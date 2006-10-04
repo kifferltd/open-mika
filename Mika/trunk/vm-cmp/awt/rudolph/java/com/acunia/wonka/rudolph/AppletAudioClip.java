@@ -99,9 +99,6 @@ public class AppletAudioClip implements java.applet.AudioClip, Runnable {
         return;
       }
     }
-    if(DSPManager.USE_DSP_MANAGER){
-      DSPManager.setMute(true);
-    }
 
     do {
       synchronized(this) {
@@ -116,10 +113,6 @@ public class AppletAudioClip implements java.applet.AudioClip, Runnable {
       }
       play(sound_data);
     } while(true);
-
-    if(DSPManager.USE_DSP_MANAGER){
-      DSPManager.setMute(false);
-    }
   }
 
   private synchronized void badData() {
