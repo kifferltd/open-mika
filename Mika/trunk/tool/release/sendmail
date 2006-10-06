@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# -------------------------------------------------------------------
+#set -x
+if [ $# -eq 2 ]; then
+  mail -s $1 wonka@acunia.com < $2
+else
+if [ $# -eq 1 ]; then
+  mail -s WONKA_HEAD wonka@acunia.com < $1
+else
+  echo "usage $0 [<subject>] <infile>"
+fi
+fi
+set -

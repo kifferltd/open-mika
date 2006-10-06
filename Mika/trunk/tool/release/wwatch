@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# -------------------------------------------------------------------
+# watch any process running 'wonka'
+# -------------------------------------------------------------------
+while [ t ]; do ps -o pid,time,etime,state -C wonka h; sleep 20 ; done

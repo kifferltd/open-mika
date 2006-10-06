@@ -1,0 +1,52 @@
+<project name="mika-anttasks" default="main" basedir=".">
+  <property name="build.dir" value="${basedir}/build/"/>
+  <property name="tools.dir" value="${build.dir}tools/"/>
+  <property name="ant.dir" value="${basedir}/ant/"/>
+  <property name="release.dir" value="${basedir}/release/"/>
+
+  <!-- build targets -->
+  <target name="main" depends="check,tool">
+    <taskplatform list="${PLATFORM}" target="buildplatform"/>
+  </target>
+
+  <target name="sample">
+    <subant target="sample" antfile="sample.xml" buildpath="${ant.dir}"/>
+  </target>
+
+  <target name="tests">
+    <subant target="tool" antfile="tool.xml" buildpath="${ant.dir}"/>
+  </target>
+
+  <!-- Clean targets -->
+  <target name="cleanall">
+    <delete dir="${build.dir}" />
+    <delete dir="${release.dir}" />
+  </target>
+
+  <target name="clean" depends="check,tool">
+    <taskplatform list="${PLATFORM}" target="cleanplatform"/>
+  </target>
+
+  <!-- Helper targets ... -->
+  <target name="cleanplatform">
+    <echo message="Deleting platform files '${platform}'" />
+    <delete dir="${build.dir}${platform}" />
+  </target>
+
+  <target name="check">
+    <fail message="please provide a platform definition ex: -DPLATFORM=pc" unless="PLATFORM"/>
+  </target>
+
+  <target name="tool">
+    <subant antfile="build.xml" buildpath="${ant.dir}"/>
+    <taskdef name="taskplatform" classname="be.kiffer.mika.ant.PlatformParser"
+             classpath="${tools.dir}/ant-mika.jar"/>
+  </target>
+
+  <target name="buildplatform">
+    <echo message="Building platform '${platform}'" />
+    <subant antfile="mika_build.xml" buildpath="${ant.dir}">
+      <property name="ANT.PLATFORM" value="${platform}"/>
+    </subant>
+  </target>
+</project>

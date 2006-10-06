@@ -1,0 +1,79 @@
+<title>/k/ Embedded Java Solutions - Mika v1.2 User Manual - Installation</title>
+<!-- Revision History                                                      -->
+<!-- 20031015 First Draft              Chris Gray                          -->
+<!-- 20031108 First Revision           Chris Gray                          -->
+<!-- 20031218 Renamed to Mika          Chris Gray                          -->
+<!-- 20040302 Updated for LxNETES 2.3  Chris Gray                          -->
+<!-- 20040416 Updated for Mika 1.1     Chris Gray                          -->
+<!-- 20040428 Updated after review     Chris Gray                          -->
+<!-- 20050522 Preliminary version for Mika 1.2     Chris Gray              -->
+<!-- 20050817 Preliminary version for Mika 1.2     Chris Gray              -->
+
+<body bgcolor=white>
+
+<h2>Installation</h2>
+
+<h3>Installing the Jikes Compiler (optional)</h3>
+
+<p>If you do not currently have any kind of Java development installed, you
+will need to install at least a Java compiler. We recommend Jikes, an open 
+source Java compiler developed by IBM.  You can find Jikes in the <tt>Jikes</tt>
+directory of the cd, or on the web site at
+<a href=http://oss.software.ibm.com/developerworks/opensource/jikes/>http://oss.software.ibm.com/developerworks/opensource/jikes/</a>.
+<p>Jikes is just a Java compiler, not a complete developement environment.
+However it can be used in conjunction with the <tt>Makefile</tt>s supplied as 
+part of the Mika distribution to provide a command-line based environment
+which is perfectly adequate for small projects.
+<p>See the chapter <a href=Project.html>Building a Project</a>
+for more information on building projects using Jikes and <tt>make</tt>.
+
+<h3>Installing the Mika binaries</h3>
+
+<p>The simplest method is to <t>cd</tt> to the CD and run the <tt>install.sh</tt>
+script, e.g.
+<pre>
+    cd /mnt/cdrom
+    ./install.sh
+</pre>
+
+<p>This will create a directory <tt>/targets/Mika</tt>, 
+containing the Mika executable for arm7tdmi/uClinux (<tt>mika</tt>)
+and directories for the Mika runtime environment
+(<tt>fsroot/</tt>) and applications (<tt>apps/</tt>).
+
+<p>Of course you can also place the <tt>Mika</tt> directory in your home directory,
+or even in somewhere like <tt>/usr/local/shared/</tt>.  (Note that you
+will need to have write access to the Mika directory and its subdirectories
+when you build projects.) In this case you should copy the contents of the CD
+onto your hard disc and make the appropriate changes to the <tt>install.sh</tt>
+script before running it.
+
+<p>The <tt>Mika/</tt> directory contains files <tt>COPYRIGHT</tt> and 
+<tt>COPYRIGHT.Wonka</tt> which you should read carefully.
+
+<h3>Creating a target directory</h3>
+
+<p>For ease of debugging, we recommend that you create an NFS export on your
+development host which can be mounted by the A9Mxxxx.  See chapter 5.4,
+<cite>Configuring the Network on the Host</cite> of the LxNETES User's Manual
+for details. The <tt>Makefile</tt>s supplied with Mika are set up to place
+the Mika binary, libraries and applications in directory
+<tt>$LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i><tt>/Mika</tt>, where
+<i>&lt;project&gt;</i> is the project name as indicated by environment
+variable <tt>$LXNETES_PROJECT</tt>; thus if <tt>$LXNETES_PROJECT</tt> holds
+<tt>/targets/LxNETES/project_foo</tt> the directory
+<tt>$LXNETES_NFSROOT_project_foo/Mika</tt>
+will be used. (See also chapter 5.5, <cite>Environment variables</cite> of the LxNETES User's Manual.)
+
+<p>You may also wish to create a subdirectory
+<tt>$LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i>/Mika/data</tt> which is
+writable by the A9Mxxxx (in practice this may mean making it world-writable,
+depending on your NFS configuration).
+
+<p align=center><small>[
+<a href="index.html">Index</a>
+] - [
+Previous : <a href="Requirements.html">Requirements</a>
+] - [
+Next : <a href="Project.html">Building a Project</a>
+]</small></p>

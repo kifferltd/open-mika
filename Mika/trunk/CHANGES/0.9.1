@@ -1,0 +1,26 @@
+Changes in 0.9.1
+----------------
+
+AWT/Rudolph
+  Lots of bugfixes and enhancements, particularly in the area of clipping 
+  e.g. of partially off-screen components. 
+  Event-handling thread now started/re-started when first window is opened, 
+  stopped when last window is closed (so Wonka terminates when you would 
+  expect). 
+  We now have two fonts `nippon13' and `nippon18' which contain haragana and 
+  katakana characters. (Kanji is still work-in-progress, sorry). 
+  Modal dialogues, e.g. FileDialog. 
+  Windows now have a title-bar, which you can use to drag them, wow. 
+  We at last have an applet viewer, com.acunia.wonka.AppletViewer, woot woot. 
+VM/Core libraries
+    Added a lot of classes to cover the OSGi Execution Environment (only 
+  one class is still missing, namely java.lang.reflect.Proxy).
+        * java.lang.StrictMath (mapped onto java.lang.Math)
+        * java.net.HttpURLConnection, java.net.FtpURLConnection (basic 
+version)
+        * java.security.DomainCombiner
+        * java.util.Timer, java.util.TimerTask
+        * javax.microedition.io
+        * etc.
+  Improved shutdown behaviour (cf. AWT event-handling thread). 
+  Fixed a lot of serialisation bugs, e.g. by hard-coding SUID.

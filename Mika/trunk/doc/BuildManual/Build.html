@@ -1,0 +1,106 @@
+<title>/k/ Embedded Java Solutions - Mika Build Manual - Building Mika</title>
+<!-- Revision History                                             -->
+<!-- 20040524 First Draft              Chris Gray                          -->
+
+<body bgcolor=white>
+
+<h2>Building Mika</h2>
+
+<p>To build  <font color="#cc0000"><b>Mi</b>|<b>k</b>|<b>a</b></font> 
+from the sources, <td>cd</tt> to the <tt>Mika-source</tt> directory
+and type
+<pre>
+export WONKA_TOP=`pwd`
+</pre>
+for <tt>bash</tt>, or the appropriate command to set an environment variable
+in your chosen shell. Then type
+<pre>
+acunia-jam install
+</pre>
+to build Mika.
+
+<p>The full build takes some time: there are almost 1000 targets to be built.
+A successful build output ends with something similar to
+<pre>
+Link /home/chris/mika-1.1.1/mika-source/build-arm-uclinux/mika/bin/mika 
+Chmod1 /home/chris/mika-1.1.1/mika-source/build-arm-uclinux/mika/bin/mika 
+Install /home/chris/mika-1.1.1/mika-source/build-arm-uclinux/mika/mika 
+Chmod1 /home/chris/mika-1.1.1/mika-source/build-arm-uclinux/mika/mika 
+...updated 931 target(s)...
+</pre>
+
+<p> Change directory to <tt>build-arm-uclinux/mika/</tt> :
+<pre>
+$ cd build-arm-uclinux/mika/
+$ ls -lR
+.:
+total 584
+drwxr-xr-x    2 chris    users        4096 May 17 16:57 bin
+drwxr-xr-x    3 chris    users        4096 May 17 16:55 fsroot
+-rwx--x--x    1 chris    users      583012 May 17 16:57 mika
+
+./bin:
+total 2628
+-rw-r--r--    1 chris    users      126845 May 17 16:45 core-classes.c
+-rw-r--r--    1 chris    users       37888 May 17 16:39 core-classes.h
+-rw-r--r--    1 chris    users       36416 May 17 16:55 libcomm.a
+-rw-r--r--    1 chris    users       29922 May 17 16:50 libunicode.a
+-rw-r--r--    1 chris    users     1002194 May 17 16:48 libwonka.a
+-rw-r--r--    1 chris    users        4792 May 17 16:39 main.o
+-rwx--x--x    1 chris    users      583012 May 17 16:57 mika
+-rwxr-xr-x    1 chris    users      717034 May 17 16:55 mika.gdb
+-rw-r--r--    1 chris    users        8875 May 17 16:50 uart-classes.c
+-rw-r--r--    1 chris    users        3160 May 17 16:50 uart-classes.h
+-rw-r--r--    1 chris    users      125095 May 17 16:50 unicode.c
+
+./fsroot:
+total 4
+drwxr-xr-x    3 chris    users        4096 May 17 16:55 system
+
+./fsroot/system:
+total 828
+-rw-r--r--    1 chris    users         980 May 17 16:55 device.config
+drwxr-xr-x    2 chris    users        4096 May 17 16:55 ext
+-rw-r--r--    1 chris    users          64 May 17 16:55 system.properties
+-rw-r--r--    1 chris    users          98 May 17 16:55 wonka.policy
+-rw-r--r--    1 chris    users        3437 May 17 16:55 wonka.properties
+-rw-r--r--    1 chris    users         461 May 17 16:55 wonka.security
+-rw-r--r--    1 chris    users      817465 May 17 16:55 wre.jar
+
+./fsroot/system/ext:
+total 60
+-rw-r--r--    1 chris    users       38218 May 17 16:55 crypto.jar
+-rw-r--r--    1 chris    users       20281 May 17 16:55 microedition-io.jar
+
+</pre>
+
+<p>Copy the <tt>mika</tt> executable and the <tt>fsroot</tt> directory
+to the appropriate directory (e.g. <tt>/targets/Mika</tt>) to install it
+on the UNC20.
+
+<h3>Re-building after changes</h3>
+
+<p>Like <tt>make</tt>, <tt>acunia-jam</tt> can recognise which files have 
+changed and which need to be recompiled. However (also like <tt>make</tt>),
+it sometimes needs a little help to do the Right Thing.
+To force all native C/ASM code to be recompiled, use 
+<pre>
+acunia-jam clean
+</pre>
+To also force all Java code to be recompiled and all resource files to be 
+re-copied, use
+<pre>
+acunia-jam mrproper
+</pre>
+
+<p>Sometimes the build may fail because of unsatisfied dependencies; running
+<tt>acunia-jam install</tt> a second time solves the problem. We are aware of
+this problem, which will be fixed in future releases.
+
+<p align=center><small>[
+<a href="index.html">Index</a>
+] - [
+Previous : <a href="Installation.html">Installation</a>
+] - [
+Next : <a href="Parameters.html">Build Parameters</a>
+]</small></p>

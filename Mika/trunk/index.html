@@ -1,0 +1,72 @@
+<!--
+$ Id: $
+-->
+
+<TITLE>Open Wonka: top-level directory</TITLE>
+
+<H1>Top-level directory <tt>open-wonka</tt></H1>
+
+<p>This directory contains the global <a href="Jamrules">Jamrules</a>
+for Wonka, a <a href="Jamfile">Jamfile</a>,
+and the following text files:
+<dl>
+<dt><a href="README">README</a></dt>
+<dd>General information about Wonka.</dd>
+<dt><a href="README.build">README.build</a></dt>
+<dd>How to build Wonka from the sources.</dd>
+<dt><a href="README.install">README.install</a></dt>
+<dd>How to install a pre-compiled binary.</dd>
+<dt><a href="README.licensing">README.licensing</a></dt>
+<dd>Important licensing information.</dd>
+<dt><a href="COPYRIGHT">COPYRIGHT</a></dt>
+<dd>Yet more important licensing information.</dd>
+</dl>
+but no source files. It has the following subdirectories:
+<dl>
+<dt><a href="Configuration/">Configuration</a>
+<dd>Steerfiles for the Wonka build process.
+<dt><a href="awt/">awt</a>
+<dd>Contains AWT implementations.
+<dt>build-&lt;<it>cpu</it>&gt;-&lt;<it>hostos</it>&gt;
+<dd>Used at build time to hold output and generated files.
+The Wonka binary is produced in 
+<tt>build-&lt;<it>cpu</it>&gt;-&lt;<it>hostos</it>&gt;/wonka</tt>. 
+<dt>class
+<dd>Used to collect class files during Java compilation. (Created on demand).
+<dt><a href="compiler/">compiler</a>
+<dd>Contains runtime compiler implementations.
+<dt><a href="doc/">doc</a>
+<dd>Contains a makefile to build all LaTeX documentation, and
+templates used by the LaTeX documentation.
+<dt><a href="fs/">fs</a>
+<dd>Contains filesystem implementations.
+<dt><a href="jpda/">jpda</a>
+<dd>Contains implementations of the Java Platform Debugging Architecture.
+<dt><a href="kernel/">kernel</a>
+<dd>Contains implementations of the <tt>OSwald</tt>
+internal threading and memory management API: both the <tt>OSwald</tt>
+Reference Implementation and wrappers for various host operating systems.
+<dt><a href="network/">network</a>
+<dd>Contains network stack implementations.
+<dt><a href="roadmap/">roadmap</a>
+<dd>Contains some text files outlining current ideas for development of Wonka.
+<dt><a href="sample/">sample</a>
+<dd>Contains sample applications.
+<dt><a href="tool/">tool</a>
+<dd>Contains tools (including the Mauve and VTE test suites) and scripts.
+<dt><a href="wonka/">wonka</a>
+<dd>Contains the various non-optional components of the Virtual Machine
+and core class libraries.
+</dl>
+
+<p>When we say a directory "contains &lt;<i>foo</i>&gt; implementations",
+this means that the directory has two or more subdirectories, each of
+which contains one possible implementation of feature <it>foo</it>.
+Which implementation to use is decided at runtime by setting a <tt>Jam</tt>
+variable, e.g.
+<blockquote><tt>jam -sFS=native install</tt></blockquote>
+will cause subdirectory <a href="fs/native/">fs/native</a>
+of <a href="fs/">fs</a> to be used in the build.
+Often one of the subdirectories is called <tt>none</tt>, and provides
+a null implementation (no AWT, no runtime compiler, no filesystem ...).
+

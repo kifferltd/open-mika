@@ -1,0 +1,162 @@
+<title>/k/ Embedded Java Solutions - Mika v1.2 User Manual - Building a Project</title>
+<!-- Revision History                                             -->
+<!-- 20031015 First Draft              Chris Gray                          -->
+<!-- 20031108 First Revision           Chris Gray                          -->
+<!-- 20031218 Renamed to Mika          Chris Gray                          -->
+<!-- 20040302 Updated for LxNETES 2.3  Chris Gray                          -->
+<!-- 20040416 Updated for Mika 1.1     Chris Gray                          -->
+<!-- 20040428 Updated after review     Chris Gray                          -->
+
+<body bgcolor=white>
+
+<h2>Building a Project</h2>
+
+<p>There are two basic approches to building a Java project using Mika:
+<ul>
+<li>The command-line approach, using <tt>make</tt> and a Java compiler such
+as <tt>jikes</tt>, <tt>kjc</tt>, or <tt>javac</tt>; or
+<li>A Java development environment such as Ant, JBuilder, Eclipse, etc..
+</ul>
+
+<h3>Command-line Approach</h3>
+
+<p>Some sample projects are provided as subdirectories of the <tt>Mika/apps</tt> directory.
+(From now on we will refer to the directory where you installed Mika as
+"<tt>Mika/</tt>" - if you installed Mika somewhere else then you will need 
+to make the necessary adjustments).
+These projects contain Makefiles which can be used to generate <tt>.class</tt>
+and <tt>.jar</tt> files, copy to an NFS-mounted directory and to flash, etc..
+<b>The Makefiles assume that the <tt>LxNET.sh</tt> script has been run to
+set the environment variables. Otherwise they will NOT run correctly!</b>
+<p>
+The projects <tt>io-demo</tt> and <tt>filter-demo</tt> work by generating
+JAR files which can be run using the <tt>mika&nbsp;-jar</tt> command.
+
+<p>The directory <tt>apps/io-demo</tt> has the following structure:
+<pre>
+  apps/io-demo/
+    Makefile
+    META-INF/
+      MANIFEST.MF
+    class/
+      Makefile
+    javasrc/
+      Makefile
+      de/
+        fsforth/
+          unc20/
+            demo/
+              io/
+                GPIODemo.java
+                GPIOView.java
+                LCDOutputStreamDemo.java
+                Main.java
+</pre>
+
+<h4>Generating the <tt>.class</tt> and <tt>.jar</tt> files</h4>
+
+<p>The subdirectory <tt>META-INF</tt> contains a file <tt>MANIFEST.MF</tt>
+file which serves mainly to indicate the class which contains the <tt>main()</tt> method:
+<pre>
+Manifest-Version: 1.0
+Created-By: Hand
+Main-Class: de.fsforth.unc20.demo.io.Main
+</pre>
+
+<p>The subdirectory <tt>javasrc</tt> contains a source tree whose structure 
+reflects the package structure of the application; in this case all packages
+form part of the package <tt>de.fsforth.unc20.demo.io</tt>, so they are 
+located in directory <tt>de/fsforth/unc20/demo/io</tt> relative to the
+<tt>javasrc</tt> directory.
+
+<p>If you <tt>cd</tt> to <tt>Mika/apps/io-demo</tt> and type <tt>make install</tt>
+ (or just <tt>make</tt>), two actions are performed:
+<ul>
+<li>under subdirectory <tt>class/</tt>, a tree of <tt>.class</tt> files is created
+which mirrors the source tree in <tt>javasrc/</tt>.
+<pre>
+      de/
+        fsforth/
+          unc20/
+            demo/
+              io/
+                GPIODemo.class
+                GPIOView.class
+                LCDOutputStreamDemo.class
+                Main.class
+</pre>
+<li>A JAR file <tt>io-demo.jar</tt> is created in the <tt>apps/</tt>
+directory itself. This JAR file contains all the <tt>.class</tt> files we just
+generated, together with <tt>META-INF/MANIFEST.MF</tt>.
+</ul>
+
+<p>In the top-level <tt>Mika</tt> directory, the command <tt>make install</tt>
+first executes <tt>make install</tt> in every subdirectory of <tt>Mika/apps</tt>,
+and then copies all files required at runtime to <tt>Mika/fsroot/apps</tt>. 
+
+<h4>Copying to the NFS Directory</h4>
+
+<p>In the top-level <tt>Mika</tt> directory, the command <tt>make install-nfs</tt>
+copies the <tt>mika</tt> executable and the <tt>fsroot</tt> directory tree to
+<tt>$LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i><tt>/Mika</tt>,
+corresponding to directory <tt>nfs/Mika</tt> on the UNC20.
+Thus the io-demo application can be executed on the UNC20 using the command
+<pre>/nfs/Mika/mika -jar {}/apps/io-demo.jar</pre>
+(see next chapter, <a href="Running.html">Executing Java Code on the UNC20</a>
+ for an explanation of the <tt>{}/</tt> notation).
+
+<h4>Creating a JFFS2 Filesystem</h4>
+
+<p>In the top-level <tt>Mika</tt> directory, the command <tt>make install-jffs2</tt>
+converts the <tt>$LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i><tt>/Mika</tt>
+directory into a JFFS2 filesystem, which is saved in file
+<tt>$(LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i><tt>)/Mika.img</tt>.
+This file can then be copied onto partition 4 of the UNC20 flash using either
+the command
+<pre>
+  update_flash -f -v -r -t ram nfs/Mika.img 4
+</pre>
+or more simply
+<pre>
+  eraseall /dev/mtd/4
+  cp /nfs/Mika.img /dev/mtd/4
+</pre>.
+For more details see Chapter 15, <cite>Linux Utilities and Daemons</cite>, and Chapter 16, <cite>Applications from FS-Forth Systeme</cite> of the LxNETES User's Manual.
+
+<p>After copying the JFFS2 filesystem to flash, the io-demo application can be
+executed on the UNC20 using the command
+<pre>/Mika/mika -jar {}/apps/io-demo.jar</pre>
+(see next chapter, <a href="Running.html">Executing Java Code on the UNC20</a>
+ for an explanation of the <tt>{}/</tt> notation).
+
+<p><b><font color=red>WARNING: The size of the JFFS2 file system,
+as indicated by</font></b>
+<pre>ls -l Mika.img</pre>
+<b><font color=red>must not exceed 3 MB!
+Otherwise you will risk overwriting the "rescue" kernel in the flash partition
+following, which would be a Bad Thing.</font></b>
+
+<h3>Using a Java Development Environment</h3>
+
+<p>Any development environment can be used to develop Java code for use on
+Mika, so long as the restrictions of the Mika class libraries are respective.
+This can be approximated by selecting a Java "profile" such as CDC/FP or CDC/PP,
+but ideally the development library should be configured to use 
+<tt>Mika/fsroot/system/wre.jar</tt> as its system classpath when compiling
+applications. This ensures that a compilation error will be flagged if your
+application attempts to use any class or member which is not present in the
+Mika libraries.
+
+<p>Once an application has been built, the resulting <tt>.jar</tt> or
+<tt>.class</tt> files should be placed in
+<tt>$LXNETES_NFSROOT_</tt><i>&lt;project&gt;</i><tt>/Mika/apps</tt>.
+From there they can be converted into a JFFS2 filesystem if needed using the
+<tt>make&nbsp;install-jffs2</tt> command described above.
+
+<p align=center><small>[
+<a href="index.html">Index</a>
+] - [
+Previous : <a href="Installation.html">Installation</a>
+] - [
+Next : <a href="Demo.html">Running the Demo Projects</a>
+]</small></p>

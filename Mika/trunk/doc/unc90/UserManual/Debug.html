@@ -1,0 +1,136 @@
+<title>/k/ Embedded Java Solutions - Mika v1.2 User Manual - Debugging</title>
+<!-- Revision History                                                      -->
+<!-- 20040416 New for Mika 1.1     Chris Gray                              -->
+<!-- 20051024 Preliminary version for Mika 1.2     Chris Gray              -->
+
+<body bgcolor=white>
+
+<h2>Debugging Java Code on the UNC90</h2>
+
+<p>For reasons of space and performance, currently
+<font color="#cc0000"><b>Mi</b>|<b>k</b>|<b>a</b></font>
+does not support the Java Platform Debugger Architecture (JPDA).
+However 
+<font color="#cc0000"><b>Mi</b>|<b>k</b>|<b>a</b></font>
+does contain some useful debugging features, which are decscribed below.
+
+<h3>Control-backslash</h3>
+
+<p>When it receives a SIGQUIT (control-backslash or kill -QUIT),
+<font color="#cc0000">Mi|k|a</font>
+will dump the current execution state of all running threads, plus a list
+of all instance locks and who owns them.
+
+<pre>
+ Threads :
+  "SystemThreadGroup"  (id: 0x00a93db8(3), prio: 15, state: Queue, switches: 741, stacksize: 65532)
+    competing: 0x007014f0 (unknown) owned by: 0x00000000(0)
+  "Confessor"  (id: 0x00c1eb98(6), prio: 30, state: Waiting, switches: 244, stacksize: 32764)
+    waiting: 0x00c26c70 (1)
+       initialized class java.lang.Object/wait(JI)V (native method)
+       initialized class java.lang.Object/wait(J)V pc = 3
+       initialized class wonka.vm.Finalizer/run()V pc = 241
+       initialized class java.lang.Thread/_run()V pc = 4
+  "Undertaker"  (id: 0x00c147e0(5), prio: 34, state: Waiting, switches: 20, stacksize: 32764)
+    waiting: 0x00c31c68 (1)
+       initialized class java.lang.Object/wait(JI)V (native method)
+       initialized class java.lang.Object/wait(J)V pc = 3
+       initialized class wonka.vm.GarbageCollector/run()V pc = 391
+       initialized class java.lang.Thread/_run()V pc = 4
+  "SystemInitThread"  (id: 0x007a1708(4), prio: 40, state: Ready, switches: 1088, stacksize: 32764)
+       initialized class wonka.io.StandardInputStream/read([BII)I (native method)
+       initialized class wonka.decoders.Latin1Decoder/cFromStream(Ljava/io/InputStream;[CII)I pc = 12
+       initialized class java.io.InputStreamReader/read([CII)I pc = 35
+       initialized class java.io.BufferedReader/updateBuffer()Z pc = 38
+       initialized class java.io.BufferedReader/readLine()Ljava/lang/String; pc = 192
+       initialized class {wonka.vm.ApplicationClassLoader@0x0081d1a0}de.fsforth.unc20.demo.filter.Main/main([Ljava/lang/String;)V pc = 163
+       initialized class java.lang.reflect.Method/invoke0(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; (native method)
+       initialized class java.lang.reflect.Method/invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object; pc = 58
+       initialized class wonka.vm.Init/main([Ljava/lang/String;)V pc = 568
+  "Thread-1"  (id: 0x00c41308(8), prio: 40, state: Ready, switches: 475, stacksize: 32764)
+       initialized class java.net.PlainSocketImpl/read([BII)I (native method)
+       initialized class java.net.SocketInputStream/read([BII)I pc = 7
+       initialized class wonka.decoders.Latin1Decoder/cFromStream(Ljava/io/InputStream;[CII)I pc = 12
+       initialized class java.io.InputStreamReader/read([CII)I pc = 35
+       initialized class java.io.BufferedReader/updateBuffer()Z pc = 38
+       initialized class java.io.BufferedReader/readLine()Ljava/lang/String; pc = 192
+       initialized class {wonka.vm.ApplicationClassLoader@0x0081d1a0}de.fsforth.unc20.demo.filter.Main/run()V pc = 7
+       initialized class java.lang.Thread/_run()V pc = 4
+  "Heartbeat"  (id: 0x00c28e80(7), prio: 48, state: Ready, switches: 1, stacksize: 32756)
+       initialized class java.lang.Thread/sleep0(JI)V (native method)
+       initialized class java.lang.Thread/sleep(JI)V pc = 5
+       initialized class java.lang.Thread/sleep(J)V pc = 2
+       initialized class wonka.vm.Heartbeat/run()V pc = 26
+       initialized class java.lang.Thread/_run()V pc = 4
+
+ Locks :
+     Finalizer fifo mutex :  (0x00a94418) not locked
+       Enqueue fifo mutex :  (0x00a943ec) not locked
+             String mutex :  (0x00700478) not locked
+         Reclaim listener :  (0x00a9f944) not locked
+           Memory monitor :  (0x00a95428) not locked
+               GC monitor :  (0x00c31c68) not locked
+   Instance locks :
+   java.io.InputStreamReader@0x0099ed48 (0x00c63920) Locked by "SystemInitThread"
+   java.net.SocketInputStream@0x00c4c2b8 (0x00c65b20) Locked by "Thread-1"
+   wonka.io.StandardInputStream@0x00775f60 (0x00c63a08) Locked by "SystemInitThread"
+   java.io.InputStreamReader@0x00c4c210 (0x00c65a38) Locked by "Thread-1"
+
+ Classloaders :
+     wonka.vm.SystemClassLoader@0x007b5818
+     wonka.vm.ApplicationClassLoader@0x0081d1a0
+
+ Memory :
+         Total :   3014656
+     Available :   1664752
+          Used :   1349904 (of which 144144 in objects)
+</pre>
+
+<p>If a garbage collection cycle was in progress when the signal was received,
+you may see one thread marked "marking heap", while others are marked "safe
+point requested". You may also sometimes see threads marked as "unsafe";
+this is normal, it just means that the thread is engaged in activity that 
+changes the state of the stack or heap (so if another thread wanted to
+initiate garbage collection it would have to wait for this thread to reach 
+a safe point before marking the heap).
+
+<h3>mika.verbose</h3>
+
+<p>In file <tt>/usr/lib/mika/system/mika.properties</tt> you should find a
+line
+<pre>
+#mika.verbose=startup:shutdown:gc
+</pre>
+
+<p>Remove the leading '<tt>#</tt>' to enable some useful debugging information.
+The string after '<tt>=</tt>' is a colon-separated list of words taken from
+the following list:
+
+<table width="90%" align=center>
+<tr valign=baseline>
+<td><tt>gc</tt>
+<td>Gives a running commentary on garbage collection activity.
+<tr valign=baseline>
+<td><tt>loading</tt>
+<td>Shows the initiating and defining class loader for all classes loaded
+after initial bootstrapping.
+<tr valign=baseline>
+<td><tt>threads</tt>
+<td>Shows the start and termination of each Java thread.
+<tr valign=baseline>
+<td><tt>startup</tt>
+<td>Shows information about startup of the VM (e.g. starting class/method).
+<tr valign=baseline>
+<td><tt>shutdown</tt>
+<td>Shows information about shutdown of the VM (e.g. running of shutdown hooks).
+</table>
+
+<p align=center><small>[
+<a href="index.html">Index</a>
+] - [
+Previous : <a href="Running.html">Executing Java Code on the UNC90</a>
+] - [
+Next : <a href="Parameters.html">Command-line Parameters and Properties</a>
+]</small></p>
+
+

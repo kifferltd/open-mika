@@ -1,0 +1,68 @@
+<title>/k/ Embedded Java Solutions - Mika v1.2 User Manual - Installation</title>
+<!-- Revision History                                                      -->
+<!-- 20031015 First Draft              Chris Gray                          -->
+<!-- 20031108 First Revision           Chris Gray                          -->
+<!-- 20031218 Renamed to Mika          Chris Gray                          -->
+<!-- 20040302 Updated for LxNETES 2.3  Chris Gray                          -->
+<!-- 20040416 Updated for Mika 1.1     Chris Gray                          -->
+<!-- 20040428 Updated after review     Chris Gray                          -->
+<!-- 20051221 Updated for Mika 1.2, UNC90  Chris Gray                      -->
+<!-- 20060103 Revised after feedback   Chris Gray                          -->
+
+<body bgcolor=white>
+
+<h2>Installation</h2>
+
+<h3>Copyright notice<h3>
+
+<p>The CD contains files <tt>COPYRIGHT</tt> and 
+<tt>COPYRIGHT.Wonka</tt> which you should read carefully.
+
+<h3>Installing the Jikes Compiler (optional)</h3>
+
+<p>If you do not currently have any kind of Java development installed, you
+will need to install at least a Java compiler. We recommend Jikes, an open 
+source Java compiler developed by IBM.  You can find Jikes 
+on the SourceForge web site at
+<a href=http://sourceforge.net/projects/jikes/>http://sourceforge.net/projects/jikes/</a>; 
+Debian users can also install the 'jikes' package 
+(<tt>apt-get install jikes</tt>).
+<p>Jikes is just a Java compiler, not a complete developement environment.
+However it can be used in conjunction with the <tt>Makefile</tt>s supplied as 
+part of the Mika distribution to provide a command-line based environment
+which is perfectly adequate for small projects.
+<p>See the chapter <a href=Project.html>Building a Project</a>
+for more information on building projects using Jikes and <tt>make</tt>.
+
+<h3>Installing the Mika environment</h3>
+
+<p>In your project directory, run the <tt>install.sh</tt> script on the CD; e.g.
+<pre>
+cd &#126;/LxNETES-3.2/myproject/
+/cdrom/install.sh
+</tt>
+</pre>
+
+<p>This will install the Mika binary in subdirectory
+<tt>rootfs_wo_kernel/usr/bin/</tt>,
+the Mika libraries in subdirectory <tt>rootfs_wo_kernel/usr/lib/mika/</tt>,
+and the sample makefiles in subdirectory <tt>java-apps</tt>
+of the project directory.
+
+<h3>Completing installation</h3>
+
+<p>After performing these steps you can proceed to the <tt>make</tt> and
+<tt>make&nbsp;install</tt> steps of the kernel installation. To test the correct
+functioning of 
+<font color="#cc0000"><b>Mi</b>|<b>k</b>|<b>a</b></font>, 
+try running the command:
+<pre>mika HelloWorld</tt>
+</pre>
+
+<p align=center><small>[
+<a href="index.html">Index</a>
+] - [
+Previous : <a href="Requirements.html">Requirements</a>
+] - [
+Next : <a href="Project.html">Building a Project</a>
+]</small></p>
