@@ -498,7 +498,6 @@ public class LinkedList extends AbstractSequentialList implements List, Cloneabl
     setup();
     int s = in.readInt();
     for(int i = 0 ; i < s ; i++){
-      System.out.println("LinkedList.readObject()");
       add(in.readObject());
     }
   }
