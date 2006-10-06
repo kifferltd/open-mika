@@ -1,0 +1,23 @@
+<!--
+$ Id: $
+-->
+
+<TITLE>Open Wonka: directory open-wonka/network</TITLE>
+
+<H1>Directory <tt>open-wonka/network</tt></H1>
+
+<p>Apart from the ubiquitous <a href="Jamfile">Jamfile</a>,
+this directory has two subdirectories:
+<dl>
+<dt><a href="native/">native</a>
+<dd>The "native" netwoek implementation, which translates all socket
+operations to operations on the underlying BSD sockets interface
+of the host OS
+<dt><a href="none/">none</a>
+<dd>A dummy implementation in which all socket calls simply fail. 
+</dl>
+
+<p>One or other directory will be included in the build according
+to the setting of the <tt>NETWORK</tt> variable (<tt>-sNETWORK=native</tt>
+or <tt>-sNETWORK=none</tt>).
+

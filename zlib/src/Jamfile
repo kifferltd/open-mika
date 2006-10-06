@@ -1,0 +1,19 @@
+#############################################################################
+# Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. #
+# All rights reserved.  The contents of this file may not be copied or      #
+# distributed in any form without express written consent of the author.    #
+#############################################################################
+
+#
+# $Id: Jamfile,v 1.1 2005/05/11 16:53:18 cvs Exp $
+#
+
+SubDir WONKA_TOP zlib src ;
+
+LOCATE_TARGET = $(OROOT)/mika/bin ;
+
+CCFLAGS += -DNOUNCRYPT ;
+
+Library $(Z_LIB) : adler32.c crc32.c inffast.c inftrees.c ioapi.c zinflate.c unzip.c zutil.c ;
+
+

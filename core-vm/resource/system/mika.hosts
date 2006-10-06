@@ -1,0 +1,9 @@
+# This file can be used to add static hostname translations, analogously
+# to the /etc/hosts file of Unix. Standard properties file syntax is used,
+# with the hostname as the property name and the dotted-notation IP address
+# as the property value, e.g. 'testserver=192.168.42.1'. Currently this
+# file is restricted to IPv4 addresses, and there is no way to specify
+# multiple IP addresses corresponding to a single hostname nor a default
+# domain name to be appended to hostnames which do not contain a '.' (in
+# fact no attempt is made to parse the hostname).
+

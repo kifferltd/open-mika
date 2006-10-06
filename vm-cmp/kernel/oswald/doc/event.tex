@@ -1,0 +1,64 @@
+%
+% $Id: event.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{The Event Structure}
+
+The event structure is the fundamental component in any element of \oswald
+that is used to pass messages between threads (mutexes, queues, signals,
+...). It is always the first field in any event component of \oswald and is
+included in such a structure, not referred to.
+
+Its definition is the following:
+
+\bcode
+\begin{verbatim}
+ 1: typedef struct x_Event * x_event;
+ 2:
+ 3: typedef struct x_Event {
+ 4:   volatile w_ushort flags_type;
+ 5:   volatile w_ushort n_competing;
+ 6:   volatile x_thread l_competing;
+ 7:   volatile x_event l_owned;
+ 8: } x_Event;
+\end{verbatim}
+\ecode
+
+The relevant fields in the event structure are the following:
+
+\begin{itemize}
+\item \txt{x\_event$\rightarrow$type\_flags} The different flags to record the
+state of the event, merged with the type of the event to save space. The type of an event is an
+element of the \txt{x\_type} enumeration. This enumeration can be found
+back in the \fl{event.h} header file.
+\item \txt{x\_event$\rightarrow$n\_competing} The number of threads that
+are competing on a change in this event.
+\item \txt{x\_event$\rightarrow$l\_competing}
+The list of threads that are competing for a change in this event. This list
+is continued through the \txt{x\_thread$\rightarrow$l\_competing} field.
+The event that a thread in this list is competing for, is recorded in the
+\txt{x\_thread$\rightarrow$competing\_for} field.
+\item \txt{x\_event$\rightarrow$l\_owned} Certain events can be owned by
+a thread (mutexes or monitors). A thread that owns events is linked through
+this field.
+\end{itemize}
+
+There is a special function that can be used to 'wait until an event has
+been deleted'.
+
+\txt{x\_status x\_event\_join(void * event, x\_window timeout);}
+
+This function will make a thread wait untill the event (mutex, queue,
+mailbox, ...) has been deleted. When the event has been deleted and no
+threads are attempting any operation on it, this call returns
+\txt{xs\_success}, if some threads were still trying to abort any
+operation on the event, the call will return \txt{xs\_incomplete} to
+indicate that some threads did not complete the call for the operation yet.
+
+The calling thread will attempt to join the event for as long a number of
+ticks as indicated by the \txt{timeout} argument.
+
+This functionality could be used in a thread that allocates memory for the
+element and creates it as a service for other threads. After allocation and
+creation, the service thread can execute a join call on the event to wait until
+all threads have stopped using the element.

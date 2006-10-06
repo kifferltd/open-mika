@@ -1,0 +1,77 @@
+DIFFERENCES BETWEEN WONKA AND TYPICAL DESKTOP JAVA SYSTEMS
+
+Wonka is primarily designed to be used in embedded systems; the desktop
+version exists mainly so that you can see how your application runs on
+Wonka while enjoying all the comforts of your desktop system.  Probably
+you already have a version of Java installed, and you will continue to
+use this as your `main' Java.
+
+Consequently the linux version of Wonka works in a slightly different way
+to conventional desktop implementations: it looks in the
+directory in which it is started for a subdirectory called `fsroot',
+and mounts that as the root of its own internal filesystem.
+This means that Wonka runs in its own little world, and anything
+you want Wonka to run must be copied into that world.
+
+This world is represented by the subdirectory `fsroot' in the directory
+where Wonka is launched.  Wonka's bootstrap class loader expects to find
+a file called `classes.zip' in directory `fsroot/system' (this is put there
+automatically by the build process).  Other classes are loaded by the
+system class loader, which searches:
+  - directories `fsroot/system', `fsroot/test', and `fsroot/user',
+    for files such as `fsroot/usr/com/mycorp/MyClass.class' (containing
+    com.mycorp.MyClass);
+  - any jar files which are mentioned in system property
+    com.acunia.wonka.jarfiles (the system properties file will be found at
+    fsroot/system/system.properties).
+
+The system class loader can also be used to load other resources, using the
+same search path.  Basically, if you regard CLASSPATH as consisting of the
+`fsroot/user' directory plus all the jars in com.acunia.wonka.jarfiles
+then you won't go far wrong.
+
+If Wonka is launched using a command line then you can modify its behaviour
+using the following command-line options:
+ -classpath <colon-separated-pathlist>
+    Set the classpath, i.e. the list of directories and jarfiles to be
+    searched by the system class loader.
+  -cp
+    Synonym for -classpath.
+  -D <name>=<value>
+    Define system property <name> to have  value <value>,
+    overriding the contents of <system.properties>.
+  -version
+    Print version information.
+  -help
+    Print a list of compile-time options.
+  -?
+    Synonym for -help.
+  -Xbootclasspath:<path>
+    Set the bootstrap class path, used by the ``primordial'' class loader.
+    <path> must be to a single zipfile.
+
+
+Note that currently Wonka does not use the CLASSPATH environment variable.
+(This has the advantage that you don't need to change CLASSPATH when
+switching between Wonka and another VM).  However the build process is
+influenced by CLASSPATH, and actually works best if CLASSPATH is empty.
+
+BUILDING WONKA FROM SOURCES
+
+To build Wonka from source you will need our modified version of Jam
+and the JamJar tool.  You can get both of these from the Wonka downloads
+page, http://wonka.acunia.com/download.html .  Assuming you checked out
+or untarred Wonka into directory open-wonka, to make the x86-linux build
+you just need to do
+  cd open-wonka
+  export WONKA_TOP=`pwd`
+  jam install
+(replace the second line by whatever your shell uses to set environment
+variables).  Now cd to build-x86-linux/wonka, where you should find
+  bin/ fsroot/ wonka*
+Here `wonka' is the Wonka executable and `fsroot' is the filesystem root 
+referred to above.
+
+If you want to change the way Wonka compiles or to compile for another
+target, you need to read the `Wonka Quick Start' document.
+ 

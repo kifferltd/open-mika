@@ -1,0 +1,232 @@
+%
+% $Id: atomic.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Atomic Operations}
+
+\subsubsection{Principle}
+
+Atomic operations are called 'atomic' because in performing an operation,
+they can not be interrupted. This is the short explanation, now up to
+something with more meat on it...
+
+Suppose we have the following C code fragment
+in a multi threaded environment\footnote{We use a label and a goto to show
+the 2 offending lines right after another. Please don't use this example to
+judge the C code quality of \oswald...}:
+
+\bcode
+\begin{verbatim}
+ 1: int fencepost = 0;      // fencepost is a thread global variable
+
+ 2: ...
+
+ 3:  retry:
+ 4:  if (fencepost == 0) {  // Check if 'fencepost' is free
+ 5:                         <---- Place of thread switch between A and B
+ 6:    fencepost = 1;       // Indicate that we are the owner of the fencepost
+ 7:  }
+ 8:  else {
+ 9:    x_thread_sleep(10);
+10:    goto retry;
+11:  }
+
+12:  ... do some 'critical' stuff ...
+
+13:  fencepost = 0;         // Leave the critical region
+
+14: ...
+
+\end{verbatim}
+\ecode
+
+
+This is a piece of code that would give, at first sight, a safe feeling to a
+programmer that at any time, only a single thread can execute the 'critical' stuff
+section shown in the example; it looks safe all-right; check that no other
+thread is in the critical section by reading the \textbf{fencepost} variable and if
+it is 0, we set it to 1 so that other threads have to wait and take a nap
+until the \textbf{fencepost} reads 0.
+
+This assumption is wrong! Suppose thread A is performing line 4 and has read
+the value of the \textbf{fencepost} variable into a register. The value of
+the \textbf{fencepost} variable is actually 0 and thus the register value is
+also 0. Now at that moment, the scheduler stops this thread, saving all
+registers and makes another thread B ready to run the same code fragment. This
+thread B reaches line 4, again reads in \textbf{fencepost} and sees it is 0,
+then proceeds to execute line 6 and writes a value of 1 in the
+\textbf{fencepost} global variable, assuming it has access to the critical
+section. This thread B is again stopped by the
+scheduler and thread A is again made to run, thread A was stopped at line 5
+and thus it writes, in its turn, a 1 into the \textbf{fencepost} variable,
+and proceeds into the critical section. In
+other words, both thread A and B now assume they are the only thread that is
+executing the 'critical' section.
+
+In other words, the above construct is wrong, because the operation of
+\textbf{reading} a variable for checking and \textbf{writing} a new value back,
+are not indivisible operations. For this sample of code to work, the lines,
+4 and 6 should be executed without any thread scheduling or other
+interruption occurring. This nature of operations being indivisible is called
+\textbf{atomicity} in computer science. Just like an atom can not be
+split\footnote{At least programmers can't, physicist and nuclear powerplants do it all the time...},
+an atomic operation can not be split or interrupted.
+
+This kind of atomic operations are supported by \oswald with help of the
+underlying CPU that offers special atomic instructions for implementing atomic
+constructs.
+
+The constructs that \oswald offers for atomic operations are:
+
+\begin{itemize}
+\item \txt{void x\_atomic\_swap(void * address1, void * address2);}
+
+A function that atomically swaps the contents of \txt{address1} and
+\txt{address2}.
+
+\item \txt{x\_boolean x\_enter\_atomic(void * address, void * contents);}
+
+A function that tries to enter an atomic region or mutually exclusive
+region and reports back whether it succeeded or the caller should try again.
+When successful, the contents at \txt{address} will be the same as \txt{contents}.
+
+\item \txt{x\_boolean x\_exit\_atomic(void * address, void * contents);}
+
+A function that tries to exit an atomic region and reports back whether it
+was successful or not. When successful, the contents at \txt{address}
+will be 0 or NULL.
+\end{itemize}
+
+By means of these simple functions, other more powerful atomic operations
+can be build, e.g. compare and swap, mutexes, semaphores, monitors... Note
+that the \oswald mutexes, semaphores and monitors don't use these atomic
+constructs.
+
+\subsubsection{Atomic Swap}
+
+\oswald offers a function: 
+
+\txt{void x\_atomic\_swap(void * address1, void * address2);}
+
+This function will swap the contents pointed to by \txt{address1} and
+\txt{address2} in an atomic way. It is equivalent to executing the
+following C code fragment.
+
+\bcode
+\begin{verbatim}
+1: void x_atomic_swap(void * address1, void * address2) {
+
+2:  unsigned int tmp;
+
+3:  tmp = * (unsigned int *)address1;
+4:  * (unsigned int *)address1 = * (unsigned int *)address2;
+5:  * (unsigned int *)address2 = tmp;
+
+6: }
+\end{verbatim}
+\ecode
+
+But with a guarantee that the reading and writing operations that occur in
+lines 3 to 5 are never interrupted. I.e. they happen atomically.
+
+Note that the atomicity that is offered by this call, is only 32 bits wide
+(the size of an int). When 64 bit or other constructs need atomic reading or
+writing, a special function should be written.
+
+\subsubsection{Atomic Regions}
+
+Atomic regions are implemented by means of the enter and exit functions.
+Both calls go hand in hand and are best illustrated by means of an example.
+
+\bcode
+\begin{verbatim}
+ 1:
+ 2: x_thread owner; // Owner of the critical region, a thread global variable.
+ 3:
+ 4: void atomic_region(void) {
+ 5:
+ 6:   while (! x_enter_atomic(&owner, x_thread_current())) {
+ 7:     x_thread_sleep(1);
+ 8:   }
+ 9:
+10:   ... The critical region, the owner thread is recorded in 'owner' ...
+11:
+12:   while (! x_exit_atomic(&owner)) {
+13:     x_thread_sleep(1);
+14:   }
+15:
+16: }
+\end{verbatim}
+\ecode
+
+The \txt{x\_enter\_atomic} call will try to place the current thread
+pointer into the variable \txt{owner}. It can fail for two reasons:
+
+\begin{enumerate}
+\item The contents of the \txt{owner} variable are not NULL since another
+thread is in the critical region. The \txt{x\_enter\_atomic} call will
+return false.
+\item The contents of the \txt{owner} variable contain a special value,
+that indicate that another thread has atomically swapped\footnote{In fact,
+the \txt{x\_atomic\_swap} functionality is used for this.} in the contents of
+the \txt{owner} variable to examine its contents. The thread that is
+examining the \txt{owner} variable has put a 'special' value in the
+\txt{owner} variable to indicate that he is looking into the contents of
+the \txt{owner} variable. This special variable has the value of 1. The
+\txt{x\_enter\_atomic} will also return false in this case.
+\end{enumerate}
+
+Whatever the reason for failure, the calling thread has to wait or sleep a little
+bit so that the other thread that is examining the variable or has locked the
+critical region, is done with the job.
+
+When the \txt{x\_enter\_atomic} succeeds with a return value of 'true',
+it means that the \textbf{previous} contents of \txt{owner} were NULL and that it
+\textbf{now} contains the current thread
+pointer and as such the current thread can safely enter the critical region.
+
+When the thread wants to leave the critical section, it calls the
+\txt{x\_exit\_atomic} function so that the contents of \txt{owner} are
+again set to NULL, so that other threads can try to get into the critical
+region.
+
+It is important to note that although at line 12, the current thread owns
+the critical region, the \txt{x\_exit\_atomic} call can still fail since
+another thread could have put the special 'looking value' of 1 into the
+\txt{owner} variable, in which case the current owning thread has to wait
+a little until the other thread has stopped examining the \txt{owner}
+variable and replaced the special looking value again with the current
+thread pointer.
+
+Another equally important remark is that although the second argument to
+\txt{x\_enter\_atomic} is a void pointer, it doesn't need to be a
+pointer. It can contain whatever information is usefull for the programmer.
+The call itself does not use this argument. So it could as well contain a
+counter or a combination of a thread identifier and the number of times a
+thread has entered the critical region; this way, powerfull ad lightweight constructs
+can be made like e.g. monitors and such. There are only 2 values that should
+\textbf{NOT} be used as values for the second argument; the special 0 or
+NULL value and the special 'looking value' 1.
+
+Atomic operations are called leigthweight since they don't set or reset
+interrupt flags. In \oswald they are especially leightweight since they are
+implemented as inline assembly calls and don't have function calling
+overhead\footnote{In the \oswald implementation for x86, the
+\txt{x\_atomic\_swap} implementation is only 3 opcodes large, while the
+\txt{x\_enter\_atomic} operation is 62 bytes large. The
+\txt{x\_exit\_atomic} is even smaller than the enter function. They are
+all implemented in the \fl{cpu.h} header file.}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
