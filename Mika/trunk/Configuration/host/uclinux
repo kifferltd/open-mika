@@ -28,5 +28,5 @@ ECHO Configuring build to run Wonka on a uClinux host. ;
 # get compiler warnings that result in errors because of the -Werror flag.
 #
 
-CCFLAGS += -D__NO_STRING_INLINES -DLINUX ; 
+CCFLAGS += -D__NO_STRING_INLINES -DLINUX -DUCLINUX ; 
 

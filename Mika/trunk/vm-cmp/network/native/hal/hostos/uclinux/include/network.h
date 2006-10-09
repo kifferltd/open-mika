@@ -84,6 +84,7 @@ static inline int w_errno(int s) {
 #include <fcntl.h>
 #include "oswald.h"
 #include "locks.h"
+#include "asyncio.h"
 
 #define DMSEC 100 // # of msec waited by datagram operations
 #define AMSEC 250 // # of msec waited by the w_accept call
@@ -143,7 +144,7 @@ static inline int w_recv(w_instance This, int s, void *b, size_t l, int f, int* 
   int waited = 0;
   int timeout = *timeoutp;
 
-  //enterMonitor(This);
+  enterMonitor(This);
 
   while (retval == -1 && (errno == EAGAIN || errno == EINTR)){
     if(timeout && waited > timeout){
@@ -151,15 +152,12 @@ static inline int w_recv(w_instance This, int s, void *b, size_t l, int f, int* 
       break;
     }
     waited += SMSEC;
-
-    //waitMonitor(This, x_usecs2ticks(SMSEC * 1000));
-    x_thread_sleep(x_usecs2ticks(SMSEC * 1000));
-
+    waitMonitor(This, x_usecs2ticks(SMSEC * 1000));
     woempa(6,"polling for new bytes ...\n");
     retval = recv(s,b,l,f);
   }
 
-  //exitMonitor(This);
+  exitMonitor(This);
 
   return retval;  	
 }
