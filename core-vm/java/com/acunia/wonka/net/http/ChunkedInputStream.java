@@ -86,7 +86,7 @@ public class ChunkedInputStream extends InputStream {
       if(idx != -1){
         line = line.substring(0,idx);
       }
-      int size = Integer.parseInt(line,16);
+      int size = Integer.parseInt(line.trim(),16);
 
       if(size == 0){
         eof = true;
