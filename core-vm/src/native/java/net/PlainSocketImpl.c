@@ -281,8 +281,11 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
 
   timeout = getIntegerField(ThisImpl, F_PlainSocketImpl_timeout);
   woempa(2, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
+#ifdef UCLINUX
+  res = w_recv(ThisImpl, sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
+#else
   res = w_recv(sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
-
+#endif
   if (res == -1) {
     if( timeout == -1) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -545,7 +548,11 @@ int PlainSocketImpl_accept(JNIEnv* env , w_instance ThisImpl, w_instance newImpl
     socklen_t bytelen = sizeof (struct sockaddr_in);
   		
     memset(&sa, 0, sizeof(sa)); //lets play safe
+#ifdef UCLINUX
+    newsocket = w_accept(ThisImpl,sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
+#else
     newsocket = w_accept(sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
+#endif
     woempa(1, "newsocket = %d\n", newsocket);
   	
     //set the wotsit value to -1 or the valid socket descriptor
