@@ -28,4 +28,6 @@
 
 SubDir WONKA_TOP vm-cmp awt none src ;
 
+LOCATE_TARGET = $(OROOT)/mika/bin ;
+
 Library $(AWT_LIB) : noawt.c ;
