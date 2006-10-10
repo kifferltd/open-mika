@@ -881,7 +881,7 @@ void voidProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
-  frame->flags |= FRAME_REFLECTION;
+  new_frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;
@@ -962,7 +962,7 @@ w_word singleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
-  frame->flags |= FRAME_REFLECTION;
+  new_frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;
@@ -1065,7 +1065,7 @@ w_long doubleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
-  frame->flags |= FRAME_REFLECTION;
+  new_frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;
