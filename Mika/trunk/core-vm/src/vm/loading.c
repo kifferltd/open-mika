@@ -419,25 +419,29 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
   w_instance elementData;
   w_instance *weakrefs;
   w_int elementCount;
-  w_fifo fifo = NULL;
+  w_fifo outer_fifo = NULL;
   w_int i;
 
   if (refsToClassLoaders && (elementData = getReferenceField(refsToClassLoaders, F_Vector_elementData))) {
     weakrefs = instance2Array_instance(elementData);
     elementCount = getIntegerField(refsToClassLoaders, F_Vector_elementCount);
-    fifo = allocFifo(63);
+    outer_fifo = allocFifo(63);
 
     for (i = 0; i < elementCount; ++i) {
       w_instance ref = *weakrefs++;
       w_instance classloader = getWotsitField(ref, F_Reference_referent);
 
       if (classloader) {
-        putFifo(fun(classloader), fifo);
+        w_fifo inner_fifo = fun(classloader);
+
+        if (inner_fifo) {
+          putFifo(inner_fifo, outer_fifo);
+        }
       }
     }
   }
 
-  return fifo;
+  return outer_fifo;
 }
 
 /*
@@ -1372,7 +1376,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
     return NULL;
 
   }
-  frame = activateFrame(thread, method, 0, 2, initiating_loader, stack_trace, Name, stack_trace);
+  frame = activateFrame(thread, method, FRAME_LOADING, 2, initiating_loader, stack_trace, Name, stack_trace);
   exception = exceptionThrown(thread);
   if (! exception) {
     theClass = (w_instance) frame->jstack_top[-1].c;

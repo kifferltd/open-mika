@@ -109,7 +109,17 @@ w_ubyte clazz2sigbyte(w_clazz clazz) {
 ** Returns TRUE if the pointer is genuine, FALSE otherwise.
 */
 w_boolean jdwp_check_clazz(w_clazz clazz) {
-  return clazz && (strcmp(clazz->label, "clazz") == 0) && (Class2clazz(clazz2Class(clazz)) == clazz);
+  if (!clazz || strcmp(clazz->label, "clazz") != 0) {
+    return FALSE;
+  }
+  else {
+    w_instance instance = clazz2Class(clazz);
+    w_clazz roundtrip = Class2clazz(instance);
+
+    woempa(7, "  class instance = %j -> clazz %k\n", instance, roundtrip);
+
+    return roundtrip == clazz;
+  }
 }
 
 /*

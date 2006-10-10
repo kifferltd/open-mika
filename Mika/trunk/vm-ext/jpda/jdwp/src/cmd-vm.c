@@ -162,6 +162,11 @@ static void *getMatchingClasses(w_instance loader) {
   woempa(7, "%j has loaded %d classes matching %w\n", loader, fifo2->numElements, classname);
   releaseFifo(fifo1);
 
+  if (fifo2->numElements == 0) {
+    releaseFifo(fifo2);
+    fifo2 = NULL;
+  }
+
   return fifo2;
 }
 

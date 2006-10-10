@@ -310,6 +310,7 @@ w_void jdwp_thr_group(jdwp_command_packet cmd) {
   }
 }
 
+#define JDWP_IGNORE_FRAME (FRAME_JNI | FRAME_LOADING | FRAME_CLINIT | FRAME_REFLECTION)
 
 /*
 **  Returns the call stack of a thread. The thread has to be suspended, and the frameID is only 
@@ -348,7 +349,7 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
         woempa(7, "  top frame is at %p\n", cursor);
       
         while(cursor  && cursor->method && count < start) {
-          count++;
+          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;
           cursor = cursor->previous;
         }
       
@@ -362,7 +363,7 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
         count = 0;
 
         while(cursor  && cursor->method && (length == -1 ? 1 : (count < length))) {
-          count++;
+          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;
           cursor = cursor->previous;
         }
 
@@ -373,23 +374,25 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
         count = 0;
 
         while(cursor  && cursor->method && (length == -1 ? 1 : (count < length))) {
-          frame = cursor;
+          if (isNotSet(cursor->flags, JDWP_IGNORE_FRAME)) {
+            frame = cursor;
       
-          woempa(7, "    frame at %p (%m)\n", frame, frame->method);
-          jdwp_put_frame(&reply_grobag, frame);
+            woempa(7, "    frame at %p (%m)\n", frame, frame->method);
+            jdwp_put_frame(&reply_grobag, frame);
   
-          method = cursor->method;
-          clazz = method->spec.declaring_clazz;
-          pc = frame->current - method->exec.code;
+            method = cursor->method;
+            clazz = method->spec.declaring_clazz;
+            pc = frame->current - method->exec.code;
 
-          location.tag = isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class;
-          location.clazz = clazz;
-          location.method = method;
-          location.pc = pc;
+            location.tag = isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class;
+            location.clazz = clazz;
+            location.method = method;
+            location.pc = pc;
 
-          jdwp_put_location(&reply_grobag, &location);
+            jdwp_put_location(&reply_grobag, &location);
       
-          count++;
+            count++;
+          }
           cursor = cursor->previous;
         }
 
@@ -431,10 +434,10 @@ w_void jdwp_thr_countframes(jdwp_command_packet cmd) {
       if(thread->kthread->state == xt_suspended || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
         cursor = thread->top;
         while(cursor) {
-          count++;
+          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;
           cursor = cursor->previous;
         }
-        jdwp_put_frame(&reply_grobag, cursor);
+        jdwp_put_u4(&reply_grobag, count);
         jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
       }
       else {

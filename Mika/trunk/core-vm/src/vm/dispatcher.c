@@ -39,6 +39,7 @@
 #include "exception.h"
 #include "heap.h"
 #include "interpreter.h"
+#include "jdwp.h"
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
@@ -648,6 +649,7 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
 
 static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w_method method) {
 
+  frame->flags = FRAME_NATIVE;
   frame->label = "frame";
   frame->previous = caller;
   frame->thread = thread;
@@ -1307,7 +1309,15 @@ void prepareBytecode(w_method method) {
   bytecode = method->exec.code;
 
   while (pc < method->exec.code_length) {
-    switch (bytecode[pc]) {
+    int bc = bytecode[pc];
+
+#ifdef JDWP
+    if (bc == breakpoint) {
+      bc = jdwp_breakpoint_get_original(bytecode + pc);
+    }
+#endif
+
+    switch (bc) {
       case aload: case astore: case bipush: case dload: case dstore: case fload: case fstore:
       case iload: case istore: case lload: case lstore: case newarray: case ret: {
         pc += 1; 

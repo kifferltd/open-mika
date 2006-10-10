@@ -695,6 +695,7 @@ jobject NewObject(JNIEnv *env, jclass class, jmethodID methodID, ...) {
 
   if (new) {
     frame = pushFrame(thread, methodID);
+    frame->flags |= FRAME_JNI;
     frame->jstack_top[0].c = (w_word) new;
     frame->jstack_top[0].s = stack_trace;
     frame->jstack_top += 1;
@@ -728,6 +729,7 @@ jobject NewObjectV(JNIEnv *env, jclass class, jmethodID methodID, va_list args) 
 
   if (new) {
     frame = pushFrame(thread, methodID);
+    frame->flags |= FRAME_JNI;
     frame->jstack_top[0].c = (w_word) new;
     frame->jstack_top[0].s = stack_trace;
     frame->jstack_top += 1;
@@ -760,6 +762,7 @@ jobject NewObjectA(JNIEnv *env, jclass class, jmethodID methodID, jvalue *args) 
 
   if (new) {
     frame = pushFrame(thread, methodID);
+    frame->flags |= FRAME_JNI;
     frame->jstack_top[0].c = (w_word) new;
     frame->jstack_top[0].s = stack_trace;
     frame->jstack_top += 1;
@@ -814,6 +817,7 @@ w_word CallMethod32(JNIEnv *env, jobject instance, w_method method, va_list args
   w_frame frame;
 
   frame = pushFrame(thread, method);
+  frame->flags |= FRAME_JNI;
 
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;
@@ -831,6 +835,7 @@ w_word CallMethod32A(JNIEnv *env, jobject instance, w_method method, jvalue *arg
   w_thread thread = JNIEnv2w_thread(env);
 
   w_frame frame = pushFrame(thread, method);
+  frame->flags |= FRAME_JNI;
 
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;
@@ -849,6 +854,7 @@ w_dword CallMethod64(JNIEnv *env, jobject instance, w_method method, va_list arg
 
   w_frame frame = pushFrame(thread, method);
 
+  frame->flags |= FRAME_JNI;
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
@@ -865,6 +871,7 @@ w_dword CallMethod64A(JNIEnv *env, jobject instance, w_method method, jvalue *ar
   w_thread thread = JNIEnv2w_thread(env);
   w_frame frame = pushFrame(thread, method);
 
+  frame->flags |= FRAME_JNI;
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
@@ -879,6 +886,7 @@ w_void CallMethodVoid(JNIEnv *env, jobject instance, w_method method, va_list ar
 
   w_thread thread = JNIEnv2w_thread(env);
   w_frame frame = pushFrame(thread, method);
+  frame->flags |= FRAME_JNI;
 
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;
@@ -896,6 +904,7 @@ w_void CallMethodVoidA(JNIEnv *env, jobject instance, w_method method, jvalue *a
 
   w_thread thread = JNIEnv2w_thread(env);
   w_frame frame = pushFrame(thread, method);
+  frame->flags |= FRAME_JNI;
 
   frame->jstack_top[0].c = (w_word) instance;
   frame->jstack_top[0].s = stack_trace;

@@ -3811,11 +3811,10 @@ void interpret(w_frame caller, w_method method) {
     w_ubyte original_bytecode;
 
     enterSafeRegion(thread);
-    original_bytecode = jdwp_event_breakpoint(current);
+    original_bytecode = jdwp_breakpoint_event(current);
     enterUnsafeRegion(thread);
     goto * jumps[original_bytecode];
 #endif
-    do_next_opcode;
   }
 
 #ifndef PACK_BYTE_FIELDS
@@ -4149,7 +4148,7 @@ w_frame activateFrame(w_thread thread, w_method method, w_word flags, w_int narg
     }
     va_end(args);
 
-    frame->flags = flags;
+    frame->flags |= flags;
     i_callMethod(frame, method);
   }
   

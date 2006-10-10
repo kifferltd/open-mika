@@ -543,8 +543,8 @@ w_frame invoke(JNIEnv *env, w_method method, w_instance This, w_instance Argumen
   threadMustBeSafe(thread);
 
   woempa(1, "(REFLECTION) Invoking %M, %d argument words.\n", method, method->exec.arg_i);
-
   frame = pushFrame(thread, method);
+  frame->flags |= FRAME_REFLECTION;
 
   numArgs = instance2Array_length(Arguments);
   spec_nargs = 0;
@@ -881,6 +881,7 @@ void voidProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
+  frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;
@@ -961,6 +962,7 @@ w_word singleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
+  frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;
@@ -1063,6 +1065,7 @@ w_long doubleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
   setWotsitField(currentMethod, F_Method_wotsit, current_method);
   new_frame = pushFrame(thread, target_method);
+  frame->flags |= FRAME_REFLECTION;
 
   new_frame->jstack_top[0].c = (w_word)handler;
   new_frame->jstack_top[0].s = stack_trace;

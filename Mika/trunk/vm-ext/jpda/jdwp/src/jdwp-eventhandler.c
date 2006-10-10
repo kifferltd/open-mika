@@ -955,10 +955,22 @@ void jdwp_event_vm_start(w_instance threadID) {
 }
 
 /*
-** We've hit a breakpoint !
+** Return the opcode byte which was overwritten by a breakpoint.
 */
 
-w_ubyte jdwp_event_breakpoint(w_ubyte *code) {
+w_ubyte jdwp_breakpoint_get_original(w_ubyte *code) {
+  jdwp_breakpoint      point;
+
+  point = jdwp_breakpoint_get(code);
+  // TODO: what if not found?
+
+  return point->original;
+}
+
+/*
+*/
+
+w_ubyte jdwp_breakpoint_event(w_ubyte *code) {
   jdwp_event           event;
   jdwp_breakpoint      point;
   w_instance           instance = currentWonkaThread->Thread;
@@ -985,6 +997,8 @@ w_ubyte jdwp_event_breakpoint(w_ubyte *code) {
   */
  
   point = jdwp_breakpoint_get(code);
+  // TODO: what if not found?
+
   event = point->event;
   woempa(7, "Hit breakpoint (event %p, original bytecode %02x, location %d:%k:%m:%d) at %p\n", point->event, point->original, point->location.tag, point->location.clazz, point->location.method, point->location.pc, point->code);
 
@@ -1010,10 +1024,7 @@ w_ubyte jdwp_event_breakpoint(w_ubyte *code) {
   releaseGrobag(&gb);
 
   /*
-  ** Return the original opcode. This is used in the interpreter loop where the breakpoint
-  ** opcode will be overwritten with the original opcode. Then the pc is turned back by one
-  ** so the interpreter will go over the original opcode. Then the breakpoint will be written
-  ** over the original opcode once again.
+  ** Return the original opcode.
   */
 
   return point->original;
