@@ -591,6 +591,10 @@ extern void jdwp_internal_suspend_all(void);
 
 extern void jdwp_internal_resume_all(void);
 
+extern w_ubyte jdwp_breakpoint_event(w_ubyte *code);
+
+extern w_ubyte jdwp_breakpoint_get_original(w_ubyte *code);
+
 /*
 ** The following static const indicates if JDWP was enabled or not. 
 */

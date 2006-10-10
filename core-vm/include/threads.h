@@ -161,12 +161,14 @@ void callMethod(w_frame arguments, w_method method);
 * Stack frame flags
 */
 
-//#define FRAME_CLINIT        0x00000004   /* Frame is used to run a <clinit> method  */
 #define FRAME_NATIVE        0x00000001   /* Frame is a host frame for a native method */
 #define FRAME_JNI           0x00000002   /* Frame is used in a JNI call */
-#define FRAME_STACKMAP      0x00000004   /* Frame has stack map  */
-#define FRAME_REFLECTION    0x00000008   /* Frame is used in reflection invocation */
-#define FRAME_PRIVILEGED    0x00000010   /* Frame was built using doPrivileged */
+#define FRAME_LOADING       0x00000004   /* Frame built to invoke classloader */
+#define FRAME_CLINIT        0x00000008   /* Frame is used to run a <clinit> method  */
+#define FRAME_REFLECTION    0x00000010   /* Frame is used in reflection invocation */
+#define FRAME_PRIVILEGED    0x00000040   /* Frame was built using doPrivileged */
+#define FRAME_STACKMAP      0x00000080   /* Frame has stack map  */
+
 
 /**
 ** Get the security domain associated with a frame.

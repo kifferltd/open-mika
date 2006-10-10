@@ -356,7 +356,7 @@ w_int initializeClazz(w_clazz clazz) {
       initializeStaticFields(thread, clazz);
       if (clazz->clinit) {
         woempa(1, "Class %k has <clinit> method %m, so let's run it.\n", clazz, clazz->clinit);
-        frame = activateFrame(thread, clazz->clinit, 0, 0);
+        frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         deactivateFrame(frame, NULL);
         cleanUpClinit(clazz->clinit);
         //clazz->clinit = NULL;

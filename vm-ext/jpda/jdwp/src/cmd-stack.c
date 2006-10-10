@@ -39,7 +39,7 @@
 #include "wonka.h"
 
 #ifdef DEBUG
-static const char* stack_reference_command_names[] = {
+static const char* stack_frame_command_names[] = {
   /*  0 */ NULL,
   /*  1 */ "GetValues",
   /*  2 */ "SetValues",
@@ -47,7 +47,7 @@ static const char* stack_reference_command_names[] = {
   /*  4 */ "PopFrames",
 };
 
-#define STACK_REFERENCE_MAX_COMMAND 4
+#define STACK_FRAME_MAX_COMMAND 4
 #endif
 
 extern w_thread jdwp_check_thread_reference(w_instance);
@@ -75,30 +75,35 @@ w_void jdwp_stack_get_values(jdwp_command_packet cmd) {
       for(i = 0; i < slots; i++) {
         slot = jdwp_get_u4(cmd->data, &offset);
         tag = jdwp_get_u1(cmd->data, &offset);
-        jdwp_put_u1(&reply_grobag, tag);
 
         switch(tag) {
           case 'V':
+            jdwp_put_u1(&reply_grobag, tag);
             break;
           case 'B':
           case 'Z':
+            jdwp_put_u1(&reply_grobag, tag);
             jdwp_put_u1(&reply_grobag, (w_ubyte)frame->jstack_base[slot].c);
             break;  
           case 'C':
           case 'S':
-           jdwp_put_u2(&reply_grobag, (w_ushort)frame->jstack_base[slot].c);
+            jdwp_put_u1(&reply_grobag, tag);
+            jdwp_put_u2(&reply_grobag, (w_ushort)frame->jstack_base[slot].c);
             break;
           case 'F':
           case 'I':
+            jdwp_put_u1(&reply_grobag, tag);
             jdwp_put_u4(&reply_grobag, frame->jstack_base[slot].c);
             break;
           case 'J':
           case 'D':
+            jdwp_put_u1(&reply_grobag, tag);
             jdwp_put_u4(&reply_grobag, frame->jstack_base[slot + WORD_MSW].c);
             jdwp_put_u4(&reply_grobag, frame->jstack_base[slot + WORD_LSW].c);
             break;
           default:
-           jdwp_put_objectref(&reply_grobag, (w_instance)frame->jstack_base[slot].c);
+            jdwp_put_u1(&reply_grobag, clazz2sigbyte(instance2clazz((w_instance)frame->jstack_base[slot].c)));
+            jdwp_put_objectref(&reply_grobag, (w_instance)frame->jstack_base[slot].c);
         }
       }
 
@@ -243,7 +248,7 @@ w_void jdwp_stack_this(jdwp_command_packet cmd) {
 
 w_void dispatch_stack(jdwp_command_packet cmd) {
 
-  woempa(7, "StackReference Command = %s\n", cmd->command > 0 && cmd->command <= STACK_REFERENCE_MAX_COMMAND ? stack_reference_command_names[cmd->command] : "unknown");
+  woempa(7, "StackReference Command = %s\n", cmd->command > 0 && cmd->command <= STACK_FRAME_MAX_COMMAND ? stack_frame_command_names[cmd->command] : "unknown");
   switch((jdwp_stack_cmd)cmd->command) {
     case jdwp_stack_getValues:
       jdwp_stack_get_values(cmd);
