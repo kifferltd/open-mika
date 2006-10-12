@@ -1001,7 +1001,8 @@ w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
     if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
-      w_clazz outer_clazz = getClassConstant(clazz, i);
+      int j = clazz->temp.inner_class_info[i].outer_class_info_index;
+      w_clazz outer_clazz = getClassConstant(clazz, j);
 
       return clazz2Class(outer_clazz);
     }
@@ -1022,7 +1023,9 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
     if (clazz->temp.inner_class_info[i].outer_class_info_index == clazz->temp.this_index) {
-      inner_clazz[n++] = getClassConstant(clazz, i);
+      int j = clazz->temp.inner_class_info[i].inner_class_info_index;
+
+      inner_clazz[n++] = getClassConstant(clazz, j);
       if (exceptionThrown(thread)) {
 
         return NULL;
@@ -1059,7 +1062,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   while (super) {
     for (i = 0; i < super->temp.inner_class_info_count; ++i) {
       if (super->temp.inner_class_info[i].outer_class_info_index == super->temp.this_index) {
-        w_clazz inner_clazz = getClassConstant(super, i);
+        w_clazz inner_clazz = getClassConstant(super, clazz->temp.inner_class_info[i].inner_class_info_index);
 
         if (exceptionThrown(thread)) {
           releaseFifo(inner_clazz_fifo);
