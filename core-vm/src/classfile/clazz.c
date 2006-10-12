@@ -615,12 +615,13 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
   w_int length;
 
   if (bar_avail(bar) < 2) {
-    woempa(9, "Class file too short for class attribute count\n");
+    woempa(9, "Class file too short for attribute count\n");
 
     return FALSE;
   }
 
   n = get_u2(bar);
+  woempa(1, "%d attributes\n", n);
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 6) {
@@ -636,6 +637,7 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
       return FALSE;
     }
     length = get_u4(bar);
+    woempa(1, "Attribute[%d] length = %d\n", i, length);
     if (bar_avail(bar) < length) {
       woempa(9, "Less than <attribute length> bytes remaining\n");
 
@@ -686,6 +688,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   }
 
   n = get_u2(bar);
+  woempa(1, "%d fields\n", n);
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {
@@ -721,6 +724,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   }
 
   n = get_u2(bar);
+  woempa(1, "%d methods\n", n);
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {

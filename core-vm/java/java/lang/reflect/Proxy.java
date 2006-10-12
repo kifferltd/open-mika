@@ -362,7 +362,7 @@ public class Proxy implements java.io.Serializable {
     classfile.write16(1);  // no. attributes
     classfile.write16(code_tag_index);
     classfile.write16(0);  // MS half of attribute length
-    classfile.write16(16); // LS half of attribute length
+    classfile.write16(18); // LS half of attribute length
     classfile.write16(2);  // max stack
     classfile.write16(2);  // max locals
     classfile.write16(0);  // MS half of code length
