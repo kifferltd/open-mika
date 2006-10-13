@@ -51,7 +51,7 @@
     <antcall target="build-ext"/>
     <antcall target="jam-mika"/>
     <antcall target="copy-resources"/>
-  </target>
+ </target>
 
   <!-- build helper targets ... -->
   <target name="check-build-env">
@@ -145,7 +145,9 @@
   <target name="cleanplatform">
     <delete dir="${build.dir}"/>
     <delete dir="${release.dir}"/>
-    <antcall target="prepare"/>
+    <mkdir dir="${class.dir}"/>
+    <mkdir dir="${empty.dir}"/>
+    <mkdir dir="${release.ext.dir}"/>
   </target>
 
   <!-- jamming mika targets -->

@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Properties;
 
@@ -54,9 +55,8 @@ public class BuildSettingsChecker extends Task {
   private String task;
   
   private final static String[] keylist = new String[] {
-    "SECURITY" , "JAR", "MATH", "JAVA_BEANS", "AWT",
-    "JAVAX_CRYPTO", "JAVAX_COMM", "AWT_DEF",
-    "DEBUG", "STATIC", "TESTS", "JAM.PLATFORM"
+    "SECURITY" , "JAR", "MATH", "JAVA_BEANS", "AWT", "DEBUG",
+    "JAVAX_CRYPTO", "JAVAX_COMM", "AWT_DEF", "STATIC",
   };
   
   public final String getFile() {
@@ -79,9 +79,9 @@ public class BuildSettingsChecker extends Task {
     if(file == null) {
       throw new BuildException("specify a 'file'");
     }
-    
+
     File f = new File(file);
-    
+
     Project project = getProject();
     Hashtable props = (Hashtable) project.getProperties().clone();
     props.putAll(project.getUserProperties());
@@ -104,37 +104,71 @@ public class BuildSettingsChecker extends Task {
       Object value = list.get(key);
       props.setProperty(key,(value == null ? "" : (String)value));
     }
-    
+    Enumeration keys = list.keys();
+    while(keys.hasMoreElements()) {
+      try {
+        String key = (String) keys.nextElement();
+        if(key.startsWith("JAM.")) {
+          Object value = list.get(key);
+          props.setProperty(key,(value == null ? "" : (String)value));
+        }
+      } catch(ClassCastException cce) {
+        //Ignore ...
+      }
+    }
+
     log("Storing "+props+" to '"+file+"'");
-    
     props.store(new FileOutputStream(file), "ANT GENERATED - DO NOT CHANGE !");    
   }
 
   private boolean checkProperties(Hashtable list) throws IOException {
-    Properties props = new Properties();    
+    Properties props = new Properties();
     props.load(new FileInputStream(file));
     for(int i=0 ; i < keylist.length ; i++) {
       String key = keylist[i];
       Object value = list.get(key);
       String setting = value == null ? "" : (String)value;
       if(!setting.equals(props.getProperty(key))) {
-        log("Key '"+key+"' doesn't math:");
-        log("\twas = '"+props.getProperty(key)+"'");
-        log("\t is = '"+value+"'");
-        CallTarget call = new CallTarget();
-        call.setLocation(this.getLocation());
-        call.setInheritAll(true);
-        call.setProject(this.getProject());
-        call.setOwningTarget(this.getOwningTarget());
-        call.setDescription(task);
-        call.setTaskName("/k/" + task);
-        call.setTarget(task);
-        call.init();
-        call.execute();        
+        doClean(key, setting, props);
         return false;
       }
-    }  
+    }
+    Hashtable all = new Hashtable();
+    all.putAll(list);
+    all.putAll(props);
+    Enumeration keys = all.keys();
+    while(keys.hasMoreElements()) {
+      try {
+        String key = (String) keys.nextElement();
+        if(key.startsWith("JAM.")) {
+          Object value = list.get(key);
+          String setting = value == null ? "" : (String)value;
+          if(!setting.equals(props.getProperty(key))) {
+            doClean(key, setting, props);
+            return false;
+          }
+        }
+      } catch(ClassCastException cce) {
+        //Ignore ...
+      }
+    }
     log("All keys matched !");
-    return true;    
+    return true;
+  }
+
+  private void doClean(String key, Object value, Properties props) {
+    log("Key '"+key+"' doesn't match:");
+    log("\twas = '"+props.getProperty(key,"")+"'");
+    log("\t is = '"+value+"'");
+    CallTarget call = new CallTarget();
+    call.setLocation(this.getLocation());
+    call.setInheritAll(true);
+    call.setProject(this.getProject());
+    call.setOwningTarget(this.getOwningTarget());
+    call.setDescription(task);
+    call.setTaskName("/k/" + task);
+    call.setTarget(task);
+    call.init();
+    call.execute();
   }
 }
