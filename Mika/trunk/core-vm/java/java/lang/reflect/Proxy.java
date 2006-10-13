@@ -28,6 +28,7 @@
 package java.lang.reflect;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Vector;
 
@@ -54,10 +55,10 @@ public class Proxy implements java.io.Serializable {
 
 /**
  Hashtable used to map classloader x interfaces -> dynamic proxy class.
- The key is a Vector in which the first element is the classloader and
+ The key is an ArrayList in which the first element is the classloader and
  the remaining elements are the interfaces which are implemented; the
  corresponding value is the Class object for the dynamic proxy class.
- We call such a Vector a "proxyspec".
+ We call such an ArrayList a "proxyspec".
  <p>
  Method getProxyClass synchronises on this object while creating a new
  proxy class, so we use this lock to protect other static structures.
@@ -196,57 +197,32 @@ public class Proxy implements java.io.Serializable {
   }
 
 /**
- If any of the interfaces implemented by this dynamic proxy class are
- non-public, then the dynamic proxy will be in the same package. Of
- course if there are multiple non-public interfaces in different packages,
- we might as well give up and go home.
-*/
-  private static String proxypackage(Vector proxyspec) {
-    String string = null;
-    int l = proxyspec.size();
-    for (int i = 1; i < l; ++i) {
-      Class c = (Class)proxyspec.elementAt(i);
-      if (!Modifier.isPublic(c.getModifiers())) {
-        if (string == null) {
-          string = c.getPackage().getName();
-        }
-        else {
-          throw new IllegalArgumentException("chimerical interfaces");
-        }
-      }
-    }
-
-    return string;
-  }
-
-/**
  The namespace beginning "$Proxy" is reserved for dynamic proxy classes.
  We make up the name as follows:
 <pre>
    $Proxy$$&lt;hash&gt;$$&lt;cl&gt;$$&lt;i1&gt;$$&lt;i2&gt;...
 </pre>
- where &lt;hash&gt; is the hashcode of the Vector used as the key to the
+ where &lt;hash&gt; is the hashcode of the ArrayList used as the key to the
  hashtable of known proxies, as a hex string; &lt;cl&gt; is the name of the
  class of the classloader, and &lt;i1&gt; etc. are the names of the interfaces.
 */
-  private static String proxyname(Vector proxyspec) {
+  private static String proxyname(Package pkg, ArrayList proxyspec) {
    StringBuffer s = new StringBuffer();
-   String pkgname = proxypackage(proxyspec);
-   if (pkgname != null) {
-     s.append(pkgname);
+   if (pkg != null) {
+     s.append(pkg.getName());
      s.append('.');
    }
    s.append("$Proxy$$");
    s.append(Integer.toHexString(proxyspec.hashCode()));
    s.append("$$");
-   s.append(proxyspec.elementAt(0).getClass().getName());
+   s.append(proxyspec.get(0).getClass().getName().replace('.','_'));
    int l = proxyspec.size();
    for (int i = 1; i < l; ++i) {
      s.append("$$");
-     s.append(((Class)proxyspec.elementAt(i)).getName());
+     s.append(((Class)proxyspec.get(i)).getName().replace('.','_'));
    }
 
-   return s.toString().replace('.','_');
+   return s.toString();
   }
 
 /**
@@ -309,10 +285,10 @@ public class Proxy implements java.io.Serializable {
  Create a dynamic proxy class. We write a simple classfile in memory, and
  pass it to classloader.defineProxyClass().
 */
-  private static Class makeproxy(Vector proxyspec) {
+  private static Class makeproxy(Package pkg, ArrayList proxyspec) {
     int numInterfaces = proxyspec.size() - 1;
     int i;
-    String name = proxyname(proxyspec);
+    String name = proxyname(pkg, proxyspec);
     ClassFile classfile = new ClassFile();
 
 // Build the constant pool. Remember where we put the class constant for the
@@ -329,7 +305,7 @@ public class Proxy implements java.io.Serializable {
     int code_tag_index = classfile.addConstant(utf8Constant("Code"));
     int[] itf_index = new int[numInterfaces];
     for (i = 0; i < numInterfaces; ++i) {
-      itf_index[i] = classfile.addClassConstant((Class)proxyspec.elementAt(i + 1));
+      itf_index[i] = classfile.addClassConstant((Class)proxyspec.get(i + 1));
     }
 
 // OK, let's write out the class file.
@@ -378,7 +354,7 @@ public class Proxy implements java.io.Serializable {
     classfile.write16(0);
 // That's it, folks ...
 
-    ClassLoader cl = (ClassLoader)proxyspec.elementAt(0);
+    ClassLoader cl = (ClassLoader)proxyspec.get(0);
     if (cl == null) {
       cl = ClassLoader.getSystemClassLoader();
     }
@@ -400,18 +376,58 @@ public class Proxy implements java.io.Serializable {
   }
 
   public static Class getProxyClass(ClassLoader loader, Class[] interfaces) throws IllegalArgumentException {
-    Vector proxyspec = new Vector(interfaces.length + 1);
-    proxyspec.addElement(loader);
+    ArrayList al = new ArrayList();
+    Package pkg = null;
+
+    // Check the 'interfaces' array:
+    for (int i = 0; i < interfaces.length; ++i) {
+      Class itf = interfaces[i];
+      // must contain only interfaces, not classes or primitive types.
+      if (!itf.isInterface()) {
+        throw new IllegalArgumentException(itf + " is not an interface");
+      }
+
+      // no duplicates
+      if (al.contains(itf)) {
+        throw new IllegalArgumentException(itf + " is duplicate interface");
+      }
+
+      // must be visible through specified class loader
+      try {
+        if (Class.forName(itf.getName(), false, loader) != itf) {
+          throw new IllegalArgumentException(itf + " is not visible using " + loader);
+        }
+      }
+      catch (Exception e) {
+        throw new IllegalArgumentException(itf + " is not visible using " + loader + ": " + e);
+      }
+
+      if (!Modifier.isPublic(itf.getModifiers())) {
+        if (pkg == null) {
+          pkg = itf.getPackage();
+        }
+        else if (itf.getPackage() != pkg) {
+          throw new IllegalArgumentException(itf + " is not in same package as " + interfaces[0]);
+      }
+    }
+
+      // TODO: No two interfaces may each have a method with the same name and parameter signature but different return type.
+
+      al.add(itf);
+    }
+
+    ArrayList proxyspec = new ArrayList(interfaces.length + 1);
+    proxyspec.add(loader);
     int l = interfaces.length;
     for (int i = 0; i < l; ++i) {
-      proxyspec.addElement(interfaces[i]);
+      proxyspec.add(interfaces[i]);
     }
     synchronized(proxies) {
       Class proxy = (Class)proxies.get(proxyspec);
       if (proxy != null) {
         return proxy;
       }
-      proxy = makeproxy(proxyspec);
+      proxy = makeproxy(pkg, proxyspec);
       proxies.put(proxyspec, proxy);
       return proxy;
     }
@@ -436,38 +452,6 @@ public class Proxy implements java.io.Serializable {
     }
     catch (InvocationTargetException ite) {
       throw new java.lang.UnknownError(proxy + "constructor failed : " + ite);
-    }
-  }
-
-  private static class MyException extends Exception {
-  }
-
-  private static class myIH implements InvocationHandler {
-    static Method method_compareTo;
-    
-    static {
-      try {
-        method_compareTo = Comparable.class.getMethod("compareTo", new Class[] {Object.class});
-      }
-      catch (NoSuchMethodException nsme) {}
-    }
-
-    public Object invoke(Object proxy, Method method, Object[] args) throws Exception {
-      System.out.println("Proxy : calling myIH.invoke() with method " + method);
-      if (args != null)
-      for (int i = 0; i < args.length; ++i) {
-        System.out.println("  arg[" + i + "] = " + args[i]);
-      }
-
-      if (method.equals(method_compareTo)) {
-        Integer result = new Integer("baz".compareTo((String)args[0]));
-	System.out.println("returning " + result);
-	return result;
-      }
-      System.out.println("method not recognised, returning null");
-      //throw new NullPointerException();
-      throw new MyException();
-      //return null;
     }
   }
 
