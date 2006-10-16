@@ -23,7 +23,7 @@
 
 
 /*
-** $Id: Heartbeat.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
+** $Id: Heartbeat.java,v 1.2 2006/10/13 13:40:33 cvs Exp $
 */
 
 package wonka.vm;
@@ -92,15 +92,9 @@ public final class Heartbeat implements Runnable {
    ** The run() method
    */
   public void run() {
-    long next_beat = System.currentTimeMillis();
-
     while(true) {
-      next_beat += PERIOD;
       try {
-        long sleep = next_beat -  System.currentTimeMillis();
-        if(sleep > 0){
-          Thread.sleep(sleep);
-        }
+        Thread.sleep(PERIOD);
       }
       catch (InterruptedException ie) {
       }
