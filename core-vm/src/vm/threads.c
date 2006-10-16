@@ -286,7 +286,7 @@ void removeThreadFromGroup(w_thread thread, w_instance parentThreadGroup) {
 
 /*
 ** Note [CG 20031112] :
-** don't use woempa() or wabort() in here, 'coz they call currentWonkaTHread ...
+** don't use woempa() or wabort() in here, 'coz they call currentWonkaThread ...
 */
 w_thread _currentWonkaThread(const char *f, int l) {
   x_thread kthread;
@@ -696,14 +696,17 @@ w_boolean enterSafeRegion(const w_thread thread) {
 
   }
 
+#ifdef RUNTIME_CHECKS
+  if (number_unsafe_threads <= 0) {
+    wabort(ABORT_WONKA, "number_unsafe_threads = %d in enterSafeRegion()!\n", number_unsafe_threads);
+  }
+#endif
+
 #ifdef GC_SAFE_POINTS_USE_NO_MONITORS
   -- number_unsafe_threads;
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
   x_monitor_eternal(safe_points_monitor);
-  if (number_unsafe_threads <= 0) {
-    wabort(ABORT_WONKA, "number_unsafe_threads = %d in enterSafeRegion()!\n", number_unsafe_threads);
-  }
   -- number_unsafe_threads;
   woempa(2, "enterSafeRegion: %t decremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
