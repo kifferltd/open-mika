@@ -46,7 +46,7 @@
 #include "wonka.h"
 #include "vfs.h"
 #include "network.h"
-
+#include "exec.h"
 #ifndef FSROOT
 #define FSROOT "./fsroot"
 #endif
@@ -54,6 +54,7 @@
 #ifdef MODULES
 extern void  x_symtab_kernel(void);
 #endif
+
 //TODO: get rid of these extern's
 extern void mouse_set_path(char *s);
 
@@ -260,18 +261,27 @@ void args_read(void) {
 
   if (fsroot[0] == '.') {
     char *new_fsroot;
-    int l = strlen(command_line_path);
+    char *path = host_getCommandPath();
+    int l = strlen(path);
 
-    woempa(7, "fsroot was '%s', command_line_path is '%s'\n", fsroot, command_line_path);
+    woempa(7, "fsroot was '%s', path is '%s'\n", fsroot, path);
     if (fsroot[1] == '/') {
       fsroot += 2;
     }
-    while (command_line_path[--l] != '/');
+    while (path[--l] != '/') {
+      if(l <= 0) {
+        woempa(9,"Panic mode: where are we called from ?\n\tNo slash found in '%s'\n",path); 
+        wabort(ABORT_WONKA, "Unable to locate binary !\n");
+      }
+    } 
+
     woempa(7, "Allocating %d bytes for new fsroot\n", l + strlen(fsroot) + 2);
     new_fsroot = allocClearedMem(l + strlen(fsroot) + 2);
-    memcpy(new_fsroot, command_line_path, l + 1);
+    memcpy(new_fsroot, path, l + 1);
     woempa(7, "command_line_path directory is '%s'\n", new_fsroot);
     memcpy(new_fsroot + l + 1, fsroot, strlen(fsroot));
+    releaseMem(path);
+
     fsroot = new_fsroot;
     woempa(7, "fsroot is now '%s'\n", fsroot);
   }

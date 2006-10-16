@@ -51,4 +51,5 @@ w_void  host_close_out(w_void* pid);
 w_void  host_close_err(w_void* pid);
 w_void  host_close(w_void* pid);
 
+char*   host_getCommandPath(void);
 #endif /* _EXEC_H */
