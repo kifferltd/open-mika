@@ -64,6 +64,49 @@ typedef w_Pid_struct* w_pid;
 extern char *current_working_dir;
 extern char **environ;
 
+extern char *command_line_path;
+
+char* cloneCommandLinePath(void) {
+  int len = strlen(command_line_path);
+  char* path = allocMem(len+1);
+  memcpy(path, command_line_path, len);
+  path[len] = 0;
+  return path;
+}
+
+char *host_getCommandPath() {
+  pid_t pid = getpid();
+  char buffer[64];
+  int result;
+  char* path;
+  int size = 256;
+  int len = snprintf(buffer, 128, "/proc/%d/exe", pid);
+  woempa(5,"formatted %d into '%s' (len = %d)\n",len);
+
+  if(len == -1 || len >= 128) {
+    return cloneCommandLinePath();
+  }
+
+  do {
+     path = allocMem(size);
+     if(path == NULL) {
+       return cloneCommandLinePath();
+     }
+     result = readlink(buffer, path, size);
+     if(result == -1) {
+       return cloneCommandLinePath();
+     } else if(result >= size) {
+       releaseMem(path);
+       size *= 2;
+     } else {
+       path[result] = 0;
+       woempa(9,"Found mika binary: '%s'\n",path);
+       return path;
+     }
+  } while (1);
+}
+
+
 /*
 ** Spawn a child process used to execute 'cmd', using path 'path'. Note that
 ** currently 'env' is not used (bug???). The child process's stdin, stdout,
