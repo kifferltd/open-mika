@@ -245,13 +245,15 @@ void *jdwp_recv_packet() {
   w_int peek;
   w_int count = 0;
   w_int timeout = 0;
-  w_int rc;
+  w_int rc = 0;
   
   /*
   ** First peek to get the length of this packet
   */
     
-  rc = w_recv(sock, &peek, sizeof(w_int), MSG_PEEK, (w_int *)&timeout);
+  while (rc < 4) {
+    rc = w_recv(sock, &peek, sizeof(w_int), MSG_PEEK, (w_int *)&timeout);
+  }
   peek = swap_int(peek);
   woempa(1, "Peek result = %d, peek = 0x%08x\n", rc, peek);
 
