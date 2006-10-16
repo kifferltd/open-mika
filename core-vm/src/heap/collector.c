@@ -1816,7 +1816,7 @@ void deregisterReclaimCallback(w_reclaim_callback callback) {
 */
 
 #ifdef JDWP
-extern x_thread jdwp_thread;
+extern w_thread jdwp_thread;
 #endif
 
 w_size gc_reclaim(w_int requested, w_instance caller) {
@@ -1867,10 +1867,10 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
   
 #ifdef JDWP
-  if (thread->kthread == jdwp_thread) {
-    //if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    //  wprintf("GC: thread %t is the JDWP thread, skipping gc_reclaim()\n", thread);
-    //}
+  if (thread == jdwp_thread) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
+      wprintf("GC: thread %t is the JDWP thread, skipping gc_reclaim()\n", thread);
+    }
 
     return 0;
 
