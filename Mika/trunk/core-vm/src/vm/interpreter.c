@@ -3810,6 +3810,7 @@ void interpret(w_frame caller, w_method method) {
 #ifdef JDWP
     w_ubyte original_bytecode;
 
+    frame->current = current;
     enterSafeRegion(thread);
     original_bytecode = jdwp_breakpoint_event(current);
     enterUnsafeRegion(thread);
