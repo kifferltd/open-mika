@@ -4,7 +4,7 @@
 ###########################################################################
 
 CPU_MIPS = 200 ;
-DEFAULT_HEAP_SIZE = 16M ;
+DEFAULT_HEAP_SIZE default = 16M ;
 
 FLOATING_POINT = hauser ;
 SHARED_OBJECTS = true ;
@@ -12,3 +12,6 @@ SHARED_OBJECTS = true ;
 HOSTOS = linux ;
 CPU = arm ;
 SCHEDULER = o4p ;
+
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+

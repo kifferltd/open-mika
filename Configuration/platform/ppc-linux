@@ -5,7 +5,7 @@
 
 
 CPU_MIPS = 165 ;
-DEFAULT_HEAP_SIZE = 16M ;
+DEFAULT_HEAP_SIZE default = 16M ;
 
 STATIC default = true ;
 FLOATING_POINT = hauser ;
