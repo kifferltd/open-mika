@@ -55,8 +55,8 @@ public class BuildSettingsChecker extends Task {
   private String task;
   
   private final static String[] keylist = new String[] {
-    "SECURITY" , "JAR", "MATH", "JAVA_BEANS", "AWT", "DEBUG",
-    "JAVAX_CRYPTO", "JAVAX_COMM", "AWT_DEF", "STATIC",
+    "SECURITY" , "JAR", "MATH", "JAVA_BEANS", "DEBUG", "UNICODE_SUBSETS",
+    "JAVAX_CRYPTO", "JAVAX_COMM", "AWT", "AWT_DEF", "STATIC", "JAVA_DEBUG",
   };
   
   public final String getFile() {
