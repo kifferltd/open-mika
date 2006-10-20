@@ -349,7 +349,7 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
         woempa(7, "  top frame is at %p\n", cursor);
       
         while(cursor  && cursor->method && count < start) {
-          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;
+          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);
           cursor = cursor->previous;
         }
       
@@ -363,7 +363,7 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
         count = 0;
 
         while(cursor  && cursor->method && (length == -1 ? 1 : (count < length))) {
-          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;
+          count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);
           cursor = cursor->previous;
         }
 
@@ -384,8 +384,6 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
             clazz = method->spec.declaring_clazz;
             pc = frame->current - method->exec.code;
 
-            location.tag = isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class;
-            location.clazz = clazz;
             location.method = method;
             location.pc = pc;
 

@@ -591,15 +591,43 @@ extern void jdwp_internal_suspend_all(void);
 
 extern void jdwp_internal_resume_all(void);
 
-extern w_ubyte jdwp_breakpoint_event(w_ubyte *code);
-
 extern w_ubyte jdwp_breakpoint_get_original(w_ubyte *code);
+
+w_ubyte jdwp_event_breakpoint(w_ubyte *code);
+
+void jdwp_event_step(w_thread thread);
 
 /*
 ** The following static const indicates if JDWP was enabled or not. 
 */
 
 static const w_word jpda_hooks = 1;
+
+#include "methods.h"
+
+/*
+** Detect 'bogus' frames, i.e. those which are not interpreted and therefore
+** cannot contain a breakpoint or steppoint. Returns true iff frame is bogus.
+*/
+#define frameIsBogus(f) (isSet((f)->flags, FRAME_JNI | FRAME_LOADING | FRAME_CLINIT | FRAME_REFLECTION) || isSet((f)->method->flags, ACC_NATIVE))
+
+/*
+** Starting with frame f, go back up the stack until we find an interpretable
+** frame, i.e. one which is not marked FRAME_JNI or FRAME_LOADING or 
+** FRAME_CLINIT or FRAME_REFLECTION and which is not running a native method.
+** The result can be f itself, or NULL if no such frame is found.
+*/
+
+static inline w_frame skipBogusFrames(w_frame f) {
+  w_frame frame = f;
+
+  while (frame && frameIsBogus(frame)) {
+    woempa(7, "Skipping a frame because it's not interpretable\n");
+    frame = frame->previous;
+  }
+
+  return frame;
+}
 
 #else  /* JDWP */
 

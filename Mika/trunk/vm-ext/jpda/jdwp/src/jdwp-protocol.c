@@ -32,6 +32,7 @@
 #include "jdwp.h"
 #include "jdwp_events.h"
 #include "jdwp-protocol.h"
+#include "methods.h"
 #include "wordset.h"
 #include "wstrings.h"
 
@@ -117,8 +118,8 @@ w_string jdwp_get_string(char *buffer, w_size *offset) {
 }
 
 void jdwp_get_location_here(char *buffer, w_size *offset, jdwp_location location) {
-  location->tag = jdwp_get_u1(buffer, offset);
-  location->clazz = jdwp_get_clazz(buffer, offset);
+  jdwp_get_u1(buffer, offset);
+  jdwp_get_clazz(buffer, offset);
   location->method = jdwp_get_method(buffer, offset);
   jdwp_get_u4(buffer, offset); // skip MS 4 bytes
   location->pc = jdwp_get_u4(buffer, offset);
@@ -176,9 +177,11 @@ void jdwp_put_string(w_grobag *gb, w_string string) {
 }
 
 void jdwp_put_location(w_grobag *gb, jdwp_location location) {
-  woempa(7, "Appending location: tag = %d, clazz = %k, method = %m, pc = %d\n", location->tag, location->clazz, location->method, location->pc);
-  jdwp_put_u1(gb, location->tag);
-  jdwp_put_u4(gb, (w_word)location->clazz);
+  w_clazz clazz = location->method->spec.declaring_clazz;
+
+  woempa(7, "Appending location: method = %M, pc = %d\n", location->method, location->pc);
+  jdwp_put_u1(gb, isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class);
+  jdwp_put_u4(gb, (w_word)clazz);
   jdwp_put_u4(gb, (w_word)location->method);
   jdwp_put_u4(gb, 0);
   jdwp_put_u4(gb, location->pc);

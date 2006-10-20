@@ -182,7 +182,7 @@ w_void jdwp_evtreq_set(jdwp_command_packet cmd) {
 
       case  7: 
         jdwp_get_location_here(cmd->data, &offset, &mod->condition.location);
-        woempa(7, "       -> tag = %d, clazz = %k, method = %m, pc = %d\n", mod->condition.location.tag, mod->condition.location.clazz, mod->condition.location.method, mod->condition.location.pc);
+        woempa(7, "       -> method = %M, pc = %d\n", mod->condition.location.method, mod->condition.location.pc);
         break;
                
       /* 
@@ -222,8 +222,9 @@ w_void jdwp_evtreq_set(jdwp_command_packet cmd) {
       case 10:
         instance = jdwp_get_objectref(cmd->data, &offset);
         if (instance) {
-          if (jdwp_check_thread_reference(instance)) {
-            mod->condition.step.thread = instance;
+          w_thread thread = jdwp_check_thread_reference(instance);
+          if (thread) {
+            mod->condition.step.thread = thread;
             mod->condition.step.size = jdwp_get_u4(cmd->data, &offset);
             mod->condition.step.depth = jdwp_get_u4(cmd->data, &offset);
           }
@@ -234,7 +235,7 @@ w_void jdwp_evtreq_set(jdwp_command_packet cmd) {
         else {
           error_code = jdwp_err_invalid_object;
         }
-        woempa(7, "          step: %j size %d depth %d\n", mod->condition.step.thread, mod->condition.step.size, mod->condition.step.depth);
+        woempa(7, "          step: %t size %d depth %d\n", mod->condition.step.thread, mod->condition.step.size, mod->condition.step.depth);
         break;
                
       /* 
@@ -262,6 +263,7 @@ w_void jdwp_evtreq_set(jdwp_command_packet cmd) {
         // Hm, actually it's the mod kind which is invalid ...
         error_code = jdwp_err_invalid_event_type;
     }
+woempa(7, "error code = %d\n", error_code);
 
     if (error_code) {
       jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
@@ -278,11 +280,14 @@ w_void jdwp_evtreq_set(jdwp_command_packet cmd) {
   }
 
   /*
-  ** If the event is a breakpoint, we need to do some more stuff.
+  ** If the event is a breakpoint or a step, we need to do some more stuff.
   */
 
   if(event->event_kind == jdwp_evt_breakpoint) {
     jdwp_breakpoint_set(event);
+  }
+  else if(event->event_kind == jdwp_evt_single_step) {
+    jdwp_single_step_set(event);
   }
 
   /*
@@ -323,6 +328,9 @@ w_void jdwp_evtreq_clear(jdwp_command_packet cmd) {
 
     if(event->event_kind == jdwp_evt_breakpoint) {
       jdwp_breakpoint_clear(event);
+    }
+    else if(event->event_kind == jdwp_evt_single_step) {
+      jdwp_single_step_clear(event);
     }
 
     /*
