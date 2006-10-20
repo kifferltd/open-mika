@@ -341,15 +341,74 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
 */
 #endif
 
+#ifdef JDWP
+/*
+** Check to see whether a pending single-step event should be triggered.
+** 0. If no pending event, exit.
+** 1. If step size is LINE and line number information is available but no
+**    line has current pc as start_pc, exit.
+** 2. If step->frame is non-NULL and is not current frame, exit.
+** 3. If we make it this far, set up step->location and trigger the event.
+*/
+static void checkSingleStep(w_frame frame, w_code current) {
+  jdwp_step step = frame->thread->step;
+
+  if (!step) {
+
+    return;
+
+  }
+
+  if (step->size && frame->method->exec.debug_info && frame->method->exec.debug_info->lineNums) {
+    w_LineNum *ln = frame->method->exec.debug_info->lineNums;
+    w_int n = frame->method->exec.debug_info->numLineNums;
+    w_int i;
+
+    woempa(7, "Step size is LINE and have info, look for line with start_pc == %d\n", current - frame->method->exec.code);
+    for (i = 0; i < n; ++i) {
+      if (ln->start_pc == current - frame->method->exec.code) {
+        woempa(7, "OK, found it at line %d\n", ln->line_number);
+        break;
+      }
+      ++ln;
+    }
+
+    if (i >= n) {
+      woempa(7, "Didn't find one, will not trigger SingleStep event\n");
+
+      return;
+    }
+  }
+        
+  if (step->frame && step->frame != frame) {
+    woempa(7, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
+
+    return;
+  }
+
+  step->location.method = frame->method;
+  step->location.pc = current - frame->method->exec.code;
+
+  frame->current = current;
+  enterSafeRegion(frame->thread);
+  jdwp_event_step(frame->thread);
+  enterUnsafeRegion(frame->thread);
+}
+#else
+#define checkSingleStep(frame,current)
+#endif
+
 #define do_next_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current + 1, tos); \
+  checkSingleStep(frame, current + 1);     \
   goto * jumps[*(++current)];             \
 }
 
 #define do_this_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current, tos);   \
+  checkSingleStep(frame, current);       \
   goto * jumps[*current];                 \
 }
 
@@ -357,6 +416,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
   updateProfileBytecodes(frame);          \
   current += (a);                         \
   updateDebugInfo(frame, current, tos);   \
+  checkSingleStep(frame, current);       \
   goto * jumps[*current];                 \
 }
 
@@ -365,6 +425,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
   if (!(c)) {                             \
     current += 3;                         \
     updateDebugInfo(frame, current, tos); \
+    checkSingleStep(frame, current);     \
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
@@ -373,6 +434,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
     }                                     \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
+    checkSingleStep(frame, current);     \
     goto * jumps[*current];               \
   }                                       \
 }
@@ -573,7 +635,7 @@ void interpret(w_frame caller, w_method method) {
 #endif
   w_Slot *tos;
 #ifdef CACHE_TOS
-  register w_word tos_cache = 0; // else we get 'may be used before assinment'
+  register w_word tos_cache = 0; // else we get 'may be used before assignment'
 #endif
   w_int i;
   w_instance o;
@@ -619,6 +681,8 @@ void interpret(w_frame caller, w_method method) {
   
   thread->top = frame;
   tos = (w_Slot*)frame->jstack_top;
+  updateDebugInfo(frame, current, tos);
+  checkSingleStep(frame, current);
 
   /*
   ** Note that pc is a signed integer and that values -1 and -2, currently, are used to store Wonka specific
@@ -774,6 +838,12 @@ void interpret(w_frame caller, w_method method) {
     caller->jstack_top += 1;
     thread->top = caller;
     frame->jstack_top = tos;
+#ifdef JDWP
+    // HACK so that step->frame is not left pointing at a popped frame
+    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
+      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
+    }
+#endif
     woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
     if (!from_unsafe) enterSafeRegion(thread);
     return;
@@ -1162,6 +1232,12 @@ void interpret(w_frame caller, w_method method) {
     }
     thread->top = caller;
     frame->jstack_top = tos;
+#ifdef JDWP
+    // HACK so that step->frame is not left pointing at a popped frame
+    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
+      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
+    }
+#endif
     woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
     if (!from_unsafe) enterSafeRegion(thread);
     return;
@@ -3055,6 +3131,12 @@ void interpret(w_frame caller, w_method method) {
     caller->jstack_top += 2;
     thread->top = caller;
     frame->jstack_top = tos;
+#ifdef JDWP
+    // HACK so that step->frame is not left pointing at a popped frame
+    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
+      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
+    }
+#endif
     woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
     if (!from_unsafe) enterSafeRegion(thread);
     return;
@@ -3064,6 +3146,12 @@ void interpret(w_frame caller, w_method method) {
     caller->jstack_top -= method->exec.arg_i;
     thread->top = caller;
     frame->jstack_top = tos;
+#ifdef JDWP
+    // HACK so that step->frame is not left pointing at a popped frame
+    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
+      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
+    }
+#endif
     woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
     if (!from_unsafe) enterSafeRegion(thread);
     return;
@@ -3812,7 +3900,7 @@ void interpret(w_frame caller, w_method method) {
 
     frame->current = current;
     enterSafeRegion(thread);
-    original_bytecode = jdwp_breakpoint_event(current);
+    original_bytecode = jdwp_event_breakpoint(current);
     enterUnsafeRegion(thread);
     goto * jumps[original_bytecode];
 #endif
@@ -3883,6 +3971,12 @@ void interpret(w_frame caller, w_method method) {
   c_no_handler: {
     frame->auxstack_top = frame->auxstack_base;
     thread->top = caller;
+#ifdef JDWP
+    // HACK so that step->frame is not left pointing at a popped frame
+    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
+      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
+    }
+#endif
     woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
     if (!from_unsafe) enterSafeRegion(thread);
     return;
@@ -4050,13 +4144,15 @@ static w_code searchHandler(w_frame frame) {
           }
           woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
           woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
-#ifdef JDWP
-          jdwp_event_exception(pending, frame->method, ex->handler_pc);
-#endif
           frame->jstack_top = frame->jstack_base + frame->method->exec.local_i;
           frame->jstack_top[0].c = (w_word) pending;
           frame->jstack_top[0].s = stack_trace;
           frame->jstack_top += 1;
+#ifdef JDWP
+          enterSafeRegion(thread);
+          jdwp_event_exception(pending, frame->method, ex->handler_pc);
+          enterUnsafeRegion(thread);
+#endif
           setReferenceField_unsafe(thread->Thread, NULL, F_Thread_thrown);
           thread->exception = NULL;
           frame->auxstack_top = auxs;

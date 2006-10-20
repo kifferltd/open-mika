@@ -237,7 +237,7 @@ typedef struct w_Thread {
   volatile w_frame    top;
   volatile w_instance exception;      // currently pending exception when not NULL, is also in thread->Thread[F_Thread_thrown]
   volatile w_instance Thread;        // corresponding instance of java.lang.Thread
-  w_instance protected;
+  w_instance protected;              // instance which we wish to protect from GC (e.g. reference returned by a method)
 
   /*
   ** The native part of a Wonka thread, it's kernel thread, the stack and it's size.
@@ -245,6 +245,9 @@ typedef struct w_Thread {
 
 #ifdef JSPOT
   int counter;
+#endif
+#ifdef JDWP
+  volatile void *step;                // Current jdwp_step or NULL
 #endif
   
   x_thread  kthread;

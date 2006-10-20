@@ -37,6 +37,7 @@ LOCATE_TARGET = $(OROOT)/mika/bin ;
 HDRS += $(WONKA_TOP)/core-vm/include ;
 HDRS += $(WONKA_TOP)/core-vm/hal/cpu/$(CPU)/include ;
 HDRS += $(WONKA_TOP)/core-vm/hal/hostos/$(HOSTOS)/include ;
+SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
 switch $(HOSTOS) {
   case linux : {
     HDRS += $(WONKA_TOP)/core-vm/hal/hostos/posix/include ;

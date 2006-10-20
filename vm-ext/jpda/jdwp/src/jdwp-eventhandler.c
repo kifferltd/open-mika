@@ -123,10 +123,12 @@ jdwp_event jdwp_event_get_ID(w_int ID) {
 w_void jdwp_event_add_modifier(jdwp_event event, jdwp_event_modifier modifier) {
   
   if(event->modifiers == NULL) {                    /* First one in the list */
+    woempa(7, "adding modifier of kind %d to empty modifier list\n", modifier->mod_kind);
     event->modifiers = modifier;
     event->modifiers->next = event->modifiers;
     event->modifiers->prev = event->modifiers;
   } else {                                          /* Put it on the end of the list */
+    woempa(7, "adding modifier of kind %d to non-empty modifier list\n", modifier->mod_kind);
     modifier->next = event->modifiers;
     modifier->prev = event->modifiers->prev;
     modifier->prev->next = modifier;
@@ -158,6 +160,24 @@ jdwp_event jdwp_event_alloc(w_int event_kind, w_int suspend_policy) {
   return event;
 }
 
+/*
+** Deallocate an event structure, after deallocating all its modifiers.
+*/
+
+void jdwp_dealloc_event(jdwp_event event) {
+  jdwp_event_modifier modifier = event->modifiers;
+  jdwp_event_modifier next;
+
+  while (modifier) {
+    next = modifier->next;
+    releaseMem(modifier);
+    modifier = next;
+  }
+
+  releaseMem(event);
+}
+ 
+void jdwp_single_step_clear(jdwp_event event);
 
 /*
 ** Clear all events.
@@ -179,11 +199,13 @@ w_void jdwp_clear_all_events() {
         if(event->event_kind == jdwp_evt_breakpoint) {
           jdwp_breakpoint_clear(event);
         }
+        if(event->event_kind == jdwp_evt_single_step) {
+          jdwp_single_step_clear(event);
+        }
 
-        /* TODO: modifiers ! */
         ht_erase(jdwp_event_hashtable, event->eventID);
         
-        releaseMem(event);
+        jdwp_dealloc_event(event);
         
         event = temp;
       }
@@ -194,7 +216,7 @@ w_void jdwp_clear_all_events() {
 }
 
 /*
-** Clear all breakpoint events. Probably broken. TODO: replace with a regular hashtable.
+** Clear all breakpoint events. Probably broken.
 */
 
 w_void jdwp_breakpoint_clear_all(void) {
@@ -232,7 +254,7 @@ w_void jdwp_breakpoint_clear_all(void) {
 */
 
 w_void jdwp_breakpoint_add(jdwp_breakpoint breakpoint) {
-  woempa(7, "Adding breakpoint (event %p, original bytecode %02x, location %d:%k:%m:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.tag, breakpoint->location.clazz, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
+  woempa(7, "Adding breakpoint (event %p, original bytecode %02x, location %M:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
   ht_write(jdwp_breakpoint_hashtable, (w_word)breakpoint->code, (w_word)breakpoint);
 }
 
@@ -242,7 +264,7 @@ w_void jdwp_breakpoint_add(jdwp_breakpoint breakpoint) {
 */
 
 w_void jdwp_breakpoint_remove(jdwp_breakpoint breakpoint) {
-  woempa(7, "Removing breakpoint (event %p, original bytecode %02x, location %d:%k:%m:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.tag, breakpoint->location.clazz, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
+  woempa(7, "Removing breakpoint (event %p, original bytecode %02x, location %M:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
   ht_erase(jdwp_breakpoint_hashtable, (w_word)breakpoint->code);
 }
 
@@ -253,7 +275,7 @@ w_void jdwp_breakpoint_remove(jdwp_breakpoint breakpoint) {
 
 jdwp_breakpoint jdwp_breakpoint_get(w_code code) {
   jdwp_breakpoint breakpoint =  (jdwp_breakpoint)ht_read(jdwp_breakpoint_hashtable, (w_word)code);
-  woempa(7, "Getting breakpoint (event %p, original bytecode %02x, location %d:%k:%m:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.tag, breakpoint->location.clazz, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
+  woempa(7, "Getting breakpoint (event %p, original bytecode %02x, location %M:%d) at %p\n", breakpoint->event, breakpoint->original, breakpoint->location.method, breakpoint->location.pc, breakpoint->code);
     
   return breakpoint;
 }
@@ -344,31 +366,34 @@ w_void jdwp_check_suspend(jdwp_event event) {
 ** Set a breakpoint.
 */
 
-w_void jdwp_breakpoint_set(jdwp_event event) {
+void jdwp_breakpoint_set(jdwp_event event) {
   jdwp_event_modifier  modifier = event->modifiers;
   w_long               pc;
   w_method             method;
-  w_clazz              clazz;
   jdwp_breakpoint      point;
   
   woempa(9, "--== Setting a breakpoint ==--\n");
 
   /*
   ** Loop through the modifiers of the event to find the location_only modifier.
-  ** This modifiers contains the clazz, method and pc where the breakpoint should be set.
+  ** This modifier contains the method and pc where the breakpoint should be set.
   */
   
-  while(modifier->mod_kind != 7) modifier = modifier->next;
+  while (modifier && modifier->mod_kind != 7) {
+    modifier = modifier->next;
+  }
+  if (!modifier) {
+
+    return;
+
+  }
 
   /*
-  ** Get clazz, method and pc out of the location modifier.
+  ** Get method and pc out of the location modifier.
   */
  
-  clazz = modifier->condition.location.clazz;
   method = modifier->condition.location.method;
   pc = modifier->condition.location.pc;
-
-  woempa(9, "    clazz: %w,  method: %w,  pc: %Ld,  original opcode: 0x%x\n", clazz->dotified, method->spec.name, pc, method->exec.code[pc]);
 
   /*
   ** Allocate memory for a breakpoint structure.
@@ -389,7 +414,7 @@ w_void jdwp_breakpoint_set(jdwp_event event) {
   ** Store the breakpoint in the event as well.
   */
   
-  event->break_point = point;
+  event->point.break_point = point;
 
   /*
   ** Replace the original opcode with a breakpoint opcode (0xca).
@@ -410,40 +435,110 @@ w_void jdwp_breakpoint_set(jdwp_event event) {
 ** Clear a breakpoint.
 */
 
-w_void jdwp_breakpoint_clear(jdwp_event event) {
+void jdwp_breakpoint_clear(jdwp_event event) {
   w_method             method;
-  w_clazz              clazz;
   
   woempa(9, "--== Clearing a breakpoint ==--\n");
 
   /*
-  ** Get the clazz and method out of the event->breakpoint.
+  ** Get the method out of the event->breakpoint.
   */
 
-  clazz = event->break_point->location.clazz;
-  method = event->break_point->location.method;
-
-  woempa(9, "    clazz: %w,  method: %w\n", clazz->dotified, method->spec.name);
+  method = event->point.break_point->location.method;
 
   /*
   ** Put the original opcode back where it belongs.
   */
 
-  *event->break_point->code = event->break_point->original;
+  *event->point.break_point->code = event->point.break_point->original;
 
   /*
   ** Remove the breakpoint from the hashtable.
   */
   
-  jdwp_breakpoint_remove(event->break_point);
+  jdwp_breakpoint_remove(event->point.break_point);
   
   /* 
   ** Clean up.
   */
   
-  releaseMem(event->break_point);
+  releaseMem(event->point.break_point);
 }
 
+/*
+** Set a steppoint.
+*/
+
+void jdwp_single_step_set(jdwp_event event) {
+  jdwp_event_modifier  modifier = event->modifiers;
+  jdwp_step step;
+  w_ushort size;
+  w_ushort depth;
+  w_thread thread;
+
+  while (modifier && modifier->mod_kind != 10) {
+    modifier = modifier->next;
+  }
+  if (!modifier) {
+    woempa(9, "Event has no modifier 10, don't know what to do\n");
+
+    return;
+
+  }
+
+  size = modifier->condition.step.size;
+  depth = modifier->condition.step.depth;
+  thread = modifier->condition.step.thread;
+
+  woempa(7, "Setting steppoint in thread '%t', depth = %d size = %d\n", thread, depth, size);
+  if (frameIsBogus(thread->top)) {
+    woempa(9, "Top frame (%m) is not interpretable, not allowed to step\n", thread->top->method);
+
+    return;
+
+  }
+
+  step = allocMem(sizeof(jdwp_Step));
+  step->thread = thread;
+  step->event = event;
+  step->size = size;
+  step->depth = depth;
+  step->frame = (depth == 1) ? thread->top : (depth == 2) ? skipBogusFrames(thread->top->previous) : NULL;
+#ifdef DEBUG
+  if (step->frame) {
+    woempa(7, "Set step->frame to frame where '%M' is called\n", step->frame->method);
+  }
+  else {
+    woempa(7, "Set step->frame to NULL\n");
+  }
+#endif
+  memset(&step->location, 0, sizeof(jdwp_Location));
+
+  thread->step = step;
+}
+
+/*
+** Clear a steppoint.
+*/
+
+void jdwp_single_step_clear(jdwp_event event) {
+  jdwp_event_modifier  modifier = event->modifiers;
+  w_thread thread;
+  jdwp_step step;
+
+  while (modifier) {
+    if (modifier->mod_kind == 10) {
+      thread = modifier->condition.step.thread;
+      woempa(7, "Clearing steppoint in thread '%t'\n", thread);
+      step = thread->step;
+      releaseMem(step);
+      thread->step = NULL;
+
+      return;
+    }
+    modifier = modifier->next;
+  }
+}
 
 /*
 ** From this point on are the event handlers. Wonka calls these to let us know 
@@ -557,8 +652,6 @@ w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int c
         // Thread in which thrown
         jdwp_put_objectref(&gb, thread->Thread);
         // Location where thrown
-        location.tag = isSet(throw_method->spec.declaring_clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class;
-        location.clazz = throw_method->spec.declaring_clazz;
         location.method = throw_method;
         location.pc = throw_pc;
         jdwp_put_location(&gb, &location);
@@ -566,8 +659,6 @@ w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int c
         jdwp_put_u1(&gb, jdwp_tag_object);
         jdwp_put_objectref(&gb, throwable);
         // Location where thrown
-        location.tag = isSet(catch_method->spec.declaring_clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class;
-        location.clazz = catch_method->spec.declaring_clazz;
         location.method = catch_method;
         location.pc = catch_pc;
         jdwp_put_location(&gb, &location);
@@ -955,6 +1046,54 @@ void jdwp_event_vm_start(w_instance threadID) {
 }
 
 /*
+** Send a single step event.
+*/
+
+void jdwp_event_step(w_thread thread) {
+  jdwp_step step = thread->step;
+  jdwp_event event = step->event;
+  w_instance instance = thread->Thread;
+  jdwp_event_modifier  modifier;
+  w_int                go_ahead;
+  w_grobag             gb = NULL;
+  
+  /*
+  ** Only go through with this if the events are enabled.
+  */
+
+  if(!jdwp_events_enabled) return;
+
+  /*
+  ** Do some locking for sanity.
+  */
+
+  x_mutex_lock(jdwp_mutex, x_eternal);
+  
+  woempa(7, "Hit steppoint (event %p, location %M:%d)\n", step->event, step->location.method, step->location.pc);
+
+  /*
+  ** Store the thread ID.
+  */
+
+  jdwp_put_objectref(&gb, instance);
+  jdwp_put_location(&gb, &step->location);
+  jdwp_send_event(event, &gb);
+
+  /*
+  ** Check the suspend policy and act accordingly.
+  */
+        
+  jdwp_check_suspend(event);
+
+  /*
+  ** Unlock.
+  */
+
+  x_mutex_unlock(jdwp_mutex);
+  releaseGrobag(&gb);
+}
+
+/*
 ** Return the opcode byte which was overwritten by a breakpoint.
 */
 
@@ -970,7 +1109,7 @@ w_ubyte jdwp_breakpoint_get_original(w_ubyte *code) {
 /*
 */
 
-w_ubyte jdwp_breakpoint_event(w_ubyte *code) {
+w_ubyte jdwp_event_breakpoint(w_ubyte *code) {
   jdwp_event           event;
   jdwp_breakpoint      point;
   w_instance           instance = currentWonkaThread->Thread;
@@ -1000,7 +1139,7 @@ w_ubyte jdwp_breakpoint_event(w_ubyte *code) {
   // TODO: what if not found?
 
   event = point->event;
-  woempa(7, "Hit breakpoint (event %p, original bytecode %02x, location %d:%k:%m:%d) at %p\n", point->event, point->original, point->location.tag, point->location.clazz, point->location.method, point->location.pc, point->code);
+  woempa(7, "Hit breakpoint (event %p, original bytecode %02x, location %M:%d) at %p\n", point->event, point->original, point->location.method, point->location.pc, point->code);
 
   /*
   ** Store the thread ID.

@@ -39,11 +39,10 @@
 typedef struct jdwp_Event           *jdwp_event;
 typedef struct jdwp_Location        *jdwp_location;
 typedef struct jdwp_Breakpoint      *jdwp_breakpoint;
+typedef struct jdwp_Step            *jdwp_step;
 typedef struct jdwp_Event_Modifier  *jdwp_event_modifier;
 
 typedef struct jdwp_Location {
-  w_int tag;
-  w_clazz clazz;
   w_method method;
   w_int pc;
 } jdwp_Location;
@@ -53,7 +52,6 @@ typedef struct jdwp_Location {
 ** the opcode at that location will be overwritten with a breakpoint opcode. This 
 ** structure holds the original opcode, the location of the breakpoint and a reference to
 ** the event that caused this breakpoint to be set.
-** These breakpoints are stored in a hashtable.
 */
 
 typedef struct jdwp_Breakpoint {
@@ -61,12 +59,26 @@ typedef struct jdwp_Breakpoint {
   w_ubyte          original;
   jdwp_event       event;
   jdwp_Location    location;
-  jdwp_breakpoint  next;
-  jdwp_breakpoint  prev;
 } jdwp_Breakpoint;
 
 /*
-** This is the modifier structure for events (see below). 
+** The step structure. The thread, event, size, depth, and frame are set up
+**  when the step event is created; the frame is set to the current top frame
+** of the thread for OVER, the previous interpretable frame for OUT, and null
+** for INTO. The location is filled in when triggering the event itself, so 
+** that it can be included in the JDWP reply.
+*/
+
+typedef struct jdwp_Step {
+  w_thread thread;        /* Thread inside which the event will take place */
+  jdwp_event event;       /* jdwp_event which describes the step */
+  w_int size;             /* Size = MIN(0) / LINE(1) */
+  w_int depth;            /* Depth = INTO(0) / OVER (1) / OUT(2) */
+  w_frame frame;          /* Frame in which event will occur if OVER or OUT */
+  jdwp_Location location; /* Location where event was triggered */
+} jdwp_Step;
+
+/* This is the modifier structure for events (see below). 
 ** Which value we need from the union depends on the value of mod_kind.
 */
 
@@ -91,7 +103,7 @@ typedef struct jdwp_Event_Modifier {
       w_field ID;
     } field;
     struct {
-      w_instance thread;
+      w_thread thread;
       w_int   size;
       w_int   depth;
     } step;
@@ -112,24 +124,25 @@ typedef struct jdwp_Event_Modifier {
 */
 
 typedef struct jdwp_Event {
-  w_int                eventID;
-  w_ubyte              event_kind;
-  w_ubyte              suspend_policy;
-  jdwp_event_modifier  modifiers;
-  jdwp_breakpoint      break_point;
-
+  w_int         eventID;
+  w_ubyte       event_kind;
+  w_ubyte       suspend_policy;
+  w_ushort      dummy;
   jdwp_event    next;
   jdwp_event    prev;
-  jdwp_event    hash_next;
-  jdwp_event    hash_prev;
+  jdwp_event_modifier  modifiers;
+  union {
+    jdwp_breakpoint break_point;
+    jdwp_step       step_point;
+  } point;
 } jdwp_Event;
 
 /* 
 ** All the events we have to watch out for are kept in 2 structures. 
 ** The first one is a array of circular linked lists which groups all the events of a certain 
 ** type in one list (e.g. All the 'class prepared' events).
-** The other one is a hashtable of circular linked lists in which all the elements have the
-** same hashvalue. This is used to find an event with a certain ID at reasonable speed.
+** The other one is a hashtable which maps eventID to event.
+** For breakpoints we also have a table mapping bytecode address to breakpoint.
 */
 
 #define JDWP_EVENT_HASHTABLE_SIZE 97
@@ -137,7 +150,7 @@ typedef struct jdwp_Event {
 
 extern jdwp_event jdwp_events_by_kind[255]; /* One entry for every event kind */
 extern w_hashtable jdwp_event_hashtable;     /* To look for eventID's */
-extern w_hashtable jdwp_breakpoint_hashtable; /* To look for breakpointID's */
+extern w_hashtable jdwp_breakpoint_hashtable; /* To look for breakpoints */
 
 /*
 ** A few functions to add, remove and find stored events.
@@ -158,6 +171,12 @@ w_void jdwp_breakpoint_set(jdwp_event event);
 w_void jdwp_breakpoint_clear(jdwp_event event);
 w_void jdwp_breakpoint_clear_all(void);
 
+/*
+** Single-step events.
+*/
+w_void jdwp_step_set(jdwp_event event);
+w_void jdwp_step_clear(jdwp_event event);
+
 #endif /* JDWP */
 
 /*
@@ -171,7 +190,6 @@ w_void jdwp_breakpoint_clear_all(void);
 w_void  jdwp_event_class_prepare(w_clazz clazz);
 w_void  jdwp_event_thread_start(w_thread thread);
 w_void  jdwp_event_thread_end(w_thread thread);
-w_ubyte jdwp_event_breakpoint(w_ubyte *code);
 
 w_boolean jdwp_holding_events;
 
