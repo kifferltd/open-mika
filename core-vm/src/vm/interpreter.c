@@ -345,18 +345,31 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
 /*
 ** Check to see whether a pending single-step event should be triggered.
 ** 0. If no pending event, exit.
-** 1. If step size is LINE and line number information is available but no
+** 1. If step depth is OUT, exit.
+** 2. If step size is LINE and line number information is available but no
 **    line has current pc as start_pc, exit.
-** 2. If step->frame is non-NULL and is not current frame, exit.
-** 3. If we make it this far, set up step->location and trigger the event.
+** 3. If step->frame is non-NULL and is not current frame, exit.
+** 4. If we make it this far, set up step->location and trigger the event.
 */
-static void checkSingleStep(w_frame frame, w_code current) {
+static void checkSingleStep1(w_frame frame, w_code current) {
   jdwp_step step = frame->thread->step;
 
   if (!step) {
 
     return;
 
+  }
+
+  if (step->depth == 2) {
+
+    return;
+
+  }
+
+  if (step->frame && step->frame != frame) {
+    woempa(7, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
+
+    return;
   }
 
   if (step->size && frame->method->exec.debug_info && frame->method->exec.debug_info->lineNums) {
@@ -380,12 +393,6 @@ static void checkSingleStep(w_frame frame, w_code current) {
     }
   }
         
-  if (step->frame && step->frame != frame) {
-    woempa(7, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
-
-    return;
-  }
-
   step->location.method = frame->method;
   step->location.pc = current - frame->method->exec.code;
 
@@ -394,21 +401,38 @@ static void checkSingleStep(w_frame frame, w_code current) {
   jdwp_event_step(frame->thread);
   enterUnsafeRegion(frame->thread);
 }
+
+/*
+** If a step of depth 2 (OUT) is pending and the current frame is the one
+** we are stepping OUT of, change it to a step INTO. We call this on exit 
+** from every interpreted method, and it results in a single step event 
+** being triggered by the first bytecode encountered in the next surrounding 
+** interpreted frame.
+*/
+static void checkSingleStep2(w_frame frame) {
+  jdwp_step step = (jdwp_step)frame->thread->step;
+
+  if (step && step->depth == 2 && step->frame == frame) {
+    step->depth = 0;
+    step->frame = NULL;
+  }
+}
 #else
-#define checkSingleStep(frame,current)
+#define checkSingleStep1(frame,current)
+#define checkSingleStep2(frame)
 #endif
 
 #define do_next_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current + 1, tos); \
-  checkSingleStep(frame, current + 1);     \
+  checkSingleStep1(frame, current + 1);     \
   goto * jumps[*(++current)];             \
 }
 
 #define do_this_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep(frame, current);       \
+  checkSingleStep1(frame, current);       \
   goto * jumps[*current];                 \
 }
 
@@ -416,7 +440,7 @@ static void checkSingleStep(w_frame frame, w_code current) {
   updateProfileBytecodes(frame);          \
   current += (a);                         \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep(frame, current);       \
+  checkSingleStep1(frame, current);       \
   goto * jumps[*current];                 \
 }
 
@@ -425,7 +449,7 @@ static void checkSingleStep(w_frame frame, w_code current) {
   if (!(c)) {                             \
     current += 3;                         \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep(frame, current);     \
+    checkSingleStep1(frame, current);     \
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
@@ -434,7 +458,7 @@ static void checkSingleStep(w_frame frame, w_code current) {
     }                                     \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep(frame, current);     \
+    checkSingleStep1(frame, current);     \
     goto * jumps[*current];               \
   }                                       \
 }
@@ -682,7 +706,7 @@ void interpret(w_frame caller, w_method method) {
   thread->top = frame;
   tos = (w_Slot*)frame->jstack_top;
   updateDebugInfo(frame, current, tos);
-  checkSingleStep(frame, current);
+  checkSingleStep1(frame, current);
 
   /*
   ** Note that pc is a signed integer and that values -1 and -2, currently, are used to store Wonka specific
@@ -836,17 +860,8 @@ void interpret(w_frame caller, w_method method) {
     caller->jstack_top[0].c = tos[-1].c;
 #endif
     caller->jstack_top += 1;
-    thread->top = caller;
     frame->jstack_top = tos;
-#ifdef JDWP
-    // HACK so that step->frame is not left pointing at a popped frame
-    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
-      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
-    }
-#endif
-    woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
-    if (!from_unsafe) enterSafeRegion(thread);
-    return;
+    goto c_common_return;
   }
 
   c_iload_0: c_fload_0: {
@@ -1230,17 +1245,8 @@ void interpret(w_frame caller, w_method method) {
       caller->jstack_top[0].s = stack_trace;
       caller->jstack_top += 1;
     }
-    thread->top = caller;
     frame->jstack_top = tos;
-#ifdef JDWP
-    // HACK so that step->frame is not left pointing at a popped frame
-    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
-      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
-    }
-#endif
-    woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
-    if (!from_unsafe) enterSafeRegion(thread);
-    return;
+    goto c_common_return;
   }
 
   c_ldc2_w: {
@@ -1503,11 +1509,11 @@ void interpret(w_frame caller, w_method method) {
   */
 
   check_async_exception: {
-    frame->jstack_top = tos;
     if (thread->exception) {
+      frame->jstack_top = tos;
       current = searchHandler(frame);
+      tos = (w_Slot*)frame->jstack_top;
     }
-    tos = (w_Slot*)frame->jstack_top;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
 #endif
@@ -3129,32 +3135,14 @@ void interpret(w_frame caller, w_method method) {
     caller->jstack_top[1].s = stack_notrace;
     caller->jstack_top[1].c = tos[-1].c;
     caller->jstack_top += 2;
-    thread->top = caller;
     frame->jstack_top = tos;
-#ifdef JDWP
-    // HACK so that step->frame is not left pointing at a popped frame
-    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
-      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
-    }
-#endif
-    woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
-    if (!from_unsafe) enterSafeRegion(thread);
-    return;
+    goto c_common_return;
   }
 
   c_vreturn: {
     caller->jstack_top -= method->exec.arg_i;
-    thread->top = caller;
     frame->jstack_top = tos;
-#ifdef JDWP
-    // HACK so that step->frame is not left pointing at a popped frame
-    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
-      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
-    }
-#endif
-    woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
-    if (!from_unsafe) enterSafeRegion(thread);
-    return;
+    goto c_common_return;
   }
 
   c_getstatic: {
@@ -3970,17 +3958,19 @@ void interpret(w_frame caller, w_method method) {
 
   c_no_handler: {
     frame->auxstack_top = frame->auxstack_base;
-    thread->top = caller;
-#ifdef JDWP
-    // HACK so that step->frame is not left pointing at a popped frame
-    if (frame->thread->step && ((jdwp_step)frame->thread->step)->frame == frame) {
-      ((jdwp_step)frame->thread->step)->frame = skipBogusFrames(((jdwp_step)frame->thread->step)->frame->previous);
-    }
-#endif
-    woempa(1, "GC state on exit from %M restored to %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
-    if (!from_unsafe) enterSafeRegion(thread);
-    return;
+    goto c_common_return;
   }
+
+  c_common_return:
+    thread->top = caller;
+    checkSingleStep2(frame);
+    if (from_unsafe) {
+      woempa(1, "GC state on exit from %M remains UNSAFE\n", method);
+    }
+    else {
+      woempa(1, "GC state on exit from %M restored to SAFE\n", method);
+      enterSafeRegion(thread);
+    }
 
 }
 

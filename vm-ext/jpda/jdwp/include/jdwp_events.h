@@ -63,9 +63,13 @@ typedef struct jdwp_Breakpoint {
 
 /*
 ** The step structure. The thread, event, size, depth, and frame are set up
-**  when the step event is created; the frame is set to the current top frame
-** of the thread for OVER, the previous interpretable frame for OUT, and null
-** for INTO. The location is filled in when triggering the event itself, so 
+**  when the step event is created; if the step depth is OVER or OUT then 
+** the frame is set to the current top frame of the thread. For step OVER,
+** the an event will only be triggered for bytecodes executed in the given
+** frame; for step OUT, no events will be triggered until the given frame
+** is left, at which moment the frame is set to NULL and the depth is 
+** changed to INTO.
+** The location is filled in when triggering the event itself, so 
 ** that it can be included in the JDWP reply.
 */
 

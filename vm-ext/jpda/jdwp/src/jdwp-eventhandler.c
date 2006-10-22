@@ -503,7 +503,7 @@ void jdwp_single_step_set(jdwp_event event) {
   step->event = event;
   step->size = size;
   step->depth = depth;
-  step->frame = (depth == 1) ? thread->top : (depth == 2) ? skipBogusFrames(thread->top->previous) : NULL;
+  step->frame = depth ? thread->top : NULL;
 #ifdef DEBUG
   if (step->frame) {
     woempa(7, "Set step->frame to frame where '%M' is called\n", step->frame->method);
