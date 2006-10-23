@@ -80,20 +80,20 @@
              author="true"
              version="true"
              use="true"
-             excludepackagenames="junit.*,test.*"
+             excludepackagenames="com.*,gnu.*,wonka.*"
              windowtitle="${ant.project.name} API Description">
       <bottom><![CDATA[<i>Copyright &#169; 2006 /K/ Embedded Java Solutions. All Rights Reserved.</i><br>
          For more information please contact <a href="mailto:k-info@kiffer.be">k-info@kiffer.be</a>
          or <br>check our website <A HREF="http://www.k-embedded-java.com/">http://www.k-embedded-java.com/</A>
            ]]></bottom>
-      <fileset dir="${basedir}/vm-ext/comm/java"/>
-      <fileset dir="${crypto.dir}"/>
-      <fileset dir="${vm.ext.dir}beans/java"/>
-      <fileset dir="${vm.java.dir}"/>
-      <fileset dir="${security.dir}"/>
-      <fileset dir="${math.dir}"/>
-      <fileset dir="${awt.dir}"/>
-      <fileset dir="${jar.dir}"/>
+      <fileset dir="${basedir}/vm-ext/comm/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${crypto.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${vm.ext.dir}beans/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${vm.java.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${math.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${awt.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${jar.dir}" excludes="com/**/,gnu/**,wonka/**"/>
     </javadoc>
  </target>
  
