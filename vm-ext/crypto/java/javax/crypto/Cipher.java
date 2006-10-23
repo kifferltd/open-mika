@@ -40,14 +40,14 @@ public class Cipher {
   static final byte[] EMPTY = new byte[0];
 
   //                UNINITIALIZED= 0;
-  public static int ENCRYPT_MODE = 1;
-  public static int DECRYPT_MODE = 2;
-  public static int WRAP_MODE    = 3;
-  public static int UNWRAP_MODE  = 4;
+  public static final int ENCRYPT_MODE = 1;
+  public static final int DECRYPT_MODE = 2;
+  public static final int WRAP_MODE    = 3;
+  public static final int UNWRAP_MODE  = 4;
 
-  public static int PUBLIC_KEY   = 1;
-  public static int PRIVATE_KEY  = 2;
-  public static int SECRET_KEY   = 3;
+  public static final int PUBLIC_KEY   = 1;
+  public static final int PRIVATE_KEY  = 2;
+  public static final int SECRET_KEY   = 3;
 
 
   public final static Cipher getInstance(String algorithm)throws NoSuchAlgorithmException{
