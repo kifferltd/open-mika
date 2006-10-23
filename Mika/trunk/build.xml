@@ -17,6 +17,13 @@
     <subant target="tool" antfile="tool.xml" buildpath="${ant.dir}"/>
   </target>
 
+  <target name="source" depends="check,tool">
+    <subant antfile="mika_build.xml" buildpath="${ant.dir}" target="source">
+      <property name="ANT.PLATFORM" value="${PLATFORM}"/>
+      <property name="do.javadoc" value="${want.javadoc}"/>
+    </subant>
+  </target>
+  
   <!-- Clean targets -->
   <target name="cleanall">
     <delete dir="${build.dir}" />

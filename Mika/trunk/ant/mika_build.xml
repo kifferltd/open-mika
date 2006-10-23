@@ -51,8 +51,52 @@
     <antcall target="build-ext"/>
     <antcall target="jam-mika"/>
     <antcall target="copy-resources"/>
- </target>
+  </target>
 
+  <target name="source" depends="prepare,check-build-env">
+    <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+    <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
+
+    <jar destfile="${release.dir}/src.jar">
+      <fileset dir="${basedir}/vm-ext/comm/java"/>
+      <fileset dir="${crypto.dir}"/>
+      <fileset dir="${vm.ext.dir}beans/java"/>
+      <fileset dir="${vm.java.dir}"/>
+      <fileset dir="${security.dir}"/>
+      <fileset dir="${math.dir}"/>
+      <fileset dir="${awt.dir}"/>
+      <fileset dir="${jar.dir}"/>
+    </jar>
+    <mkdir dir="${release.dir}doc"/>
+    <condcall target="gen.javadoc" condition="${do.javadoc}"/>
+  </target>
+
+  <target name="gen.javadoc">
+    <javadoc packagenames="java.*,javax.*"
+             destdir="${release.dir}doc"
+             author="true"
+             version="true"
+             use="true"
+             excludepackagenames="junit.*,test.*"
+             windowtitle="${ant.project.name} API Description">
+      <bottom><![CDATA[<i>Copyright &#169; 2006 /K/ Embedded Java Solutions. All Rights Reserved.</i><br>
+         For more information please contact <a href="mailto:k-info@kiffer.be">k-info@kiffer.be</a>
+         or <br>check our website <A HREF="http://www.k-embedded-java.com/">http://www.k-embedded-java.com/</A>
+           ]]></bottom>
+      <fileset dir="${basedir}/vm-ext/comm/java"/>
+      <fileset dir="${crypto.dir}"/>
+      <fileset dir="${vm.ext.dir}beans/java"/>
+      <fileset dir="${vm.java.dir}"/>
+      <fileset dir="${security.dir}"/>
+      <fileset dir="${math.dir}"/>
+      <fileset dir="${awt.dir}"/>
+      <fileset dir="${jar.dir}"/>
+    </javadoc>
+ </target>
+ 
   <!-- build helper targets ... -->
   <target name="check-build-env">
     <fail message="please provide a platform definition ex: -DANT.PLATFORM=pc" unless="ANT.PLATFORM"/>
