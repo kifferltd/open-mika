@@ -338,7 +338,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   threadMustBeSafe(thread);
 
   x_monitor_eternal(clazz->resolution_monitor);
-  clazz->resolution_thread = thread;
+  //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
 
   while(state == CLAZZ_STATE_LOADING) {
