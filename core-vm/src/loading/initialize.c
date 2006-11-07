@@ -396,6 +396,9 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   if (exceptionThrown(thread)) {
     woempa(9, "Eh? Exception '%e' already pending in mustBeInitialized(%K)\n", exceptionThrown(thread), clazz);
+
+    return CLASS_LOADING_FAILED;
+
   }
 #endif
 
