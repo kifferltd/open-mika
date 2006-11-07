@@ -347,4 +347,15 @@ w_int addResolvedFieldConstantToPool(w_clazz, w_field field);
  */
 w_int addPointerConstantToPool(w_clazz, void *ptr);
 
+/*
+** Get the declaring class name, name, and/or descriptor from a Field, Method, 
+** or IMethod constant, without resolving the constant if it is not already 
+** resolved. Only the strings for which the corresponding w_string* parameter
+** is non-null will be extracted. Returns TRUE if the operation succeeded,
+** FALSE if it failed e.g. because the constant is in state COULD_NOT_RESOLVE.
+** The resulting w_string's are registered, so remember to deregister
+** them afterwards.
+*/
+w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring_clazz_ptr, w_string *member_name_ptr, w_string *member_type_ptr);
+
 #endif /* _CONSTANT_H */
