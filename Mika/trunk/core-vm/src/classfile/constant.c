@@ -964,7 +964,6 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
   w_method   method = NULL;
   w_clazz    search_clazz;
   w_clazz    super;
-  w_ConstantType *nat_cnt;
   w_string name;
   w_string desc_string;
   w_size   j;
@@ -983,7 +982,6 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
     ** Look in the class for a method with the correct name
     ** and descriptor.
     */
-    nat_cnt = &clazz->tags[Member_get_nat_index(member)];
     nat = clazz->values[Member_get_nat_index(member)];
     woempa(1, "Name & Type = '0x%08x'\n", nat);
     name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));
@@ -1113,7 +1111,6 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
   w_method   candidate;
   w_clazz    search_clazz;
   w_clazz    current_clazz;
-  w_ConstantType *nat_cnt;
   w_string name;
   w_string desc_string;
   w_size   i;
@@ -1125,7 +1122,6 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
   x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Resolving imethod constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
   search_clazz = getClassConstant(clazz, Member_get_class_index(member));
-  nat_cnt = &clazz->tags[Member_get_nat_index(member)];
   nat = clazz->values[Member_get_nat_index(member)];
   woempa(1, "Name & Type = '0x%08x'\n", nat);
   name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));
@@ -1274,6 +1270,119 @@ void dissolveConstant(w_clazz clazz, int idx) {
     if (clazz->values[idx]) {
       deregisterString((w_string)clazz->values[idx]);
     }
+  }
+}
+
+/*
+** Utility method used by getMemberConstantStrings() when the constant is
+** already resolved.
+*/
+static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring_clazz_ptr, w_string *member_name_ptr, w_string *member_type_ptr) {
+  w_method m;
+  w_field f;
+
+  if (isFieldConstant(clazz, idx)) {
+    f = (w_field)clazz->values[idx];
+    woempa(7, "Resolved Field constant: %k %w %k\n", f->declaring_clazz, f->name, f->value_clazz);
+    if (declaring_clazz_ptr) {
+      *declaring_clazz_ptr = clazz2desc(f->declaring_clazz);
+    }
+    if (member_name_ptr) {
+      *member_name_ptr = registerString(f->name);
+    }
+    if (member_type_ptr) {
+      *member_type_ptr = registerString(f->desc);
+    }
+
+    return TRUE;
+  }
+  else if (isMethodConstant(clazz, idx) || isIMethodConstant(clazz, idx)) {
+    m = (w_method)clazz->values[idx];
+    woempa(7, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->desc);
+    if (declaring_clazz_ptr) {
+      *declaring_clazz_ptr = clazz2desc(m->spec.declaring_clazz);
+    }
+    if (member_name_ptr) {
+      *member_name_ptr = registerString(m->spec.name);
+    }
+    if (member_type_ptr) {
+      *member_type_ptr = registerString(m->desc);
+    }
+
+    return TRUE;
+  }
+  else {
+    woempa(9, "Constant tag[%d] of %k is 0x%02x!\n", idx, clazz, clazz->tags[idx]);
+
+    return FALSE;
+
+  }
+}
+
+/*
+** Get the declaring class name, name, and/or descriptor from a Field, Method, 
+** or IMethod constant, without resolving the constant if it is not already 
+** resolved. Only the strings for which the corresponding w_string* parameter
+** is non-null will be extracted. Returns TRUE if the operation succeeded,
+** FALSE if it failed e.g. because the constant is in state COULD_NOT_RESOLVE.
+** The resulting w_string's are registered, so remember to deregister
+** them afterwards.
+*/
+w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring_clazz_ptr, w_string *member_name_ptr, w_string *member_type_ptr) {
+
+  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+
+    return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+
+  }
+  else {
+    x_monitor_eternal(clazz->resolution_monitor);
+    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
+      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+        x_monitor_eternal(clazz->resolution_monitor);
+      }
+    }
+
+    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
+      w_word member = clazz->values[idx];
+
+      woempa(7, "Unresolved constant\n");
+      if (declaring_clazz_ptr) {
+        w_int cls_idx = Member_get_class_index(member);
+
+        *declaring_clazz_ptr = resolveUtf8Constant(clazz, cls_idx);
+        woempa(7, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
+      }
+      if (member_name_ptr || member_type_ptr) {
+        w_int nat_idx = Member_get_nat_index(member);
+        w_word nat = clazz->values[nat_idx];
+        w_int name_idx = Name_and_Type_get_name_index(nat);
+        w_int type_idx = Name_and_Type_get_type_index(nat);
+
+        woempa(7, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
+        if (member_name_ptr) {
+          *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
+          woempa(7, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
+        }
+        if (member_type_ptr) {
+          *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
+          woempa(7, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
+        }
+      }
+      x_monitor_exit(clazz->resolution_monitor);
+
+      return TRUE;
+    }
+    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+      x_monitor_exit(clazz->resolution_monitor);
+
+      return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+
+    }
+    // else we return NULL (e.g. COULD_NOT_RESOLVE)
+    x_monitor_exit(clazz->resolution_monitor);
+
+    return FALSE;
   }
 }
 
