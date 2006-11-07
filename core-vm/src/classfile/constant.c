@@ -1379,7 +1379,7 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
       return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
 
     }
-    // else we return NULL (e.g. COULD_NOT_RESOLVE)
+    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
     x_monitor_exit(clazz->resolution_monitor);
 
     return FALSE;
