@@ -1205,12 +1205,14 @@ void native_static_unsynchronized_void(w_frame caller, w_method method) {
 }
 
 static void prepareBytecode(w_method method);
+w_boolean verifyMethod(w_method method);
 
 void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
 
   w_int i;
   //w_instance ref_result;
  
+  threadMustBeSafe(caller->thread);
 #ifdef JSPOT
   i = 21;  // interprete_profiled
 #else
@@ -1270,15 +1272,24 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   }
 #endif
 
-  woempa(1, "Will call bytecode of %m using dispatcher[%d]\n", method, i);
-  if (i == 1 || i >= 24) {
-    setFlag(method->flags, METHOD_UNSAFE_DISPATCH);
-  }
   // Check that another thread didn't beat us to it
   x_monitor_enter(method->spec.declaring_clazz->resolution_monitor, x_eternal);
   if (method->exec.dispatcher == initialize_dispatcher) {
+/* VERIFICATION
+    if (!verifyMethod(method)) {
+      x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
+      return;
+    }
+*/
     prepareBytecode(method);
     method->exec.dispatcher = dispatchers[i];
+    if (i == 1 || i >= 24) {
+      setFlag(method->flags, METHOD_UNSAFE_DISPATCH);
+      woempa(7, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, i);
+    }
+    else {
+      woempa(7, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, i);
+    }
   }
   x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
   callMethod(caller, method);
