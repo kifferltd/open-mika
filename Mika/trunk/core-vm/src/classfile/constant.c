@@ -1274,6 +1274,59 @@ void dissolveConstant(w_clazz clazz, int idx) {
 }
 
 /*
+** Get the class name from a Class constant, without resolving the constant if
+** it is not already resolved. Returns the descriptor of the class if
+** the operation succeeded, NULL if it failed e.g. because the constant is in
+** state COULD_NOT_RESOLVE.
+** The resulting w_string is registered, so remember to deregister it afterwards.
+*/
+static w_string getClassConstantName(w_clazz clazz, w_int idx) {
+
+  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+    w_clazz c = (w_clazz)clazz->values[idx];
+
+    woempa(7, "Already resolved constant\n");
+
+    return dots2slashes(c->dotified);
+
+  }
+  else {
+    x_monitor_eternal(clazz->resolution_monitor);
+    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
+      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+        x_monitor_eternal(clazz->resolution_monitor);
+      }
+    }
+
+    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
+      w_int name_index = clazz->values[idx];
+
+      woempa(7, "Unresolved constant\n");
+
+      x_monitor_exit(clazz->resolution_monitor);
+
+      return resolveUtf8Constant(clazz, name_index);
+
+    }
+    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+      w_clazz c = (w_clazz)clazz->values[idx];
+
+      x_monitor_exit(clazz->resolution_monitor);
+
+      woempa(7, "Newly resolved constant\n");
+
+      return dots2slashes(c->dotified);
+
+
+    }
+    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
+    x_monitor_exit(clazz->resolution_monitor);
+
+    return NULL;
+  }
+}
+
+/*
 ** Utility method used by getMemberConstantStrings() when the constant is
 ** already resolved.
 */
@@ -1285,7 +1338,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
     f = (w_field)clazz->values[idx];
     woempa(7, "Resolved Field constant: %k %w %k\n", f->declaring_clazz, f->name, f->value_clazz);
     if (declaring_clazz_ptr) {
-      *declaring_clazz_ptr = clazz2desc(f->declaring_clazz);
+      *declaring_clazz_ptr = dots2slashes(f->declaring_clazz->dotified);
     }
     if (member_name_ptr) {
       *member_name_ptr = registerString(f->name);
@@ -1300,7 +1353,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
     m = (w_method)clazz->values[idx];
     woempa(7, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->desc);
     if (declaring_clazz_ptr) {
-      *declaring_clazz_ptr = clazz2desc(m->spec.declaring_clazz);
+      *declaring_clazz_ptr = dots2slashes(m->spec.declaring_clazz->dotified);
     }
     if (member_name_ptr) {
       *member_name_ptr = registerString(m->spec.name);
@@ -1349,8 +1402,16 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
       woempa(7, "Unresolved constant\n");
       if (declaring_clazz_ptr) {
         w_int cls_idx = Member_get_class_index(member);
+        w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
 
-        *declaring_clazz_ptr = resolveUtf8Constant(clazz, cls_idx);
+        if (declaring_clazz_name) {
+          *declaring_clazz_ptr = declaring_clazz_name;
+        }
+        else {
+          x_monitor_exit(clazz->resolution_monitor);
+
+          return FALSE;
+        }
         woempa(7, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
       }
       if (member_name_ptr || member_type_ptr) {
