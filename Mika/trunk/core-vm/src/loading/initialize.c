@@ -390,9 +390,7 @@ w_int mustBeInitialized(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
-  if (state < CLAZZ_STATE_LOADED) {
-    wabort(ABORT_WONKA, "%K must be loaded before it can be Initialized\n", clazz);
-  }
+  threadMustBeSafe(thread);
 
   if (exceptionThrown(thread)) {
     woempa(9, "Eh? Exception '%e' already pending in mustBeInitialized(%K)\n", exceptionThrown(thread), clazz);
@@ -402,7 +400,39 @@ w_int mustBeInitialized(w_clazz clazz) {
   }
 #endif
 
-  if (state == CLAZZ_STATE_BROKEN) {
+  switch (state) {
+  case CLAZZ_STATE_UNLOADED:
+  case CLAZZ_STATE_LOADING:
+    wabort(ABORT_WONKA, "%K must be loaded before it can be Initialized\n", clazz);
+
+  case CLAZZ_STATE_LOADED:
+  case CLAZZ_STATE_SUPERS_LOADING:
+  case CLAZZ_STATE_SUPERS_LOADED:
+  case CLAZZ_STATE_REFERENCING:
+  case CLAZZ_STATE_REFERENCED:
+  case CLAZZ_STATE_LINKING:
+    result = mustBeLinked(clazz);
+    break;
+
+  case CLAZZ_STATE_VERIFYING:
+  case CLAZZ_STATE_VERIFIED:
+    wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
+
+  case CLAZZ_STATE_LINKED:
+    break;
+
+  case CLAZZ_STATE_INITIALIZING:
+    if (clazz->resolution_thread == thread) {
+
+      return CLASS_LOADING_DID_NOTHING;
+
+    }
+
+  case CLAZZ_STATE_INITIALIZED:
+
+    return CLASS_LOADING_DID_NOTHING;
+
+  default: // broken/garbage class
   // TODO - is the right thing to throw?
     throwException(thread, clazzNoClassDefFoundError, "%k : %w", clazz, clazz->failure_message);
 
@@ -410,15 +440,11 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   }
 
-  if (state >= CLAZZ_STATE_INITIALIZED || (state == CLAZZ_STATE_INITIALIZING && clazz->resolution_thread == thread)) {
+  if (result == CLASS_LOADING_FAILED) {
 
-    return CLASS_LOADING_DID_NOTHING;
+    return CLASS_LOADING_FAILED;
 
   }
-
-  threadMustBeSafe(thread);
-
-  mustBeLinked(clazz);
 
   x_monitor_eternal(clazz->resolution_monitor);
   state = getClazzState(clazz);
@@ -433,14 +459,19 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   clazz->resolution_thread = thread;
   if (state == CLAZZ_STATE_LINKED) {
-    woempa(1, "Initializing %K\n", clazz);
+    woempa(7, "Initializing %K\n", clazz);
     setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
     x_monitor_exit(clazz->resolution_monitor);
 
     n = clazz->numSuperClasses;
     woempa(1, "%K has %d superclasses\n", clazz, n);
-    for (i = n - 1; (result != CLASS_LOADING_FAILED) && (i >= 0); --i) {
+    for (i = n - 1; i >= 0; --i) {
       result |= mustBeInitialized(clazz->supers[i]);
+      if (result != CLASS_LOADING_SUCCEEDED) {
+
+        break;
+
+      }
     }
 
     if (result != CLASS_LOADING_FAILED) {
@@ -478,3 +509,4 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   return result;
 }
+
