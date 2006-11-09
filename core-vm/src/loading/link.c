@@ -64,6 +64,8 @@ w_int mustBeLinked(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
+  threadMustBeSafe(thread);
+
   if (state < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "%K must be loaded before it can be Linked\n", clazz);
   }
@@ -87,9 +89,13 @@ w_int mustBeLinked(w_clazz clazz) {
 
   }
 
-  mustBeReferenced(clazz);
+  result = mustBeReferenced(clazz);
 
-  threadMustBeSafe(thread);
+  if (result == CLAZZ_LOADING_FAILED) {
+
+    return CLAZZ_LOADING_FAILED;
+
+  }
 
   x_monitor_eternal(clazz->resolution_monitor);
   //clazz->resolution_thread = thread;
@@ -108,23 +114,6 @@ w_int mustBeLinked(w_clazz clazz) {
     setClazzState(clazz, CLAZZ_STATE_LINKING);
     x_monitor_exit(clazz->resolution_monitor);
 
-/* Do we need this?
-    n = clazz->numSuperClasses;
-    woempa(1, "%K has %d superclasses\n", clazz, n);
-    for (i = n - 1; (result != CLASS_LOADING_FAILED) && (i >= 0); --i) {
-      result |= mustBeLinked(clazz->supers[i]);
-    }
-
-    n = clazz->numInterfaces;
-    woempa(1, "%K has %d superinterfaces\n", clazz, n);
-    for (i = n - 1; (result != CLASS_LOADING_FAILED) && (i >= 0); --i) {
-      result |= mustBeLinked(clazz->interfaces[i]);
-    }
-
-    if (result != CLASS_LOADING_FAILED) {
-      result |= linkClazz(clazz);
-    }
-*/
     result = linkClazz(clazz);
 
     if (result == CLASS_LOADING_FAILED) {
