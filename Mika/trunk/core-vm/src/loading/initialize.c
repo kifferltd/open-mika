@@ -427,6 +427,7 @@ w_int mustBeInitialized(w_clazz clazz) {
       return CLASS_LOADING_DID_NOTHING;
 
     }
+    break;
 
   case CLAZZ_STATE_INITIALIZED:
 
