@@ -59,7 +59,7 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
   w_clazz super;
   w_int   i;
   w_int   n;
-  w_int   retcode;
+  w_int   result;
 
 #ifndef NO_FORMAT_CHECKS
   if (isNotSet(clazz->flags, CLAZZ_IS_TRUSTED) && !clazz->temp.super_index) {
@@ -159,8 +159,8 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
 #endif
 
   for (i = n - 1; i >= 0; --i) {
-    retcode = mustBeSupersLoaded(clazz->supers[i]);
-    if (exceptionThrown(thread)) {
+    result |= mustBeSupersLoaded(clazz->supers[i]);
+    if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
 
       return CLASS_LOADING_FAILED;
 
@@ -193,7 +193,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   w_int   j;
   w_int   n;
   w_clazz interfaze;
-  w_int   retcode;
+  w_int   result;
 
   n = 0;
   clazz->interfaces = allocMem(MAX_INTERFACES * sizeof(w_clazz));
@@ -245,8 +245,8 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
       wabort(ABORT_WONKA, "Class %k has too many superinterfaces", clazz);
     }
 
-    mustBeSupersLoaded(interfaze);
-    if (exceptionThrown(thread)) {
+    result = mustBeSupersLoaded(interfaze);
+    if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
 
       return CLASS_LOADING_FAILED;
 
@@ -306,7 +306,12 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   }
 
   for (i = n - 1; i >= 0; --i) {
-    retcode = mustBeSupersLoaded(clazz->interfaces[i]);
+    result |= mustBeSupersLoaded(clazz->interfaces[i]);
+    if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
+
+      return CLASS_LOADING_FAILED;
+
+    }
   }
 
   return CLASS_LOADING_SUCCEEDED;
@@ -319,8 +324,6 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
-  threadMustBeSafe(thread);
-
   if (state < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "%K must be loaded before it can be SupersLoaded\n", clazz);
   }
@@ -336,6 +339,8 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
     return CLASS_LOADING_DID_NOTHING;
 
   }
+
+  threadMustBeSafe(thread);
 
   x_monitor_eternal(clazz->resolution_monitor);
   //clazz->resolution_thread = thread;

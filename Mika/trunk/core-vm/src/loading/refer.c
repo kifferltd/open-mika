@@ -828,8 +828,6 @@ w_int mustBeReferenced(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
-  threadMustBeSafe(thread);
-
   if (state < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "%K must be loaded before it can be Referenced\n", clazz);
   }
@@ -852,6 +850,8 @@ w_int mustBeReferenced(w_clazz clazz) {
     return CLASS_LOADING_DID_NOTHING;
 
   }
+
+  threadMustBeSafe(thread);
 
   result = mustBeSupersLoaded(clazz);
 
