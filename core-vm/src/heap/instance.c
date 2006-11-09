@@ -130,15 +130,6 @@ inline static void checkClazz(w_clazz clazz) {
   if (! clazz) {
     wabort(ABORT_WONKA, "Clazz is NULL\n");
   }
-
-  /*
-  ** Check if bytes needed is negative or larger than 8 Mbytes.
-  */
-    
-  if (clazz->bytes_needed & 0xff800000) {
-    wabort(ABORT_WONKA, "Clazz %k impossible size words = 0x%x bytes = 0x%x\n", clazz, clazz->instanceSize, clazz->bytes_needed);
-  }
-
 }
 
 /*
@@ -228,7 +219,7 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
   ** Maybe we should have a separate allocator for priority cases?
   */
 
-  if (clazz == clazzString || isSet(clazz->flags, CLAZZ_IS_THROWABLE) || heap_request(thread, (w_int)clazz->bytes_needed)) {
+  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE) || heap_request(thread, (w_int)clazz->bytes_needed)) {
     object = allocClearedMem(clazz->bytes_needed);
   }
 
