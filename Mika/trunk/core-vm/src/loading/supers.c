@@ -59,7 +59,7 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
   w_clazz super;
   w_int   i;
   w_int   n;
-  w_int   result;
+  w_int   result = CLASS_LOADING_DID_NOTHING;
 
 #ifndef NO_FORMAT_CHECKS
   if (isNotSet(clazz->flags, CLAZZ_IS_TRUSTED) && !clazz->temp.super_index) {
@@ -193,7 +193,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   w_int   j;
   w_int   n;
   w_clazz interfaze;
-  w_int   result;
+  w_int   result = CLASS_LOADING_DID_NOTHING;
 
   n = 0;
   clazz->interfaces = allocMem(MAX_INTERFACES * sizeof(w_clazz));
