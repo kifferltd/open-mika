@@ -1127,13 +1127,16 @@ static w_instance getStringInstance_internal(w_string s) {
   instance = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
   if (!instance) {
     instance = allocStringInstance(thread);
-//wprintf("Setting %j YELLOW\n", instance);
-    //setFlag(instance2flags(instance), O_YELLOW);
     if (instance) {
       w_string r = registerString(s);
       setWotsitField(instance, F_String_wotsit, r);
       ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)instance);
     }
+#ifdef PIGS_MIGHT_FLY
+  } else {
+    w_object object = instance2object(instance);
+    unsetFlag(object->flags, O_GARBAGE);
+#endif
   }
   ht_unlock(string_hashtable);
 
