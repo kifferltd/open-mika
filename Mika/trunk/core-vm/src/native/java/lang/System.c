@@ -52,7 +52,6 @@
 w_hashtable prop_hashtable;
 
 w_long System_static_currentTimeMillis(JNIEnv *env, w_instance classSystem) {
-  replaceByFastCall(env, FAST_SYSTEM_CURRENTTIMEMILLIS);
   return (w_long)getNativeSystemTime();
 }
 

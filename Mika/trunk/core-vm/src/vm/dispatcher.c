@@ -49,6 +49,7 @@
 #include "misc.h"
 #include "wstrings.h"
 #include "calls.h"
+#include "fastcall.h"
 
 extern w_hashtable lock_hashtable;
 extern w_clazz clazzLinkageError;
@@ -1358,11 +1359,24 @@ void prepareBytecode(w_method method) {
       case if_icmpgt: case if_icmple: case ifeq: case ifne: case iflt: case ifge: case ifgt: case ifle:
       case ifnonnull: case ifnull: case jsr: case sipush: case anewarray: case instanceof: case j_goto: 
       case checkcast: case ldc2_w: case new: case getfield: case getstatic: case invokespecial: 
-      case invokestatic: case invokevirtual: case putfield: case putstatic: case iinc: {
+      case putfield: case putstatic: case iinc: {
         pc += 2;
         break;
       }
-      
+
+      case invokestatic: {
+        fastcall_check_invoke_static(cclazz, bytecode+pc+1);
+        pc += 2;
+        break;
+      }
+
+
+      case invokevirtual: {    
+        fastcall_check_invoke_virtual(cclazz, bytecode+pc+1);
+        pc += 2;
+        break;
+      }
+ 
       case multianewarray: {
         pc += 3;
         break;

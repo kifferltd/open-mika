@@ -268,7 +268,6 @@ java/lang/String
         endsWith                (Ljava/lang/String;)Z   String_endsWith
         regionMatches           (ZILjava/lang/String;II)Z                        String_regionMatches
         startsWith              (Ljava/lang/String;I)Z  String_startsWith
-	toString		()Ljava/lang/String;	String_toString
 	trim			()Ljava/lang/String;	String_trim
 	intern			()Ljava/lang/String;	String_intern
         getNativeBytes          (Z)[B  			String_getBytes

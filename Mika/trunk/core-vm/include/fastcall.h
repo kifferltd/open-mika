@@ -37,22 +37,27 @@
 #define FAST_CHARACTER_DIGIT_CHAR_INT   15
 #define FAST_SYSTEM_CURRENTTIMEMILLIS   16
 
-/*
-** Code to replace a slow call by a fast one.
-*/
-static inline void replaceByFastCall(JNIEnv *env, int fast_method_num) {
-#ifdef USE_FAST_CALLS
-  w_thread thread = JNIEnv2w_thread(env);
+typedef struct w_FastCall {
+  w_string method_name;
+  w_string method_sig;
+  w_int index;
+} w_FastCall;
 
-  woempa(1, "Calling opcode: %02x %02x %02x\n", thread->top->previous->current[0], thread->top->previous->current[1], thread->top->previous->current[2]);
-  if (*thread->top->previous->current == 0xcf || *thread->top->previous->current == 0xd0) {
-    thread->top->previous->current[0] = 0xd3;
-    thread->top->previous->current[1] = fast_method_num >> 8;
-    thread->top->previous->current[2] = fast_method_num  & 0xff;
-    woempa(1, "Replaced by: %02x %02x %02x\n", thread->top->previous->current[0], thread->top->previous->current[1], thread->top->previous->current[2]);
-  }
-#endif
-}
+typedef w_FastCall* w_fastcall;
+
+typedef struct w_FastClass {
+  w_string class_name;
+  w_clazz initialize;
+  w_fastcall* calls;
+} w_FastClass;
+
+typedef w_FastClass* w_fastclass;
+
+#define FAST_STATIC_CLASSES 2
+#define FAST_VIRTUAL_CLASSES 2
+void fastcall_check_invoke_static(w_clazz clazz, unsigned char * bytecodes);
+void fastcall_check_invoke_virtual(w_clazz clazz, unsigned char * bytecodes);
+void fastcall_init_tables(void);
 
 #define _FASTCALL_H
 #endif /* _FASTCALL_H */

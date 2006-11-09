@@ -56,7 +56,6 @@
 
 void String_create_empty(JNIEnv *env, w_instance String) {
   w_string s = registerString(string_empty);
-  replaceByFastCall(env, FAST_STRING_CREATE_EMPTY);
   setWotsitField(String, F_String_wotsit, s);
   woempa(1, "%p new string at %p, empty\n", String, (char *)(String2string(String)));
 }
@@ -133,7 +132,6 @@ void i_String_create_char(w_thread thread, w_instance String, w_instance charArr
 }
 
 void String_create_char(JNIEnv *env, w_instance thisString, w_instance charArray, w_int offset, w_int count) {
-  replaceByFastCall(env, FAST_STRING_CREATE_CHAR);
   i_String_create_char(JNIEnv2w_thread(env), thisString, charArray, offset, count);
 }
 
@@ -197,7 +195,6 @@ static void i_String_create_byte(w_thread thread, w_instance String, w_instance 
 }
 
 void String_create_byte(JNIEnv *env, w_instance thisString, w_instance byteArray, w_int hibyte, w_int offset, w_int count) {
-  replaceByFastCall(env, FAST_STRING_CREATE_BYTE);
   i_String_create_byte(JNIEnv2w_thread(env), thisString, byteArray, hibyte, offset, count);
 }
 
@@ -206,16 +203,6 @@ void fast_String_create_byte(w_frame frame) {
   i_String_create_byte(frame->thread, (w_instance)frame->jstack_top[-5].c, (w_instance)frame->jstack_top[-4].c, frame->jstack_top[-3].c, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
   frame->jstack_top -= 5;
   enterUnsafeRegion(frame->thread);
-}
-
-
-/*
-** Vacuous.
-*/
-
-w_instance String_toString(JNIEnv *env, w_instance theString) { 
-  replaceByFastCall(env, FAST_STRING_TOSTRING);
-  return theString;
 }
 
 void fast_String_toString(w_frame frame) {
@@ -356,7 +343,6 @@ static w_boolean i_String_equals(w_thread thread, w_instance thisString, w_insta
 }
 
 w_boolean String_equals(JNIEnv *env, w_instance thisString, w_instance otherString) {
-  replaceByFastCall(env, FAST_STRING_EQUALS);
   return i_String_equals(JNIEnv2w_thread(env), thisString, otherString);
 }
 
@@ -364,7 +350,7 @@ void fast_String_equals(w_frame frame) {
   w_instance objectref = (w_instance) frame->jstack_top[-2].c;
   w_instance otherref = (w_instance) frame->jstack_top[-1].c;
 
-  if (objectref && otherref) {
+  if (objectref) {
     frame->jstack_top[-2].s = 0;
     frame->jstack_top[-2].c = i_String_equals(frame->thread, objectref, otherref);
     frame->jstack_top -= 1;
@@ -429,7 +415,6 @@ static w_int i_String_hashCode(w_thread thread, w_instance thisString) {
 }
 
 w_int String_hashCode(JNIEnv *env, w_instance thisString) {
-  replaceByFastCall(env, FAST_STRING_HASHCODE);
   return i_String_hashCode(JNIEnv2w_thread(env), thisString);
 }
 
@@ -453,7 +438,6 @@ void fast_String_hashCode(w_frame frame) {
 
 w_int String_length(JNIEnv *env, w_instance String) {
   w_string string = String2string(String);
-  replaceByFastCall(env, FAST_STRING_LENGTH);
   woempa(1, "%p '%w'\n", String, string);
 
   return string_length(string);
@@ -544,8 +528,6 @@ static w_boolean i_String_startsWith(w_string this, w_string prefix, w_int offse
 }
 
 w_boolean String_startsWith(JNIEnv *env, w_instance This, w_instance Prefix, w_int offset) {
-  replaceByFastCall(env, FAST_STRING_STARTSWITH);
-
   if (!Prefix) {
     throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
     return FALSE;
@@ -625,7 +607,6 @@ static w_char i_String_charAt(w_thread thread, w_instance thisString, w_int idx)
 }
 
 w_char String_charAt(JNIEnv *env, w_instance thisString, w_int idx) {
-  replaceByFastCall(env, FAST_STRING_CHARAT);
   return i_String_charAt(JNIEnv2w_thread(env), thisString, idx);
 }
 
@@ -731,7 +712,6 @@ static w_int i_String_indexOf_char(w_thread thread, w_instance thisString, w_int
 }
 
 w_int String_indexOf_char(JNIEnv *env, w_instance thisString, w_int ch, w_int offset) {
-  replaceByFastCall(env, FAST_STRING_INDEXOF_CHAR);
   return i_String_indexOf_char(JNIEnv2w_thread(env), thisString, ch, offset);
 }
 
@@ -1080,7 +1060,6 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
 }
 
 w_instance String_substring(JNIEnv *env, w_instance thisString, w_int offset, int endIndex) {
-  replaceByFastCall(env, FAST_STRING_SUBSTRING);
   return i_String_substring(JNIEnv2w_thread(env), thisString, offset, endIndex);
 }
 

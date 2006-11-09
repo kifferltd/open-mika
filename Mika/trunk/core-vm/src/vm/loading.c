@@ -43,6 +43,8 @@
 #include "ts-mem.h"
 #include "wstrings.h"
 #include "wonka.h"
+#include "fastcall.h"
+
 #ifdef USE_ZLIB
 #include "unzip.h"
 #include "zutil.h"
@@ -630,6 +632,8 @@ void startLoading(void) {
   string_params_String_return_Class = cstring2String("(Ljava/lang/String;)Ljava/lang/Class;", 37);
   string_L_java_lang_String = cstring2String("Ljava/lang/String;", 18);
 
+  fastcall_init_tables();
+
   string_bootstrap = cstring2String("bootstrap class loader", 22);
 
   clazz_boolean = createPrimitive(string_boolean, VM_TYPE_BOOLEAN, 1);
@@ -854,7 +858,6 @@ void startLoading(void) {
 
 //  createOutOfMemoryErrorCache();
   mustBeInitialized(clazzInvocationTargetException);
-//  mustBeInitialized(clazzProxy);
 
   woempa(7, "Forced class loading complete, loaded %d classes.\n",system_loaded_class_hashtable->occupancy);
 
