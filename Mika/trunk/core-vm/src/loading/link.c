@@ -91,9 +91,9 @@ w_int mustBeLinked(w_clazz clazz) {
 
   result = mustBeReferenced(clazz);
 
-  if (result == CLAZZ_LOADING_FAILED) {
+  if (result == CLASS_LOADING_FAILED) {
 
-    return CLAZZ_LOADING_FAILED;
+    return CLASS_LOADING_FAILED;
 
   }
 
