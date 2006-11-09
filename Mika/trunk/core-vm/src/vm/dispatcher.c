@@ -1358,7 +1358,7 @@ void prepareBytecode(w_method method) {
       case if_acmpeq: case if_acmpne: case if_icmpeq: case if_icmpne: case if_icmplt: case if_icmpge: 
       case if_icmpgt: case if_icmple: case ifeq: case ifne: case iflt: case ifge: case ifgt: case ifle:
       case ifnonnull: case ifnull: case jsr: case sipush: case anewarray: case instanceof: case j_goto: 
-      case checkcast: case ldc2_w: case new: case getfield: case getstatic: case invokespecial: 
+      case checkcast: case ldc2_w: case new: case getfield: case getstatic: 
       case putfield: case putstatic: case iinc: {
         pc += 2;
         break;
@@ -1370,6 +1370,11 @@ void prepareBytecode(w_method method) {
         break;
       }
 
+      case invokespecial: {
+        fastcall_check_invoke_special(cclazz, bytecode+pc+1);
+        pc += 2;
+        break;
+      }
 
       case invokevirtual: {    
         fastcall_check_invoke_virtual(cclazz, bytecode+pc+1);

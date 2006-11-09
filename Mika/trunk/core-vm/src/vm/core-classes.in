@@ -260,10 +260,10 @@ java/lang/ThreadGroup
 java/lang/String
 	wotsit                  +
         hashCode		+
-        create_empty            ()V                     String_create_empty
+#        create_empty            ()V                     String_create_empty
         create_String           (Ljava/lang/String;)V   String_create_String
         create_char             ([CII)V                 String_create_char
-        create_byte             ([BIII)V                String_create_byte
+#        create_byte             ([BIII)V                String_create_byte
         create_StringBuffer     (Ljava/lang/StringBuffer;)V String_create_StringBuffer
         endsWith                (Ljava/lang/String;)Z   String_endsWith
         regionMatches           (ZILjava/lang/String;II)Z                        String_regionMatches

@@ -49,10 +49,6 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
   ** clause.)
   */
   
-  /** Create an empty String.
-   */
-  private native void create_empty();
-
   /** Create a String identical to another String.
    */
   private native void create_String(String s);
@@ -61,18 +57,10 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
    */
   private native void create_StringBuffer(StringBuffer b);
 
-  /**
-   */
   private native void create_char(char[] value, int offset, int count);
 
-  /** Create a String from a sequence of bytes.
-   ** If hibyte < 0, applies utf8->Unicode conversion.
-   ** Otherwise, just adds 256*hibyte to every byte and treats the result as a Char.
-   */
-  private native void create_byte(byte[] value, int hibyte, int offset, int count);
-
   public String() {
-    create_empty();
+    throw new InternalError();
   }
 
   public String(String value) throws NullPointerException {
@@ -84,25 +72,25 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
   }
 
   public String(byte[] value) throws NullPointerException {
-    create_byte(value, 0, 0, value.length);
+    this(value, 0, 0, value.length);
   }
 
   // DEPRECATED
   public String(byte[] value, int hibyte) throws NullPointerException {
-    create_byte(value, hibyte, 0, value.length);
+    this(value, hibyte, 0, value.length);
   }
 
   // DEPRECATED
   public String(byte[] value, int hibyte, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
-    create_byte(value, hibyte, offset, count);
+    throw new InternalError();
   }
 
   public String(byte[] value, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
-    create_byte(value, 0, offset, count);
+    this(value, 0, offset, count);
   }
 
   public String(char[] value) throws NullPointerException {
-    create_char(value, 0, value.length);
+    this(value, 0, value.length);
   }
 
   public String(byte[] value,int offset, int length, String str) throws UnsupportedEncodingException {
@@ -115,7 +103,8 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
   }
 
   public String(char[] value, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
-    create_char(value, offset, count);
+    throw new InternalError();
+
   }
 
   public String toString() {

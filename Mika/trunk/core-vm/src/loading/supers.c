@@ -346,7 +346,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
 
-  while(state == CLAZZ_STATE_LOADING) {
+  while(state == CLAZZ_STATE_SUPERS_LOADING) {
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
     if (monitor_status == xs_interrupted) {
       x_monitor_eternal(clazz->resolution_monitor);

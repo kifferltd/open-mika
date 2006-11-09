@@ -39,22 +39,23 @@
 #include "methods.h"
 #include "fastcall.h"
 
-extern w_string string_L_java_lang_String;
-
 w_fastclass static_calls[FAST_STATIC_CLASSES];
 w_fastclass virtual_calls[FAST_VIRTUAL_CLASSES];
+w_fastclass special_calls[FAST_SPECIAL_CLASSES];
+
 w_string clazz_name_Charater;
 
 void fastcall_check_class(w_fastclass fclass, w_string method_name, 
  w_string method_sig, unsigned char * bytecodes) {
   int i;
 
+  woempa(5,"looking for %w.%w%w\n",fclass->class_name,method_name,method_sig);
   for (i=0 ; fclass->calls[i] != NULL; i++) {
     if((method_name == fclass->calls[i]->method_name)
       && (fclass->calls[i]->method_sig == method_sig)){
 
-      woempa(7, "Using  %w.%w%w fastcalls\n",fclass->class_name,
-            fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
+     woempa(7,"Using  %w.%w%w fastcalls\n",fclass->class_name,
+           fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
 
       //A bit of a hack to guarantee that Class java.lang.Character gets initialized...
       if(fclass->class_name ==  clazz_name_Charater) {
@@ -106,6 +107,12 @@ void fastcall_check_invoke_virtual(w_clazz clazz, unsigned char * bytecodes) {
 #endif
 }
 
+void fastcall_check_invoke_special(w_clazz clazz, unsigned char * bytecodes) {
+#ifdef USE_FAST_CALLS
+  fastcall_check_invoke(clazz,bytecodes,special_calls, FAST_SPECIAL_CLASSES);
+#endif
+}
+
 w_fastclass createClassTable(w_int size, w_string name) {
   w_int i=0;
   w_fastclass current = (w_fastclass) allocMem(sizeof(w_FastClass));
@@ -123,6 +130,8 @@ void fastcall_init_tables() {
   w_fastclass current;
 
   w_string no_args_void = cstring2String("()V", 3);
+  w_string clazz_name_String = cstring2String("java/lang/String", 16);
+  w_string init = cstring2String("<init>", 6);
 
   clazz_name_Charater = cstring2String("java/lang/Character", 19);
 
@@ -153,7 +162,7 @@ void fastcall_init_tables() {
   current->calls[1]->method_name = cstring2String("toString", 8);
   current->calls[1]->method_sig = cstring2String("()Ljava/lang/String;", 20);
 
-  current = createClassTable(11,cstring2String("java/lang/String", 16));
+  current = createClassTable(8,clazz_name_String);
   virtual_calls[1] = current;
   current->calls[0]->index = FAST_STRING_SUBSTRING;
   current->calls[0]->method_name = cstring2String("substring", 11);
@@ -179,15 +188,18 @@ void fastcall_init_tables() {
   current->calls[7]->index = FAST_STRING_STARTSWITH;
   current->calls[7]->method_name = cstring2String("startsWith", 10);
   current->calls[7]->method_sig = cstring2String("(Ljava/lang/String;I)V", 22);
-  current->calls[8]->index = FAST_STRING_CREATE_EMPTY;
-  current->calls[8]->method_name = cstring2String("create_empty", 12);
-  current->calls[8]->method_sig = no_args_void;
-  current->calls[9]->index = FAST_STRING_CREATE_BYTE;
-  current->calls[9]->method_name = cstring2String("create_byte", 11);
-  current->calls[9]->method_sig = cstring2String("([BIII)V", 8);
-  current->calls[10]->index = FAST_STRING_CREATE_CHAR;
-  current->calls[10]->method_name = cstring2String("create_char", 11);
-  current->calls[10]->method_sig = cstring2String("([CIII)V", 8);
+
+  current = createClassTable(3,clazz_name_String);
+  special_calls[0] = current;
+  current->calls[0]->index = FAST_STRING_CREATE_BYTE;
+  current->calls[0]->method_name = init;
+  current->calls[0]->method_sig = cstring2String("([BIII)V", 8);
+  current->calls[1]->index = FAST_STRING_CREATE_CHAR;
+  current->calls[1]->method_name = init;
+  current->calls[1]->method_sig = cstring2String("([CII)V", 7);
+  current->calls[2]->index = FAST_STRING_CREATE_EMPTY;
+  current->calls[2]->method_name = init;
+  current->calls[2]->method_sig = no_args_void;
 #endif
 }
 

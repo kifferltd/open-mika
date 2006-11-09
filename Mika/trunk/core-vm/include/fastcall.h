@@ -47,7 +47,6 @@ typedef w_FastCall* w_fastcall;
 
 typedef struct w_FastClass {
   w_string class_name;
-  w_clazz initialize;
   w_fastcall* calls;
 } w_FastClass;
 
@@ -55,8 +54,11 @@ typedef w_FastClass* w_fastclass;
 
 #define FAST_STATIC_CLASSES 2
 #define FAST_VIRTUAL_CLASSES 2
+#define FAST_SPECIAL_CLASSES 1
+
 void fastcall_check_invoke_static(w_clazz clazz, unsigned char * bytecodes);
 void fastcall_check_invoke_virtual(w_clazz clazz, unsigned char * bytecodes);
+void fastcall_check_invoke_special(w_clazz clazz, unsigned char * bytecodes);
 void fastcall_init_tables(void);
 
 #define _FASTCALL_H

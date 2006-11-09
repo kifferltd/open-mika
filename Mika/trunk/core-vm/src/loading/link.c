@@ -98,8 +98,13 @@ w_int mustBeLinked(w_clazz clazz) {
   }
 
   x_monitor_eternal(clazz->resolution_monitor);
-  //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
+
+#ifdef RUNTIME_CHECKS
+  if(state < CLAZZ_STATE_REFERENCED) {
+    wabort(ABORT_WONKA,"INVALID CLAZZ STATE %d for %K",state,clazz);
+  }
+#endif
 
   while(state == CLAZZ_STATE_LINKING) {
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
@@ -116,8 +121,8 @@ w_int mustBeLinked(w_clazz clazz) {
 
     result = linkClazz(clazz);
 
+    x_monitor_eternal(clazz->resolution_monitor);
     if (result == CLASS_LOADING_FAILED) {
-      x_monitor_eternal(clazz->resolution_monitor);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
@@ -126,7 +131,6 @@ w_int mustBeLinked(w_clazz clazz) {
 
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
     if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       result = CLASS_LOADING_FAILED;
