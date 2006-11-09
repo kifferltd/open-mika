@@ -389,7 +389,6 @@ w_int mustBeInitialized(w_clazz clazz) {
   w_int    result = CLASS_LOADING_DID_NOTHING;
   x_status monitor_status;
 
-#ifdef RUNTIME_CHECKS
   threadMustBeSafe(thread);
 
   if (exceptionThrown(thread)) {
@@ -398,7 +397,6 @@ w_int mustBeInitialized(w_clazz clazz) {
     return CLASS_LOADING_FAILED;
 
   }
-#endif
 
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
@@ -412,6 +410,9 @@ w_int mustBeInitialized(w_clazz clazz) {
   case CLAZZ_STATE_REFERENCED:
   case CLAZZ_STATE_LINKING:
     result = mustBeLinked(clazz);
+    if (result == CLASS_LOADING_FAILED) {
+      return CLASS_LOADING_FAILED;
+    }
     break;
 
   case CLAZZ_STATE_VERIFYING:
@@ -441,12 +442,6 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   }
 
-  if (result == CLASS_LOADING_FAILED) {
-
-    return CLASS_LOADING_FAILED;
-
-  }
-
   x_monitor_eternal(clazz->resolution_monitor);
   state = getClazzState(clazz);
 
@@ -458,16 +453,16 @@ w_int mustBeInitialized(w_clazz clazz) {
     state = getClazzState(clazz);
   }
 
-  clazz->resolution_thread = thread;
   if (state == CLAZZ_STATE_LINKED) {
     woempa(7, "Initializing %K\n", clazz);
+    clazz->resolution_thread = thread;
     setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
     x_monitor_exit(clazz->resolution_monitor);
 
     n = clazz->numSuperClasses;
     woempa(1, "%K has %d superclasses\n", clazz, n);
     for (i = n - 1; i >= 0; --i) {
-      result |= mustBeInitialized(clazz->supers[i]);
+      result = mustBeInitialized(clazz->supers[i]);
       if (result != CLASS_LOADING_SUCCEEDED) {
 
         break;
@@ -476,11 +471,11 @@ w_int mustBeInitialized(w_clazz clazz) {
     }
 
     if (result != CLASS_LOADING_FAILED) {
-      result |= initializeClazz(clazz);
+      result = initializeClazz(clazz);
     }
 
+    x_monitor_eternal(clazz->resolution_monitor);
     if (result == CLASS_LOADING_FAILED) {
-      x_monitor_eternal(clazz->resolution_monitor);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
@@ -489,7 +484,6 @@ w_int mustBeInitialized(w_clazz clazz) {
 
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
     if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       result = CLASS_LOADING_FAILED;

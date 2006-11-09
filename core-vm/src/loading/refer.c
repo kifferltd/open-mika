@@ -855,6 +855,7 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   result = mustBeSupersLoaded(clazz);
 
+
   if (result == CLASS_LOADING_FAILED) {
 
     return CLASS_LOADING_FAILED;
@@ -864,6 +865,12 @@ w_int mustBeReferenced(w_clazz clazz) {
   x_monitor_eternal(clazz->resolution_monitor);
   //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
+
+#ifdef RUNTIME_CHECKS
+  if(state < CLAZZ_STATE_SUPERS_LOADED) {
+    wabort(ABORT_WONKA,"INVALID CLAZZ STATE %d for %K (%p) %d",state,clazz,thread->exception,result);
+  }
+#endif
 
   while(state == CLAZZ_STATE_REFERENCING) {
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);

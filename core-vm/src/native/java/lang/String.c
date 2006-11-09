@@ -52,13 +52,13 @@
 
 /*
 ** Create an empty string
-*/
 
 void String_create_empty(JNIEnv *env, w_instance String) {
   w_string s = registerString(string_empty);
   setWotsitField(String, F_String_wotsit, s);
   woempa(1, "%p new string at %p, empty\n", String, (char *)(String2string(String)));
 }
+*/
 
 void fast_String_create_empty(w_frame frame) {
   w_instance objectref = (w_instance) frame->jstack_top[-1].c;
@@ -193,11 +193,11 @@ static void i_String_create_byte(w_thread thread, w_instance String, w_instance 
   }
 
 }
-
+/*
 void String_create_byte(JNIEnv *env, w_instance thisString, w_instance byteArray, w_int hibyte, w_int offset, w_int count) {
   i_String_create_byte(JNIEnv2w_thread(env), thisString, byteArray, hibyte, offset, count);
 }
-
+*/
 void fast_String_create_byte(w_frame frame) {
   enterSafeRegion(frame->thread);
   i_String_create_byte(frame->thread, (w_instance)frame->jstack_top[-5].c, (w_instance)frame->jstack_top[-4].c, frame->jstack_top[-3].c, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
@@ -870,7 +870,7 @@ w_int String_lastIndexOf_String(JNIEnv *env, w_instance thisString, w_instance o
     woempa(1, "Result: %w <-> %w starting at %d, result %d.\n", other, string, offset, result);
 
   }
-  
+
   return result;
 
 }
@@ -883,7 +883,7 @@ w_instance String_toUpperCase(JNIEnv *env, w_instance This, w_instance Locale) {
   w_char *buffer;
   w_char *dst;
   w_string string;
-  
+
   buffer = allocMem(string_length(this) * sizeof(w_char));
   if (buffer) {
     dst = buffer;
