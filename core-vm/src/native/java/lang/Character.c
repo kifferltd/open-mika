@@ -80,7 +80,6 @@ Character_static_isDefined
 w_boolean Character_static_isDigit
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  replaceByFastCall(env, FAST_CHARACTER_ISDIGIT_CHAR);
   return charIsDigit(ch);
 }
 
@@ -119,7 +118,6 @@ static w_char forDigit (w_int digit, w_int radix) {
 w_char Character_static_forDigit
 ( JNIEnv *env, w_instance ClassCharacter, w_int digit, w_int radix
 ) {
-  replaceByFastCall(env, FAST_CHARACTER_FORDIGIT_INT_INT);
   return forDigit(digit, radix);
 }
 
@@ -165,7 +163,6 @@ static w_int i_digit(w_char ch, w_int radix) {
 w_int Character_static_digit
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch, w_int radix
 ) {
-  replaceByFastCall(env, FAST_CHARACTER_DIGIT_CHAR_INT);
   return i_digit(ch, radix);
 }
 

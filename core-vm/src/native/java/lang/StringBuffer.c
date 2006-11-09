@@ -105,6 +105,7 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
     if (newbuffer) {
       copyChars(instance2Array_char(newbuffer), instance2Array_char(oldbuffer), getIntegerField(StringBuffer, F_StringBuffer_count));
       setReferenceField(StringBuffer, newbuffer, F_StringBuffer_value);
+      removeLocalReference(thread, newbuffer);
     }
   }
 }
@@ -218,7 +219,6 @@ w_instance StringBuffer_append_String(JNIEnv *env, w_instance thisStringBuffer, 
   w_thread thread = JNIEnv2w_thread(env);
   w_int curr_length = getIntegerField(thisStringBuffer, F_StringBuffer_count);
 
-  replaceByFastCall(env, FAST_STRINGBUFFER_APPEND);
   if (theString) {
     w_string string = String2string(theString);
     w_int src_length = string_length(string);
@@ -235,31 +235,35 @@ w_instance StringBuffer_append_String(JNIEnv *env, w_instance thisStringBuffer, 
 void fast_StringBuffer_append_String(w_frame frame) {
   w_instance objectref = (w_instance) frame->jstack_top[-2].c;
   w_thread thread = frame->thread;
-  w_int curr_length = getIntegerField(objectref, F_StringBuffer_count);
+  w_int curr_length;
 
-  if (frame->jstack_top[-1].c) {
-    w_string string = String2string((w_instance)frame->jstack_top[-1].c);
-    w_int    src_length = string_length(string);
-
-    i_ensureCapacity(thread, objectref, src_length + curr_length);
+  enterSafeRegion(thread);
+  if (!objectref) {
+    throwException(thread, clazzNullPointerException, NULL);
+    enterUnsafeRegion(thread);
   }
   else {
-    i_ensureCapacity(thread, objectref, 4 + curr_length);
-  }
-  enterSafeRegion(thread);
-  if (objectref) {
+    x_monitor m;
+
+    m = getMonitor(objectref);
+    x_monitor_eternal(m);
+    curr_length  = getIntegerField(objectref, F_StringBuffer_count);
+ 
     if (frame->jstack_top[-1].c) {
+      w_string string = String2string((w_instance)frame->jstack_top[-1].c);
+      w_int    src_length = string_length(string);
+
+      i_ensureCapacity(thread, objectref, src_length + curr_length);
       (void)i_StringBuffer_append_String(thread, objectref, (w_instance)frame->jstack_top[-1].c);
     }
     else {
+      i_ensureCapacity(thread, objectref, 4 + curr_length);
       (void)i_StringBuffer_append_String_null(thread, objectref);
     }
+    x_monitor_exit(m);
+    enterUnsafeRegion(thread);
     frame->jstack_top -= 1;
   }
-  else {
-    throwException(thread, clazzNullPointerException, NULL);
-  }
-  enterUnsafeRegion(thread);
 }
 
 w_instance StringBuffer_substring(JNIEnv *env, w_instance StringBuffer, w_int start, w_int end) {
@@ -308,7 +312,6 @@ static w_instance i_StringBuffer_toString(w_instance thisStringBuffer) {
 }
 
 w_instance StringBuffer_toString(JNIEnv *env, w_instance thisStringBuffer) {
-  replaceByFastCall(env, FAST_STRINGBUFFER_TOSTRING);
   return i_StringBuffer_toString(thisStringBuffer);
 }
 
