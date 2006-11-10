@@ -417,7 +417,7 @@ IEEE_INLINE static wfp_flag wfp_i_float64_is_signaling_nan( wfp_float64 a ) {
 Returns the result of converting the canonical NaN `a' to the double-
 precision floating-point format.
 -------------------------------------------------------------------------------
-*/
+Was only called from one other place. It inlined there ...
 
 static wfp_float64 wfp_commonNaNToFloat64( wfp_commonNaNT a ) {
 
@@ -427,7 +427,7 @@ static wfp_float64 wfp_commonNaNToFloat64( wfp_commonNaNT a ) {
         | ( a.high>>12 );
 
 }
-
+*/
 /*
 -------------------------------------------------------------------------------
 Takes two double-precision floating-point values `a' and `b', one of which
@@ -1302,7 +1302,11 @@ wfp_float64 wfp_float32_to_float64( wfp_float32 a ) {
     if ( aExp == 0xFF ) {
         if ( aSig ) {
           wfp_float32ToCommonNaN( &z, a );
-          return wfp_commonNaNToFloat64( z );
+
+          return (wfp_float64)( (((wfp_bits64) z.sign)<<63) |
+                  WFP_LIT64(0x7FF8000000000000) | (((wfp_bits64) z.high)>>12) ); 
+
+          //return wfp_commonNaNToFloat64( z );
         }
         return wfp_packFloat64( aSign, 0x7FF, WFP_LIT64(0) );
     }
