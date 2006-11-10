@@ -1,4 +1,4 @@
-<project name="mika-anttasks" default="main" basedir=".">
+<project name="mika" default="main" basedir=".">
   <property name="build.dir" value="${basedir}/build/"/>
   <property name="tools.dir" value="${build.dir}tools/"/>
   <property name="ant.dir" value="${basedir}/ant/"/>
