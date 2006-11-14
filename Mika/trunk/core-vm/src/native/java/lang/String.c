@@ -193,11 +193,11 @@ static void i_String_create_byte(w_thread thread, w_instance String, w_instance 
   }
 
 }
-/*
+
 void String_create_byte(JNIEnv *env, w_instance thisString, w_instance byteArray, w_int hibyte, w_int offset, w_int count) {
   i_String_create_byte(JNIEnv2w_thread(env), thisString, byteArray, hibyte, offset, count);
 }
-*/
+
 void fast_String_create_byte(w_frame frame) {
   enterSafeRegion(frame->thread);
   i_String_create_byte(frame->thread, (w_instance)frame->jstack_top[-5].c, (w_instance)frame->jstack_top[-4].c, frame->jstack_top[-3].c, frame->jstack_top[-2].c, frame->jstack_top[-1].c);

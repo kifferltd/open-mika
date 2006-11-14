@@ -58,9 +58,10 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
   private native void create_StringBuffer(StringBuffer b);
 
   private native void create_char(char[] value, int offset, int count);
+  private native void create_byte(byte[] value, int hibyte, int offset, int count);
 
   public String() {
-    throw new InternalError();
+    this("");
   }
 
   public String(String value) throws NullPointerException {
@@ -82,7 +83,7 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
 
   // DEPRECATED
   public String(byte[] value, int hibyte, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
-    throw new InternalError();
+    create_byte(value,hibyte,offset,count);
   }
 
   public String(byte[] value, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
@@ -103,8 +104,7 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
   }
 
   public String(char[] value, int offset, int count) throws NullPointerException, ArrayIndexOutOfBoundsException {
-    throw new InternalError();
-
+    create_char(value, offset,count);
   }
 
   public String toString() {
