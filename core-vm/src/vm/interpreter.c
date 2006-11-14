@@ -3514,8 +3514,18 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_invokefast: {
+#ifdef RUNTIME_CHECKS
+    void* p = frame->auxstack_top;
+#endif
     frame->jstack_top = tos;
     fast_method_table[short_operand](frame);
+
+#ifdef RUNTIME_CHECKS
+    if(p != frame->auxstack_top) {
+      wabort(ABORT_WONKA, "Fast method %d grew aux stack\n",short_operand);
+    }
+#endif
+
     if (thread->exception) {
       do_the_exception;
     }

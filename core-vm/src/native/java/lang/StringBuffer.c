@@ -327,6 +327,7 @@ void fast_StringBuffer_toString(w_frame frame) {
     frame->jstack_top[-1].c = (w_word)theString;
     if (!exceptionThrown(thread)) {
       setFlag(instance2flags(theString), O_BLACK);
+      removeLocalReference(thread, theString);
     }
   }
   else {
