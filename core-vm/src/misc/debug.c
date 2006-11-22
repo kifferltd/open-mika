@@ -417,7 +417,9 @@ void w_dump_trace(void *xref) {
   w_frame frame = thread->top;
   w_method method;
   w_int pc;
-  
+
+  w_dump("Local references: %d\n",thread->slots + SLOTS_PER_THREAD - thread->top->auxstack_top);
+
   if (thread == marking_thread) {
     w_dump("     marking heap\n");
   }
@@ -592,10 +594,13 @@ void w_dump_meminfo(void) {
   w_dump("\n");
 }
 
+extern w_hashtable globals_hashtable;
+
 void w_dump_info() {
   w_dump("\n");
   w_dump_threads();
   w_dump_locks();
 //  w_dump_classloaders();
+  w_dump("Global References: %d\n",globals_hashtable->occupancy);
   w_dump_meminfo();
 }
