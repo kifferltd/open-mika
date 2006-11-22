@@ -64,12 +64,12 @@ w_instance ReferenceQueue_poll(JNIEnv *env, w_instance this) {
   x_monitor lock = getWotsitField(this, F_ReferenceQueue_lock);
   w_thread thread = JNIEnv2w_thread(env);
   w_instance ref;
-
+  w_boolean unsafe;
   if(!lock || !fifo) {
    return NULL;
   }
 
-  enterUnsafeRegion(thread);
+  unsafe = enterUnsafeRegion(thread);
   x_monitor_eternal(lock);
   ref = (w_instance) getFifo(fifo);
   if(ref) {
@@ -77,7 +77,10 @@ w_instance ReferenceQueue_poll(JNIEnv *env, w_instance this) {
     addLocalReference(thread,ref);
   }
   x_monitor_exit(lock);
-  enterSafeRegion(thread);
+
+  if(!unsafe) {
+    enterSafeRegion(thread);
+  }
   return ref;
 }
 
@@ -182,12 +185,12 @@ void ReferenceQueue_destructor(w_instance queue) {
   x_monitor lock = getWotsitField(queue, F_ReferenceQueue_lock);
 
   if(fifo) {
-    releaseFifo(fifo);
     clearWotsitField(queue, F_ReferenceQueue_fifo);
+    releaseFifo(fifo);
   }
   if(lock) {
+    clearWotsitField(queue, F_ReferenceQueue_lock);
     x_monitor_delete(lock);
     releaseMem(lock);
-    clearWotsitField(queue, F_ReferenceQueue_lock);
   }
 }
