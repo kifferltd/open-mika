@@ -34,29 +34,14 @@ public class SoftReference extends Reference {
   ** @remark throws NullPointerException if referent is null
   */
   public SoftReference(Object referent) {
-    if(referent == null){
-      throw new NullPointerException();
-    }
-    set(referent);
+    super(referent);
   }
 
   /**
   ** @remark throws NullPointerException if referent or queue is null
   */
   public SoftReference(Object referent, ReferenceQueue queue) {
-    if(referent == null || queue == null){
-      throw new NullPointerException();
-    }
-    set(referent);
-    this.ref_queue = queue;
+    super(referent,queue);
   }
-
-  private native void set(Object referent);
-
-/*  public boolean enqueue() {
-    boolean result = super.enqueue();
-    clear();
-    return result;
-  }*/
 }
  

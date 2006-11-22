@@ -30,4 +30,4 @@ SubDir WONKA_TOP core-vm src native java lang ref ;
 
 LOCATE_TARGET = $(OROOT)/mika/bin ;
 
-Library $(WONKA_LIB) : Reference.c ;
+Library $(WONKA_LIB) : Reference.c ReferenceQueue.c ;

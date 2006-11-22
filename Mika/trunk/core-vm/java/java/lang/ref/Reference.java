@@ -34,45 +34,44 @@ package java.lang.ref;
 
 public abstract class Reference {
 
-  ReferenceQueue ref_queue;
+  private ReferenceQueue ref_queue;
 
   /**
   ** true if the Reference is in a queue, false otherwise ...
+  ** NOTE: this will be set via native code !!!
   */
-  boolean queued;
-  /**
-  ** a reference can only be queued once.
-  ** Holds true if this reference has been put in a queue, false otherwise ...
-  */
-  boolean hasBeenQueued;
+  private boolean queued;
 
   /**
    ** In the constructor we check that the programmer has used one of the
    ** "official" subclasses [Soft|Weak|Phantom]Reference. Our GC depends on
    ** this.
+   * @param referent 
    */
-  Reference() {
-    if (!(this instanceof SoftReference) && !(this instanceof WeakReference) && !(this instanceof PhantomReference)) {
-      throw new SecurityException("Forbidden to directly subclass java.lang.ref.Reference");
-    }
+  Reference(Object referent) {
+    set(referent);
+  }
+
+  Reference(Object referent, ReferenceQueue queue) {
+    set(referent);
+    ref_queue = referent == null ? null : queue;
   }
 
   public native Object get();
   
   public native void clear();
   
-  public synchronized boolean isEnqueued() {
+  public boolean isEnqueued() {
     return queued;
   }
 
-  public synchronized boolean enqueue() {
-    if (hasBeenQueued || ref_queue == null) {
+  public boolean enqueue() {
+    if (ref_queue == null) {
       return false;
     }
-    hasBeenQueued = true;
-    queued = true;
-    ref_queue.append(this);
-    return true;
-  }
+    return ref_queue.append(this);
+  }  
+  
+  private native void set(Object referent);
 
 }

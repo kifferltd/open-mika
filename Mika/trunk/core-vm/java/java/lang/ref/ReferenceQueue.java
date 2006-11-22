@@ -28,7 +28,6 @@
 
 package java.lang.ref;
 
-import java.util.LinkedList;
 
 /**
  ** Straightforward implementation using a LinkedList.
@@ -38,61 +37,31 @@ import java.util.LinkedList;
 public class ReferenceQueue {
 
   /**
-   ** The reference queue.
-   */
-  private LinkedList q;
-
-  /**
    ** Default constructor: create an empty queue.
    */
   public ReferenceQueue() {
-    q = new LinkedList();
+    create();
   }
  
   /**
    */
-  public synchronized Reference poll() {
-    if (q.size() > 0) {
-      Reference ref = (Reference)q.removeFirst();
-      ref.queued = false;
-      return ref;
-    }
+  public native Reference poll(); 
 
-    return null;
-  }
-
-  public synchronized Reference remove(long timeout) throws IllegalArgumentException, InterruptedException {
-    long now = System.currentTimeMillis();
-    long deadline = now + timeout;
-    long remaining = timeout;
-
-    while (remaining > 0) {
-      if (q.size() > 0) {
-        Reference ref = (Reference)q.removeFirst();
-        ref.queued = false;
-        return ref;
+  public Reference remove(long timeout) throws IllegalArgumentException, InterruptedException {
+    if(timeout < 1) {
+      if(timeout == 0) {
+        return remove();
       }
-      this.wait(remaining);
-      remaining = deadline - System.currentTimeMillis();
+      throw new IllegalArgumentException();
     }
+    return _remove(timeout);
+  }
+  
 
-    return null;
-  }
+  public native Reference remove() throws InterruptedException; 
   
-  public synchronized Reference remove() throws IllegalArgumentException, InterruptedException {
-    while (true) {
-      if (q.size() > 0) {
-        Reference ref = (Reference)q.removeFirst();
-        ref.queued = false;
-        return ref;
-      }
-      this.wait();
-    }
-  }
-  
-  synchronized void append(Reference item) {
-    q.addLast(item);
-    this.notify();
-  }
-  
+  native boolean append(Reference item);
+  private native void create();
+  private native Reference _remove(long timeout); 
+
 }

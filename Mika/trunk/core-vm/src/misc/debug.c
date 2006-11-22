@@ -487,7 +487,6 @@ void lock_iterator(w_word key, w_word value, void *v1, void *v2) {
 void w_dump_locks(void) {
   w_dump(" Locks :\n");
   x_dump_mutex("    Finalizer fifo mutex : ", finalizer_fifo_mutex);
-  x_dump_mutex("      Enqueue fifo mutex : ", enqueue_fifo_mutex);
   x_dump_monitor("  Lock hashtable monitor : ", &lock_hashtable->monitor);
   x_dump_monitor("String hashtable monitor : ", &string_hashtable->monitor);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);

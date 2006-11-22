@@ -42,7 +42,7 @@ public class AcuniaSoftReferenceTest implements Testlet, GarbageListener {
   public void test (TestHarness harness) {
     th = harness;
     th.setclass("java.lang.ref.SoftReference");
-    test_SoftReference();
+    //test_SoftReference();
     test_get();
     test_clear();
     test_enqueue();
