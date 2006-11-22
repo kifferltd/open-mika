@@ -237,11 +237,6 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
     setFlag(object->flags, O_FINALIZABLE);
   }
 
-  if (isSet(clazz->flags, CLAZZ_IS_REFERENCE)) {
-    woempa(1, "Clazz %k is reference, setting instance at %p ENQUEUEABLE\n", clazz, object->fields);
-    setFlag(object->flags, O_ENQUEUEABLE);
-  }
-
   if (thread && isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
     woempa(5, "Clazz %k is a Throwable, filling in stack trace\n", clazz);
     fillThrowable(thread, object->fields);

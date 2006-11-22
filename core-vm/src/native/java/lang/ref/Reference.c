@@ -38,7 +38,11 @@ void Reference_set(JNIEnv *env, w_instance this, w_instance referent) {
   w_thread thread = JNIEnv2w_thread(env);
   w_boolean unsafe = enterUnsafeRegion(thread);
   woempa(1, "Setting reference from %j to %k at %p\n", this, instance2clazz(referent), (w_instance)referent);
-  setWotsitField(this, F_Reference_referent, referent);
+  if(referent && getReferenceField(this, F_Reference_ref_queue)) {
+    volatile w_word *flagsptr = instance2flagsptr(this);
+    setFlag(*flagsptr, O_ENQUEUEABLE);
+    setWotsitField(this, F_Reference_referent, referent);
+  }
   if (!unsafe) {
     enterSafeRegion(thread);
   }

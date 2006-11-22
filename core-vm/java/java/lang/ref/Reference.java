@@ -53,8 +53,8 @@ public abstract class Reference {
   }
 
   Reference(Object referent, ReferenceQueue queue) {
+    ref_queue = queue;
     set(referent);
-    ref_queue = referent == null ? null : queue;
   }
 
   public native Object get();
