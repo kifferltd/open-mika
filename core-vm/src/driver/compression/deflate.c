@@ -1156,6 +1156,7 @@ w_void zzzdeflate(w_void *ll) {
   x_status s;
   x_monitor_eternal(l->ready);
   x_monitor_notify_all(l->ready);
+  l->state = 1;
   x_monitor_exit(l->ready);
 
   err = stop = no_auto = 0;
@@ -1253,4 +1254,8 @@ w_void zzzdeflate(w_void *ll) {
       err = 1;
     }
   }
+  x_monitor_eternal(l->ready);
+  x_monitor_notify_all(l->ready);
+  l->state = 2;
+  x_monitor_exit(l->ready);
 }

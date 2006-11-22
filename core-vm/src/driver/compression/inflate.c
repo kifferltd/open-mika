@@ -777,6 +777,7 @@ void zzzinflate(void *ll) {
 
   x_monitor_eternal(l->ready);
   x_monitor_notify_all(l->ready);
+  l->state = 1;
   x_monitor_exit(l->ready);
 
   while (!err && !no_auto && !stop) {
@@ -973,5 +974,9 @@ hastalavista:
       err = 1;
     }
   }
+  x_monitor_eternal(l->ready);
+  x_monitor_notify_all(l->ready);
+  l->state = 2;
+  x_monitor_exit(l->ready);
 }
 
