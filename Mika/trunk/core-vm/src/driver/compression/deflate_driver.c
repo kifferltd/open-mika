@@ -189,6 +189,7 @@ static w_void unzip_initDevice(w_device device) {
 
     unzip->reset = 0;
     unzip->stop = 0;
+    unzip->state = 0;
 
     x_monitor_create(unzip->ready);
 
@@ -214,7 +215,7 @@ static w_void unzip_initDevice(w_device device) {
     if (status != xs_success) {
       wabort(ABORT_WONKA, "Hooooola, unable to start deflating thread: status = '%s'\n", x_status2char(status));
     }
-    x_monitor_wait(unzip->ready, 10);
+    x_monitor_wait(unzip->ready, x_eternal);
     x_monitor_exit(unzip->ready);
   }
 }
@@ -258,16 +259,18 @@ static w_void unzip_termDevice(w_device device) {
 
       woempa(INF_WOEMP_LEV_1, "Waiting\n");
       // wait till thread notifies us
-      s = x_monitor_wait(unzip->ready, 10); // CG 20040122 : was x_eternal
-      if (s == xs_success || s == xs_no_instance) {
-        x_monitor_exit(unzip->ready);
-      }
-      else if (s != xs_interrupted) {
-        x_monitor_exit(unzip->ready);
+      if(unzip->state == 1) {
+        s = x_monitor_wait(unzip->ready, x_eternal);
+        if (s == xs_success || s == xs_no_instance) {
+          x_monitor_exit(unzip->ready);
+        }
+        else if (s != xs_interrupted) {
+          x_monitor_exit(unzip->ready);
 
-        wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
+          wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
+        }
+        x_monitor_exit(unzip->ready);
       }
-      x_monitor_exit(unzip->ready);
     }
     else {
       wabort(ABORT_WONKA, "entering unzip->ready, error in monitor\n");
@@ -278,7 +281,7 @@ static w_void unzip_termDevice(w_device device) {
     if (status != xs_success && status != xs_no_instance) {
       wabort(ABORT_WONKA, "Hooooola, unable to join deflating thread: status = '%s'\n", x_status2char(status));
     }
-    
+
     status = x_thread_delete(unzip->thread);
     if (status != xs_success) {
       wabort(ABORT_WONKA, "Hooooola, unable to stop deflating thread: status = '%s'\n", x_status2char(status));
@@ -292,7 +295,7 @@ static w_void unzip_termDevice(w_device device) {
     x_queue_delete(unzip->q_in);
     releaseMem(unzip->qmem_in);
     releaseMem(unzip->q_in);
-   
+
     woempa(1, "Deleting q_out at %p\n", unzip->q_out);
     x_queue_delete(unzip->q_out);
     releaseMem(unzip->qmem_out);
@@ -705,7 +708,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
           case xs_success:
             break;
           default:
-	  wprintf("Unable to send queue element\n");
+            wprintf("Unable to send queue element\n");
             return wds_internal_error;
         }
 
@@ -713,21 +716,24 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         x_monitor_notify_all(zip->ready);
 
         woempa(INF_WOEMP_LEV_1, "Waiting\n");
-        s = x_monitor_wait(zip->ready, timeout);
-        if (s == xs_success || s == xs_no_instance) {
-          woempa(INF_WOEMP_LEV_1, "Exit OK\n");
-          x_monitor_exit(zip->ready);
-          return wds_success;
-        }
-        else if (s == xs_interrupted) {
-	  wprintf("x_monitor_wait returned xs_interrupted\n");
-          return wds_internal_error;
-        }
-        else {
-          woempa(INF_WOEMP_LEV_1, "Exit ERROR\n");
-          x_monitor_exit(zip->ready);
-	  wprintf("x_monitor_wait returned error code %d\n", s);
-          return wds_internal_error;
+
+        if(zip->state == 1) {
+          s = x_monitor_wait(zip->ready, x_eternal);
+          if (s == xs_success || s == xs_no_instance) {
+            woempa(INF_WOEMP_LEV_1, "Exit OK\n");
+            x_monitor_exit(zip->ready);
+            return wds_success;
+          }
+          else if (s == xs_interrupted) {
+            wprintf("x_monitor_wait returned xs_interrupted\n");
+            return wds_internal_error;
+          }
+          else {
+            woempa(INF_WOEMP_LEV_1, "Exit ERROR\n");
+            x_monitor_exit(zip->ready);
+            wprintf("x_monitor_wait returned error code %d\n", s);
+            return wds_internal_error;
+          }
         }
       }
       else {

@@ -80,6 +80,8 @@ typedef struct w_Deflate_Control {
   w_int reset;
   w_int stop;
 
+  w_int state;
+
   w_int dictionary;
 } w_Deflate_Control;
 typedef w_Deflate_Control *w_deflate_control;
