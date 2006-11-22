@@ -31,25 +31,10 @@ package java.lang.ref;
 public class WeakReference extends Reference {
 
   public WeakReference(Object referent) {
-    if(referent == null){
-      throw new NullPointerException();
-    }
-    set(referent);
+    super(referent);
   }
 
   public WeakReference(Object referent, ReferenceQueue queue) {
-    if(referent == null || queue == null){
-      throw new NullPointerException();
-    }
-    set(referent);
-    this.ref_queue = queue;
-  }
-  
-  private native void set(Object referent);
-
-/*  public boolean enqueue() {
-    boolean result = super.enqueue();
-    clear();
-    return result;
-  }*/
+    super(referent,queue);
+  }  
 }

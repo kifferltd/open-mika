@@ -215,14 +215,21 @@ java/lang/reflect/Proxy
 java/lang/ref/Reference
         referent                +
 	ref_queue		Ljava/lang/ref/ReferenceQueue;
+        queued			Z
         get                     ()Ljava/lang/Object;	Reference_get
         clear                   ()V			Reference_clear
+	set			(Ljava/lang/Object;)V	Reference_set
+java/lang/ref/ReferenceQueue
+        lock                	+
+        fifo			+
+        append			(Ljava/lang/ref/Reference;)Z 	ReferenceQueue_append
+ 	create			()V				ReferenceQueue_create
+	poll			()Ljava/lang/ref/Reference;	ReferenceQueue_poll
+	_remove			(J)Ljava/lang/ref/Reference;	ReferenceQueue_removeJ
+	remove			()Ljava/lang/ref/Reference;	ReferenceQueue_remove
 java/lang/ref/SoftReference
-	set			(Ljava/lang/Object;)V	Reference_set
 java/lang/ref/WeakReference
-	set			(Ljava/lang/Object;)V	Reference_set
 java/lang/ref/PhantomReference
-	set			(Ljava/lang/Object;)V	Reference_set
 #
 java/lang/Cloneable
 java/lang/Thread
@@ -613,8 +620,6 @@ wonka/vm/Finalizer
 	theFinalizer	Lwonka/vm/Finalizer;
 	nextFinalizee	()Ljava/lang/Object;	Finalizer_nextFinalizee
 	finalized	(Ljava/lang/Object;)V	Finalizer_finalized
-	nextEnqueueee	()Ljava/lang/Object;	Finalizer_nextEnqueueee
-	enqueued	(Ljava/lang/Object;)V	Finalizer_enqueued
 wonka/vm/Etc
 	setTriggerLevel (Ljava/lang/String;I)V	Etc_static_setTriggerLevel
 	setAllTriggerLevel (I)V			Etc_static_setAllTriggerLevel

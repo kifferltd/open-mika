@@ -37,7 +37,7 @@ public class AcuniaPhantomReferenceTest implements Testlet {
   public void test (TestHarness harness) {
     th = harness;
     th.setclass("java.lang.ref.PhantomReference");
-    test_PhantomReference();
+    //test_PhantomReference();
     test_get();
     test_clear();
     test_enqueue();

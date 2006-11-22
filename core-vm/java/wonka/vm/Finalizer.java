@@ -39,7 +39,6 @@ public final class Finalizer implements Runnable {
 
   private Object[] empty;
   private java.lang.reflect.Method finalizer_method;
-  private java.lang.reflect.Method enqueue_method;
 
   /**
    ** Our very private constructor.  We look up the methodID's for the
@@ -53,9 +52,6 @@ public final class Finalizer implements Runnable {
       finalizer_method = java_lang_Object.getDeclaredMethod("finalize", new Class[0]);
       finalizer_method.setAccessible(true);
 
-      Class java_lang_ref_Reference = Class.forName("java.lang.ref.Reference");
-      enqueue_method = java_lang_ref_Reference.getDeclaredMethod("enqueue", new Class[0]);
-      enqueue_method.setAccessible(true);
     }
     catch (Exception e) {
       e.printStackTrace();
@@ -87,7 +83,6 @@ public final class Finalizer implements Runnable {
     boolean idle;
     boolean verbose;
     int finalized_count = 0;
-    int enqueued_count = 0;
     Object o;
 
     // Give GC thread time to start up, otherwise nextFinalizee() crashes (kludge).
@@ -127,33 +122,8 @@ public final class Finalizer implements Runnable {
         ++finalized_count;
       }
 
-      synchronized(this) {
-        o = nextEnqueueee();
-      }
-
-      if (o == null) {
-        synchronized(this) {
-          notifyAll();
-        }
-      }
-      else {
-        idle = false;
-        if (verbose) {
-          System.err.println("GC: enqueuing " + o);
-        }
-        try {
-          enqueue_method.invoke(o, empty);
-        }
-        catch (Throwable t) {
-          t.printStackTrace();
-        }
-        enqueued(o);
-        ++enqueued_count;
-      }
-
       if (idle) {
         finalized_count = 0;
-        enqueued_count = 0;
         synchronized(this) {
           try {
             wait(IDLE_WAIT_MILLIS);
@@ -167,11 +137,6 @@ public final class Finalizer implements Runnable {
   }
 
   /**
-   ** Poll the enqueue() fifo.
-   */
-  private native Object nextEnqueueee();
-
-  /**
    ** Poll the finalize() fifo.
    */
   private native Object nextFinalizee();
@@ -181,9 +146,5 @@ public final class Finalizer implements Runnable {
    */
   private native void finalized(Object o);
 
-  /**
-   ** Tell GC that object has been enqueued.
-   */
-  private native void enqueued(Object o);
 }
 

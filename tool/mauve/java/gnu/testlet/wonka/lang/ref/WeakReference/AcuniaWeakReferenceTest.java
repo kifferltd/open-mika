@@ -42,7 +42,7 @@ public class AcuniaWeakReferenceTest implements Testlet, GarbageListener {
   public void test (TestHarness harness) {
     th = harness;
     th.setclass("java.lang.ref.WeakReference");
-    test_WeakReference();
+    //test_WeakReference();
     test_get();
     test_clear();
     test_enqueue();

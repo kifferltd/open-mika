@@ -50,37 +50,11 @@ w_instance Finalizer_nextFinalizee(JNIEnv *env, w_instance theFinalizer) {
   return nextFinalizee;
 }
 
-w_instance Finalizer_nextEnqueueee(JNIEnv *env, w_instance theFinalizer) {
-  w_instance nextEnqueueee;
-
-  if (!enqueue_fifo) {
-
-    return NULL;
-
-  }
-
-  x_mutex_lock(enqueue_fifo_mutex, x_eternal);
-  nextEnqueueee = getFifo(enqueue_fifo);
-  if (nextEnqueueee) {
-    woempa(7, "Took %j from enqueue_fifo, now has %d elements\n", nextEnqueueee, enqueue_fifo->numElements);
-  }
-  x_mutex_unlock(enqueue_fifo_mutex);
-
-  return nextEnqueueee;
-}
-
 /**
  ** When the object has been finalized we clear the FINALIZING flag.
  */
 void Finalizer_finalized(JNIEnv *env, w_instance theFinalizer, w_instance finalizee) {
   unsetFlag(instance2object(finalizee)->flags, (O_FINALIZING));
-}
-
-/**
- ** When the object has been enqueued we clear the ENQUEUEING flag.
- */
-void Finalizer_enqueued(JNIEnv *env, w_instance theFinalizer, w_instance enqueuee) {
-  unsetFlag(instance2object(enqueuee)->flags, (O_ENQUEUEING));
 }
 
 

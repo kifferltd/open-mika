@@ -208,14 +208,6 @@ w_fifo enqueue_fifo;
 #define ENQUEUE_FIFO_LEAF_SIZE         OTHER_FIFO_LEAF_SIZE
 
 /*
-** Mutex used to protect the fifo from conflicting accesses.
-*/
-
-static x_Mutex enqueue_fifo_Mutex;
-x_mutex enqueue_fifo_mutex;
-
-
-/*
 ** List of instances waiting to be finalized.
 */
 
@@ -326,7 +318,7 @@ volatile w_thread marking_thread;
 volatile w_thread sweeping_thread;
 
 static w_boolean checkStrongRefs(w_object);
-
+void ReferenceQueue_destructor(w_instance queue);
 /*
 ** Reclaim an instance by returning its memory to the global object heap.
 ** The value returned is the size of the instance in bytes (the amount of 
@@ -377,6 +369,8 @@ static w_int releaseInstance(w_object object) {
   }
   else if (isSet(object->clazz->flags, CLAZZ_IS_THROWABLE)) {
     Throwable_destructor(object->fields);
+  } else if(clazz == clazzReferenceQueue) {
+    ReferenceQueue_destructor(object->fields);
   }
 
   if (clazz->previousDimension) {
@@ -915,28 +909,6 @@ w_int markReferentReachable(w_instance referent, w_word flag) {
 
 w_int markChildren(w_object o, w_fifo fifo, w_word flag);
 
-/*
- * Add the given reference to the queue of things to be enqueued(!).
- * We do so only if the ENQUEUEABLE flag is set (so an instance can only
- * be enqueued once), and if the 'ref_queue' field of the Reference is
- * non-null (or the Reference is not one of the direct subclasses of
- * java.lang.ref.Reference - in this case the programmer could in theory
- * override the enqueue method to do something quite different).
- */
-static void enqueueReference(w_instance instance) {
-  volatile w_word *flagsptr = instance2flagsptr(instance);
-  w_clazz clazz = instance2clazz(instance);
-
-  x_mutex_lock(enqueue_fifo_mutex, x_eternal);
-  if (isSet(*flagsptr, O_ENQUEUEABLE) && !(getSuper(clazz) == clazzReference && !instance[F_Reference_ref_queue])) {
-    if (tryPutFifo(instance, enqueue_fifo) >= 0) {
-      setFlag(*flagsptr, O_ENQUEUEING);
-      unsetFlag(*flagsptr, O_ENQUEUEABLE);
-    }
-  }
-  x_mutex_unlock(enqueue_fifo_mutex);
-}
-
 static void finalizeReference(w_instance instance) {
 
   x_mutex_lock(finalizer_fifo_mutex, x_eternal);
@@ -959,6 +931,10 @@ static void finalizeReference(w_instance instance) {
 ** Reference (or a subclass) then there is also some type-specific
 ** scanning to be done.
 */
+
+void enqueuedReference(void* reference) {
+  putFifo(reference, enqueue_fifo);
+}
 
 w_int markFifo(w_fifo fifo, w_word flag) {
 
@@ -1007,6 +983,22 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       }
       queued += retcode;
     }
+    else if(parent_object->clazz == clazzReferenceQueue) {
+      //Mark the native fifo ...
+      w_fifo qfifo = getWotsitField(parent_instance, F_ReferenceQueue_fifo);
+      x_monitor monitor = getWotsitField(parent_instance, F_ReferenceQueue_lock);
+
+      if(monitor && qfifo) {
+        w_instance reference;
+        x_monitor_eternal(monitor);
+        forEachInFifo(qfifo,enqueuedReference);
+        x_monitor_exit(monitor);
+        while ((reference = getFifo(enqueue_fifo))) {
+          markInstance(reference,fifo, flag);
+        }
+      }
+    }
+
     /*
     ** If this is a thread, we scan the stack.
     */
@@ -1210,7 +1202,7 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
     }
   }
 
-  if (isSet(object->flags, (O_FINALIZING | O_FINALIZABLE | O_ENQUEUEING ))) {
+  if (isSet(object->flags, (O_FINALIZING | O_FINALIZABLE))) {
     w_size i;
     w_instance child_instance;
     w_object child_object;
@@ -1391,6 +1383,8 @@ w_int preparationPhase(void) {
   return 0;
 }
 
+w_boolean ReferenceQueue_append(JNIEnv *env, w_instance this, w_instance reference);
+
 static void miniSweepReferences(void) {
   w_instance parent_instance;
   w_object   parent_object;
@@ -1408,7 +1402,10 @@ static void miniSweepReferences(void) {
           clearWotsitField(parent_instance, F_Reference_referent);
         }
         else wprintf("(GC): enqueueing %j\n", parent_instance);
-        enqueueReference(parent_instance);      
+
+        if(getReferenceField(parent_instance,F_Reference_ref_queue)) { 
+          ReferenceQueue_append(NULL,getReferenceField(parent_instance,F_Reference_ref_queue), parent_instance);
+        }
       }
     }
   }
@@ -1565,7 +1562,7 @@ static w_boolean checkStrongRefs(w_object object) {
  */
 static w_boolean checkFinalization(w_object object) {
 
-  if (isSet(object->flags, (O_FINALIZING | O_ENQUEUEING))) {
+  if (isSet(object->flags, (O_FINALIZING))) {
     woempa(7, "Not collecting %j because it is currently being enqueued or finalized\n", object->fields);
 
     return WONKA_FALSE;
@@ -1986,9 +1983,7 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   memory_load_factor = 1;
   reclaim_threshold = memory_total / 3;
   finalizer_fifo_mutex = &finalizer_fifo_Mutex;
-  enqueue_fifo_mutex = &enqueue_fifo_Mutex;
   x_mutex_create(finalizer_fifo_mutex);
-  x_mutex_create(enqueue_fifo_mutex);
   window_fifo = allocFifo(WINDOW_FIFO_LEAF_SIZE);
   expandFifo(16384, window_fifo);
   strongly_reachable_fifo = allocFifo(STRONG_FIFO_LEAF_SIZE);

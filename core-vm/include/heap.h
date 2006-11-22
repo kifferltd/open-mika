@@ -82,8 +82,8 @@ extern volatile w_thread sweeping_thread;
 #define O_FINALIZING         0x00000020 
 // An object is ENQUEUEABLE if it has an enqueue() which has not yet been called
 #define O_ENQUEUEABLE        0x00000040 
-// An object is ENQUEUEING if it is on the enqueue_fifo or its enqueue() method has been called
-#define O_ENQUEUEING         0x00000080 
+//REMOVED: An object is ENQUEUEING if it is on the enqueue_fifo or its enqueue() method has been called
+//#define O_ENQUEUEING         0x00000080 
 // An object has WINDOW set if it is subject to analysis by the garbage collector.
 #define O_WINDOW             0x00000100
 // A GARBAGE object has become garbage and can be freed. 

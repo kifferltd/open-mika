@@ -35,15 +35,9 @@ public class PhantomReference extends Reference {
 ** the referent is null or the queue is null.
 */
   public PhantomReference(Object referent, ReferenceQueue queue) {
-    if(queue == null || referent == null){
-      throw new NullPointerException();
-    }
-    set(referent);
-    this.ref_queue = queue;
+    super(referent, queue);
   }
   
-  private native void set(Object referent);
-
   public Object get() {
     return null;
   }
