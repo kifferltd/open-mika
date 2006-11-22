@@ -1028,9 +1028,11 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       w_instance referent = getWotsitField(parent_instance, F_Reference_referent);
       woempa(7, "(GC) Object %p is instance of %k, a subclass of Reference\n", parent_object, parent_object->clazz);
       woempa(7, "(GC) It refers to %j\n", referent);
-      retcode = tryPutFifo(parent_instance, reference_fifo);
-      if (retcode < 0) {
-        wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", reference_fifo->numElements);
+      if(isSet(parent_object->flags, O_ENQUEUEABLE)) {
+        retcode = tryPutFifo(parent_instance, reference_fifo);
+        if (retcode < 0) {
+          wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", reference_fifo->numElements);
+        }
       }
 
       if (referent) {
