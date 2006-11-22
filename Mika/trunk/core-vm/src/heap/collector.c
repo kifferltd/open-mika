@@ -1416,6 +1416,8 @@ static void miniSweepReferences(void) {
 
         if(getReferenceField(parent_instance,F_Reference_ref_queue)) { 
           ReferenceQueue_append(NULL,getReferenceField(parent_instance,F_Reference_ref_queue), parent_instance);
+        } else {
+          unsetFlag(parent_object->flags, O_ENQUEUEABLE);
         }
       }
     }
