@@ -285,11 +285,11 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
 
     if (thread) {
       thread->exception = theThrowable;
-      removeLocalReference(thread, theThrowable);
 
       if (thread->Thread) {
         setReferenceField(thread->Thread, theThrowable, F_Thread_thrown);
       }
+      removeLocalReference(thread, theThrowable);
     }
     else {
       bootstrap_exception = theThrowable;
