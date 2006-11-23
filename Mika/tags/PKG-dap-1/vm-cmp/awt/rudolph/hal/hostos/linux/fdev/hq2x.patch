@@ -1,0 +1,88 @@
+--- hq2x.cpp	Wed Nov 19 11:15:53 2003
++++ hq2x.c	Wed Nov 19 11:17:06 2003
+@@ -19,10 +19,7 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <conio.h>
+ #include <string.h>
+-#include <windows.h>
+-#include "Image.h"
+ 
+ static int   LUT16to32[65536];
+ static int   RGBtoYUV[65536];
+@@ -131,7 +128,7 @@
+ #define PIXEL11_90    Interp9(pOut+BpL+4, c[5], c[6], c[8]);
+ #define PIXEL11_100   Interp10(pOut+BpL+4, c[5], c[6], c[8]);
+ 
+-
++typedef int bool;
+ 
+ inline bool Diff(unsigned int w1, unsigned int w2)
+ {
+@@ -2890,65 +2887,3 @@
+   }
+ }
+ 
+-int main(int argc, char* argv[])
+-{
+-  int         nRes;
+-  CImage      ImageIn;
+-  CImage      ImageOut;
+-  char      * szFilenameIn;
+-  char      * szFilenameOut;
+-  
+-  if (argc <= 2)
+-  {
+-    printf("\nUsage: hq2x.exe input.bmp output.bmp\n");
+-    printf("supports .bmp and .tga formats\n");
+-    return 1;
+-  }
+-
+-  szFilenameIn = argv[1];
+-  szFilenameOut = argv[2];
+-
+-  if ( GetFileAttributes( szFilenameIn ) == -1 )
+-  {
+-    printf( "ERROR: file '%s'\n not found", szFilenameIn );
+-    return 1;
+-  }
+-
+-  if ( ImageIn.Load( szFilenameIn ) != 0 )
+-  {
+-    printf( "ERROR: can't load '%s'\n", szFilenameIn );
+-    return 1;
+-  }
+-
+-  if ( ImageIn.m_BitPerPixel != 16 ) 
+-  {
+-    if ( ImageIn.ConvertTo16() != 0 )
+-    {
+-      printf( "ERROR: '%s' conversion to 16 bit failed\n", szFilenameIn );
+-      return 1;
+-    }
+-  }
+-
+-  printf( "\n%s is %ix%ix%i\n", szFilenameIn, ImageIn.m_Xres, ImageIn.m_Yres, ImageIn.m_BitPerPixel );
+-
+-  if ( ImageOut.Init( ImageIn.m_Xres*2, ImageIn.m_Yres*2, 32 ) != 0 )
+-  {
+-    printf( "ERROR: ImageOut.Init()\n" );
+-    return 1;
+-  };
+-
+-  InitLUTs();
+-
+-  hq2x_32( ImageIn.m_pBitmap, ImageOut.m_pBitmap, ImageIn.m_Xres, ImageIn.m_Yres, ImageOut.m_Xres*4 );
+-
+-  nRes = ImageOut.Save( szFilenameOut );
+-  if ( nRes != 0 )
+-  {
+-    printf( "ERROR %i: ImageOut.Save(\"%s\")\n", nRes, szFilenameOut );
+-    return nRes;
+-  }
+-  printf( "%s is %ix%ix%i\n", szFilenameOut, ImageOut.m_Xres, ImageOut.m_Yres, ImageOut.m_BitPerPixel );
+-
+-  printf( "\nOK\n" );
+-  return 0;
+-}

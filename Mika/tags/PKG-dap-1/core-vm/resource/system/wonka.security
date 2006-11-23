@@ -1,0 +1,18 @@
+# list of security providers
+security.provider.1=com.acunia.wonka.security.DefaultProvider
+security.provider.2=gnu.java.security.provider.Gnu
+
+# the default Policy
+policy.provider=com.acunia.wonka.security.DefaultPolicy
+
+# list of url to look for policy files
+policy.url.1=file:/system/wonka.policy
+
+# (dis)allow property expanding while parsing policy files
+policy.expandProperties=true
+
+# (dis)allow to pass a policy file via the system.properties
+policy.allowSystemProperty=true
+
+#keystore.type=not used yet
+
