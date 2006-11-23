@@ -24,6 +24,7 @@
 
 package javax.crypto;
 
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.security.InvalidKeyException;
 
@@ -31,8 +32,8 @@ public abstract class SecretKeyFactorySpi {
 
   public SecretKeyFactorySpi(){}
 
-  protected abstract SecretKey engineGenerateSecret(KeySpec keySpec) throws InvalidKeyException;
-  protected abstract KeySpec engineGetKeySpec(SecretKey key, Class keySpec) throws InvalidKeyException;
+  protected abstract SecretKey engineGenerateSecret(KeySpec keySpec) throws InvalidKeySpecException;
+  protected abstract KeySpec engineGetKeySpec(SecretKey key, Class keySpec) throws InvalidKeySpecException;
   protected abstract SecretKey engineTranslateKey(SecretKey key) throws InvalidKeyException;
 
 }
