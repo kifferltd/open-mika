@@ -28,6 +28,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Provider;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
 public class SecretKeyFactory {
@@ -71,11 +72,11 @@ public class SecretKeyFactory {
     return provider;
   }
 
-  public final SecretKey generateSecret(KeySpec keySpec)throws InvalidKeyException {
+  public final SecretKey generateSecret(KeySpec keySpec)throws InvalidKeySpecException {
     return keyFacSpi.engineGenerateSecret(keySpec);
   }
 
-  public final KeySpec getKeySpec(SecretKey key, Class keySpec)throws InvalidKeyException {
+  public final KeySpec getKeySpec(SecretKey key, Class keySpec)throws InvalidKeySpecException {
     return keyFacSpi.engineGetKeySpec(key, keySpec);
   }
 
