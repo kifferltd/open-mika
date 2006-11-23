@@ -1,0 +1,26 @@
+###########################################################################
+# Copyright (c) 2003 by Chris Gray, /k/ Embedded Java Solutions.          #
+# All rights reserved.                                                    #
+###########################################################################
+
+ECHO Configuring build for a ppc cpu. ;
+
+#CC = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-gcc ;
+#AR = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-ar ru ;
+#AS = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-as ;
+#RANLIB = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-ranlib ;
+#LINK = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-gcc ;
+
+#LD_TOOL = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-ld ;
+#AR_TOOL = /home/chris/buildroot/build_mipsel/staging_dir/bin/mipsel-linux-uclibc-ar ;
+
+CC = mips-gcc ;
+AR = mips-ar ru ;
+AS = mips-as ;
+RANLIB = mips-ranlib ;
+LINK = mips-gcc ;
+
+LD_TOOL = mips-ld ;
+AR_TOOL = mips-ar ;
+
+

@@ -1,0 +1,116 @@
+%
+% $Id: running_testing.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\chapter{Running \& Testing Oswald}
+
+\section{Introduction to the Oswald Tests}
+
+Oswald comes with a whole test suite that can be compiled and run, to test
+the internal consistency. 
+
+At this moment\footnote{October 2001}, the number of lines of code of the
+Oswald functionality has passed the 11000 lines mark, while the number of
+lines of test code is slightly larger than that.
+
+Since we try to adhere to the Extreme Programming principle as much as
+possible, this is a good sign of health. The code base to test Oswald is
+about the same size, even a bit larger, than the functionality code base.
+
+The code that forms the test base is to be found in the
+\textsf{kernel/oswald/tests} directory, if you consider that Oswald comes
+with the Wonka Virtual Machine.
+The best documentation for the tests is ultimately found in the source code
+in that directory.
+
+The main control of the tests start in the file \textsf{main\_test.c} that
+can be reconfigured to run all the tests or only some individual tests.
+
+Each of the components of Oswald, like e.g. have their own file. So the
+tests for the normal Oswald monitors, resides in the file
+\textsf{monitor\_test.c}.
+
+The components of Oswald that are events (monitors, queues, semaphores,
+mutexes, ...) are tested by means of threads that run together and form a so
+called finite state machine; the finite state machine puts the component
+under test in a certain state and checks wether a function call on the
+components puts or leaves the component in a correct state.
+
+Note that all tests\footnote{Except for the module test code.} are run in
+loops, i.e. they never end. At the end of a finite state machine run,
+allocated memory is returned, the component is deleted and the test is
+re-initialized to start again.
+
+Most of the parameters and arguments used in tests are assigned by means of
+the \textsf{x\_random} call that returns a random number of a thread by
+thread basis; i.e. each thread has its own random number generator to reduce
+the amount of locking required to get a random number\footnote{Note that
+this random number generator is for testing purposes only. Don't try to
+build any encryption or security based components with it.}.
+
+\section{Non FSM Tests}
+
+Some tests, like the module test and especially the memory allocation test
+routines, don't run by means of a finite state machine. The memory test for
+instance, just spawns a lot of threads that try to allocate, free, discard
+and reallocate memory in a loop. When all memory is exhausted, it is
+released and the process continues.
+
+During the memory tests, the allocated blocks are filled with a pattern and
+a certain tag is assigned to the blocks. Before releasing the blocks, they
+are checked by the thread that allocated them to see if the pattern is still
+intact.
+
+Also, when allocating cleared memory, the memory test thread checks if all
+bytes have been properly initialized to zero. For reallocation tests, the
+thread checks wether the available bytes have been copied correctly, when
+the reallocation resulted in a new block of memory being used.
+
+For more information about these and other tests, we refer to the source
+code itself, according to the principle \textit{"Use the source, Luke..."}.
+
+\section{Compiling \& Running the Tests}
+
+In the full Wonka tree, at the topmost level, you need to specify, by means
+of an environment variable, the directory where you are. In this example,
+I'll use as top directory \textsf{/home/buytaert/cvs/open-wonka}. You have
+to modify this for your own environment. So before we start compiling, you
+have to, assuming the bash shell and the '\$' sign is the prompt of the
+shell, give in:
+
+\begin{verbatim}
+$ export WONKA_TOP=/home/buytaert/cvs/open-wonka
+$ jam oswaldtests
+\end{verbatim}
+
+We further assume that you are running on an Intel X86 based linux box.
+This should result in a program called \textsf{oswaldtests} that can be
+found in:
+
+\begin{verbatim}
+./build-x86-linux/kernel/oswald/tests/
+\end{verbatim}
+
+You can run the program from the \textsf{\$WONKA\_TOP} directory with the
+command:
+
+\begin{verbatim}
+./build-x86-linux/kernel/oswald/tests/oswaldtests
+\end{verbatim}
+
+Running this program should give you the messages passing by of all the
+tests that are being run. You should see that the test output is mixed,
+which is normal since the tests are running in muliple threads.
+
+If you want to run the tests without any debuggin or runtime checking code
+being put in the normal functionality of Oswald, you can issue the following
+build commands:
+
+\begin{verbatim}
+$ export WONKA_TOP=/home/buytaert/cvs/open-wonka
+$ jam -sDEBUG=false oswaldtests
+\end{verbatim}
+
+The result of which will be the same executable file as described above. The
+Oswald tests use their own logging routine, so the printing of messages
+should be the same as with the debug version of the Oswald tests.

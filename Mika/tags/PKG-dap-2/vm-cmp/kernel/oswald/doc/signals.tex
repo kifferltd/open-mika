@@ -1,0 +1,276 @@
+%
+% $Id: signals.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Signals}
+
+\subsubsection{Operation}
+
+Signals are a set of 31 flags, that can be used by threads to communicate certain
+conditions to other threads. The most significant bit of the signals
+structure is reserved for future purposes (e.g. to control atomic operations
+on signals.).
+
+By means of logical operators, threads can set or query individual bit flags
+or sets of bit flags in the signal structure.
+
+Threads can also wait until a certain bit flag configuration appears in the
+signals structure. The use and combination of the logical operators at query
+or setting time can provide powerful but complex (read \textit{dangerous}) semantics.
+
+\subsubsection{Signals Structure Definition}
+
+The structure definition of a set of signals is as follows:
+
+\bcode
+\begin{verbatim}
+ 1: typedef struct x_Signals * x_signals;
+ 2:
+ 3: typedef struct x_Signals {
+ 4:   x_Event Event;
+ 5:   volatile x_flags flags;
+ 6: } x_Signals;
+\end{verbatim}
+\ecode
+
+The relevant fields in the signals structure are the following:
+
+\begin{itemize}
+\item \txt{x\_signals$\rightarrow$Event} This is the universal event structure that is a field
+in all threadable components or elements. It controls the synchronized access
+to the signals component and the signalling between threads to indicate changes
+in the signals structure.
+\item \txt{x\_signals$\rightarrow$flags} The word in which the lower 31
+bits are used to store the bit states of the different signals.
+\end{itemize}
+
+
+\subsubsection{Signal Set or Get Options}
+
+The signal get and set functions take a logical option indicator that
+controls the behavior of these functions. The different options and
+in which context they are applicable are indicated in table
+\ref{table:xo_options}.
+
+
+\footnotesize
+\begin{longtable}{||l|p{2cm}|p{9cm}||}
+\hline
+\hfill \textbf{Option} \hfill\null & \textbf{Applies to} & \textbf{Meaning} \\ 
+\hline
+\endhead
+\hline
+\endfoot
+\endlastfoot
+\hline
+
+% \begin{table}[!ht]
+%   \begin{center}
+% \begin{tabular}{||>{\footnotesize}l<{\normalsize}|>{\footnotesize}l<{\normalsize}|>{\footnotesize}l<{\normalsize}||} \hline
+% \textbf{Option} & \textbf{Applies to} & \textbf{Meaning} \\ \hline
+
+\txt{xo\_or} &
+
+\begin{minipage}[t]{2cm}
+\txt{x\_signals\_get} \\
+\txt{x\_signals\_set} \\
+\end{minipage} &
+
+\begin{minipage}[t]{8cm}
+For the \txt{x\_signals\_get} function, this option indicates that the
+query is satisfied when \textbf{any} of the requested flags becomes set during the
+timeout window. When this call returns, the flag or flags that satisfied the
+condition, \textbf{remain set} in the signals structure.\\
+
+For the \txt{x\_signals\_set} function, this option indicates that the
+flags that are passed as an argument are logically ORed with the actual flags
+in the signal structure; the result of this logical or become the new flags
+of the signals structure.
+\end{minipage} \\
+
+ & & \\
+
+\txt{xo\_or\_clear} &
+
+\begin{minipage}[t]{2cm}
+\txt{x\_signals\_get} \\
+\end{minipage} &
+
+\begin{minipage}[t]{8cm}
+This option indicates that the
+query is satisfied when \textbf{any} of the requested flags becomes set during the
+timeout window. Before the call returns, the flag or flags that satisfied the
+condition, will be reset (to 0) before returning. Since upon such a return,
+the signal flags have changed again, all waiting threads will be woken up to
+recheck if their conditions are satisfied.
+\end{minipage} \\
+
+ & & \\
+
+\txt{xo\_and} &
+
+\begin{minipage}[t]{2cm}
+\txt{x\_signals\_get} \\
+\txt{x\_signals\_set} \\
+\end{minipage} &
+
+\begin{minipage}[t]{8cm}
+For the \txt{x\_signals\_get} function, this option indicates that the
+query is only satisfied when \textbf{all} of the requested flags become set during the
+timeout window. When this call returns, the flag or flags that satisfied the
+condition, remain set in the signals structure.\\
+
+For the \txt{x\_signals\_set} function, this option indicates that the
+flags that are passed as an argument or logically anded with the actual flags
+in the signal structure; the result of this logical and become the new flags
+of the signals structure.
+\end{minipage} \\
+
+ & & \\
+
+\txt{xo\_and\_clear} &
+
+\begin{minipage}[t]{2cm}
+\txt{x\_signals\_get} \\
+\end{minipage} &
+
+\begin{minipage}[t]{8cm}
+This option indicates that the
+query is satisfied when \textbf{all} of the requested flags becomes set during the
+timeout window. Before the call returns, the flags that satisfied the
+condition, will be reset (to 0) before returning. Since upon such a return,
+the signal flags have changed again, all waiting threads will be woken up to
+recheck if their conditions are satisfied.
+\end{minipage} \\
+
+
+
+\hline 
+\multicolumn{3}{c}{} \\
+\caption{The different signal set and get options}
+\label{table:xo_options}
+\end{longtable}
+\normalsize
+
+
+%     \hline
+%     \end{tabular}
+%     \caption{The different signal set and get options}
+%     \label{table:xo_options}
+%   \end{center}
+% \end{table}
+
+\subsubsection{Creating a Set of Signals}
+
+A set of 31 signalling flags is created by means of the call:\\
+
+\txt{x\_status x\_signals\_create(x\_signals signals);}
+
+This call results in signal event being set up. All 31 signals bits are initialized to
+0. This function always returns \txt{xs\_success}. 
+
+\subsubsection{Deleting a Set of Signals}
+
+\subsection{Querying for a Condition}
+
+\txt{x\_status x\_signals\_get(x\_signals si, x\_flags co, x\_option op, x\_flags ac, x\_sleep to);}
+
+The different return values that this call can produce are summarized in
+table \ref{table:rs_signals_get}.
+
+
+\footnotesize
+\begin{longtable}{||l|p{9cm}||}
+\hline
+\hfill \textbf{Return Value} \hfill\null & \textbf{Meaning}  \\ 
+\hline
+\endhead
+\hline
+\endfoot
+\endlastfoot
+\hline
+
+% \begin{table}[!ht]
+%   \begin{center}
+%     \begin{tabular}{||>{\footnotesize}l<{\normalsize}|>{\footnotesize}c<{\normalsize}||} \hline
+%     \textbf{Return Value} & \textbf{Meaning} \\ \hline
+
+\txt{xs\_success} &
+
+\begin{minipage}[t]{9cm}
+The call succeeded and the query flags are satisfied according to the
+\txt{op} argument given.
+\end{minipage} \\
+
+\txt{xs\_no\_instance} &
+
+\begin{minipage}[t]{9cm}
+The call did not succeed within the given timeout and with the given option.
+\end{minipage} \\
+
+\txt{xs\_bad\_option} &
+
+\begin{minipage}[t]{9cm}
+The call failed since the passed \txt{op} option argument isn't one of
+\txt{xo\_or}, \txt{xo\_or\_clear}, \txt{xo\_and} or
+\txt{xo\_and\_clear}.
+\end{minipage} \\
+
+\txt{xs\_bad\_context} &
+
+\begin{minipage}[t]{9cm}
+A timeout argument 'to' other than \txt{x\_no\_wait} was given from within a timer
+or interrupt handler context.
+\end{minipage} \\
+
+\txt{xs\_deleted} &
+
+\begin{minipage}[t]{9cm}
+The signals structure has been deleted by another thread during the call.
+\end{minipage} \\
+
+\txt{xs\_bad\_element} &
+
+\begin{minipage}[t]{9cm}
+The passed reference \txt{si} doesn't refer to a signal event.
+\end{minipage} \\
+
+
+
+\hline 
+\multicolumn{2}{c}{} \\
+\caption{The different signal set and get options}
+\label{table:xo_options}
+\end{longtable}
+\normalsize
+
+%     \hline
+%     \end{tabular}
+%     \caption{Return Status for \txt{x\_signals\_get}}
+%     \label{table:rs_signals_get}
+%   \end{center}
+% \end{table}
+
+\subsection{Setting a Condition}
+
+Signal bits in the signals structure can be set by means of the following
+call:
+
+\txt{x\_status x\_signals\_set(x\_signals si, x\_flags co, x\_option op);}
+
+The different set options and in which context they are applicable are indicated in table
+\ref{table:xo_options}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

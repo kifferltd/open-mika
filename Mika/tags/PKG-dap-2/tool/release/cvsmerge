@@ -1,0 +1,90 @@
+# goto acunia librarian and cd /home/cvs
+# make a copy of the current open-wonka tree to ow: cp -Rp open-wonka ow
+# return from librarian
+
+alias grep=
+
+cd /data/head
+
+mkdir new
+cd new
+cvs co ow 2>&1 | grep "^U" | cut -d" " -f2 > ow.lst
+cvs admin -nWONKA-OLD-INTERPRETER: ow
+cd ..
+
+mkdir xp
+cd xp
+cvs co -r WONKA-EXPERIMENTAL ow 2>&1 | grep "^U" | cut -d" " -f2 > ow.lst
+cvs admin -nWONKA-NEW-INTERPRETER:WONKA-EXPERIMENTAL  ow
+cvs admin -nWONKA-EXPERIMENTAL  ow
+cd ..
+
+diff new/ow.lst xp/ow.lst > newxpdiff
+grep "<" newxpdiff | cut -d" " -f2 > newonly
+grep ">" newxpdiff | cut -d" " -f2 > xponly
+
+# remove these files from list newonly:
+#  ow/wonka/doc/ref-man/GC.obj
+#  ow/wonka/doc/ref-man/stack_java_push.obj
+grep -v "GC.obj" newonly > no
+grep -v "stack_java_push.obj" no > newonly
+
+
+#exit
+#kwrite newonly
+
+cd new
+#copy files from branch (xp) to head (new)
+for f in $(cat ../xp/ow.lst); do
+  cp ../xp/$f $f
+done
+#remove files in head that were removed in branch
+for f in $(cat ../newonly); do
+  /bin/rm  $f
+  cvs remove $f
+done
+# add files in head that were created in branch
+for f in $(cat ../xponly); do
+  cd $(dirname $f)
+  cvs add -m "adding new NEW-INTERPRETER branch files to main trunk" $(basename $f)
+  cd -
+done
+cd ..
+# commit all files to new revision number
+cd new/ow
+cvs commit -m "preparing for release 0.9.3: merging NEW-INTERPRETER branch in main trunk (OLD-INTERPRETER); moving all revision numbers to 1.93" -r 1.93 &> ../commit.log
+cd ../..
+
+
+#check correctness
+
+# check diff in file list
+cd new
+mv ow ow-backup
+cvs co ow 2>&1 | grep "^U" | cut -d" " -f2 > own.lst
+cd ..
+diff new/own.lst xp/ow.lst
+# diff should only show:
+#< ow/wonka/doc/ref-man/GC.obj
+#< ow/wonka/doc/ref-man/stack_java_push.obj
+
+#check diff in all individual files; should only contain comments
+cd new
+for f in $(cat ../xp/ow.lst); do
+  diff $f ../xp/$f >> diff.log
+done
+grep -e">" -e"<" diff.log | grep -v "Id" > diff1.log
+kwrite diff1.log
+
+#build wonka; execute vte
+cd ow
+export WONKA_TOP=$PWD
+export CLASSPATH=
+jam install
+cd build-x86-linux/wonka
+./wonka
+
+cd ../../../..
+#/bin/rm -rf xp* new*
+
+exit

@@ -1,0 +1,205 @@
+# Mika timezones file
+# -------------------
+# This file is read in by the TimeResourceBundle class. It has the following
+# format:
+# Lines beginning with '#' are treated as comments, and are silently ignored.
+# All other lines must contain an '=' sign. The characters to the left of
+# this sign will be treated as the ID of the timezone, and the characters to
+# the left constitute its definition.
+# If the definition begins with a character other than '+', '-', or a digit, 
+# it must be identical to the left-hand side of a previous non-comment line.
+# The new ID is then defined as an alias for the old.
+# Otherwise, the definition must consist of a valid integer or floating-point
+# number, optionally followed by eight further numbers enclosed in parentheses,
+# followed by a ninth after the closing parenthesis.
+# The first number indicates the basic offset from UCT, with positive values
+# indicating oriental offsets (e.g. Europe) and negative offsets occidental
+# offsets (e.g. Americas). The remaining nine, if present, indicate a daylight
+# saving scheme as follows:
+# (startMonth, startDay, startDayOfWeek, startTime, endMonth, endDayOfWeek, 
+# endDay, endTime) savings
+# These are passed through to the SimpleTimeZone constructor with signature
+# (int, String, int, int, int, int, int, int, int, inti, int) after making
+# the following conversions:
+# - startMonth/endMonth: add 1 so that 1 indicates January and 12 December
+# - startDayOfWeek/endDayOfWeek: 1 represents Monday, 7 is Sunday
+# - startTime/endTime/savings: floating-point hours instead of seconds.
+# Badly-formatted lines will be ignored, and an error message will be printed.
+
+# N.B. Disclaimer - the information provided below may contain errors!
+# Check the timezones you will be using, and report any errors you find.
+
+GMT=0
+UTC=0
+ART=2
+EAT=3
+MET=3.5
+NET=4
+PLT=5
+IST=5.5
+BST=6
+VST=7
+CTT=8
+ACT=9.5
+AET=10
+SST=11
+NST=12
+PNT=-7
+IET=-5
+PRT=-4
+CNT=-3.5
+AGT=-3
+BET=-2
+HST=-1
+WET=0(3,-1,7,1.0,10,-1,7,1.0)1.0
+ECT=1(3,-1,7,2.0,10,-1,7,2.0)1.0
+EET=2(3,-1,7,2.0,10,-1,7,2.0)1.0
+PST=-8(4,1,7,2.0,10,-1,7,2.0)1.0
+MIT=-11(4,1,7,1.0,10,-1,7,2.0)1.0
+CAT=-10(4,1,7,2.0,10,-1,7,2.0)1.0
+AST=-9(4,1,7,2.0,10,-1,7,2.0)1.0
+MST=-7(4,1,7,2.0,10,-1,7,2.0)1.0
+CST=-6(4,1,7,2.0,10,-1,7,2.0)1.0
+EST=-5(4,1,7,2.0,10,-1,7,2.0)1.0
+NST=-3.5(4,1,7,2.0,10,-1,7,2.0)1.0
+CTT=8(4,1,7,2.0,10,-1,7,2.0)1.0
+JST=9(4,1,7,2.0,10,-1,7,2.0)1.0
+# Time zone aliases - Europe
+Europe/Vilnius=2
+Europe/Simferopol=2
+Atlantic/Canary=WET
+Atlantic/Faeroe=WET
+Atlantic/Madeira=WET
+Europe/Belfast=WET
+Europe/Dublin=WET
+Europe/Lisbon=WET
+Europe/London=WET
+Europe/Tirane=ECT
+Europe/Andorra=ECT
+Europe/Vienna=ECT
+Europe/Brussels=ECT
+Europe/Prague=ECT
+Europe/Bratislava=ECT
+Europe/Copenhagen=ECT
+Europe/Paris=ECT
+Europe/Berlin=ECT
+Europe/Gibraltar=ECT
+Europe/Budapest=ECT
+Europe/Rome=ECT
+Europe/Vatican=ECT
+Europe/San_Marino=ECT
+Europe/Riga=ECT
+Europe/Vaduz=ECT
+Europe/Vilnius=ECT
+Europe/Luxembourg=ECT
+Europe/Malta=ECT
+Europe/Monaco=ECT
+Europe/Amsterdam=ECT
+Europe/Oslo=ECT
+Arctic/Longyearbyen=ECT
+Atlantic/Jan_Mayen=ECT
+Europe/Warsaw=ECT
+Europe/Madrid=ECT
+Africa/Ceuta=ECT
+Europe/Stockholm=ECT
+Europe/Zurich=ECT
+Europe/Belgrade=ECT
+Europe/Ljubljana=ECT
+Europe/Sarajevo=ECT
+Europe/Skopje=ECT
+Europe/Zagreb=ECT
+Europe/Minsk=EET
+Europe/Sofia=EET
+Europe/Tallinn=EET
+Europe/Helsinki=EET
+Europe/Athens=EET
+Europe/Riga=EET
+Europe/Chisinau=EET
+Europe/Bucharest=EET
+Europe/Kaliningrad=EET
+Europe/Istanbul=EET
+Asia/Istanbul=EET
+Europe/Kiev=EET
+Europe/Uzhgorod=EET
+Europe/Zaporozhye=EET
+Europe/Simferopol=EET
+Asia/Jerusalem=EET
+Asia/Tel_Aviv=EET
+#
+# Time zone aliases - Asia (a beginning)
+#
+Asia/Tokyo=JST
+#
+# Time zone aliases - N. America (work in progress)
+#
+Pacific/Honolulu=HST
+America/Adak=CAT
+America/Juneau=AST
+America/Yakutat=AST
+America/Anchorage=AST
+America/Nome=AST
+America/Los_Angeles=PST
+PST8PDT=PST
+America/Vancouver=PST
+America/Whitehorse=PST
+America/Dawson=PST
+America/Tijuana=PST
+America/Phoenix=PNT
+America/Denver=MST
+MST7MDT=MST
+America/Shiprock=MST
+America/Boise=MST
+America/Edmonton=MST
+America/Cambridge_Bay=MST
+America/Yellowknife=MST
+America/Inuvik=MST
+America/Chihuahua=MST
+America/Hermosillo=MST
+America/Mazatlan=MST
+America/Dawson_Creek=MST
+America/Chicago=CST
+CST6CDT=CST
+America/Menominee=CST
+America/Rainy_River=CST
+America/Winnipeg=CST
+America/Rankin_Inlet=CST
+America/Regina=CST
+America/Swift_Current=CST
+America/Cancun=CST
+America/Merida=CST
+America/Monterrey=CST
+America/Mexico_City=CST
+America/Belize=CST
+America/Costa_Rica=CST
+America/Havana=CST
+America/El_Salvador=CST
+America/Guatemala=CST
+America/Tegucigalpa=CST
+America/New_York=EST
+EST5EDT=EST
+America/Louisville=EST
+America/Kentucky/Louisville=EST
+America/Kentucky/Monticello=EST
+America/Detroit=EST
+America/Montreal=EST
+America/Thunder_Bay=EST
+America/Nipigon=EST
+America/Pangnirtung=EST
+America/Iqaluit=EST
+America/Nassau=EST
+America/Port-au-Prince=EST
+America/Grand_Turk=EST
+America/Indianapolis=IET
+America/Indiana=IET
+America/Indiana/Indianapolis=IET
+America/Indiana/Marengo=IET
+America/Indiana/Knox=IET
+America/Indiana/Vevay=IET
+America/Cayman=IET
+America/Jamaica=IET
+America/Panama=IET
+America/St_Johns=NST
+America/Goose_Bay=NST
+America/Anguilla=PRT
+America/Antigua=PRT
+
