@@ -22,7 +22,7 @@
 
 // Tags: JDK1.1
 
-package gnu.testlet.java.text.BreakIterator;
+package gnu.testlet.wonka.text.BreakIterator;
 
 import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;

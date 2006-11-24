@@ -21,7 +21,7 @@
 
 // Tags: JDK1.2
 
-package gnu.testlet.java.text.ACIAttribute;
+package gnu.testlet.wonka.text.ACIAttribute;
 
 import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;
