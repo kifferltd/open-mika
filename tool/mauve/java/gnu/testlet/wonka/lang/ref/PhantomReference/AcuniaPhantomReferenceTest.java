@@ -33,6 +33,8 @@ import java.lang.ref.*;
 public class AcuniaPhantomReferenceTest implements Testlet {
 
   protected TestHarness th;
+  private ReferenceQueue queue;
+  private boolean finalized;
 
   public void test (TestHarness harness) {
     th = harness;
@@ -42,6 +44,28 @@ public class AcuniaPhantomReferenceTest implements Testlet {
     test_clear();
     test_enqueue();
     test_isEnqueued();
+    test_behaviour();
+  }
+
+
+  public void test_behaviour() {
+    th.checkPoint("PhantomReference: behaviour");
+    try {
+      queue = new ReferenceQueue();
+      finalized = false;
+      PhantomReference pr = new PhantomReference(new Mock(this), queue);
+      System.gc();
+      System.runFinalization();
+      synchronized (this) {
+        if (finalized == false) {
+          wait(20000);
+        }
+      }
+      System.gc();
+      th.check(queue.remove(10000), pr);
+    } catch (InterruptedException e) {
+      th.fail(e.toString());
+    }
   }
 
 
@@ -166,7 +190,18 @@ public class AcuniaPhantomReferenceTest implements Testlet {
 
   }
 
+  synchronized void finalizingMock() {
+    finalized = true;
+    try {
+      th.check(queue.remove(500), null);
+    } catch (Exception e) {
+      th.fail("query failed.");
+    }
+    
+  }
   private PhantomReference makePhantom(ReferenceQueue rq, int size){
     return new PhantomReference(new byte[size], rq);
   }
+
+
 }

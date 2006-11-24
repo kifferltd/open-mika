@@ -1056,8 +1056,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
         }
         else if (isSuperClass(clazzPhantomReference,parent_object->clazz)) {
           reachability = O_PHANTOM_BLACK;
-          woempa(1, "(GC) Marking phantom reference to %j\n", getWotsitField(parent_instance, F_Reference_referent));
-          wprintf("(GC) Marking phantom reference to %j\n", getWotsitField(parent_instance, F_Reference_referent));
+          woempa(7, "(GC) Marking phantom reference to %j\n", getWotsitField(parent_instance, F_Reference_referent));
         }
         else {
           wabort(ABORT_WONKA, "Eh??? %k is not a subclass of SoftReference, WeakReference, or PhantomReference!\n", parent_object->clazz);
@@ -1405,13 +1404,16 @@ static void miniSweepReferences(void) {
   while ((parent_instance = getFifo(reference_fifo))) {
     if ((referent_instance = getWotsitField(parent_instance, F_Reference_referent))) {
       referent_object = instance2object(referent_instance);
-      if (isNotSet(referent_object->flags, O_BLACK | O_FINALIZE_BLACK) &&
-         !(isSet(referent_object->flags, O_FINALIZING | O_FINALIZABLE)
-           && isSuperClass(clazzPhantomReference,instance2clazz(parent_instance)))) {
-
-        woempa(7, "(GC) Clearing reference %j from %j \n", referent_instance, parent_instance);
-        clearWotsitField(parent_instance, F_Reference_referent);
-
+      if (isNotSet(referent_object->flags, O_BLACK | O_FINALIZE_BLACK)) {
+        if(isSuperClass(clazzPhantomReference,instance2clazz(parent_instance))) {
+          if(isSet(referent_object->flags, O_FINALIZABLE | O_FINALIZING)) {
+            continue;
+          }
+        }
+        else {
+          woempa(7, "(GC) Clearing reference %j from %j \n", referent_instance, parent_instance);
+          clearWotsitField(parent_instance, F_Reference_referent);
+        }
         if(getReferenceField(parent_instance,F_Reference_ref_queue)) { 
           woempa(7, "(GC): enqueueing %j\n", parent_instance);
           ReferenceQueue_append(NULL,getReferenceField(parent_instance,F_Reference_ref_queue), parent_instance);
@@ -1696,7 +1698,6 @@ w_size sweep(w_int target) {
 
           if (thread && thread->state != wt_dead && thread->state != wt_unstarted) {
             woempa(9, "Hold on a moment - thread '%w' is still running...\n", NM(thread));
-            wprintf("Hold on a moment - %t is still running...\n", thread);
             do_collect = 0;
           }
         }
