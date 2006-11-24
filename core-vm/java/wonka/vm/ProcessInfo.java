@@ -81,12 +81,8 @@ public class ProcessInfo {
     //System.out.println("ProcessInfo.finish() pid "+id+", NativeProcess "+process);  
     
     if(process != null) {
-      //lets force gc to see if the process is still really referenced
-      process = (NativeProcess)reference.get();
-      if(process != null) {
-        process.setReturnValue(retval);
-        return;
-      }
+      process.setReturnValue(retval);
+      return;
     } 
     cleanUp();
   }

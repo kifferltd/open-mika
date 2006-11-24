@@ -127,7 +127,8 @@ public class NativeProcess extends Process {
   }
  
   public String toString() {
-    return "PID: " + info == null ? "???" : info.id + " returnvalue: " + returnvalue;
+    return "PID: " + (info == null ? "???" : String.valueOf(info.id)) + " returnvalue: " + 
+    (returnvalue < STILL_RUNNING ? String.valueOf(returnvalue) : "?");
   }
 
   synchronized void setReturnValue(int returnValue) {

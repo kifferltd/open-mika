@@ -1398,7 +1398,6 @@ w_boolean ReferenceQueue_append(JNIEnv *env, w_instance this, w_instance referen
 
 static void miniSweepReferences(void) {
   w_instance parent_instance;
-  w_object   parent_object;
   w_instance referent_instance;
   w_object referent_object;
 
@@ -1406,18 +1405,18 @@ static void miniSweepReferences(void) {
   while ((parent_instance = getFifo(reference_fifo))) {
     if ((referent_instance = getWotsitField(parent_instance, F_Reference_referent))) {
       referent_object = instance2object(referent_instance);
-      if (isNotSet(referent_object->flags, O_BLACK | O_FINALIZE_BLACK)) {
-        parent_object = instance2object(parent_instance);
-        if (!isSuperClass(clazzPhantomReference,parent_object->clazz)) {
-          woempa(7, "(GC) Clearing reference from %j to %j\n", parent_instance, referent_instance);
-          clearWotsitField(parent_instance, F_Reference_referent);
-        }
-        else wprintf("(GC): enqueueing %j\n", parent_instance);
+      if (isNotSet(referent_object->flags, O_BLACK | O_FINALIZE_BLACK) &&
+         !(isSet(referent_object->flags, O_FINALIZING | O_FINALIZABLE)
+           && isSuperClass(clazzPhantomReference,instance2clazz(parent_instance)))) {
+
+        woempa(7, "(GC) Clearing reference %j from %j \n", referent_instance, parent_instance);
+        clearWotsitField(parent_instance, F_Reference_referent);
 
         if(getReferenceField(parent_instance,F_Reference_ref_queue)) { 
+          woempa(7, "(GC): enqueueing %j\n", parent_instance);
           ReferenceQueue_append(NULL,getReferenceField(parent_instance,F_Reference_ref_queue), parent_instance);
         } else {
-          unsetFlag(parent_object->flags, O_ENQUEUEABLE);
+          unsetFlag(instance2object(parent_instance)->flags, O_ENQUEUEABLE);
         }
       }
     }
