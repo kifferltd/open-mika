@@ -46,7 +46,7 @@ public class ProcessOutputStream extends OutputStream {
 
   public synchronized void close() throws IOException {
     if(info != null) {
-      System.out.println("ProcessOutputStream.close()"+process.info);
+      //System.out.println("ProcessOutputStream.close()"+process.info);
       nativeClose();
       info = null;
     }

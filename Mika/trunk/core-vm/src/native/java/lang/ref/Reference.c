@@ -49,33 +49,23 @@ void Reference_set(JNIEnv *env, w_instance this, w_instance referent) {
 }
 
 w_instance Reference_get(JNIEnv *env, w_instance this) {
-  w_instance referent = getWotsitField(this, F_Reference_referent);
+  w_thread thread = JNIEnv2w_thread(env);
+  w_instance referent;
+
+  enterUnsafeRegion(thread);
+
+  referent = getWotsitField(this, F_Reference_referent);
   woempa(1, "Getting reference from %j to %j\n", this, referent);
 
-  if (!referent) {
-    return NULL;
-  }
-
-  if (gc_monitor) {
-    x_monitor_eternal(gc_monitor);
-    while (gc_phase < GC_PHASE_SWEEP || (gc_phase == GC_PHASE_SWEEP && sweeping_thread)) {
-      x_monitor_wait(gc_monitor, x_eternal);
+  if (referent) {
+/*
+    if(isNotSet(instance2object(this)->flags,O_ENQUEUEABLE)) {
+      w_dump("PANIC ! Reference %j is not Enqueueable but stil has referent %p :0\n",this,referent);
     }
-
-    //Ask for the reference again since it could set to NULL by the collector
-    referent = getWotsitField(this, F_Reference_referent);
-
-    if (!referent) {
-      x_monitor_exit(gc_monitor);
-      return NULL;
-    }
-
-    setFlag(instance2object(referent)->flags, O_BLACK);
-    x_monitor_exit(gc_monitor);
+*/
+    addLocalReference(thread, referent);
   }
-  else {
-    setFlag(instance2object(referent)->flags, O_BLACK);
-  }
+  enterSafeRegion(thread);
 
   return referent;
 }
