@@ -518,6 +518,18 @@ static void identify_special_methods(void) {
   }
 }
 
+static w_boolean attach_class_iteration(void * name, void * cl) {
+  w_clazz clazz = cl;
+
+  if (clazz->Class) {
+    attachClassInstance(clazz);
+  }
+}
+
+static void attach_class_instances(void) {
+  ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+}
+
 /*
 ** Search colon-separated list bcp and extract the first string which ends
 ** in `.jar' or `.zip'.  Skip over leading '/' if present.
@@ -737,7 +749,7 @@ void startLoading(void) {
  * 4 *
  ****/
 
-  woempa(7,"Step 4: load java.lang.Class, java.lang.ClassLoader, java.lang.Thread, java.lang.ThreadGroup, java.lang.ref.Reference\n");
+  woempa(7,"Step 4: load java.lang.Class, java.lang.ClassLoader\n");
 // load class java/lang/Class
   clazzClass = seekClazzByName(string_java_lang_Class, NULL);
   if (!clazzClass) {
@@ -750,8 +762,18 @@ void startLoading(void) {
   }
   setFlag(clazzClassLoader->flags, CLAZZ_IS_CLASSLOADER);
 
+ /****
+ * 5 *
+ ****/
+
+  woempa(7,"Step 5: attach an instance of Class to everything loaded so far, and locate the special methods Object.finalize() and ClassLoader.loadClass().\n");
   identify_special_methods();
 
+ /****
+ * 6 *
+ ****/
+
+  woempa(7,"Step 6: load java.lang.Thread, java.lang.ref.Reference, java.lang.reflect.Constructor\n");
 // load class java/lang/Thread
   clazzThread = seekClazzByName(string_java_lang_Thread, NULL);
   if (!clazzThread) {
@@ -778,17 +800,17 @@ void startLoading(void) {
   }
 
  /****
- * 5 *
+ * 7 *
  ****/
-  woempa(7,"Step 5: loading core classes \n");
+  woempa(7,"Step 7: loading core classes \n");
   loadCoreClasses();
   x_monitor_exit(&system_loaded_class_hashtable->monitor);
 
 
  /****
- * 6 *
+ * 8 *
  ****/
-  woempa(7,"Step 6: create primitive classes and their array classes\n");
+  woempa(7,"Step 8: create primitive classes and their array classes\n");
 
   preparePrimitive(clazz_boolean, string_boolean, P_boolean);
   preparePrimitive(clazz_char, string_c_h_a_r, P_char);
@@ -799,6 +821,8 @@ void startLoading(void) {
   preparePrimitive(clazz_int, string_int, P_int);
   preparePrimitive(clazz_long, string_long, P_long);
   preparePrimitive(clazz_void, string_void, P_void);
+
+  attach_class_instances();
 
   /*
   ** For some strange reason, SUN seems to fix the SUIDs for arrays of primitives. 
@@ -1250,7 +1274,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
 ** "java." or "wonka.", optionally preceded by one or more "["s,
 ** and contains only ISO Latin 1 characters.
 */
-static w_boolean namedClassIsSystemClass(w_string name) {
+w_boolean namedClassIsSystemClass(w_string name) {
   w_ubyte *ch;
 
   if (!string_is_latin1(name)) {

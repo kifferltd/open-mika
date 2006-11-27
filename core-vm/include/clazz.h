@@ -126,7 +126,7 @@ typedef struct w_Clazz {
                          /* some commonly-occurring methods, if present: */
 
   w_long suid;          /* the cached SUID of this clazz or 0 */
-    w_string filename;  /* filename as found in class file */
+  w_string filename;    /* filename as found in class file */
 
 #ifdef JAVA_PROFILE
   w_long instances;
@@ -179,8 +179,8 @@ typedef struct w_UnloadedClazz {
 **
 ** +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ** | | | | | | | | | | | | | state |       ACC_xxxxx flags         |
-** +-+^+^+^+-+^+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-**    | | |   | | | | | | +- CLAZZ_HAS_BEEN_MARKED
+** +-+^+^+^+-+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+**    | | |   | | | | | |
 **    | | |   | | | | | +--- CLAZZ_IS_TRUSTED 
 **    | | |   | | | | +----- CLAZZ_IS_SCRAMBLED
 **    | | |   | | | +------- CLAZZ_IS_PRIMITIVE
@@ -213,12 +213,7 @@ typedef struct w_UnloadedClazz {
 #define getClazzState(c) (((c)->flags & CLAZZ_STATE_MASK) >> CLAZZ_STATE_SHIFT)
 #define setClazzState(c,s) (c)->flags = (((c)->flags & ~CLAZZ_STATE_MASK) | ((s) << CLAZZ_STATE_SHIFT))
 
-/*
- * CLAZZ_HAS_BEEN_MARKED is set by the Mark phase of GC when it marks a clazz.
- * It is cleared during the Prepare phase.
- */
-
-#define CLAZZ_HAS_BEEN_MARKED   0x00100000
+#define CLAZZ_HAS_BEEN_MARKED 0 // no longer used
 
 /*
  * CLAZZ_IS_TRUSTED is set if no verification is required for this class.
@@ -308,6 +303,7 @@ w_instance attachClassInstance(w_clazz);
 
 /*
 ** clazz2Class returns the w_instance of Class associated with this w_clazz.
+** If the Class instance does not already exist it will be created.
 */
 w_instance clazz2Class(w_clazz);
 
