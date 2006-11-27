@@ -1634,6 +1634,12 @@ w_clazz allocClazz(void);
 w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader, w_boolean trusted) {
   w_clazz clazz;
 
+  if (loader && systemClassLoader && loader != systemClassLoader && namedClassIsSystemClass(name)) {
+    throwException(thread, clazzSecurityException, "not allowed to define system class %w", name);
+
+    return NULL;
+  }
+
   clazz = allocClazz();
   // We initialise instanceSize to an impossible value, so any attempt
   // to allocate an instance of an unresolved clazz will fail.
@@ -1651,7 +1657,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_header(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, NULL);
+    throwException(thread, clazzClassFormatError, "error in class file header");
     destroyClazz(clazz);
 
     return NULL;
@@ -1662,7 +1668,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_constant_pool(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, NULL);
+    throwException(thread, clazzClassFormatError, "error in constant pool");
     destroyClazz(clazz);
 
     return NULL;
@@ -1711,6 +1717,12 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
     } 
   }
 
+  // Don't try to attach a Class instance during initial bootstrap phase.
+  // At the end of this phase all loaded classes get a Class instance attached,
+  // from that point on it's done here at creation time.
+  if (clazzClass && clazzClass->Class) {
+    attachClassInstance(clazz);
+  }
   clazz->resolution_thread = NULL;
   setClazzState(clazz, CLAZZ_STATE_LOADED);
   registerClazz(thread, clazz, loader);  
@@ -1736,15 +1748,17 @@ w_instance attachClassInstance(w_clazz clazz) {
     wabort(ABORT_WONKA, "Cannot create instance of Class for %k, as clazzClass not yet defined\n", clazz);
     return NULL;
   }
-#endif
 
   woempa(1, "clazzClass state is %d\n", getClazzState(clazz));
   if (getClazzState(clazz) < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "Cannot create instance of Class for unloaded class: %K\n", clazz);
     return NULL;
   }
+#endif
 
-  threadMustBeSafe(thread);
+  if (thread) {
+    threadMustBeSafe(thread);
+  }
 
   Class = allocInstance(thread, clazzClass);
 
@@ -1876,17 +1890,27 @@ w_field getField(w_clazz clazz, w_string name) {
 
 /*
 ** clazz2Class returns the w_instance of Class associated with this w_clazz.
-** It calls attachClassInstance if necessary.
+** It calls attachClassInstance if necessary (which shouldn't be very often,
+** as after the bootstrap phase every clazz gets a Class instance attached
+** as soon as it is created.
 */
 w_instance clazz2Class(w_clazz clazz) {
+  w_instance Class;
 
-  w_instance Class = clazz ? clazz->Class : NULL;
+  if (!clazz) {
+    wabort(ABORT_WONKA, "clazz2Class(NULL)???");
+  }
 
- if (Class == NULL) {
+  Class = clazz->Class;
+  if (Class == NULL) {
     Class = attachClassInstance(clazz);
- }
- 
- return Class;
+  }
+
+  if (!Class) {
+    wabort(ABORT_WONKA, "clazz %k has no Class", clazz);
+  }
+
+  return Class;
 
 }
 

@@ -106,6 +106,11 @@ w_clazz createNextDimension(w_clazz, w_instance initiating_loader);
 */
 w_string undescriptifyClassName(w_string string);
 
+/*
+** Returns true iff the class name is one that may only be loaded by the
+** system/bootstrap class loader (e.g. java.*, wonka.*).
+*/
+w_boolean namedClassIsSystemClass(w_string name);
 
 extern w_hashtable fixup1_hashtable;
 extern w_hashtable fixup2_hashtable;
