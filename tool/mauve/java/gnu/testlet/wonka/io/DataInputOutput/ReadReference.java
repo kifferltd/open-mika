@@ -37,7 +37,7 @@ test(TestHarness harness)
 {
   try
     {
-      InputStream is = new FileInputStream("{}/test/reference.data2");
+      InputStream is = getClass().getResourceAsStream("/reference.data2");
       DataInputStream dis = new DataInputStream(is); 
 
       harness.debug("Reading reference DataInput data");
