@@ -386,7 +386,9 @@ java/lang/VerifyError
 java/lang/LinkageError
 java/lang/UnsatisfiedLinkError
 java/lang/NoClassDefFoundError
+java/lang/NoSuchFieldError
 java/lang/NoSuchMethodError
+java/lang/InstantiationError
 java/lang/ClassCircularityError
 java/lang/ClassFormatError
 java/lang/ArithmeticException

@@ -552,10 +552,6 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   clazz = namedClassMustBeLoaded(loader, dotified);
   deregisterString(dotified);
 
-  if (! exceptionThrown(thread) && clazz == NULL) {
-    throwException(thread, clazzClassNotFoundException, "(JNI) FindClass: %w", name);
-  }
-
   if (exceptionThrown(thread)) {
     woempa(1, "(JNI) exception %j\n", exceptionThrown(thread));
     return NULL;

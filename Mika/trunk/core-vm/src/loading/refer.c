@@ -873,6 +873,15 @@ w_int mustBeReferenced(w_clazz clazz) {
 #endif
 
   while(state == CLAZZ_STATE_REFERENCING) {
+    if(clazz->resolution_thread == thread) {
+      setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      throwException(thread, clazzLinkageError, "Refering %k failed", clazz);
+      x_monitor_notify_all(clazz->resolution_monitor);
+      x_monitor_exit(clazz->resolution_monitor);
+
+      return CLASS_LOADING_FAILED;
+    }
+
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
     if (monitor_status == xs_interrupted) {
       x_monitor_eternal(clazz->resolution_monitor);
@@ -883,6 +892,12 @@ w_int mustBeReferenced(w_clazz clazz) {
   if (state == CLAZZ_STATE_SUPERS_LOADED) {
     woempa(1, "Referencing %K\n", clazz);
     setClazzState(clazz, CLAZZ_STATE_REFERENCING);
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be NULL\n", clazz);
+    }
+#endif
+    clazz->resolution_thread = thread;
     x_monitor_exit(clazz->resolution_monitor);
 
     n = clazz->numSuperClasses;
@@ -901,18 +916,18 @@ w_int mustBeReferenced(w_clazz clazz) {
       result |= referenceClazz(clazz);
     }
 
-    if (result == CLASS_LOADING_FAILED) {
-      x_monitor_eternal(clazz->resolution_monitor);
-      setClazzState(clazz, CLAZZ_STATE_BROKEN);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
-
-      return result;
-
-    }
-
     x_monitor_eternal(clazz->resolution_monitor);
-    if(exceptionThrown(thread)) {
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread != thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p\n", clazz, thread);
+    }
+#endif
+    clazz->resolution_thread = NULL;
+
+    if (result == CLASS_LOADING_FAILED) {
+      setClazzState(clazz, CLAZZ_STATE_BROKEN);
+    }
+    else if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       result = CLASS_LOADING_FAILED;
     }

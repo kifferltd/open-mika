@@ -107,6 +107,14 @@ w_int mustBeLinked(w_clazz clazz) {
 #endif
 
   while(state == CLAZZ_STATE_LINKING) {
+    if(clazz->resolution_thread == thread) {
+      setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      throwException(thread, clazzLinkageError, "Linking of %k failed", clazz);
+      x_monitor_notify_all(clazz->resolution_monitor);
+      x_monitor_exit(clazz->resolution_monitor);
+
+      return CLASS_LOADING_FAILED;
+    }
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
     if (monitor_status == xs_interrupted) {
       x_monitor_eternal(clazz->resolution_monitor);
@@ -117,11 +125,23 @@ w_int mustBeLinked(w_clazz clazz) {
   if (state == CLAZZ_STATE_REFERENCED) {
     woempa(1, "Linking %K\n", clazz);
     setClazzState(clazz, CLAZZ_STATE_LINKING);
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be NULL\n", clazz);
+    }
+#endif
+    clazz->resolution_thread = thread;
     x_monitor_exit(clazz->resolution_monitor);
 
     result = linkClazz(clazz);
 
     x_monitor_eternal(clazz->resolution_monitor);
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread != thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p\n", clazz, thread);
+    }
+#endif
+    clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       x_monitor_notify_all(clazz->resolution_monitor);

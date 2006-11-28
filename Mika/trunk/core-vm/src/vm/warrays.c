@@ -71,6 +71,8 @@ w_clazz createClazzArray(void) {
       woempa(7, "Found clone method of clazzObject in slot [%d], using it as basis of array clone\n", i);
       w_memcpy(arrayclone, &clazzObject->own_methods[i], sizeof(w_Method));
       arrayclone->exec.function = (w_function)(w_void_fun)Array_clone;
+      unsetFlag(arrayclone->flags, ACC_PROTECTED);
+      setFlag(arrayclone->flags, ACC_PUBLIC);
     }
   }
 
