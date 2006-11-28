@@ -315,7 +315,7 @@ public abstract class ClassLoader {
    ** If the ProtectionDomain is null, use the default protection domain.
    */
   protected final Class defineClass(String classname, byte data[], int offset, int length, ProtectionDomain pd)
-    throws NullPointerException, ArrayIndexOutOfBoundsException, ClassFormatError
+    throws ClassFormatError
   {
     if (offset < 0 || length < 0 || offset > data.length - length) {
       throw new ArrayIndexOutOfBoundsException();
