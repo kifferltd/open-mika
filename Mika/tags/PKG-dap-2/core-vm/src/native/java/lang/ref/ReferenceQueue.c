@@ -142,13 +142,15 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
     } else {
       w_long now = getNativeSystemTime();
       x_monitor_eternal(lock);
+      
       if(fifo->numElements == 0) {
+        x_status status;
         if(waittime <= 0) {
           x_monitor_exit(lock);
           return NULL;
         }
 
-        x_status status = x_monitor_wait(lock, waittime != 0 ? x_millis2ticks((w_size)waittime) : x_eternal);
+        status = x_monitor_wait(lock, waittime != 0 ? x_millis2ticks((w_size)waittime) : x_eternal);
         if(status == xs_interrupted) {
           throwException(thread, clazzInterruptedException, NULL);
           thread->flags &= ~WT_THREAD_INTERRUPTED;
