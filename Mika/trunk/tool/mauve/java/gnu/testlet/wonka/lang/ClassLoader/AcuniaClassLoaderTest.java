@@ -24,12 +24,18 @@
 
 package gnu.testlet.wonka.lang.ClassLoader; //complete the package name ...
 
-import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;
-import java.io.*;
-import java.lang.reflect.*;
-import java.util.jar.*;
-import java.util.*;
+import gnu.testlet.Testlet;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 //import java.*; // at least the class you are testing ...
 
@@ -66,72 +72,88 @@ public class AcuniaClassLoaderTest implements Testlet
   private static final String ae1 = "gnu.testlet.wonka.lang.ClassLoader.AbstractEvol1";
   private static final String e1i = "gnu.testlet.wonka.lang.ClassLoader.Evol1Interface";
 
-  protected boolean setup(){
-      hm = new HashMap();
-      th.debug("start seting up ClassLoaderTest");
-      try {
-        JarFile jf = new JarFile("/test/CLTest.jar");
-        Enumeration e = jf.entries();
-        while (e.hasMoreElements()){
-        	JarEntry je = (JarEntry) e.nextElement();
-		String s = je.getName();
-		if (!s.endsWith(".class")){
-		 	continue;
-		}
-        	int i = s.indexOf('/');
-        	while (i != -1){
-         		s = s.substring(0,i)+"."+s.substring(i+1);
-         		i = s.indexOf('/');
-        	}
-        	i = s.lastIndexOf('.');
-        	if(i != -1){
-			s = s.substring(0,i);
-		}
- 		InputStream in = jf.getInputStream(je);
- 		byte [] bytes = new byte[1024];
- 		int rd = in.read(bytes,0,1024);
- 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
- 		while (rd != -1){
- 	 		bos.write(bytes,0,rd);
- 	 		rd = in.read(bytes,0,1024);	
- 		}	 	
- 		bytes = bos.toByteArray();
- 		hm.put(s,bytes);
-      	}
-      	HashMap clmap = new HashMap();
-      	clmap.put(abc, hm.get(abc));
-      	clmap.put(bsi, hm.get(bsi));
-      	baseCl = new ExClassLoader(clmap, "baseClassLoader");
-      	
-      	clmap = new HashMap(clmap);
-      	clmap.put(ae1, hm.get(ae1));
-      	clmap.put(e1i, hm.get(e1i));
-      	evol1Cl = new ExClassLoader(baseCl, clmap, "evol1ClassLoader");
-      	
-      	clmap = new HashMap(clmap);
-      	clmap.put(ac1, hm.get(ac1));
-      	clmap.put(ti1, hm.get(ti1));
-      	clmap.put(ac2, hm.get(ac2));
-      	clmap.put(ti2, hm.get(ti2));
-      	atest1Cl = new ExClassLoader(evol1Cl, clmap, "atest1ClassLoader");
-      	atest2Cl = new ExClassLoader(evol1Cl, clmap, "atest2ClassLoader");
-      	
-      	clmap = new HashMap(clmap);
-      	clmap.put(tc1, hm.get(tc1));
-      	clmap.put(tc2, hm.get(tc2));
-      	rtest1Cl = new ExClassLoader(atest1Cl, clmap, "rtest1ClassLoader");
-      	rtest2Cl = new ExClassLoader(atest2Cl, clmap, "rtestClassLoader");
-      	duplicateCl = new ExClassLoader(clmap, "duplucateClassLoader");
-      	
-      	th.debug("done setting up ClassLoaderTest");
-        return true;
+  protected boolean setup() {
+    hm = new HashMap();
+    th.debug("start seting up ClassLoaderTest");
+    try {
+      JarFile jf = newJarFile("/CLTest.jar");
+      Enumeration e = jf.entries();
+      while (e.hasMoreElements()) {
+        JarEntry je = (JarEntry) e.nextElement();
+        String s = je.getName();
+        if (!s.endsWith(".class")) {
+          continue;
+        }
+        int i = s.indexOf('/');
+        while (i != -1) {
+          s = s.substring(0, i) + "." + s.substring(i + 1);
+          i = s.indexOf('/');
+        }
+        i = s.lastIndexOf('.');
+        if (i != -1) {
+          s = s.substring(0, i);
+        }
+        InputStream in = jf.getInputStream(je);
+        byte[] bytes = new byte[1024];
+        int rd = in.read(bytes, 0, 1024);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        while (rd != -1) {
+          bos.write(bytes, 0, rd);
+          rd = in.read(bytes, 0, 1024);
+        }
+        bytes = bos.toByteArray();
+        hm.put(s, bytes);
       }
-      catch(IOException e){
-       	th.debug("Jar-file is Missing");
-      	return false;
-      }	
+      HashMap clmap = new HashMap();
+      clmap.put(abc, hm.get(abc));
+      clmap.put(bsi, hm.get(bsi));
+      baseCl = new ExClassLoader(clmap, "baseClassLoader");
 
+      clmap = new HashMap(clmap);
+      clmap.put(ae1, hm.get(ae1));
+      clmap.put(e1i, hm.get(e1i));
+      evol1Cl = new ExClassLoader(baseCl, clmap, "evol1ClassLoader");
 
+      clmap = new HashMap(clmap);
+      clmap.put(ac1, hm.get(ac1));
+      clmap.put(ti1, hm.get(ti1));
+      clmap.put(ac2, hm.get(ac2));
+      clmap.put(ti2, hm.get(ti2));
+      atest1Cl = new ExClassLoader(evol1Cl, clmap, "atest1ClassLoader");
+      atest2Cl = new ExClassLoader(evol1Cl, clmap, "atest2ClassLoader");
+
+      clmap = new HashMap(clmap);
+      clmap.put(tc1, hm.get(tc1));
+      clmap.put(tc2, hm.get(tc2));
+      rtest1Cl = new ExClassLoader(atest1Cl, clmap, "rtest1ClassLoader");
+      rtest2Cl = new ExClassLoader(atest2Cl, clmap, "rtestClassLoader");
+      duplicateCl = new ExClassLoader(clmap, "duplucateClassLoader");
+
+      th.debug("done setting up ClassLoaderTest");
+      return true;
+    } catch (Exception e) {
+      th.debug("Jar-file is Missing");
+      return false;
+    }
+
+  }
+
+  private JarFile newJarFile(String string) throws IOException {
+    InputStream in = getClass().getResourceAsStream(string);
+    if(in != null) {
+      File out = new File("tmp.file");
+      out.deleteOnExit();
+      FileOutputStream fos = new FileOutputStream(out);
+      byte[] bytes = new byte[1024];
+      int rd = in.read(bytes);
+      while(rd != -1) {
+        fos.write(bytes,0,rd);
+        rd = in.read(bytes);
+      }
+      fos.close();
+      return new JarFile(out);
+    }
+    return null;
   }
 
   public void test (TestHarness harness)
@@ -154,8 +176,8 @@ public class AcuniaClassLoaderTest implements Testlet
     Thread t = new Thread(new InitClass(rtest1Cl));
     ClassLoader cl = new ExClassLoader(new HashMap(), "dumbClassLoader");
     try {
-   	Class c = Class.forName("gnu.testlet.wonka.lang.ClassLoader.BasicInterface",true,cl);
-    	th.fail("should throw a ClassNotFoundException");
+   	  Class.forName("gnu.testlet.wonka.lang.ClassLoader.BasicInterface",true,cl);
+    	th.fail("should throw a ClassNotFoundException ");
     }catch(ClassNotFoundException cnfe){ th.check(true); }
 
     try {
@@ -176,7 +198,7 @@ public class AcuniaClassLoaderTest implements Testlet
     catch (InterruptedException _){}
 */
     try {
-   	Class c = Class.forName("gnu.testlet.wonka.lang.ClassLoader.BasicInterface",true,cl);
+   	  Class.forName("gnu.testlet.wonka.lang.ClassLoader.BasicInterface",true,cl);
     	th.fail("should throw a ClassNotFoundException");
     }catch(ClassNotFoundException cnfe){ th.check(true); }
 
@@ -251,33 +273,34 @@ public class AcuniaClassLoaderTest implements Testlet
     BadClassLoader cl = new BadClassLoader();
     try {
      	Class c = cl.findClass("A");
-     	th.fail("should throw ClassCircularityError");	
+      c.newInstance();
+     	th.fail("should throw ClassCircularityError "+c);
     }catch (Throwable t){
         //t.printStackTrace();
      	th.check(t.getClass(), ClassCircularityError.class);
     }
-// not everyone should be allowed to
+ 
+    // not everyone should be allowed to
     try {
      	Class c = cl.findClass("String");
      	String s =(String) c.newInstance();
-     	th.fail("should throw an Error");	
+     	th.fail("should throw an Error "+s);	
     }catch (Throwable t){
         //t.printStackTrace();
      	th.check((t instanceof ClassCastException) || (t instanceof SecurityException), "checking Throwable type");
     }
     try {
-     	Class c = cl.findClass("java.lang.Bad");
+     	cl.findClass("java.lang.Bad");      
+      th.fail("Bad class");
     }catch (Throwable t){
         //t.printStackTrace();
-     	//th.check((t instanceof Error) || (t instanceof SecurityException));
+     	th.check((t instanceof Error) || (t instanceof SecurityException));
     }
     try {
      	Class c = cl.findClass("Old");
-     	Object o = c.newInstance();
-     	th.fail("should throw a LinkageError");	
+     	c.newInstance();
     }catch (Throwable t){
-        //t.printStackTrace();
-     	th.check(t instanceof LinkageError, "caught an Error");
+     th.fail("should be allowed, but got "+t);   
     }
     try {
      	Class c = cl.findClass("Mis");
@@ -285,7 +308,7 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw a NoClassDefFoundError");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class);
+     	th.check(t.getClass(), NoClassDefFoundError.class, "Mis: "+t);
     }
     try {
      	Class c = cl.findClass("MisClass");
@@ -293,17 +316,17 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw a NoClassDefFoundError");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class);
+     	th.check(t.getClass(), NoClassDefFoundError.class, "MisClass: "+t);
     }
     try {
-     	Class c = cl.findClass("BadFormat1");
+     	cl.findClass("BadFormat1");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
         //t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {
-     	Class c = cl.findClass("BadFormat2");
+     	cl.findClass("BadFormat2");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
         //t.printStackTrace();
@@ -318,14 +341,14 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.check(t.getClass(), VerifyError.class);
     }
     try {
-     	Class c = cl.findClass("CreateByteArray");
+     	cl.findClass("CreateByteArray");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
         //t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {
-     	Class c = cl.findClass("wrongName");//, true, cl);
+     	cl.findClass("wrongName");//, true, cl);
      	th.fail("should throw an Error");	
     }catch (Throwable t){
         //t.printStackTrace();
@@ -334,41 +357,43 @@ public class AcuniaClassLoaderTest implements Testlet
     try {
      	Class c = cl.findClass("Acces.AcMethod");//, true, cl);
      	c.newInstance();
-     	th.fail("should throw an IncompatibleClassChangeError");	
+     	th.fail("should throw an IncompatibleClassChangeError - 1");	
     }catch (Throwable t){
-        //t.printStackTrace();
+      //t.printStackTrace();
      	th.check(t instanceof IllegalAccessError);
     }
     try {
      	Class c = cl.findClass("Acces");//, true, cl);
      	c.newInstance();
-     	th.fail("should throw an IncompatibleClassChangeError");	
+     	th.fail("should throw an IncompatibleClassChangeError - 2");	
     }catch (Throwable t){
-        //t.printStackTrace();
+      //t.printStackTrace();
      	th.check(t instanceof IllegalAccessError);
     }
     try {
      	Class c = cl.findClass("NoSuchField");//, true, cl);
      	c.newInstance();
-     	th.fail("should throw an IncompatibleClassChangeError");	
+     	th.fail("should throw an IncompatibleClassChangeError - 3");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t instanceof NoSuchFieldError);
+     	th.check(t instanceof NoSuchFieldError, 
+          "need a NoSuchFieldError, but got "+t);
     }
     try {
      	Class c = cl.findClass("NoSuchMethod");//, true, cl);
      	c.newInstance();
-     	th.fail("should throw an IncompatibleClassChangeError");	
+     	th.fail("should throw an IncompatibleClassChangeError - 4");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t instanceof NoSuchMethodError);
+     	th.check(t instanceof NoSuchMethodError, 
+          "need a NoSuchMethodError, but got "+t);
     }
     try {
      	Class c = cl.findClass("Instantiate");//, true, cl);
      	c.newInstance();
-     	th.fail("should throw an IncompatibleClassChangeError");	
+     	th.fail("should throw an IncompatibleClassChangeError - 5");	
     }catch (Throwable t){
-        //t.printStackTrace();
+      //t.printStackTrace();
      	th.check(t instanceof InstantiationError);
     }
     try {
