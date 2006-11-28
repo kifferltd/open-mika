@@ -311,10 +311,7 @@ w_instance ClassLoader_loadClass(JNIEnv *env, w_instance thisClassLoader, w_inst
   woempa(7, "Loader: %j, name: %w\n", NULL, name);
   clazz = namedClassMustBeLoaded(NULL, name);
 
-  if (exceptionThrown(thread)) {
-    return NULL;
-  }
-  else if (clazz) {
+  if (clazz) {
     if (clazz->Class == NULL) {
       attachClassInstance(clazz);  
     }
@@ -326,12 +323,8 @@ w_instance ClassLoader_loadClass(JNIEnv *env, w_instance thisClassLoader, w_inst
     woempa(1, "--> clazz at %p.\n", clazz);
     return exceptionThrown(thread) ? NULL : clazz->Class;
   }
-  else {
-    woempa(1, "--> NOT found! Throwing ClassNotFoundException.\n");
-    throwException(thread, clazzClassNotFoundException, "loadClass: %w", name);
-    return NULL;
-  }
 
+  return NULL;
 }
 
 /*

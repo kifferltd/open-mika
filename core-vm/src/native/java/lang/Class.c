@@ -293,11 +293,6 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   
   loader = clazz2loader(calling_clazz);
   clazz = namedClassMustBeLoaded(loader, classname);
-  if (! clazz) {
-    throwException(thread, clazzClassNotFoundException, "forName(String): %w", classname);
-    return NULL;
-  } 
-
   if (exceptionThrown(thread) || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -326,11 +321,10 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
 
   clazz = namedClassMustBeLoaded(Classloader, classname);
   if (! clazz) {
-    throwException(thread, clazzClassNotFoundException, "forName(String, boolean, ClassLoader): %w", classname);
     return NULL;
   } 
 
-  if (! exceptionThrown(thread) && initialize) {
+  if (initialize) {
     if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
       return NULL;
     }

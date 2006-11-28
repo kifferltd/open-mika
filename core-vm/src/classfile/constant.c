@@ -646,13 +646,7 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
 
   }
 
-  if (exceptionThrown(thread) == NULL) {
-    woempa(9, "Throwing ClassNotFoundException re: %w\n", dotified);
-    throwException(thread, clazzClassNotFoundException, "%w", dotified);
-  }
-  else {
-    woempa(9, "Got a %k\n", instance2clazz(exceptionThrown(thread)));
-  }
+  woempa(9, "Got a %k\n", instance2clazz(exceptionThrown(thread)));
 
   x_monitor_eternal(clazz->resolution_monitor);
   *v = (w_word)exceptionThrown(thread);
@@ -715,15 +709,10 @@ void resolveClassConstant(w_clazz clazz, w_int i) {
 ** of the class where the member is declared.
 */
 static w_boolean checkAccess(w_flags flags, w_boolean same_class, w_boolean same_package, w_boolean ancestor) {
-  w_boolean allowed = (same_class || isNotSet(flags, ACC_PRIVATE));
+  w_boolean allowed = same_class || isSet(flags, ACC_PUBLIC);
 
-  if (!allowed) {
-    if (isSet(flags, ACC_PROTECTED)) {
-      allowed = ancestor;
-    }
-    else {
-      allowed = (same_package || isSet(flags, ACC_PUBLIC)); 
-    }
+  if (!allowed && isNotSet(flags, ACC_PRIVATE)) {
+    allowed = same_package || (ancestor && isSet(flags, ACC_PROTECTED)); 
   }
 
   return allowed;
@@ -743,23 +732,29 @@ static w_field seekFieldInClass(w_string name, w_string descriptor, w_clazz valu
   for (i = 0; i < search_clazz->numFields; ++i) {
     w_field f = &search_clazz->own_fields[i];
 
-    if ((f->name == name) && checkAccess(f->flags, same_class, same_package, ancestor)) {
-      if (mustBeLoaded(&f->value_clazz) == CLASS_LOADING_FAILED) {
-        woempa(9, "  failed to load %K!\n", value_clazz);
-      }
-      else {
-        woempa(1, "  matching field has value_clazz %K (%p), looking for %K (%p)\n", f->value_clazz, f->value_clazz, value_clazz, value_clazz);
-        if (f->value_clazz == value_clazz) {
+    if (f->name == name) {
+      if(checkAccess(f->flags, same_class, same_package, ancestor)) {
+        if (mustBeLoaded(&f->value_clazz) == CLASS_LOADING_FAILED) {
+          woempa(9, "  failed to load %K!\n", value_clazz);
+        }
+        else {
+          woempa(1,"  matching field %w has value_clazz %K (%p), looking for %K (%p)\n", name, f->value_clazz, f->value_clazz, value_clazz, value_clazz);
+          if (f->value_clazz == value_clazz) {
 #ifdef PACK_BYTE_FIELDS
-          woempa(1, "  found it in %K, size %d slot %d.\n", search_clazz, FIELD_SIZE(f->size_and_slot), FIELD_OFFSET(f->size_and_slot));
+            woempa(1, "  found it in %K, size %d slot %d.\n", search_clazz, FIELD_SIZE(f->size_and_slot), FIELD_OFFSET(f->size_and_slot));
 #else
-          woempa(1, "  found it in %K, slot %d.\n", search_clazz, f->size_and_slot);
+            woempa(1, "  found it in %K, slot %d.\n", search_clazz, f->size_and_slot);
 #endif
 
-          return f;
-
+            return f;
+          }
         }
       }
+      else {
+        throwException(currentWonkaThread, clazzIllegalAccessError, "Field %w in %k is not accessable from %k",
+                       name,search_clazz,accessible_from);
+        return NULL;
+      } 
     }
   }
 
@@ -845,7 +840,7 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
     }
 
     if (!field && thread && !exceptionThrown(thread)) {
-      throwException(thread, clazzLinkageError, "%k: no field '%w' with type %w found in %K or its superclasses", clazz, name, desc_string, search_clazz);
+      throwException(thread, clazzNoSuchFieldError, "%k: no field '%w' with type %w found in %K or its superclasses", clazz, name, desc_string, search_clazz);
     }
 
     deregisterString(desc_string);
@@ -947,6 +942,9 @@ static w_method seekMethodInClass(w_string name, w_string desc_string, w_MethodS
 
         }
         woempa(1, "=> access forbidden, match fails\n");
+        throwException(currentWonkaThread, clazzIllegalAccessError, "Method %w in %k is not accessable from %k",
+                       name,search_clazz,accessible_from);
+        return NULL;
       }
     }
   }
@@ -1006,7 +1004,7 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
 
 
     if (!method && thread && !exceptionThrown(thread)) {
-        throwException(thread, clazzLinkageError, "%k: no method %w with signature %w found in %K or its superclasses", clazz, name, desc_string, search_clazz);
+        throwException(thread, clazzNoSuchMethodError, "%k: no method %w with signature %w found in %K or its superclasses", clazz, name, desc_string, search_clazz);
     }
 
     if (!thread || !exceptionThrown(thread)) {

@@ -1375,7 +1375,7 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
   }
 
   if (! current && ! exceptionThrown(thread)) {
-    throwException(thread, clazzClassNotFoundException, "%j could not load %w", effectiveLoader, name);
+    throwException(thread, clazzNoClassDefFoundError, "%j could not load %w", effectiveLoader, name);
   }
 
   return current;

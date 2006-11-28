@@ -99,15 +99,6 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
 
     }
 
-#ifndef NO_HIERARCHY_CHECKS
-    if (super == clazz) {
-      throwException(thread, clazzClassCircularityError, "Class %k is its own superclass", clazz);
-
-      return CLASS_LOADING_FAILED;
-
-    }
-#endif
-
     clazz->supers[i] = super;
     woempa(1, "Class %k supers[%d] = %k\n", clazz, i, super);
     if (getClazzState(super) >= CLAZZ_STATE_SUPERS_LOADED) {
@@ -343,11 +334,21 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   threadMustBeSafe(thread);
 
   x_monitor_eternal(clazz->resolution_monitor);
-  //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
 
   while(state == CLAZZ_STATE_SUPERS_LOADING) {
+    if(clazz->resolution_thread == thread) {
+      throwException(thread, clazzClassCircularityError, "Class %k is its own superclass", clazz);
+      setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      x_monitor_notify_all(clazz->resolution_monitor);
+      x_monitor_exit(clazz->resolution_monitor);
+      
+      return CLASS_LOADING_FAILED;
+    }
+
+
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+
     if (monitor_status == xs_interrupted) {
       x_monitor_eternal(clazz->resolution_monitor);
     }
@@ -373,6 +374,12 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 
     }
 
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be NULL\n", clazz);
+    }
+#endif
+    clazz->resolution_thread = thread;
     setClazzState(clazz, CLAZZ_STATE_SUPERS_LOADING);
     x_monitor_exit(clazz->resolution_monitor);
 
@@ -388,8 +395,14 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       result = loadSuperInterfaces(clazz, thread);
     }
 
+    x_monitor_eternal(clazz->resolution_monitor);
+#ifdef RUNTIME_CHECKS
+    if (clazz->resolution_thread != thread) {
+      wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p, but is %p\n", clazz, thread, clazz->resolution_thread);
+    }
+#endif
+    clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
-      x_monitor_eternal(clazz->resolution_monitor);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
@@ -398,7 +411,6 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
     setClazzState(clazz, CLAZZ_STATE_SUPERS_LOADED);
     x_monitor_notify_all(clazz->resolution_monitor);
   }

@@ -3639,7 +3639,11 @@ void interpret(w_frame caller, w_method method) {
 
     if (clazz) {
       mustBeInitialized(clazz);
+      if(!thread->exception && isSet(clazz->flags, ACC_ABSTRACT | ACC_INTERFACE)) {
+        throwException(thread, clazzInstantiationError, "%k", clazz);
+      }
     }
+
     enterUnsafeRegion(thread);
     if (thread->exception) {
       do_the_exception;
