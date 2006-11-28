@@ -38,7 +38,7 @@ test(TestHarness harness)
 
   try
     {
-      InputStream is = new FileInputStream("{}/test/utf8test.data");
+      InputStream is = getClass().getResourceAsStream("/utf8test.data");
       InputStreamReader isr = new InputStreamReader(is, "UTF8");
       char[] buf = new char[255];
 
