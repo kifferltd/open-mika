@@ -109,11 +109,11 @@ w_int instance_allocated = 0;
 w_int instance_returned = 0;
 w_object instance_first = NULL;
 
-inline static void registerObject(w_object object) {
+inline static void registerObject(w_object object, w_thread thread) {
   woempa(1, "Registering %j\n", object->fields);
   instance_use += 1;
   instance_allocated += 1;
-  addLocalReference(currentWonkaThread, object->fields);
+  addLocalReference(thread, object->fields);
   setFlag(object->flags, O_IS_JAVA_INSTANCE);
 #ifdef USE_OBJECT_HASHTABLE
   if (ht_write(object_hashtable, (w_word)object, (w_word)object)) {
@@ -246,7 +246,7 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
   profileAllocInstance(thread, clazz);
 #endif 
   
-  registerObject(object);
+  registerObject(object,thread);
 
   //woempa(1, "Allocated instance %p (object %p) of %k, %d words.\n", object->fields, object, clazz, clazz->instanceSize);
 
@@ -274,7 +274,7 @@ w_instance allocStringInstance(w_thread thread) {
   profileAllocInstance(thread, clazzString);
 #endif 
   
-  registerObject(object);
+  registerObject(object, thread);
 
   return object->fields;
 }
@@ -311,7 +311,7 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
 
   object->clazz = clazz;
 
-  registerObject(object);
+  registerObject(object, thread);
 
   return object->fields;
   
@@ -408,7 +408,7 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
     w_object newobject = reallocMem(oldobject, bytes);
 
     if (newobject) {
-      registerObject(newobject);
+      registerObject(newobject, thread);
       newarray = newobject->fields;
       newarray[F_Array_length] = newlength;
     }
