@@ -259,18 +259,21 @@ static void cleanUpClinit(w_method clinit) {
   // TODO: set the dispatcher/function to some kind of trap
   if (clinit->exec.code_length) {
     woempa(1, "  Throwing away code array %p\n", clinit->exec.code);
-    clinit->exec.code_length = 0;
     releaseMem(clinit->exec.code - 4);
+    clinit->exec.code_length = 0;
+    clinit->exec.code = NULL;
   }
   if (clinit->exec.exceptions) {
     woempa(1, "  Throwing away exception table %p\n", clinit->exec.exceptions);
-    clinit->exec.numExceptions = 0;
     releaseMem(clinit->exec.exceptions);
+    clinit->exec.numExceptions = 0;
+    clinit->exec.exceptions = NULL;
   }
   if (clinit->exec.debug_info) {
     if (clinit->exec.debug_info->localVars) {
       woempa(1, "  Throwing away local variable table %p\n", clinit->exec.debug_info->localVars);
       releaseMem(clinit->exec.debug_info->localVars);
+      clinit->exec.debug_info->localVars = NULL;
     }
   }
 }

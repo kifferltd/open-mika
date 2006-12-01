@@ -454,16 +454,16 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
   w_int length;
   w_size i;
   char *tags;
+  w_boolean ok = TRUE;
 
   n = get_u2(bar);
   tags = allocMem(n);
 
   // We do this in two passes, because in theory forward references are possible.
-  for (i = 1; i < n; ) {
+  for (i = 1; ok && i < n; ) {
     if (bar_avail(bar) < 3) {
       woempa(9, "Less than 3 bytes remaining at start of constant\n");
-
-      return FALSE;
+      ok = FALSE;
     }
     tag = get_u1(bar);
     tags[i] = tag;
@@ -473,8 +473,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         if (length) {
           if (bar_avail(bar) < length) {
             woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
-
-            return FALSE;
+            ok = FALSE;
           }
           bar_skip(bar, length);
         }
@@ -485,8 +484,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_STRING:
         if (bar_avail(bar) < 2) {
           woempa(9, "Insufficient bytes remaining for CLASS/STRING constant\n");
-
-          return FALSE;
+          ok = FALSE;
         }
         bar_skip(bar, 2);
         ++i;
@@ -500,8 +498,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_NAME_AND_TYPE:
         if (bar_avail(bar) < 4) {
           woempa(9, "Insufficient bytes remaining for constant\n");
-
-          return FALSE;
+          ok = FALSE;
         }
         bar_skip(bar, 4);
         ++i;
@@ -511,8 +508,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_DOUBLE:
         if (bar_avail(bar) < 8) {
           woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
-
-          return FALSE;
+          ok = FALSE;
         }
         bar_skip(bar, 8);
         i += 2;
@@ -520,14 +516,13 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
 
       default:
         woempa(9, "Illegal constant type tag %d\n", tag);
-
-        return FALSE;
+        ok = FALSE;
     }
   }
 
   bar_seek(bar, 10);
 
-  for (i = 1; i < n; ) {
+  for (i = 1; ok && i < n; ) {
     tag = get_u1(bar);
     switch (tag) {
       case CONSTANT_UTF8: 
@@ -543,8 +538,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
           woempa(9, "Class constant[%d] references non-utf8 constant[%d]\n", i, val);
-
-          return FALSE;
+          ok = FALSE;
         }
         ++i;
         break;
@@ -561,14 +555,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_CLASS) {
           woempa(9, "Member constant[%d] references non-class constant[%d]\n", i, val);
-
-          return FALSE;
+          ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_NAME_AND_TYPE) {
           woempa(9, "Member constant[%d] references non-name & type constant[%d]\n", i, val);
-
-          return FALSE;
+          ok = FALSE;
         }
         ++i;
         break;
@@ -577,14 +569,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
           woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
-
-          return FALSE;
+          ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
           woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
-
-          return FALSE;
+          ok = FALSE;
         }
         ++i;
         break;
@@ -601,7 +591,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
 
   bar_seek(bar, 8);
 
-  return TRUE;
+  return ok;
 }
 
 /**
@@ -795,11 +785,8 @@ inline static w_boolean check_classname(w_clazz clazz, w_string name) {
   if (!dotified) {
     wabort(ABORT_WONKA, "Unable to dotify name\n");
   }
-  if (!name || dotified == name) {
-    clazz->dotified = dotified;
-  }
-  else {
-    woempa(9,"Impostor! The class which should be known as `%w' is really `%k'.\n",name,clazz);
+  if (name && dotified != name) {
+    woempa(9,"Impostor! The class which should be known as `%w' is really `%w'.\n",name,dotified);
 
     return FALSE;
   }
@@ -1686,7 +1673,8 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   }
 #endif
 
-  clazz->flags = get_u2(bar) & (ACC_PUBLIC | ACC_FINAL | ACC_SUPER | ACC_INTERFACE | ACC_ABSTRACT);
+  // 'Or in' the access flags, so as not to destroy the clazz state
+  clazz->flags |= get_u2(bar) & (ACC_PUBLIC | ACC_FINAL | ACC_SUPER | ACC_INTERFACE | ACC_ABSTRACT);
   clazz->temp.this_index = get_u2(bar);
   clazz->temp.super_index = get_u2(bar);
   get_interfaces(clazz, bar);
@@ -1696,7 +1684,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !post_checks(clazz, name)) {
-    throwException(thread, clazzClassFormatError, NULL);
+    throwException(thread, clazzClassFormatError, name);
     destroyClazz(clazz);
 
     return NULL;
@@ -1717,14 +1705,14 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
     } 
   }
 
+  clazz->resolution_thread = NULL;
+  setClazzState(clazz, CLAZZ_STATE_LOADED);
   // Don't try to attach a Class instance during initial bootstrap phase.
   // At the end of this phase all loaded classes get a Class instance attached,
   // from that point on it's done here at creation time.
   if (clazzClass && clazzClass->Class) {
     attachClassInstance(clazz);
   }
-  clazz->resolution_thread = NULL;
-  setClazzState(clazz, CLAZZ_STATE_LOADED);
   registerClazz(thread, clazz, loader);  
 
   woempa(1, "%j is the defining class loader of %k\n", loader, clazz);
@@ -1796,57 +1784,175 @@ w_clazz allocClazz() {
 }
 
 /*
+** Destroy a w_Method structure.
+*/
+static void destroyMethod(w_method method) {
+  woempa(7, "  Destroying method %w%w\n", method->spec.name, method->desc);
+
+  releaseMethodSpec(&method->spec);
+
+  if (method->desc) {
+    deregisterString(method->desc);
+  }
+  if (method->throws) {
+    releaseMem(method->throws);
+  }
+  if (method->exec.code) {
+    releaseMem(method->exec.code - 4);
+  }
+  if (method->exec.exceptions) {
+    releaseMem(method->exec.exceptions);
+  }
+  if (method->exec.debug_info) {
+    if (method->exec.debug_info->localVars) {
+      releaseMem(method->exec.debug_info->localVars);
+    }
+    if (method->exec.debug_info->lineNums) {
+      releaseMem(method->exec.debug_info->lineNums);
+    }
+    releaseMem(method->exec.debug_info);
+  }
+}
+
+/*
+** Destroy a w_Field structure.
+*/
+static inline void destroyField(w_field field) {
+  woempa(7, "  Destroying field %w\n", field->name);
+  deregisterString(field->name);
+}
+
+/*
+** Examine an entry in interface_hashtable to see if it involves clazz c;
+** if it does, put the imethod onto fifo f.
+*/
+static w_int interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_word method_word, void *c, void *f) {
+  w_clazz found_clazz = (w_clazz) clazz_word;
+  w_method imethod = (w_method) imethod_word;
+  w_clazz target_clazz = c;
+  w_fifo fifo = f;
+
+  if (found_clazz == target_clazz) {
+    woempa(7, "Looking for %k: found it, %M implements %M\n", target_clazz, method_word, imethod);
+    putFifo(imethod, f);
+  }
+}
+
+/*
+** Remove all the entries in the interface_hashtable referring to this class.
+*/
+static void destroyImplementations(w_clazz clazz) {
+  w_method imethod;
+  w_fifo fifo = allocFifo(255);
+
+  ht2k_iterate(interface_hashtable, interface_fifo_iterator, clazz, fifo);
+  while ((imethod = getFifo(fifo))) {
+    woempa(7, "Erasing %k x %m from interface_hashtable\n", clazz, imethod);
+    ht2k_erase(interface_hashtable, clazz, imethod);
+  }
+  releaseFifo(fifo);
+}
+  
+/*
 ** Destroy the w_Clazz structure corresponding to a class.
 */
 
-void destroyClazz(w_clazz clazz) {
-  w_int  i;
+w_int destroyClazz(w_clazz clazz) {
+  w_int i;
+  w_int freed = sizeof(w_Clazz);
   
   woempa(7,"Destroying class %k\n",clazz);
-/* TODO: (or rather undo ...)
-        get_attributes(clazz, s);
-      get_methods(clazz, s, loading_problem);
-      get_fields(clazz, s);
-*/
 
+  if (clazz->dotified) {
+    deregisterString(clazz->dotified);
+  }
+
+  if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
+    // TODO: [CG 20061201] can we really get here? I don't think so ...
+
+    return 0;
+  }
+
+  woempa(7, "Releasing constant pool\n");
   for (i = 1; i < (w_int)clazz->numConstants; i++) {
     dissolveConstant(clazz, i);
   }
+  if (clazz->tags){
+    releaseMem((void*)clazz->tags);
+  }
+  if (clazz->values){
+    releaseMem((void*)clazz->values);
+  }
 
+  woempa(7, "Releasing class members\n");
+  for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
+    destroyMethod(&clazz->own_methods[i]);
+  }
+
+  if (clazz->own_methods) {
+    releaseMem(clazz->own_methods);
+  }
+  for (i = 0; i < (w_int)clazz->numFields; i++) {
+    destroyField(&clazz->own_fields[i]);
+  }
+  if (clazz->own_fields) {
+    releaseMem(clazz->own_fields);
+  }
+
+  if (clazz->vmlt) {
+    woempa(7, "Releasing vmlt and references\n");
+    releaseMem(clazz->vmlt);
+  }
+
+  if (clazz->references) {
+    releaseWordset(&clazz->references);
+  }
   if (clazz->dims) {
   // array classes use a static `supers' and `interfaces', so don't release 'em
   }
   else {
+    woempa(7, "Releasing supers and interfaces\n");
     if (clazz->supers) {
       releaseMem(clazz->supers);
     }
     if (clazz->interfaces) {
+      destroyImplementations(clazz);
       releaseMem(clazz->interfaces);
     }
-    if (clazz->references) {
-      releaseWordset(&clazz->references);
-    }
   }
-  if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(clazz) < CLAZZ_STATE_INITIALIZED) {
-    if (clazz->temp.interface_index) {
-      releaseMem(clazz->temp.interface_index);
-    }
+
+  if (clazz->staticFields) {
+    releaseMem(clazz->staticFields);
   }
-  woempa(1,"Deregistering the class (isn't that bass-ackwards?\n");
+
+  if (clazz->filename) {
+    deregisterString(clazz->filename);
+  }
+
+  if (clazz->temp.interface_index) {
+    woempa(7, "Releasing temp.interface_index\n");
+    releaseMem(clazz->temp.interface_index);
+  }
+
+  if (clazz->temp.inner_class_info) {
+    woempa(7, "Releasing temp.inner_class_info\n");
+    releaseMem(clazz->temp.inner_class_info);
+  }
+
+  woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
 
-  // TODO: release all strings, methods, fields
-  releaseMem((void*)clazz->tags);
-  if(clazz->values){
-    releaseMem((void*)clazz->values);
-  }
+  woempa(7, "Releasing resolution_monitor\n");
   x_monitor_delete(clazz->resolution_monitor);
   releaseMem(clazz->resolution_monitor);
   if (clazz->failure_message) {
+    woempa(7,"Deregistering failure message '%w'\n", clazz->failure_message);
     deregisterString(clazz->failure_message);
   }
-  woempa(1,"Finally releasing memory of clazz itself\n");
+  woempa(7,"Releasing w_clazz at %p\n", clazz);
   releaseMem(clazz);
+
+  return freed;
 }
 
 /*

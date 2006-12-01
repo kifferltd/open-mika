@@ -113,6 +113,22 @@ static void _flying_pig_check(char *func, char *file, int line, w_object object)
 #define FLYING_PIG_CHECK(o)
 #endif
 
+//#define INSTANCE_STATS
+
+#ifdef INSTANCE_STATS
+static w_hashtable instance_stat_hashtable;
+
+static void instance_stat_iteration(w_word clazz_word, w_word count, void* dummy1, void *dummy2) {
+  wprintf("%8d %k\n", count, clazz_word);
+}
+
+static void reportInstanceStat(void) {
+  wprintf("--- START INSTANCE STATS ---\n");
+  ht_iterate(instance_stat_hashtable, instance_stat_iteration, NULL, NULL);
+  wprintf("--- END INSTANCE STATS ---\n");
+}
+#endif
+
 #ifndef GC_SAFE_POINTS_USE_NO_MONITORS
 x_Monitor safe_points_Monitor;
 x_monitor safe_points_monitor = &safe_points_Monitor;
@@ -123,8 +139,8 @@ volatile w_int number_unsafe_threads;
 ** Enable this if you really want classes and class loaders to be subject
 ** to garbage collection. Otherwise they will always be treated as reachable,
 ** even when the mark phase fails to mark them ...
-#define COLLECT_CLASSES_AND_LOADERS
 */
+#define COLLECT_CLASSES_AND_LOADERS
 
 void persistentGarbageCollector(void);
 
@@ -215,18 +231,11 @@ w_fifo finalizer_fifo;
 #define FINALIZER_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
 
 /*
-** Mutex used to protect the fifo from conflicting accesses.
+** Mutex used to protect the finalizer fifo from conflicting accesses.
 */
 
 static x_Mutex finalizer_fifo_Mutex;
 x_mutex finalizer_fifo_mutex;
-
-/*
-** List of all existing class loaders.
-*/
-
-w_fifo classloader_fifo;
-#define CLASSLOADER_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
 
 /*
 ** List of all existing reference objects (instances of java.lang.ref.Reference).
@@ -234,6 +243,15 @@ w_fifo classloader_fifo;
 
 w_fifo reference_fifo;
 #define REFERENCE_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
+
+/*
+** List of w_clazz structures which need to be released. We accumulate this
+** during the sweep phase and only actually release the memory at the very
+** end, because during sweep we need to check the clazz of every unreachable
+** instance.
+*/
+w_fifo dead_clazz_fifo;
+#define DEAD_CLAZZ_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
 
 /*
 ** Convert a w_fifo to its name as a C string
@@ -245,8 +263,8 @@ w_fifo reference_fifo;
   : ((f) == finalize_reachable_fifo) ? "finalize_reachable_fifo" \
   : ((f) == enqueue_fifo) ? "enqueue_fifo" \
   : ((f) == finalizer_fifo) ? "finalizer_fifo" \
-  : ((f) == classloader_fifo) ? "classloader_fifo" \
   : ((f) == reference_fifo) ? "reference_fifo" \
+  : ((f) == dead_clazz_fifo) ? "dead_clazz_fifo" \
   : "unknown fifo" )
 
 /*
@@ -301,10 +319,56 @@ static w_int memory_load_factor;
 
 static w_boolean killing_soft_references;
 
-extern void Class_destructor(w_instance);
-extern void ClassLoader_destructor(w_instance);
 extern void Thread_destructor(w_instance);
 extern void Throwable_destructor(w_instance);
+extern void ReferenceQueue_destructor(w_instance);
+
+static void Class_destructor(w_instance theClass) {
+  w_clazz clazz = getWotsitField(theClass, F_Class_wotsit);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+    wprintf("Unloading %K\n", clazz);
+  }
+
+  clearWotsitField(theClass, F_Class_wotsit);
+  putFifo(clazz, dead_clazz_fifo);
+}
+
+/*
+** Release the memory held by a w_UnloadedClazz in a class loader's unload
+** class hashtable. We shouldn't really need to do this - by the time the
+** class loader is collected the table should be empty. Strange ...
+*/
+static void trashUnloadedClasses(w_word key, w_word value, void *dummy1, void*dummy2) {
+  w_clazz clazz = (w_clazz)key;
+
+  woempa(7, "trashing %K (%d references)\n", clazz, value);
+  releaseMem(clazz);
+}
+
+static void ClassLoader_destructor(w_instance theClassLoader) {
+  w_hashtable class_hashtable;
+
+  woempa(9, "Destroying ClassLoader instance %j\n", theClassLoader);
+  wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+  class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
+  if (class_hashtable) {
+    clearWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
+    releaseMem(class_hashtable->label);
+    ht_destroy(class_hashtable);
+  }
+
+  class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_unloaded_classes);
+  if (class_hashtable) {
+    clearWotsitField(theClassLoader, F_ClassLoader_unloaded_classes);
+    woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, theClassLoader);
+    if (class_hashtable->occupancy) {
+      ht_iterate(class_hashtable, trashUnloadedClasses, NULL, NULL);
+    }
+    releaseMem(class_hashtable->label);
+    ht_destroy(class_hashtable);
+  }
+}
 
 /*
 ** The thread (if any) which is currently running a PREPARE/MARK sequence
@@ -318,7 +382,7 @@ volatile w_thread marking_thread;
 volatile w_thread sweeping_thread;
 
 static w_boolean checkStrongRefs(w_object);
-void ReferenceQueue_destructor(w_instance queue);
+
 /*
 ** Reclaim an instance by returning its memory to the global object heap.
 ** The value returned is the size of the instance in bytes (the amount of 
@@ -332,6 +396,10 @@ static w_int releaseInstance(w_object object) {
     wabort(ABORT_WONKA, "Releasing NULL object !!\n");
   }
   
+  if (isSet(object->flags, O_HAS_LOCK)) {
+    releaseMonitor(object->fields);
+  }
+
   clazz = object->clazz;
 //  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)object->fields, object, clazz, printFlags(object->flags));
 
@@ -485,6 +553,7 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
   w_int retcode;
 
 #endif
+#ifdef DEBUG_STACKS
   {
     int depth = (char*)marking_thread->native_stack_base - (char*)&object;
     if (depth > marking_thread->native_stack_max_depth) {
@@ -494,6 +563,7 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
       marking_thread->native_stack_max_depth = depth;
     }
   }
+#endif
 
   if (isMarked(object, flag)) {
 
@@ -511,6 +581,34 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
   }
 
   return 1;
+}
+
+/*
+** Mark a class (possibly an unloaded class) which is reachable via the
+** current class. For unloaded classes we just mark the classloader,
+** for loaded classes we mark the Class instance. 'child' must not be NULL.
+*/
+static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word flag) {
+  if (child == parent) {
+
+    return 0;
+
+  }
+
+  if (getClazzState(child) == CLAZZ_STATE_UNLOADED) {
+    if (child->loader) {
+
+      return markInstance(child->loader, fifo, flag);
+
+    }
+  }
+  else if (child->Class) {
+
+    return markInstance(child->Class, fifo, flag);
+
+  }
+
+  return 0;
 }
 
 /*
@@ -544,7 +642,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
 
   child_instance = clazz2Class(clazz);
   if (child_instance) {
-    woempa(1, "Marking %j => %K\n", child_instance, clazz);
     retcode = markInstance(child_instance, fifo, flag);
     if (retcode < 0) {
 
@@ -554,13 +651,12 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     queued += retcode;
   }
 #ifdef RUNTIME_CHECKS
-  else if (!clazz->previousDimension) {
-    wabort(ABORT_WONKA, "No Class instance for non-array class %k\n", clazz);
+  else {
+    wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
   }
 #endif
 
   if (state == CLAZZ_STATE_BROKEN) {
-    setFlag(clazz->flags, CLAZZ_HAS_BEEN_MARKED);
 
     return queued;
 
@@ -581,6 +677,11 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
         }
         queued += retcode;
       }
+#ifdef RUNTIME_CHECKS
+      else {
+        wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
+      }
+#endif
     }
   }
 
@@ -615,6 +716,24 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     }
   }
 
+  if (clazz->previousDimension) {
+    child_instance = clazz2Class(clazz->previousDimension);
+    if (child_instance) {
+      retcode = markInstance(child_instance, fifo, flag);
+      if (retcode < 0) {
+
+        return retcode;
+
+      }
+      queued += retcode;
+    }
+#ifdef RUNTIME_CHECKS
+    else {
+      wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
+    }
+#endif
+  }
+
   if (state >= CLAZZ_STATE_SUPERS_LOADED) {
     w_clazz super = getSuper(clazz);
     if (super) {
@@ -629,6 +748,11 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
         }
         queued += retcode;
       }
+#ifdef RUNTIME_CHECKS
+      else {
+        wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
+      }
+#endif
     }
 
     if (clazz->interfaces) {
@@ -643,6 +767,11 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
           }
           queued += retcode;
         }
+#ifdef RUNTIME_CHECKS
+        else {
+          wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
+        }
+#endif
       }
     }
   }
@@ -669,8 +798,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
       }
     }
   }
-
-  setFlag(clazz->flags, CLAZZ_HAS_BEEN_MARKED);
 
   return queued;
 }
@@ -850,12 +977,38 @@ w_int markThreadReachable(w_object object, w_fifo fifo, w_word flag) {
 
 }
 
+/*
+** If a Throwable is reachable and it has a stack trace attached then we mark
+** every class referenced from the stack trace.
+*/
+
+w_int markThrowableReachable(w_object object, w_fifo fifo, w_word flag) {
+  w_Exr *record = getWotsitField(object->fields, F_Throwable_records);
+  w_int queued = 0;
+  w_int retcode;
+
+  while (record) {
+    woempa(7, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
+    retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
+    if (retcode < 0) {
+
+      return retcode;
+
+    }
+
+    queued += retcode;
+    record = record->position ? record + 1 : NULL;
+  }
+
+  return queued;
+}
+
 void markLoadedClass(w_word key, w_word value, void *pointer, void*dummy) {
   w_clazz clazz = (w_clazz)value;
   w_int  *counter = pointer;
   w_int retcode;
 
-  if (*counter >= 0 && isNotSet(clazz->flags, CLAZZ_HAS_BEEN_MARKED)) {
+  if (*counter >= 0) {
     woempa(1, "--> marking %K\n", clazz);
     retcode = markClazzReachable(clazz, strongly_reachable_fifo, O_BLACK);
     if (retcode < 0) {
@@ -983,11 +1136,16 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       }
       queued += retcode;
     }
+#ifdef RUNTIME_CHECKS
+    else {
+      wabort(ABORT_WONKA, "No Class instance for class %k\n", parent_object->clazz);
+    }
+#endif
 
     /*
     ** If this is an instance of java.lang.Class, we have extra work to do.
     */
-    if (parent_object->clazz == clazzClass && (clazz = getWotsitField(parent_instance, F_Class_wotsit)) && isNotSet(clazz->flags, CLAZZ_HAS_BEEN_MARKED)) {
+    if (parent_object->clazz == clazzClass && (clazz = getWotsitField(parent_instance, F_Class_wotsit))) {
       woempa(1,"(GC) Object %p is instance of %k\n",parent_object,parent_object->clazz);
       retcode = markClazzReachable(clazz, strongly_reachable_fifo, O_BLACK);
       if (retcode < 0) {
@@ -1019,6 +1177,17 @@ w_int markFifo(w_fifo fifo, w_word flag) {
     else if (isSet(parent_object->clazz->flags, CLAZZ_IS_THREAD) && getWotsitField(parent_instance, F_Thread_wotsit)) {
       woempa(1, "(GC) %p is instance of %k, a subclass of Thread.\n", parent_instance, parent_object->clazz);
       retcode = markThreadReachable(parent_object, fifo, flag);
+      if (retcode < 0) {
+        return retcode;
+      }
+      queued += retcode;
+    }
+    /*
+    ** If this is a throwable, we scan the stack trace.
+    */
+    else if (isSet(parent_object->clazz->flags, CLAZZ_IS_THROWABLE) && getWotsitField(parent_instance, F_Throwable_records)) {
+      woempa(1, "(GC) %p is instance of %k, a subclass of Throwable.\n", parent_instance, parent_object->clazz);
+      retcode = markThrowableReachable(parent_object, fifo, flag);
       if (retcode < 0) {
         return retcode;
       }
@@ -1170,35 +1339,6 @@ typedef struct w_Chs {
 typedef struct w_Chs * w_chs;
 #endif
 
-void unmarkClassLoaderChildren(w_instance loader) {
-  w_fifo class_fifo;
-  w_clazz clazz;
-
-  w_hashtable ht = loader2loaded_classes(loader);
-
-  if (!ht) {
-
-    return;
-
-  }
-
-  ht_lock(ht);
-
-  woempa(1, "Unmarking classes loaded by %j (%s)\n", loader, ((w_hashtable)loader2loaded_classes(loader))->label);
-  class_fifo = ht_list_values_no_lock(ht);
-  ht_unlock(ht);
-
-  if (!class_fifo) {
-
-    return;
-
-  }
-  while ((clazz = getFifo(class_fifo))) {
-    unsetFlag(clazz->flags, CLAZZ_HAS_BEEN_MARKED);
-  }
-  releaseFifo(class_fifo);
-}
-
 #ifdef USE_OBJECT_HASHTABLE
 void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
   w_int retcode = 0;
@@ -1208,13 +1348,6 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
 
   if (!object->clazz) {
     wabort(ABORT_WONKA, "((w_object)%p)->clazz == NULL\n", object);
-  }
-
-  if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-    retcode = tryPutFifo(object->fields, classloader_fifo);
-    if (retcode < 0) {
-      wabort(ABORT_WONKA, "Couldn't add to classloader_fifo (%d items), PANIC\n", classloader_fifo->numElements);
-    }
   }
 
   if (isSet(object->flags, (O_FINALIZING | O_FINALIZABLE))) {
@@ -1251,13 +1384,6 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 
   if (!object->clazz) {
     wabort(ABORT_WONKA, "((w_object)%p)->clazz == NULL\n", object);
-  }
-
-  if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-    retcode = tryPutFifo(object->fields, classloader_fifo);
-    if (retcode < 0) {
-      wabort(ABORT_WONKA, "Couldn't add to classloader_fifo (%d items), PANIC\n", classloader_fifo->numElements);
-    }
   }
 
   if (isSet(object->flags, (O_FINALIZING | O_FINALIZABLE))) {
@@ -1347,7 +1473,6 @@ static void postmark(w_thread thread) {
 
 w_int preparationPhase(void) {
   w_int memory_busy = memory_total - x_mem_avail();
-  w_instance classloader;
 
   while (getFifo(window_fifo));
   while (getFifo(strongly_reachable_fifo));
@@ -1381,11 +1506,6 @@ w_int preparationPhase(void) {
     memory_load_factor = 0;
   }
   killing_soft_references = (*gc_kicks_pointer) || (memory_load_factor > 1);
-
-  unmarkClassLoaderChildren(NULL);
-  while ((classloader = getFifo(classloader_fifo))) {
-    unmarkClassLoaderChildren(classloader);
-  }
 
 #ifdef USE_OBJECT_HASHTABLE
   ht_iterate(object_hashtable, preparation_iteration, NULL, NULL);
@@ -1485,16 +1605,6 @@ w_int markPhase(void) {
       woempa(7, "markInstance(I_ThreadGroup_system, strongly_reachable_fifo, O_BLACK) returned %d, quitting markPhase\n", retcode);
 
       return -1;
-
-    }
-    marked += retcode;
-
-    woempa(7, "(GC) Marking system class hashtable.\n");
-    retcode = markClassLoaderReachable(NULL, strongly_reachable_fifo, O_BLACK);
-    if (retcode < 0) {
-      woempa(7, "markClassLoaderReachable(NULL, strongly_reachable_fifo, O_BLACK) returned %d, quitting markPhase\n", retcode);
-
-      return retcode;
 
     }
     marked += retcode;
@@ -1634,7 +1744,7 @@ static w_boolean checkPhantomRefs(w_object object) {
 */
 
 w_size sweep(w_int target) {
-
+  w_clazz    clazz;
   w_instance instance;
   w_object   object;
   w_int      object_size;
@@ -1652,7 +1762,7 @@ w_size sweep(w_int target) {
 
   }
 
-  while(window_fifo) {
+  while (window_fifo) {
     woempa(1, "getFifo(window_fifo)\n");
     instance = getFifo(window_fifo);
     woempa(1, "instance %p\n", instance);
@@ -1662,7 +1772,12 @@ w_size sweep(w_int target) {
         wprintf("Hole in window fifo!\n");
         continue;
       }
-    woempa(1, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
+
+      woempa(7, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
+      while ((clazz = getFifo(dead_clazz_fifo))) {
+        woempa(7, "Cleaning up dead class %w\n", clazz->dotified);
+        bytes_freed += destroyClazz(clazz);
+      }
 
       break;
 
@@ -1706,11 +1821,16 @@ w_size sweep(w_int target) {
             do_collect = 0;
           }
         }
+        else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
+          w_hashtable hashtable = getWotsitField(object->fields, F_ClassLoader_loaded_classes);
+
+          if (hashtable && hashtable->occupancy) {
+            woempa(9, "Hold on a moment - loaded class hashtable of %j still holds %d classes\n", object->fields, hashtable->occupancy);
+            do_collect = 0;
+          }
+        }
 
         if (do_collect) {
-          if (isSet(object->flags, O_HAS_LOCK)) {
-            releaseMonitor(object->fields);
-          }
           object_size = releaseInstance(object);
           bytes_freed += object_size;
         }
@@ -1726,6 +1846,12 @@ w_size sweep(w_int target) {
       }
 #endif
     }
+#ifdef INSTANCE_STATS
+    else if (instance_stat_hashtable) {
+      w_size count = ht_read(instance_stat_hashtable, object->clazz);
+      ht_write(instance_stat_hashtable, object->clazz, count + 1);
+    }
+#endif
   }
 
   woempa(7, "(GC) Collected %i bytes from %d objects out of %d.\n", bytes_freed, objects_freed, objects_examined);
@@ -2008,12 +2134,14 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   finalize_reachable_fifo = allocFifo(OTHER_FIFO_LEAF_SIZE);
   enqueue_fifo = allocFifo(ENQUEUE_FIFO_LEAF_SIZE);
   finalizer_fifo = allocFifo(FINALIZER_FIFO_LEAF_SIZE);
-  classloader_fifo = allocFifo(CLASSLOADER_FIFO_LEAF_SIZE);
   reference_fifo = allocFifo(REFERENCE_FIFO_LEAF_SIZE);
+  dead_clazz_fifo = allocFifo(DEAD_CLAZZ_FIFO_LEAF_SIZE);
   gc_instance = theGarbageCollector;
   woempa(7,"         window_fifo at %p\n", window_fifo);
   woempa(7,"      finalizer_fifo at %p\n", finalizer_fifo);
   woempa(7,"        enqueue_fifo at %p\n", enqueue_fifo);
+  woempa(7,"      reference_fifo at %p\n", reference_fifo);
+  woempa(7,"     dead_clazz_fifo at %p\n", dead_clazz_fifo);
   woempa(7, "I_ThreadGroup_system = %j.\n", I_ThreadGroup_system);
   woempa(7, "     W_Thread_system = %p.\n", W_Thread_system);
   woempa(7, "           gc_thread = %p.\n", gc_thread);
@@ -2043,11 +2171,13 @@ void gc_collect(w_instance theGarbageCollector) {
     wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
   }
 #ifdef TRACE_MEM_ALLOC
-  //if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
-  //if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportInstanceStat();
+  if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
 #endif
 
   while (done < 2) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
+      wprintf("GC: done = %d (%s), GC phase = %s.\n", done, done == 0 ? "nothing" : done == 1 ? "mark" : done == 2 ? "mark+sweep" : "fail", gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
+    }
     switch (gc_phase) {
       case GC_PHASE_UNREADY:
       case GC_PHASE_COMPLETE:
@@ -2132,7 +2262,15 @@ void gc_collect(w_instance theGarbageCollector) {
           wprintf("GC: thread %t performing sweep\n", this_thread);
         }
 	sweeping_thread = this_thread;
+#ifdef INSTANCE_STATS
+        instance_stat_hashtable = ht_create((char*)"hashtable:instance-stats", 65535, NULL , NULL, 0, 0);
+#endif
         sweepPhase();
+#ifdef INSTANCE_STATS
+        reportInstanceStat();
+        ht_destroy(instance_stat_hashtable);
+        instance_stat_hashtable = NULL;
+#endif
 	sweeping_thread = NULL;
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
           wprintf("GC: thread %t setting GC phase to COMPLETE\n", this_thread);
@@ -2186,6 +2324,9 @@ w_int gc_request(w_int requested) {
     wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
   }
   while (tries > 0 && remaining > 0) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
+      wprintf("GC: tries remaining = %d, looking to collect %d bytes, GC phase = %s.\n", tries, remaining, gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
+    }
     switch (gc_phase) {
       case GC_PHASE_PREPARE:
       case GC_PHASE_MARK:

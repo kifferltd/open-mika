@@ -1895,6 +1895,7 @@ jmethodID GetStaticMethodID(JNIEnv *env, jclass class, const char *utf8name, con
   }
 
   releaseMethodSpec(spec);
+  releaseMem(spec);
   deregisterString(name_string);
   deregisterString(desc_string);
 
@@ -1982,6 +1983,7 @@ jmethodID GetMethodID(JNIEnv *env, jclass class, const char *utf8name, const cha
   }
 
   releaseMethodSpec(spec);
+  releaseMem(spec);
   deregisterString(name_string);
   deregisterString(desc_string);
 

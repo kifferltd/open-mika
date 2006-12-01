@@ -213,8 +213,6 @@ typedef struct w_UnloadedClazz {
 #define getClazzState(c) (((c)->flags & CLAZZ_STATE_MASK) >> CLAZZ_STATE_SHIFT)
 #define setClazzState(c,s) (c)->flags = (((c)->flags & ~CLAZZ_STATE_MASK) | ((s) << CLAZZ_STATE_SHIFT))
 
-#define CLAZZ_HAS_BEEN_MARKED 0 // no longer used
-
 /*
  * CLAZZ_IS_TRUSTED is set if no verification is required for this class.
  */
@@ -355,7 +353,11 @@ void startClasses(void);
 
 void registerClazz(w_thread thread, w_clazz clazz, w_instance loader);
 
-void destroyClazz(w_clazz clazz);
+/*
+** Destroy a w_clazz structure, cleaning up all its ramifications.
+** The value returned is (a conservative estimate of) the number of bytes reclaimed.
+*/
+w_int destroyClazz(w_clazz clazz);
 
 /*
 ** getField retrieves the field of `clazz' with a given name.

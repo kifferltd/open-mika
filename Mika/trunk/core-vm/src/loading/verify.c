@@ -1461,6 +1461,85 @@ verify_error:
 }
 
 /*
+ * Initialize the local variable array.
+static w_boolean loadInitialArgs(w_method method, errorInfo* einfo, v_BasicBlock* block, SigStack** sigs, v_UninitializedType** uninits) {
+  w_word paramCount = 0;
+  char* argbuf    = allocMem(string_length(method->desc) + 1) * sizeof(char));
+  char* newsig    = NULL;
+	
+  v_Type* locals = block->locals;
+
+  if (isNotSet(method->flags, ACC_STATIC)) {
+    if (method->exec.local_i < 1) {
+      VERIFY_ERROR("number of locals in non-static method must be > 0");
+    }
+    if (method->spec.name == string_angle_brackets_init) {
+      *uninits = pushUninit(*uninits, &locals[0]);
+      locals[0].tinfo = TINFO_UNINIT_SUPER;
+      locals[0].data.uninit = *uninits;
+    }
+    else {
+      locals[0].tinfo = TINFO_CLASS;
+      locals[0].data.clazz = method->spec.declaring_clazz;
+    }
+    paramCount = 1;
+  }
+  
+  for (sig = getNextArg(sig, argbuf); *argbuf != ')'; sig = getNextArg(sig, argbuf)) {
+  	if (paramCount > method->localsz) {
+  		LOCAL_OVERFLOW_ERROR;
+  	}
+  	
+  	switch (*argbuf) {
+  	case 'Z': case 'S': case 'B': case 'C':
+  	case 'I': locals[paramCount++] = *TINT; break;
+  	case 'F': locals[paramCount++] = *TFLOAT; break;
+  		
+  	case 'J':
+  		if (paramCount + 1 > method->localsz) {
+  			LOCAL_OVERFLOW_ERROR;
+  		}
+  		locals[paramCount] = *TLONG;
+  		locals[paramCount+1] = *TWIDE;
+  		paramCount += 2;
+  		break;
+  		
+  	case 'D':
+  		if (paramCount + 1 > method->localsz) {
+  			LOCAL_OVERFLOW_ERROR;
+  		}
+  		locals[paramCount] = *TDOUBLE;
+  		locals[paramCount+1] = *TWIDE;
+  		paramCount += 2;
+  		break;
+  		
+  	case '[':
+  	case 'L':
+  		newsig = checkPtr(gc_malloc((strlen(argbuf) + 1) * sizeof(char), GC_ALLOC_VERIFIER));
+  		*sigs = pushSig(*sigs, newsig);
+  		sprintf(newsig, "%s", argbuf);
+  		locals[paramCount].tinfo = TINFO_SIG;
+  		locals[paramCount].data.sig = newsig;
+  		paramCount++;
+  		break;
+  		
+  	default:
+  		
+  		VERIFY_ERROR("unrecognized first character in parameter type descriptor");
+  		break;
+  	}
+  }
+  
+  
+  // success!
+  releaseMem(argbuf);
+  return(true);
+
+#undef LOCAL_OVERFLOW_ERROR
+#undef VERIFY_ERROR
+}
+ */
+/*
 ** TEST CODE
 ** Currently just calls identifyBoundaries() and identifyBasicBlocks() and prints out the result.
 */
@@ -1471,6 +1550,11 @@ w_boolean verifyMethod(w_method method) {
 
   if (result) {
     v_BasicBlock** blocks = identifyBasicBlocks(method, status_array, &numBlocks);
+
+    if (blocks) {
+      //loadInitialArgs
+      releaseMem(blocks);
+    }
   }
   releaseMem(status_array);
 
@@ -1481,76 +1565,6 @@ w_boolean verifyMethod(w_method method) {
 
 #ifdef GONZALEZ
 
-/*
- * verifyMethod3a()
- *     check static constraints.  section 4.8.1 of JVML Spec 2.
- *
- * NOTE: we don't check whether execution can fall off the end of method code here as
- *       that would require us to know whether the last statements are reachable.
- *       Sun's verifier, for instance, rejects code with an unreachable NOP at the end!
- *       Thus we check whether execution can fall off the end during the data flow analysis
- *       of pass 3b, structural constraint checking.
- */
-static v_BasicBlock** verifyMethod3a(w_method method, w_word* status_array, w_size* numBlocks)
-{
-
-  w_string sig;
-  w_int codelen  = method->exec.code_length;
-  w_code code = method->exec.code;
-  w_size pc = 0;
-  w_size newpc = 0;
-  w_size n = 0;
-  w_size idx = 0;
-  w_int branchoffset;
-  w_int low;
-  w_int high;
-  w_boolean is_wide;
-  w_word blockCount  = 0;
-  v_BasicBlock** blocks = NULL;
-	
-  woempa(7, "    Verifier Pass 3a: checking static constraints and finding basic blocks...\n");
-	
-	
-  if (!identifyBoundaries(method, status_array, numBlocks)) {
-    // TODO: scream and shout
-
-    return NULL;
-  }
-
-  woempa(7, "    Verifier Pass 3a: second pass to locate illegal branches and count blocks...\n");
-	
-  blocks = allocMem((*numBlocks) * sizeof(v_BasicBlock*));
-  if (!blocks) {
-    // TODO: scream and shout
-
-    return NULL;
-  }
-
-  for (inABlock = true, n = 0, pc = 0; pc < codelen; pc++) {
-		if (status_array[pc] & START_BLOCK) {
-			blocks[n] = createBlock(method);
-			blocks[n]->startAddr = pc;
-			n++;
-			
-			inABlock = true;
-			
-			
-		if (inABlock && (status_array[pc] & END_BLOCK)) {
-			blocks[n-1]->lastAddr = pc;
-			
-			inABlock = false;
-			
-			
-	}
-	
-	
-	
-	*numBlocks = blockCount;
-	return blocks;
-	
-	
-#undef VERIFY_ERROR
-}
 /*
  * Controls the verification of a single method.  It allocates most of the memory needed for
  * verification (when encountering JSRs, more memory will need to be allocated later),

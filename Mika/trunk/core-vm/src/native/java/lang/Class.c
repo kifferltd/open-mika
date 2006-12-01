@@ -50,18 +50,6 @@
 ** Destructor called from GC just before releasing the memory occupied by
 ** an instance of java.lang.Class . Used to clean up the w_Clazz structure.
 */
-void Class_destructor(w_instance this) {
-  if (getWotsitField(this, F_Class_wotsit)) {
-    w_clazz clazz = Class2clazz(this);
-    clearWotsitField(this, F_Class_wotsit);
-    woempa(9, "Destroying Class instance %K\n",clazz);
-    destroyClazz(clazz);
-  }
-  else {
-    woempa(9, "Weird. %j has wotsit 0.\n", this);
-  }
-}
-
 /*
 ** getName() returns the name held in clazz->dotified.
 */
@@ -206,9 +194,7 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
   if (Array) {
     for (i = 0; i < (w_int)clazz->numDirectInterfaces; i++) {
       interfaze = clazz->interfaces[i];
-      if (interfaze->Class == NULL) {
-        attachClassInstance(interfaze);
-      }
+      clazz2Class(interfaze);
       woempa(7, "--> interface %d = %k.\n", i, interfaze);
       setArrayReferenceField(Array, clazz2Class(interfaze), i);
     }
