@@ -1118,67 +1118,43 @@ w_instance newStringInstance(w_string s) {
 
 }
 
-static w_instance getStringInstance_internal(w_string s) {
+w_instance getStringInstance(w_string s) {
   w_instance instance;
   w_thread thread = currentWonkaThread;
 
   threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+
   ht_lock(string_hashtable);
   instance = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
   if (!instance) {
+    ht_unlock(string_hashtable);
+    enterSafeRegion(thread);
     instance = allocStringInstance(thread);
     if (instance) {
-      w_string r = registerString(s);
+      w_string r;
+      ht_lock(string_hashtable);
+      r = registerString(s);
       setWotsitField(instance, F_String_wotsit, r);
       ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)instance);
     }
-#ifdef PIGS_MIGHT_FLY
-  } else {
+    else {
+      return NULL;
+    }
+  } 
+  else {
     w_object object = instance2object(instance);
+#ifdef PIGS_MIGHT_FLY
     unsetFlag(object->flags, O_GARBAGE);
 #endif
+    setFlag(object->flags, O_BLACK);
+    enterSafeRegion(thread);
   }
   ht_unlock(string_hashtable);
 
   return instance;
 }
 
-w_instance getStringInstance(w_string s) {
-  w_thread thread = currentWonkaThread;
-  w_instance instance;
-
-  if (gc_monitor) {
-    x_monitor_eternal(gc_monitor);
-    while (gc_phase < GC_PHASE_COMPLETE && gc_phase != GC_PHASE_UNREADY) {
-      if (gc_phase == GC_PHASE_MARK) {
-        if (thread == marking_thread) {
-          wabort(ABORT_WONKA, "Eh? getStringInstance() called from marking thread");
-        } 
-        else {
-          x_monitor_wait(gc_monitor, x_eternal);
-        }
-      }
-      else if (gc_phase == GC_PHASE_SWEEP) {
-        if (thread == sweeping_thread) {
-          wabort(ABORT_WONKA, "Eh? getStringInstance() called from sweeping thread");
-        } 
-        else if (!sweeping_thread) {
-          gc_request(16000000);
-        }
-        else {
-          x_monitor_wait(gc_monitor, x_eternal);
-        }
-      }
-    }
-    instance = getStringInstance_internal(s);
-    x_monitor_exit(gc_monitor);
-  }
-  else {
-    instance = getStringInstance_internal(s);
-  }
-
-  return instance;
-}
 
 #ifdef DEBUG
 static w_int string_reclaim_count = 0;
