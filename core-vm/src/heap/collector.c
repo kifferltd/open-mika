@@ -344,6 +344,11 @@ static w_int releaseInstance(w_object object) {
         clearWotsitField(object->fields, F_String_wotsit);
         deregisterString(string);
       }
+      else {
+        ht_unlock(string_hashtable);
+        woempa(9, "Not collecting %j %w because it is strongly reachable\n", object->fields,string); 
+        return 0;
+      }
       ht_unlock(string_hashtable);
     }
   }
