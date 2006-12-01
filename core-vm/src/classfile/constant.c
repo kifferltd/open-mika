@@ -999,6 +999,7 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
 
       if (spec) {
         releaseMethodSpec(spec);
+        releaseMem(spec);
       }
     }
 
@@ -1174,6 +1175,7 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
 
       if (spec) {
         releaseMethodSpec(spec);
+        releaseMem(spec);
       }
     }
 
@@ -1283,7 +1285,7 @@ static w_string getClassConstantName(w_clazz clazz, w_int idx) {
   if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
     w_clazz c = (w_clazz)clazz->values[idx];
 
-    woempa(7, "Already resolved constant\n");
+    woempa(1, "Already resolved constant\n");
 
     return dots2slashes(c->dotified);
 
@@ -1299,7 +1301,7 @@ static w_string getClassConstantName(w_clazz clazz, w_int idx) {
     if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
       w_int name_index = clazz->values[idx];
 
-      woempa(7, "Unresolved constant\n");
+      woempa(1, "Unresolved constant\n");
 
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -1311,7 +1313,7 @@ static w_string getClassConstantName(w_clazz clazz, w_int idx) {
 
       x_monitor_exit(clazz->resolution_monitor);
 
-      woempa(7, "Newly resolved constant\n");
+      woempa(1, "Newly resolved constant\n");
 
       return dots2slashes(c->dotified);
 
@@ -1334,7 +1336,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
 
   if (isFieldConstant(clazz, idx)) {
     f = (w_field)clazz->values[idx];
-    woempa(7, "Resolved Field constant: %k %w %k\n", f->declaring_clazz, f->name, f->value_clazz);
+    woempa(1, "Resolved Field constant: %k %w %k\n", f->declaring_clazz, f->name, f->value_clazz);
     if (declaring_clazz_ptr) {
       *declaring_clazz_ptr = dots2slashes(f->declaring_clazz->dotified);
     }
@@ -1349,7 +1351,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
   }
   else if (isMethodConstant(clazz, idx) || isIMethodConstant(clazz, idx)) {
     m = (w_method)clazz->values[idx];
-    woempa(7, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->desc);
+    woempa(1, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->desc);
     if (declaring_clazz_ptr) {
       *declaring_clazz_ptr = dots2slashes(m->spec.declaring_clazz->dotified);
     }
@@ -1397,7 +1399,7 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
     if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
       w_word member = clazz->values[idx];
 
-      woempa(7, "Unresolved constant\n");
+      woempa(1, "Unresolved constant\n");
       if (declaring_clazz_ptr) {
         w_int cls_idx = Member_get_class_index(member);
         w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
@@ -1410,7 +1412,7 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
 
           return FALSE;
         }
-        woempa(7, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
+        woempa(1, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
       }
       if (member_name_ptr || member_type_ptr) {
         w_int nat_idx = Member_get_nat_index(member);
@@ -1418,14 +1420,14 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
         w_int name_idx = Name_and_Type_get_name_index(nat);
         w_int type_idx = Name_and_Type_get_type_index(nat);
 
-        woempa(7, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
+        woempa(1, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
         if (member_name_ptr) {
           *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
-          woempa(7, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
+          woempa(1, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
         }
         if (member_type_ptr) {
           *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
-          woempa(7, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
+          woempa(1, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
         }
       }
       x_monitor_exit(clazz->resolution_monitor);

@@ -121,50 +121,6 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
   }
 }
 
-void ClassLoader_destructor(w_instance thisClassLoader) {
-  w_hashtable class_hashtable;
-
-  class_hashtable = getWotsitField(thisClassLoader, F_ClassLoader_loaded_classes);
-  if (class_hashtable) {
-    woempa(9, "Destroying ClassLoader instance %j\n", thisClassLoader);
-    clearWotsitField(thisClassLoader, F_ClassLoader_loaded_classes);
-    woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, thisClassLoader);
-    if (class_hashtable->occupancy) {
-      wabort(ABORT_WONKA, "Hey! Hashtable %s still contains %d entries!\n", class_hashtable, class_hashtable->occupancy);
-    }
-    releaseMem(class_hashtable->label);
-    ht_destroy(class_hashtable);
-  }
-
-  class_hashtable = getWotsitField(thisClassLoader, F_ClassLoader_unloaded_classes);
-  if (class_hashtable) {
-/*
-    w_fifo fifo = ht_list_keys(class_hashtable);
-    w_clazz c = getFifo(fifo);
-
-    while (c) {
-      woempa(7, "Deregistering unloaded class %k\n", c);
-      deregisterUnloadedClass(c);
-      c = getFifo(fifo);
-      if (!c) {
-        releaseFifo(fifo);
-        fifo = ht_list_keys(class_hashtable);
-        c = getFifo(fifo);
-      }
-    }
-    releaseFifo(fifo);
-*/
-
-    clearWotsitField(thisClassLoader, F_ClassLoader_unloaded_classes);
-    woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, thisClassLoader);
-    if (class_hashtable->occupancy) {
-      wabort(ABORT_WONKA, "Hey! Hashtable %s still contains %d entries!\n", class_hashtable, class_hashtable->occupancy);
-    }
-    releaseMem(class_hashtable->label);
-    ht_destroy(class_hashtable);
-  }
-}
-
 w_boolean ClassLoader_checkClassName(JNIEnv *env, w_instance This, w_instance nameString) {
   w_string name = String2string(nameString);
 
@@ -312,9 +268,7 @@ w_instance ClassLoader_loadClass(JNIEnv *env, w_instance thisClassLoader, w_inst
   clazz = namedClassMustBeLoaded(NULL, name);
 
   if (clazz) {
-    if (clazz->Class == NULL) {
-      attachClassInstance(clazz);  
-    }
+    clazz2Class(clazz);  
 
     if (resolve) {
       mustBeLinked(clazz);

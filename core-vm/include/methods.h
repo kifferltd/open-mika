@@ -234,7 +234,9 @@ static inline w_method Method2method(w_instance Method) {
 w_int createMethodSpecUsingDescriptor(w_clazz declaring_clazz, w_string name, w_string desc_string, w_MethodSpec **specptr);
 
 /*
-** Release a method spec.
+** Release a method spec. Does not release the memory of the w_MethodSpec
+** itself (this could be part of a w_Method structure), but it does
+** deregister all the strings, unloaded classes etc. which it references.
 */
 void releaseMethodSpec(w_MethodSpec *spec);
 

@@ -175,14 +175,19 @@ w_boolean sameClazz(w_clazz clazz1, w_clazz clazz2) {
 }
 
 /*
-** Compare two pointers to w_Clazz (or w_UnloadedCLazz) pointers.
+** Compare two pointers to w_Clazz (or w_UnloadedClazz) pointers.
+** [CG 20061201]
+** Always load both classes, it saves a whole lot of pain when we try to
+** unload a class and we need to untangle its references to other classes.
 */
 w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
+/* [CG 20061201] see above
   if (*clazzptr1 == *clazzptr2) {
 
     return WONKA_TRUE;
 
   }
+*/
 
   if ((*clazzptr1)->dotified != (*clazzptr2)->dotified) {
 
@@ -190,11 +195,13 @@ w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
 
   }
 
+/* [CG 20061201] see above
   if ((getClazzState(*clazzptr1) == CLAZZ_STATE_UNLOADED) && (getClazzState(*clazzptr2) == CLAZZ_STATE_UNLOADED) && (*clazzptr1)->loader == (*clazzptr2)->loader) {
 
     return WONKA_TRUE;
 
   }
+*/
 
   if (mustBeLoaded(clazzptr1) == CLASS_LOADING_FAILED) {
     woempa(7, "Failed to load %K\n", *clazzptr1);
@@ -282,7 +289,7 @@ void deregisterUnloadedClazz(w_clazz clazz) {
   woempa(1, "Deregistering %k\n", clazz);
   garbage = (w_clazz)ht_deregister(hashtable, (w_word)clazz);
   if (garbage) {
-    woempa(1,"Releasing %k (%p)\n",garbage,garbage);
+    woempa(7,"Releasing %K (%p)\n",garbage,garbage);
     deregisterString(garbage->dotified);
     releaseMem(garbage);
   }

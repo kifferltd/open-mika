@@ -222,7 +222,6 @@ void releaseMethodSpec(w_MethodSpec *spec) {
   if (spec->return_type && getClazzState(spec->return_type) == CLAZZ_STATE_UNLOADED) {
      deregisterUnloadedClazz(spec->return_type);
   }
-  releaseMem(spec);
 }
 
 /*
@@ -341,6 +340,7 @@ void _registerNativeMethod(w_clazz clazz, w_fun_dec fp, const char * utf8name, c
   }
 
   releaseMethodSpec(spec);
+  releaseMem(spec);
   deregisterString(name_string);
   deregisterString(desc_string);
 
