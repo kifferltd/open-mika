@@ -111,7 +111,7 @@ void _throwOutOfMemoryError(w_thread thread, const char *file, const char *funct
   }
   else if(!exceptionThrown(thread)) {
     woempa(9, "First OutOfMemoryError thrown in %t at line %d in %s (%s)\n", thread, line, function, file);
-    oome = allocInstance(thread, clazzOutOfMemoryError);
+    oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
     if (!oome) {
       wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
     }
@@ -139,7 +139,7 @@ void _throwOutOfMemoryError(w_thread thread) {
   }
 
   if (instance2clazz(exceptionThrown(thread)) != clazzOutOfMemoryError && !exceptionThrown(thread)) {
-    oome = allocInstance(thread, clazzOutOfMemoryError);
+    oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
     if (!oome) {
       wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
     }
@@ -271,7 +271,7 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
   woempa(7, "Throwing %k with message `%w' in %t\n", exception, message, thread);
   threadMustBeSafe(thread);
 
-  theThrowable = allocInstance(thread, exception);
+  theThrowable = allocThrowableInstance(thread, exception);
 
   if (theThrowable) {
     if (message) {
