@@ -196,9 +196,56 @@ static w_boolean heap_request(w_thread thread, w_int bytes) {
   return WONKA_TRUE;
 }
 
+static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
+  object->clazz = clazz;
+
+#ifdef JAVA_PROFILE
+  profileAllocInstance(thread, clazz);
+#endif 
+  
+  registerObject(object,thread);
+
+  return object->fields;
+}
+
+w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
+  w_object object = NULL;
+
+#ifdef RUNTIME_CHECKS
+  checkClazz(clazz);
+
+  if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
+   && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
+    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
+    return NULL;
+  }
+#endif
+
+  woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
+
+  if (heap_request(thread, (w_int)clazz->bytes_needed)) {
+    object = allocClearedMem(clazz->bytes_needed);
+  }
+
+  if (! object) {
+    return NULL;
+  }
+
+  if (isSet(clazz->flags, CLAZZ_HAS_FINALIZER)) {
+    woempa(1, "Clazz %k has a finalizer, setting instance at %p FINALIZABLE\n", clazz, object->fields);
+    setFlag(object->flags, O_FINALIZABLE);
+  }
+
+  return allocInstance_common(thread, object, clazz);
+}
+
 w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
-  w_object object = NULL;
+  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
+
+    return allocThrowableInstance(thread, clazz);
+
+  }
 
   threadMustBeSafe(thread);
 
@@ -210,73 +257,55 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
     return NULL;
   }
 
-  checkClazz(clazz);
+  return allocInstance_initialized(thread, clazz);
+}
 
-  woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
+w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
+
+  w_object object = NULL;
+
+#ifdef RUNTIME_CHECKS
+  checkClazz(clazz);
+#endif
+
+  threadMustBeSafe(thread);
 
   /*
-  ** The test for CLAZZ_IS_THROWABLE is really a proxy for `ignore quotas'.
-  ** Maybe we should have a separate allocator for priority cases?
+  ** The class must be initialized.
   */
 
-  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE) || heap_request(thread, (w_int)clazz->bytes_needed)) {
-    object = allocClearedMem(clazz->bytes_needed);
-  }
-
-  if (! object) {
-    throwOutOfMemoryError(thread);
+  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
-  woempa(1, "Allocated a %k at %p, need %d bytes\n", clazz, object->fields, clazz->bytes_needed);
+  woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  object->clazz = clazz;
+  object = allocClearedMem(clazz->bytes_needed);
+
+  if (! object) {
+    return NULL;
+  }
 
   if (isSet(clazz->flags, CLAZZ_HAS_FINALIZER)) {
     woempa(1, "Clazz %k has a finalizer, setting instance at %p FINALIZABLE\n", clazz, object->fields);
     setFlag(object->flags, O_FINALIZABLE);
   }
 
-  if (thread && isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
-    woempa(5, "Clazz %k is a Throwable, filling in stack trace\n", clazz);
-    fillThrowable(thread, object->fields);
-  }
+  fillThrowable(thread, object->fields);
 
-#ifdef JAVA_PROFILE
-  profileAllocInstance(thread, clazz);
-#endif 
-  
-  registerObject(object,thread);
-
-  //woempa(1, "Allocated instance %p (object %p) of %k, %d words.\n", object->fields, object, clazz, clazz->instanceSize);
-
-  return object->fields;
-
+  return allocInstance_common(thread, object, clazz);
 }
 
 w_instance allocStringInstance(w_thread thread) {
 
   w_object object;
 
-  threadMustBeSafe(thread);
-  woempa(1, "clazz is java.lang.String, requested size is %d words, instance needs %d bytes.\n", clazzString->instanceSize, clazzString->bytes_needed);
-
   object = allocClearedMem(clazzString->bytes_needed);
   if (! object) {
     return NULL;
   }
 
-  woempa(1, "Allocated a java.lang.String at %p, need %d bytes\n", clazzString, object->fields, clazzString->bytes_needed);
-
-  object->clazz = clazzString;
-
-#ifdef JAVA_PROFILE
-  profileAllocInstance(thread, clazzString);
-#endif 
-  
-  registerObject(object, thread);
-
-  return object->fields;
+  return allocInstance_common(thread, object, clazzString);
 }
 
 static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_size size) {
@@ -305,16 +334,10 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
   }
 
   if (object == NULL) {
-    throwOutOfMemoryError(thread);
     return NULL;
   }
 
-  object->clazz = clazz;
-
-  registerObject(object, thread);
-
-  return object->fields;
-  
+  return allocInstance_common(thread, object, clazz);
 }
 
 inline static w_size roundBitsToWords(w_int bits) {

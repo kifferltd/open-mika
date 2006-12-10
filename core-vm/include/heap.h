@@ -155,8 +155,26 @@ typedef struct w_Object {
 
 extern w_int gc_phase;
 
+/*
+** Use allocInstance_initialized when it is known that 'clazz' is already initialized.
+*/
+w_instance allocInstance_initialized(w_thread thread, w_clazz clazz);
+
+/*
+** Use allocInstance() when it is not known whether 'clazz' is already initia
+lized.
+*/
 w_instance allocInstance(w_thread thread, w_clazz clazz);
+
+/*
+** Allocate an instance of String.
+*/
 w_instance allocStringInstance(w_thread thread);
+
+/*
+** Allocate an instance of Throwable or a subclass (class need not be initialized).
+*/
+w_instance allocThrowableInstance(w_thread thread, w_clazz clazz);
 
 /*
 ** Allocation of array instances
@@ -192,7 +210,7 @@ w_clazz instance2clazz(w_instance ins);
 ** (a w_instance pointer points at the first field).
 */
 
-inline static w_word* instance2flagsptr(w_instance instance) {
+inline static volatile w_word* instance2flagsptr(w_instance instance) {
   w_word *flags = (w_word*)(((unsigned char *)(instance)) - offsetof(w_Object, fields) + offsetof(w_Object, flags));
   return flags;
 }
