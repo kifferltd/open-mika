@@ -69,7 +69,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
     w_int instanceSize = clazz->instanceSize;
     w_int i;
 
-    theClone = allocInstance(thread, clazz);
+    theClone = allocInstance_initialized(thread, clazz);
 
     if (theClone) {
       woempa(1, "cloneable object is of class %k, size is %d words, new instance @ %p\n", clazz, instanceSize,theClone);

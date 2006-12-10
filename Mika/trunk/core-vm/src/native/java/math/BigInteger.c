@@ -1504,7 +1504,7 @@ w_instance BigInteger_subtractBytes(JNIEnv *env, w_instance ThisBigInt, w_instan
 ** represents the default constructor ..
 */
 w_instance BigInteger_allocInstance(w_thread thread){
-  w_instance newBig = allocInstance(thread,clazzBigInteger);
+  w_instance newBig = allocInstance_initialized(thread, clazzBigInteger);
 
   if(newBig){
     setIntegerField(newBig, F_BigInteger_lowestSetBit, -2);

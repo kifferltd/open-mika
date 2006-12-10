@@ -516,6 +516,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   x_long time_start;    
   x_long time_delta;    
 #endif
+#ifdef DEBUG_STACKS
   int depth = (char*)caller->thread->native_stack_base - (char*)&depth;
   if (depth > caller->thread->native_stack_max_depth) {
     if (isSet(verbose_flags, VERBOSE_FLAG_STACK)) {
@@ -523,7 +524,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
     }
     caller->thread->native_stack_max_depth = depth;
   }
-
+#endif
 
   woempa(1, "CALLING %M, dispatcher is %d\n", method, method->exec.dispatcher);
   if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
@@ -549,7 +550,12 @@ inline static void i_callMethod(w_frame caller, w_method method) {
     woempa(1, "RETURNED from %M\n", method);
   }
   else {
+    w_boolean unsafe = enterSafeRegion(caller->thread);
+
     throwException(caller->thread, clazzStackOverflowError, "unable to call %M: %d on aux stack, %d on java stack, need %d + %d free slots", method, caller->thread->slots + SLOTS_PER_THREAD - caller->auxstack_top, caller->jstack_top - caller->thread->slots, method->exec.stack_i, MIN_FREE_SLOTS);
+    if (unsafe) {
+      enterUnsafeRegion(caller->thread);
+    }
   }
 }
 
@@ -1480,7 +1486,6 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_new: {
-    threadMustBeUnsafe(thread);
     clazz = (w_clazz) cclazz->values[(unsigned short) short_operand];
 
     frame->jstack_top = tos;
@@ -3947,7 +3952,7 @@ void interpret(w_frame caller, w_method method) {
       frame->jstack_top = tos;
       enterSafeRegion(thread);
       mustBeInitialized(clazz);
-      thread->exception = allocInstance(thread, clazz);
+      thread->exception = allocThrowableInstance(thread, clazz);
       enterUnsafeRegion(thread);
       if (thread->exception) {
         removeLocalReference(thread, thread->exception);
