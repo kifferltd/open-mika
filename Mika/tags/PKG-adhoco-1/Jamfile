@@ -1,0 +1,78 @@
+###########################################################################
+# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Philips site 5, box 3       info@acunia.com                           #
+#   3001 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+#                                                                         #
+# Modifications for Mika copyright (c) 2003, 2004, 2005 by Chris Gray,    #
+# /k/ Embedded Java Solutions. All rights reserved.                       #
+#                                                                         #
+###########################################################################
+
+SubDir WONKA_TOP ;
+
+WONKA_LIB = libwonka ;
+COMM_LIB = libcomm ;
+
+COMMON_TOP  = $(WONKA_TOP)/vm-cmp/kernel/common ;
+COMMON_LIB  = libcommon ;
+
+if $(USE_ZLIB) = true {
+  Z_LIB = libz ;
+  HDRS += $(WONKA_TOP)/zlib/include ;
+}
+
+if $(MODULES) = true {
+
+  LOCATE_TARGET = $(OROOT)/
+/rudolph/bin ;
+  LOCATE_SOURCE = $(OROOT)/awt/rudolph/bin ;
+  
+  DEPENDS mod_awt.o : $(AWT_LIB).a ;
+  DEPENDS mika : mod_awt.o ;
+  
+  GenFile mod_awt.o : make_module : $(AR_TOOL) $(LD_TOOL) $(LOCATE_TARGET)/mod_awt.o $(LOCATE_TARGET)/$(AWT_LIB).a ;
+  
+  InstallFile $(BINDIR)/system : mod_awt.o ;
+}  
+
+HDRS += $(WONKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include ;
+
+SubInclude WONKA_TOP vm-cmp kernel $(SCHEDULER) ;
+SubInclude WONKA_TOP vm-cmp kernel common ;
+SubInclude WONKA_TOP vm-cmp fs $(FILESYSTEM) ;
+SubInclude WONKA_TOP vm-cmp network $(NETWORK) ;
+SubInclude WONKA_TOP core-vm ;
+SubInclude WONKA_TOP vm-cmp awt $(AWT) ;
+SubInclude WONKA_TOP tool ;
+SubInclude WONKA_TOP vm-ext jpda ;
+SubInclude WONKA_TOP vm-cmp fp $(FLOATING_POINT) ;
+
+if $(MATH) = native {
+  SubInclude WONKA_TOP vm-cmp math $(MATH) ;
+}
+
+if $(USE_ZLIB) = true {
+  SubInclude WONKA_TOP zlib src ;
+}
+
+if $(JAVAX_COMM) = true {
+  SubInclude WONKA_TOP vm-ext comm ;
+}
+

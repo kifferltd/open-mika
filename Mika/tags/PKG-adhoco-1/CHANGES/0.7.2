@@ -1,0 +1,36 @@
+Changes in 0.7.2
+----------------
+
+Configuration stuff:
+  New config variables BUILDROOT and FSROOT: the former specifies where
+  files should be put on the build machine, the latter specifies (for
+  FILESYSTEM=native only) where Wonka will look for them on the target.
+  Useful for cross-compilation!
+  New config variables BOOTCLASSDIR and BOOTCLASSFILE tell the 
+  bootstrap class loader where to look for classes.zip (or whatever
+  you choose to call it).
+  New variable DUMPFILE determines where woempa's will be logged
+  (useful if e.g. FSROOT is / or /usr/local/share/wonka).
+VM (Wonka):
+  Fixed a major problem with GC: finalizable objects were not completing
+  their life-cycle properly, so not getting garbage-collected.
+  New code for handling constant pool, reducing memory consumption and
+  fragmentation.
+AWT (Rudolph):
+  A good deal of refactoring which should improve performance and stability.
+  Most noticeable improvements are in the areas of scrollbars, checkboxes,
+  and buttons (which no longer stay pressed when they shouldn't).
+RTOS (OSwald):
+  Made a start on a native exception handling system: see
+  open-wonka/kernel/oswald/tests/exception_test.c for more info.
+  Not yet used by Wonka.
+Miscellaneous:
+  The following command-line switches are now implemented and act as
+  expected (?):
+    -classpath/-cp, -D, -Xbootclasspath, -version, -help, -X,-?
+  
+  Work has begun on implementing 'Java Platform Debugger Interface' (JPDA)
+  and 'Java Debug Wire Protocol' (JDWP).  See open-wonka/jdpa.
+  The adaptive compiler (code-named `J-spot') is beginning to take shape:
+  see directory open-wonka/compiler-jspot.
+

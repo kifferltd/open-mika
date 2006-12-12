@@ -1,0 +1,57 @@
+\chapter{Introduction}
+
+% \begin{minipage}[t]{13cm}
+% \begin{quote}
+% {\em Uncle Oswald is, if you remember, the greatest rogue, bounder, connoisseur,
+% bon vivant and fornicator of all time. Here, many famous names are mentioned
+% and there is obviously a grave risk that families and friends are going to
+% take offense...}
+
+% \hspace{4cm}{\bf Roald Dahl, "My Uncle Oswald"}
+% \end{quote}
+% \end{minipage}
+
+\textbf{Please note that this documentation is still very much a work in
+progress. If you are looking for a project, dive in and write...}
+
+\section{Why Another Operating System}
+
+There are several good reasons for making our own operating system:
+
+\begin{itemize}
+\item Porting the OS to another processor is relatively easy since we know
+all the insides and out-sides. Only 3 assembly functions are required:
+\begin{enumerate}
+\item \txt{x\_init\_stack}: an assembly function that sets up the stack of
+a thread that is being created.
+\item \txt{x\_thread\_switch}: an assembly function that will switch
+between different threads; the current thread stack and status is saved and the thread
+that should run next is reinstated.
+\item \txt{x\_start\_init}: an assembly function that will start off the
+initial thread of the kernel. All other threads are started by means of a
+call to \txt{x\_thread\_switch}.
+\end{enumerate}
+
+\item Porting the OS to another processor is done by our own company; this
+means that the porting effort, which is an element of the critical path of
+development is in our own hands.
+\item There are no external royalties to be payed to the OS vendor.
+\item Implementing special features like the combination of real time
+threads with round robin threads is relatively easy.
+\item Integration with our hardware is almost perfect. Extra features that
+need hardware support and vice versa can be implemented without the need to
+rely on an outside party.
+\item Code bloat can be kept to a minimum and is under our own control.
+\item And probably the most important element is that Oswald is tailor fit for
+Wonka, the Java Virtual Kernel. Any feature that is required by Wonka, can
+be implemented in Oswald; awe full, isn't it...
+\end{itemize}
+
+There are also some things to say against writing yet another operating
+system:
+
+\begin{itemize}
+\item Writing a solid real time kernel is a daunting task.
+\item Porting to another processor requires extra internal resources.
+\item And so forth
+\end{itemize}

@@ -1,0 +1,664 @@
+###########################################################################
+# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Philips site 5, box 3       info@acunia.com                           #
+#   3001 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+#                                                                         #
+# Modifications for Mika copyright (c) 2003, 2004, 2005, 2006 by Chris    #
+# Gray, /k/ Embedded Java Solutions. All rights reserved.                 #
+#                                                                         #
+###########################################################################
+
+#
+# Jamrules,v 1.14 2002/01/17 17:01:52 dumon Exp
+#
+# Jamrules for building Wonka
+#
+# -------------------------------------------------------------------------------
+
+
+actions quietly GenTarget {
+}
+
+#
+# Configuration variables defaults
+#
+
+HOSTOS    ?=   uclinux ;
+
+#
+# Check if WONKA_TOP has been set properly.
+#
+
+if "$(WONKA_TOP)" = "." && $(HOSTOS) != winnt {
+  EXIT "Please do 'export WONKA_TOP=<top dir of wonka>' or 'setenv WONKA_TOP <top dir of wonka>' depending on your shell before you try to use jam." ;
+}
+
+#
+# Setup the baisc CCFLAGS. There will be flags appended in the config files.
+#
+
+CCFLAGS  = -Wall -Wsign-compare -Wshadow -Wpointer-arith -Wstrict-prototypes ;
+CCFLAGS += -Winline -DDEBUG_LEVEL=7 ;
+
+#
+# Read in the appropriate configuration files
+#
+
+include $(WONKA_TOP)/Configuration/platform/$(PLATFORM) ;
+
+switch $(CPU) {
+  case i?86 : CPU = x86 ;
+}
+
+include $(WONKA_TOP)/Configuration/cpu/$(CPU) ;
+include $(WONKA_TOP)/Configuration/host/$(HOSTOS) ;
+
+#OROOT     = $(WONKA_TOP)/build-$(CPU)-$(HOSTOS) ;
+
+include $(WONKA_TOP)/Configuration/wonka/default ;
+if $(TOOL_CONFIG) != none {
+  include $(WONKA_TOP)/Configuration/tool/$(TOOL_CONFIG) ;
+}
+
+if $(AWT) = rudolph {
+  ECHO "AWT_DEVICE = " $(AWT_DEVICE) ; 
+  include $(WONKA_TOP)/Configuration/awt/$(AWT_DEF) ;
+  ECHO "AWT_DEVICE = " '$(AWT_DEVICE)' ; 
+}
+
+#
+# Fix for Linux systems that set the CPU shell variable to something
+# like "i686" instead of "x86"
+#
+
+switch $(CPU) {
+  case i?86 : CPU = x86 ;
+}
+
+#
+# Determine the library prefix based on the compiling host OS, if
+# not specified allready.
+#
+
+if $(UNIX) {
+  LIBPREFIX ?= lib ;
+}
+else {
+  LIBPREFIX ?= "" ;
+}
+
+switch $(CPU) {
+  case arm : {
+    CCFLAGS += -DARM ;
+  }
+  case mips : {
+    CCFLAGS += -DMIPS ;
+  }
+  case ppc : {
+    CCFLAGS += -DPPC ;
+  }
+  case x86 : {
+    CCFLAGS += -DX86 ;
+  }
+}
+
+if $(PLATFORM) = unc20 {
+  CCFLAGS += -DUNC20 ;
+}
+if $(PLATFORM) = unc90 {
+  CCFLAGS += -DUNC90 ;
+}
+
+if $(HOSTOS) = uclinux {
+  if $(CPU) = arm {
+    CCFLAGS += -mapcs-32 -mcpu=arm7tdmi ;
+  }
+  CCFLAGS += -fno-builtin -DEMBED -Dlinux -D__linux__ -Dunix -D__uClinux__ ;
+}
+
+if $(HOSTOS) = linux {
+  CCFLAGS += -DHAVE_TIMEDWAIT ;
+}
+
+if $(HOSTOS) = netbsd {
+  CCFLAGS += -DHAVE_TIMEDWAIT ;
+}
+
+#
+# Set the compiler for the tools we need. We use the default compiler
+# on this compiling host.
+#
+
+TOOL_CC   = $(CC) ;
+TOOL_LINK = $(LINK) ;
+
+SCRIPT_DIR = $(WONKA_TOP)/tool/script ;
+
+#
+# The libraries
+#
+
+WONKA_LIB = libwonka ;
+COMM_LIB = libcomm ;
+UNICODE_LIB = libunicode ;
+AWT_LIB   = libawt ;
+FS_LIB    = libfs ;
+
+if $(UNIX) {
+  BUILD_HOST = $(JAMUNAME) ;
+}
+else {
+  BUILD_HOST = "<unknown>" ;
+}
+
+FONTDIR = "$(BOOTCLASSDIR)/font" ;
+
+CCFLAGS += -DBOOTCLASSDIR=\'\"{}/$(BOOTCLASSDIR)\"\' ;
+CCFLAGS += -DBOOTCLASSFILE=\'\"wre.jar\"\' ;
+CCFLAGS += -DEXTCLASSDIR=\'\"{}/$(BOOTCLASSDIR)/ext\"\' ;
+CCFLAGS += -DDEFAULT_HEAP_SIZE=\'\"$(DEFAULT_HEAP_SIZE)\"\' ;
+CCFLAGS += -DVERSION_STRING=\'\"$(VERSION_STRING)\"\' ;
+
+if $(JDWP) = true {
+  CCFLAGS += -DJDWP ;
+}
+
+if $(JAVA_PROFILE) = true {
+  CCFLAGS += -DJAVA_PROFILE ;
+}
+
+if $(METHOD_DEBUG) = true {
+  CCFLAGS += -DMETHOD_DEBUG ;
+}
+
+if $(UNICODE_SUBSETS) {
+  CCFLAGS += -DUNICODE_SUBSETS=\'\"$(UNICODE_SUBSETS)\"\' ;
+}
+
+if $(USE_ZLIB) = true {
+  CCFLAGS += -DUSE_ZLIB ;
+}
+
+if $(USE_NATIVE_MALLOC) = true {
+  CCFLAGS += -DUSE_NATIVE_MALLOC ;
+}
+
+if $(CPU_MIPS) {
+  CCFLAGS += -DCPU_MIPS=$(CPU_MIPS) ;
+}
+
+if $(USE_NANOSLEEP) = true {
+  CCFLAGS += -DUSE_NANOSLEEP ;
+}
+
+if $(HOST_TIMER_GRANULARITY) {
+  CCFLAGS += -DHOST_TIMER_GRANULARITY=$(HOST_TIMER_GRANULARITY) ;
+}
+
+if $(DETECT_FLYING_PIGS) = true {
+  CCFLAGS += -DDETECT_FLYING_PIGS ;
+}
+
+if $(JAVAX_COMM) = true {
+  CCFLAGS += -DJAVAX_COMM ;
+}
+
+if $(USE_APP_DIR) = true {
+  CCLASSPATH = "\{\}/apps/" ;
+}
+
+if $(CCLASSPATH) {
+  CCFLAGS += -DCLASSPATH=\'\"$(CCLASSPATH)\"\' ;
+}
+
+#
+# Add the -static flag to the linker if a static binary is required.
+#
+
+if $(STATIC) = true {
+  LINKFLAGS += -static ;
+}
+
+# 
+# Add the dl library if we want to be able to load shared libraries.
+# Also define SHARED_OBJECTS
+#
+
+if $(SHARED_OBJECTS) = true {
+  switch $(HOSTOS) {
+    case linux : {
+      CCFLAGS += -DSHARED_OBJECTS ;
+      LINKLIBS += -ldl ;
+      LINKFLAGS += -Wl,-export-dynamic ;
+      if $(SCHEDULER) = oswald {
+        if $(SHARED_HEAP) = true {
+          CCFLAGS += -DSHARED_HEAP ;
+        }
+      }
+    }
+    case uclinux : {
+      if $(CPU) = arm {
+        LINKFLAGS += -elf2flt=-s65536 ;
+      }
+      LINKFLAGS += -Wl,-export-dynamic ;
+    }
+    case netbsd : {
+      CCFLAGS += -DSHARED_OBJECTS ;
+      LINKFLAGS += -Wl,-export-dynamic ;
+    }
+  }
+}
+
+if $(MAPFILE) = true {
+  LINKFLAGS += -Wl,--cref,-Map,$(OROOT)/map ;
+}
+
+#
+# NOTE: The module loader doesn't like gdb symbols.
+#
+
+$GDB_SYMBOLS ?= false ;
+
+if $(DEBUG) = true {
+  
+  CCFLAGS += -DDEBUG -DRUNTIME_CHECKS ;
+  
+  if $(HOSTOS) = winnt {
+    if $(OPTIM) = "-O" {
+      OPTIM = -O1 ;
+    } else {
+      OPTIM += -O1 ;
+    }
+  }
+  else {
+          #CG optimise for size
+    if $(OPTIM) = "-O" {
+      OPTIM = -Os ;
+    } else {
+      OPTIM += -Os ;
+    }
+  }
+
+  if $(MODULES) = false {
+    GDB_SYMBOLS = true ;
+  }
+  
+} else {  # No debug -> Full optimalisation 
+          #CG optimise for size
+
+  if $(OPTIM) = "-O" {
+    OPTIM = -Os ;
+  } else {
+    OPTIM += -Os ;
+  }
+
+#  CCFLAGS += -ggdb ;
+}
+
+if $(GDB_SYMBOLS) = true {
+    CCFLAGS += -ggdb ;  
+}
+
+#
+# Only add -fomit-frame-pointer when debugging and profiling are turned off.
+# Debugging with the flag on, gives a lot less information. Profiling with the
+# flag on is not possible.
+#
+#
+if $(DEBUG) = false && $(SCHEDULER) = oswald {
+  CCFLAGS += -fomit-frame-pointer ;
+}
+
+if $(MODULES) = true {
+  CCFLAGS += -DMODULES ;
+}
+
+UPTIME_LIMIT ?= none ;
+ACADEMIC_LICENCE ?= false ;
+
+if $(UPTIME_LIMIT) != none {
+  CCFLAGS += -DUPTIME_LIMIT=$(UPTIME_LIMIT) ;
+} 
+
+if $(ACADEMIC_LICENCE) = true {
+  CCFLAGS += -DACADEMIC_LICENCE ;
+} 
+
+if $(AWT_SWAPDISPLAY) = true {
+  CCFLAGS += -DAWT_SWAPDISPLAY ;
+}
+  
+#
+# We redefine the GenFile and GenFile1 rule and actions so that we can pass
+# arguments to our file creation tools. So the rule invocation:
+#
+# GenFile target : image sources : arg1 arg2 ar3 ;
+#
+# Is translated into the following invocation:
+#
+# image arg1 arg2 arg3 target sources
+#
+
+rule GenFile 
+{
+	local _t = [ FGristSourceFiles $(<) ] ;
+	local _s = [ FAppendSuffix $(>[1]) : $(SUFEXE) ] ;
+	Depends $(_t) : $(_s) $(>[2-]) ;
+	GenFile1 $(_t) : $(_s) $(>[2-]) : $(3) ;
+	Clean clean : $(_t) ;
+}
+
+rule GenFile1
+{
+	MakeLocate $(<) : $(LOCATE_SOURCE) ;
+	SEARCH on $(>) = $(SEARCH_SOURCE) ;
+        ARGS on $(<) = $(3) ;
+}
+
+actions GenFile1
+{
+        $(>[1]) $(ARGS) $(<) $(>[2-])
+}
+
+#
+# Set defines for scheduler setting. 
+#
+
+switch $(SCHEDULER) {
+  case oswald : {
+    CCFLAGS += -DOSWALD -D_REENTRANT ;
+  }
+
+  case o4e : {
+    CCFLAGS += -DO4E ;
+    CCFLAGS += -pthread ;
+  }
+
+  case o4p : {
+    CCFLAGS += -DO4P -D_REENTRANT ;
+#    CCFLAGS += -pthread ;
+  }
+
+  case * : {
+    EXIT "Please configure SCHEDULER = oswald|o4p in the Wonka configuration." ;
+  }
+}
+
+#
+# Print out the configuration settings.
+#
+
+switch $(AWT) {
+  case rudolph : {
+    CCFLAGS += -DRUDOLPH ;
+
+    switch $(AWT_DEVICE) {
+      case none : {
+        CCFLAGS += -DAWT_NONE ;
+      }
+      case fdev : {
+        CCFLAGS += -DAWT_FDEV -DAWT_PIXELFORMAT_$(AWT_PIXELFORMAT) ;
+      }
+      case xsim : {
+        CCFLAGS += -DAWT_XSIM ;
+      }
+      case *    : EXIT "Please configure AWT_DEVICE = fdev|xsim|none for Rudolph." ;
+    }
+  }
+
+  case none : {
+  }
+
+  case * : {
+    EXIT "Please configure AWT = rudolph|none in the Wonka configuration." ;
+  }
+
+}
+
+switch $(FILESYSTEM) {
+  case vfs : {
+    CCFLAGS += -DFSENABLE ;
+  }
+
+  case native : {
+    CCFLAGS += -DFSROOT=\'\"$(FSROOT)\"\' ;
+  }
+
+  case * : {
+    EXIT "Please configure FILESYSTEM = native|vfs in the Wonka configuration." ;
+  }
+
+}
+
+switch $(FLOATING_POINT) {
+  case native : {
+    CCFLAGS += -DNATIVE_FP ;
+  }
+
+  case hauser : {
+    CCFLAGS += -DHAUSER_FP ;
+  }
+
+  case * : {
+    EXIT "Please configure FLOATING_POINT = native|hauser." ;
+  }
+}
+
+switch $(MATH) {
+  case native : {
+    CCFLAGS += -DNATIVE_MATH ;
+  }
+
+  case java : {
+  }
+
+  case * : {
+    EXIT "Please configure MATH = native|java." ;
+  }
+}
+
+switch $(NETWORK) {
+  case none : {
+  }
+
+  case native : {
+  }
+
+  case * : {
+    EXIT "Please configure NETWORK = native|none in the Wonka configuration." ;
+  }
+
+}
+
+TESTS ?= false ;
+JAVAX_COMM ?= false ;
+#
+# Compiling for WinNT and Cygwin on an x86 gives errors with leading underscores.
+#
+
+if $(HOSTOS) = winnt {
+  CCFLAGS += -fno-leading-underscore ;
+}
+
+if $(CCLASSPATH) {
+  WONKA_INFO += "runtime classpath is $(CCLASSPATH);" ;
+}
+
+switch $(FILESYSTEM) {
+  case vfs : {
+    WONKA_INFO += "using own virtual filesystem;" ;
+  }
+  case native : {
+    WONKA_INFO += "using host OS filesystem, with virtual root at $(FSROOT);" ;
+  }
+}
+
+switch $(NETWORK) {
+  case none : {
+    WONKA_INFO += "no network;" ;
+  }
+  case native : {
+    WONKA_INFO += "using the host OS network facilities;" ;
+  }
+}
+
+switch $(SECURITY) {
+  case fine : {
+    WONKA_INFO += "fine-grained (Java2) security;" ;
+  }
+  case coarse : {
+    WONKA_INFO += "coarse-grained (Java 1.1) security;" ;
+  }
+  case none : {
+    WONKA_INFO += "no security;" ;
+  }
+}
+
+switch $(FLOATING_POINT) {
+  case native : {
+    WONKA_INFO += "using native floating-point;" ;
+  }
+  case hauser : {
+    WONKA_INFO += "using own floating-point after John Hauser;" ;
+  }
+}
+
+switch $(MATH) {
+  case native : {
+    WONKA_INFO += "using native math functions;" ;
+  }
+  case java : {
+    WONKA_INFO += "using all-java math functions;" ;
+  }
+}
+
+switch $(UNICODE_SUBSETS) {
+  case 0 : {
+    WONKA_INFO += "minimal Unicode support;" ;
+  }
+  case 999 : {
+    WONKA_INFO += "full Unicode support;" ;
+  }
+  case * : {
+    WONKA_INFO += "support for Unicode subsets $(UNICODE_SUBSETS);" ;
+  }
+}
+
+switch $(USE_ZLIB) {
+  case true : {
+    WONKA_INFO += "using ZLIB for unzipping;" ;
+  }
+  case * : {
+    WONKA_INFO += "using own routines for unzipping;" ;
+  }
+}
+
+switch $(JAVAX_COMM) {
+  case true : {
+    WONKA_INFO += "with javax.comm;" ;
+  }
+  case false : {
+    WONKA_INFO += "no javax.comm;"  ;
+  }
+}
+
+switch $(TESTS) {
+  case true : {
+    TEST_INFO = "generating tests for Mauve and for the VisualTestEngine;" ;
+  }
+  case false : {
+    TEST_INFO = "not generating tests for Mauve and for the VisualTestEngine;" ;
+  }
+}
+
+if $(UPTIME_LIMIT) != none {
+  WONKA_INFO += "will exit automatically after" $(UPTIME_LIMIT) "seconds;" ;
+}
+
+switch $(AWT) {
+  case rudolph : {
+    AWT_INFO = "Rudolph AWT;" ;
+
+    switch $(AWT_DEVICE) {
+      case none : {
+        AWT_INFO += "no visual display;" ;
+      }
+      case fdev : {
+        AWT_INFO += "frame buffer display;" ;
+      }
+      case xsim : {
+        AWT_INFO += "display is X window;" ;
+      }
+    }
+
+    if $(AWT_GIF_SUPPORT)  = true {
+      AWT_INFO += "GIF support enabled;" ;
+    }
+    if $(AWT_JPEG_SUPPORT)  = true {
+      AWT_INFO += "JPEG support enabled;" ;
+    }
+  }
+
+  case none : {
+    AWT_INFO = "no AWT;" ;
+  }
+}
+
+if $(SCHEDULER) = o4p {
+  if $(USE_NANOSLEEP) = true {
+    O4P_INFO = "using nanosleep(2) for internal timing loop;" ;
+  }
+  else {
+    O4P_INFO = "using usleep(3) for internal timing loop;" ;
+  }
+  if $(HOST_TIMER_GRANULARITY) {
+    O4P_INFO += "host timer granularity = $(HOST_TIMER_GRANULARITY) usec;" ;
+  }
+}
+else {
+  if $(CPU_MIPS) {
+    OSWALD_INFO += "estimated CPU speed = $(CPU_MIPS) MIPS;" ;
+  }
+  if $(HOST_TIMER_GRANULARITY) {
+    OSWALD_INFO += "host timer granularity = $(HOST_TIMER_GRANULARITY) usec;" ;
+  }
+  if $(SHARED_HEAP) = true {
+    OSWALD_INFO += "exporting own version of malloc and friends;" ;
+  }
+}
+
+CCFLAGS += "-DWONKA_INFO=\'\"" $(WONKA_INFO) "\"\'" ;
+CCFLAGS += "-DTEST_INFO=\'\"" $(TEST_INFO) "\"\'" ;
+CCFLAGS += "-DAWT_INFO=\'\"" $(AWT_INFO) "\"\'" ;
+if $(SCHEDULER) = o4p {
+  CCFLAGS += "-DO4P_INFO=\'\"" $(O4P_INFO) "\"\'" ;
+}
+if $(SCHEDULER) = oswald {
+  CCFLAGS += "-DOSWALD_INFO=\'\"" $(OSWALD_INFO) "\"\'" ;
+}
+CCFLAGS += "-DBUILD_HOST=\'\"" $(BUILD_HOST) "\"\'" ;
+
+ECHO "Global CCFLAGS =" $(CCFLAGS) ;
+
+# JAVA rules
+
+#DEPENDS all : tools classes ;
+#NOTFILE tools classes ;
+
