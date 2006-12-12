@@ -1737,7 +1737,6 @@ w_instance attachClassInstance(w_clazz clazz) {
     return NULL;
   }
 
-  woempa(1, "clazzClass state is %d\n", getClazzState(clazz));
   if (getClazzState(clazz) < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "Cannot create instance of Class for unloaded class: %K\n", clazz);
     return NULL;
@@ -2037,7 +2036,7 @@ void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
 
   mustBeInitialized(clazz);
 
-  unsafe = thread && clazz->staticFields[slot] && enterUnsafeRegion(thread);
+  unsafe = thread && enterUnsafeRegion(thread);
 
   clazz->staticFields[slot] = (w_word)child;
   if (child) {
