@@ -39,7 +39,7 @@
 #include "threads.h"
 #include "wstrings.h"
 
-w_boolean haveWonkaThreads = WONKA_FALSE;
+w_boolean haveWonkaThreads = FALSE;
 
 w_hashtable thread_hashtable;
 
@@ -388,7 +388,7 @@ void startInitialThreads(void* data) {
   setReferenceField(I_ThreadGroup_system, newStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
   setReferenceField(I_Thread_sysInit, newStringInstance(string_sysThread), F_Thread_name);
-  setBooleanField(I_Thread_sysInit, F_Thread_started, WONKA_TRUE);
+  setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
 
 /*
 ** First we gather the command line arguments (if any: in the embedded case
@@ -461,7 +461,7 @@ void startInitialThreads(void* data) {
     (*env)->ExceptionDescribe(env);
   }
 
-  setBooleanField(I_Thread_sysInit, F_Thread_stopped, WONKA_TRUE);
+  setBooleanField(I_Thread_sysInit, F_Thread_stopped, TRUE);
   W_Thread_sysInit->top = & W_Thread_sysInit->rootFrame;
   removeThreadFromGroup(W_Thread_sysInit, thread2ThreadGroup(W_Thread_sysInit));
   W_Thread_sysInit->state = wt_dying;
@@ -502,7 +502,7 @@ void startKernel() {
   W_Thread_sysInit->label = (char*)"thread:sysInit";
   W_Thread_sysInit->name = string_sysThread;
   W_Thread_sysInit->state = wt_unstarted;
-  W_Thread_sysInit->isDaemon = WONKA_FALSE;
+  W_Thread_sysInit->isDaemon = FALSE;
   W_Thread_sysInit->jpriority = USER_PRIORITY;
   W_Thread_sysInit->Thread = I_Thread_sysInit;
 
@@ -632,23 +632,17 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterUnsafeRegion: %t has flag already set\n", thread);
 
-    return WONKA_TRUE;
-
-  }
-
-  if (thread == marking_thread) {
-    woempa(2, "enterUnsafeRegion: %t is marking_thread, ignore\n", thread);
-    setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-
-    return WONKA_FALSE;
+    return TRUE;
 
   }
 
 #ifdef GC_SAFE_POINTS_USE_NO_MONITORS
   while (TRUE) {
+  if (thread != marking_thread) {
     while (blocking_all_threads) {
       x_thread_sleep(1);
     }
+  }
     ++ number_unsafe_threads;
     if (blocking_all_threads) {
       -- number_unsafe_threads;
@@ -661,14 +655,16 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
   x_monitor_eternal(safe_points_monitor);
-  while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-    x_status status;
+  if (thread != marking_thread) {
+    while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
+      x_status status;
 
-    woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
-    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-     }
+      woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
+      status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+      if (status == xs_interrupted) {
+        x_monitor_eternal(safe_points_monitor);
+       }
+    }
   }
   ++ number_unsafe_threads;
   woempa(2, "enterUnsafeRegion: %t incremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
@@ -677,22 +673,14 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   x_monitor_exit(safe_points_monitor);
 #endif
 
-  return WONKA_FALSE;
+  return FALSE;
 }
 
 w_boolean enterSafeRegion(const w_thread thread) {
   if (isNotSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterSafeRegion: %t has flag unset\n", thread);
 
-    return WONKA_FALSE;
-
-  }
-
-  if (thread == marking_thread) {
-    woempa(2, "enterSafeRegion: %t is marking_thread, ignore\n", thread);
-    unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-
-    return WONKA_TRUE;
+    return FALSE;
 
   }
 
@@ -714,7 +702,7 @@ w_boolean enterSafeRegion(const w_thread thread) {
   x_monitor_exit(safe_points_monitor);
 #endif
 
-  return WONKA_TRUE;
+  return TRUE;
 }
 
 void _gcSafePoint(w_thread thread
@@ -722,14 +710,6 @@ void _gcSafePoint(w_thread thread
 , char *file, int line
 #endif
 ) {
-  if (isSet(blocking_all_threads, BLOCKED_BY_GC)) {
-    if (thread == marking_thread || isNotSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
-
-      return;
-
-    }
-  }
-
 #ifdef GC_SAFE_POINTS_USE_NO_MONITORS
     -- number_unsafe_threads;
     unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
