@@ -422,20 +422,18 @@ void _gcSafePoint(w_thread thread, char *file, int line);
 
 inline static void gcSafePoint(w_thread thread) {
   if (blocking_all_threads) {
-    woempa(7, "gsSafePoint(): %s:%d (%s): all threads blocked by %s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? "GC" : "JDWP");
+    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by %s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? "GC" : "JDWP");
     if (thread == marking_thread) {
-      woempa(7, "gsSafePoint(): %s:%d (%s): %t is marking thread, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
+      woempa(7, "gcSafePoint(): %s:%d (%s): %t is marking thread, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
     }
     else if (threadIsSafe(thread)) {
-      woempa(7, "gsSafePoint(): %s:%d (%s): %t is already safe, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
+      woempa(7, "gcSafePoint(): %s:%d (%s): %t is already safe, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
     }
     else {
-      if (blocking_all_threads) {
-        woempa(7, "gsSafePoint(): %s:%d (%s): %t entering safe point\n", __FILE__, __LINE__, __FUNCTION__, thread);
-        _gcSafePoint(thread, __FILE__, __LINE__);
-        woempa(7, "gsSafePoint(): %s:%d (%s): %t leaving safe point\n", __FILE__, __LINE__, __FUNCTION__, thread);
+      woempa(7, "gcSafePoint(): %s:%d (%s): %t entering safe point\n", __FILE__, __LINE__, __FUNCTION__, thread);
+      _gcSafePoint(thread, __FILE__, __LINE__);
+      woempa(7, "gcSafePoint(): %s:%d (%s): %t leaving safe point\n", __FILE__, __LINE__, __FUNCTION__, thread);
       }
-    }
   }
 }
 
