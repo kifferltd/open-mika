@@ -1,0 +1,10 @@
+#############################################################################
+# Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. #
+# All rights reserved.  The contents of this file may not be copied or      #
+# distributed in any form without express written consent of the author.    #
+#############################################################################
+
+SubDir WONKA_TOP vm-cmp math native src native ;
+
+SubInclude WONKA_TOP vm-cmp math native src native java lang ;
+

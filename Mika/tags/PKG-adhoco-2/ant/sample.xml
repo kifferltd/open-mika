@@ -1,0 +1,24 @@
+<project name="mika-samples" default="sample" basedir=".">
+  <property name="top.level.dir" value="../" />
+  <property name="sample.dir" value="${top.level.dir}sample/"/>
+  <property name="jarfile.dir" value="${top.level.dir}build/sample/"/>
+  <property name="sample.class.dir" value="${jarfile.dir}class/"/>
+  <property name="ant.dir" value="${top.level.dir}ant/"/>
+  <property name="common.class.dir" value="${top.level.dir}build/common/class/"/>
+
+  <target name="sample">
+     <mkdir dir="${sample.class.dir}" />
+     <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}"/>
+     <javac compiler="jikes" destdir="${sample.class.dir}" 
+            bootclasspath="${common.class.dir}"
+            target="1.3" debug="true" nowarn="true" failonerror="true"
+            srcdir="${sample.dir}/apps/java/:${sample.dir}/metronome/"/>
+
+     <jar destfile="${jarfile.dir}/mika-samples.jar" 
+          basedir="${sample.class.dir}"/>
+  </target>
+
+  <target name="clean">
+    <delete dir="${jarfile.dir}"/>
+  </target>
+</project>
