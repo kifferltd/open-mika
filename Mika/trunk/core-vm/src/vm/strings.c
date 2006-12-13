@@ -1119,40 +1119,85 @@ w_instance newStringInstance(w_string s) {
 }
 
 w_instance getStringInstance(w_string s) {
-  w_instance instance;
   w_thread thread = currentWonkaThread;
+  w_string r = registerString(s);
+  w_instance new_instance;
+  w_instance canonical;
+  w_word *flagsptr;
 
+  /*
+  ** The story so far:
+  ** - we could be anywhere in a GC cycle, (mark, sweep, complete)
+  ** - w_string r will not be reclaimed, because it is registered to us
+  */
   threadMustBeSafe(thread);
-  enterUnsafeRegion(thread);
 
+  /*
+  ** We lock the string_hashtable while looking for a canonical instance;
+  ** this ensures that the logic in collector.c to reclaim canonical instances
+  ** either runs before this (so we will not find one) or runs after it (and
+  ** it will see our O_BLACK flag and not reclaim the instance).
+  */
   ht_lock(string_hashtable);
-  instance = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
-  if (!instance) {
-    ht_unlock(string_hashtable);
-    enterSafeRegion(thread);
-    instance = allocStringInstance(thread);
-    if (instance) {
-      w_string r;
-      ht_lock(string_hashtable);
-      r = registerString(s);
-      setWotsitField(instance, F_String_wotsit, r);
-      ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)instance);
-    }
-    else {
-      return NULL;
-    }
-  } 
-  else {
-    w_object object = instance2object(instance);
+  canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+  if (canonical) {
+    enterUnsafeRegion(thread);
+    addLocalReference(thread, canonical);
+    flagsptr = instance2flagsptr(canonical);
 #ifdef PIGS_MIGHT_FLY
-    unsetFlag(object->flags, O_GARBAGE);
+    unsetFlag(*flagsptr, O_GARBAGE);
 #endif
-    setFlag(object->flags, O_BLACK);
+    setFlag(*flagsptr, O_BLACK);
     enterSafeRegion(thread);
   }
   ht_unlock(string_hashtable);
 
-  return instance;
+  /*
+  ** If we found a canonical instance, we aren't creating a new reference to 
+  ** the w_string, so we deregister it.
+  */
+  if (canonical) {
+    deregisterString(r);
+
+    return canonical;
+
+  }
+
+  /*
+  ** OK, no canonical instance up to now so we create a new one. It's safe 
+  ** from being GC'd, because allocInstance() creates a local reference to it.
+  */
+  new_instance = allocStringInstance(thread);
+  if (!new_instance) {
+    deregisterString(r);
+
+    return NULL;
+
+  }
+
+  ht_lock(string_hashtable);
+  setWotsitField(new_instance, F_String_wotsit, r);
+  canonical = (w_instance)ht_write_no_lock(interned_string_hashtable, r, new_instance);
+  /*
+  ** If we just overwrote a canonical instance, back everything out (and
+  ** allow new_instance to be reclaimed by GC).
+  */
+  if (canonical) {
+    ht_write_no_lock(interned_string_hashtable, r, canonical);
+    deregisterString(r);
+    ht_unlock(string_hashtable);
+    removeLocalReference(thread, new_instance);
+
+    return canonical;
+
+  }
+
+  /*
+  ** Otherwise, everything's just fine.
+  */
+  ht_unlock(string_hashtable);
+
+  return new_instance;
 }
 
 
