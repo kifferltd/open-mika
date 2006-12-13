@@ -377,13 +377,14 @@ static void fillParentArray(w_thread thread, w_aas parent) {
         return;
       }
       parent->next->Array[F_Array_length] = parent->next->length;
-      
-      setArrayReferenceField(parent->Array, parent->next->Array, x);
-      // CG 20040114 (well, 20040116) thread->top->auxs -= 1; // Do a manual pop of the local reference; saves stack...
+
+      enterUnsafeRegion(thread);      
+      setArrayReferenceField_unsafe(parent->Array, parent->next->Array, x);
+      popLocalReference(thread->top);
+      enterSafeRegion(thread);
       fillParentArray(thread, parent->next);
     }
   }
-
 }
 
 w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
