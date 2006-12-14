@@ -932,7 +932,7 @@ void startStrings() {
   ** Allocate the hashtable in which interned strings will be stored.
   */
 
-  interned_string_hashtable = ht_create((char *)"hashtable:internees", INTERNED_STRING_HASHTABLE_SIZE, ht_stringHash, ht_stringCompare, 0, 0);
+  interned_string_hashtable = ht_create((char *)"hashtable:internees", INTERNED_STRING_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "created interned_string_hashtable at %p\n", interned_string_hashtable);
 
   /*
@@ -1139,7 +1139,7 @@ w_instance getStringInstance(w_string s) {
   ** it will see our O_BLACK flag and not reclaim the instance).
   */
   ht_lock(string_hashtable);
-  canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+  canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)r);
   if (canonical) {
     enterUnsafeRegion(thread);
     addLocalReference(thread, canonical);
