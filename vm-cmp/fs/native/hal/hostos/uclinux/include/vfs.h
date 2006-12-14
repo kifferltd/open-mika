@@ -248,11 +248,21 @@ static inline vfs_FILE *vfs_fopen(const w_ubyte *path, const w_ubyte *mode) {
   return stream;
 }
 
-/*
-** static inline vfs_FILE *vfs_fdopen(int fildes, const w_ubyte *mode) {
-** }
-** -> This function is not supported !!!
-*/
+static inline vfs_FILE *vfs_fdopen(int file_desc, const w_ubyte *mode) {
+  vfs_FILE   *stream = allocMem(sizeof(vfs_FILE));         /* Allocate memory */
+  if (stream) {
+    stream->file_desc = file_desc;                    /* Store the file descriptor */
+    stream->error = 0;
+    stream->mode = allocMem((w_size)strlen(mode)+1); /* Allocate memory to store the mode */
+    if (stream->mode) {
+      strcpy(stream->mode, mode);                     /* Copy the mode to the stream */
+    } else {
+      releaseMem(stream);
+      return NULL;
+    }
+  }
+  return stream;
+}
 
 static inline w_word vfs_fclose(vfs_FILE *stream) {
   vfs_close(stream->file_desc);

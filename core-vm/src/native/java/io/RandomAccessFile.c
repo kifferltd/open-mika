@@ -82,7 +82,7 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
     return 1;
   } 
 
-  file = fdopen(fdesc, fmode);
+  file = vfs_fdopen(fdesc, fmode);
 
   if (file == NULL) {
     return 1;
