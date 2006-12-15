@@ -1,0 +1,195 @@
+###########################################################################
+# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Philips site 5, box 3       info@acunia.com                           #
+#   3001 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+#                                                                         #
+# Modifications for Mika copyright 2004, 2005, 2006 by (C) Chris Gray,    #
+# /k/ Embedded Java Solutions. All rights reserved.                       #
+#                                                                         #
+###########################################################################
+
+#
+# Debug is set off per default.
+#
+
+DEBUG default = false ;
+
+#
+# If DETECT_FLYING_PIGS is true, a check will be performed for objects which
+# appear to be unreachable in one GC pass and reachable in the next. This of
+# course "cannot happen", hence the name ...
+# Normally the VM recovers well from these "glitches", so this check should
+# be disabled for production code.
+#
+
+DETECT_FLYING_PIGS default = false ;
+
+#
+# SCHEDULER must be 'oswald' for uClinux.
+# For Linux and NetBSD, scheduler must be 'o4p', except on arm and x86,
+# where either 'oswald' or 'o4p' are allowed.
+#
+
+SCHEDULER default = oswald ;
+
+#
+# Java Native Interface support is set on per default.
+#
+
+JNI default = true ;
+
+#
+# The Garbage Collector is set on per default.
+#
+
+GC default = true ;
+
+#
+# FILESYSTEM can take the values `native' (meaning use the filesystem of
+# the host os) or `vfs' (meaning use Mika's own built-in implementation
+# of e2fs).
+# The default is `native', i.e. use the hostos filesystem.
+#
+
+FILESYSTEM default = native ;
+
+#
+# If the hostos filesystem is used then when Mika is run it will translate
+# the prefix '{}/' attached to any path into $(FSROOT); e.g. the path
+# will be translated to $(FSROOT)/system/wre.jar.
+# FSROOT may be an absolute or a relative path; if relative it is interpreted 
+# relative to the location of the Mika binary (args[0]), not the current 
+# directory of the shell from which Mika was launched.
+#
+
+FSROOT default = ../ ;
+
+#
+# OROOT will be set via the commandline (by ant). This directory should be used
+# by ant to store all of it's output 
+#
+
+#
+# If Mika is run with no -Xbootclasspath parameter, the bootstrap class 
+# loader will search the file $(BOOTCLASSFILE), located in {}/$(BOOTCLASSDIR).
+# These variables also specify where the zipfile of bootstrap classes will
+# be created, and what name it will be given. 
+#
+
+BOOTCLASSDIR  default = "lib/mika" ;
+BOOTCLASSFILE default = "wre.jar" ;
+
+TESTDIR default = "test" ;
+INSTALLTESTDIR  default = $(OROOT)/$(TESTDIR) ;
+
+#
+# network defaults to the hostos native network.
+#
+
+NETWORK default = native ;
+
+#
+# Modules are default switched off.
+#
+
+MODULES default = false ;
+
+#
+# Setting SHARED_OBJECTS to true makes it possible to load lib.so files.
+#
+
+SHARED_OBJECTS default = true ;
+
+#
+# Static linking is default. 
+#
+
+STATIC default = false ;
+
+#
+# When SHARED_HEAP is enabled, Oswald will export malloc(), calloc(), realloc()
+# and free. When a loaded lib.so file wants some memory, they'll get some
+# from the same heap as Mika.
+#
+
+SHARED_HEAP default = false ;
+
+#
+# The Java Debug Wire Protocol is disabled by default, because currently
+# JDPA does not work.
+#
+
+JDWP default = false ;
+
+#
+# When METHOD_DEBUG is enabled, line-number information included in class
+# files will be used by the VM when printing a stack trace. Note that this
+# substantially increases the amount of memory used to store classes.
+#
+
+METHOD_DEBUG = false ;
+
+# By default code will be generated in unicode.c to cover only ISO 8859-1. 
+# Specify a colon-separated list of subset numbers to extend Unicode coverage
+# to one or more subsets of Unicode: see tool/script/unicode.awk for details.
+# Specify 999 to get complete Unicode coverage.  Characters from non-included 
+# subsets will be treated by Mika as undefined.
+#
+
+UNICODE_SUBSETS default = 0 ;
+
+#
+# The mauve and JNI tests are not enabled. (The code to generate them is
+# not included in this package).
+#
+
+TESTS default = false ;
+
+#
+# If no -Xmx=<bytes> flag is specified on the command line, the default heap 
+# size is used. The usual suffices 'k', 'm' can be used.
+#
+
+DEFAULT_HEAP_SIZE default = 8M ;
+
+#
+# CPU_MIPS is used to calculate a sensible duration for the OSwald 'tick'.
+# Choose a "round" number rather than a pedantically accurate one.
+#
+
+CPU_MIPS default = 40 ;
+
+#
+# Timers. The timer granularity used internally will never be finer than
+# HOST_TIMER_GRANULARITY microseconds (for SCHEDULER=oswald it may be a
+# multiple of this, if CPU_MIPS is low). If USE_NANOSLEEP is true, O4P
+# will use the nanosleep(2) function to control the timers, otherwise
+# usleep(3) is used.
+# Note: we say 20 msec when the truth is 10 msec. That's how slow nanosleep runs. 
+
+HOST_TIMER_GRANULARITY default = 20000 ;
+USE_NANOSLEEP default = true ;
+
+#
+# allows you to specify a different tool chain set then normally used
+# for the chosen CPU. 
+#
+TOOL_CONFIG default = none ;
+

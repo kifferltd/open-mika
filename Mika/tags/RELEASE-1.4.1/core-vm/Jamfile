@@ -1,0 +1,114 @@
+###########################################################################
+# Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Vanden Tymplestraat 35      info@acunia.com                           #
+#   3000 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+#                                                                         #
+# Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded      #
+# Java Solutions. All rights reserved.                                    #
+#                                                                         #
+###########################################################################
+
+
+#
+# $Id: Jamfile,v 1.7 2006/09/18 14:51:14 cvsroot Exp $
+#
+
+SubDir WONKA_TOP core-vm ;
+
+LOCATE_TARGET = $(OROOT)/mika/bin ;
+
+HDRS += $(WONKA_TOP)/core-vm/include ;
+HDRS += $(WONKA_TOP)/core-vm/hal/cpu/$(CPU)/include ;
+HDRS += $(WONKA_TOP)/core-vm/hal/hostos/$(HOSTOS)/include ;
+SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
+switch $(HOSTOS) {
+  case linux : {
+    HDRS += $(WONKA_TOP)/core-vm/hal/hostos/posix/include ;
+  }
+  case uclinux : {
+    HDRS += $(WONKA_TOP)/core-vm/hal/hostos/posix/include ;
+  }
+  case netbsd : {
+    HDRS += $(WONKA_TOP)/core-vm/hal/hostos/posix/include ;
+  }
+}
+
+#
+# For generated header files, we include the output directory in the
+# header search path.
+#
+
+HDRS += $(OROOT)/mika/bin ;
+
+#
+# Modules
+#
+
+if $(MODULES) = true {
+  
+  LOCATE_SOURCE = $(OROOT)/mika/bin ;
+
+  DEPENDS symtable_static.c : $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_static ; 
+  DEPENDS symtable_dynamic.c : $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_dynamic ; 
+  DEPENDS symtable_dynamic.c : $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_include ; 
+  
+  DEPENDS wonka_mod : $(LOCATE_SOURCE)/empty ;
+  DEPENDS symtable_static.c : wonka_mod ;
+  DEPENDS mika : wonka_mod ;
+  
+  Main wonka_mod : main.c empty_static.c empty_dynamic.c ;
+  LinkLibraries wonka_mod : $(WONKA_LIB) $(COMMON_LIB) $(OSWALD_LIB) $(COMM_LIB) $(FS_LIB) $(UNICODE_LIB) ;
+
+  Main mika : main.c symtable_static.c symtable_dynamic.c ;
+  LinkLibraries mika : $(WONKA_LIB) $(COMMON_LIB) $(OSWALD_LIB) $(COMM_LIB) $(FS_LIB) $(UNICODE_LIB) ;
+
+  File $(LOCATE_SOURCE)/empty : /dev/null ;
+  
+  GenFile empty_static.c : crestab : --output=$(LOCATE_SOURCE)/empty_static.c --relocatable=/bin/ls --table=$(LOCATE_SOURCE)/empty --verbose ;
+  GenFile empty_dynamic.c : credtab : $(LOCATE_SOURCE)/empty $(LOCATE_SOURCE)/empty $(LOCATE_SOURCE)/empty_dynamic.c ;
+  GenFile symtable_static.c : crestab : --output=$(LOCATE_SOURCE)/symtable_static.c --relocatable=$(LOCATE_TARGET)/wonka_mod --table=$(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_static --verbose --extra=50 ;
+  GenFile symtable_dynamic.c : credtab : $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_dynamic $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/$(AWT_DEVICE)/module_include $(LOCATE_SOURCE)/symtable_dynamic.c ; 
+
+} else {
+  
+  Main mika : main.c ;
+  
+  LinkLibraries mika : $(WONKA_LIB) ;
+
+  LinkLibraries mika : $(COMMON_LIB) $(OSWALD_LIB) $(AWT_LIB) $(FS_LIB) $(UNICODE_LIB) ;
+
+  if $(JAVAX_COMM) = true {
+     LinkLibraries mika : $(COMM_LIB) ;
+  }
+ 
+  if $(SCHEDULER) = "o4e" {
+     LinkLibraries mika : $(WONKA_TOP)/vm-cmp/fs/vfs/src/image.a ;
+  }
+ 
+  if $(USE_ZLIB) = "true" {
+     LinkLibraries mika : $(Z_LIB) ;
+  }
+}  
+
+InstallBin $(BINDIR) : mika ;
+
+SubInclude WONKA_TOP core-vm src ;
+SubInclude WONKA_TOP core-vm hal ;
+

@@ -1,0 +1,56 @@
+###########################################################################
+# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Philips-site 5, box 3       info@acunia.com                           #
+#   3001 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+###########################################################################
+
+
+__floatdidf f
+__strtol_internal v
+__udivsi3 f
+__divsi3 f
+__cmpdi2 f
+__ctype_b v
+__fixunsdfdi f
+__fixunsdfdi f
+__modsi3 f
+strcpy f
+memcpy f
+ioctl f
+printf f
+mmap f
+read f
+strncmp f
+strncpy f
+memcmp f
+sscanf f
+memset f
+strcmp f
+exit f
+strlen f
+open f
+x_mutex_create f
+x_mutex_lock f
+x_mutex_unlock f
+x_thread_create f
+x_thread_sleep f
+_deregisterString f
+getDeviceByName f
+

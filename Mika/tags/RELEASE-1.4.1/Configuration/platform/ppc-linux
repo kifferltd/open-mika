@@ -1,0 +1,17 @@
+###########################################################################
+# Copyright (c) 2003, 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   #
+# Solutions.                               All rights reserved.           #
+###########################################################################
+
+
+CPU_MIPS = 165 ;
+DEFAULT_HEAP_SIZE default = 16M ;
+
+STATIC default = true ;
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = true ;
+
+HOSTOS = linux ;
+CPU = ppc ;
+
+SCHEDULER = o4p ;

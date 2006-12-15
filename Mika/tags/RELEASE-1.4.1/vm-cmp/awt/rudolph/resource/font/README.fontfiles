@@ -1,0 +1,92 @@
+The courier and helvetica bdf files in this directory were obtained as follows :
+
+  download 100 dpi fonts from the repository
+	http://cvsweb.netbsd.org/bsdweb.cgi/xsrc/xc/fonts/bdf/100dpi
+	
+  select the following files:
+     courB12.bdf courB14.bdf courB10.bdf courB18.bdf courB24.bdf
+     courO12.bdf courO14.bdf courO10.bdf courO18.bdf courO24.bdf
+     courR12.bdf courR14.bdf courR10.bdf courR18.bdf courR24.bdf
+     helvB12.bdf helvB14.bdf helvB10.bdf helvB18.bdf helvB24.bdf
+     helvO12.bdf helvO14.bdf helvO10.bdf helvO18.bdf helvO24.bdf
+     helvR12.bdf helvR14.bdf helvR10.bdf helvR18.bdf helvR24.bdf
+
+  rename these as follows
+     courB17.bdf courB20.bdf courB14.bdf courB25.bdf courB34.bdf
+     courO17.bdf courO20.bdf courO14.bdf courO25.bdf courO34.bdf
+     courR17.bdf courR20.bdf courR14.bdf courR25.bdf courR34.bdf
+     helvB17.bdf helvB20.bdf helvB14.bdf helvB25.bdf helvB34.bdf
+     helvO17.bdf helvO20.bdf helvO14.bdf helvO25.bdf helvO34.bdf
+     helvR17.bdf helvR20.bdf helvR14.bdf helvR25.bdf helvR34.bdf
+
+
+  next download 75 dpi fonts from the repository
+	http://cvsweb.netbsd.org/bsdweb.cgi/xsrc/xc/fonts/bdf/75dpi
+
+  select the following files:
+     courB10.bdf courB12.bdf
+     courO10.bdf courO12.bdf
+     courR10.bdf courR12.bdf
+     helvB08.bdf helvB10.bdf helvB12.bdf  helvB18.bdf
+     helvO08.bdf helvO10.bdf helvO12.bdf  helvO18.bdf
+     helvR08.bdf helvR10.bdf helvR12.bdf  helvR18.bdf
+
+
+The nippon (CJKV) bdf files in this directory were obtained as follows :
+
+  download file
+       http://www.cl.cam.ac.uk/~mgk25/download/ucs-fonts-asian.tar.gz
+  or got there via the webpage
+       http://www.cl.cam.ac.uk/~mgk25/ucs-fonts.html
+
+  and select following files from the archive:
+       12x13ja.bdf
+       18x18ja.bdf
+
+  rename these files as
+       nippon13complete.bdf
+       nippon18complete.bdf
+
+  copy these files to
+       nippon13.bdf
+       nippon18.bdf
+
+  edit the files nippon13.bdf and nippon18.bdf to
+       - not remove character 0000
+       - replace character definitions in the range 0020-00ff
+       (double width latin characters, like the kanji), with corresponding
+       character definitions from file helvR12.bdf and file helvR17.bdf
+       respectively (single width, proportionally spaced characters).
+       - remove character definitions in the range 0100-2fff
+       - remove character definitions in the range 3100-4dff
+       - remove character definitions in the range 9fb0-ffff
+       - replace the value of the 'CHARS' property with the true number
+       of character definitions in the file
+       - set the value of the 'SPACE' property to "P"
+
+  this results in following characteristics for file nippon13.bdf
+       - originally contained 19192 glyphs
+       - removed 12443 glyphs
+       - 6749 unicodes remain in the following ranges:
+         Latin 0000-00ff, katakana 3000-30ff, Kanji 4e00-9fa0.
+
+  this results in following characteristics for file nippon18.bdf
+       - originally contained 19168 glyphs
+       - removed 4118 glyphs
+       - 15050 unicodes remain in the following ranges:
+         Latin 0000-00ff, katakana 3000-30ff, Kanji 4e00-9fa0.
+
+To obtain the pcf files, convert the bdf files, except nippon13complete.bdf
+and nippon18complete.bdf, using the tool 'bdftopcf' as follows
+
+	bdftopcf -o <output file>  <input file>
+	
+	
+In the current release only part of the fonts in this directory are available
+for use with wonka. See the commented lines in file Jamfile to find out which
+fonts are currently not available. To make one of these fonts available for use,
+ - remove the comment character from the corresponding line in Jamfile,
+ - remove comment characters '//' in the file
+   open-wonka/awt/rudolph/src/native/java/awt/Font.c of the corresponding
+   'Font_iitialize' call in function 'Font_init'
+ - rebuild wonka

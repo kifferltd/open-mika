@@ -1,0 +1,177 @@
+%
+% $Id: memory.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Memory Allocation}
+
+\subsubsection{Operation}
+
+\oswald provides mechanisms for dynamically allocating and releasing memory,
+much like the well known \txt{malloc} and \txt{free} functions from
+the standard C library\footnote{The memory allocation in \oswald is based on
+the ideas of the very well known and very good memory routines of Doug Lea.
+Doug, when we ever meet, I'll buy you a beer...}.
+Besides allocating and freeing memory like malloc and free does, the memory
+routines of \oswald provide extra functionality like a fast freeing function
+with later scaveging of blocks, memory tagging and functions to walk over
+the memory blocks and calling a user defined function on each block.
+
+There are however, some issues that are specific for the \oswald dynamic
+memory allocator.
+
+\begin{itemize}
+\item The largest memory chunk that can be allocated in a single call is
+8388596 bytes or 8 Mb - 4 bytes, exactly. Limiting the blocks to this maximum size enables us
+to implement memory tags, described in the next bullet. Note that this does
+not mean that only 8 Mb is available; if more than 8 Mb of memory is
+required to perform a job, several allocations need to be done one after
+another. 
+\item Memory tags are 9 bits of information that can be assigned to a block
+of allocated memory, for which no extra space needs to be allocated. The 9
+bit tags are contained in the normal internal memory householding
+information. The tag bits can be used for whatever purpose the programmer
+has in mind. 
+\item \oswald provides a function, with a callback mechanism, that allows a
+programmer to walk over all the allocated memory blocks. This feature, in
+combination with the tag bits, can provide powerfull mechanisms, without
+memory space overhead, to manipulate certain types of memory blocks. It can
+reduce the number of referal pointers and thus memory space. It can for
+instance we used to replace 'next' and 'previous' pointers in structures
+that would require a linked list operation and for which speed is not that
+important.
+\item \oswald provides a \txt{x\_mem\_discard} function that very quickly marks a
+memory block as garbage. It doesn't free the memory yet, at the moment of
+the call. The freeing is performed by a call to \txt{x\_mem\_collect}
+that coalesces and frees all garbage blocks in a single call. This reduces
+locking and unlocking overhead and probably reduces fragmentation when the
+collecting is done after a subsequent discarded of a whole slew of memory
+blocks.
+\end{itemize}
+
+\subsubsection{Allocating Memory}
+
+Memory is allocated by means of the following call:
+
+\txt{void * x\_mem\_alloc(x\_size numbytes, x\_word id);}
+
+which returns \txt{NULL} on failure or a non \txt{NULL} pointer when the allocation was
+successful. Allocations larger than 8 Mb - 4 bytes always return \txt{NULL}. The
+contents of the returned memory block are not cleared.
+
+For obtaining a cleared memory block, the call:
+
+\txt{void * x\_mem\_calloc(x\_size numbytes, x\_word id);}
+
+can be used. The function internally uses a duff's device for quickly
+clearing memory.
+
+Note that both allocation functions require and ID to the passed. This is
+the information that will be stored in the header of the block, in the tag
+field. ID values 0 to 31 inclusive are reserved for \oswald.
+
+\subsubsection{Reallocating Memory}
+
+\txt{void * x\_mem\_realloc(void * block, x\_size numbytes);}
+
+\subsubsection{Releasing Memory}
+
+\txt{void x\_mem\_free(void * block);}
+
+\subsubsection{Discarding Memory \& Collecting It}
+
+\txt{void x\_mem\_discard(void * block);}
+
+\txt{x\_status x\_mem\_collect(x\_size * bytes, x\_size * blocks);}
+
+\subsubsection{Setting \& Reading Tags}
+
+Memory tags are a 9 bit piece of information that can be used and that carry
+no overhead in the memory usage. They are usefull to replace \txt{next}
+and \txt{previous} pointer links in lists. When a structure is 'listed'
+but doesn't require fast removal and insertion or lookup, the tag can be
+used to store the type of the structure and the memory walker function can
+be used to check for a certain tag and perform operations on the found
+blocks. 
+
+A tag can be set with the call:
+
+\txt{x\_status x\_mem\_tag\_set(void * block, x\_word tag);}
+
+The lower 9 bits of the tag will be stored in the memory chunk, the higher
+bits above the first 9 bytes are silently discarded. The return value of
+this call is the return status of the \txt{x\_monitor\_enter} or
+\txt{x\_monitor\_exit} call that is performed inside, since the tag is
+copied in the chunk after locking the memory functions.
+
+The 9 bits can be read out by means of the call:
+
+\txt{x\_word x\_mem\_tag\_get(void * block);}
+
+Which will return the 9 bits of tag information in the lower 9 bits of the
+returned word.
+
+Note that \oswald reserves the values 0 to 31 inclusive, of the tag
+information. With 9 bits of information, this leaves us with, $512 - 32 =
+480$ user defined values that can be stored in the tag bits. Not much, but
+they don't carry overhead either...
+
+\subsubsection{Getting the Size of a Chunk}
+
+The following function will return the useable size in bytes of a block of
+memory.
+
+\txt{x\_size x\_mem\_size(void * block);}
+
+The value returned could be very well larger than the number of bytes that
+has been requested for. Since all memory chunks size are 8 byte aligned, a
+call to \txt{x\_mem\_alloc(22)} will yield a return value from this
+function of 28. Also when the memory allocator is chopping up a block to
+return in a call to e.g. \txt{x\_mem\_alloc} and the remainder block
+would become smaller than 16 bytes, the block is not chopped up and the
+internally recorded size will be larger than the argument to the allocator
+function. In any case, it is safe to use the number of bytes returned by
+this call for storing data.
+
+\subsubsection{Iterating over Allocated Memory}
+
+\oswald provides a function that can be used to walk over all the allocated
+memory blocks.
+
+\txt{x\_status x\_mem\_walk(x\_sleep to, void (*cb)(void * m, void * a), void * a);}
+
+This function will walk over all the memory blocks and will call the
+callback function \txt{cb} for each memory block that is not freed or
+garbage. The arguments to the callback function are \txt{m} which is a
+pointer to the in use memory block and \txt{a} a copy of the pointer
+argument passed to the memory walk function, which can be used for whatever
+purpose. 
+
+The \txt{to} parameter is a timeout. Before all the blocks are scanned,
+the memory allocator is locked and this timeout value is used to acquire the
+memory allocator. Its meaning is the same as the timeout parameter of the
+\txt{x\_monitor\_enter} function. After the walk, the lock is released.
+
+The return status of the function is the return status of the monitor lock
+that is used inside the walking function. Since the walker function provides
+a security mechanism that prevents the same thread of calling it twice
+(this could happen by the code in the callback function), the return status
+can also be \txt{xs\_bad\_context} to indicate that same thread tried to
+call the walker function more than once.
+
+Note that you \textit{SHOULD NOT} call \txt{x\_mem\_free} from within the
+callback function as it would change the internal lists and could crash.
+There is no provision yet to secure for this situation\footnote{It would not
+be difficult to do so, but would increase overhead during normal
+operations.}. It is safe to call \txt{x\_mem\_discard} on the block since
+this call does not change the interal lists.
+
+\subsubsection{Pointer Checking}
+
+A function that can be used to check if a certain pointer is pointing to a
+memory block that has been allocated through any of the allocation routines
+is:
+
+\txt{x\_boolean x\_mem\_is\_block(void * pointer);}
+
+It will return \txt{true} when the pointer points to memory that is
+allocated and is not freed allready and is not garbage.

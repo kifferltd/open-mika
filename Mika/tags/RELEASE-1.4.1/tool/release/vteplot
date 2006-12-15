@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#set -x
+let n=0
+PLOT="plot"
+TEMP=""
+while [ $1 ] ; do 
+  let n=n+1
+  grep "memory:" $1  | cut -d" " -f3 > $(dirname $1)/__$(basename $1)
+  if [ $n -gt 1 ]; then
+    PLOT=${PLOT}","
+  fi
+  PLOT=${PLOT}" \"$(dirname $1)/__$(basename $1)\" with lines"
+  TEMP=${TEMP}" $(dirname $1)/__$(basename $1)"
+  shift
+done
+
+if [ $n -gt 0 ]; then
+  {
+  echo "set terminal png small color"
+  echo $PLOT
+  } | gnuplot > vteplot.png
+  echo "output written to file vteplot.png"
+  /bin/rm $TEMP
+else
+  echo "This script takes one or more vte.log files as input;"
+  echo "from each input file it extracts the memory usage figures"
+  echo "on the lines containing the message string 'memory: ';"
+  echo "it then plots the memory usage graph for each input file"
+  echo "in a single png image which is written to file vteplot.png"
+  echo
+  echo "usage $0 {<vte log file> [...]}"
+
+fi
+
+
