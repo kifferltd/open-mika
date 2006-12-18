@@ -76,7 +76,6 @@ public class PlatformParser extends Task {
       call.setDescription(target);
       call.setTaskName("/k/" + target);
       call.setTarget(target);
-      call.init();
       call.execute();
       
     }
