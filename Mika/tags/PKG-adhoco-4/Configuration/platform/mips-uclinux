@@ -1,0 +1,14 @@
+###########################################################################
+# Copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions           #
+#                                          All rights reserved.           #
+###########################################################################
+
+
+CPU_MIPS = 200 ;
+DEFAULT_HEAP_SIZE default = 16M ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = false ;
+
+CPU = mips ;
+HOSTOS = uclinux ;

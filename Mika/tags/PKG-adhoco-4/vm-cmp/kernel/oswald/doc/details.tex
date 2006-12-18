@@ -1,0 +1,55 @@
+ 
+% ENTER PRODUCT NAME, DOCUMENT TYPE, & FILE NAME FOR THE DOCUMENT %
+\newcommand{\ProductName}{\oswald $^{\normalsize{\texttrademark}}$} % type in product
+
+\newcommand{\DocumentType}{\Huge{Reference Specification}} % type in document type (e.g. White Paper)
+
+\newcommand{\FileName}{Oswald_REF-SPEC} % without the extension.  be sure there
+                                    % are no spaces in between the { } curly
+                                    % brackets.... 
+
+
+% ENTER Document Title & DOCUMENT DESCRIPTION:                    %
+\newcommand{\DocumentTitle}{The Real Time Operating Layer for Wonka}
+
+\newcommand{\DocumentDescription}{\textsf{OSwald}, \emph{The Real Time Operating Layer for
+Wonka}, was designed with specific goals.  The main goal being to complement
+the Wonka Java Virtual Kernel.  The aim of this reference
+specification is to examine the specific design goals and their implementation
+so that developers may utilize and modify \oswald to their
+needs. }
+
+
+% ENTER THE PRODUCT LOGO and ITS RELATIVE LOCATION FROM THIS DIRECTORY:
+% (i.e.               ../../../doc/template/AlogoColor'
+%       or simply     ProductLogo ' if it resides in current directory)
+
+\newcommand{\ProductLogo}{../../../doc/template/AlogoColor.jpg}
+
+
+% DEFINE TEMPLATE DIR & THE VARIOUS GRAPHICS DIRECTORIES         %
+% AND THE GRAPHICS EXTENSION...                                  %
+
+\newcommand{\templatepath}{\graphicspath{
+                        {./}
+                        {../../../doc/template/} 
+                                                   }}
+
+\newcommand{\GraphicsExtension}{.pdf}
+
+
+% ENTER THE AUTHOR OR GROUP RESPONSIBLE FOR MAINTAINING DOCUMENT:
+\newcommand{\TheAuthor}{Steven Buytaert}
+
+% ENTER DATE CREATED:  
+\newcommand{\datewhen}{April 2001}
+
+
+% ENTER THE DESIRED HEADER AND FOOTER TEXT:
+\newcommand{\HeaderText}{Proprietary}
+% (typically    Internal - Confidential' otherwise suggest \acunia\ )
+
+\newcommand{\FooterText}{\DocumentTitle}
+% (typically  `Article Title')
+
+
