@@ -509,7 +509,7 @@ void w_dump_locks(void) {
     w_dump("       GC sweeping thread : %t\n", sweeping_thread);
   }
   if (blocking_all_threads) {
-    w_dump("     %s blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : "JDWP");
+    w_dump("     %s blocking all threads : true\n", isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : "JDWP");
   }
   w_dump("\n");
   w_dump("   Instance locks :\n");
