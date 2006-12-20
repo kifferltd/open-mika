@@ -382,21 +382,38 @@ Class_get_constructors
 
 }
 
+static w_int addFieldsToFifo(w_clazz current_clazz, w_fifo fields_fifo, w_int mtype) {
+  w_field field;
+  w_int i;
+  w_int relevant;
+  for (i = 0; i < current_clazz->numFields; i++) {
+    field = &current_clazz->own_fields[i];
+    woempa(3, "%02d: field %w is %s, declared in %k\n",i,NM(field),
+              isSet(field->flags, ACC_PUBLIC)?"public":"non-public", field->declaring_clazz);
+    relevant = (mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
+             || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz);
+
+    woempa(3,"field[%d] %w is %srelevant\n",i,NM(field),relevant?"":"ir");
+    if(relevant) {
+      if(putFifo(field, fields_fifo) < 0) {
+        releaseFifo(fields_fifo);
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
 /*
 ** get_fields gets the fields (PUBLIC or DECLARED, depending ** on mtype)
 ** of this class, and of its superclasses if mtype is PUBLIC.
 */
-w_instance
-Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
+w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz = Class2clazz(thisClass);
-  w_int relevant;
-  w_size i;
   w_int numRelevantFields;
-  w_field field;
-  w_clazz current_clazz;
-  w_instance Field;
+  w_fifo fields;
   w_instance Array;
   w_instance exception;
   w_clazz   clazzArrayOf_Field = getNextDimension(clazzField, NULL);
@@ -405,60 +422,59 @@ Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
   ** Find the number of appropriate fields first.  
   */
 
-  woempa(1,"looking for %s fields of %k\n", mtype==PUBLIC ? "public" : "declared", clazz);
-  numRelevantFields = 0;
-  current_clazz=clazz;
-  while (current_clazz) {
-    for (i = 0; i < current_clazz->numFields; i++) {
-      field = &current_clazz->own_fields[i];
-      woempa(1,"%02d: field %w is %s, declared in %k\n",i,NM(field),isSet(field->flags, ACC_PUBLIC)?"public":"non-public", field->declaring_clazz);
-      relevant = (mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
-          || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz);
-      woempa(1,"field[%d] %w is %srelevant\n",i,NM(field),relevant?"":"ir");
-      numRelevantFields += relevant;
-    }
-    woempa(1,"found %d suitable fields in %k\n", numRelevantFields,  current_clazz);
-    if (mtype==DECLARED) break;
-    if (isSet(current_clazz->flags,ACC_INTERFACE)) {
-      current_clazz = current_clazz->interfaces[0];
-    }
-    else {
-      current_clazz = getSuper(current_clazz);
-    }
+  woempa(1, "looking for %s fields of %K\n", mtype==PUBLIC ? "public" : "declared", clazz);
+
+  fields = allocFifo((w_size)clazz->numFields);
+  if(fields == NULL) {
+    return NULL;
   }
-  
-  exception = NULL;
 
-  Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
+  if(addFieldsToFifo(clazz, fields, mtype)) {
+    return NULL;
+  }
 
-  if (Array) {
-    numRelevantFields = 0;
-    current_clazz=clazz;
-    while (current_clazz) {
-      for (i = 0; i < current_clazz->numFields; i++) {
-        field = &current_clazz->own_fields[i];
-        if ((mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
-         || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz)
-          ) {
-          Field = allocInstance(JNIEnv2w_thread(env), clazzField);
-          if (Field==NULL) {
-            woempa(9, "Unable to allocate Field\n");
-            break;
-          }
-          setWotsitField(Field, F_Field_wotsit, field);
-          setArrayReferenceField(Array, Field, numRelevantFields);
-          numRelevantFields += 1;
-        }
+  if(mtype == PUBLIC) {
+    if (isSet(clazz->flags,ACC_INTERFACE)) {
+      int j;
+      for (j = 0; j < clazz->numInterfaces; ++j) {
+        if(addFieldsToFifo(clazz->interfaces[j],fields, PUBLIC)) {
+          return NULL;
+        }  
       }
-      if (mtype==DECLARED) break;
-      if (isSet(current_clazz->flags,ACC_INTERFACE)) {
-        current_clazz = current_clazz->interfaces[0];
-      }
-      else {
+    } else {
+      w_clazz current_clazz = getSuper(current_clazz);
+      while (current_clazz) {
+        if(addFieldsToFifo(current_clazz,fields, PUBLIC)) {
+          return NULL;
+        }  
         current_clazz = getSuper(current_clazz);
       }
     }
   }
+  
+  exception = NULL;
+  numRelevantFields = fields->numElements;
+
+
+  Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
+
+  if (Array) {
+    int i;
+
+    for(i = 0; i < numRelevantFields ; i++) {
+      w_field field = (w_field) getFifo(fields);
+      w_instance Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+
+      if (Field==NULL) {
+        woempa(9, "Unable to allocate Field\n");
+        break;
+      }
+      setWotsitField(Field, F_Field_wotsit, field);
+      setArrayReferenceField(Array, Field, i);
+    }
+  }
+
+  releaseFifo(fields);
 
   return Array;
 
@@ -734,7 +750,7 @@ w_field seekField (w_clazz clazz, w_string name, int mtype) {
 */
 
   for (i=0; !result && i<clazz->numInterfaces; i++) {
-    woempa(1, " --> trying superinterface %x\n", clazz->interfaces[0]);
+    woempa(1, " --> trying superinterface %x\n", clazz->interfaces[i]);
     result = seekField(clazz->interfaces[i],name,mtype);
   }
 
@@ -964,7 +980,20 @@ w_instance Class_getComponentType(JNIEnv *env, w_instance thisClass) {
 ** dreaded ambiguous ACC_SYNCwhatever flag.
 */
 w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
-  w_word flags = Class2clazz(Class)->flags;
+  w_clazz clazz = Class2clazz(Class);
+  w_word flags;
+  int i;
+
+  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+    return NULL;
+  }
+  for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
+    if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
+      return clazz->temp.inner_class_info[i].inner_class_access_flags;
+    }
+  }
+
+  flags = Class2clazz(Class)->flags;
 
   woempa(1, "Class %k has modifiers %s %s %s %s %s %s (0x%08x).\n", Class2clazz(Class), isSet(flags,ACC_PUBLIC)?"public":"",isSet(flags,ACC_PRIVATE)?"private":"",isSet(flags,ACC_PROTECTED)?"protected":"",isSet(flags,ACC_ABSTRACT)?"abstract":"",isSet(flags,ACC_FINAL)?"final":"",isSet(flags,ACC_INTERFACE)?"interface":"",flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_ABSTRACT | ACC_FINAL));
 
