@@ -109,6 +109,11 @@ void print_jdwp_help(void) {
 
 }
 
+
+void  abortJDWP() {
+  wabort(ABORT_WONKA, "failed to create JDWP socket due to '%s'\n",strerror(errno));
+
+}
 /*
 ** Connect to the debugger. Only TCP/IP socket connections are possible for now. In the future, 
 ** this will most likely be extended to connections over serial ports and others.
@@ -141,6 +146,11 @@ void jdwp_connect() {
   */
 
   sock = w_socket(PF_INET, SOCK_STREAM, 0);
+
+  if(sock == -1) {
+    abortJDWP();
+  }
+
   memset(&sa,0,sizeof(sa)); 
   sa.sin_addr.s_addr = *((unsigned long*)host->h_addr_list[0]);
   sa.sin_family = host->h_addrtype;
@@ -159,7 +169,13 @@ void jdwp_connect() {
       serversock = sock;
       sa.sin_addr.s_addr = INADDR_ANY;
       rc = w_bind(serversock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
-      rc = w_listen(serversock, 1);  
+      if(rc == -1) {
+        abortJDWP();
+      }
+      rc = w_listen(serversock, 1);
+      if(rc == -1) {
+        abortJDWP();
+      }
     }
 
     woempa(7, "Calling accept() on socket %d\n", serversock);
@@ -182,7 +198,7 @@ void jdwp_connect() {
     woempa(9, "-------------------------------------------------------------------------------------------------\n");
     woempa(9, "         J D W P :     C O U L D    N O T    C O N N E C T    TO    T H E    D E B U G G E R\n");
     woempa(9, "-------------------------------------------------------------------------------------------------\n");
-    x_thread_sleep(x_eternal);
+    abortJDWP();
   }
 
   /*
