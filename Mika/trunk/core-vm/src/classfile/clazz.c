@@ -317,12 +317,12 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
       length = get_u2(s);
 
       if (length > 0) {
-        char *buffer = allocMem(length);
+        void *buffer = allocMem(length);
         if (!buffer) {
           wabort(ABORT_WONKA, "No space for buffer\n");
         }
-        barread(s, buffer, length);
-        clazz->values[*idx] = (w_ConstantValue)utf2String(buffer, length);
+        barread(s, (w_ubyte*)buffer, length);
+        clazz->values[*idx] = (w_ConstantValue)utf2String((char*)buffer, length);
         releaseMem(buffer);
       }
       else {
@@ -350,7 +350,7 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
         w_long val = get_u4(s);
 
         val = (val << 32) | get_u4(s);
-	memcpy(clazz->values + *idx, &val, 8);
+	memcpy((w_word*)clazz->values + *idx, &val, 8);
         clazz->tags[*idx + 1] = NO_VALID_ENTRY;
         woempa(1, "Constant[%d] = %s 0x%08x%08x\n", *idx, tag == CONSTANT_LONG ? "long" : "double", clazz->values[*idx], clazz->values[*idx + 1]);
         *idx += 2;
@@ -824,7 +824,7 @@ static w_boolean check_field(w_clazz clazz, w_field f) {
 
   // Spec says to silently ignore ConstantValue if field not static
   if (f->initval && isSet(flags, ACC_STATIC)) {
-    w_int initval = f->initval;
+    w_ushort initval = f->initval;
     w_int inittag = clazz->tags[initval];
     if ((initval >= clazz->numConstants)) {
       return FALSE;
@@ -918,7 +918,7 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
 }
 
 static w_boolean post_checks(w_clazz clazz, w_string name) {
-  w_int i;
+  w_size i;
 
   for (i = 0; i < clazz->numFields && check_field(clazz, &clazz->own_fields[i]); ++i) ;
   for (i = 0; i < clazz->numDeclaredMethods && check_method(clazz, &clazz->own_methods[i]); ++i) ;
@@ -1684,7 +1684,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !post_checks(clazz, name)) {
-    throwException(thread, clazzClassFormatError, name);
+    throwException(thread, clazzClassFormatError, "%w", name);
     destroyClazz(clazz);
 
     return NULL;
@@ -1825,11 +1825,10 @@ static inline void destroyField(w_field field) {
 ** Examine an entry in interface_hashtable to see if it involves clazz c;
 ** if it does, put the imethod onto fifo f.
 */
-static w_int interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_word method_word, void *c, void *f) {
+static void interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_word method_word, void *c, void *f) {
   w_clazz found_clazz = (w_clazz) clazz_word;
   w_method imethod = (w_method) imethod_word;
   w_clazz target_clazz = c;
-  w_fifo fifo = f;
 
   if (found_clazz == target_clazz) {
     woempa(7, "Looking for %k: found it, %M implements %M\n", target_clazz, method_word, imethod);
@@ -1847,7 +1846,7 @@ static void destroyImplementations(w_clazz clazz) {
   ht2k_iterate(interface_hashtable, interface_fifo_iterator, clazz, fifo);
   while ((imethod = getFifo(fifo))) {
     woempa(7, "Erasing %k x %m from interface_hashtable\n", clazz, imethod);
-    ht2k_erase(interface_hashtable, clazz, imethod);
+    ht2k_erase(interface_hashtable, (w_word)clazz, (w_word)imethod);
   }
   releaseFifo(fifo);
 }
@@ -1862,25 +1861,10 @@ w_int destroyClazz(w_clazz clazz) {
   
   woempa(7,"Destroying class %k\n",clazz);
 
-  if (clazz->dotified) {
-    deregisterString(clazz->dotified);
-  }
-
   if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
     // TODO: [CG 20061201] can we really get here? I don't think so ...
 
     return 0;
-  }
-
-  woempa(7, "Releasing constant pool\n");
-  for (i = 1; i < (w_int)clazz->numConstants; i++) {
-    dissolveConstant(clazz, i);
-  }
-  if (clazz->tags){
-    releaseMem((void*)clazz->tags);
-  }
-  if (clazz->values){
-    releaseMem((void*)clazz->values);
   }
 
   woempa(7, "Releasing class members\n");
@@ -1948,6 +1932,23 @@ w_int destroyClazz(w_clazz clazz) {
     woempa(7,"Deregistering failure message '%w'\n", clazz->failure_message);
     deregisterString(clazz->failure_message);
   }
+
+  woempa(7, "Releasing constant pool\n");
+  for (i = 1; i < (w_int)clazz->numConstants; i++) {
+    dissolveConstant(clazz, i);
+  }
+  if (clazz->tags){
+    releaseMem((void*)clazz->tags);
+  }
+  if (clazz->values){
+    releaseMem((void*)clazz->values);
+  }
+
+  woempa(7, "Deregistering [dotified] class name\n");
+  if (clazz->dotified) {
+    deregisterString(clazz->dotified);
+  }
+
   woempa(7,"Releasing w_clazz at %p\n", clazz);
   releaseMem(clazz);
 
