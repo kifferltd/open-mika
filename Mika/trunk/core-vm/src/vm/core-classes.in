@@ -76,6 +76,7 @@
 # other methods and fields need only be present if the F_... declaration
 # is needed.
 #
+wonka/vm/ApplicationClassLoader
 wonka/vm/ArrayUtil
 	bArrayToI	([BI)I		ArrayUtil_bArrayToI
 	bArrayToL	([BI)J		ArrayUtil_bArrayToL
