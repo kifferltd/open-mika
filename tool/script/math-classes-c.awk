@@ -32,8 +32,6 @@ BEGIN {
   print "#include \"loading.h\""
   print "#include \"math-classes.h\""
   print " "
-  print "extern w_instance extensionClassLoader;"
-  print " "
 
 }
 

@@ -46,6 +46,7 @@
 #include "oswald.h"
 #include "wstrings.h"
 #include "ts-mem.h"
+#include "verifier.h"
 #include "vfs.h"
 
 extern Wonka_InitArgs *system_vm_args;
@@ -135,10 +136,8 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
   w_instance theClass;
   w_BAR bar;
   w_string name;
-  w_clazz thisLoaderClazz = instance2clazz(thisClassLoader);
-  w_boolean trusted;
-  
-  trusted = (thisClassLoader == systemClassLoader) || (thisClassLoader == extensionClassLoader);
+  w_boolean trusted = loaderIsTrusted(thisClassLoader);
+
   woempa(1,"installing %w from %p (thread %w)\n",String2string(nameString),data,NM(thread));
 
   bar.buffer = data + offset;

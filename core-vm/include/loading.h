@@ -182,6 +182,12 @@ extern w_hashtable2k interface_hashtable;
 extern w_instance systemClassLoader;
 
 /*
+** The unique instance of ExtensionClassLoader, or NULL if none exists.
+** Set up by static method installExtensionClassLoader() of java.lang.ClassLoader.
+*/
+extern w_instance extensionClassLoader;
+
+/*
 ** Function to compare two w_[Unloaded}Clazz pointers.
 ** Returns WONKA_TRUE if they are either both unloaded (state == 0) or both
 ** loading or loaded (state != 0), and both refer to the same class name
