@@ -42,7 +42,6 @@ void add_class_to_reply(w_word key, w_word value, void *pointer1, void *pointer2
 ** Returns all reference types which have the given class loader as *initiating* class loader.
 */
 
-// FIXME: This can't work, we don't store the originating class loader anywhere.
 w_void jdwp_classloaderref_visible_classes(jdwp_command_packet cmd) {
   w_size offset = 0;
   w_instance loader;
@@ -76,9 +75,8 @@ w_void dispatch_classloaderref(jdwp_command_packet cmd) {
 
   switch((jdwp_classloaderref_cmd)cmd->command) {
     case jdwp_classloaderref_visibleClasses:
-      // FIXME: see above
-      // jdwp_classloaderref_visible_classes(cmd);
-      // break;
+      jdwp_classloaderref_visible_classes(cmd);
+      break;
     default:
       jdwp_send_not_implemented(cmd->id);
   }
