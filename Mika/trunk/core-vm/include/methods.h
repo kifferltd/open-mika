@@ -77,7 +77,7 @@ typedef struct w_Exception {
   w_ushort start_pc;   /* Start of code covered by this handler (inclusive) */
   w_ushort end_pc;     /* End of code covered by this handler (exclusive)   */
   w_ushort handler_pc; /* Entry point of the handler                        */
-  w_ushort type_index; /* Type of exeception covered (0 -> all execeptions) */
+  w_ushort type_index; /* Type of exception covered (0 -> all exceptions)   */
 } w_Exception;
 
 /*
@@ -91,7 +91,7 @@ typedef struct w_MethodSpec {
 } w_MethodSpec;
 
 typedef struct w_MethodExec {
-  w_callfun dispatcher;
+  volatile w_callfun dispatcher;
   w_size       arg_i;      /* The number of argument words. !! DONT move !! Assembly depends on it.    */
   w_function   function;   /* if native, the function pointer. !! DONT move !! Assembly depends on it. */
   w_ushort return_i;       /* Number of words returned as result (0, 1, or 2) */
