@@ -4130,8 +4130,8 @@ static w_code searchHandler(w_frame frame) {
   threadMustBeUnsafe(thread);
   auxs = (w_slot)frame->auxstack_top;
   pending = thread->exception;
-  thread->exception = NULL;
   pushLocalReference(frame, pending);
+  thread->exception = NULL;
 
   for (i = 0; i <  frame->method->exec.numExceptions; i++) {
       ex = &frame->method->exec.exceptions[i];
