@@ -1369,13 +1369,6 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
     }
   }
 
-  if (current) {
-    registerClazz(thread, current, effectiveLoader);
-  }
-  else {
-    woempa(9, "Did not find clazz %w\n", name);
-  }
-
   if (effectiveLoader) {
     // wprintf("releasing lock for %j\n", effectiveLoader);
     exitMonitor(effectiveLoader);
@@ -1444,8 +1437,6 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
     throwException(thread, clazzLinkageError, "%w", name);
     return NULL;
   }
-
-  registerClazz(thread, clazz, initiating_loader);
 
   woempa(1, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
 
