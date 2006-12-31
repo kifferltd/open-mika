@@ -49,8 +49,6 @@ BEGIN {
   print "#include \"loading.h\""
   print "#include \"uart-classes.h\""
   print " "
-  print "extern w_instance extensionClassLoader;"
-  print " "
 
 }
 
