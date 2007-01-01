@@ -37,6 +37,7 @@
 #include "descriptor.h"
 #include "dispatcher.h"
 #include "exception.h"
+#include "hashtable.h"
 #include "heap.h"
 #include "interpreter.h"
 #include "jdwp.h"
@@ -45,7 +46,7 @@
 #include "methods.h"
 #include "opcodes.h"
 #include "threads.h"
-#include "hashtable.h"
+#include "verifier.h"
 #include "misc.h"
 #include "wstrings.h"
 #include "calls.h"
@@ -1276,12 +1277,12 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   // Check that another thread didn't beat us to it
   x_monitor_enter(method->spec.declaring_clazz->resolution_monitor, x_eternal);
   if (method->exec.dispatcher == initialize_dispatcher) {
-/* VERIFICATION
-    if (!verifyMethod(method)) {
+#ifdef USE_BYTECODE_VERIFIER
+    if (clazzShouldBeVerified(method->spec.declaring_clazz) && !verifyMethod(method)) {
       x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
       return;
     }
-*/
+#endif
     prepareBytecode(method);
     method->exec.dispatcher = dispatchers[i];
     if (i == 1 || i >= 24) {
