@@ -84,6 +84,11 @@ const char *general_help_text =
   " options:\n"
   "   -cp -classpath <classpath>   set search path for classes and resources\n"
   "   -D<name>=<value>             set a system property\n"
+#ifdef USE_BYTECODE_VERIFIER
+  "   -noverify                    do not verify any classes\n"
+  "   -verify                      verify all classes, even system classes\n"
+  "   -verifyremote                verify classes loaded by non-system classloaders (default)\n"
+#endif
   "   -version                     print version\n"
   "   -? -help --help              print this explanation\n"
   "   -X                           print help on non-standard options\n"
@@ -98,6 +103,11 @@ const char *X_help_text =
   "  -Xdebug             enable remote debugging\n"
   "  -Xnoagent           obscure historic flag, ignored\n"
   "  -Xrunjdwp:...       set jdwp options. (use -Xrunjdwp:help for more info)\n"
+#endif
+#ifdef USE_BYTECODE_VERIFIER
+  "  -Xverify:all        verify all classes, even system classes\n"
+  "  -Xverify:none       do not verify any classes\n"
+  "  -Xverify:remote     verify classes loaded by non-system classloaders (default)\n"
 #endif
   "\n";
 
