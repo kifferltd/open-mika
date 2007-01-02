@@ -39,7 +39,8 @@
 
 #define JNI_OK            0
 #define JNI_ERR           (-1)
-
+#define JNI_EDETACHED     (-2)              /* thread detached from the VM */
+#define JNI_EVERSION      (-3)              /* JNI version error           */
 /*
 ** Mapping between the Wonka types and their JNI counterparts.
 */
@@ -118,6 +119,8 @@ typedef struct JNINativeMethod {
 #define	JNICALL
 
 typedef const struct JNINativeInterface *JNIEnv;
+
+typedef const struct JNIInvokeInterface *JavaVM;
 
 typedef struct JNINativeInterface {
 
@@ -376,7 +379,7 @@ typedef struct JNINativeInterface {
   jint          (*MonitorEnter)                    (JNIEnv *env, jobject obj);
   jint          (*MonitorExit)                     (JNIEnv *env, jobject obj);
 
-  void          *reserved219;
+  jint          (*GetJavaVM)                       (JNIEnv *env, JavaVM** vm);
   void          (*GetStringRegion)                 (JNIEnv *env, jstring string, jsize start, jsize len, jchar *buf);               /* 220 */  
   void          (*GetStringUTFRegion)              (JNIEnv *env, jstring string, jsize start, jsize len, char *buf);
   void         *(*GetPrimitiveArrayCritical)       (JNIEnv *env, jarray array, jboolean *isCopy);
@@ -398,7 +401,6 @@ typedef struct JNINativeInterface {
 ** Currently we only have one JVM.
 */
 
-typedef const struct JNIInvokeInterface *JavaVM;
 
 typedef struct JNIInvokeInterface {
 // N.B. The first three entries are bogus: these are global functions ...
@@ -408,6 +410,8 @@ typedef struct JNIInvokeInterface {
   jint (*DestroyJavaVM)          (JavaVM *vm);
   jint (*AttachCurrentThread)    (JavaVM *vm, JNIEnv **p_env, void *thr_args);
   jint (*DetachCurrentThread)    (JavaVM *vm);
+  jint (*GetEnv)                 (JavaVM *vm, void **env, jint version);
+  jint (*AttachCurrentThreadAsDaemon)  (JavaVM* vm, void** penv, void* args);
 } JNIInvokeInterface;
 
 
