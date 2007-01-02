@@ -3080,6 +3080,14 @@ jint JNI_CreateJavaVM(JavaVM **p_VM, JNIEnv **p_env, void *vm_args) {
 
 }
 
+jint GetJavaVM( JNIEnv *env,  JavaVM** vm) {
+  mrWonka = &w_JNIInvokeInterface;
+  *vm = &mrWonka;
+  
+  return 0;
+}
+
+
 jint DestroyJavaVM(JavaVM *vm) {
   woempa(9,"Sorry, you can't do that.\n");
   return -1;
@@ -3102,11 +3110,21 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   Wonka_AttachArgs *wonka_args = thr_args;
   char *cname = (char*)"Native Thread";
   w_MethodSpec spec;
+  x_thread kthread = x_thread_current();
 
-  if (thread_hashtable == NULL) {
+  if (thread_hashtable == NULL || kthread == NULL) {
     woempa(9, "Attempt to attach before VM is properly initialised\n");
     return -1;
   }
+
+  
+  thread = ht_read(thread_hashtable, kthread);
+
+  if(thread) {
+    *p_env = w_thread2JNIEnv(thread);
+    return 0;
+  }
+
 
   if (wonka_args && wonka_args->name) {
     cname = wonka_args->name;
@@ -3129,7 +3147,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->isDaemon = WONKA_FALSE;
   thread->flags = WT_THREAD_IS_NATIVE;
   thread->kthread = allocClearedMem(sizeof(x_Thread));
-  thread->kthread = x_thread_current();
+  thread->kthread = kthread;
   thread->kthread->xref = thread;
   thread->kpriority = x_thread_priority_get(thread->kthread);
   thread->ksize = 65536; // BOGUS - TODO: what to put here?
@@ -3227,6 +3245,24 @@ jint DetachCurrentThread(JavaVM *vm) {
   releaseMem(thread);
 
   return 0;
+}
+
+
+jint GetEnv(JavaVM *vm, void **env, jint version) {
+  x_thread kthread = x_thread_current();
+
+  if(kthread) {
+    w_thread thread = ht_read(thread_hashtable, kthread);
+
+    if (thread != NULL) {
+      *env =  w_thread2JNIEnv(thread); 
+      return JNI_OK;
+    }
+  }
+
+  *env = NULL;
+  return JNI_EDETACHED;
+  
 }
 
 
@@ -3482,7 +3518,7 @@ const struct JNINativeInterface w_JNINativeInterface = {
   MonitorEnter,
   MonitorExit,
 
-  NULL, //reserved219,
+  GetJavaVM, //reserved219,
   NULL, //GetStringRegion,              /* 220 */
   GetStringUTFRegion,
   GetPrimitiveArrayCritical,
@@ -3502,5 +3538,7 @@ const struct JNIInvokeInterface w_JNIInvokeInterface = {
   DestroyJavaVM,
   AttachCurrentThread,
   DetachCurrentThread,
+  GetEnv,
+  NULL,
 };
 
