@@ -44,10 +44,9 @@
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
+#include "misc.h"
 #include "opcodes.h"
 #include "threads.h"
-#include "verifier.h"
-#include "misc.h"
 #include "wstrings.h"
 #include "calls.h"
 #include "fastcall.h"
@@ -1277,12 +1276,6 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   // Check that another thread didn't beat us to it
   x_monitor_enter(method->spec.declaring_clazz->resolution_monitor, x_eternal);
   if (method->exec.dispatcher == initialize_dispatcher) {
-#ifdef USE_BYTECODE_VERIFIER
-    if (clazzShouldBeVerified(method->spec.declaring_clazz) && !verifyMethod(method)) {
-      x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
-      return;
-    }
-#endif
     prepareBytecode(method);
     method->exec.dispatcher = dispatchers[i];
     if (i == 1 || i >= 24) {
