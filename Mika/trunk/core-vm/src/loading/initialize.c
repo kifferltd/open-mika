@@ -35,11 +35,12 @@
 #include "clazz.h"
 #include "constant.h"
 #include "exception.h"
-#include "reflection.h"
 #include "fields.h"
 #include "interpreter.h"
 #include "loading.h"
 #include "methods.h"
+#include "reflection.h"
+#include "verifier.h"
 #include "wonka.h"
 
 void initializeStaticFields(w_thread thread, w_clazz clazz) {
@@ -112,13 +113,14 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
   }
 }
 
+// TODO: move this to prepareBytecode(), so it can also be used when verifying
+#ifndef USE_BYTECODE_VERIFIER
 static void doSuperConstructorHack(w_clazz clazz, w_method m) {
   w_size j;
-  w_size n;
   w_method super;
 
   if (isSet(m->flags, METHOD_IS_CONSTRUCTOR) && m->exec.code && (m->exec.code_length > 4) && (m->exec.code[0] == 0x2a) && (m->exec.code[1] == 0xb7)) {
-    woempa(1, "First byte of %M is 0x2a (aload_0), second is 0xb7\n", m);
+    woempa(7, "First byte of %M is 0x2a (aload_0), second is 0xb7 (invokespecial)\n", m);
     j = (unsigned char)m->exec.code[2];
     j = (j << 8) | (unsigned char)m->exec.code[3];
     super = getMethodConstant(clazz, j);
@@ -128,9 +130,21 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
       return;
 
     }
-    woempa(1, "Method being called is %M with code length %d\n", super, super->exec.code_length);
-    if (isSet(m->flags, METHOD_IS_CONSTRUCTOR) && super->exec.code_length && (super->exec.code[0] == 0xb1)) {
-      woempa(7, "Removing call from %M to trivial constructor %M :)\n", m, super);
+    woempa(7, "Method being called is %M with code length %d\n", super, super->exec.code_length);
+    if (super->exec.code_length) {
+      j = 0;
+      if (super->exec.code[0] == 0xa7) {
+        j = (super->exec.code[1] << 8) | super->exec.code[2];
+        woempa(7, "  begins with a jump to pc %d, opcode = 0x%02x\n", j, super->exec.code[j]);
+      }
+      if (super->exec.code[j] == 0xb1) {
+        woempa(7, "Removing call from %M to trivial constructor %M :)\n", m, super);
+        m->exec.code[0] = 0xa7; // j_goto
+        m->exec.code[1] = 0;
+        m->exec.code[2] = 4;
+        m->exec.code[3] = 0;    // nop
+
+/*
       m->exec.code_length -= 4;
       memmove(m->exec.code, m->exec.code + 4, m->exec.code_length);
       if (m->exec.debug_info) {
@@ -187,9 +201,12 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
           m->exec.exceptions[j].handler_pc = 0;
         }
       }
+*/
+      }
     }
   }
 }
+#endif
 
 /*
 **   - if the class is not abstract, it is not allowed to contain any
@@ -217,7 +234,9 @@ static void scanMethods(w_clazz clazz) {
       woempa(1, "Class %k has run method %m\n", clazz, m);
       clazz->runner = m;
     }
+#ifndef USE_BYTECODE_VERIFIER
     doSuperConstructorHack(clazz, m);
+#endif
   }
 
   if (isNotSet(clazz->flags, ACC_INTERFACE)) {
@@ -278,6 +297,7 @@ static void cleanUpClinit(w_method clinit) {
   }
 }
 
+
 /*
 ** Initialize a class.
 ** The result returned is CLASS_LOADING_xxxxx.
@@ -313,6 +333,24 @@ w_int initializeClazz(w_clazz clazz) {
     }
     parent = parent->nextDimension;
   }
+
+#ifdef USE_BYTECODE_VERIFIER
+  /*
+  ** If we are going to run this class through a bytecode verifier, now is a 
+  ** good time to resolve all the Class, Field, and Method constants. Otherwise
+  ** we'll have to do so in the middle of verification, which sucks.
+  ** (And which locks dead, to the point more).
+  */
+  if (clazzShouldBeVerified(clazz)) {
+    result = verifyClazz(clazz);
+  }
+
+  if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
+
+      return CLASS_LOADING_FAILED;
+
+  }
+#endif
 
   woempa(1, "Thread %t: initializing class %k.\n", thread, clazz);
   setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
