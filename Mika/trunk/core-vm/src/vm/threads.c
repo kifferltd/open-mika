@@ -628,7 +628,15 @@ char * threadDescription(w_thread t) {
 
 }
 
+#ifdef RUNTIME_CHECKS
+#define checkOswaldStatus(s) if ((s) != xs_success) wabort(ABORT_WONKA, "x_monitor_xxx() call returned status = %d", (s))
+#else
+#define checkOswaldStatus(s)
+#endif
+
 w_boolean enterUnsafeRegion(const w_thread thread) {
+  x_status status;
+
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterUnsafeRegion: %t has flag already set\n", thread);
 
@@ -654,7 +662,7 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   }
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  status = x_monitor_eternal(safe_points_monitor);
   if (thread != marking_thread) {
     while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
       x_status status;
@@ -662,21 +670,26 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
       woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
       status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
       if (status == xs_interrupted) {
-        x_monitor_eternal(safe_points_monitor);
-       }
+        status = x_monitor_eternal(safe_points_monitor);
+      }
+      checkOswaldStatus(status);
     }
   }
   ++ number_unsafe_threads;
   woempa(2, "enterUnsafeRegion: %t incremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
 
   return FALSE;
 }
 
 w_boolean enterSafeRegion(const w_thread thread) {
+  x_status status;
+
   if (isNotSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterSafeRegion: %t has flag unset\n", thread);
 
@@ -694,12 +707,15 @@ w_boolean enterSafeRegion(const w_thread thread) {
   -- number_unsafe_threads;
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  status = x_monitor_eternal(safe_points_monitor);
+  checkOswaldStatus(status);
   -- number_unsafe_threads;
   woempa(2, "enterSafeRegion: %t decremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
 
   return TRUE;
@@ -728,7 +744,8 @@ void _gcSafePoint(w_thread thread
     }
     setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  x_status status = x_monitor_eternal(safe_points_monitor);
+  checkOswaldStatus(status);
 #ifdef RUNTIME_CHECKS
   if (number_unsafe_threads <= 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d in _gcSafePoint()!\n", number_unsafe_threads);
@@ -737,21 +754,22 @@ void _gcSafePoint(w_thread thread
   -- number_unsafe_threads;
   woempa(7, "gcSafePoint -> enterSafeRegion: %t decremented number_unsafe_threads to %d in %s:%d\n", thread, number_unsafe_threads, file, line);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
 
   while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-    x_status status;
-
     woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-     }
+      status = x_monitor_eternal(safe_points_monitor);
+    }
+    checkOswaldStatus(status);
   }
   ++ number_unsafe_threads;
   woempa(7, "gcSafePoint -> enterUnsafeRegion: %t incremented number_unsafe_threads to %d in %s:%d\n", thread, number_unsafe_threads, file, line);
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
 }
 
