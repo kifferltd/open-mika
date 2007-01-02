@@ -445,7 +445,8 @@ static w_boolean pre_check_header(w_clazz clazz, w_bar bar) {
  ** Check file is big enough to contain constant pool.
  ** 'bar' should be set to byte 8 of the classfile, and will be rewound
  ** to there on exit.
- ** Returns TRUE for success, FALSE for failure.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */ 
 static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
   w_size n;
@@ -454,6 +455,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
   w_int length;
   w_size i;
   char *tags;
+  w_thread thread = currentWonkaThread;
   w_boolean ok = TRUE;
 
   n = get_u2(bar);
@@ -462,7 +464,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
   // We do this in two passes, because in theory forward references are possible.
   for (i = 1; ok && i < n; ) {
     if (bar_avail(bar) < 3) {
-      woempa(9, "Less than 3 bytes remaining at start of constant\n");
+      throwException(thread, clazzClassFormatError, "Less than 3 bytes remaining at start of constant[%d]", i);
       ok = FALSE;
     }
     tag = get_u1(bar);
@@ -472,7 +474,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         length = get_u2(bar);
         if (length) {
           if (bar_avail(bar) < length) {
-            woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
+            throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
             ok = FALSE;
           }
           bar_skip(bar, length);
@@ -483,7 +485,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_CLASS:
       case CONSTANT_STRING:
         if (bar_avail(bar) < 2) {
-          woempa(9, "Insufficient bytes remaining for CLASS/STRING constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for CLASS/STRING constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 2);
@@ -497,7 +499,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_IMETHOD:
       case CONSTANT_NAME_AND_TYPE:
         if (bar_avail(bar) < 4) {
-          woempa(9, "Insufficient bytes remaining for constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 4);
@@ -507,7 +509,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_LONG:
       case CONSTANT_DOUBLE:
         if (bar_avail(bar) < 8) {
-          woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 8);
@@ -515,7 +517,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         break;
 
       default:
-        woempa(9, "Illegal constant type tag %d\n", tag);
+        throwException(thread, clazzClassFormatError, "Illegal constant type tag %d", tag);
         ok = FALSE;
     }
   }
@@ -537,7 +539,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_STRING:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Class constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Class constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -554,12 +556,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_IMETHOD:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_CLASS) {
-          woempa(9, "Member constant[%d] references non-class constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-class constant[%d]", i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_NAME_AND_TYPE) {
-          woempa(9, "Member constant[%d] references non-name & type constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-name & type constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -568,12 +570,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_NAME_AND_TYPE:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -597,15 +599,18 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
 /**
  ** Check a set of attributes beginning with the attribute count at the 
  ** current position of 'bar'. Afterwards 'bar' points past the last attribute.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */
-static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type) {
   w_size n;
   w_size i;
   w_word val;
   w_int length;
+  w_thread thread = currentWonkaThread;
 
   if (bar_avail(bar) < 2) {
-    woempa(9, "Class file too short for attribute count\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for %s attribute count", type);
 
     return FALSE;
   }
@@ -615,21 +620,21 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 6) {
-      woempa(9, "Less than 6 bytes remaining at start of attribute[%d]\n", i);
+      throwException(thread, clazzClassFormatError, "Less than 6 bytes remaining at start of %s attribute[%d]", type, i);
 
       return FALSE;
     }
 
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Attribute[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "%s attribute[%d] references non-utf8 constant[%d]", type, i, val);
 
       return FALSE;
     }
     length = get_u4(bar);
     woempa(1, "Attribute[%d] length = %d\n", i, length);
     if (bar_avail(bar) < length) {
-      woempa(9, "Less than <attribute length> bytes remaining\n");
+      throwException(thread, clazzClassFormatError, "Less than <attribute length> bytes remaining");
 
       return FALSE;
     }
@@ -643,7 +648,8 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
  ** Check file is big enough to contain fields, methods, attributes.
  ** 'bar' should be set to byte following constant pool, and will be rewound
  ** to there on exit.
- ** Returns TRUE for success, FALSE for failure.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */ 
 static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   w_int offset = bar->current;
@@ -651,10 +657,11 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   w_word val;
   w_size i;
   w_int length;
+  w_thread thread = currentWonkaThread;
   w_boolean result;
 
   if (bar_avail(bar) < 8) {
-    woempa(9, "Class file too short for class flags / this class / super class / num interfaces\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for class flags / this class / super class / num interfaces");
 
     return FALSE;
   }
@@ -662,8 +669,8 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   bar_skip(bar, 6);
   n = get_u2(bar);
 
-  if (bar_avail(bar) < (n * 2 + 2)) {
-    woempa(9, "Class file too short for interfaces / field count\n");
+  if (bar_avail(bar) < (signed)(n * 2 + 2)) {
+    throwException(thread, clazzClassFormatError, "Class file too short for interfaces / field count");
 
     return FALSE;
   }
@@ -671,7 +678,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   for (i = 0; i < n; ++i) {
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_CLASS) {
-      woempa(9, "Interface[%d] references non-class constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Interface[%d] references non-class constant[%d]", i, val);
 
       return FALSE;
     }
@@ -682,7 +689,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {
-      woempa(9, "Less than 8 bytes remaining at start of field\n");
+      throwException(thread, clazzClassFormatError, "Less than 8 bytes remaining at start of field");
 
       return FALSE;
     }
@@ -690,25 +697,24 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
     bar_skip(bar, 2);
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Field[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Field[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Field[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Field[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar)) {
-      woempa(9, "Field[%d] attributes corrupt\n", i);
+    if (!pre_check_attributes(clazz, bar, "field")) {
 
       return FALSE;
     }
   }
 
   if (bar_avail(bar) < 2) {
-    woempa(9, "Class file too short for method count\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for method count");
 
     return FALSE;
   }
@@ -718,7 +724,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {
-      woempa(9, "Less than 8 bytes remaining at start of method\n");
+      throwException(thread, clazzClassFormatError, "Less than 8 bytes remaining at start of method");
 
       return FALSE;
     }
@@ -726,28 +732,27 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
     bar_skip(bar, 2); // flags
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Method[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Method[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Method[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Method[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar)) {
-      woempa(9, "Method[%d] attributes corrupt\n", i);
+    if (!pre_check_attributes(clazz, bar, "method")) {
 
       return FALSE;
     }
   }
 
-  result =  pre_check_attributes(clazz, bar);
+  result =  pre_check_attributes(clazz, bar, "class");
 
   length = bar_avail(bar);
   if (length) {
-    woempa(9, "%d bytes left at end\n", bar_avail(bar));
+    throwException(thread, clazzClassFormatError, "%d bytes left at end of class file", bar_avail(bar));
 
     result = FALSE;
   }
@@ -760,22 +765,25 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 /*
 ** Check that the constant indexed by clazz->temp.this_index is a valid class
 ** constant and that its name matches 'name' (if the latter is non-NULL).
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
 */
 inline static w_boolean check_classname(w_clazz clazz, w_string name) {
   w_int classConstantIndex;
   w_int classNameIndex;
   w_string slashed;
   w_string dotified;
+  w_thread thread = currentWonkaThread;
 
   classConstantIndex = clazz->temp.this_index;
   if (clazz->tags[classConstantIndex] != CONSTANT_CLASS) {
-    woempa(9, "Own class index is not a CONSTANT_CLASS\n");
+    throwException(thread, clazzClassFormatError, "Own class index is not a CONSTANT_CLASS");
 
     return FALSE;
   }
   classNameIndex = clazz->values[classConstantIndex];
   if (clazz->tags[classNameIndex] != CONSTANT_UTF8) {
-    woempa(9, "Own class name is not a CONSTANT_UTF8\n");
+    throwException(thread, clazzClassFormatError, "Own class name is not a CONSTANT_UTF8");
 
     return FALSE;
   }
@@ -786,7 +794,7 @@ inline static w_boolean check_classname(w_clazz clazz, w_string name) {
     wabort(ABORT_WONKA, "Unable to dotify name\n");
   }
   if (name && dotified != name) {
-    woempa(9,"Impostor! The class which should be known as `%w' is really `%w'.\n",name,dotified);
+    throwException(thread, clazzClassFormatError, "Impostor! The class which should be known as `%w' is really `%w'.",name,dotified);
 
     return FALSE;
   }
@@ -883,12 +891,12 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
 
   if (isSet(clazz->flags, ACC_INTERFACE)) {
     // Interface methods must be public static final and nowt else.
-    if ((flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != (ACC_PUBLIC | ACC_ABSTRACT)) {
+    if (m->spec.name != string_angle_brackets_clinit && (flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != (ACC_PUBLIC | ACC_ABSTRACT)) {
       return FALSE;
     }
   }
   else {
-    // Class fields may have at most one of the following flags set.
+    // Class methods may have at most one of the following flags set.
     switch(flags & (ACC_PRIVATE | ACC_PROTECTED | ACC_PUBLIC)) {
     case 0:
     case ACC_PRIVATE:
@@ -917,11 +925,31 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
   return TRUE;
 }
 
+/** Final checks on class file format.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
+*/
 static w_boolean post_checks(w_clazz clazz, w_string name) {
   w_size i;
+  w_thread thread = currentWonkaThread;
+  w_boolean result = TRUE;
 
-  for (i = 0; i < clazz->numFields && check_field(clazz, &clazz->own_fields[i]); ++i) ;
-  for (i = 0; i < clazz->numDeclaredMethods && check_method(clazz, &clazz->own_methods[i]); ++i) ;
+  for (i = 0; result && i < clazz->numFields; ++i) {
+    result = check_field(clazz, &clazz->own_fields[i]);
+  }
+  if (!result) {
+    throwException(thread, clazzClassFormatError, "bad flags in field[%d]", i);
+
+    return FALSE;
+  }
+  for (i = 0; result && i < clazz->numDeclaredMethods; ++i) {
+    result = check_method(clazz, &clazz->own_methods[i]);
+  }
+  if (!result) {
+    throwException(thread, clazzClassFormatError, "bad flags in method[%d]", i);
+
+    return FALSE;
+  }
 
   return check_classname(clazz, name);
 }
@@ -1368,7 +1396,7 @@ void registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
     wabort(ABORT_WONKA, "%K\n", clazz);
   }
-  woempa(1, "Registering clazz %k in %s.\n", clazz, hashtable->label);
+  woempa(7, "Registering clazz %k in %s.\n", clazz, hashtable->label);
 
   ht_lock(hashtable);
   existing = (w_clazz)ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)clazz);
@@ -1382,7 +1410,6 @@ void registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
         throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
       }
       ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)existing);
-      wabort(ABORT_WONKA, "Fascinating. The class %k (w_clazz %p) was already registered in %s as w_clazz %p.\n", clazz, clazz, hashtable->label, existing);
     }
   }
   ht_unlock(hashtable);
@@ -1565,7 +1592,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
     w_size n = get_u2(s);
     if (n * 8 + 2 != attribute_length) {
       if (thread) {
-        throwException(currentWonkaThread, clazzClassFormatError, "%k: InnerClasses attribute has wrong length", clazz);
+        throwException(currentWonkaThread, clazzClassFormatError, "InnerClasses attribute has wrong length");
       }
 
       return;
@@ -1655,7 +1682,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_constant_pool(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, "error in constant pool");
     destroyClazz(clazz);
 
     return NULL;
@@ -1666,7 +1692,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_remainder(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, NULL);
     destroyClazz(clazz);
 
     return NULL;
@@ -1675,6 +1700,12 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
   // 'Or in' the access flags, so as not to destroy the clazz state
   clazz->flags |= get_u2(bar) & (ACC_PUBLIC | ACC_FINAL | ACC_SUPER | ACC_INTERFACE | ACC_ABSTRACT);
+  if(isSet(clazz->flags, ACC_INTERFACE) && isNotSet(clazz->flags, ACC_ABSTRACT)){
+    woempa(9,"How rude, clazz %w is has ACC_INTERFACE set but not ACC_ABSTRACT\n",name);
+    woempa(9,"Fixing this ...\n");
+    setFlag(clazz->flags, ACC_ABSTRACT);
+  } 
+
   clazz->temp.this_index = get_u2(bar);
   clazz->temp.super_index = get_u2(bar);
   get_interfaces(clazz, bar);
@@ -1682,28 +1713,21 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_methods(thread, clazz, bar);
   get_attributes(thread, clazz, bar);
 
+  if (exceptionThrown(thread)
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !post_checks(clazz, name)) {
-    throwException(thread, clazzClassFormatError, "%w", name);
+    || (!trusted && !post_checks(clazz, name))
+#endif
+  ) {
     destroyClazz(clazz);
 
     return NULL;
   }
-#endif
 
   if (trusted) {
     setFlag(clazz->flags, CLAZZ_IS_TRUSTED);
   }
 
   set_classname(clazz);
-
-  if (! exceptionThrown(thread)) {
-    if(isSet(clazz->flags, ACC_INTERFACE) && isNotSet(clazz->flags, ACC_ABSTRACT)){
-      woempa(9,"How rude, clazz %w is has ACC_INTERFACE set but not ACC_ABSTRACT\n",name);
-      woempa(9,"Fixing this ...\n");
-      setFlag(clazz->flags, ACC_ABSTRACT);
-    } 
-  }
 
   clazz->resolution_thread = NULL;
   setClazzState(clazz, CLAZZ_STATE_LOADED);
@@ -1726,7 +1750,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 */
 
 w_instance attachClassInstance(w_clazz clazz) {
-  w_thread   thread = currentWonkaThread;
+  w_thread thread = currentWonkaThread;
   w_instance Class;
   w_int      i;
 
@@ -2032,7 +2056,7 @@ w_instance getStaticReferenceField(w_clazz clazz, w_int slot) {
 ** Set a reference field of a class.
 */
 void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
-  w_thread  thread = currentWonkaThread;
+  w_thread thread = currentWonkaThread;
   w_boolean unsafe;
 
   mustBeInitialized(clazz);
