@@ -85,6 +85,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+w_word verify_flags; // select classes to be verified, see verifier.h
+
 w_boolean verifyMethod(w_method method);
 
 /*
@@ -184,6 +186,9 @@ w_int verifyClazz(w_clazz clazz) {
   w_method m;
   w_int result = CLASS_LOADING_DID_NOTHING;
 
+  if (verbose_flags & VERBOSE_FLAG_LOAD) {
+    wprintf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
+  }
   for (i = 1; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numConstants; ++i) {
     switch (clazz->tags[i]) {
       case CONSTANT_CLASS:
@@ -229,6 +234,9 @@ w_int verifyClazz(w_clazz clazz) {
   for (i = 0; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numDeclaredMethods; ++i) {
     m = &clazz->own_methods[i];
     result |= loadDescriptorTypes(m);
+    if (verbose_flags & VERBOSE_FLAG_LOAD) {
+      wprintf("Verify %k: verifying method %m\n", clazz, m);
+    }
     result |= verifyMethod(m) ? CLASS_LOADING_SUCCEEDED : CLASS_LOADING_FAILED;
   }
 

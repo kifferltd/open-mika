@@ -42,6 +42,7 @@
 #include "file_driver.h"
 #include "deflate_driver.h"
 #include "locks.h"
+#include "verifier.h"
 #include "wstrings.h"
 #include "wonka.h"
 #include "vfs.h"
@@ -143,7 +144,7 @@ void args_read(void) {
 
   memset(args, 0, sizeof(Wonka_InitArgs));
   properties = allocMem(100 * sizeof(char *));
-
+  verify_flags = VERIFY_LEVEL_DEFAULT;
 
   classpath = get_default_classpath();
 
@@ -185,11 +186,39 @@ void args_read(void) {
       woempa(7, "Found an Xdebug argument\n");
       jdwp_enabled = 1;
     }
+
+#endif  /* JDWP */
+
+#ifdef USE_BYTECODE_VERIFIER
+    else if(strncmp(command_line_arguments[0], "-Xverify:all", 12) == 0) {
+      woempa(7, "Found an Xverify:all argument\n");
+      verify_flags = VERIFY_LEVEL_ALL;
+    }
+    else if(strncmp(command_line_arguments[0], "-Xverify:none", 13) == 0) {
+      woempa(7, "Found an Xverify:none argument\n");
+      verify_flags = VERIFY_LEVEL_NONE;
+    }
+    else if(strncmp(command_line_arguments[0], "-Xverify:remote", 15) == 0) {
+      woempa(7, "Found an Xverify:remote argument\n");
+      verify_flags = VERIFY_LEVEL_REMOTE;
+    }
+    else if(strncmp(command_line_arguments[0], "-verify", 8) == 0) {
+      woempa(7, "Found a verify argument\n");
+      verify_flags = VERIFY_LEVEL_ALL;
+    }
+    else if(strncmp(command_line_arguments[0], "-noverify", 8) == 0) {
+      woempa(7, "Found a noverify argument\n");
+      verify_flags = VERIFY_LEVEL_NONE;
+    }
+    else if(strncmp(command_line_arguments[0], "-verifyremote", 8) == 0) {
+      woempa(7, "Found a verifyremote argument\n");
+      verify_flags = VERIFY_LEVEL_REMOTE;
+    }
+
+#endif
     else if(strncmp(command_line_arguments[0], "-X", 2) == 0) {
       woempa(7, "Found an unknown argument '%s', ignoring it\n", command_line_arguments[0]);
     }
-
-#endif  /* JDWP */
 
 #ifdef JSPOT
     
