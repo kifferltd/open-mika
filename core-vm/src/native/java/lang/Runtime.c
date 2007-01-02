@@ -239,9 +239,35 @@ static void statistics_instances(void) {
 }
 
 #endif
+/*
+** Iterator called from Runtime.exit0(); for every object which is an instance
+** of PlainSocketImpl or PlainDatagramSocketImpl, call close() on its file
+** descriptor. This logic could be applied to other classes with "externalities"
+** also.
+*/
+static w_boolean shutdown_iteration(void * mem, void * arg) {
+  w_object object = chunk2object(mem);
+  w_int fd;
+
+  if(isSuperClass(clazzPlainSocketImpl, object->clazz)) {
+    fd = (w_int)getWotsitField(object->fields, F_PlainSocketImpl_wotsit);
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+  else if(isSuperClass(clazzPlainDatagramSocketImpl, object->clazz)) {
+    fd = (w_int)getWotsitField(object->fields, F_PlainDatagramSocketImpl_wotsit);
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+
+  return TRUE;
+}
 
 void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 
+  x_mem_scan(x_eternal, OBJECT_TAG, shutdown_iteration, NULL);
 #ifdef JAVA_PROFILE
   statistics_timings();
   statistics_instances();
