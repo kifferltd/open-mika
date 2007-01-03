@@ -418,13 +418,10 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
 
   threadMustBeSafe(thread);
 
-  wprintf("Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
   woempa(1, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
 
   bytes = (1 + roundBitsToWords(clazz->previousDimension->bits * newlength)) * 4;
-  wprintf("New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
   woempa(1, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
-  newarray = internalAllocArrayInstance(thread, clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * newlength));
   bytes += sizeof(w_Object);
 
   if (heap_request(thread, bytes)) {
