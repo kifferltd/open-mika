@@ -101,10 +101,11 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
 
   if (minimum > oldsize) {
     woempa(1,"Current buffer has length %d, new buffer will have length %d\n", oldsize, (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
-    newbuffer = allocArrayInstance_1d(thread, atype2clazz[P_char], (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
+    newbuffer = reallocArrayInstance_1d(thread, oldbuffer, (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
     if (newbuffer) {
-      copyChars(instance2Array_char(newbuffer), instance2Array_char(oldbuffer), getIntegerField(StringBuffer, F_StringBuffer_count));
-      setReferenceField(StringBuffer, newbuffer, F_StringBuffer_value);
+      if (newbuffer != oldbuffer) {
+        setReferenceField(StringBuffer, newbuffer, F_StringBuffer_value);
+      }
       removeLocalReference(thread, newbuffer);
     }
   }
