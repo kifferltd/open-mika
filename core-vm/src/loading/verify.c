@@ -2515,13 +2515,13 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup:
       CHECK_STACK_SIZE(1);
-      PUSH(PEEK);
+      PUSH1(PEEK);
       break;
 
     case dup_x1:
       CHECK_STACK_SIZE(2);
       t = PEEK;
-      PUSH(t);
+      PUSH1(t);
       block->opstack[block->stacksz - 2] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = t;
       break;
@@ -2529,7 +2529,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case dup_x2:
       CHECK_STACK_SIZE(3);
       t = PEEK;
-      PUSH(t);
+      PUSH1(t);
       block->opstack[block->stacksz - 2] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 4];
       block->opstack[block->stacksz - 4] = t;
@@ -2537,14 +2537,14 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup2:
       CHECK_STACK_SIZE(2);
-      PUSH(block->opstack[block->stacksz - 2]);
-      PUSH(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
       break;
 
     case dup2_x1:
       CHECK_STACK_SIZE(3);
-      PUSH(block->opstack[block->stacksz - 2]);
-      PUSH(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
       block->opstack[block->stacksz - 4] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 5];
       block->opstack[block->stacksz - 5] = block->opstack[block->stacksz - 4];
@@ -2552,8 +2552,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup2_x2:
       CHECK_STACK_SIZE(4);
-      PUSH(block->opstack[block->stacksz - 2]);
-      PUSH(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
+      PUSH1(block->opstack[block->stacksz - 2]);
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 5];
       block->opstack[block->stacksz - 4] = block->opstack[block->stacksz - 6];
       block->opstack[block->stacksz - 5] = block->opstack[block->stacksz - 1];
