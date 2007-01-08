@@ -51,7 +51,7 @@ public class StringReader extends Reader {
       if(string == null){
         throw new IOException("Reader is closed");
       }
-      pos = markpos;
+      markpos = pos;
     }
   }
 
@@ -101,7 +101,7 @@ public class StringReader extends Reader {
       if(string == null){
         throw new IOException("Reader is closed");
       }
-      markpos = pos;
+      pos = markpos;
     }
   }
 
