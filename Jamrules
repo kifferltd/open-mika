@@ -236,6 +236,11 @@ if $(STATIC) = true {
   LINKFLAGS += -static ;
 }
 
+
+if $(BYTECODE_VERIFIER) = true {
+  CCFLAGS += -DUSE_BYTECODE_VERIFIER ; 
+}
+
 # 
 # Add the dl library if we want to be able to load shared libraries.
 # Also define SHARED_OBJECTS
