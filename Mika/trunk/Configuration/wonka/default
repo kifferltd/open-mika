@@ -193,3 +193,7 @@ USE_NANOSLEEP default = true ;
 #
 TOOL_CONFIG default = none ;
 
+#
+# Enables or disable the java bytecode verifier
+#
+BYTECODE_VERIFIER default = false ; 
