@@ -144,8 +144,9 @@ void args_read(void) {
 
   memset(args, 0, sizeof(Wonka_InitArgs));
   properties = allocMem(100 * sizeof(char *));
+#ifdef USE_BYTECODE_VERIFIER
   verify_flags = VERIFY_LEVEL_DEFAULT;
-
+#endif
   classpath = get_default_classpath();
 
   woempa(7, "Found %d command line arguments\n", command_line_argument_count);
