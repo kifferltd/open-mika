@@ -5,7 +5,7 @@
 ** $id: verifier.h,v1.1.1.1 2001/07/06 07:30:25 ruelens Exp $
 */
 
-#define USE_BYTECODE_VERIFIER
+//#define USE_BYTECODE_VERIFIER
 
 #ifdef USE_BYTECODE_VERIFIER
 
