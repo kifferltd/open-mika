@@ -36,7 +36,7 @@ public class HashSet extends AbstractSet implements Set, Cloneable, Serializable
 
   private static int defaultSize = 101;
   private static float defaultLoadFactor= 0.75f;
-  static Object nullKey = new Object();
+  final static Object nullKey = new Object();
 
   transient int modCount;
 
@@ -112,14 +112,14 @@ public class HashSet extends AbstractSet implements Set, Cloneable, Serializable
    	return (occupancy == 0);
   }
 
-  public boolean remove(Object key){
+  public boolean remove(Object rkey){
 
-    if(key==null) {
-      key = nullKey;
+    if(rkey == null) {
+      rkey = nullKey;
     }
 
     int cap = this.capacity;
-    int hashcode = key.hashCode() % cap;
+    int hashcode = rkey.hashCode() % cap;
     Object[] k = this.key;
 
     do {
@@ -132,7 +132,7 @@ public class HashSet extends AbstractSet implements Set, Cloneable, Serializable
       if(o == null) {
         return false;
       }
-      else if(key.equals(o)) {
+      else if(rkey.equals(o)) {
         modCount++;
         deleteSlot(hashcode);
         return true;
@@ -258,9 +258,6 @@ public class HashSet extends AbstractSet implements Set, Cloneable, Serializable
   	}	
   	
   	public boolean hasNext() {
-      if (mc != modCount) {
-        throw new ConcurrentModificationException();
-      }
       return (pos != -1);
   	}
   	
