@@ -898,6 +898,8 @@ static v_BasicBlock* createBlock(v_MethodVerifier *mv) {
   w_size bytes_needed_for_locals = mv->method->exec.local_i * sizeof(v_Type);
   w_size bytes_needed_for_stack = mv->method->exec.stack_i * sizeof(v_Type);
   w_size bytes_needed_for_successors = mv->numBlocks * sizeof(w_ubyte);
+  void *memptr;
+  v_BasicBlock* binfo;
 
   woempa(7, "Need %d bytes for v_BasicBlock struct, %d for locals, %d for stack, %d for successors\n", sizeof(v_BasicBlock), bytes_needed_for_locals, bytes_needed_for_stack, bytes_needed_for_successors);
   if (mv->jsr_count) {
@@ -905,8 +907,8 @@ static v_BasicBlock* createBlock(v_MethodVerifier *mv) {
     woempa(7, "Found %d jsr/jsr_w's, increasing size of successor array to %d bytes\n", mv->jsr_count, bytes_needed_for_successors);
   }
 
-  void *memptr = allocClearedMem(sizeof(v_BasicBlock) + bytes_needed_for_locals + bytes_needed_for_stack + bytes_needed_for_successors);
-  v_BasicBlock* binfo = memptr;
+  memptr = allocClearedMem(sizeof(v_BasicBlock) + bytes_needed_for_locals + bytes_needed_for_stack + bytes_needed_for_successors);
+  binfo = memptr;
 
   if (!binfo) {
     return NULL;
