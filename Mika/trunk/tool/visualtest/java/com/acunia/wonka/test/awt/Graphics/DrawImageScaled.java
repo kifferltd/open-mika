@@ -38,8 +38,7 @@ public class DrawImageScaled extends VisualTestImpl {
     
   public DrawImageScaled() {
     super();
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    original = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/lena1.png"));
 
     w = original.getWidth(null);
     h = original.getHeight(null);

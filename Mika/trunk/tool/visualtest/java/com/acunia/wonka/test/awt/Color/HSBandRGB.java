@@ -93,8 +93,7 @@ public class HSBandRGB extends VisualTestImpl {
   
   public HSBandRGB() {
     super();
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    original = Toolkit.getDefaultToolkit().createImage(this.getClass().getResource("/lena1.png"));
     setLayout(new BorderLayout());
 
     Panel bottom = new Panel(new BorderLayout());
