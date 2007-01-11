@@ -20,8 +20,8 @@
 *   3001 Leuven                 http://www.acunia.com                     *
 *   Belgium - EUROPE                                                      *
 *                                                                         *
-* Modifications copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
+* Modifications copyright (c) 2004, 2006, 2007 by Chris Gray,             *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 **************************************************************************/
 
@@ -49,9 +49,10 @@
 * Written by Chris Gray, mainly in a winter holiday hackathon from 22 to  *
 * 31 December 2006.                                                       *
 *                                                                         *
-* This is a fairly straightforward implementation of Sun's spec, warts    *
-* and all; i.e. we tend to unify data types up towards java.lang.Object   *
-* and we provoke "eager" class loading.                                   *
+* This is a fairly straightforward implementation of Sun's spec, except   *
+* that rather than unifing data types up towards java.lang.Object we      *
+* build a union of possible types for the slot (whether classes or        *
+* interfaces). Verification tends to provoke "eager" class loading.       *
 *                                                                         *
 * In writing this code I was able to refer to the Kaffe verifier by Rob   *
 * Gonzalez <rob@kaffe.org>. Almost none of the code is directly derived   *
@@ -200,25 +201,16 @@ w_int verifyClazz(w_clazz clazz) {
       case CONSTANT_FIELD:
       case RESOLVING_FIELD:
         f = getFieldConstant(clazz, i);
-        if (!exceptionThrown(thread)) {
-          result |= loadValueType(f);
-        }
         break;
       
       case CONSTANT_METHOD:
       case RESOLVING_METHOD:
         m = getMethodConstant(clazz, i);
-        if (!exceptionThrown(thread)) {
-          result |= loadDescriptorTypes(m);
-        }
         break;
       
       case CONSTANT_IMETHOD:
       case RESOLVING_IMETHOD:
         m = getIMethodConstant(clazz, i);
-        if (!exceptionThrown(thread)) {
-          result |= loadDescriptorTypes(m);
-        }
         break;
       
         default:
@@ -244,6 +236,8 @@ w_int verifyClazz(w_clazz clazz) {
 }
 
 /*
+ * Internal representation of a data type; may be undefined, a class (possibly
+ * uninitialised or a primitive class), a union of classes, or a return address.
  */
 
 typedef struct v_Type
@@ -261,13 +255,27 @@ typedef struct v_Type
     /* clazz for TINFO_PRIMITIVE, TINFO_CLASS */
     w_clazz clazz;
     
-    /* list of types for TINFO_UNION */
-    w_wordset supertypes;
+    /* for TINFO_UNION we store an index onto mv->unions */
+    w_size union_index;
   
     /* return address for TINFO_ADDR */
     w_size retaddr;
   } data;
 } v_Type;
+
+/*
+ * Representation of a class union. Class unions are immutable; if we want to
+ * extend one we create a new one and add more classes. All unions are stored
+ * in the mv->unions wordset, and when we release the mv we release all the
+ * memory used by the unions.
+ */
+
+typedef struct v_Union {
+  struct v_MethodVerifier *mv;
+  w_size  size;
+  w_word  hashcode;
+  w_clazz members[0];
+} v_Union;
 
 /* status flags for opstack/local info arrays
  *
@@ -285,7 +293,7 @@ typedef struct v_Type
 #define TINFO_CLASS        4
 #define TINFO_UNINIT       16
 #define TINFO_UNINIT_SUPER 48
-#define TINFO_UNION         64
+#define TINFO_UNION        64
 #define TINFO_SECOND_HALF  128
 
 #define UNDEF_VIRGIN 0    // never assigned
@@ -295,9 +303,40 @@ typedef struct v_Type
 #define IS_ADDRESS(_TINFO) ((_TINFO)->tinfo & TINFO_ADDR)
 #define IS_PRIMITIVE_TYPE(_TINFO) ((_TINFO)->tinfo & TINFO_PRIMITIVE)
 
+/*
+ * Verifier super-structure which holds everything you need to know about
+ * this method and its state of verification.
+ */
+typedef struct v_MethodVerifier {
+  /* The method being verified */
+  w_method method;
+  /* The length of its bytecode (also the length of the status_array) */
+  w_size code_length;
+  /* Array containing flags for each byte of the bytecode */
+  w_ubyte *status_array;
+  /* Number of basic blocks */
+  w_size numBlocks;
+  /* The blocks themselves - each entry in the wordset is a v_BasicBlock* */
+  w_wordset blocks;
+  /* Class unions - each entry in the wordset is a v_Union* */
+  w_wordset unions;
+  /* Count of jsr/jsr_w instructions */
+  w_size jsr_count;
+} v_MethodVerifier;
+
+/*
+** Macro to retrieve the i'th basic block ftom mv->blocks
+*/
+#define getBasicBlock(mv,i) ((v_BasicBlock*)elementOfWordset(&((mv)->blocks),(i)))
+
+/*
+** Macro to retrieve the i'th basic block ftom mv->blocks
+*/
+#define getUnion(mv,i) ((v_Union*)elementOfWordset(&((mv)->unions),(i)))
+
 #ifdef DEBUG
 #define DUMP_TYPE_LEVEL 7
-static void w_dump_type(const char *s, v_Type t) {
+static void w_dump_type(const char *s, struct v_MethodVerifier *mv, v_Type t) {
   switch(t.tinfo) {
   case TINFO_UNDEFINED:
     woempa(DUMP_TYPE_LEVEL, "%s undefined type (%s)\n", s, t.data.undef_kind == UNDEF_VIRGIN ? "never assigned" : t.data.undef_kind == UNDEF_SOMETIMES ? "not defined in all paths" : "conflicting definitions");
@@ -324,8 +363,14 @@ static void w_dump_type(const char *s, v_Type t) {
     break;
 
   case TINFO_UNION:
-    woempa(DUMP_TYPE_LEVEL, "%s union of types\n", s);
-    // Not yet impemented
+    woempa(DUMP_TYPE_LEVEL, "%s union of types #%d\n", s, t.data.union_index);
+    { v_Union *uni = getUnion(mv, t.data.union_index);
+      w_size i;
+
+      for (i = 0; i < uni->size; ++i) {
+        woempa(DUMP_TYPE_LEVEL, "  member[%d]: %k\n", i, uni->members[i]);
+      }
+    }
     break;
 
   case TINFO_SECOND_HALF:
@@ -339,7 +384,7 @@ static void w_dump_type(const char *s, v_Type t) {
   }
 }
 #else
-#define w_dump_type(s,t)
+#define w_dump_type(s,mv,t)
 #endif
 
 /*
@@ -353,27 +398,7 @@ static v_Type v_type_null; // reference type which is subclass of all reference 
 static v_Type v_type_Object; // reference type which is superclass of all reference types
 static v_Type v_type_String;
 static v_Type v_type_Class;
-
-struct v_BasicBlock;
-
-/*
- * Verifier super-structure which holds everything you need to know about
- * this method and its state of verification.
- */
-typedef struct v_MethodVerifier {
-  /* The method being verified */
-  w_method method;
-  /* The length of its bytecode (also the length of the status_array) */
-  w_size code_length;
-  /* Array containing flags for each byte of the bytecode */
-  w_ubyte *status_array;
-  /* Number of basic blocks */
-  w_size numBlocks;
-  /* The blocks themselves - each entry in the wordset is a v_BasicBlock* */
-  w_wordset blocks;
-  /* Count of jsr/jsr_w instructions */
-  w_size jsr_count;
-} v_MethodVerifier;
+static v_Type v_type_conflict;
 
 /*
  * Basic block information
@@ -752,16 +777,27 @@ void initVerifier(void) {
   v_type_Class.tinfo = TINFO_CLASS;
   v_type_Class.uninitpc = 0;
   v_type_Class.data.clazz = clazzClass;
+  v_type_conflict.tinfo = TINFO_UNDEFINED;
+  v_type_conflict.uninitpc = 0;
+  v_type_conflict.data.undef_kind = UNDEF_CONFLICT;
 }
 
+/*
+** Release the memory used bu a method verifier and by all its adjuncts and
+** appertinances.
+*/
 void releaseMethodVerifier(v_MethodVerifier *mv) {
   if (mv->blocks) {
-    v_BasicBlock* bb;
-
-    while ((bb = (v_BasicBlock*)takeLastFromWordset(&mv->blocks))) {
-      releaseMem(bb);
+    while (sizeOfWordset(&mv->blocks)) {
+      releaseMem((void*)takeLastFromWordset(&mv->blocks));
     }
     releaseWordset(&mv->blocks);
+  }
+  if (mv->unions) {
+    while (sizeOfWordset(&mv->unions)) {
+      releaseMem((void*)takeLastFromWordset(&mv->unions));
+    }
+    releaseWordset(&mv->unions);
   }
   if (mv->status_array) {
     releaseMem(mv->status_array);
@@ -1444,9 +1480,12 @@ verify_error:
 #undef CHECK_POOL_IDX
 #undef BRANCH_IN_BOUNDS
 
+/*
+** Macro to append a basic block to the mv->blocks wordset
+*/
 #define appendBlock(bb,mv) bb->own_index = sizeOfWordset(&(mv)->blocks); \
     addToWordset(&(mv)->blocks, (w_word)bb);
-#define getBasicBlock(mv,i) ((v_BasicBlock*)elementOfWordset(&((mv)->blocks),(i)))
+
 
 /*
 ** Within a method verifier, find the index of the basic block which starts at 
@@ -1475,6 +1514,10 @@ static w_int pc2BasicBlock(v_MethodVerifier *mv, w_size pc) {
   return -1;
 }
 
+/*
+** Add the basic block with index succ_index as a successor of kind succ_kind
+** of the basic block with index block.
+*/
 static void addSuccessor(v_MethodVerifier *mv, w_size block_index, w_size succ_index, w_ubyte succ_kind) {
   v_BasicBlock* bb = getBasicBlock(mv, block_index);
 
@@ -1482,6 +1525,10 @@ static void addSuccessor(v_MethodVerifier *mv, w_size block_index, w_size succ_i
   bb->successors[succ_index] = succ_kind;
 }
  
+/*
+** Copy the subroutine consisting of block subr_index, its successors, etc.
+** into a new set of basic blocks appended to the end of mv->blocks
+*/
 static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
   w_size clone_index = mv->numBlocks;
   w_size result = mv->numBlocks;
@@ -1511,17 +1558,13 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
     woempa(7, "Copied block[%d] to become block[%d], incremented numBlocks to %d\n", orig_index, clone_index - 1, clone_index);
     last_opcode = mv->method->exec.code[origBlock->last_pc];
     woempa(7, "Last opcode is %s\n", opc2name(last_opcode));
-    if (last_opcode == ret || last_opcode == jsr || last_opcode == jsr_w) {
-      woempa(7, "Not following successors of this opcode\n");
-
-      continue;
-
-    }
     woempa(7, "Checking successors of block[%d]\n", orig_index);
     for (succ_index = 0; succ_index < result; ++succ_index) {
       w_ubyte succ_kind = origBlock->successors[succ_index];
 
-      if (succ_kind) {
+      switch (succ_kind) {
+      case SUCC_NORMAL:
+      case SUCC_EXCEPTION:
         if (mapping[succ_index]) {
           woempa(7, "Successor %d of kind %d, already mapped to %d\n", succ_index, succ_kind, mapping[succ_index]);
         }
@@ -1533,12 +1576,23 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
         }
         cloneBlock->successors[succ_index] = 0;
         cloneBlock->successors[mapping[succ_index]] = succ_kind;
+        break;
+
+      case SUCC_RET:
+        woempa(7, "Cancelling old RET successor %d\n", succ_index);
+        cloneBlock->successors[succ_index] = 0;
+        break;
+
+      case SUCC_JSR:
+        woempa(7, "Not following JSR successor, will be unrolled later\n");
+
+      default: // SUCC_NONE
+        ;
       }
     }
 
     // This is just to prevent us from looping indefinitely.
     // TODO - don't abort, force a VerifyError instead
-    woempa(7, "limit = %d\n", limit);
     if (limit-- == 0) {
       wabort(ABORT_WONKA, "Infinite loop?");
     }
@@ -1552,6 +1606,9 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
   return result;
 }
 
+/*
+** Mark block subr_index and its successors as having the given return address
+*/
 static void propagateReturnAddress(v_MethodVerifier *mv, w_size subr_index, w_size return_address) {
   w_size limit = mv->numBlocks;
   w_size orig_index;
@@ -1582,7 +1639,6 @@ static void propagateReturnAddress(v_MethodVerifier *mv, w_size subr_index, w_si
 
     // This is just to prevent us from looping indefinitely.
     // TODO - don't abort, force a VerifyError instead
-    woempa(7, "limit = %d\n", limit);
     if (limit-- == 0) {
       wabort(ABORT_WONKA, "Infinite loop?");
     }
@@ -1608,7 +1664,7 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
   w_size previous_pc;
   w_size block_count;
   w_size jsr_count;
-  v_BasicBlock *bb;
+  v_BasicBlock *bb = NULL;
   char *error_cstring;
 #ifdef DEBUG
   int lineno;
@@ -1835,15 +1891,11 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
       }
       break;
 
+    case ret:
     case athrow:
       woempa(7, "last instruction of block[%d] is %s, cannot determine successors\n", block_index, opc2name(opcode));
       break;
 
-    case ret:
-      succ_index = pc2BasicBlock(mv, bb->return_address);
-      woempa(7, "last instruction of block[%d] is %s, return address is %d in block[%d]\n", block_index, opc2name(opcode), bb->return_address, succ_index);
-      addSuccessor(mv, block_index, succ_index, SUCC_RET);
-      break;
 
     case ireturn:
     case lreturn:
@@ -1867,16 +1919,18 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
 
     if (method->exec.numExceptions) {
       w_exception ex = method->exec.exceptions;
+      v_BasicBlock *exbb;
 
       woempa(1, "Parsing exception table\n");
       for (exception_index = 0; exception_index < method->exec.numExceptions; ++exception_index, ++ex) {
+        woempa(7, "Exception[%d]; start_pc = %d, end_pc = %d, handler_pc = %d\n", exception_index, ex->start_pc, ex->end_pc, ex->handler_pc);
         if (ex->start_pc <= bb->start_pc && ex->end_pc > bb->last_pc) {
           succ_index = pc2BasicBlock(mv, ex->handler_pc);
           addSuccessor(mv, block_index, succ_index, SUCC_EXCEPTION);
-          bb = getBasicBlock(mv, succ_index);
-          setFlag(bb->flags, EXCEPTION);
-          bb->exception_type = ex->type_index ?  getResolvedClassConstant(mv->method->spec.declaring_clazz, ex->type_index) : clazzThrowable;
-          woempa(7, "block[%d] exception_type = %k\n", succ_index, bb->exception_type);
+          exbb = getBasicBlock(mv, succ_index);
+          setFlag(exbb->flags, EXCEPTION);
+          exbb->exception_type = ex->type_index ?  getResolvedClassConstant(mv->method->spec.declaring_clazz, ex->type_index) : clazzThrowable;
+          woempa(7, "block[%d] exception_type = %k\n", succ_index, exbb->exception_type);
         }
       }
     }
@@ -1910,6 +1964,12 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
           break;
         }
       }
+      break;
+
+    case ret:
+      succ_index = pc2BasicBlock(mv, bb->return_address);
+      woempa(7, "last instruction of block[%d] is %s, return address is %d in block[%d]\n", block_index, opc2name(opcode), bb->return_address, succ_index);
+      addSuccessor(mv, block_index, succ_index, SUCC_RET);
       break;
 
     default: 
@@ -2074,22 +2134,416 @@ void listBasicBlocks(v_BasicBlock** blocks) {
 
 /*
 ** Test whether the type rhs can be assigned to a field or parameter of type
-** lhs. Returns TRUE if assignme,t is possible, FALSE otherwise.
+** lhs, given as a w_clazz. Returns TRUE if assignme,t is possible, FALSE otherwise.
 */
-static w_boolean v_assignable(w_clazz lhs, v_Type *rhs) {
+static w_boolean v_assignable2clazz(w_clazz lhs, v_MethodVerifier *mv, v_Type *rhs) {
+  //woempa(7, "lhs: %k\n", lhs);
+  //w_dump_type("rhs:", mv, *rhs);
   switch(rhs->tinfo) {
   case TINFO_PRIMITIVE:
-    woempa(1, "lhs is %k, rhs is primitive type %k\n", lhs, rhs->data.clazz);
     return lhs == rhs->data.clazz || ((lhs == clazz_boolean || lhs == clazz_byte || lhs == clazz_short || lhs == clazz_char) && rhs->data.clazz == clazz_int);
 
   case TINFO_CLASS:
-    woempa(1, "lhs is %k, rhs is reference type %k\n", lhs, rhs->data.clazz);
     return rhs->data.clazz == clazz_void || isAssignmentCompatible(rhs->data.clazz, lhs);
+
+  case TINFO_UNION:
+    { v_Union *uni = getUnion(mv, rhs->data.union_index);
+      w_size i;
+
+      for (i = 0; i < uni->size; ++i) {
+        w_clazz c = uni->members[i];
+
+        woempa(1, "members[%d] is %k, is this assignable to %k?\n", i, c, lhs);
+        if (!isAssignmentCompatible(c, lhs)) {
+          woempa(1, "--> NO\n");
+
+          return FALSE;
+        }
+        woempa(1, "--> yes\n");
+      }
+
+      return TRUE;
+    }
 
   default:
     return FALSE;
 
   }
+}
+
+/*
+** Test whether the type rhs can be assigned to a field or parameter of type
+** lhs, given as a v_Type. Returns TRUE if assignme,t is possible, FALSE otherwise.
+*/
+static w_boolean v_assignable2type(v_Type *lhs, v_MethodVerifier *mv, v_Type *rhs) {
+  v_Union *lhs_uni;
+  v_Union *rhs_uni;
+  w_size i;
+  w_size j;
+  w_size n;
+  w_clazz lhs_clazz;
+  w_clazz rhs_clazz;
+
+  w_dump_type("lhs:", mv, *lhs);
+  w_dump_type("rhs:", mv, *rhs);
+
+  if (lhs->tinfo == TINFO_CLASS) {
+
+    return v_assignable2clazz(lhs->data.clazz, mv, rhs);
+
+  }
+
+  lhs_uni = getUnion(mv, lhs->data.union_index);
+  n = lhs_uni->size;
+  switch(rhs->tinfo) {
+  case TINFO_CLASS:
+    if (rhs->data.clazz == clazz_void) {
+      woempa(1, "rhs is clazz_void, that's assignable to anything\n");
+
+      return TRUE;
+
+    }
+
+    for (i = 0; i < n; ++i) {
+      lhs_clazz = lhs_uni->members[i];
+      woempa(1, "lhs members[%d] is %k, is %k assignable to it?\n", i, lhs_clazz, rhs->data.clazz);
+      if (!isAssignmentCompatible(rhs->data.clazz, lhs_clazz)) {
+        woempa(1, "--> NO\n");
+
+        return FALSE;
+
+      }
+      woempa(1, "--> yes\n");
+    }
+
+    return TRUE;
+
+  case TINFO_UNION:
+    rhs_uni = getUnion(mv, rhs->data.union_index);
+    for (i = 0; i < n; ++i) {
+      lhs_clazz = lhs_uni->members[i];
+      woempa(1, "lhs members[%d] is %k\n", i, lhs_clazz);
+      for (j = 0; j < rhs_uni->size; ++j) {
+        rhs_clazz = rhs_uni->members[j];
+        woempa(1, "rhs members[%d] is %k, is it assignable to lhs?\n", j, rhs_clazz);
+        if (!isAssignmentCompatible(rhs_clazz, lhs_clazz)) {
+          woempa(1, "--> NO\n");
+
+          return FALSE;
+        }
+        woempa(1, "--> yes\n");
+      }
+    }
+
+    return TRUE;
+
+  default:
+    return FALSE;
+
+  }
+}
+
+/*
+** Calculate the hash code of a union. We first sort its members into ascending
+** order of w_clazz address.
+*/
+static void calculateUnionHashcode(v_Union *uni) {
+  w_size i;
+  w_size j;
+  w_size n;
+  w_clazz c;
+  w_word hashcode;
+
+  woempa(7, "Calculating hashcode for union %p, size is %d\n", uni, uni->size);
+  n = uni->size;
+  while (n--) {
+    for (i = 0; i < n; ++i) {
+      woempa(7, "members[%d] = %p\n", i, uni->members[i]);
+      for (j = i + 1; j < uni->size; ++j) {
+        woempa(7, "members[%d] = %p\n", j, uni->members[j]);
+        if (uni->members[j] < uni->members[i]) {
+          woempa(7, "swapping [%d] with [%d]\n", i, j);
+          c = uni->members[i];
+          uni->members[i] = uni->members[j];
+          uni->members[j] = c;
+        }
+      }
+    }
+  }
+
+  hashcode = 0;
+  for (i = 0; i < uni->size; ++i) {
+    woempa(7, "merging %p into the hashcode\n", uni->members[i], uni->members[i]);
+    hashcode = hashcode * 41 + (w_word)uni->members[i];
+  }
+
+  uni->hashcode = hashcode;
+}
+
+/*
+** Get the hash code of a union, calculating it first if necessary.
+*/
+static w_word getUnionHashcode(v_Union *uni) {
+  if (!uni->hashcode) {
+    calculateUnionHashcode(uni);
+  }
+
+  return uni->hashcode;
+}
+
+/*
+** Compare two unions for equality. Note that this can have a side effect;
+** if the unions are the same size and one or other has no hash code set,
+** that union (or both unions) will get sorted into ascensing order of
+** w_clazz address and its hash code will be calculated.
+*/
+static w_boolean unionsEqual(v_Union *uni1, v_Union *uni2) {
+  w_word hashcode1;
+  w_word hashcode2;
+  w_size i;
+
+  woempa(7, "Comparing unions %p and %p\n", uni1, uni2);
+  if (uni1 == uni2) {
+    woempa(9, "Funny, we were called with two identical pointers. That works, but we didn't expect it.\n");
+  }
+
+  if (uni1->size != uni2->size) {
+    woempa(7, "Different sizes, cannot be equal\n");
+
+    return FALSE;
+  }
+
+  hashcode1 = getUnionHashcode(uni1);
+  hashcode2 = getUnionHashcode(uni2);
+
+  if (hashcode1 != hashcode2) {
+    woempa(7, "Different hashcodes, cannot be equal\n");
+
+    return FALSE;
+
+  }
+
+  for (i = 0; i < uni1->size; ++i) {
+    if (uni1->members[i] != uni2->members[i]) {
+
+      return FALSE;
+
+    }
+  }
+
+  return TRUE;
+}
+
+
+/*
+** Look for an existing copy of a union in mv->unions; if it is found, release
+** the memory used for the union and return the index of the existing union
+** of which it is a duplicate. If not found, add it to mv->unions and return
+** its index there.
+*/
+static w_size seekUnion(v_MethodVerifier *mv, v_Union *uni) {
+  w_size i;
+  w_size n = sizeOfWordset(&mv->unions);
+
+  woempa(7, "Looking for a match for union %p, MV for %m has %d unions\n", uni, mv->method, n);
+  for (i = 0; i < n; ++i) {
+    if (unionsEqual(getUnion(mv, i), uni)) {
+      releaseMem(uni);
+      woempa(7, "Found at position %d\n", i);
+
+      return i;
+    }
+  }
+
+  addToWordset(&mv->unions, (w_word)uni);
+  woempa(7, "Not found, adding at position %d\n", n);
+
+  return n;
+}
+
+/*
+** Merge two existing unions to obtain a new one (or possibly one of the old
+** ones back, if one is a superset of the other). Returns the index of the
+** new or existing union in mv->unions.
+*/
+static w_size mergeUnions(v_MethodVerifier *mv, w_size union_index1, w_size union_index2) {
+  v_Union *uni1;
+  v_Union *uni2;
+  v_Union *merged;
+  w_size size1;
+  w_size size2;
+  w_size size3;
+  w_clazz *members1;
+  w_clazz *members2;
+  w_clazz *members3;
+  w_size i;
+  w_size j;
+  w_clazz clazz;
+  w_boolean found;
+
+  if (union_index1 == union_index2) {
+
+    return union_index1;
+
+  }
+
+  uni1 = getUnion(mv, union_index1);
+  uni2 = getUnion(mv, union_index2);
+  size1 = uni1->size;
+  size2 = uni2->size;
+  members1 = uni1->members;
+  members2 = uni2->members;
+  merged = allocMem(sizeof(v_Union) + (size1 + size2) * sizeof(w_clazz));
+  merged->mv = mv;
+  members3 = merged->members;
+  memcpy(members3, members1, size1 * sizeof(w_clazz));
+  size3 = size1;
+  for (i = 0; i < size2; ++i) {
+    clazz = members2[i];
+    found = FALSE;
+    for (j = 0; j < size3; ++j) {
+      if (isAssignmentCompatible(clazz, members3[j])) {
+        found = TRUE;
+        break;
+      }
+      else if (isAssignmentCompatible(members3[j], clazz)) {
+        members3[j] = clazz;
+        found = TRUE;
+        break;
+      }
+    } 
+    if (!found) {
+      members3[size3++] = clazz;
+    }
+  }
+  merged->size = size3;
+  merged->hashcode = 0;
+
+  return seekUnion(mv, merged);
+}
+
+/*
+** Create a union, starting with two classes. The caller should ensure that
+** neither class is a superclass of the other, otherwise redundancy will result.
+** Returns the index of the new or existing union in mv->unions.
+*/
+static w_size createUnion2(v_MethodVerifier *mv, w_clazz clazz1, w_clazz clazz2) {
+  v_Union *merged;
+
+  woempa(7, "Creating a union of %k and %k\n", clazz1, clazz2);
+  merged = allocMem(sizeof(v_Union) + 2 * sizeof(w_clazz));
+  merged->mv = mv;
+  merged->members[0] = clazz1;
+  merged->members[1] = clazz2;
+  merged->size = 2;
+  merged->hashcode = 0;
+
+  return seekUnion(mv, merged);
+}
+
+/*
+** Merge an existing union with a class to obtain a new or existing union.
+** Returns the index of the new or existing union in mv->unions.
+*/
+static w_size mergeClassIntoUnion(v_MethodVerifier *mv, w_clazz clazz, w_size union_index) {
+  v_Union *uni;
+  v_Union *merged;
+  w_size size;
+  w_clazz *members;
+  w_size j;
+  w_boolean found;
+
+  if (clazz == clazz_void) {
+
+    return union_index;
+
+  }
+
+  uni = getUnion(mv, union_index);
+  size = uni->size;
+  members = uni->members;
+  merged = allocMem(sizeof(v_Union) + (size + 1) * sizeof(w_clazz));
+  memcpy(merged->members, members, size * sizeof(w_clazz));
+  found = FALSE;
+  for (j = 0; j < size; ++j) {
+    if (isSuperClass(merged->members[j], clazz)) {
+      found = TRUE;
+      break;
+    }
+    else if (isStrictSuperClass(clazz, merged->members[j])) {
+      merged->members[j] = clazz;
+      found = TRUE;
+      break;
+    }
+  } 
+
+  if (!found) {
+    merged->members[size++] = clazz;
+  }
+  merged->size = size;
+  merged->hashcode = 0;
+
+  return seekUnion(mv, merged);
+}
+
+/*
+** Given an array type atype, get the type of its elements. If atype is a
+** TINFO_CLASS, returns a TINFO_CLASS holding the element type; if atype is
+** a TINFO_UNION, returns a TINFO_UNION holding the element types of the
+** member classes. If atype is or includes a non-array type, returns a
+** TINFO_UNDEFINED.
+*/
+v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
+  v_Type result = v_type_conflict;
+  w_clazz clazz;
+  v_Union *uni;
+  w_size i;
+  w_size n;
+  v_Union *merged;
+
+  w_dump_type("getElementType() array_type:", mv, type);
+  switch(type.tinfo) {
+  case TINFO_CLASS:
+    clazz = type.data.clazz;
+    if (clazz->previousDimension) {
+      woempa(7, "Previous dimension is %k, returning that\n", clazz->previousDimension);
+      result.tinfo = TINFO_CLASS;
+      result.uninitpc = 0;
+      result.data.clazz = clazz->previousDimension;
+    }
+    break;
+
+  case TINFO_UNION:
+    uni = getUnion(mv, type.data.union_index);
+    n = uni->size;
+    merged = allocMem(sizeof(v_Union) + n * sizeof(w_clazz));
+    merged->mv = mv;
+    for (i = 0; i < n; ++i) {
+      clazz = uni->members[i];
+      if (clazz->previousDimension) {
+        woempa(7, "Union member %d revious dimension is %k, returning that\n", i, clazz->previousDimension);
+        merged->members[i] = clazz->previousDimension;
+      }
+      else {
+        releaseMem(merged);
+        woempa(7, "Union member %d is not array, returning UNDEFINED\n");
+
+        return result;
+      }
+    }
+
+    result.tinfo = TINFO_UNION;
+    result.uninitpc = 0;
+    result.data.union_index = seekUnion(mv, merged);
+    break;
+
+  default:
+     ;
+  }
+
+  w_dump_type("getElementType() result:", mv, result);
+
+  return result;
 }
 
 #define CHECK_STACK_CAPACITY(n) V_ASSERT(block->stacksz + (n) <= method->exec.stack_i, stack_overflow)
@@ -2098,11 +2552,12 @@ static w_boolean v_assignable(w_clazz lhs, v_Type *rhs) {
 #define GET_INDEX (isSet(status_array[pc], WIDE_MODDED) ? GET_INDEX2 : GET_INDEX1)
 #define GET_INDEX1 (code[pc + 1])
 #define GET_INDEX2 ((code[pc + 1] << 8) | code[pc + 2])
+#define IS_REFERENCE(t) (t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION)
 #define LOCAL_IS_DOUBLE(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_double)
 #define LOCAL_IS_FLOAT(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_float)
 #define LOCAL_IS_INTEGER(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_int)
 #define LOCAL_IS_LONG(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_long)
-#define LOCAL_IS_REFERENCE(idx) ((block->locals[idx].tinfo == TINFO_CLASS ) || (block->locals[idx].tinfo == TINFO_UNINIT ) || (block->locals[idx].tinfo == TINFO_UNINIT_SUPER ))
+#define LOCAL_IS_REFERENCE(idx) ((block->locals[idx].tinfo == TINFO_CLASS ) || (block->locals[idx].tinfo == TINFO_UNINIT ) || (block->locals[idx].tinfo == TINFO_UNINIT_SUPER ) || (block->locals[idx].tinfo == TINFO_UNION))
 #define LOCAL_IS_RETURN_ADDRESS(idx,addr) (block->locals[idx].tinfo == TINFO_ADDR && block->locals[idx].data.retaddr == addr)
 #define PEEK block->opstack[block->stacksz - 1]
 #define PEEK2 block->opstack[block->stacksz - 2]
@@ -2117,7 +2572,7 @@ static w_boolean v_assignable(w_clazz lhs, v_Type *rhs) {
 #define POP_IS_INTEGER (t = POP, TYPE_IS_INTEGER(t))
 #define POP_IS_LONG ((void)POP, t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == clazz_long)
 #define POP_IS_PRIMITIVE(c) (((c) == clazz_double || (c) == clazz_long ? (void)POP : (void)0), t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == (c))
-#define POP_IS_REFERENCE (t = POP, t.tinfo == TINFO_CLASS)
+#define POP_IS_REFERENCE (t = POP, IS_REFERENCE(t))
 #define PUSH(t) if (TYPE_IS_INTEGER(t)) { PUSH1(v_type_int); } else if ((t).tinfo == TINFO_PRIMITIVE) { if ((t).data.clazz == clazz_float) { PUSH1(t); } else { PUSH2(t); } } else { PUSH1(t); }
 #define PUSH1(t) CHECK_STACK_CAPACITY(1); block->opstack[block->stacksz++] = (t)
 #define PUSH2(t) CHECK_STACK_CAPACITY(2); block->opstack[block->stacksz++] = (t); block->opstack[block->stacksz++].tinfo = TINFO_SECOND_HALF
@@ -2139,6 +2594,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
   w_int idx;
   w_size n;
   v_Type t;
+  v_Type aType;
+  v_Type eType;
   w_clazz clazz;
   w_clazz aclazz;
   w_field f;
@@ -2154,15 +2611,16 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 #ifdef DEBUG
     woempa(7, "stack size = %d (max is %d)\n", block->stacksz, method->exec.stack_i);
     for (n = block->stacksz; n > 0;) {
-      w_dump_type("   ", block->opstack[--n]);
+      w_dump_type("   ", mv, block->opstack[--n]);
     }
+    woempa(7, "%m pc %d (%s)\n", method, pc, opc2name(opcode));
 #endif
     switch(opcode) {
     case nop:
       break;
 
     case aconst_null:
-      PUSH(v_type_null);
+      PUSH1(v_type_null);
       break;
 
     case iconst_m1:
@@ -2174,22 +2632,26 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case iconst_5:
     case bipush:
     case sipush:
-      PUSH(v_type_int);
+    push_integer:
+      PUSH1(v_type_int);
       break;
 
     case lconst_0:
     case lconst_1:
+    push_long:
       PUSH2(v_type_long);
       break;
 
     case fconst_0:
     case fconst_1:
     case fconst_2:
-      PUSH(v_type_float);
+    push_float:
+      PUSH1(v_type_float);
       break;
 
     case dconst_0:
     case dconst_1:
+    push_double:
       PUSH2(v_type_double);
       break;
 
@@ -2201,26 +2663,26 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       idx = (code[pc + 1] << 8) | code[pc + 2];
     ldc_common:
       if (isIntegerConstant(declaring_clazz, idx)) {
-        PUSH(v_type_int);
+        goto push_integer;
       }
-      else if (isFloatConstant(declaring_clazz, idx)) {
-        PUSH(v_type_float);
+      if (isFloatConstant(declaring_clazz, idx)) {
+        goto push_float;
       }
-      else if (isStringConstant(declaring_clazz, idx)) {
-        PUSH(v_type_String);
+      if (isStringConstant(declaring_clazz, idx)) {
+        PUSH1(v_type_String);
       }
       else if (isClassConstant(declaring_clazz, idx)) {
-        PUSH(v_type_Class);
+        PUSH1(v_type_Class);
       }
       break;
       
     case ldc2_w:
       idx = (code[pc + 1] << 8) | code[pc + 2];
       if (isLongConstant(declaring_clazz, idx)) {
-        PUSH2(v_type_long);
+        goto push_long;
       }
-      else if (isDoubleConstant(declaring_clazz, idx)) {
-        PUSH2(v_type_double);
+      if (isDoubleConstant(declaring_clazz, idx)) {
+        goto push_double;
       }
       break;
       
@@ -2236,8 +2698,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     xload_common:
       V_ASSERT(LOCAL_IS_INTEGER(idx), local_not_integer);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case lload:
       idx = GET_INDEX;
@@ -2251,8 +2712,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     lload_common:
       V_ASSERT(LOCAL_IS_LONG(idx), local_not_long);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case fload:
       idx = GET_INDEX;
@@ -2266,8 +2726,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     fload_common:
       V_ASSERT(LOCAL_IS_FLOAT(idx), local_not_float);
-      PUSH(v_type_float);
-      break;
+      goto push_float;
 
     case dload:
       idx = GET_INDEX;
@@ -2281,8 +2740,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     dload_common:
       V_ASSERT(LOCAL_IS_DOUBLE(idx), local_not_double);
-      PUSH2(v_type_double);
-      break;
+      goto push_double;
 
     case aload:
       idx = GET_INDEX;
@@ -2297,44 +2755,43 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     aload_common:
       V_ASSERT(LOCAL_IS_REFERENCE(idx), local_not_reference);
       t = block->locals[idx];
-      w_dump_type("aload: loaded", t);
-      PUSH(t);
+    push_reference:
+      w_dump_type("pushing", mv, t);
+      PUSH1(t);
       break;
 
     case iaload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_int]), array_not_correct);
-      goto xaload_common;
+      goto push_integer;
 
     case laload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_long]), array_not_correct);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case faload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_float]), array_not_correct);
-      PUSH(v_type_float);
-      break;
+      goto push_float;
 
     case daload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_double]), array_not_correct);
-      PUSH2(v_type_double);
-      break;
+      goto push_double;
 
     case aaload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && t.data.clazz && t.data.clazz->previousDimension && !clazzIsPrimitive(t.data.clazz->previousDimension), array_not_correct);
-      t.data.clazz = t.data.clazz->previousDimension;
-      PUSH(t);
+      V_ASSERT(IS_REFERENCE(t), array_not_correct);
+      aType = getElementType(mv, t);
+      V_ASSERT(aType.tinfo != TINFO_UNDEFINED, array_not_correct);
+      PUSH1(aType);
       break;
 
     case baload:
@@ -2342,22 +2799,19 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       t = POP;
       V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == atype2clazz[P_boolean] || t.data.clazz == atype2clazz[P_byte]), array_not_correct);
-      goto xaload_common;
+      goto push_integer;
 
     case caload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_char]), array_not_correct);
-      goto xaload_common;
+      goto push_integer;
 
     case saload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       V_ASSERT(POP_IS_CLASS(atype2clazz[P_short]), array_not_correct);
-
-    xaload_common:
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case istore:
       idx = GET_INDEX;
@@ -2436,8 +2890,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     astore_common:
       CHECK_STACK_SIZE(1);
       t = POP;
-      w_dump_type("astore: popped", t);
-      V_ASSERT(t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNINIT || t.tinfo == TINFO_UNINIT_SUPER || t.tinfo == TINFO_ADDR, value_not_correct);
+      w_dump_type("astore: popped", mv, t);
+      V_ASSERT(t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNINIT || t.tinfo == TINFO_UNINIT_SUPER || t.tinfo == TINFO_UNION || t.tinfo == TINFO_ADDR, value_not_correct);
       STORE(t, idx);
       break;
 
@@ -2467,16 +2921,16 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case aastore:
       CHECK_STACK_SIZE(3);
-      t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS, value_not_correct);
-      clazz = t.data.clazz;
-      woempa(7, "element class is %d %k\n", t.tinfo, clazz);
+      eType = POP;
+      w_dump_type("aastore value", mv, eType);
+      V_ASSERT(IS_REFERENCE(eType), value_not_correct);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS, value_not_correct);
-      aclazz = t.data.clazz;
-      woempa(7, "array class is %d %k\n", t.tinfo, aclazz);
-      V_ASSERT(clazz == clazz_void || isAssignmentCompatible(clazz, aclazz->previousDimension), array_not_correct);
+      w_dump_type("aastore array", mv, t);
+      V_ASSERT(IS_REFERENCE(t), array_not_correct);
+      aType = getElementType(mv, t);
+      V_ASSERT(aType.tinfo != TINFO_UNDEFINED, array_not_correct);
+      V_ASSERT(v_assignable2type(&aType, mv, &eType), array_not_correct);
       break;
 
     case bastore:
@@ -2642,8 +3096,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(3);
       V_ASSERT(POP_IS_INTEGER, arg_not_correct);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case iinc:
       idx = GET_INDEX;
@@ -2653,74 +3106,62 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case i2l:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, arg_not_correct);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case i2f:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, arg_not_correct);
-      PUSH(v_type_float);
-      break;
+      goto push_float;
 
     case i2d:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, arg_not_correct);
-      PUSH2(v_type_double);
-      break;
+      goto push_double;
 
     case l2i:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case l2f:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
-      PUSH(v_type_float);
-      break;
+      goto push_float;
 
     case l2d:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
-      PUSH2(v_type_double);
-      break;
+      goto push_double;
 
     case f2i:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_FLOAT, arg_not_correct);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case f2l:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_FLOAT, arg_not_correct);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case f2d:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_FLOAT, arg_not_correct);
-      PUSH2(v_type_double);
-      break;
+      goto push_double;
 
     case d2i:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_DOUBLE, arg_not_correct);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case d2l:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_DOUBLE, arg_not_correct);
-      PUSH2(v_type_long);
-      break;
+      goto push_long;
 
     case d2f:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_DOUBLE, arg_not_correct);
-      PUSH(v_type_float);
-      break;
+      goto push_float;
 
     case i2b:
     case i2c:
@@ -2733,25 +3174,21 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(4);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
       V_ASSERT(POP_IS_LONG, arg_not_correct);
-      goto cmp_common;
+      goto push_integer;
 
     case fcmpl:
     case fcmpg:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_FLOAT, arg_not_correct);
       V_ASSERT(POP_IS_FLOAT, arg_not_correct);
-      goto cmp_common;
+      goto push_integer;
 
     case dcmpl:
     case dcmpg:
       CHECK_STACK_SIZE(4);
       V_ASSERT(POP_IS_DOUBLE, arg_not_correct);
       V_ASSERT(POP_IS_DOUBLE, arg_not_correct);
-      goto cmp_common;
-
-    cmp_common:
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case if_icmpeq:
     case if_icmpne:
@@ -2804,7 +3241,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case jsr_w:
       t.tinfo = TINFO_ADDR;
       t.data.retaddr = pc + instruction_length(opcode);
-      PUSH(t);
+      w_dump_type("pushing", mv, t);
+      PUSH1(t);
       break;
 
     case ret:
@@ -2838,9 +3276,17 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case areturn:
       CHECK_STACK_SIZE(1);
-      t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || isAssignmentCompatible(t.data.clazz, method->spec.return_type)), value_not_correct);
       V_ASSERT(!clazzIsPrimitive(method->spec.return_type), return_not_match_type);
+      t = POP;
+      switch(t.tinfo) {
+      case TINFO_CLASS:
+      case TINFO_UNION:
+        V_ASSERT(v_assignable2clazz(method->spec.return_type, mv, &t), value_not_correct);
+        break;
+
+      default:
+        VERIFY_ERROR(value_not_correct);
+      }
       break;
 
     case vreturn:
@@ -2867,7 +3313,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       }
       t = POP;
       woempa(1, "popped %d %p, field %v expects %k\n", t.tinfo, t.data.clazz, f, f->value_clazz);
-      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS) && v_assignable(f->value_clazz, &t), value_not_correct);
+      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
       break;
 
     case getfield:
@@ -2876,9 +3322,10 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       f = getResolvedFieldConstant(declaring_clazz, idx);
       V_ASSERT(isNotSet(f->flags, ACC_STATIC), member_is_static);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && v_assignable(f->declaring_clazz, &t), objectref_wrong_type);
+      V_ASSERT(IS_REFERENCE(t) && v_assignable2clazz(f->declaring_clazz, mv, &t), objectref_wrong_type);
       // TODO: check access?
       CLAZZ2TYPE(f->value_clazz, t);
+      w_dump_type("pushing", mv, t);
       PUSH(t);
       break;
 
@@ -2893,11 +3340,11 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
         V_ASSERT(t.tinfo = TINFO_SECOND_HALF, not_doubleword);
       }
       t = POP;
-      w_dump_type("putfield: value =", t);
-      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS) && v_assignable(f->value_clazz, &t), value_not_correct);
+      w_dump_type("putfield: value =", mv, t);
+      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
       t = POP;
-      w_dump_type("putfield: objectref =", t);
-      V_ASSERT((t.tinfo == TINFO_CLASS && v_assignable(f->declaring_clazz, &t)) || (t.tinfo == TINFO_UNINIT_SUPER && isSuperClass(f->declaring_clazz, t.data.clazz)) , objectref_wrong_type);
+      w_dump_type("putfield: objectref =", mv, t);
+      V_ASSERT(((t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->declaring_clazz, mv, &t)) || (t.tinfo == TINFO_UNINIT_SUPER && isSuperClass(f->declaring_clazz, t.data.clazz)) , objectref_wrong_type);
       break;
 
     case invokevirtual:
@@ -2917,11 +3364,11 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
         woempa(7, "argument[%d] is of type %k\n", arglist - m->spec.arg_types, arg_type);
         t = block->opstack[block->stacksz - n];
-        w_dump_type("actual argument =", t);
-        V_ASSERT(v_assignable(arg_type, &t), parameter_type_mismatch);
+        w_dump_type("actual argument =", mv, t);
+        V_ASSERT(v_assignable2clazz(arg_type, mv, &t), parameter_type_mismatch);
         --n;
         if (arg_type == clazz_long || arg_type == clazz_double) {
-          w_dump_type("skipped word with", block->opstack[block->stacksz - n]);
+          w_dump_type("skipped word with", mv, block->opstack[block->stacksz - n]);
           --n;
         }
       }
@@ -2930,7 +3377,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       if (opcode == invokespecial && m->spec.name == string_angle_brackets_init) {
         if (m->spec.declaring_clazz == declaring_clazz) {
           woempa(7, "invokespecial on own constructor\n");
-          w_dump_type("objectref =", t);
+          w_dump_type("objectref =", mv, t);
           if (t.tinfo == TINFO_UNINIT && t.data.clazz == declaring_clazz) {
             popUninit(mv, t.uninitpc, block);
           }
@@ -2943,7 +3390,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
         }
         else if (m->spec.declaring_clazz == getSuper(declaring_clazz)) {
           woempa(7, "invokespecial on constructor of superclass %k\n", m->spec.declaring_clazz);
-          w_dump_type("objectref =", t);
+          w_dump_type("objectref =", mv, t);
           // Note: it could be a call to super(), but it could just be a call
           // to a constructor of the superclass, e.g. new Object();
           if (t.tinfo == TINFO_UNINIT_SUPER) {
@@ -2958,7 +3405,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
         }
         else { // someone else's constructor
           woempa(7, "invokespecial on constructor of non-superclass %k\n", m->spec.declaring_clazz);
-          w_dump_type("objectref =", t);
+          w_dump_type("objectref =", mv, t);
           if (t.tinfo == TINFO_UNINIT) {
             V_ASSERT(t.data.clazz == clazz_void || isAssignmentCompatible(t.data.clazz, m->spec.declaring_clazz), objectref_wrong_type);
             popUninit(mv, t.uninitpc, block);
@@ -2971,10 +3418,8 @@ exit(255);
       }
       else {
         woempa(7, "normal invocation of method %m of %k\n", m, m->spec.declaring_clazz);
-        w_dump_type("objectref =", t);
-        if (t.tinfo != TINFO_CLASS || !v_assignable(m->spec.declaring_clazz, &t)) {
-          VERIFY_ERROR(objectref_wrong_type);
-        }
+        w_dump_type("objectref =", mv, t);
+        V_ASSERT((t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(m->spec.declaring_clazz, mv, &t), objectref_wrong_type);
       }
       goto invoke_common;
 
@@ -2993,7 +3438,7 @@ exit(255);
         woempa(1, "argument[%d] is of type %k\n", arglist - m->spec.arg_types, arg_type);
         t = block->opstack[block->stacksz - n];
         woempa(1, "actual argument = %d %k\n", t.tinfo, t.data.clazz);
-        V_ASSERT(v_assignable(arg_type, &t), parameter_type_mismatch);
+        V_ASSERT(v_assignable2clazz(arg_type, mv, &t), parameter_type_mismatch);
         --n;
         if (arg_type == clazz_long || arg_type == clazz_double) {
           woempa(1, "skipped word with tinfo = %d\n", block->opstack[block->stacksz - n].tinfo);
@@ -3003,13 +3448,8 @@ exit(255);
 
     invoke_common:
       block->stacksz -= m->exec.arg_i;
-      t.tinfo = clazzIsPrimitive(m->spec.return_type) ? TINFO_PRIMITIVE : TINFO_CLASS;
-      t.uninitpc = 0;
-      t.data.clazz = m->spec.return_type;
-      if (m->spec.return_type == clazz_long || m->spec.return_type == clazz_double) {
-        PUSH2(t);
-      }
-      else if (m->spec.return_type != clazz_void) {
+      if (m->spec.return_type != clazz_void) {
+        CLAZZ2TYPE(m->spec.return_type, t);
         PUSH(t);
       }
       break;
@@ -3020,35 +3460,29 @@ exit(255);
       clazz = getResolvedClassConstant(declaring_clazz, idx);
       t.uninitpc = pushUninit(mv, pc);
       t.data.clazz = clazz;
-      PUSH(t);
-      break;
+      goto push_reference;
 
     case newarray:
       idx = GET_INDEX1;
       V_ASSERT(POP_IS_INTEGER, count_not_integer);
       CLAZZ2TYPE(atype2clazz[idx], t);
-      PUSH(t);
-      break;
+      goto push_reference;
 
     case anewarray:
       idx = GET_INDEX2;
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, count_not_integer);
       aclazz = getResolvedClassConstant(declaring_clazz, idx);
-      woempa(7, "component class is %k\n", aclazz);
       t.tinfo = TINFO_CLASS;
       t.uninitpc = 0;
       t.data.clazz = getNextDimension(aclazz, aclazz->loader);
-      woempa(7, "array class is %k\n", t.data.clazz);
-      PUSH(t);
-      break;
+      goto push_reference;
 
     case arraylength:
       CHECK_STACK_SIZE(1);
       t = POP;
       V_ASSERT(t.tinfo == TINFO_CLASS && t.data.clazz->dims, value_not_array);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case athrow:
       CHECK_STACK_SIZE(1);
@@ -3058,17 +3492,16 @@ exit(255);
     case checkcast:
       idx = GET_INDEX2;
       CHECK_STACK_SIZE(1);
-      V_ASSERT(POP_IS_REFERENCE, value_not_reference);
+      t = POP;
+      V_ASSERT(IS_REFERENCE(t), value_not_reference);
       CLAZZ2TYPE(getResolvedClassConstant(declaring_clazz, idx), t);
       woempa(1, "checkcast to %k\n", t.data.clazz);
-      PUSH(t);
-      break;
+      goto push_reference;
 
     case instanceof:
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_REFERENCE, value_not_reference);
-      PUSH(v_type_int);
-      break;
+      goto push_integer;
 
     case monitorenter:
     case monitorexit:
@@ -3084,16 +3517,14 @@ exit(255);
       idx = GET_INDEX2;
       aclazz = getResolvedClassConstant(declaring_clazz, idx);
       n = method->exec.code[pc + 3];
-      woempa(7, "multianewarray: aclazz = %k, dims = %d\n", aclazz, n);
       CHECK_STACK_SIZE(n);
       V_ASSERT(aclazz->dims >= n, array_too_few_dims);
       block->stacksz -= n;
       t.tinfo = TINFO_CLASS;
       t.uninitpc = 0;
       t.data.clazz = aclazz;
-      PUSH(t);
-      break;
-      
+      goto push_reference;
+
     case goto_w:
     case breakpoint:
       break;
@@ -3124,8 +3555,13 @@ verify_error:
 #define MERGE_FAILED -1
 
 /*
+** Merge two types. If successful, either old_type is updated to hold the 
+** merged type and MERGE_SUCCEEDED is returned, or in trivial cases old_type
+** is unchanged and MERGE_DID_NOTHING is returned. If unsuccessful, returns
+** MERGE_FAILED.
 */
-w_int mergeTypes(v_Type *old_type, v_Type *new_type) {
+w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
+
   if (memcmp(old_type, new_type, sizeof(v_Type)) == 0) {
 
     return MERGE_DID_NOTHING;
@@ -3135,9 +3571,6 @@ w_int mergeTypes(v_Type *old_type, v_Type *new_type) {
   if (new_type->tinfo == TINFO_UNDEFINED) {
     *old_type = *new_type;
     old_type->data.undef_kind = UNDEF_SOMETIMES;
-    woempa(7, "Merged define and undefined:");
-    w_dump_type("   old:", *old_type);
-    w_dump_type("   new:", *new_type);
 
     return MERGE_SUCCEEDED;
   }
@@ -3161,19 +3594,35 @@ w_int mergeTypes(v_Type *old_type, v_Type *new_type) {
 
   case TINFO_CLASS:
     if (new_type->tinfo == TINFO_CLASS) {
-      w_clazz super;
+      //w_clazz super;
 
       woempa(7, "Merging classes...\n");
-      if (new_type->data.clazz == clazz_void || isAssignmentCompatible(new_type->data.clazz, old_type->data.clazz)) {
-        woempa(7, "new type %k can be assigned to old type %k, leaving as is\n", new_type->data.clazz, old_type->data.clazz);
+      if (new_type->data.clazz == clazz_void) {
+        woempa(7, "new class is void, leaving as is\n");
         return MERGE_DID_NOTHING;
       }
-      if (old_type->data.clazz == clazz_void || isAssignmentCompatible(old_type->data.clazz, new_type->data.clazz)) {
-        woempa(7, "old type %k can be assigned to new type %k, replacing old by new\n", old_type->data.clazz, new_type->data.clazz);
+      if (old_type->data.clazz == clazz_void) {
+        woempa(7, "new class is void, leaving as is\n");
+        return MERGE_DID_NOTHING;
+      }
+      if (new_type->data.clazz == old_type->data.clazz) {
+        woempa(7, "both are type %k, leaving as is\n", new_type->data.clazz);
+        return MERGE_DID_NOTHING;
+      }
+      if (isAssignmentCompatible(new_type->data.clazz, old_type->data.clazz)) {
+        woempa(7, "new type %k is subclass of old type %k, leaving as is\n", new_type->data.clazz, old_type->data.clazz);
+        return MERGE_DID_NOTHING;
+      }
+      if (isAssignmentCompatible(old_type->data.clazz, new_type->data.clazz)) {
+        woempa(7, "old type %k is subclass of new type %k, replacing old by new\n", old_type->data.clazz, new_type->data.clazz);
         *old_type = *new_type;
         return MERGE_SUCCEEDED;
       }
 
+      old_type->tinfo = TINFO_UNION;
+      old_type->data.union_index = createUnion2(mv, old_type->data.clazz, new_type->data.clazz);
+      return MERGE_SUCCEEDED;
+      /* WAS:
       super = getSuper(new_type->data.clazz);
       while (super) {
         woempa(7, "Searching for common superclass, trying %k\n", super);
@@ -3184,6 +3633,12 @@ w_int mergeTypes(v_Type *old_type, v_Type *new_type) {
         }
         super = getSuper(super);
       }
+      */
+    }
+    else if (new_type->tinfo == TINFO_UNION) {
+      old_type->tinfo = TINFO_UNION;
+      old_type->data.union_index = mergeClassIntoUnion(mv, old_type->data.clazz, new_type->data.union_index);
+      return MERGE_SUCCEEDED;
     }
     break;
 
@@ -3195,20 +3650,36 @@ w_int mergeTypes(v_Type *old_type, v_Type *new_type) {
     break;
 
   case TINFO_UNION:
-    // Not yet implemented
-    break;
+    {
+      w_size old_index = old_type->data.union_index;
+      w_size new_index;
+
+      if (new_type->tinfo == TINFO_CLASS) {
+        new_index = mergeClassIntoUnion(mv, new_type->data.clazz, old_index);
+      }
+      else if (new_type->tinfo == TINFO_UNION) {
+        new_index = mergeUnions(mv, new_type->data.union_index, old_index);
+      }
+      else {
+
+        return MERGE_FAILED;
+
+      }
+
+      return new_index == old_index ? MERGE_DID_NOTHING : MERGE_SUCCEEDED;
+    }
 
   case TINFO_SECOND_HALF:
     if (new_type->tinfo == TINFO_SECOND_HALF) {
       return MERGE_DID_NOTHING;
     }
-    break;
+    return MERGE_FAILED;
 
   }
 
   woempa(7, "Merged conflicting types:\n");
-  w_dump_type("   old:", *old_type);
-  w_dump_type("   new:", *new_type);
+  w_dump_type("   old:", mv, *old_type);
+  w_dump_type("   new:", mv, *new_type);
   old_type->tinfo = TINFO_UNDEFINED;
   old_type->data.undef_kind = UNDEF_CONFLICT;
 
@@ -3230,13 +3701,13 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
 */
     for (i = 0; i < old_block->localsz; ++i) {
       woempa(7, "Filling in old locals[%d]\n", i);
-      w_dump_type("   ", new_block->locals[i]);
+      w_dump_type("   ", mv, new_block->locals[i]);
       old_block->locals[i] = new_block->locals[i];
     }
 
     for (i = 0; i < old_block->stacksz; ++i) {
       woempa(7, "Filling in old opstack[%d]\n", i);
-      w_dump_type("   ", new_block->opstack[i]);
+      w_dump_type("   ", mv, new_block->opstack[i]);
       old_block->opstack[i] = new_block->opstack[i];
     }
 
@@ -3262,9 +3733,9 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
 
     for (i = 0; i < old_block->localsz; ++i) {
       woempa(7, "Merging locals[%d]\n", i);
-      w_dump_type("  old:", old_block->locals[i]);
-      w_dump_type("  new:", new_block->locals[i]);
-      result |= mergeTypes(&old_block->locals[i], &new_block->locals[i]);
+      w_dump_type("  old:", mv, old_block->locals[i]);
+      w_dump_type("  new:", mv, new_block->locals[i]);
+      result |= mergeTypes(mv, &old_block->locals[i], &new_block->locals[i]);
       if (result == MERGE_FAILED) {
 
         return MERGE_FAILED;
@@ -3274,9 +3745,9 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
 
     for (i = 0; i < old_block->stacksz; ++i) {
       woempa(7, "Merging opstack[%d]\n", i);
-      w_dump_type("  old:", old_block->opstack[i]);
-      w_dump_type("  new:", new_block->opstack[i]);
-      result |= mergeTypes(&old_block->opstack[i], &new_block->opstack[i]);
+      w_dump_type("  old:", mv, old_block->opstack[i]);
+      w_dump_type("  new:", mv, new_block->opstack[i]);
+      result |= mergeTypes(mv, &old_block->opstack[i], &new_block->opstack[i]);
       if (result == MERGE_FAILED) {
 
         return MERGE_FAILED;
@@ -3316,6 +3787,7 @@ w_boolean verifyMethod(w_method method) {
   mv.status_array = allocClearedMem(method->exec.code_length);
   mv.numBlocks = 0;
   mv.blocks = NULL;
+  mv.unions = NULL;
 
   result = identifyBoundaries(&mv);
   if (result) {
