@@ -42,8 +42,7 @@ public class DrawImageClipped extends VisualTestImpl {
     
   public DrawImageClipped() {
     super();
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    original = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/lena1.png"));
     faded = createImage(new FilteredImageSource(original.getSource(), new FadeFilter()));
 
     w = original.getWidth(null);

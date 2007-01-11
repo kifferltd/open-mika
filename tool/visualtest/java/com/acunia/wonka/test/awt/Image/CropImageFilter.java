@@ -60,8 +60,7 @@ public class CropImageFilter extends VisualTestImpl implements MouseListener, Mo
     crop = new Rectangle(72, 59, 77, 18);
     lastClick = new Point();
     
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena2.png");
+    original = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/lena2.png"));
     
     this.repaint();
   }

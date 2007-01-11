@@ -121,8 +121,7 @@ public class ImageFilter extends VisualTestImpl {
     
   public ImageFilter() {
     super();
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    original = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/lena1.png"));
     trans = this.createImage(new FilteredImageSource(original.getSource(), new TransFilter()));
     flip1 = this.createImage(new FilteredImageSource(original.getSource(), new FlipFilter(true, false)));
     flip2 = this.createImage(new FilteredImageSource(original.getSource(), new FlipFilter(false, true)));

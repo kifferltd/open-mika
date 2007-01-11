@@ -109,8 +109,7 @@ public class RGBImageFilter extends VisualTestImpl {
 
 
   public RGBImageFilter() {
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    Image original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    Image original = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/lena1.png"));
 
     Image color1 = createImage(new FilteredImageSource(original.getSource(), new MaskFilter(0xFFE0E0E0)));
     Image color2 = createImage(new FilteredImageSource(original.getSource(), new MaskFilter(0xFF808080)));

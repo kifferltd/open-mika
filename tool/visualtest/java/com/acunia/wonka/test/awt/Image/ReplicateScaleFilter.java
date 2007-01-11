@@ -36,8 +36,7 @@ public class ReplicateScaleFilter extends VisualTestImpl {
     
   public ReplicateScaleFilter() {
     super();
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    original = Toolkit.getDefaultToolkit().getImage(path + "/lena1.png");
+    original = Toolkit.getDefaultToolkit().getImage(getClass().getResource("/lena1.png"));
 
     int w = original.getWidth(null);
     int h = original.getHeight(null);
