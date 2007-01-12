@@ -177,7 +177,10 @@
 
   <target name="copy-rudolph-files">
     <copy todir="${release.lib.dir}">
-      <fileset  dir="${rudolph.resource.dir}"/>
+      <fileset  dir="${rudolph.resource.dir}">
+        <include name="*"/>
+        <include name="font/*.pcf"/>
+      </fileset>
     </copy>
   </target>
 
