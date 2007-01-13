@@ -89,40 +89,40 @@ static inline void init_vfs(void) {
 ** non-blocking.
 */
 
-#define vfs_open(path, a...)       open(path, ##a)
-#define vfs_creat(path, a...)      creat(path, ##a)
-#define vfs_read(a...)             read(##a)
-#define vfs_write(a...)            write(##a)
+#define vfs_open(path, a...)       open(path, a)
+#define vfs_creat(path, a...)      creat(path, a)
+#define vfs_read(a...)             read(a)
+#define vfs_write(a...)            write(a)
 
-#define vfs_fopen(path, a...)      fopen(path, ##a)
-#define vfs_fdopen(a...)           fdopen(##a)
-#define vfs_fclose(a...)           fclose(##a)
+#define vfs_fopen(path, a...)      fopen(path, a)
+#define vfs_fdopen(a...)           fdopen(a)
+#define vfs_fclose(a...)           fclose(a)
 
-#define vfs_fseek(a...)            fseek(##a)
-#define vfs_ftell(a...)            ftell(##a)
-#define vfs_rewind(a...)           rewind(##a)
-#define vfs_fgetpos(a...)          fgetpos(##a)
-#define vfs_fsetpos(a...)          fsetpos(##a)
+#define vfs_fseek(a...)            fseek(a)
+#define vfs_ftell(a...)            ftell(a)
+#define vfs_rewind(a...)           rewind(a)
+#define vfs_fgetpos(a...)          fgetpos(a)
+#define vfs_fsetpos(a...)          fsetpos(a)
 
-#define vfs_fread(a...)            fread(##a)
-#define vfs_fwrite(a...)           fwrite(##a)
+#define vfs_fread(a...)            fread(a)
+#define vfs_fwrite(a...)           fwrite(a)
 
-#define vfs_fopen(path, a...)      fopen(path, ##a)
-#define vfs_fdopen(a...)           fdopen(##a)
-#define vfs_fclose(a...)           fclose(##a)
+#define vfs_fopen(path, a...)      fopen(path, a)
+#define vfs_fdopen(a...)           fdopen(a)
+#define vfs_fclose(a...)           fclose(a)
 
-#define vfs_feof(a...)             feof(##a)
-#define vfs_ferror(a...)           ferror(##a)
-#define vfs_clearerr(a...)         clearerr(##a)
+#define vfs_feof(a...)             feof(a)
+#define vfs_ferror(a...)           ferror(a)
+#define vfs_clearerr(a...)         clearerr(a)
 
-#define vfs_fgetc(a...)            fgetc(##a)
-#define vfs_getc(a...)             getc(##a)
-#define vfs_fgets(a...)            fgets(##a)
-#define vfs_fputc(a...)            fputc(##a)
-#define vfs_fputs(a...)            fputs(##a)
-#define vfs_putc(a...)             putc(##a)
+#define vfs_fgetc(a...)            fgetc(a)
+#define vfs_getc(a...)             getc(a)
+#define vfs_fgets(a...)            fgets(a)
+#define vfs_fputc(a...)            fputc(a)
+#define vfs_fputs(a...)            fputs(a)
+#define vfs_putc(a...)             putc(a)
 
-#define vfs_fflush(a...)           fflush(##a)
+#define vfs_fflush(a...)           fflush(a)
 
 #define vfs_FILE                   FILE
 
@@ -141,18 +141,18 @@ static inline void init_vfs(void) {
 #define vfs_closedir(a)            closedir(a)
 #define vfs_readdir(a)             readdir(a)
 #define vfs_rewinddir(a)           rewinddir(a)
-#define vfs_telldir(a...)          telldir(##a)
-#define vfs_seekdir(a...)          seekdir(##a)
-#define vfs_alphasort(a...)        alphasort(##a)
+#define vfs_telldir(a...)          telldir(a)
+#define vfs_seekdir(a...)          seekdir(a)
+#define vfs_alphasort(a...)        alphasort(a)
 
-#define vfs_fstat(a...)            fstat(##a)
-#define vfs_stat(path, a...)       stat(path, ##a)
+#define vfs_fstat(a...)            fstat(a)
+#define vfs_stat(path, a...)       stat(path, a)
 
-#define vfs_mkdir(path, a...)      mkdir(path, ##a)
+#define vfs_mkdir(path, a...)      mkdir(path, a)
 #define vfs_rmdir(path)            rmdir(path)
 #define vfs_unlink(path)           unlink(path)
-#define vfs_chmod(path, a...)      chmod(path, ##a)
-#define vfs_fchmod(a...)           fchmod(##a)
+#define vfs_chmod(path, a...)      chmod(path, a)
+#define vfs_fchmod(a...)           fchmod(a)
 
 #define vfs_rename(a, b)           rename(a, b)
 
