@@ -197,6 +197,8 @@ void x_setup_timers(x_size millis) {
   usecs_per_tick = millis * 1000;
 }
 
+#endif
+
 void x_now_plus_ticks(x_size ticks, struct timespec *ts)
 {
   // volatile 'coz I don't trust gcc any further than I can throw it
@@ -224,8 +226,6 @@ x_boolean x_deadline_passed(struct timespec *ts) {
 
   return (ts->tv_sec < now.tv_sec)  || ((ts->tv_sec == now.tv_sec) && (ts->tv_nsec <= now.tv_usec));
 }
-
-#endif
 
 x_sleep x_time_get() {
   return o4pe->timer_ticks;
