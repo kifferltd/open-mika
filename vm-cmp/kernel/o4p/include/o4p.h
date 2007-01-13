@@ -317,10 +317,8 @@ typedef struct o4p_Memory_Chunk {
 
 x_size x_ticks2usecs(x_size ticks);
 
-#ifdef HAVE_TIMEDWAIT
 extern void x_now_plus_ticks(x_size ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
-#endif
 
 // HACK for some buggy linuces
 extern long previous_seconds;
