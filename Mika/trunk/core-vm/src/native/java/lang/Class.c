@@ -442,7 +442,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
         }  
       }
     } else {
-      w_clazz current_clazz = getSuper(current_clazz);
+      w_clazz current_clazz = getSuper(clazz);
       while (current_clazz) {
         if(addFieldsToFifo(current_clazz,fields, PUBLIC)) {
           return NULL;
