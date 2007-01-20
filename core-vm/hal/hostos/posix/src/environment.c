@@ -107,7 +107,7 @@ char *getOSVersion(void) {
     uname(&uname_buffer);
   }
 
-  return uname_buffer.version;
+  return uname_buffer.release;
 }
 
 char *getOSArch(void) {

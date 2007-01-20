@@ -70,18 +70,29 @@ public class Properties extends Hashtable {
   /**
    * Copy all key/value pairs in a new hashtable merged with the
    * default values if any.
-   *
-   * Note: we first expand the 'defaults' then override them with the specific key/values.
    */
   private Hashtable flatten() {
+    Hashtable h;
+
     if (defaults==null){
-      return (Hashtable)this.clone();
+      // Look out - this has to work with NativeProperties, which doesn't
+      // implement many methods of Hashtable. Change at your peril!
+      h = new Hashtable();
+      Object k;
+      Object v;
+      Enumeration e = keys();
+
+      while (e.hasMoreElements()) {
+        k = e.nextElement();
+        v = get(k);
+        h.put(k, v);
+      }
     }
     else {
-      Hashtable h = defaults.flatten();
+      h = defaults.flatten();
       h.putAll(this);
-      return h;
     }
+    return h;
   }
 
   public Enumeration propertyNames() {
@@ -519,9 +530,7 @@ public class Properties extends Hashtable {
   }
   
   public void list(PrintStream out) throws NullPointerException {
-    if (out == null){
-      throw new NullPointerException();
-    }
+    out.println("-- listing properties --");
     Hashtable h = flatten();
     String key;
     String value;
