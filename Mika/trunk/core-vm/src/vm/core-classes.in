@@ -134,6 +134,10 @@ java/lang/Class
 	getDeclaringClass	()Ljava/lang/Class;		Class_getDeclaringClass
 	getDeclaredClasses0	()[Ljava/lang/Class;		Class_getDeclaredClasses0
 	getClasses0		()[Ljava/lang/Class;		Class_getClasses0
+java/lang/Math
+java/lang/NativeProperties
+	init			()[Ljava/lang/String;				NativeProperties_init
+	get		(Ljava/lang/Object;)Ljava/lang/Object;	NativeProperties_get
 java/lang/Throwable
 	cause			Ljava/lang/Throwable;
         trace                   +
@@ -426,9 +430,6 @@ java/lang/Runtime
 java/lang/System
         currentTimeMillis ()J			System_static_currentTimeMillis
         arraycopy (Ljava/lang/Object;ILjava/lang/Object;II)V		System_static_arraycopy
-        initNativeProperties	()V             System_static_initNativeProperties
-        termNativeProperties	()V             System_static_termNativeProperties
-        getNativeProperty	(Ljava/lang/String;)Ljava/lang/String;   System_static_getNativeProperty
         getCmdLineProperties	()[Ljava/lang/String;   System_getCmdLineProperties
         identityHashCode   (Ljava/lang/Object;)I                      System_identityHashCode
 java/lang/SecurityManager

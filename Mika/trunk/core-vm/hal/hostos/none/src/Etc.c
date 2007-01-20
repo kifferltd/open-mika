@@ -38,7 +38,7 @@ Etc_getPlatform (JNIEnv *env, w_instance classEtc) {
   w_instance result;
   w_string   string;
 
-  result = allocInstance(JNIEnv2w_thread(env), clazzString);
+  result = allocStringInstance(JNIEnv2w_thread(env));
   if (result) {
     string = cstring2String("UNKNOWN", 7);
     setWotsitField(result, F_String_wotsit, string);

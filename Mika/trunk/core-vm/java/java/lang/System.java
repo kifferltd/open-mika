@@ -47,7 +47,7 @@ public final class System {
 
   static {
     theRuntime = Runtime.getRuntime();
-    systemProperties = new Properties(createDefaultProperties());
+    systemProperties = new Properties(new DefaultProperties());
 
     try {
       InputStream syspropstream = ClassLoader.getSystemResourceAsStream("system.properties");
@@ -148,92 +148,6 @@ public final class System {
         }
       }
     }
-  }
-
-  private static Properties createDefaultProperties() {
-    Properties systemDefaultProperties = new Properties();
-
-/*
-** The 1.4.2 API states that the following should always be defined:
-** java.version
-** java.vendor
-** java.vendor.url
-** java.home
-** java.vm.specification.version
-** java.vm.specification.vendor
-** java.vm.specification.name
-** java.vm.version
-** java.vm.vendor
-** java.vm.name
-** java.specification.version
-** java.specification.vendor
-** java.specification.name
-** java.class.version
-** java.class.path
-** java.library.path +
-** java.io.tmpdir +
-** java.compiler +
-** java.ext.dirs
-** os.name
-** os.arch
-** os.version
-** file.separator
-** path.separator
-** line.separator
-** user.name
-** user.home
-** user.dir
-** + = new in 1.4
-**
-** We support all of these as best we can, except java.vm.specification.*
-** and java.specification.* (for legal reasons).
-*/
-    systemDefaultProperties.put("java.vm.version","1.3");
-    systemDefaultProperties.put("java.vendor","/k/ Embedded Java Solutions");
-    systemDefaultProperties.put("java.vendor.url","http://www.acunia.com");
-    systemDefaultProperties.put("java.vm.vendor", "/k/ Embedded Java Solutions");
-    systemDefaultProperties.put("java.vm.name", "Mika");
-    systemDefaultProperties.put("java.class.version","46.0");
-// java.class.path will be updated later in the boot process
-    systemDefaultProperties.put("java.class.path","");
-    systemDefaultProperties.put("file.separator","/");
-  /*
-  ** N.B. file.encoding should be one of the six mandatory encodings,
-  ** in canonical form.
-  */
-    systemDefaultProperties.put("file.encoding","8859_1");
-    systemDefaultProperties.put("path.separator",":");
-    systemDefaultProperties.put("line.separator","\n");
-// user.language may be overriden by a native property
-    systemDefaultProperties.put("user.language","en");
-
-    initNativeProperties();
-    String[] native_property_names = {
-      // Standard properties
-      "java.home", "java.library.path", "java.ext.dirs", "os.name", "os.arch", "os.version", "user.name", "user.home", "user.dir, user.language",
-      // Mika properties
-      "mika.version", "mika.vm.options", "mika.default.heap.size", "mika.o4p.options", "mika.oswald.options", "mika.awt.options", "mika.build.host", "mika.build.time"
-    };
-    String name;
-    String val;
-    for (int i = 0; i < native_property_names.length; ++i) {
-      name = native_property_names[i];
-      val = getNativeProperty(name);
-      if (val != null) {
-        systemDefaultProperties.put(name, val);
-      }
-    }
-
-  /*
-  ** Mika-specific properties
-  */
-    val = getNativeProperty("mika.unicode.subsets");
-    if (val != null) {
-      systemDefaultProperties.put("mika.unicode.subsets", val);
-    }
-    termNativeProperties();
-
-    return systemDefaultProperties;
   }
 
   public static String getenv(String name) {
