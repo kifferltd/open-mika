@@ -203,20 +203,24 @@ void args_read(void) {
       woempa(7, "Found an Xverify:remote argument\n");
       verify_flags = VERIFY_LEVEL_REMOTE;
     }
-    else if(strncmp(command_line_arguments[0], "-verify", 8) == 0) {
-      woempa(7, "Found a verify argument\n");
-      verify_flags = VERIFY_LEVEL_ALL;
-    }
-    else if(strncmp(command_line_arguments[0], "-noverify", 8) == 0) {
-      woempa(7, "Found a noverify argument\n");
-      verify_flags = VERIFY_LEVEL_NONE;
-    }
-    else if(strncmp(command_line_arguments[0], "-verifyremote", 8) == 0) {
+    else if(strncmp(command_line_arguments[0], "-verifyremote", 13) == 0) {
       woempa(7, "Found a verifyremote argument\n");
       verify_flags = VERIFY_LEVEL_REMOTE;
     }
-
+    else if(strncmp(command_line_arguments[0], "-verify", 7) == 0) {
+      woempa(7, "Found a verify argument\n");
+      verify_flags = VERIFY_LEVEL_ALL;
+    }
+    else if(strncmp(command_line_arguments[0], "-noverify", 9) == 0) {
+      woempa(7, "Found a noverify argument\n");
+      verify_flags = VERIFY_LEVEL_NONE;
+    }
+#else
+    else if(strncmp(command_line_arguments[0], "-Xverify:", 9) == 0 || strncmp(command_line_arguments[0], "-verify", 7) == 0 || strncmp(command_line_arguments[0], "-noverify", 9) == 0) {
+      PutString("Warning: ignoring verify argument as verifier is disabled\n");
+    }
 #endif
+
     else if(strncmp(command_line_arguments[0], "-X", 2) == 0) {
       woempa(7, "Found an unknown argument '%s', ignoring it\n", command_line_arguments[0]);
     }
