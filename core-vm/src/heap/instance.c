@@ -410,7 +410,6 @@ w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
     
 }
 
-// Not yet used ...
 w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int newlength) {
   w_clazz clazz = instance2clazz(oldarray);
   w_instance newarray = NULL;
@@ -418,10 +417,10 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
 
   threadMustBeSafe(thread);
 
-  woempa(1, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
+  woempa(7, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
 
   bytes = (1 + roundBitsToWords(clazz->previousDimension->bits * newlength)) * 4;
-  woempa(1, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
+  woempa(7, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
   bytes += sizeof(w_Object);
 
   if (heap_request(thread, bytes)) {
@@ -429,9 +428,19 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
     w_object newobject = reallocMem(oldobject, bytes);
 
     if (newobject) {
-      registerObject(newobject, thread);
-      newarray = newobject->fields;
+      if (newobject != oldobject) {
+        woempa(7, "New array is different to old\n");
+        registerObject(newobject, thread);
+        newarray = newobject->fields;
+      }
+      else {
+        woempa(7, "New array is same as old\n");
+        newarray = oldarray;
+      }
       newarray[F_Array_length] = newlength;
+    }
+    else {
+      woempa(9, "Unable to allocate new array!\n");
     }
   }
   else {
