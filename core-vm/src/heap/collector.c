@@ -350,7 +350,9 @@ static void ClassLoader_destructor(w_instance theClassLoader) {
   w_hashtable class_hashtable;
 
   woempa(9, "Destroying ClassLoader instance %j\n", theClassLoader);
-  wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+  if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+    wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+  }
   class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
   if (class_hashtable) {
     clearWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
