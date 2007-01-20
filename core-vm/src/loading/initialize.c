@@ -113,8 +113,6 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
   }
 }
 
-// TODO: move this to prepareBytecode(), so it can also be used when verifying
-#ifndef USE_BYTECODE_VERIFIER
 static void doSuperConstructorHack(w_clazz clazz, w_method m) {
   w_size j;
   w_method super;
@@ -143,70 +141,10 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
         m->exec.code[1] = 0;
         m->exec.code[2] = 4;
         m->exec.code[3] = 0;    // nop
-
-/*
-      m->exec.code_length -= 4;
-      memmove(m->exec.code, m->exec.code + 4, m->exec.code_length);
-      if (m->exec.debug_info) {
-        w_methodDebugInfo debug_info = m->exec.debug_info;
-        n = debug_info->numLineNums;
-        while (n && (debug_info->lineNums[0].start_pc < 4)) {
-          woempa(1, "Eliminating lineNums[0] entry with start_pc %d\n", debug_info->lineNums[0].start_pc);
-          memmove(debug_info->lineNums, debug_info->lineNums + 1, (--n) * sizeof(w_LineNum));
-        }
-        debug_info->numLineNums = n;
-        woempa(1, "%d lineNums[] remaining\n", n);
-
-        for (j = 0; j < n; ++j) {
-          if (debug_info->lineNums[j].start_pc > 3) {
-            woempa(1, "Reducing lineNums[%d].start_pc from %d to %d\n", j, debug_info->lineNums[j].start_pc, debug_info->lineNums[j].start_pc - 4);
-            debug_info->lineNums[j].start_pc -= 4;
-          }
-        }
-        n = debug_info->numLocalVars;
-        woempa(1, "%d localVars[]\n", n);
-        for (j = 0; j < n; ++j) {
-          if (debug_info->localVars[j].start_pc > 3) {
-            woempa(1, "Reducing localVars[%d].start_pc from %d to %d\n", j, debug_info->localVars[j].start_pc, debug_info->localVars[j].start_pc - 4);
-            debug_info->localVars[j].start_pc -= 4;
-          }
-          else {
-            debug_info->localVars[j].start_pc = 0;
-          }
-        }
-      }
-      n = m->exec.numExceptions;
-      for (j = 0; j < n; ++j) {
-        if (m->exec.exceptions[j].start_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].start_pc from %d to %d\n", j, m->exec.exceptions[j].start_pc, m->exec.exceptions[j].start_pc - 4);
-          m->exec.exceptions[j].start_pc -= 4;
-        }
-        else {
-          m->exec.exceptions[j].start_pc = 0;
-        }
-        if (m->exec.exceptions[j].end_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].end_pc from %d to %d\n", j, m->exec.exceptions[j].end_pc, m->exec.exceptions[j].end_pc - 4);
-          m->exec.exceptions[j].end_pc -= 4;
-        }
-        else {
-          woempa(8, "Setting exceptions[%d].end_pc to 0 -- handler may be unreachable?\n", j);
-          m->exec.exceptions[j].end_pc = 0;
-        }
-        if (m->exec.exceptions[j].handler_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].handler_pc from %d to %d\n", j, m->exec.exceptions[j].handler_pc, m->exec.exceptions[j].handler_pc - 4);
-          m->exec.exceptions[j].handler_pc -= 4;
-        }
-        else {
-          woempa(8, "Setting exceptions[%d].handler_pc to 0 -- odd, eh?\n", j);
-          m->exec.exceptions[j].handler_pc = 0;
-        }
-      }
-*/
       }
     }
   }
 }
-#endif
 
 /*
 **   - if the class is not abstract, it is not allowed to contain any
@@ -234,9 +172,7 @@ static void scanMethods(w_clazz clazz) {
       woempa(1, "Class %k has run method %m\n", clazz, m);
       clazz->runner = m;
     }
-#ifndef USE_BYTECODE_VERIFIER
     doSuperConstructorHack(clazz, m);
-#endif
   }
 
   if (isNotSet(clazz->flags, ACC_INTERFACE)) {
