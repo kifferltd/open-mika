@@ -1191,10 +1191,10 @@ BEGIN {
   class=class_undefined; subclass=0;
 
 # Let's collect some useful evidence from the unicode name of the character.
-
-  smallName=index(name,"SMALL LETTER") || index(name,"SMALL LIGATURE");
-  capsName=index(name,"CAPITAL LETTER") || index(name,"CAPITAL LIGATURE");
-  digitName=index(name,"DIGIT");
+# [CG 20070125] These are now obsolete.
+#  smallName=index(name,"SMALL LETTER") || index(name,"SMALL LIGATURE");
+#  capsName=index(name,"CAPITAL LETTER") || index(name,"CAPITAL LIGATURE");
+#  digitName=index(name,"DIGIT");
 
 # More useful evidence from the general category code of the character.
 
@@ -1208,16 +1208,20 @@ BEGIN {
 
 # This is where the classification proper begins.
 
+
+# Following is old logic, obsolete since 1.4
 # If no lower-case equivalent, but has upper-case equivalent or has a small-
-# sounding name, classify as "lower-case letter".  The subclass indicates
-# how the upper-case equivalent is to be derived:
+# sounding name, classify as "lower-case letter".
+#  if(!lce && (uce || smallName)) {
+# New logic:
+# If category is "Ll", classify as "lower-case letter".
+  if (category == "Ll") {
+    class=class_lowercase
+# The subclass indicates how the upper-case equivalent is to be derived:
 #   0   don't bother, there ain't none
 #   n,0<n<F
 #       subtract delta[n]
 #   F   look it up in a table wot we will output later
-
-  if(!lce && (uce || smallName)) {
-    class=class_lowercase
     for(d in delta) if(sprintf("%04X",number-delta[d])==uce) subclass=d
 
     if(subclass==0 && uce) {
@@ -1226,16 +1230,19 @@ BEGIN {
     }
   }
 
+# Following is old logic, obsolete since 1.4
 # If no upper-case equivalent, but has lower-case equivalent or has a large-
-# sounding name, classify as "upper-case letter".  The subclass indicates
-# how the lower-case equivalent is to be derived:
+# sounding name, classify as "upper-case letter".
+#  else if(!uce && (lce || capsName)) {
+# New logic:
+# If category is "Lu", classify as "upper-case letter".
+  else if (category == "Lu") {
+    class=class_uppercase
+# The subclass indicates how the lower-case equivalent is to be derived:
 #   0   don't bother, there ain't none
 #   n,0<n<F
 #       add delta[n]
-#   F   look it up in a table what we will output later
-
-  else if(!uce && (lce || capsName)) {
-    class=class_uppercase
+#   F   look it up in a table wot we will output later
     for(d in delta) if(sprintf("%04X",number+delta[d])==lce) subclass=d
 
     if(subclass==0 && lce) {
@@ -1244,11 +1251,13 @@ BEGIN {
     }
   }
 
+# Following is old logic, obsolete since 1.4
 # If both lower- and  upper-case equivalents exist, this must be "title case".
-# Converting to lower- or upper-case is always a table lookup job.
-
-  else if(uce && lce) {
+#  else if(uce && lce) {
+# New logic:
+  else if (category == "Lt") {
     class=class_titlecase;
+# Converting to lower- or upper-case is always a table lookup job.
     subclass=15;
     lcespecial=appendtolist(lcespecial,"{0x"code",0x"lce"}")
     ucespecial=appendtolist(ucespecial,"{0x"code",0x"uce"}")
@@ -1257,9 +1266,9 @@ BEGIN {
 # In JDK 1.2 and 1.3, a digit is a digit if it has "DIGIT" in its name.
 # In JDK 1.4 it's a digit if its general category is "Nd".
 # 1.2/1.3:
-  else if (digitName) {
+#  else if (digitName) {
 # 1.4:
-# else if(digitCat) {
+  else if(digitCat) {
 	class=class_digit;
         subclass=digitval
   }
@@ -2038,12 +2047,12 @@ END{
   print  "  }"
   print  ""
   print  "  while (try != min && try != max) {"
-  print  "  if (to_directionality[try].from > ch) {"
+  print  "    if (to_directionality[try].from > ch) {"
   print  "      next = (try + min) / 2;"
   print  "      max = try;"
   print  "      try = next;"
   print  "    }"
-  print  "  else if (to_directionality[try].from < ch) {"
+  print  "    else if (to_directionality[try].from < ch) {"
   print  "      next = (try + max + 1) / 2;"
   print  "      min = try;"
   print  "      try = next;"
@@ -2058,8 +2067,8 @@ END{
   print  "    woempa(7, \"Returning %d\\n\", to_directionality[try].to);"
   print  "  }"
   print  "  else {"
-  print  "    woempa(7, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_directionality[min].from, to_category[min].to, min);"
-  print  "    woempa(7, \"Returning %d\\n\", category_name[to_directionality[min].to]);"
+  print  "    woempa(7, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_directionality[min].from, to_directionality[min].to, min);"
+  print  "    woempa(7, \"Returning %d\\n\", to_directionality[min].to);"
   print  "  }"
   print  ""
   print  "  return to_directionality[to_directionality[try].from == ch ? try : min].to;"
