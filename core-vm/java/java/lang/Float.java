@@ -77,13 +77,7 @@ public final class Float extends Number implements Comparable {
   }
 
   public int compareTo(Float anotherFloat) {
-    float other_float = anotherFloat.value;
-
-    if (value < other_float) return -1;
-
-    if (value > other_float) return 1;
-
-    return 0;
+    return compare(value, anotherFloat.value);
   }
 
   public int compareTo(Object obj) throws ClassCastException {
@@ -91,11 +85,18 @@ public final class Float extends Number implements Comparable {
   }
 
   public static int compare(float one, float two) {
-    if(one < two) {
-      return -1;
-    }
-    return one > two ? 1 : 0;    
-  }
+		if (isNaN(one)) {
+			return isNaN(two) ? 0 : 1;
+		} else if (isNaN(two)) {
+			return -1;
+		}
+		if (one == 0.0 && two == 0.0) {
+			int oneL = floatToRawIntBits(one);
+			int twoL = floatToRawIntBits(two);
+			return oneL > twoL ? 1 : (twoL > oneL ? -1 : 0);
+		}
+		return one < two ? -1 : (one > two ? 1 : 0);
+	}
   
   public int hashCode() {
     return Float.floatToIntBits(value);

@@ -412,12 +412,13 @@ public class SingleTestRunner
 
   public String getSourceDirectory ()
   {
-  	return new String("");
+  	return "./";
   }
 
   public String getTempDirectory ()
   {
-    return new String("");
+    new File("/tmp/mauve").mkdirs();
+    return "/tmp/mauve/";
   }
 
 

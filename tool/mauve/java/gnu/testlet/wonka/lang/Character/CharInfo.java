@@ -29,6 +29,7 @@ public class CharInfo
 {
   public String name;
   public String category;
+  public int decimalDigit;
   public int digit;
   public int numericValue;
   public char uppercase;

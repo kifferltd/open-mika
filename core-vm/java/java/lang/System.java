@@ -277,17 +277,10 @@ public final class System {
     throws SecurityException
   {
     propertyCheck(key);
-
-    try {
-
-      return systemProperties.getProperty(key);
-
+    if(key.equals("")) {
+      throw new IllegalArgumentException();
     }
-    catch (NullPointerException npe) {
-
-      return null;
-
-    }
+    return systemProperties.getProperty(key);
   }
 
     

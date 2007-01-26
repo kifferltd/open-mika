@@ -22,7 +22,6 @@
 
 package gnu.testlet.wonka.lang.Class;
 
-import gnu.testlet.Testlet;
 
 public class ExHelpGetInterfaces extends HelpGetInterfaces implements java.io.Externalizable, java.io.Serializable {
   public void writeExternal(java.io.ObjectOutput out){}

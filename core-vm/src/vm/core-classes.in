@@ -240,8 +240,7 @@ java/lang/Cloneable
 java/lang/Thread
 	started		Z
 	stopped		Z
-	name		Ljava/lang/String;
-	parent		Ljava/lang/ThreadGroup;
+	parent          Ljava/lang/ThreadGroup;
         thrown          Ljava/lang/Throwable;
 	context_classloader	Ljava/lang/ClassLoader;
 	wotsit		+
@@ -252,7 +251,6 @@ java/lang/Thread
 	holdsLock	(Ljava/lang/Object;)Z	Thread_static_holdsLock
 	interrupted	()Z			Thread_static_interrupted
 	interrupt	()V			Thread_interrupt
-	isDaemon	()Z			Thread_isDaemon
 	isInterrupted	()Z			Thread_isInterrupted
 	resume0		()V			Thread_resume0
 	setDaemon0	(Z)V			Thread_setDaemon0
@@ -266,7 +264,6 @@ java/lang/Thread
 java/lang/ThreadGroup
 	name		Ljava/lang/String;
 	parent		Ljava/lang/ThreadGroup;
-	totalCount	I
 	flock		Ljava/util/Vector;
 	children	Ljava/util/Vector;
 java/lang/String

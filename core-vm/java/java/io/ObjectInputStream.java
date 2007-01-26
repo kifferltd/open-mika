@@ -389,6 +389,9 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
   }
 
   public GetField readFields() throws NotActiveException, IOException, ClassNotFoundException {
+    if(this.currentLoader == null) {
+      throw new NotActiveException();
+    }
     // big TODO ...
     return null;
   }
@@ -648,6 +651,8 @@ public class ObjectInputStream extends InputStream implements ObjectInput, Objec
         objectCache.clear();
         Exception e = (Exception) readObject();
         throw new WriteAbortedException("Aborting serialization ",e);
+      case TC_ENDBLOCKDATA:
+        return readObject();
       case -1:
         throw new EOFException("no objects on stream");
       default:

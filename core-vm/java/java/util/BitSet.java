@@ -147,13 +147,12 @@ public class BitSet implements Cloneable, java.io.Serializable {
       return null;
     }
   }
-
   
   public boolean get(int bitIndex) {
     if(bitIndex < 0){
-      throw new IndexOutOfBoundsException();
+      throw new IndexOutOfBoundsException("index "+bitIndex);
     }
-    if(bitsInUse < bitIndex){
+    if(bitsInUse <= bitIndex){
       return false;
     }
     return (((bits[bitIndex/64])>>(bitIndex%64)) & 0x01) > 0;

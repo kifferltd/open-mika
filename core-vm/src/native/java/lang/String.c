@@ -1031,7 +1031,7 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
   woempa(1, "String '%w' (length %d) offset %d endIndex %d\n", this, length, offset, endIndex);
 
   if (offset < 0 || offset > (w_int)length || offset > endIndex || endIndex > (w_int)length) {
-    throwException(thread, clazzIndexOutOfBoundsException, NULL);
+    throwException(thread, clazzStringIndexOutOfBoundsException, NULL);
   }
   else {
     buffer = allocMem((endIndex - offset) * sizeof(w_char));

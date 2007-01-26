@@ -24,16 +24,27 @@ package gnu.testlet.wonka.lang.Class;
 
 public class rf_help
 {
-  private int size = 0;
-  public String name = "";
+
+  public static class inner {
+  }
+
+  private int size;
+  public String name;
   static double value = 1.0;
 
-  static void doit ()
+  static void doit()
   {
     value = 1.0;
   }
 
-  private rf_help ()
+  private rf_help()
   {
+    this(0.0);
+  }
+
+  public rf_help(double arg) 
+  {
+    size = 0;
+    name = "";
   }
 }

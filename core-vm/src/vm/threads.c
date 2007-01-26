@@ -137,7 +137,6 @@ w_int priority_j2k(w_int java_prio, w_int trim) {
 
 w_thread createThread(w_thread parentthread, w_instance Thread, w_instance parentThreadGroup, w_string name, w_size stacksize) {
 
-  w_instance Name;
   w_thread newthread;
   
   newthread = allocClearedMem(sizeof(w_Thread));
@@ -180,14 +179,8 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   newthread->top->jstack_top += 1;
   newthread->state = wt_unstarted;
   setWotsitField(Thread, F_Thread_wotsit,  newthread);
-  Name = newStringInstance(name);
-  if (Name) {
-    setReferenceField(Thread, Name, F_Thread_name);
-  }
-  removeLocalReference(parentthread, Name);
-
+  
   return newthread;
-
 }
 
 void terminateThread(w_thread thread) {
@@ -252,7 +245,7 @@ void terminateThread(w_thread thread) {
 
 }
 
-void addThreadToGroup(w_thread thread, w_instance parentThreadGroup) {
+void addThreadCount(w_thread thread) {
 #ifdef RUNTIME_CHECKS
   w_thread calling_thread = currentWonkaThread;
 
@@ -267,10 +260,9 @@ void addThreadToGroup(w_thread thread, w_instance parentThreadGroup) {
     nondaemon_thread_count += 1;
     woempa(7, "Adding non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
   }
-  ++parentThreadGroup[F_ThreadGroup_totalCount];
 }
 
-void removeThreadFromGroup(w_thread thread, w_instance parentThreadGroup) {
+void removeThreadCount(w_thread thread) {
 #ifdef RUNTIME_CHECKS
   w_thread calling_thread = currentWonkaThread;
 
@@ -279,9 +271,8 @@ void removeThreadFromGroup(w_thread thread, w_instance parentThreadGroup) {
 
   if (!thread->isDaemon) {
     --nondaemon_thread_count;
-    woempa(1, "Removed non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
+    woempa(1,"Removed non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
   }
-  --parentThreadGroup[F_ThreadGroup_totalCount];
 }
 
 /*
@@ -387,7 +378,6 @@ void startInitialThreads(void* data) {
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
   setReferenceField(I_ThreadGroup_system, newStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
-  setReferenceField(I_Thread_sysInit, newStringInstance(string_sysThread), F_Thread_name);
   setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
 
 /*
@@ -421,7 +411,7 @@ void startInitialThreads(void* data) {
     wabort(ABORT_WONKA, "Bootstrapping failed: %e", bootstrap_exception);
   }
 
-  addThreadToGroup(W_Thread_sysInit, I_ThreadGroup_system);
+  addThreadCount(W_Thread_sysInit);
   system_init_thread_started = TRUE;
 
 /*
@@ -463,7 +453,7 @@ void startInitialThreads(void* data) {
 
   setBooleanField(I_Thread_sysInit, F_Thread_stopped, TRUE);
   W_Thread_sysInit->top = & W_Thread_sysInit->rootFrame;
-  removeThreadFromGroup(W_Thread_sysInit, thread2ThreadGroup(W_Thread_sysInit));
+  removeThreadCount(W_Thread_sysInit);
   W_Thread_sysInit->state = wt_dying;
   unsafe = enterUnsafeRegion(W_Thread_sysInit);
   ht_erase(thread_hashtable,(w_word)W_Thread_sysInit->kthread);

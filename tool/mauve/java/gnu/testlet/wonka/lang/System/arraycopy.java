@@ -125,6 +125,10 @@ public class arraycopy implements Testlet
 
       harness.check (copy (x, 0, y, 3, 5),
 		     "caught IndexOutOfBoundsException");
+      // Regression test for missing check in libgcj.
+      harness.check (copy (x, 4, y, 4, Integer.MAX_VALUE),
+		     "caught IndexOutOfBoundsException");
+
 
       Object[] w = new Object[5];
       String[] ss = new String[5];

@@ -31,10 +31,6 @@ import java.io.*;
 
 public class UTF16Decoder extends Decoder {
 
-  private static final int UNDEFINED = 0;
-  private static final int BIGEND    = 1;
-  private static final int LITTLEEND = 2;
-
   private int state;
 
   private void setEndianness(InputStream in) throws IOException {
@@ -54,29 +50,17 @@ public class UTF16Decoder extends Decoder {
 
   public char[] bToC(byte[] bytes, int off, int len){
     if(len < 2){
-      throw new IllegalArgumentException();
+      return new char[0];
     }
-    int l = (len/2) - 1;
-    char[] chars = new char[l];
-
     int c = bytes[off++];
     c = ((c<<8) | (bytes[off++] & 0xff)) & 0xffff;
     if(c == 0xfffe){ //LITTLE END
-      for(int i = 0 ; i < l ; i++){
-        int ch = bytes[off++] & 0xff;
-        chars[i] = (char)((ch | (bytes[off++]<<8)) & 0xffff);
-      }
+      return UnicodeDecoder.leBToC(bytes,off,len-2);
     }
-    else if(c == 0xfeff){ //BIGEND
-      for(int i = 0 ; i < l ; i++){
-        int ch = bytes[off++]<<8;
-        chars[i] = (char)((ch | (bytes[off++] & 0xff)) & 0xffff);
-      }
+    if(c == 0xfeff){ //BIGEND
+      return UnicodeDecoder.beBToC(bytes,off, len-2);
     }
-    else {
-      throw new IllegalArgumentException("no valid UTF16 bytes: '"+((char)c)+"' = "+Integer.toHexString(c));
-    }
-    return chars;
+    return UnicodeDecoder.beBToC(bytes, off-2, len);
   }
 
   public int cFromStream(InputStream in, char[] chars, int off, int len) throws IOException {

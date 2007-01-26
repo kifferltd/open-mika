@@ -258,6 +258,8 @@ final class Init {
 
     application_class_loader = (URLClassLoader)ClassLoader.getSystemClassLoader();
     
+    Thread.currentThread().setContextClassLoader(application_class_loader);
+    
     if (effective_args[0].equals("-jar")) {
       debug("Init: '-jar' is used");
       jar_class_path = effective_args[1];
@@ -295,6 +297,11 @@ final class Init {
     try {
       invoke_method = start_class.getMethod("main",new Class[]{Class.forName("[Ljava.lang.String;")});
 
+      if(invoke_method == null) {
+        System.err.println("Init: no 'main' method start class "+start_class+" found.  Game over.");
+        System.exit(1);        
+      }
+      
       if (!Modifier.isStatic(invoke_method.getModifiers())) {
         System.err.println("Init: " + invoke_method + " is not static.  Game over.");
         System.exit(1);

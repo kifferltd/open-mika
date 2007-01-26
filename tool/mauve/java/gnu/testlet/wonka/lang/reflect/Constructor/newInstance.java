@@ -109,6 +109,11 @@ public class newInstance implements Testlet
     harness.check(r instanceof newInstance);
     harness.check(((newInstance) r).dot == 7);
 
+    // null argument list is ok because constructor has no arguments.
+    r = callNew (c0, null);
+    harness.check(r instanceof newInstance);
+    harness.check(((newInstance) r).dot == 7);
+
     harness.checkPoint ("int arg");
     Constructor c1 = getCons (ni_class, args1);
     Object[] a1 = new Object[1];

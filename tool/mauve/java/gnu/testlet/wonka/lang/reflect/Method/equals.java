@@ -74,5 +74,6 @@ public class equals implements Testlet
     ts[0] = String.class;
     m2 = getMethod(equals.class, "m", ts);
     harness.check(!m1.equals(m2), "different argument types m");
+    harness.check(!m1.equals(null), "nothing equals null");
   }
 }

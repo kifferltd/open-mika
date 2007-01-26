@@ -60,11 +60,14 @@ public class LineNumberReader extends BufferedReader {
   public int read() throws IOException {
     synchronized(lock){
       int rd = super.read();
+      int lc = lastchar;
       lastchar = rd;
-      if ((lastchar != '\r' && rd == '\n') || rd == '\r'){
+      if ((rd == '\n' && lc != '\r') || rd == '\r'){
         lineNr++;
         // if a line separator is encountered then we return '\n'
         return '\n';
+      } else if(rd == '\n') {
+        return read();
       }
       return rd;
     }
@@ -73,7 +76,7 @@ public class LineNumberReader extends BufferedReader {
   public int read(char[] chars, int off, int len) throws IOException {
     synchronized(lock){
       int rd = super.read(chars, off, len);
-      for ( ; rd > 0; rd--){
+      for (int i = rd; i > 0; i--){
         if ((lastchar != '\r' && chars[off] == '\n') || chars[off] == '\r'){
           lineNr++;
         }
@@ -138,7 +141,7 @@ public class LineNumberReader extends BufferedReader {
       do {
         // the read will count '\n' and '\r' an "\r\n"
         int rd = read(chars, 0, (chars.length > skip ? (int)skip : chars.length));
-        if(rd == -1){
+                if(rd == -1){
           break;
         }
         skip -= rd;

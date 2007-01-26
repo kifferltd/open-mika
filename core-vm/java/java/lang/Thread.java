@@ -36,6 +36,12 @@ import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
 
+  private static int nameCounter;
+  
+  private synchronized static String createName() {    
+    return "Thread-"+nameCounter++;
+  }
+
   /*
   ** Note: this class is initialized "by hand" before the VM is fully
   ** initialized.  Consequently it must not have a static initializer.
@@ -48,12 +54,7 @@ public class Thread implements Runnable {
   public final static int MAX_PRIORITY  = 10;
   public final static int NORM_PRIORITY =  5;
 
-  /**
-   ** name       is the name of this Thread.
-   */
-  private String name;
-
-  /**
+   /**
    ** Dummy object used to synchronise accesses to 'started' and 'stopped'.
    ** Note: we don't allocate this here or in the constructors 'coz the
    ** system init thread gets created by native code, and allocating
@@ -103,7 +104,8 @@ public class Thread implements Runnable {
    ** thrown     used to store a pending exception 
    *  used in native code: do not remove !!!
    */
-  private Throwable thrown; 
+  private Throwable thrown;
+  private boolean isDaemon; 
 
   private static void permissionCheck(String permission) {
     if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
@@ -124,38 +126,41 @@ public class Thread implements Runnable {
    **       parent group as specified, or if this is null then 
    **       sm.getThreadGroup() or parent of current thread.
    */
-  public Thread(ThreadGroup group, Runnable runObject, String name) 
+  public Thread(ThreadGroup group, Runnable runObject, String myname) 
     throws SecurityException  {
-    ThreadGroup parent;
+    ThreadGroup myparent;
     SecurityManager sm = System.getSecurityManager();
 
+    if(myname == null) {
+      throw new NullPointerException();
+    }
+    
     if (group == null) {
       if (sm == null) {
-        parent = Thread.currentThread().getThreadGroup();
+        myparent = Thread.currentThread().getThreadGroup();
       }
       else {
-        parent = sm.getThreadGroup();
+        myparent = sm.getThreadGroup();
       }
     }
-    else parent = group;
+    else myparent = group;
 
-    this.parent = parent;
+    this.parent = myparent;
 
-    if (parent.isDestroyed()) {
+    if (myparent.isDestroyed()) {
       throw new IllegalThreadStateException();
     }
 
     if (sm != null) {
-      sm.checkAccess(parent);
+      sm.checkAccess(myparent);
     }
 
-    this.runObject = runObject;
+    this.runObject = runObject != null ? runObject : this;
 
     inheritThreadLocals(Thread.currentThread());
     context_classloader = currentThread() == null ? null : currentThread().getContextClassLoader();
 
-    create(parent, name, runObject);
-    this.name = name;
+    create(myparent, myname, runObject);
   }
 
   /**
@@ -186,7 +191,7 @@ public class Thread implements Runnable {
     throws SecurityException,
     IllegalThreadStateException 
   {
-    this(group,runObject,(String)null);
+    this(group,runObject,createName());
   }
 
   /**
@@ -194,7 +199,7 @@ public class Thread implements Runnable {
    **   --> Thread(ThreadGroup,Runnable,String) with null ThreadGroup, String
    */
   public Thread(Runnable runObject) {
-    this((ThreadGroup)null,runObject,(String)null);
+    this((ThreadGroup)null,runObject,createName());
   }
 
   /**
@@ -208,36 +213,7 @@ public class Thread implements Runnable {
     throws SecurityException,
     IllegalThreadStateException 
   {
-    ThreadGroup parent;
-    SecurityManager sm = System.getSecurityManager();
-
-    if (group == null) {
-      if (sm == null) {
-        parent = Thread.currentThread().getThreadGroup();
-      }
-      else {
-        parent = sm.getThreadGroup();
-      }
-    }
-    else parent = group;
-
-    this.parent = parent;
-
-    if (parent.isDestroyed()) {
-      throw new IllegalThreadStateException();
-    }
-
-    if (sm != null) {
-      sm.checkAccess(parent);
-    }
-
-    this.runObject = this;
-
-    inheritThreadLocals(Thread.currentThread());
-    context_classloader = currentThread() == null ? null : currentThread().getContextClassLoader();
-
-    create(parent, name, null);
-    this.name = name;
+    this(group, null, name);
   }
 
   /**
@@ -246,14 +222,14 @@ public class Thread implements Runnable {
    ** or parent of current thread.
    */
   public Thread(String name) {
-    this((ThreadGroup)null,name);
+    this((ThreadGroup)null,null,name);
   }
 
   /**
    ** Thread constructor with no arguments --> Thread(String) with null argument
    */
   public Thread() {
-    this((ThreadGroup)null,(String)null);
+    this((ThreadGroup)null,null, createName());
   }
 
   /**
@@ -307,10 +283,10 @@ public class Thread implements Runnable {
   public native int countStackFrames();
 
   /**
-   ** _run() is the method which is used to define the initial frame
-   ** when create() is called.  When a thread is started using start(),
-   ** the result is to execute run() and then (when _run() terminates)
-   ** to send a termination request to the ThreadGroup manager.
+   * * _run() is the method which is used to define the initial frame * when
+   * create() is called. When a thread is started using start(), * the result is
+   * to execute run() and then (when _run() terminates) * to send a termination
+   * request to the ThreadGroup manager.
    */
   void _run() {
     parent.registerThread(this);
@@ -318,20 +294,21 @@ public class Thread implements Runnable {
       runObject.run();
     } catch (Throwable t) {
       if (t instanceof ThreadDeath) {
+      } else {
+        parent.uncaughtException(this, t);
       }
-      else {
-        parent.uncaughtException(this,t);
+    } finally {
+      parent.deregisterThread(this);
+      parent = null;
+      synchronized (this) {
+        if (state_lock == null) {
+          state_lock = new Object();
+        }
       }
-    }
-    parent.deregisterThread(this);
-    synchronized(this) {
-      if (state_lock == null) {
-        state_lock = new Object();
+      synchronized (state_lock) {
+        stopped = true;
+        state_lock.notifyAll();
       }
-    }
-    synchronized (state_lock) {
-      stopped = true;
-      state_lock.notifyAll();
     }
   }
 
@@ -363,7 +340,8 @@ public class Thread implements Runnable {
    ** and parent ThreadGroup.
    */
   public String toString() {
-    return "Thread[" + name + "," + getPriority() + "," + parent.getName() +"]";
+    return "Thread[" + getName() + "," + getPriority() + "," + 
+    (parent != null ? parent.getName() : null) +"]";
   }
 
   /**
@@ -501,9 +479,8 @@ public class Thread implements Runnable {
   {
     checkAccess();
 
-    this.name = name;
     if(name==null) {
-      setName0("");
+      throw new NullPointerException();
     } else {
       setName0(name);
     }
@@ -550,7 +527,9 @@ public class Thread implements Runnable {
   /**
    ** isDaemon() returns the status of the Thread's daemon flag.
    */
-  public final native boolean isDaemon();
+  public final boolean isDaemon() {
+    return isDaemon;
+  }
 
   /**
    ** setDaemon0() sets the status of the Thread's daemon flag.
@@ -559,22 +538,33 @@ public class Thread implements Runnable {
   private final native void setDaemon0(boolean on);
 
   /**
-   ** setDaemon() first calls checkAccess() and then invokes setDaemon0()
-   ** - unless the thread is currently active, in which case 
-   ** IllegalThreadStateException is thrown.
+   * * setDaemon() first calls checkAccess() and then invokes setDaemon0() * -
+   * unless the thread is currently active, in which case *
+   * IllegalThreadStateException is thrown.
    */
-  public final void setDaemon(boolean on)
-    throws SecurityException, IllegalThreadStateException
-  {
+  public final void setDaemon(boolean on) throws SecurityException,
+      IllegalThreadStateException {
     checkAccess();
 
-    if(isAlive()) throw new IllegalThreadStateException(this+"");
-
-    setDaemon0(on);
+    synchronized (this) {
+      if (state_lock == null) {
+        state_lock = new Object();
+      }
+    }
+    synchronized (state_lock) {
+      if (!stopped) {        
+        if (started) {
+          throw new IllegalThreadStateException(this.toString());
+        } else {
+          setDaemon0(on);
+        }
+      }
+      isDaemon = on;
+    }
   }
 
   /**
-   ** isAlive() returns true iff the thread is "alive" (alive, oh-oh).
+   * * isAlive() returns true iff the thread is "alive" (alive, oh-oh).
    */
   public final boolean isAlive() {
     synchronized(this) {
@@ -594,41 +584,6 @@ public class Thread implements Runnable {
    ** join() itself!
    */
   public final void join() throws InterruptedException {
-    //join(0,0);
-    join_eternal();
-  }
-
-  /**
-   ** join(millis) blocks the calling thread until either this Thread has 
-   ** terminated or the stated number of milliseconds elapse.
-   */
-  public final void join(long millis) throws InterruptedException {
-    //join(millis,0);
-    if (millis == 0) {
-      join_eternal();
-    }
-    else {
-      join_millis(millis);
-    }
-  }
-
-  /**
-   ** join(millis,nanos) blocks the calling thread until either this Thread 
-   ** has terminated or the stated time elapses.
-   */
-  public final void join(long millis, int nanos) throws InterruptedException {
-    if (millis == 0 && nanos == 0) {
-      join_eternal();
-    }
-    else if (millis < 0 || nanos < 0) {
-      throw new IllegalArgumentException();
-    }
-    else {
-     join_millis(millis + ((nanos + 500000) / 1000000));
-    }
-  }
-
-  private final void join_eternal() throws InterruptedException {
     synchronized(this) {
       if (state_lock == null) {
         state_lock = new Object();
@@ -644,28 +599,48 @@ public class Thread implements Runnable {
     }
   }
 
-  private final void join_millis(long millis) throws InterruptedException {
-    long now = System.currentTimeMillis();
-    long then = now + millis;
-    synchronized(this) {
-      if (state_lock == null) {
-        state_lock = new Object();
+  /**
+   ** join(millis) blocks the calling thread until either this Thread has 
+   ** terminated or the stated number of milliseconds elapse.
+   */
+  public final void join(long millis) throws InterruptedException {
+    join(millis,0);
+  }
+
+  /**
+   * * join(millis,nanos) blocks the calling thread until either this Thread *
+   * has terminated or the stated time elapses.
+   */
+  public final void join(long millis, int nanos) throws InterruptedException {
+    if (millis == 0 && nanos == 0) {
+      join();
+    } else if (millis < 0 || nanos < 0 || nanos >= 1000000) {
+      throw new IllegalArgumentException();
+    } else {
+      long now = System.currentTimeMillis();
+      long then = now + millis + 1;
+      synchronized (this) {
+        if (state_lock == null) {
+          state_lock = new Object();
+        }
       }
-    }
-    if (interrupted()) {
-      throw new InterruptedException();
-    }
-    synchronized (state_lock) {
-      while (started && !stopped) {
-        state_lock.wait(then - now);
-        now = System.currentTimeMillis();
+      if (interrupted()) {
+        throw new InterruptedException();
+      }
+      synchronized (state_lock) {
+        while ((started && !stopped) && (then > now)) {
+          System.out.println("Thread.join() "+state_lock+
+              ".wait("+(then-now)+", "+nanos+")");
+          state_lock.wait(then - now, nanos);
+          now = System.currentTimeMillis();
+        }
       }
     }
   }
 
   /**
-   ** interrupt() causes the interrupt status flag to be set, and any current
-   ** wait() or sleep() to be aborted.
+   * * interrupt() causes the interrupt status flag to be set, and any current *
+   * wait() or sleep() to be aborted.
    */
   public native synchronized void interrupt();
 
@@ -737,6 +712,7 @@ public class Thread implements Runnable {
       try {
         InheritableThreadLocal ihl = (InheritableThreadLocal)(i.next());
         threadLocals.put(ihl,ihl.childValue(t.threadLocals.get(ihl)));
+        ihl.threads.put(this,null);
       }
       catch (ClassCastException x) {}
     }
@@ -784,10 +760,6 @@ public class Thread implements Runnable {
     ClassLoader caller = ClassLoader.getCallingClassLoader();
     if (caller != null && !caller.isDelegationAncestor(context_classloader)) {
       permissionCheck("getClassLoader");
-    }
-
-    if (context_classloader == null) {
-      context_classloader = ClassLoader.getSystemClassLoader();
     }
 
     return context_classloader;

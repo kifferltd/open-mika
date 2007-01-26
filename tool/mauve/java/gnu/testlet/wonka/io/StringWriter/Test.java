@@ -51,17 +51,20 @@ test(TestHarness harness)
 
   sw.write(buf, 0, 5);
   sw.write(buf, 5, 8);
+  sw.flush();
+  harness.check(sw.toString(), str.substring(0, 13), "flush()");
+  harness.check(sw.getBuffer().toString(), str.substring(0, 13), "getBuffer()");
   sw.write(buf, 13, 12);
   sw.write(buf[25]);
   sw.write(buf, 26, buf.length - 26);
-  try
+  try		// IOException added in 1.2
     {
       sw.close();
     }
-  catch(Exception e)
+  catch(Throwable t)
     {
-      harness.debug("Caught unexpected exception: " + e);
-      harness.check(false);
+      harness.debug("Caught unexpected exception: " + t);
+      harness.fail("Unexpected Throwable");
       return;
     }
 

@@ -31,13 +31,19 @@ import java.io.*;
 
 public abstract class Decoder {
 
+  static final int UNDEFINED = 0;
+  static final int BIGEND    = 1;
+  static final int LITTLEEND = 2;
+  
+  
+  private static final int HT_SIZE = 47;
   private static final String[] names;
   private static final Object[] decoders;
   public static final Decoder DEFAULT;
 
   static {
-    decoders = new Object[37];
-    names = new String[37];
+    decoders = new Object[HT_SIZE];
+    names = new String[HT_SIZE];
 
     String s = "ASCIIDecoder";
     put("ASCII", s);
@@ -52,10 +58,16 @@ public abstract class Decoder {
     put("UTF16", s);
     put("UTF-16", s);
 
+    put("UNICODEBIGUNMARKED", "UTF16BeDecoder");
     put("UTF-16BE", "UTF16BeDecoder");
 
+    put("UNICODELITTLEUNMARKED", "UTF16LeDecoder");
     put("UTF-16LE", "UTF16LeDecoder");
 
+    put("UNICODELITTLE","UnicodeLittleDecoder");
+    put("UNICODEBIG","UnicodeBigDecoder");
+    put("UNICODE","UnicodeDecoder");
+    
     Decoder d = new Latin1Decoder();
     DEFAULT = d;
     put("ISO8859_1", d);
@@ -63,7 +75,9 @@ public abstract class Decoder {
     put("ISO8859-1", d);
     put("ISO-8859-1", d);
     put("ISO-8859-15", d);
-    put("ISO_8859-1", d);
+    put("ISO_8859-1", d);    
+    put("ISO8859-15", d);
+    put("ISO8859_15", d);
     put("ISO_8859-1:1978", d);
     put("ISO_8859-1:1987", d);
     put("ISO-IR-100", d);
@@ -90,12 +104,12 @@ public abstract class Decoder {
 
   public static Decoder get(String key) throws UnsupportedEncodingException {
     String coding = key.toUpperCase();
-    int hash = coding.hashCode() % 37;
+    int hash = coding.hashCode() % HT_SIZE;
     String[] k = names;
     String k2;
 
     do {
-      if(hash < 0) hash += 37;
+      if(hash < 0) hash += HT_SIZE;
 
       k2 = k[hash];
 
@@ -113,7 +127,7 @@ public abstract class Decoder {
             decoders[hash] = d;
             return d.getInstance();
           }
-          catch(Exception e){
+          catch(Exception e){            
             throw new UnsupportedEncodingException("Unable to initiate encoder for "+key);
           }
         }
@@ -123,12 +137,12 @@ public abstract class Decoder {
   }
 
   private static void put(String key, Object newvalue) throws NullPointerException {
-    int hash = key.hashCode() % 37;
+    int hash = key.hashCode() % HT_SIZE;
     String[] k = names;
     String k2;
 
     do {
-      if(hash < 0) hash += 37;
+      if(hash < 0) hash += HT_SIZE;
       k2 = k[hash];
 
       if(k2 == null) {

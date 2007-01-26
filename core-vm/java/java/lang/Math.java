@@ -1090,10 +1090,6 @@ public final class Math {
 // System.out.println("floatValue: skipped "+(s.length()-length)+" whitespace chars at end");
 */
     try {
-      if("dDfF".indexOf(s.charAt(length-1)) != -1){
-         --length;
-      }
-
       if (s.charAt(index) == '-') {
         negative = true;
         ++index;
@@ -1102,6 +1098,17 @@ public final class Math {
         ++index;
       }
 
+      if((3 + index == length) &&s.regionMatches(true, index, "NaN", 0, 3)) {
+        return Float.NaN;
+      }
+      if((8 + index == length) &&s.regionMatches(true, index, "Infinity", 0, 8)) {
+        return negative ? Float.NEGATIVE_INFINITY : Float.POSITIVE_INFINITY;
+      }
+      
+      if("dDfF".indexOf(s.charAt(length-1)) != -1){
+         --length;
+      }
+      
 //   System.out.println("floatValue: negative is "+negative+", now at char #"+index);
       int point = s.indexOf('.', index);
       int e;
@@ -1237,10 +1244,6 @@ public final class Math {
 // System.out.println("doubleValue: skipped "+(s.length()-length)+" whitespace chars at end");
 */
     try {
-      if("dDfF".indexOf(s.charAt(length-1)) != -1){
-         --length;
-      }
-
       if (s.charAt(index) == '-') {
         negative = true;
         ++index;
@@ -1248,6 +1251,18 @@ public final class Math {
       else if (s.charAt(index) == '+') {
         ++index;
       }
+
+      if((3 + index == length) &&s.regionMatches(true, index, "NaN", 0, 3)) {
+        return Float.NaN;
+      }
+      if((8 + index == length) &&s.regionMatches(true, index, "Infinity", 0, 8)) {
+        return negative ? Float.NEGATIVE_INFINITY : Float.POSITIVE_INFINITY;
+      }
+      
+      if("dDfF".indexOf(s.charAt(length-1)) != -1){
+        --length;
+     }
+
 // System.out.println("doubleValue: negative is "+negative+", now at char #"+index);
       int point = s.indexOf('.', index);
       int e;
