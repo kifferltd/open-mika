@@ -211,11 +211,9 @@ public final class SystemClassLoader extends ClassLoader {
               Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
-
-              break;
             }
             else {
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + filename + " in " + jf);
+              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
             }
           } catch (IOException e){
             e.printStackTrace();
@@ -229,8 +227,6 @@ public final class SystemClassLoader extends ClassLoader {
               Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
-
-              break;
             }
             catch (FileNotFoundException fnfe) {
               Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
@@ -241,19 +237,19 @@ public final class SystemClassLoader extends ClassLoader {
           }
         }
       }
-    }
 
-    if (bytes != null) {
-      int j = filename.lastIndexOf('/');
-      if(j > 0){
-        String packagename = dotname.substring(0,j);
-        if (getPackage(packagename) == null) {
-          definePackage(packagename,"","","","","","",null);
+      if (bytes != null) {
+        int j = filename.lastIndexOf('/');
+        if(j > 0){
+          String packagename = dotname.substring(0,j);
+          if (getPackage(packagename) == null) {
+            definePackage(packagename,"","","","","","",null);
+          }
         }
+
+        return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
+
       }
-
-      return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
-
     }
 
     throw new ClassNotFoundException("SystemClassLoader couldn't find "+dotname);
