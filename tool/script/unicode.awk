@@ -1259,6 +1259,8 @@ BEGIN {
     class=class_titlecase;
 # Converting to lower- or upper-case is always a table lookup job.
     subclass=15;
+    if (!lce) lce = code
+    if (!uce) uce = code
     lcespecial=appendtolist(lcespecial,"{0x"code",0x"lce"}")
     ucespecial=appendtolist(ucespecial,"{0x"code",0x"uce"}")
   }
