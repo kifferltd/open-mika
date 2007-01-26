@@ -136,7 +136,8 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
   w_instance theClass;
   w_BAR bar;
   w_string name;
-  w_boolean trusted = loaderIsTrusted(thisClassLoader);
+  w_boolean trusted = (instance2clazz(thisClassLoader) == clazzSystemClassLoader);
+  // TODO make configurable, e.g. trust no one or also trust extension classes.
 
   woempa(1,"installing %w from %p (thread %w)\n",String2string(nameString),data,NM(thread));
 
