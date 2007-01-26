@@ -1013,7 +1013,6 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
 #endif
   w_string method_name;
 
-  //wprintf("Identifying instruction and basic block boundaries in %M, codelen = %d\n", method, codelen);
   woempa(1, "Identifying instruction and basic block boundaries in %M, codelen = %d\n", method, codelen);
   status_array[0] |= START_BLOCK;
   is_wide = FALSE;
@@ -1025,7 +1024,7 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
     if (is_wide) {
       inslen += (opcode == iinc ? 2 : 1);
     }
-    woempa(1, "instruction at pc[%d] is %s%s\n", pc, is_wide ? "wide " : "", opc2name(opcode));
+    woempa(7, "instruction at pc[%d] is %s%s\n", pc, is_wide ? "wide " : "", opc2name(opcode));
     //wprintf("instruction at pc[%d] is %s%s", pc, is_wide ? "wide " : "", opc2name(opcode));
     //{int i; for (i = 1; i < inslen; ++i) wprintf(" %02x", code[pc + i]);}
     //wprintf("\n");
@@ -3001,9 +3000,9 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(3);
       PUSH1(block->opstack[block->stacksz - 2]);
       PUSH1(block->opstack[block->stacksz - 2]);
-      block->opstack[block->stacksz - 4] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 5];
-      block->opstack[block->stacksz - 5] = block->opstack[block->stacksz - 4];
+      block->opstack[block->stacksz - 4] = block->opstack[block->stacksz - 1];
+      block->opstack[block->stacksz - 5] = block->opstack[block->stacksz - 2];
       break;
 
     case dup2_x2:
@@ -3664,7 +3663,8 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
       }
       else {
 
-        return MERGE_FAILED;
+        // [CG 20070126] Don't fail yet, maybe the slot is never used
+        // return MERGE_FAILED;
 
       }
 
@@ -3675,7 +3675,8 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
     if (new_type->tinfo == TINFO_SECOND_HALF) {
       return MERGE_DID_NOTHING;
     }
-    return MERGE_FAILED;
+    // [CG 20070126] Don't fail yet, maybe the slot is never used
+    // return MERGE_FAILED;
 
   }
 
@@ -3740,6 +3741,7 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
       result |= mergeTypes(mv, &old_block->locals[i], &new_block->locals[i]);
       if (result == MERGE_FAILED) {
 
+        // [CG 20070126] Unreachable now that mergeTypes() never returns MERGE_FAILED?
         return MERGE_FAILED;
 
       }
@@ -3752,6 +3754,7 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
       result |= mergeTypes(mv, &old_block->opstack[i], &new_block->opstack[i]);
       if (result == MERGE_FAILED) {
 
+        // [CG 20070126] Unreachable now that mergeTypes() never returns MERGE_FAILED?
         return MERGE_FAILED;
 
       }
