@@ -122,9 +122,16 @@ w_int Object_hashCode(JNIEnv *env, w_instance thisObject) {
 
 void Object_wait(JNIEnv *env, w_instance thisObject, w_long millis, w_int nanos) {
   w_thread thread = JNIEnv2w_thread(env);
-  w_long   sleep_millis = millis + ((w_long)nanos >> 20);
-  x_sleep  sleep_ticks = sleep_millis ? x_millis2ticks((w_size)sleep_millis) : x_eternal;
-  
+  w_long   sleep_millis;
+  x_sleep  sleep_ticks;
+ 
+  if(millis < 0 || nanos < 0 || nanos >= 10000) {
+    throwException(thread,clazzIllegalArgumentException,NULL);
+  }
+
+ 
+  sleep_millis = millis + ((w_long)nanos >> 20);
+  sleep_ticks = sleep_millis ? x_millis2ticks((w_size)sleep_millis) : x_eternal;
   if (isNotSet(instance2flags(thisObject), O_HAS_LOCK)) {
     throwException(thread, clazzIllegalMonitorStateException, "not owner");
 

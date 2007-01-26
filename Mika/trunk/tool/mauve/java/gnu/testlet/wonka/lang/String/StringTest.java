@@ -114,6 +114,35 @@ public class StringTest implements Testlet
 
 	     harness.checkPoint("String(byte[])");
 		byte bdata[] = { (byte)'d',(byte)'a',(byte)'n',(byte)'c',(byte)'i',(byte)'n',(byte)'g' };
+		String str9 = new String(bdata , 10 );
+
+		char ch = str9.charAt(1);
+		int i = (ch & 0xff00 ) >> 8 ;
+		byte b = (byte)(ch & 0x00ff );
+
+		harness.check(!( i != 10 ||  b != 'a' ), 
+			"test_Basics - 14");
+		
+
+		byte bnull [] = null;
+		try {
+			String str11 = new String( bnull , 10 , 0 , 5);
+			harness.fail("test_Basics - 15");
+		}catch ( NullPointerException e ){}
+
+		try {
+			String str12 = new String( bdata , 10 , -1 , 3);
+			harness.fail("test_Basics - 16");
+		}catch ( IndexOutOfBoundsException  e ){}
+
+
+		String str13 = new String( bdata , 10 , 1 , 1 );
+		i = (ch & 0xff00 ) >> 8 ;
+		b = (byte)(ch & 0x00ff );
+
+		harness.check(!( i != 10 ||  b != 'a' ), 
+			"test_Basics - 17");
+
 		String str14 = new String( bdata);
 		harness.check(!( !str14.equals("dancing")), 
 			"Error : test_Basics failed - 18");

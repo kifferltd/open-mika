@@ -167,7 +167,7 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
 
   w_instance  fd_obj;
   vfs_FILE    *file;
-  jlong       result = n;
+  jlong       result = 0;
   jlong       prev_pos;
 
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
@@ -175,16 +175,37 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
   
   if(file == NULL) {
     throwNullPointerException(env);
-    result = 0;
   } else {
+    w_string pathname_string;
+    const char *pathname;
+    w_instance path;
+    w_int len;
+    struct vfs_STAT statbuf;
+    jlong size = 0;
+
+    path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
+    pathname_string = String2string(path);
+    pathname = (char*)string2UTF8(pathname_string, &len) + 2;
+
+    if(vfs_stat(pathname, &statbuf) != -1) {
+      size = statbuf.st_size;
+    }
+
+    releaseMem(pathname - 2);
+
+
     prev_pos = vfs_ftell(file);
-    result = vfs_fseek(file, (long)n, SEEK_SET);
+
+    if(n > (size - prev_pos)) {
+      n = size - prev_pos;
+    }
+     
+    result = vfs_fseek(file, (long)n, SEEK_CUR);
 
     if(result == 0) {
       result = vfs_ftell(file) - prev_pos;
     } else {
       throwIOException(env);
-      result = 0; 
     }
   }
 
@@ -238,6 +259,7 @@ void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_i
   } else {
     data = bytes + offset;
     vfs_fwrite(data, 1, (w_word)length, file);
+    vfs_fflush(file);
   }
 }
 

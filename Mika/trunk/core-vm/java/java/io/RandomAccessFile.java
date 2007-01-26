@@ -191,10 +191,10 @@ public class RandomAccessFile implements DataOutput, DataInput {
 
   public final long readLong() throws IOException {
     this.readFully(buffer, 0, 8);
-    return ((long)buffer[0] << 56) | ((long)buffer[1] << 48) | 
-           ((long)buffer[2] << 40) | ((long)buffer[3] << 32) |
-           ((long)buffer[4] << 24) | ((long)buffer[5] << 16) |
-           ((long)buffer[6] <<  8) | (buffer[7]);
+    return (((long)buffer[0] & 0x0ff) << 56) | (((long)buffer[1] & 0x0ff)<< 48) | 
+           (((long)buffer[2] & 0x0ff) << 40) | (((long)buffer[3] & 0x0ff) << 32) |
+           (((long)buffer[4] & 0x0ff) << 24) | (((long)buffer[5] & 0x0ff) << 16) |
+           (((long)buffer[6] & 0x0ff) <<  8) | (buffer[7] & 0x0ff);
   }
 
   public final float readFloat() throws IOException {

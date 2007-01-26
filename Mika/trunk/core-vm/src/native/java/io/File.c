@@ -229,7 +229,7 @@ JNIEXPORT jboolean JNICALL Java_File_mkdir
  * Signature: (J)Z
  */
 
-JNIEXPORT jboolean JNICALL Java_File_setModTime(JNIEnv *env, jobject thisObj, jlong time) {
+JNIEXPORT jboolean JNICALL Java_File_setModTime(JNIEnv *env, jobject thisObj, jlong modtime) {
   jboolean        isCopy;
   const char      *pathname;
   jstring         path;
@@ -238,10 +238,10 @@ JNIEXPORT jboolean JNICALL Java_File_setModTime(JNIEnv *env, jobject thisObj, jl
 
   path = (jstring)(*env)->GetObjectField(env, thisObj, absname);
   pathname = (*env)->GetStringUTFChars(env, path, &isCopy);
-  time = time / 1000;
+  modtime = modtime / 1000;
 
-  buf.actime  = (time_t) time; 
-  buf.modtime = (time_t) time; 
+  buf.actime  = (time_t) modtime; 
+  buf.modtime = (time_t) modtime; 
 
 
   result = (0 == vfs_utime(pathname, &buf)) ? JNI_TRUE : JNI_FALSE;

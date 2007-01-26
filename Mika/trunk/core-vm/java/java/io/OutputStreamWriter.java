@@ -56,6 +56,7 @@ public class OutputStreamWriter extends Writer {
       if(out != null){
         out.write(decoder.cToB(buffer));
         out.close();
+        decoder = null;
         buffer = null;
         out = null;
       }
@@ -74,7 +75,7 @@ public class OutputStreamWriter extends Writer {
   }
 
   public String getEncoding(){
-    return decoder.getEncoding();
+    return decoder != null ? decoder.getEncoding() : null;
   }
 
   public void write(int ch) throws IOException {
@@ -108,7 +109,7 @@ public class OutputStreamWriter extends Writer {
       if(out == null){
         throw new IOException("Reader is closed");
       }
-      buffer.append(str.substring(off, len));
+      buffer.append(str.substring(off, off+len));
       if(buffer.length() > 1024){
         out.write(decoder.cToB(buffer));
         buffer.setLength(0);

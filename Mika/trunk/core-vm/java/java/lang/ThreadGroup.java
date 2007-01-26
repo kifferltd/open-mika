@@ -68,7 +68,7 @@ public class ThreadGroup {
    ** The number of threads created in this ThreadGroup and not yet terminated
    ** (includes yet-to-be-started threads).
    */
-  private int totalCount;
+  int totalCount;
 
   /**
    ** The maximum thread priority permitted within this group.
@@ -186,6 +186,7 @@ public class ThreadGroup {
    */
   synchronized void deregisterThread(Thread t) {
     flock.remove(t);
+    totalCount--;
     checkForTermination();
   }
 
@@ -658,7 +659,7 @@ public class ThreadGroup {
 
     if(newMaxPriority<Thread.MIN_PRIORITY || newMaxPriority>Thread.MAX_PRIORITY) {
  
-      throw new IllegalArgumentException();
+      return;
 
     }
 

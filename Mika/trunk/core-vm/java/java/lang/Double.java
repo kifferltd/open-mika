@@ -137,16 +137,21 @@ public final class Double extends Number implements Comparable {
   public static native double longBitsToDouble(long bits);
 
   public int compareTo(Double anotherDouble) {
-    double other_double = anotherDouble.value;
-
-    if (value < other_double) return -1;
-
-    if (value > other_double) return 1;
-
-    return 0;
+    return compare(value, anotherDouble.value);
   }
 
   public static int compare(double one, double two) {
+	if(isNaN(one)) {
+		return isNaN(two) ? 0 : 1;
+	} else if(isNaN(two)) {
+		return -1;
+	}
+	if(one == 0.0 && two == 0.0){ 
+      long oneL = doubleToRawLongBits(one);
+      long twoL = doubleToRawLongBits(two);
+      return oneL > twoL ? 1 : (twoL > oneL ? -1 : 0);
+	}
+
     if(one < two) {
       return -1;
     }

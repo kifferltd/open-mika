@@ -103,7 +103,7 @@ static void threadEntry(void * athread) {
     bogus();
     wabort(ABORT_WONKA, "Uncaught exception in %t: %e\n", thread, exceptionThrown(thread));
   }
-  removeThreadFromGroup(thread, thread2ThreadGroup(thread));
+  removeThreadCount(thread);
   deleteGlobalReference(thread->Thread);
   thread->state = wt_dying;
 #ifdef JDWP
@@ -280,7 +280,7 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   woempa(7, "Starting Java Thread %t.\n", this_thread);
 
   newGlobalReference(thisThread);
-  addThreadToGroup(this_thread, thread2ThreadGroup(this_thread));
+  addThreadCount(this_thread);
   status = x_thread_resume(this_thread->kthread);
   if (status == xs_success) {
     if(jpda_hooks) {
@@ -352,14 +352,6 @@ void Thread_setPriority0(JNIEnv *env, w_instance thisThread, w_int newPriority) 
   if (threadIsActive(thread)) {
    x_thread_priority_set(thread->kthread, thread->kpriority);
   }
-}
-
-w_boolean Thread_isDaemon(JNIEnv *env, w_instance thisThread) {
-
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-
-  return thread->isDaemon;
-
 }
 
 void Thread_setDaemon0(JNIEnv *env, w_instance thisThread, w_boolean on) {
@@ -444,15 +436,8 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
     return;
   }
 
-  if (millis) {
-    snooze = (w_word)((w_int)millis * 1000) + (nanos / 1000) ;
-  }
-  else if (nanos) {
-    snooze = 1000;
-  }
-  else {
-    snooze = x_eternal;
-  }
+  snooze = millis ? (w_word)((w_int)millis * 1000) + (nanos / 1000) : 1000 ;
+  
   woempa(1, "thread will go to sleep!!! %t\n", thread);
 
   if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {

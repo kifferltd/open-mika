@@ -26,8 +26,8 @@ package java.io;
 public class PrintWriter extends Writer {
 
   private boolean autoF;
-  private boolean error=false;
-  private boolean closed=false;
+  private boolean error;
+  private boolean closed;
 
   private static final String line_separator = GetSystemProperty.LINE_SEPARATOR;
 
@@ -55,7 +55,9 @@ public class PrintWriter extends Writer {
 
 
   public boolean checkError(){
-    flush();
+    if(!closed) {
+      flush();
+    }
     return error;
   }
 

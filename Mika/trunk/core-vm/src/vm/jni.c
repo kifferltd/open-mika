@@ -3104,7 +3104,6 @@ jint DestroyJavaVM(JavaVM *vm) {
 jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   w_size     i;
   w_instance Thread;
-  w_instance name;
   w_thread   thread;
   w_method   method = NULL;
   Wonka_AttachArgs *wonka_args = thr_args;
@@ -3162,9 +3161,6 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 
   Thread = allocInstance(NULL, clazzNativeThread);
   setReferenceField(Thread, I_ThreadGroup_system, F_Thread_parent);
-  name = newStringInstance(thread->name);
-  setReferenceField(Thread, name, F_Thread_name);
-  removeLocalReference(thread, name);
   setWotsitField(Thread, F_Thread_wotsit,  thread);
   thread->Thread = Thread;
   woempa(7, "Native thread %p now has instance of %j.\n", thread, Thread);
@@ -3196,7 +3192,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->top->method = method;
 
   woempa(7, "Adding %t to %j\n", thread, I_ThreadGroup_system);
-  addThreadToGroup(thread, I_ThreadGroup_system);
+  addThreadCount(thread);
   newGlobalReference(thread->Thread);
 
   *p_env = w_thread2JNIEnv(thread);
@@ -3224,8 +3220,8 @@ jint DetachCurrentThread(JavaVM *vm) {
   unsetFlag(thread->flags, WT_THREAD_IS_NATIVE);
 
   if (thread->Thread) {
-    woempa(7, "Removing %t from %j\n", thread, thread2ThreadGroup(thread));
-    removeThreadFromGroup(thread, thread2ThreadGroup(thread));
+    woempa(7, "Removing %t. It's no longer a native thread.\n", thread);
+    removeThreadCount(thread);
     deleteGlobalReference(thread->Thread);
     clearWotsitField(thread->Thread, F_Thread_wotsit);
     thread->Thread = NULL;

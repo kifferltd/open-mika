@@ -54,6 +54,21 @@ test(TestHarness harness)
 
       bis.close();
       harness.check(total_read, str.length(), "total_read");
+	  // Miscellaneous methods:
+	  sbis = new StringBufferInputStream(str);
+	  bis = new BufferedInputStream(sbis);
+	  harness.check(bis.available(), str.length(), "available()");
+	  harness.debug(bis.available() + " bytes available; should be " + str.length());
+	  harness.check(bis.markSupported(), "markSupported()");
+	  harness.debug("Mark " + (bis.markSupported() ? "is" : "is not") + " supported.");
+	  int skip = 10;
+	  long skipped = bis.skip(skip);
+	  harness.check(skipped, skip, "skip(long)");
+	  harness.debug("Skipped " + skipped + "(=" + skip + "?) bytes");
+	  harness.debug("Reading " + bis.read(buf, 0, 3) + "(=3?) bytes");
+	  String tst = new String(buf, 0, 3);
+	  harness.check(tst, str.substring(skip, skip + 3), "read(buf[], off, len)");
+	  harness.debug("Extracted " + tst + "; expected " + str.substring(skip, skip + 3));
     }
   catch (IOException e)
     {

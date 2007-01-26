@@ -265,8 +265,6 @@ typedef struct w_Thread {
   volatile w_Slot  slots[SLOTS_PER_THREAD]; // Reserve space for the slots
 } w_Thread;
 
-#define thread2ThreadGroup(t) getReferenceField((t)->Thread, F_Thread_parent)
-
 /*
  * Pointer to the last slot (auxstack_base of the root frame).
  */
@@ -504,8 +502,8 @@ w_method  findRunMethod(w_clazz);
 
 char *threadDescription(w_thread);
 
-void addThreadToGroup(w_thread thread, w_instance ThreadGroup);
-void removeThreadFromGroup(w_thread thread, w_instance ThreadGroup);
+void addThreadCount(w_thread thread);
+void removeThreadCount(w_thread thread);
 
 #define STACK_PRESET                        0xaa
 

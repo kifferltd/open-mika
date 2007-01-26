@@ -120,6 +120,7 @@ public class TestRunner
     {
       // string to class
       Class k = Class.forName (name);
+      System.out.println("TestRunner.runtest()"+k);
       // class name to object
       Object o = k.newInstance();
       //object to testlet
@@ -133,9 +134,10 @@ public class TestRunner
       verbose("error : " + ex.toString());
       //print error debug
       debug (ex);
-      if(debug){
+      //if(debug){
         ex.printStackTrace();
-      }
+      //}
+
       // one more test done and failed
       ++failures;
       ++total;
@@ -448,12 +450,13 @@ public int getTestsFailed() {
 
   public String getSourceDirectory ()
   {
-    return new String("");
+    return "./";
   }
 
   public String getTempDirectory ()
   {
-    return new String("");
+    new File("/tmp/mauve");
+    return "/tmp/mauve/";
   }
 
 

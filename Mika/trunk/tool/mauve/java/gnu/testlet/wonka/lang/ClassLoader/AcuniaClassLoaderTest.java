@@ -322,14 +322,14 @@ public class AcuniaClassLoaderTest implements Testlet
      	cl.findClass("BadFormat1");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
-        //t.printStackTrace();
+        t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {
      	cl.findClass("BadFormat2");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
-        //t.printStackTrace();
+        t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {

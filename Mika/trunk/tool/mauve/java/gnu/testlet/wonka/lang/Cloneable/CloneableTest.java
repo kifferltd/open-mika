@@ -92,8 +92,6 @@ public class CloneableTest	 implements Testlet,  Cloneable
 		for (i = 0; i < ia.length; i++) {
 			ia[i] = i;
 		}
-		Cloneable c;
-		Object o = ia;
 
 		if (!(ia instanceof Cloneable)) {
 			harness.fail("Error: arrays should implement Cloneable");

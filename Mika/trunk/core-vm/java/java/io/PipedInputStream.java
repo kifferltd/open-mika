@@ -99,15 +99,16 @@ public class PipedInputStream extends InputStream {
     this.consumerclosed = true;
   }
 
-  public synchronized int read(byte[] buffer, int offset, int count) throws IOException {
+  public synchronized int read(byte[] buffer, int offset, int count)
+      throws IOException {
 
     int result = 0;
     int chunk;
-    
+
     if (this.consumerclosed) {
       throw new IOException("closed");
     }
-    
+
     if (src == null) {
       throw new IOException("unconnected");
     }
@@ -116,29 +117,35 @@ public class PipedInputStream extends InputStream {
       this.consumer = Thread.currentThread();
     }
 
-    if(count < 0 || offset < 0){
+    if (count < 0 || offset < 0) {
       throw new ArrayIndexOutOfBoundsException();
     }
 
-    if(count == 0){
+    if (count == 0) {
       return 0;
     }
     try {
       while (this.readable == 0) {
         this.wait(500);
-        if (this.producer != null && ! this.producer.isAlive()) {
-          throw new IOException("no producer");
-        }
-        else if (this.producerclosed) {
+        if (this.readable == 0) {
+          if (this.producerclosed) {
+            return -1;
+          }
+          if (this.producer != null && !this.producer.isAlive()) {
+            throw new IOException("no producer " + producer + " Alive ? "
+                + producer.isAlive());
+          } else if (this.producerclosed) {
+            break;
+          }
+        } else {
           break;
         }
       }
 
-      while(this.readable > 0 && count > 0) {
+      while (this.readable > 0 && count > 0) {
         if (in <= out) {
           chunk = PIPE_SIZE - out;
-        }
-        else {
+        } else {
           chunk = in - out;
         }
 
@@ -161,15 +168,14 @@ public class PipedInputStream extends InputStream {
           in = -1;
         }
       }
-    }
-    catch (InterruptedException ie) {
+    } catch (InterruptedException ie) {
       throw new InterruptedIOException();
     }
 
     this.notify();
 
     return (result == 0) ? -1 : result;
-    
+
   }
 
   public synchronized int read() throws IOException {

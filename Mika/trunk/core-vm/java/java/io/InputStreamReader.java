@@ -93,6 +93,7 @@ public class InputStreamReader extends Reader {
       if(in != null){
         in.close();
         in = null;
+        decoder = null;
       }
     }
   }
@@ -101,7 +102,7 @@ public class InputStreamReader extends Reader {
    ** Return the encoding being used, in its canonical form.
    */
   public String getEncoding(){
-    return decoder.getEncoding();
+    return decoder != null ? decoder.getEncoding() : null;
   }
 
   public int read() throws IOException {

@@ -42,6 +42,8 @@ test(TestHarness harness)
     {
       PushbackInputStream pist = new PushbackInputStream(
         new StringBufferInputStream(str), 15);
+	  harness.check(pist.available(), str.length(), "available()");
+	  harness.check(!pist.markSupported(), "markSupported()");      
 
       byte[] read_buf1 = new byte[12]; 
       byte[] read_buf2 = new byte[12]; 
