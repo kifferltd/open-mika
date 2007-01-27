@@ -539,7 +539,7 @@ static void attach_class_instances(void) {
 
 /*
 ** Search colon-separated list bcp and extract the first string which ends
-** in `.jar' or `.zip'.  Skip over leading '/' if present.
+** in `.jar' or `.zip'.
 ** The string is returned in allocMem'd memory, bcp is not modified.
 */
 static char *getFirstJarFileName(char *bcp) {
@@ -549,13 +549,10 @@ static char *getFirstJarFileName(char *bcp) {
     w_int i = 0;
     w_int j = 0;
     w_int l = strlen(bcp);
-    woempa(7, "bootclasspath is %s\n", bcp);
+    woempa(7, "bootclasspath is %s, length is %d\n", bcp, l);
     while (bcp[i]) {
-      if (bcp[i] == '/') {
-        ++i;
-      }
       for (j = i; j < l && bcp[j] != ':'; ++j);
-      woempa(7, "Element ends at bcp[%d]\n", j);
+      woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
       if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
         woempa(7, "Element ends in `jar', so we use bcp[%d..%d]\n", i, j - 1);
 
