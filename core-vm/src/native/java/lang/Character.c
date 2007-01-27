@@ -130,6 +130,8 @@ void fast_Character_forDigit_int_int(w_frame frame) {
 ** Returns the value of 'ch' in base 'radix' (or -1 if none)
 */
 static w_int i_digit(w_char ch, w_int radix) {
+  w_char *deco;
+
   if(radix < MIN_RADIX || radix > MAX_RADIX) {
 
     return -1;
@@ -156,6 +158,11 @@ static w_int i_digit(w_char ch, w_int radix) {
     return ch - 'a'+ 10;
   } 
 
+  deco = charToDecomposition(ch);
+  if (deco && *deco == 1) {
+    return i_digit(deco[1], radix);
+  }
+
   return -1;
 
 }
@@ -173,38 +180,32 @@ void fast_Character_digit_char_int(w_frame frame) {
 
 /*
 ** Returns true iff ch is lower-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be lower-case.
 */
 w_boolean
 Character_static_isLowerCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsLower(ch);
+  return charIsLower(ch);
 }
 
 /*
 ** Returns true iff ch is upper-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be upper-case.
 */
 w_boolean
 Character_static_isUpperCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsUpper(ch);
+  return charIsUpper(ch);
 }
 
 /*
 ** Returns true iff ch is title-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be title-case.
 */
 w_boolean
 Character_static_isTitleCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsTitle(ch);
+  return charIsTitle(ch);
 }
 
 /*
@@ -277,22 +278,6 @@ Character_static_toTitleCase
 }
 
 /*
-** Return the decimal digit value associated with ch, or -1 if none.
-** Note that function char2digit() implements the JDK 1.1 definition,
-** while charToDigitValue() implements JDK 1.4: there seems to be no
-** difference in practice (based on the results of the Mauve test).
-** We leave the old version in for now, because it uses less static data.
-w_int
-Character_static_digitValue
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
-) {
-  return char2digit(ch);
-// Or maybe:
-// return charToDigitValue(ch);
-}
-*/
-
-/*
 ** Return the numeric value associated with a character, or -1 if it has none,
 ** or -2 if the numeric value is not a nonnegative integer (e.g. it is
 ** negative or fractional).
@@ -324,7 +309,24 @@ w_sbyte
 Character_static_getDirectionality
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return charToDirectionality(ch);
+  // [CG 20070126] Special-case these because what the mauve tests expect
+  // makes more sense than what is in the Unicode database
+  switch(ch) {
+  case 0x0000:
+    return 13; // DIRECTIONALITY_OTHER_NEUTRALS
+
+  case 0x000c:
+    return 10; // DIRECTIONALITY_PARAGRAPH_SEPARATOR
+
+  case 0x00a0:
+    return 12; // DIRECTIONALITY_WHITESPACE
+
+  case 0x2007:
+    return 7;  // DIRECTIONALITY_COMMON_NUMBER_SEPARATOR
+
+  default:
+    return charToDirectionality(ch);
+  }
 }
 
 
