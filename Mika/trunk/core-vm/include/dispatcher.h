@@ -64,7 +64,7 @@ extern w_callfun dispatchers[];
 ** If USE_SPECIAL_CASE_DISPATCHERS is defined, special cases such as
 ** trivial methods and getters or setters will use special dispatchers.
 */
-//#define USE_SPECIAL_CASE_DISPATCHERS
+#define USE_SPECIAL_CASE_DISPATCHERS
 
 /*
 ** If BACKPATCH_SPECIAL_CASES is defined, special-case dispatchers will

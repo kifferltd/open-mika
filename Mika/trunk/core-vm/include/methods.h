@@ -153,16 +153,24 @@ typedef struct w_Method {
                                           /* Note: a constructor has both   */
                                           /* CONSTRUCTOR and NO_OVERRIDE set*/
 #define METHOD_IS_INTERFACE    0x00080000 /* method of an interface         */
-#define METHOD_IS_COMPILED     0x00200000 /* JITed method                   */
-#define METHOD_UNSAFE_DISPATCH 0x00400000 /* Can be dispatched without      */
+#define METHOD_IS_COMPILED     0x00100000 /* JITed method                   */
+#define METHOD_UNSAFE_DISPATCH 0x00200000 /* Can be dispatched without      */
+#define METHOD_TRIVIAL_CASES   0x0f000000 /* Trivial cases, see below       */
                                           /* leaving unsafeRegion           */
-#define METHOD_IS_MIRANDA      0x01000000 /* abstract method inherited from */
+#define METHOD_IS_MIRANDA      0x10000000 /* abstract method inherited from */
                                           /* a superinterface               */
-#define METHOD_IS_PROXY        0x02000000 /* Automatically-generated method */
+#define METHOD_IS_PROXY        0x20000000 /* Automatically-generated method */
                                           /*  a dynamic Proxy class         */
-#define METHOD_IS_SYNTHETIC    0x04000000 /* method was not in source file  */
+#define METHOD_IS_SYNTHETIC    0x40000000 /* method was not in source file  */
                                           /* (only if neither PROXY nor     */
-                                          /* SYNTHETIC is set)              */
+                                          /* MIRANDA is set)                */
+
+/* We recognise some trivial cases in prepareBytecode() */
+#define METHOD_IS_VRETURN      0x01000000 /* Method consists of 'vreturn' */
+#define METHOD_IS_RETURN_THIS  0x02000000 /* Method just returns 'this' */
+#define METHOD_IS_RETURN_NULL  0x03000000 /* Method just returns null */
+#define METHOD_IS_RETURN_ICONST 0x04000000 /* Method just returns an in constant */
+#define METHOD_CALLS_SUPER     0x05000000 /* Method just calls another non-virtual method */
 
 /*
  * methodIsInterface() returns true iff the method is an interface method.

@@ -284,7 +284,7 @@ void interpret_static_synchronized_profiled(w_frame caller, w_method method) {
 #ifdef USE_SPECIAL_CASE_DISPATCHERS
 void void_return_only(w_frame caller, w_method method) {
   int pops = method->exec.arg_i;
-  woempa(1, "Dispatching %m\n", method);
+  woempa(7, "Dispatching %m\n", method);
 #ifdef BACKPATCH_SPECIAL_CASES
   if (isNotSet(caller->flags, FRAME_NATIVE) && (caller->current && pops < 7)) {
     switch (*caller->current) {
@@ -599,10 +599,12 @@ w_callfun dispatchers[] = {
   void_return_only,                            // 24  vreturn
   return_this,                                 // 25  aload_0; *return
   return_null,                                 // 26  aconst_null; areturn
-  return_iconst,                               // 27  aconst_null; areturn
+  return_iconst,                               // 27  iconst; ireturn
+/*
   interpret_getter,                            // 28  aload_0; getfield; *return
   interpret_setter,                            // 29  aload_0; aload1; putfield; vreturn
   interpret_getstaticker,                      // 30  getstatic; *return
+*/
 #endif
 };
 
@@ -1209,81 +1211,97 @@ static void prepareBytecode(w_method method);
 w_boolean verifyMethod(w_method method);
 
 void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
-
-  w_int i;
-  //w_instance ref_result;
+  w_int dispatcher_index;
  
   threadMustBeSafe(caller->thread);
 #ifdef JSPOT
-  i = 21;  // interprete_profiled
+  dispatcher_index = 21;  // interprete_profiled
 #else
-  i = 1;   // interprete
+  dispatcher_index = 1;   // interprete
 #endif
   
   if (isSet(method->flags, ACC_SYNCHRONIZED)) {
     if (isSet(method->flags, ACC_STATIC)) {
-      i += 2;
+      dispatcher_index += 2;
     }
     else {
-      i += 1;
+      dispatcher_index += 1;
     }
   }
+/*
 #ifdef USE_SPECIAL_CASE_DISPATCHERS
-  else if (method->exec.code[0] == vreturn) {
-    i = 24;
-  }
-  else if (method->exec.arg_i == 1 && method->exec.code[0] == aload_0 && method->exec.code[1] == areturn) {
-    i = 25;
-  }
-  else if (method->exec.code[0] == aconst_null && method->exec.code[1] == areturn) {
-    i = 26;
-  }
-  else if (method->exec.code[0] >= iconst_m1 && method->exec.code[0] <= iconst_5 && method->exec.code[1] == areturn) {
-    i = 27;
-  }
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 1 && method->exec.code_length == 5 && method->exec.code[0] == aload_0 && method->exec.code[1] == getfield && method->exec.code[4] >= ireturn && method->exec.code[4] <= areturn) {
     woempa(7, "Identified a GETTER %M %d %d %d %d %d\n", method, opcode_names[method->exec.code[0]], opcode_names[method->exec.code[1]], method->exec.code[2], method->exec.code[3], opcode_names[method->exec.code[4]]); 
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[2] << 8) | method->exec.code[3]);
     if (caller->thread->exception) {
-      i = 1;
+      dispatcher_index = 1;
     }
     else {
-      i = 28;
+      dispatcher_index = 28;
     }
   }
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 2 && method->exec.code_length == 6 && method->exec.code[0] == aload_0 && method->exec.code[1] == aload_1 && method->exec.code[2] == putfield && method->exec.code[5] == vreturn) {
     woempa(7, "Identified a PUTTER %M %d %d %d %d %d\n", method, method->exec.code[0], method->exec.code[1], method->exec.code[2], method->exec.code[3], method->exec.code[4], method->exec.code[5]); 
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[3] << 8) | method->exec.code[4]);
     if (caller->thread->exception) {
-      i = 1;
+      dispatcher_index = 1;
     }
     else {
-      i = 29;
+      dispatcher_index = 29;
     }
   }
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 0 && method->exec.code_length == 4 && method->exec.code[0] == getstatic && method->exec.code[3] >= ireturn && method->exec.code[3] <= areturn) {
     woempa(7, "Identified a GETSTATIC %M %d %d %d\n", method, method->exec.code[1], method->exec.code[2], method->exec.code[3]);
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[1] << 8) | method->exec.code[2]);
     if (caller->thread->exception) {
-      i = 1;
+      dispatcher_index = 1;
     }
     else {
-      i = 30;
+      dispatcher_index = 30;
     }
   }
 #endif
+*/
 
-  // Check that another thread didn't beat us to it
   x_monitor_enter(method->spec.declaring_clazz->resolution_monitor, x_eternal);
+  // Check that another thread didn't beat us to it
   if (method->exec.dispatcher == initialize_dispatcher) {
     prepareBytecode(method);
-    method->exec.dispatcher = dispatchers[i];
-    if (i == 1 || i >= 24) {
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
+    if (dispatcher_index < 2) {
+      switch(method->flags & METHOD_TRIVIAL_CASES) {
+      case METHOD_IS_VRETURN: 
+        woempa(7, "Setting dispatcher of %M to 'void_return_only'\n", method);
+        dispatcher_index = 24;
+        break;
+
+      case METHOD_IS_RETURN_THIS:
+        woempa(7, "Setting dispatcher of %M to 'return_this'\n", method);
+        dispatcher_index = 25;
+        break;
+
+      case METHOD_IS_RETURN_NULL:
+        woempa(7, "Setting dispatcher of %M to 'return_null'\n", method);
+        dispatcher_index = 26;
+        break;
+
+      case METHOD_IS_RETURN_ICONST:
+        woempa(7, "Setting dispatcher of %M to 'return_iconst'\n", method);
+        dispatcher_index = 26;
+        break;
+    
+      default:
+        ;
+      }
+    }
+#endif
+    method->exec.dispatcher = dispatchers[dispatcher_index];
+    if (dispatcher_index == 1 || dispatcher_index >= 24) {
       setFlag(method->flags, METHOD_UNSAFE_DISPATCH);
-      woempa(7, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, i);
+      woempa(7, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, dispatcher_index);
     }
     else {
-      woempa(7, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, i);
+      woempa(7, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, dispatcher_index);
     }
   }
   x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
@@ -1300,6 +1318,8 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
 void prepareBytecode(w_method method) {
   w_clazz cclazz = method->spec.declaring_clazz;
   w_int pc = 0;
+  w_int first_real_opcode = 0;
+  w_int jump_offset;
   w_ConstantType *tag;
   w_int i;
   w_int * n;
@@ -1324,7 +1344,14 @@ void prepareBytecode(w_method method) {
 #endif
 
     switch (bc) {
-      case aload: case astore: case bipush: case dload: case dstore: case fload: case fstore:
+      case aload: 
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
+        if (pc == first_real_opcode && method->exec.arg_i == 1 && bytecode[pc + 1] == areturn) {
+          woempa(7, "%M consists of 'aload_0; areturn'\n", method);
+          setFlag(method->flags, METHOD_IS_RETURN_THIS);
+        }
+#endif
+      case astore: case bipush: case dload: case dstore: case fload: case fstore:
       case iload: case istore: case lload: case lstore: case newarray: case ret: {
         pc += 1; 
         break;
@@ -1349,9 +1376,18 @@ void prepareBytecode(w_method method) {
         break;
       }
 
+      case j_goto:
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
+        if (pc == first_real_opcode) {
+          first_real_opcode += (bytecode[pc + 1] << 8) + bytecode[pc + 2];
+          woempa(7, "Bytecode[%d] is 'goto', setting first_real_opcode to %d\n", pc, first_real_opcode);
+        }
+#endif
+        // fall through
+
       case if_acmpeq: case if_acmpne: case if_icmpeq: case if_icmpne: case if_icmplt: case if_icmpge: 
       case if_icmpgt: case if_icmple: case ifeq: case ifne: case iflt: case ifge: case ifgt: case ifle:
-      case ifnonnull: case ifnull: case jsr: case sipush: case anewarray: case instanceof: case j_goto: 
+      case ifnonnull: case ifnull: case jsr: case sipush: case anewarray: case instanceof: 
       case checkcast: case ldc2_w: case new: case getfield: case getstatic: 
       case putfield: case putstatic: case iinc: {
         pc += 2;
@@ -1381,7 +1417,16 @@ void prepareBytecode(w_method method) {
         break;
       }
       
-      case invokeinterface: case goto_w: case jsr_w: {
+      case goto_w:
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
+        if (pc == first_real_opcode) {
+          first_real_opcode += (((((bytecode[pc + 1] << 8) + bytecode[pc + 2]) << 8) + bytecode[pc + 3]) << 8) + bytecode[pc + 4];
+          woempa(7, "Bytecode[%d] is 'goto_w', setting first_real_opcode to %d\n", pc, first_real_opcode);
+        }
+#endif
+        // fall through
+
+      case invokeinterface: case jsr_w: {
         pc += 4;
         break;
       }
@@ -1426,11 +1471,44 @@ void prepareBytecode(w_method method) {
         break;
       }
 
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
+      case nop:
+        if (pc == first_real_opcode) {
+          ++first_real_opcode;
+          woempa(7, "Bytecode[%d] is 'nop', setting first_real_opcode to %d\n", pc, first_real_opcode);
+        }
+        break;
+
+      case aconst_null:
+        if (pc == first_real_opcode && bytecode[pc + 1] == areturn) {
+          woempa(7, "%M consists of 'aconst_null; areturn'\n", method);
+          setFlag(method->flags, METHOD_IS_RETURN_NULL);
+        }
+        break;
+
+      case vreturn:
+        if (pc == first_real_opcode) {
+          woempa(7, "%M consists of 'vreturn'\n", method);
+          setFlag(method->flags, METHOD_IS_VRETURN);
+        }
+        break;
+
+      case iconst_m1:
+      case iconst_0:
+      case iconst_1:
+      case iconst_2:
+      case iconst_3:
+      case iconst_4:
+      case iconst_5:
+        if (pc == first_real_opcode && bytecode[pc + 1] == ireturn) {
+          woempa(7, "%M consists of 'iconst_%d; ireturn'\n", method, bc - iconst_0);
+          setFlag(method->flags, METHOD_IS_RETURN_ICONST);
+        }
+#endif
     }
     
     pc += 1;
     
   }
-  
 }
 
