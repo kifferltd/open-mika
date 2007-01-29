@@ -129,6 +129,12 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
 
     }
     woempa(7, "Method being called is %M with code length %d\n", super, super->exec.code_length);
+    if (isNotSet(super->flags, METHOD_NO_OVERRIDE)) {
+      woempa(9, "Method being called can be overridden, no optimisation possible.\n");
+
+      return;
+
+    }
     if (super->exec.code_length) {
       j = 0;
       if (super->exec.code[0] == 0xa7) {

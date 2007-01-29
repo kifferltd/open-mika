@@ -526,7 +526,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   }
 #endif
 
-  woempa(1, "CALLING %M, dispatcher is %d\n", method, method->exec.dispatcher);
+  woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
   if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
 #ifdef JAVA_PROFILE
     if(method->exec.dispatcher) {
@@ -3348,27 +3348,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    /*
-     * Make some trivial methods disappear:
-     * aload_0, areturn -> pop all params but 1 and continue
-     * (getter)
-     */
     if (isSet(x->flags, METHOD_NO_OVERRIDE) && x->exec.code) {
-	    /*
-      if (x->exec.arg_i < 4) {
-        if (x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokevirtual %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = nop;
-          *(++current) = x->exec.arg_i > 1 ? pop : nop;
-          *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokevirtual %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[-2], current[-1], current[0]);
-          tos -= x->exec.arg_i - 1;
-          do_next_opcode;
-          // that's a goto, code below is not executed
-        }
-      }
-      */
-      woempa(1, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
+      woempa(7, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
       *current = in_invokenonvirtual;
 
       goto i_invokenonvirtual;
@@ -3394,7 +3375,6 @@ void interpret(w_frame caller, w_method method) {
     if (! objectref) {
       do_throw_clazz(clazzNullPointerException);
     }
-
 
     x = virtualLookup(x, instance2object(objectref)->clazz);
     if (!x) {
