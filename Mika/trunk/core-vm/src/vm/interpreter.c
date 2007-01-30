@@ -1896,7 +1896,10 @@ void interpret(w_frame caller, w_method method) {
     i = (unsigned short) short_operand; 
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
-      w_clazz target_clazz = getClassConstant(cclazz, i);
+      w_clazz target_clazz;
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
