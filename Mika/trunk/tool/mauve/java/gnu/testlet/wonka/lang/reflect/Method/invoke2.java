@@ -107,7 +107,7 @@ public class invoke2 implements Testlet
     Class ic = null;
     try
       {
-	ic = Class.forName("gnu.testlet.wonka.lang.reflect.Method.invoke");
+	ic = Class.forName("gnu.testlet.wonka.lang.reflect.Method.invoke2");
       }
     catch (Throwable _)
       {

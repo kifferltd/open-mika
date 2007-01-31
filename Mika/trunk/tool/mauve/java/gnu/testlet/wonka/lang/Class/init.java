@@ -35,6 +35,9 @@ public class init implements Testlet
   static boolean initC3 = false;
   static boolean initC4 = false;
   static boolean initC5 = false;
+  static boolean initC6 = false;
+  static boolean initC7 = false;
+  static boolean initC8 = false;
   static boolean invokedM = false;
 
   interface I
@@ -77,6 +80,24 @@ public class init implements Testlet
     public static int i;
   }
 
+  static class C6 extends C4
+  {
+    static long l = init.initC6();
+    public static int i6;
+  }
+ 
+  static class C7 extends C4
+  {
+    static long l = init.initC7();
+    public static int i7;
+  }
+
+  static class C8 extends C4
+  {
+    static long l = init.initC8();
+    public static int i7;
+  }
+
   public void test(TestHarness h)
   {
     try
@@ -84,8 +105,13 @@ public class init implements Testlet
 	// None of this should initialize anything
 	Class i = new I[0].getClass().getComponentType();
 	Method m = i.getDeclaredMethod("m", null);
-	Field f = Class.forName(getClass().getName() + "$C5",
-	  false, getClass().getClassLoader()).getField("i");
+	Class cf = Class.forName(getClass().getName() + "$C5",
+	  false, getClass().getClassLoader());
+  h.check(!initC2, "C2 not init");
+
+  Field f =cf.getField("i");
+
+  h.check(!initI, "I not init");
 
 	// Static field access should initialize C3 and superclass C2 but not I
 	h.check(!initC2, "C2 not init");
@@ -96,10 +122,10 @@ public class init implements Testlet
 	h.check(initC3, "C3 init");
 
 	// Static method invocation should initialize C4 but not I
-	h.check(!initC4);
+	h.check(!initC4,"C4 not init");
 	if (C4.m2())
 		hashCode();
-	h.check(initC4);
+	h.check(initC4, "C4 init");
 
 	// Static field access should initialize C5
 	h.check(!initC5);
@@ -113,11 +139,33 @@ public class init implements Testlet
 	h.check(initC1);
 
 	// Apparently, invocation of interface method initializes I
-	h.check(!initI);
-	h.check(!invokedM);
+	h.check(!initI, "I not init");
+	h.check(!invokedM, "m not invoked");
 	m.invoke(o, null);
-	h.check(initI);
-	h.check(invokedM);
+	h.check(initI, "I init");
+	h.check(invokedM, "m invoked");
+  
+  
+  cf = Class.forName(getClass().getName() + "$C6",
+      false, getClass().getClassLoader());
+  h.check(!initC6, "C6 not init");
+  f = cf.getField("i6");
+  h.check(!initC6, "C6 not init");
+  f.setInt(null, 3);
+  h.check(initC6, "C6 init");
+  
+  cf = Class.forName(getClass().getName() + "$C7",
+      false, getClass().getClassLoader());
+  h.check(!initC7, "C7 not init");
+  f = cf.getField("i7");
+  h.check(!initC7, "C7 not init");
+  f.getInt(null);
+  h.check(initC7, "C7 init");
+  cf = Class.forName(getClass().getName() + "$C8",
+      false, getClass().getClassLoader());
+  h.check(!initC8, "C8 not init");
+  cf.newInstance();
+  h.check(initC8, "C8 init");
       }
     catch (NoSuchMethodException nsme)
       {
@@ -143,7 +191,11 @@ public class init implements Testlet
       {
 	h.debug(e);
 	h.check(false);
-      }
+      } 
+    catch (InstantiationException e) {
+      h.debug(e);
+      h.check(false);
+    }
   }
 
   static long initI()
@@ -179,6 +231,22 @@ public class init implements Testlet
   static long initC5()
   {
     initC5 = true;
+    return 5;
+  }
+  static long initC6()
+  {
+    initC6 = true;
+    return 5;
+  }
+
+  static long initC7()
+  {
+    initC7 = true;
+    return 5;
+  }
+  static long initC8()
+  {
+    initC8 = true;
     return 5;
   }
 }

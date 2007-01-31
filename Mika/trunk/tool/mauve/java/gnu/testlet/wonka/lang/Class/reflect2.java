@@ -50,16 +50,24 @@ public class reflect2 implements Testlet
     harness.checkPoint("getClasses");
 
     Class[] inner = (new Object()).getClass().getClasses();
-    harness.check(inner.length == 0);
+    harness.check(inner.length , 0);
 
     inner = help.getClasses();
-    harness.check(inner.length == 1 && inner[0].equals(help_inner));
+    harness.check(inner.length , 1);
+    
+    if(inner.length >= 1) {
+      harness.check(inner[0], help_inner);
+    }
 
     inner = help2.getClasses();
-    harness.check(inner.length == 3);
+    harness.check(inner.length , 3);
 
+    for(int i=0 ; i < inner.length ; i++) {
+      System.out.println("inner["+i+"] = "+inner[i]);
+    }
+    
     inner = help_inner.getClasses();
-    harness.check(inner.length == 0);
+    harness.check(inner.length , 0);
 
     inner = help2_inner.getClasses();
     harness.check(inner.length == 1 && inner[0].equals(help2_inner_inner));

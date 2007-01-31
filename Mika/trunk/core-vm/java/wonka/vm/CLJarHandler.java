@@ -86,13 +86,17 @@ public class CLJarHandler extends ClassLoaderURLHandler {
     return man;
   }
 
-  public URL getURL(String resource){
-    if(jf.getEntry(resource) != null){
-      try {
+  public URL getURL(String resource) {
+    try {
+      if (jf.getEntry(resource) != null) {
         return new URL(url, resource);
+      } else {
+        String directory = resource + "/";
+        if (jf.getEntry(directory) != null) {
+          return new URL(url, directory);
+        }
       }
-      catch(Exception e){}
-    }
+    } catch (Exception e) { }
     return null;
   }
 

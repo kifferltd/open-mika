@@ -166,16 +166,15 @@ public class ThreadGroup {
   }
 
   /**
-   ** registerThread(Thread t) 
-   ** adds t to Vector flock, the list of member Threads.
-   ** The Vector is created on demand (see ThreadGroup(ThreadGroup,String)).
+   * * registerThread(Thread t) * adds t to Vector flock, the list of member
+   * Threads. * The Vector is created on demand (see
+   * ThreadGroup(ThreadGroup,String)).
    */
-  void registerThread(Thread t) {
-    synchronized (this) {
-      if (flock==null) {
-        flock = new Vector();
-      }
+  synchronized void registerThread(Thread t) {
+    if (flock == null) {
+      flock = new Vector();
     }
+    totalCount++;
 
     flock.add(t);
   }

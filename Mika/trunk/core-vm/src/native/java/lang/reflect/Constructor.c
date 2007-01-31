@@ -160,7 +160,8 @@ w_instance Constructor_newInstance0(JNIEnv *env, w_instance thisConstructor, w_i
 
   init = getWotsitField(thisConstructor, F_Constructor_wotsit);
 
-  if (!getBooleanField(thisConstructor, F_AccessibleObject_accessible) && !isAllowedToCall(calling_clazz, init, WONKA_FALSE)) {
+  if (!getBooleanField(thisConstructor, F_AccessibleObject_accessible) && 
+      !isAllowedToCall(calling_clazz, init, init->spec.declaring_clazz)) {
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else {

@@ -360,7 +360,8 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw an IncompatibleClassChangeError - 1");	
     }catch (Throwable t){
       //t.printStackTrace();
-     	th.check(t instanceof IllegalAccessError);
+     	th.check(t instanceof IllegalAccessError, "got "+t.getClass()+
+          " =?= IllegalAccessError");
     }
     try {
      	Class c = cl.findClass("Acces");//, true, cl);
@@ -368,7 +369,7 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw an IncompatibleClassChangeError - 2");	
     }catch (Throwable t){
       //t.printStackTrace();
-     	th.check(t instanceof IllegalAccessError);
+      th.check(t instanceof IllegalAccessError || t instanceof SecurityException,"Access -2-");
     }
     try {
      	Class c = cl.findClass("NoSuchField");//, true, cl);

@@ -237,7 +237,7 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
 
   calling_clazz = getCallingClazz(thread);
   
-  if (!isAllowedToCall(calling_clazz,clazz->defaultInit, WONKA_FALSE)) {
+  if (!isAllowedToCall(calling_clazz,clazz->defaultInit, clazz)) {
     throwException(thread, clazzIllegalAccessException, "%K is not allowed to call %M", calling_clazz, clazz->defaultInit);
   }
 
@@ -278,7 +278,9 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   calling_clazz = getCallingClazz(thread);
   
   loader = clazz2loader(calling_clazz);
+
   clazz = namedClassMustBeLoaded(loader, classname);
+
   if (exceptionThrown(thread) || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -783,7 +785,7 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
   }
 
   fieldName = String2string(fieldNameString);
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -848,7 +850,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
     return NULL;
   }
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -984,7 +986,7 @@ w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
   w_word flags;
   int i;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
@@ -1005,7 +1007,7 @@ w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   int i;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
@@ -1027,7 +1029,7 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
   int i;
   int n = 0;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
@@ -1065,13 +1067,15 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   int j = 0;
   int n = 0;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
+
+
   while (super) {
     for (i = 0; i < super->temp.inner_class_info_count; ++i) {
       if (super->temp.inner_class_info[i].outer_class_info_index == super->temp.this_index) {
-        w_clazz inner_clazz = getClassConstant(super, clazz->temp.inner_class_info[i].inner_class_info_index);
+        w_clazz inner_clazz = getClassConstant(super, super->temp.inner_class_info[i].inner_class_info_index);
 
         if (exceptionThrown(thread)) {
           releaseFifo(inner_clazz_fifo);
@@ -1080,7 +1084,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
 
         }
 
-        if (isSet(inner_clazz->flags, ACC_PUBLIC)) {
+        if (isSet(super->temp.inner_class_info[i].inner_class_access_flags, ACC_PUBLIC)) {
           if (putFifo(inner_clazz, inner_clazz_fifo) < 0) {
             wprintf("No space to store inner class for Class/getClasses()\n");
             throwOutOfMemoryError(thread);

@@ -396,8 +396,6 @@ public class SMMethodTest implements Testlet {
 			"got:"+mds[2]);
 		th.check(mds[3].toString().equals("private final native void gnu.testlet.wonka.lang.reflect.Method.SMMethodTest."+
 		"method4(java.lang.String,byte)"), "expected 'private native void gnu.testlet.wonka.lang.reflect.Method.SMMethodTest.method4(java.lang.String,byte)', but got '" + mds[3].toString() + "'");
-		th.check(ms[0].toString(),"public native boolean java.lang.Object.equals(java.lang.Object)");
-  		//System.out.println(mds[16]);
 		th.check(mds[16].toString().equals("public final synchronized void "+
 		"gnu.testlet.wonka.lang.reflect.Method.SMMethodTest.SetupMethods()"),
 			"got:"+mds[16]);

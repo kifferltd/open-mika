@@ -207,6 +207,9 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
 
     return NULL;
 
+  } else if(component_clazz == clazz_void) {
+    throwException(thread, clazzIllegalArgumentException, NULL);
+    return NULL;
   }
 
   woempa(9, "Creating instance of 1 dimension and component '%k'.\n", component_clazz);
@@ -248,6 +251,10 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
     return NULL;
 
   }
+  else if(component_clazz == clazz_void) {
+    throwException(thread, clazzIllegalArgumentException, NULL);
+    return NULL;
+  }
 
   woempa(9, "Creating instance of 1 dimension and component '%k'.\n", component_clazz);
 
@@ -275,12 +282,11 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
 
-  woempa(9, "Creating instance of %d dimension(s) and component '%k'.\n", instance2Array_length(Dimensions), Class2clazz(Component));
   if (!Component || !Dimensions) {
     throwException(thread, clazzNullPointerException, NULL);
   }  
   else {
-
+    woempa(9, "Creating instance of %d dimension(s) and component '%k'.\n", instance2Array_length(Dimensions), Class2clazz(Component));
     /*
     ** Check and copy our Dimensions elements...
     */
@@ -288,8 +294,15 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
     ndims = instance2Array_length(Dimensions);
     if (ndims < 1 || ndims > 255) {
       throwException(thread, clazzIllegalArgumentException, "illegal number of dimensions");
-    }
+    } 
     else {
+      clazz = Class2clazz(Component);
+    
+      if (clazz == clazz_void) {
+        throwException(thread, clazzIllegalArgumentException, NULL);
+        return NULL;
+      }
+
 
       /*
       ** Create an array of w_int for the length of each dimension...
@@ -297,7 +310,7 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
 
       dimensions = allocMem(ndims * sizeof(w_word));
       if (!dimensions) {
-        wabort(ABORT_WONKA, "Unable to allocate space for dimensions\n");
+         return NULL;
       }
       lengths = instance2Array_int(Dimensions);
       for (i = 0; i < ndims; i++) {
@@ -316,7 +329,6 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
       if (exceptionThrown(thread) == NULL) {
         w_instance initiating_loader = clazz2loader(getCallingClazz(thread));
   
-        clazz = Class2clazz(Component);
         woempa(7, "Component class = %k\n", clazz);
         for (i = 0; i < ndims; i++) {
           clazz = getNextDimension(clazz, initiating_loader);

@@ -155,7 +155,7 @@ w_boolean isAssignmentCompatible(w_clazz S_clazz, w_clazz T_clazz) {
 ** Check whether the 'caller' clazz is allowed to call 'method'.
 */
 
-w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
+w_boolean isAllowedToCall(w_clazz caller, w_method method, w_clazz objClazz) {
 
   if (method->spec.declaring_clazz == caller) {
     woempa(1,"This Class (%K) is same as calling Class, so any method can be called.\n",method->spec.declaring_clazz);
@@ -169,10 +169,10 @@ w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
     return isNotSet(method->spec.declaring_clazz->flags,ACC_PRIVATE) && isNotSet(method->flags,ACC_PRIVATE);
 
   }
-  else if (isSuperClass(method->spec.declaring_clazz, caller) && is_this) {
+  else if (isSuperClass(method->spec.declaring_clazz, caller)) {
     woempa(1,"This Class (%K) is a superclass of calling Class (%K), and the instance being accessed is `this', so protected methods can be called.\n",method->spec.declaring_clazz,caller);
     return isSet(method->spec.declaring_clazz->flags,ACC_PUBLIC) && (isSet(method->flags,ACC_PUBLIC) ||
-              (isSet(method->flags,ACC_PROTECTED) && isNotSet(method->flags,ACC_STATIC)));
+           (isSet(method->flags,ACC_PROTECTED) && (objClazz && isSuperClass(caller,objClazz))));
 
   }
   else {
@@ -187,7 +187,7 @@ w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
 ** Check whether the 'caller' clazz is allowed to access 'field'.
 */
 
-w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this) {
+w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_clazz objClazz) {
 
   if (field->declaring_clazz == caller) {
     woempa(1,"This Class (%K) is same as calling Class, so any field can be accessed.\n",field->declaring_clazz);
@@ -201,11 +201,11 @@ w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this) {
     return isNotSet(field->declaring_clazz->flags,ACC_PRIVATE) && isNotSet(field->flags,ACC_PRIVATE);
 
   }
-  else if (is_this && isSuperClass(field->declaring_clazz, caller)) {
+  else if (isSuperClass(field->declaring_clazz, caller)) {
     woempa(1,"This Class (%K) is a superclass of calling Class (%K), and the instance being accessed is `this', so protected fields can be accessed.\n",field->declaring_clazz,caller);
 
     return isSet(field->declaring_clazz->flags,ACC_PUBLIC) && (isSet(field->flags,ACC_PUBLIC) ||
-              (isSet(field->flags,ACC_PROTECTED) && isNotSet(field->flags,ACC_STATIC)));
+          (isSet(field->flags,ACC_PROTECTED) && (objClazz && isSuperClass(caller, objClazz))));
 
   }
   else {
