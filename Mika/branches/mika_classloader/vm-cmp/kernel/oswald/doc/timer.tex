@@ -1,0 +1,60 @@
+%
+% $Id: timer.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Timers}
+
+\subsubsection{Operation}
+
+\subsubsection{Timer Structure Definition}
+
+The structure definition of a timer is as follows:
+
+\bcode
+\begin{verbatim}
+ 1: typedef struct x_Timer * x_timer;
+ 2: typedef void (*x_timerfire)(x_timer timer);
+ 3:
+ 4: typedef struct x_Timer {
+ 5:   volatile x_timer previous;
+ 6:   volatile x_timer next;
+ 7:   volatile x_timer list;
+ 8:   w_size id;
+ 9:   x_timerfire timerfire;
+10:   void * argument;
+11:   x_sleep initial;
+12:   x_sleep repeat;
+13:   x_sleep delta;
+14:   w_size fired;
+15:   x_flags flags;
+16: } x_Timer;
+\end{verbatim}
+\ecode
+
+The relevant fields in the timer structure are the following:
+
+\begin{itemize}
+\item \txt{x\_timer$\rightarrow$previous}
+\item \txt{x\_timer$\rightarrow$next}
+\item \txt{x\_timer$\rightarrow$list}
+\item \txt{x\_timer$\rightarrow$id}
+\item \txt{x\_timer$\rightarrow$timerfire}
+\item \txt{x\_timer$\rightarrow$argument}
+\item \txt{x\_timer$\rightarrow$initial}
+\item \txt{x\_timer$\rightarrow$repeat}
+\item \txt{x\_timer$\rightarrow$delta}
+\item \txt{x\_timer$\rightarrow$fired}
+\item \txt{x\_timer$\rightarrow$flags}
+\end{itemize}
+
+\subsubsection{Creating a Timer}
+
+\subsubsection{Stopping a Timer}
+
+\subsubsection{Resuming a Timer}
+
+\subsubsection{Deleting a Timer}
+
+\subsubsection{Changing a Timer}
+
+

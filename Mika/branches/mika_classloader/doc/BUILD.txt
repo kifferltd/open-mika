@@ -1,0 +1,102 @@
+Building Mika
+=============
+
+Building mika is done by calling ant in the top directory of your source tree (you'll
+find a nice build.xml there). If you're unfamiliar to ant, I
+can recommend looking at 'http://ant.apache.org'. You'll find all the nice details on
+ant overthere.
+
+There are 5 tasks which can be called directly with ant:
+
+1. main: this is the main build task. This is also the default task run by ant.
+   Typing ant in this directory is actually the same as ant main. However just typing
+   ant will fail since the build wants to know what platform you intend to build for.
+   To specify the platform, you must define a parameter (property) called PLATFORM.
+   Passing properties to ant goes with -D option. So, let's keep it easy and build for pc.
+   You're commandline would look like: 'ant -DPLATFORM=pc' or 'ant -DPLATFORM=pc main'.
+   Ant will now compile and package mika. You can build mika for another platform by
+   calling 'ant -DPLATFORM=otherplatform' or for multiple platforms in one call:
+   'ant -DPLATFORM=platform1,platform2,...'
+
+2. clean: clean will clean all generated files from a specific build. Example:
+   'ant -DPLATFORM=pc' will delete all files generated specific for the pc build.
+
+3. cleanall: as it says, cleanall will delete all generated files (no need to specify
+   a PLATFORM here). 'ant cleanall' will do.
+
+4. sample: this target will compile and package all the samples.
+
+5. tests: the 'tests' target  will build the VisualTestEngine, the ApletViewer
+   and the mauve-test. More details on these test can be found in doc/TESTS.txt.
+
+
+Customizing your build
+----------------------
+
+As you can see sometimes (task 1 and 2) you need to specify a platform. A valid PLATFORM points to 
+a file with the same name in Configuration/ant. These files define ant configuration for
+specific setups and are used for building mika (the clean can offcourse live without that configuration). 
+They should contains at least the following properties:
+SECURITY, JAR, MATH, JAVA_BEANS, AWT, DEBUG, JAVAX_CRYPTO, JAVAX_COMM, AWT_DEF, 
+STATIC, JAM.PLATFORM, JAVA_DEBUG and UNICODE_SUBSETS. If you read the TREE-LAYOUT.txt, you'll 
+notice that most of these properties map onto an extension, vm-extension or -component.
+For vm- and reguler extensions (JAVA_BEANS, JAVAX_CRYPTO, JAVAX_COMM and MICRO_IO) the value 
+is true or false. For the vm-components (SECURITY, JAR,MATH and AWT) the value is one of the
+components as mentioned in TREE-LAYOUT.txt.
+
+The other properties are:
+* AWT_DEF: values: a file in Configuration/awt. This should only be defined when AWT is rudolph.
+  It will define extra JAM settings.
+* UNICODE_SUBSETS: defines which unicode subsets to include.
+  By default code will be generated in unicode.c to cover only ISO 8859-1.
+  Specify a colon-separated list of subset numbers to extend Unicode coverage
+  to one or more subsets of Unicode: see tool/script/unicode.awk for details.
+  Specify 999 to get complete Unicode coverage.  Characters from non-included
+  subsets will be treated by Mika as undefined.
+* JAVA_DEBUG: whether to compile the core vm-classes with debug.
+* JAM.PLATFORM: should point to a file in Configuration/platform. It contains the settings 
+  for jam.
+* STATIC: values: true or false. Switches between static or dynamic linking. 
+* DEBUG: values: true or false. It enables the native debug.
+
+All of the mentioned properties can of course be specified on your commandline.
+By adding '-DAWT=none' for instance, you select the 'none' AWT implementation. Parameters
+past on the commandline take presedence over those in the configuration file.
+
+
+Jamming mika
+------------
+
+Despate all the nice features ant has, it not suited well to compile and link native libraries/binaries.
+Currently 'jam' is being used as build tool for the native parts. Until recently we had custom jam
+version (the acunia-jam) to build the whole of mika but any version should do. For instance FT-Jam (or freetype jam).
+
+The configuration for jam is a bit less easy then the ant one. 'jam' will start of reading the configartion
+file defined by JAM.PLATFORM. It will take the file with same name in the Configuration/platform directory.
+The platform definition should/will define a CPU and HOSTOS. These values are used to find and read files in
+Configuration/cpu and Configuration/host. These files define the toolchain to use and extra compilerflags.
+The last step is to read the Configuration/wonka/default file. When selecting AWT=rudolph the jam build will also
+read (or at least try to read) the file defined by AWT_DEF from the directory Configuration/awt.
+When defining TOOL_CONFIG, jam will also read that file from Configuration/tool. When defined this file will be read
+as the last one in the chain. Take note: Jam allows previously defined settings to be overriden. 
+To find a out which properties are available and what they mean, please read Configuration/wonka/default.
+
+As mention earlier, both the STATIC and DEBUG flag are not used by ant by only passed to the jam commandline. In general
+all properties added to the ant command (using -D) which start with JAM.xxx=yyy will be passed to jam as
+-sxxx=yyy. So specifying -DJAM.DEBUG=true would do the same as -DDEBUG=true, but it could confuse the build if
+you start using both. But keep in mind that if one of the configurations file also defines a commandline one, 
+it will be overriden.
+
+
+Building mika for your platform
+------------------------------- 
+
+There are a few basic configurations available for both ant and jam. Basicly those for pc. However there is
+also the default one. This makes a good starting point for building mika for your platform. If you check the 
+Configuration/platform dir you'll see more choices. It's quite easy to combine the default ant configuration
+with one of those jam files. Example: to build for a arm-linux platform you can type:
+ant -DPLATFORM=default -DJAM.PLATFORM=arm-linux
+
+Of course you can always edit the default ant config-file or copy it and make changes to your copy.
+
+ 

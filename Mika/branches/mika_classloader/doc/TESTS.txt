@@ -1,0 +1,34 @@
+Running Tests on Mika
+=====================
+
+mika contains 2 testframeworks. The VisualTestEngine and the Mauve-suite.
+Both frameworks are build by calling 'ant tests' 
+
+The VisualTestEngine
+====================
+
+The VisualTestEngine was developped specificly for wonka (mika's predecessor). It's
+main goal is to provide a test framework to run Awt test, which requires the watching eye
+of the operator. This helped us to improve rudolph a lot and still have some regression test. 
+Later on it got features to do stresstesting. After succesfully running 'ant tests' you'll 
+find vte.jar in release/test/. You can launch the VTE test by calling mika like this:
+'./release/pc/bin/mika -jar release/test/vte.jar'.
+
+It will launch the vte in autorun mode. Press a button to stop autorunning. Every single test
+should have an explaination on what is tested and how you should decide if it's ok or not ...
+
+The MauveTest Suite
+===================
+
+The mauve test framework is used to run unit tests. The mauve framework was choosen
+rather then junit, because there were a lot test available for the standard java classes.
+A lot of test were taken from the mauve repository and a lot of additions were made by ourself.
+You can run the mauve-tests by typing:
+'./release/pc/bin/mika -jar release/test/mauve-suite.jar'. On linux platforms there are also JNI test available.
+They will run by default, but fail due to lack of native libraries. If they are compiled, they can be found in:
+release/PLATFORM/test.
+To run the mauve-test including JNI do:
+'./release/pc/bin/mika -Djava.library.path=release/pc/test/ -jar release/test/mauve-suite.jar'
+
+Not all of the test will pass. There are about 20 known failures.
+

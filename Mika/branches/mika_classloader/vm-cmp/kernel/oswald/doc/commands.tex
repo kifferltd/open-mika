@@ -1,0 +1,56 @@
+\usepackage{verbatim}
+
+% This file is used to create some new commands that can be useful to get a more consistent look for the \acunia\ documentation.  
+% The new commands are \ui, \txt, \fl, \begin{code}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Frequently used names %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% The Acunia name.
+
+\newcommand{\acunia}{\textsf{ACUNIA}}
+
+% OSwald
+
+\newcommand{\oswald}{OSwald}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Typographic conventions %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% This command is used for items that are related to a user interface, like refering to dialogs, textboxes, combo boxes, tabs, ... 
+\newcommand{\ui}{\textbf}
+
+% This command is used to enter variables or properties in a continuous text.  
+\newcommand{\txt}{\texttt}
+
+%This command is defined for file names.
+\newcommand{\fl}{\textit}
+
+%This environment is defined for entering programming code in a text.
+\newenvironment{code}%
+        {\scriptsize\verbatim}%
+        {\endverbatim\normalsize}
+
+\newcommand{\bcode}{\begin{quote}\scriptsize}
+
+\newcommand{\ecode}{\normalsize \end{quote}}
+
+
+\newcommand{\tm}{$^{\tiny{\texttrademark}\normalsize}$} 
+
+\newcommand{\reg}{$^{\tiny{\textregistered}\normalsize}$} 
+
+
+
+
+
+
+
+
