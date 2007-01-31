@@ -1971,7 +1971,10 @@ void interpret(w_frame caller, w_method method) {
     i = (unsigned short) byte_operand;
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
-      w_clazz target_clazz = getClassConstant(cclazz, i);
+      w_clazz target_clazz;
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -1979,7 +1982,7 @@ void interpret(w_frame caller, w_method method) {
       tos[0].s = stack_trace;
       current[-1] = in_ldc_class;
     }
-    if (*tag == RESOLVED_STRING) {
+    else if (*tag == RESOLVED_STRING) {
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_trace;
       current[-1] = in_ldc_string;
