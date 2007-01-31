@@ -250,7 +250,6 @@ w_int initializeClazz(w_clazz clazz) {
   w_thread   thread = currentWonkaThread;
   w_frame    frame;
   w_size     i;
-  w_clazz    parent;
   w_fixup    fixup;
   w_int      result = CLASS_LOADING_DID_NOTHING;
 
@@ -260,20 +259,6 @@ w_int initializeClazz(w_clazz clazz) {
   if (clazz->clinit) {
     mustBeInitialized(clazzExceptionInInitializerError);
     mustBeInitialized(clazzAbstractMethodError);
-  }
-
-  parent = clazz;
-  for (i = clazz->dims; i && !classIsInitialized(parent->previousDimension); --i) {
-    parent = parent->previousDimension;
-  }
-  for (; i < clazz->dims; ++i) {
-    result |= mustBeInitialized(parent);
-    if (result == CLASS_LOADING_FAILED) {
-
-      return CLASS_LOADING_FAILED;
-
-    }
-    parent = parent->nextDimension;
   }
 
 #ifdef USE_BYTECODE_VERIFIER

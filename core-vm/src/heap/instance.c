@@ -390,10 +390,17 @@ static void fillParentArray(w_thread thread, w_aas parent) {
 w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
 
   w_instance result;
+  jlong size;
 
   threadMustBeSafe(thread);
 
   woempa(1, "Allocating an instance of %k (1 dimension, length %d)\n", clazz, length);
+
+  size = ((jlong)clazz->previousDimension->bits) * ((jlong) length);
+  if (size > 0x7fffffff) {
+    throwException(thread, clazzOutOfMemoryError, NULL);
+    return NULL;
+   }
 
   woempa(1, "%k has %d elements of %d bits, size = %d\n", clazz, length, clazz->previousDimension->bits, 1 + roundBitsToWords(clazz->previousDimension->bits * length));
   result = internalAllocArrayInstance(thread, clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * length));
@@ -477,9 +484,16 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   current = clazz;
   woempa(1, "Allocating an instance of %k (%d dimensions)\n", clazz, dimensions);
   for (i = 0; i < dimensions; i++) {
+    jlong size = ((jlong)clazz->previousDimension->bits) * ((jlong) lengths[0]);
+    if (size > 0x7fffffff) {
+      throwException(thread, clazzOutOfMemoryError, NULL);
+      x_mem_free(Aas);
+      return NULL;
+    }
     Aas[i].next = (i == dimensions - 1) ? NULL : Aas + i + 1;
     Aas[i].length = lengths[i];
     woempa(1, "Dimension %d has length %d, bits/element is %d\n", i, lengths[i], current->previousDimension->bits);
+
     Aas[i].clazz = current;
     current = current->previousDimension;
   }

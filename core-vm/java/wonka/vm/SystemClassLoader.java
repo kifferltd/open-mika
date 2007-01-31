@@ -271,7 +271,7 @@ public final class SystemClassLoader extends ClassLoader {
         JarFile jf = (JarFile)bcpelem;
         JarEntry je = jf.getJarEntry(name);
         if (je != null) {
-          url = new URL("jar:" + jf + "!/"+name);
+          url = new URL("jar:file:" + jf.getName() + "!/"+name);
         }
       } catch (ClassCastException cce) {
         File f = new File(bcpelem + name);
@@ -295,9 +295,7 @@ public final class SystemClassLoader extends ClassLoader {
       if (name.startsWith("/") || name.startsWith("{}/")) {
         File f = new File(name);
         if (f.isFile()) {
-
             return new URL("file:"+f);
-
         }
       }
 

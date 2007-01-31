@@ -206,9 +206,8 @@ w_instance Method_invoke0(JNIEnv *env, w_instance thisMethod, w_instance theObje
   ** normally be able to access this method.
   */
   if (!getBooleanField(thisMethod, F_AccessibleObject_accessible)
-     && !isAllowedToCall(calling_clazz, method,
-      (w_boolean)(calling_instance ? (calling_instance == theObject):(calling_clazz ==  instance2clazz(theObject))))) {
-    throwException(thread, clazzIllegalAccessException, NULL);
+     && !isAllowedToCall(calling_clazz, method, theObject ? instance2clazz(theObject) : NULL)) {
+    throwException(thread, clazzIllegalAccessException,NULL);
 
     return NULL;
 
@@ -218,8 +217,10 @@ w_instance Method_invoke0(JNIEnv *env, w_instance thisMethod, w_instance theObje
     woempa(7, "(REFLECTION) invoke failed: %k\n", instance2clazz(exceptionThrown(thread)));
     frame = NULL;
   }
+  else if (mustBeInitialized(method->spec.declaring_clazz) == CLASS_LOADING_FAILED) {
+    frame = NULL;
+  }
   else {
-
     woempa(1, "Asked to invoke Method %M on instance %p of %k.\n", method, This, instance2clazz(This));
 
     if (isSet(method->flags, ACC_STATIC)) {

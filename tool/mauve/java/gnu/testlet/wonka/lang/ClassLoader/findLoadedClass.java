@@ -158,7 +158,7 @@ public class findLoadedClass extends ClassLoader implements Testlet
     try
     {
         cl.defineClass("Triv", trivialClassDef, 0, trivialClassDef.length);
-        harness.check(false);
+        harness.check(false, "Don't load it !");
     }
     catch(LinkageError _)
     {
@@ -211,7 +211,7 @@ public class findLoadedClass extends ClassLoader implements Testlet
     try
     {
         Class c = Class.forName("Triv", false, child);
-        harness.check(c.getClassLoader() == grandParent);
+        harness.check(c.getClassLoader() , grandParent, "grandParentCheck");
     }
     catch(ClassNotFoundException x)
     {
@@ -243,6 +243,9 @@ public class findLoadedClass extends ClassLoader implements Testlet
   private void checkLoaded(TestHarness harness, findLoadedClass cl, String name)
   {
     Class c = cl.findLoadedClass(name);
-    harness.check(c != null && c.getName().equals(name));
+    harness.check(c != null,name +" is loaded");
+    if(c != null) {
+      harness.check(c.getName(),name, "check name "+name);
+    }
   }
 }

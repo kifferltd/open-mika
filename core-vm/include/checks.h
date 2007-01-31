@@ -42,7 +42,7 @@ w_boolean implementsInterface (w_clazz thisclass, w_clazz interfaze);
 
 w_boolean sameRuntimePackage(w_clazz clazz1, w_clazz clazz2);
 
-w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this);
-w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this);
+w_boolean isAllowedToCall(w_clazz caller, w_method method, w_clazz objClazz);
+w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_clazz objClazz);
 
 #endif /* _CHECKS_H */

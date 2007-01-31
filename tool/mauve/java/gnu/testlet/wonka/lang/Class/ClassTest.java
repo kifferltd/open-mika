@@ -236,7 +236,13 @@ public class ClassTest implements Cloneable, java.io.Serializable, Testlet
 			   (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
 			    ACC_FINAL | ACC_INTERFACE)), 
 			  (ACC_PUBLIC | ACC_FINAL));
-	} catch(Exception e)
+      cls = new Object[0].getClass();
+      harness.check((cls.getModifiers() & 
+         (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
+          ACC_FINAL | ACC_INTERFACE)), 
+        (ACC_PUBLIC | ACC_FINAL));
+
+  } catch(Exception e)
 	    {
 		harness.check(false);
 	    }
@@ -376,7 +382,7 @@ public class ClassTest implements Cloneable, java.io.Serializable, Testlet
 	  harness.debug("component type: " + ct);
 	  harness.debug("component type classloader: " + ct.getClassLoader());
 	}
-      harness.check(false);
+      harness.check(false,"AAAAAAAAAghhh: "+className);
     }
     catch (ClassNotFoundException e) {
       harness.check(true);
@@ -569,12 +575,20 @@ public class ClassTest implements Cloneable, java.io.Serializable, Testlet
     // The bootclassloader does this different from most other CLs, so
     // add a test for it.
     InputStream in = Class.class.getResourceAsStream("Class.class");
-    harness.check(in != null);
+    harness.check(in != null, "got "+in+" from "+Class.class.getClassLoader());
     in = Class.class.getResourceAsStream("/java/lang/Class.class");
-    harness.check(in != null);
+    harness.check(in != null, "got "+in);
     // and a last extra check to see if we ever get a null
+    in = this.getClass().getResourceAsStream("/java/lang/Class.class");
+    harness.check(in != null, "got "+in+" from "+getClass().getClassLoader());
+    ClassLoader cl = getClass().getClassLoader();
+    while(cl != null) {
+      ClassLoader parent = cl.getParent();
+      System.out.println("ClassTest.test_getResourceAsStream() parent of "+cl+" is "+parent);
+      cl = parent;
+    }
     in = InputStream.class.getResourceAsStream("Class.class");
-    harness.check(in == null);
+    harness.check(in , null);
   }
 
   public void testall()

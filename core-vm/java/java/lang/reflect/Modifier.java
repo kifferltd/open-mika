@@ -101,10 +101,10 @@ public class Modifier {
   	if (isFinal(mod)) buf.append("final ");
   	if (isTransient(mod)) buf.append("transient ");
   	if (isVolatile(mod)) buf.append("volatile ");
-  	if (isNative(mod)) buf.append("native ");
   	if (isSynchronized(mod)) buf.append("synchronized ");
-  	if (isInterface(mod)) buf.append("interface ");
-  	if (isStrict(mod)) buf.append("strict ");
+    if (isNative(mod)) buf.append("native ");
+  	if (isStrict(mod)) buf.append("strictfp ");
+    if (isInterface(mod)) buf.append("interface ");
   	if (buf.length()>0) buf.setLength(buf.length()-1);
   	return buf.toString();
   }	

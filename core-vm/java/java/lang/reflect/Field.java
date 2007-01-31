@@ -77,7 +77,7 @@ public final class Field extends AccessibleObject implements Member {
       result.append("transient ");
     }
 
-    result.append(getType().getName());
+    result.append(Method.getClassName(getType()));
     result.append(' ');
     result.append(getDeclaringClass().getName());
     result.append('.');

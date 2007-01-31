@@ -462,7 +462,7 @@ static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
   w_clazz clazz = allocClazz();
 
   clazz->dotified = registerString(name);
-  clazz->flags = CLAZZ_IS_PRIMITIVE | (CLAZZ_STATE_LOADED << CLAZZ_STATE_SHIFT);
+  clazz->flags = CLAZZ_IS_PRIMITIVE | ACC_FINAL | ACC_PUBLIC | (CLAZZ_STATE_LOADED << CLAZZ_STATE_SHIFT);
   clazz->loader = NULL;
   clazz->type = type;
   clazz->bits = bits;
@@ -471,7 +471,6 @@ static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
     wabort(ABORT_WONKA, "Unable to allocate clazz->resolution_monitor\n");
   }
   x_monitor_create(clazz->resolution_monitor);
-
   woempa(1, "Created clazz_%w @ %p\n", name, clazz);
 
   return clazz;
@@ -1145,6 +1144,7 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   }
   w_memcpy(result, clazz_Array, sizeof(w_Clazz));
 
+  setFlag(result->flags, ACC_FINAL | ACC_PUBLIC);
   result->loader = NULL;
   result->bits = 32;
   result->Class = NULL;
@@ -1164,10 +1164,10 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
     result->dims = 1;
     element_clazz->nextDimension = result;
   }
-
   return result;
 
 }
+
 
 /*
 ** If the class with the given name (in "dotted" form) is not loaded,
@@ -1189,7 +1189,8 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
 
   if (current == NULL) {
     w_char * namebuff = allocMem(string_length(name) * sizeof(w_char));
-    w_string prevname;
+    w_string prevname = NULL;
+    w_int length;
 
     if (!namebuff) {
       wabort(ABORT_WONKA, "Unable to allocate namebuff\n");
@@ -1200,53 +1201,63 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
     }
 
     w_string2chars(name, namebuff);
-    switch (namebuff[1]) {
-    case 'Z':
-      prevname = registerString(string_boolean);
-      break;
+    length = string_length(name);
 
-    case 'C':
-      prevname = registerString(string_c_h_a_r);
-      break;
+    if(length == 2) { 
+      switch (namebuff[1]) {
+      case 'Z':
+        prevname = registerString(string_boolean);
+        break;
 
-    case 'F':
-      prevname = registerString(string_float);
-      break;
+      case 'C':
+        prevname = registerString(string_c_h_a_r);
+        break;
 
-    case 'D':
-      prevname = registerString(string_double);
-      break;
+      case 'F':
+        prevname = registerString(string_float);
+        break;
 
-    case 'B':
-      prevname = registerString(string_byte);
-      break;
+      case 'D':
+        prevname = registerString(string_double);
+        break;
 
-    case 'S':
-      prevname = registerString(string_short);
-      break;
+      case 'B':
+        prevname = registerString(string_byte);
+        break;
 
-    case 'I':
-      prevname = registerString(string_int);
-      break;
+      case 'S':
+        prevname = registerString(string_short);
+        break;
 
-    case 'J':
-      prevname = registerString(string_long);
-      break;
+      case 'I':
+        prevname = registerString(string_int);
+        break;
 
-    case 'L':
-      prevname = unicode2String(namebuff + 2, string_length(name) - 3);
-      if (!prevname) {
-        wabort(ABORT_WONKA, "Unable to convert prevname to w_string\n");
+      case 'J':
+        prevname = registerString(string_long);
+        break;
+      default:
+        break;
       }
-      break;
-
-    default:
-      prevname = unicode2String(namebuff + 1, string_length(name) - 1);
-      if (!prevname) {
-        wabort(ABORT_WONKA, "Unable to convert prevname to w_string\n");
+    }  
+    if(prevname == NULL && length > 1) {    
+      char* result;
+      if (length > 3 && namebuff[1] == 'L' && namebuff[2] != '[' && namebuff[length-1] == ';') {
+        prevname = unicode2String(namebuff + 2, length - 3);
+      } else {
+        prevname = unicode2String(namebuff + 1, length - 1);
       }
     }
     releaseMem(namebuff);
+    if(prevname == NULL) {    
+      if (initiating_loader) {
+        // wprintf("releasing lock for %j\n", initiating_loader);
+        exitMonitor(initiating_loader);
+      }
+      throwException(thread, clazzNoClassDefFoundError, "%j could not load %w", initiating_loader, name);
+      return NULL;
+    }
+
     current = namedClassMustBeLoaded(initiating_loader, prevname);
     deregisterString(prevname);
     current = getNextDimension(current, initiating_loader);

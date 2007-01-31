@@ -178,7 +178,7 @@ void get_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance theObj
   calling_instance = getCurrentInstance(thread);
   if (!getBooleanField(thisField, F_AccessibleObject_accessible)
       && !isAllowedToAccess(calling_clazz, field,
-      (w_boolean)(calling_instance ? (calling_instance == theObject) : calling_clazz == instance2clazz(theObject)))) {
+      theObject ? instance2clazz(theObject) : NULL )) {
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else if (!widen(field->value_clazz, from, T_clazz, T_data)) {
@@ -435,10 +435,11 @@ static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance
 #endif
   }
 
-  calling_clazz = getCallingClazz(thread);
-  calling_instance = getCallingInstance(thread);
+  calling_clazz = getCurrentClazz(thread);
+  calling_instance = getCurrentInstance(thread);
   if (!getBooleanField(thisField, F_AccessibleObject_accessible)
-      && !isAllowedToAccess(calling_clazz, field, (w_boolean)(calling_instance && (calling_instance == theObject)))) {
+      && !isAllowedToAccess(calling_clazz, field, theObject ? instance2clazz(theObject) : NULL)) {
+
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else if (!widen(F_clazz, F_data, field->value_clazz, to)) {

@@ -51,11 +51,11 @@ public class toString implements Testlet
       harness.check (Modifier.toString (Modifier.ABSTRACT),
 		     "abstract");
       harness.check (Modifier.toString (Modifier.STRICT),
-		     "strict");
+		     "strictfp");
 
       // Spot-check a few combinations.  Add more as desired.
       harness.check (Modifier.toString (Modifier.FINAL | Modifier.STRICT),
-		     "final strict");
+		     "final strictfp");
       harness.check (Modifier.toString (Modifier.PRIVATE | Modifier.INTERFACE),
 		     "private interface");
       harness.check (Modifier.toString (Modifier.ABSTRACT | Modifier.NATIVE),
