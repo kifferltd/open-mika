@@ -20,8 +20,9 @@
 *   3001 Leuven                 http://www.acunia.com                     *
 *   Belgium - EUROPE                                                      *
 *                                                                         *
-* Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
+* Modifications copyright (C) 2004, 2005 by Chris Gray, /k/ Embedded Java *
+* Solutions. Permission is hereby granted to distribute these             *
+* modifications under the terms of the Wonka Public Licence.              *
 *                                                                         *
 **************************************************************************/
 
@@ -38,14 +39,19 @@
 #include "Math.h"
 
 w_long Double_static_doubleToRawLongBits(JNIEnv *env, w_instance class, w_double d) {
+  union {w_double d; w_long l;} foo;
 
-  return (w_long) d;
+  foo.d = d;
 
+  return foo.l;
 }
 
 w_double Double_static_longToDoubleBits(JNIEnv *env, w_instance class, w_long j) {
-  return (w_double) j;
+  union {w_double d; w_long l;} foo;
 
+  foo.l = j;
+
+  return foo.d;
 }
 
 w_boolean Double_static_isNaN(JNIEnv *env, w_instance class, w_double j) {
