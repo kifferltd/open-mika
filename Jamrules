@@ -455,6 +455,7 @@ switch $(FILESYSTEM) {
 switch $(FLOATING_POINT) {
   case native : {
     CCFLAGS += -DNATIVE_FP ;
+    LINKFLAGS += -lm ;
   }
 
   case hauser : {
