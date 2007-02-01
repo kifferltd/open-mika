@@ -2,9 +2,7 @@
 #define _WMATH_H
 
 /****************************************************************************
-* Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. *
-* All rights reserved.  The contents of this file may not be copied or      *
-* distributed in any form without express written consent of the author.    *
+* Copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.            *
 ****************************************************************************/
 
 /*
@@ -13,6 +11,10 @@
 
 #include <float.h>
 #include <math.h>
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
 
 /*
  * Integer representations.
@@ -46,6 +48,7 @@ extern wfp_float64 D_NAN;
 #define D_TWO              (2.0)
 #define D_DOUBLE_MAX_VALUE (DBL_MAX)
 #define D_MINUS_ZERO       (-0.0)
+#define D_POSITIVE_INFINITY	       (0x7ff0000000000000LL)
 
 /*
 
@@ -53,7 +56,6 @@ extern wfp_float64 D_NAN;
 #define F_ZERO_POINT_FIVE              (0x3f000000)
 #define F_FLOAT_MIN_VALUE              (0x00000001)
 
-#define D_POSITIVE_INFINITY	       (0x7ff0000000000000LL)
 #define D_NEGATIVE_INFINITY	       (0xfff0000000000000LL)
 #define D_NAN			       (0x7ff8000000000000LL)
 #define D_NANJIKES		       (0xfff8000000000000LL)
@@ -85,13 +87,11 @@ extern wfp_float64 D_NAN;
 /*
 ** Some utility macros
 */
-#define w_float32_negate(x)              (-(x))
-//w_float float32_negate(w_float value);
-#define w_float32_is_negative(x)         ((x) < 0.0)
+#define wfp_float32_negate(x)              (-(x))
+#define wfp_float32_is_negative(x)         ((x) < 0.0)
 
-#define w_float64_negate(x)              (-(x))
-//w_double float64_negate(w_double value);
-#define w_float64_is_negative(x)         ((x) < 0.0)
+#define wfp_float64_negate(x)              (-(x))
+#define wfp_float64_is_negative(x)         ((x) < 0.0)
 
 /*
 -------------------------------------------------------------------------------
@@ -147,6 +147,7 @@ static inline wfp_float64 wfp_float32_to_float64( wfp_float32 f) {
 -------------------------------------------------------------------------------
 Software IEC/IEEE single-precision operations.
 -------------------------------------------------------------------------------
+*/
 
 static inline wfp_flag wfp_float32_eq( wfp_float32 f1, wfp_float32 f2) {
   return !isnanf(f1) && !isnanf(f2) && f1 == f2;
@@ -171,19 +172,6 @@ static inline wfp_float32 wfp_float32_mul( wfp_float32 f1, wfp_float32 f2) {
 static inline wfp_float32 wfp_float32_div( wfp_float32 f1, wfp_float32 f2) {
   return (isnanf(f1) || isnanf(f2)) ? nanf(NULL) : f1 / f2;
 }
-*/
-
-#define wfp_float32_eq(f1,f2) (!isnan(f1) && !isnan(f2) && (f1) == (f2))
-
-#define wfp_float32_lt(f1,f2) (!isnan(f1) && !isnan(f2) && (f1) < (f2))
-
-#define wfp_float32_add(f1,f2) ((isnan(f1) || isnan(f2)) ? F_NAN : (f1) + (f2))
-
-#define wfp_float32_sub(f1,f2) ((isnan(f1) || isnan(f2)) ? F_NAN : (f1) - (f2))
-
-#define wfp_float32_mul(f1,f2) ((isnan(f1) || isnan(f2)) ? F_NAN : (f1) * (f2))
-
-#define wfp_float32_div(f1,f2) ((isnan(f1) || isnan(f2)) ? F_NAN : (f1) / (f2))
 
 /*
 -------------------------------------------------------------------------------
@@ -208,6 +196,7 @@ static inline wfp_float32 wfp_float64_to_float32( wfp_float64 d) {
 -------------------------------------------------------------------------------
 Software IEC/IEEE double-precision operations.
 -------------------------------------------------------------------------------
+*/
 
 static inline wfp_flag wfp_float64_eq( wfp_float64 d1, wfp_float64 d2) {
   return !isnan(d1) && !isnan(d2) && d1 == d2;
@@ -216,44 +205,26 @@ static inline wfp_flag wfp_float64_eq( wfp_float64 d1, wfp_float64 d2) {
 static inline wfp_flag wfp_float64_lt( wfp_float64 d1, wfp_float64 d2) {
   return !isnan(d1) && !isnan(d2) && d1 < d2;
 }
-*/
-
-#define wfp_float64_eq(d1,d2) (!isnan(d1) && !isnan(d2) && d1 == d2)
-
-#define wfp_float64_lt(d1,d2) (!isnan(d1) && !isnan(d2) && d1 < d2)
 
 static inline wfp_float64 wfp_float64_round_to_int( wfp_float64 d) {
   wfp_int64 j = (wfp_int64)d;
   return (wfp_float64)j;
 }
 
-#define wfp_float64_add(d1,d2) ((isnan(d1) || !isnan(d2)) ? D_NAN : d1 + d2)
-
-#define wfp_float64_sub(d1,d2) ((isnan(d1) || !isnan(d2)) ? D_NAN : d1 - d2)
-
-#define wfp_float64_mul(d1,d2) ((isnan(d1) || !isnan(d2)) ? D_NAN : d1 * d2)
-
-#define wfp_float64_div(d1,d2) ((isnan(d1) || !isnan(d2)) ? D_NAN : d1 / d2)
-
-#define wfp_float32_abs(f) (isnan(f) ? F_NAN : fabsf(f))
-
-#define wfp_float64_abs(d) (isnan(d) ? D_NAN : fabs(d))
-
-/*
 static inline wfp_float64 wfp_float64_add( wfp_float64 d1, wfp_float64 d2) {
-  return (isnan(d1) || !isnan(d2)) ? nan(NULL) : d1 + d2;
+  return (isnan(d1) || isnan(d2)) ? nan(NULL) : d1 + d2;
 }
 
 static inline wfp_float64 wfp_float64_sub( wfp_float64 d1, wfp_float64 d2) {
-  return (isnan(d1) || !isnan(d2)) ? nan(NULL) : d1 - d2;
+  return (isnan(d1) || isnan(d2)) ? nan(NULL) : d1 - d2;
 }
 
 static inline wfp_float64 wfp_float64_mul( wfp_float64 d1, wfp_float64 d2) {
-  return (isnan(d1) || !isnan(d2)) ? nan(NULL) : d1 * d2;
+  return (isnan(d1) || isnan(d2)) ? nan(NULL) : d1 * d2;
 }
 
 static inline wfp_float64 wfp_float64_div( wfp_float64 d1, wfp_float64 d2) {
-  return (isnan(d1) || !isnan(d2)) ? nan(NULL) : d1 / d2;
+  return (isnan(d1) || isnan(d2)) ? nan(NULL) : d1 / d2;
 }
 
 static inline wfp_float32 wfp_float32_abs( wfp_float32 f) {
@@ -264,7 +235,26 @@ static inline wfp_float64 wfp_float64_abs( wfp_float64 d) {
   return isnan(d) ? nan(NULL) : fabs(d);
 }
 
+#ifdef NATIVE_MATH
+static inline wfp_float64 wfp_float64_sqrt( wfp_float64 d) {
+  return isnan(d) || d < 0.0 ? nan(NULL) : sqrt(d);
+}
 
+static inline wfp_float64 wfp_float64_sin( wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : sin(d);
+}
+
+static inline wfp_float64 wfp_float64_cos( wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : cos(d);
+}
+
+static inline wfp_float64 wfp_float64_tan( wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : tan(d);
+}
+#endif
+
+
+/*
 -------------------------------------------------------------------------------
 Software IEC/IEEE integer-to-floating-point conversion routines.
 -------------------------------------------------------------------------------

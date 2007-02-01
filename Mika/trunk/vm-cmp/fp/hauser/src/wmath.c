@@ -1,12 +1,35 @@
-/****************************************************************************
-* Copyright (c) 2003 by Chris Gray, trading as /k/ Embedded Java Solutions. *
-* All rights reserved.  The contents of this file may not be copied or      *
-* distributed in any form without express written consent of the author.    *
-****************************************************************************/
+/******************************************************************************
+* Copyright (c) 2003, 2007 by Chris Gray, /k/ Embedded Java Solutions.        *
+* Parts of this file are derived from John R. Hauser's SoftFloat package, see *
+* the notice below.                                                           *
+===============================================================================
 
-/*
-** $Id: wmath.c,v 1.1 2005/04/18 17:31:29 cvs Exp $
-*/
+This C source file is part of the SoftFloat IEC/IEEE Floating-point
+Arithmetic Package, Release 2a.
+
+Written by John R. Hauser.  This work was made possible in part by the
+International Computer Science Institute, located at Suite 600, 1947 Center
+Street, Berkeley, California 94704.  Funding was partially provided by the
+National Science Foundation under grant MIP-9311980.  The original version
+of this code was written as part of a project to build a fixed-point vector
+processor in collaboration with the University of California at Berkeley,
+overseen by Profs. Nelson Morgan and John Wawrzynek.  More information
+is available through the Web page `http://HTTP.CS.Berkeley.EDU/~jhauser/
+arithmetic/SoftFloat.html'.
+
+THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort
+has been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT
+TIMES RESULT IN INCORRECT BEHAVIOR.  USE OF THIS SOFTWARE IS RESTRICTED TO
+PERSONS AND ORGANIZATIONS WHO CAN AND WILL TAKE FULL RESPONSIBILITY FOR ANY
+AND ALL LOSSES, COSTS, OR OTHER PROBLEMS ARISING FROM ITS USE.
+
+Derivative works are acceptable, even for commercial purposes, so long as
+(1) they include prominent notice that the work is derivative, and (2) they
+include prominent notice akin to these four paragraphs for those parts of
+this code that are retained.
+
+===============================================================================
+******************************************************************************/
 
 /*
 ** To optimize for speed, define IEEE_INLINE to be 'inline'
@@ -2039,37 +2062,401 @@ wfp_float64 wfp_float64_abs( wfp_float64 x ) {
 }
 
 wfp_flag wfp_float32_is_NaN(wfp_float32 a) {
-    return (((a >> 20) & 0x7fc) == 0x7fc);	
+  return (((a >> 20) & 0x7fc) == 0x7fc);	
 }
 
 // there is a difference between the NaNs of javac and jikes
 // jikes : fff8 0000 0000 0000
 // javac : 7ff8 0000 0000 0000 follows the spec
 wfp_flag wfp_float64_is_NaN(wfp_float64 a) {
-	return ( (( a >> 48) &  0x7ff8) == 0x7ff8 ) ;
+  return ( (( a >> 48) &  0x7ff8) == 0x7ff8 ) ;
 }
 
 wfp_flag wfp_float32_is_Infinite(wfp_float32 a) {
-
-	/*
-  a = wfp_float32_is_negative(a) ? wfp_float32_negate(a) : a;
-  
-  return (a == 0x7f800000);
-  */
-	return (a & 0x7fffffff) == 0x7f800000;
+  return (a & 0x7fffffff) == 0x7f800000;
   
 }
 
 wfp_flag wfp_float64_is_Infinite(wfp_float64 a) {
-
-	/*
-	wprintf("a = %08x%08x\n", a >> 32, a & WFP_LIT64(0x00000000ffffffff));
-  a = wfp_float64_is_negative(a) ? wfp_float64_negate(a) : a;
-	wprintf("a = %08x%08x\n", a >> 32, a & WFP_LIT64(0x00000000ffffffff));
-  
-  return (a == WFP_LIT64(0x7f80000000000000));
-  */
   return (a == D_POSITIVE_INFINITY) || (a == D_NEGATIVE_INFINITY);
 }
 
+/*
+-------------------------------------------------------------------------------
+Returns an approximation to the square root of the 32-bit significand given
+by `a'.  Considered as an integer, `a' must be at least 2^31.  If bit 0 of
+`aExp' (the least significant bit) is 1, the integer returned approximates
+2^31*sqrt(`a'/2^31), where `a' is considered an integer.  If bit 0 of `aExp'
+is 0, the integer returned approximates 2^31*sqrt(`a'/2^30).  In either
+case, the approximation returned lies strictly within +/-2 of the exact
+value.
+-------------------------------------------------------------------------------
+*/
+
+static IEEE_INLINE wfp_bits32 wfp_estimateSqrt32( wfp_int16 aExp, wfp_bits32 a ) {
+
+    static const wfp_bits32 sqrtOddAdjustments[] = {
+        0x00000004, 0x00000022, 0x0000005D, 0x000000B1,
+        0x0000011D, 0x0000019F, 0x00000236, 0x000002E0,
+        0x0000039C, 0x00000468, 0x00000545, 0x00000631,
+        0x0000072B, 0x00000832, 0x00000946, 0x00000A67,
+    };
+
+    static const wfp_bits32 sqrtEvenAdjustments[] = {
+        0x00000A2D, 0x000008AF, 0x0000075A, 0x00000629,
+        0x0000051A, 0x00000429, 0x00000356, 0x0000029E,
+        0x00000200, 0x00000179, 0x00000109, 0x000000AF,
+        0x00000068, 0x00000034, 0x00000012, 0x00000002,
+    };
+
+    wfp_int8 indexx;
+    wfp_bits32 z;
+
+    indexx = ( a>>27 ) & 15;
+    if ( aExp & 1 ) {
+        z = 0x4000 + ( a>>17 ) - sqrtOddAdjustments[ (short)indexx ];
+        z = ( ( a / z )<<14 ) + ( z<<15 );
+        a >>= 1;
+    }
+    else {
+        z = 0x8000 + ( a>>17 ) - sqrtEvenAdjustments[ (short)indexx ];
+        z = a / z + z;
+        z = ( 0x20000 <= z ) ? 0xFFFF8000 : ( z<<15 );
+        if ( z <= a ) return (wfp_bits32) ( ( (wfp_sbits32) a )>>1 );
+    }
+    return ( (wfp_bits32) ( ( ( (wfp_bits64) a )<<31 ) / z ) ) + ( z>>1 );
+ 
+}
+
+
+/*
+-------------------------------------------------------------------------------
+Returns the square root of the double-precision floating-point value `a'.
+The operation is performed according to the IEC/IEEE Standard for Binary
+Floating-Point Arithmetic.
+-------------------------------------------------------------------------------
+
+wfp_float64 wfp_float64_sqrt( wfp_float64 a ) {
+
+    wfp_flag aSign;
+    wfp_int16 aExp, zExp;
+    wfp_bits64 aSig, zSig, doubleZSig;
+    wfp_bits64 rem0, rem1, term0, term1;
+
+    aSig = wfp_extractFloat64Frac( a );
+    aExp = wfp_extractFloat64Exp( a );
+    aSign = wfp_extractFloat64Sign( a );
+    if ( aExp == 0x7FF ) {
+        if ( aSig ) return wfp_propagateFloat64NaN( a, a );
+        if ( ! aSign ) return a;
+        wfp_float_raise( wfp_float_flag_invalid );
+        return wfp_float64_default_nan;
+    }
+    if ( aSign ) {
+        if ( ( aExp | aSig ) == 0 ) return a;
+        wfp_float_raise( wfp_float_flag_invalid );
+        return wfp_float64_default_nan;
+    }
+    if ( aExp == 0 ) {
+        if ( aSig == 0 ) return 0;
+        wfp_normalizeFloat64Subnormal( aSig, &aExp, &aSig );
+    }
+    zExp = ( ( aExp - 0x3FF )>>1 ) + 0x3FE;
+    aSig |= WFP_LIT64( 0x0010000000000000 );
+    zSig = wfp_estimateSqrt32( aExp, (wfp_bits32)aSig>>21 );
+    aSig <<= 9 - ( aExp & 1 );
+    zSig = wfp_estimateDiv128To64( aSig, WFP_LIT64(0), zSig<<32 ) + ( zSig<<30 );
+    if ( ( zSig & 0x1FF ) <= 5 ) {
+        doubleZSig = zSig<<1;
+        wfp_mul64To128( zSig, zSig, &term0, &term1 );
+        wfp_sub128( aSig, WFP_LIT64(0), term0, term1, &rem0, &rem1 );
+        while ( (wfp_sbits64) rem0 < 0 ) {
+            --zSig;
+            doubleZSig -= 2;
+            wfp_add128( rem0, rem1, zSig>>63, doubleZSig | 1, &rem0, &rem1 );
+        }
+        zSig |= ( ( rem0 | rem1 ) != 0 );
+    }
+    return wfp_roundAndPackFloat64( 0, zExp, zSig );
+
+}
+*/
+
+#ifdef NATIVE_MATH
+/****************************************************************************/
+/* Remaining code by Chris Gray. Do not blame John Hauser for this rubbish! */
+/****************************************************************************/
+
+wfp_float64 wfp_float64_sqrt(wfp_float64 arg) {
+  wfp_int16 exp;
+  wfp_bits64 sig;
+  wfp_float64 prev;
+  wfp_float64 root;
+
+  if (wfp_float64_is_negative(arg) || wfp_float64_is_NaN(arg)) {
+
+    return D_NAN;
+
+  }
+
+  if (wfp_float64_is_Infinite(arg)) {
+
+    return arg;
+
+  }
+
+  if (wfp_float64_lt(arg, D_TINY)) {
+
+    return wfp_float64_mul(arg, D_ZERO_POINT_FIVE);
+
+  }
+ 
+  exp = wfp_extractFloat64Exp(arg) - 0x3ffLL;
+  sig = wfp_extractFloat64Frac(arg);
+
+  exp = (exp >> 1) & 0xfffLL;
+
+  prev = wfp_packFloat64(0, exp + 0x3ffLL, sig);
+  root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+  if (prev != root) {
+    prev = root;
+    root = wfp_float64_mul(wfp_float64_add(wfp_float64_div(arg, prev), prev), D_ZERO_POINT_FIVE);
+  }
+
+  return root;
+}
+
+/*
+#define D_ONE_OVER_6 0x3fc5555555555555
+#define D_ONE_OVER_20 0x3fa999999999999a
+#define D_ONE_OVER_42 0x3f98168168168168
+#define D_ONE_OVER_72 0x3f8c71c71c71c71c
+#define D_ONE_OVER_110 0x3f829e4129e4129e
+#define D_ONE_OVER_156 0x3f7a41a41a41a41a
+*/
+
+/**
+ ** Evaluate sin() using a truncated Taylor series.
+ ** Only use this in the range -quarterpi..quarterpi !
+ */
+static wfp_float64 wfp_float64_sine(wfp_float64 theta) {
+  wfp_float64 theta_squared;
+  wfp_float64 temp;
+  wfp_float64 t1;
+
+  static wfp_float64 D_ONE_OVER_6;
+  static wfp_float64 D_ONE_OVER_20;
+  static wfp_float64 D_ONE_OVER_42;
+  static wfp_float64 D_ONE_OVER_72;
+  static wfp_float64 D_ONE_OVER_110;
+  static wfp_float64 D_ONE_OVER_156;
+
+  if (!D_ONE_OVER_6) {
+    D_ONE_OVER_6 = wfp_float64_div(D_ONE, wfp_int32_to_float64(6));
+    D_ONE_OVER_20 = wfp_float64_div(D_ONE, wfp_int32_to_float64(20));
+    D_ONE_OVER_42 = wfp_float64_div(D_ONE, wfp_int32_to_float64(42));
+    D_ONE_OVER_72 = wfp_float64_div(D_ONE, wfp_int32_to_float64(72));
+    D_ONE_OVER_110 = wfp_float64_div(D_ONE, wfp_int32_to_float64(110));
+    D_ONE_OVER_156 = wfp_float64_div(D_ONE, wfp_int32_to_float64(156));
+  }
+
+  theta_squared = wfp_float64_mul(theta, theta);
+  temp = theta_squared;
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_156);
+  t1 = wfp_float64_mul(theta_squared, t1);
+  temp = wfp_float64_sub(theta_squared, t1);
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_110);
+  t1 = wfp_float64_mul(theta_squared, t1);
+  temp = wfp_float64_sub(theta_squared, t1);
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_72);
+  t1 = wfp_float64_mul(theta_squared, t1);
+  temp = wfp_float64_sub(theta_squared, t1);
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_42);
+  t1 = wfp_float64_mul(theta_squared, t1);
+  temp = wfp_float64_sub(theta_squared, t1);
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_20);
+  t1 = wfp_float64_mul(theta_squared, t1);
+  temp = wfp_float64_sub(theta_squared, t1);
+  t1 = wfp_float64_mul(temp, D_ONE_OVER_6);
+  t1 = wfp_float64_mul(theta, t1);
+  temp = wfp_float64_sub(theta, t1);
+
+  return temp;
+
+}
+
+#define D_FOUR              (0x4010000000000000LL)
+#define D_MINUS_FOUR        (0xc010000000000000LL)
+#define D_EIGHT             (0x4020000000000000LL)
+#define D_PI                (0x400921fb54442d18LL)
+#define D_TWO_PI            (0x401921fb54442d18LL)
+#define D_HALF_PI           (0x3ff921fb54442d18LL)
+#define D_QUARTER_PI        (0x3fe921fb54442d18LL)
+
+/*
+** Reduce arg to the range -pi..pi, and classify into an octant (-4..4).
+*/
+static wfp_float64 wfp_float64_reduce_angle(wfp_float64 arg) {
+  wfp_float64 cycles;
+  wfp_float64 roundedcycles;
+  wfp_float64 theta;
+  wfp_float64 adjust;
+
+  cycles = wfp_float64_div(arg, D_TWO_PI);
+
+  if (wfp_float64_lt(D_LONG_MAX_VALUE, cycles) || wfp_float64_lt(D_LONG_MAX_VALUE, wfp_float64_negate(cycles))) {
+
+    return D_ZERO;
+
+  }
+
+  roundedcycles = wfp_int64_to_float64(wfp_float64_to_int64_round_to_zero(cycles));
+
+  if (wfp_float64_lt(cycles, D_ZERO)) {
+    theta = wfp_float64_add(arg, wfp_float64_mul(roundedcycles, D_TWO_PI));
+  }
+  else if (wfp_float64_lt(D_ZERO, cycles)) {
+    theta = wfp_float64_sub(arg, wfp_float64_mul(roundedcycles, D_TWO_PI));
+  }
+
+  return theta;
+}
+
+/**
+ ** Now for the real sin() function.
+ **
+ ** For small x, sin(x) = x (this also takes care of -0.0 and 0.0).
+ ** Otherwise we reduce the argument to the range -pi..pi, and then
+ ** subdivide this range into eight octants (half-quadrants).
+ ** Within each quadrant, we use either our truncated Taylor series
+ ** directly or sqrt(1-y*y), where y is the complementary angle to x
+ ** (opposite corner of a right-angled triangle).
+ */
+wfp_float64 wfp_float64_sin(wfp_float64 arg) {
+  wfp_float64 theta;
+  wfp_float64 temp;
+  wfp_int32 phase;
+
+  if (wfp_float64_is_NaN(arg)) {
+
+    return arg;
+
+  }
+
+  if (wfp_float64_lt(wfp_float64_abs(arg), D_TINY)) {
+
+    return arg;
+
+  }
+
+  theta = wfp_float64_reduce_angle(arg);
+  phase = wfp_float64_to_int32_round_to_zero(wfp_float64_div(theta, D_QUARTER_PI));
+
+  switch(phase) {
+  case 0:
+  case -1:
+
+    return wfp_float64_sine(theta);
+
+  case 1:
+    temp = wfp_float64_sine(wfp_float64_sub(D_HALF_PI, theta));
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+
+    return wfp_float64_sqrt(temp);
+
+  case -3:
+  case -2:
+    temp = wfp_float64_sine(wfp_float64_negate(wfp_float64_add(D_HALF_PI, theta)));
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+
+    return wfp_float64_negate(wfp_float64_sqrt(temp));
+
+  case 2:
+    temp = wfp_float64_sine(wfp_float64_sub(theta, D_HALF_PI));
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+
+    return wfp_float64_sqrt(temp);
+
+  default: // 3
+
+    return wfp_float64_sine(wfp_float64_sub(D_PI, theta));
+  }
+}
+
+/**
+ ** The cos() function works the same way as sin(), mutatis mutandis.
+ */
+wfp_float64 wfp_float64_cos(wfp_float64 arg) {
+  wfp_float64 theta;
+  wfp_float64 temp;
+  wfp_int32 phase;
+
+  if (wfp_float64_is_NaN(arg)) {
+
+    return arg;
+
+  }
+
+  if (wfp_float64_lt(wfp_float64_abs(arg), D_TINY)) {
+
+    return D_ONE;
+
+  }
+
+  theta = wfp_float64_reduce_angle(arg);
+  phase = wfp_float64_to_int32_round_to_zero(wfp_float64_div(theta, D_QUARTER_PI));
+
+  switch(phase) {
+  case 0:
+  case -1:
+    temp = wfp_float64_sine(theta);
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+
+    return wfp_float64_sqrt(temp);
+
+  case 1:
+  case 2:
+
+    return wfp_float64_sine(wfp_float64_sub(D_HALF_PI, theta));
+
+  case -2:
+  case -3:
+
+    return wfp_float64_sine(wfp_float64_add(D_HALF_PI, theta));
+
+  default:
+    temp = wfp_float64_sine(wfp_float64_sub(D_PI, theta));
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+
+    return wfp_float64_negate(wfp_float64_sqrt(temp));
+  }
+}
+
+/**
+ ** Let's just act dumb for this one.
+ */
+wfp_float64 wfp_float64_tan(wfp_float64 arg) {
+  return wfp_float64_div(wfp_float64_sin(arg), wfp_float64_cos(arg));
+}
+#endif
 

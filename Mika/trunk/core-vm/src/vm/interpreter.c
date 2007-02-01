@@ -70,7 +70,7 @@
 ** If CACHE_TOS is defined, we carry forward the top element of the stack in a
 ** register variable from one opcode to the next (so long as it is single-length).
 ** Disabled for now, because it adds a couple of KB code size but only speeds
-** up execution by about &% - according to Caffeine marks, maybe other
+** up execution by about 1% - according to Caffeine marks, maybe other
 ** benchmarks will give a different result.
 */
 //#define CACHE_TOS
@@ -321,7 +321,7 @@ static void do_drem(w_Slot**);
 inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) { 
   frame->current = current;
 //  frame->jstack_top = tos;
-  woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+  woempa(7, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
 //  wprintf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
   if (!threadIsUnsafe(frame->thread)) { 
@@ -587,6 +587,12 @@ extern void fast_Character_isDigit_char(w_frame);
 extern void fast_Character_forDigit_int_int(w_frame);
 extern void fast_Character_digit_char_int(w_frame);
 extern void fast_System_static_currentTimeMillis(w_frame);
+#ifdef NATIVE_MATH
+extern void fast_Math_static_sqrt(w_frame);
+extern void fast_Math_static_sin(w_frame);
+extern void fast_Math_static_cos(w_frame);
+extern void fast_Math_static_tan(w_frame);
+#endif
 
 typedef void (*w_fast_method)(w_frame);
 static w_fast_method fast_method_table[] = {
@@ -607,6 +613,12 @@ static w_fast_method fast_method_table[] = {
   fast_Character_forDigit_int_int,
   fast_Character_digit_char_int,
   fast_System_static_currentTimeMillis,
+#ifdef NATIVE_MATH
+  fast_Math_static_sqrt,
+  fast_Math_static_sin,
+  fast_Math_static_cos,
+  fast_Math_static_tan,
+#endif
 };
 
 void interpret(w_frame caller, w_method method) {
@@ -1105,20 +1117,22 @@ void interpret(w_frame caller, w_method method) {
   c_fcmpg: i = +1; goto do_fcmp;
 
   do_fcmp: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
 #ifdef CACHE_TOS
-    w_float f0 = tos_cache;
+    float_y.w = tos_cache;
 #else
-    w_float f0 = tos[-1].c;
+    float_y.w = tos[-1].c;
 #endif
-    w_float f1 = tos[-2].c;
+    float_x.w = tos[-2].c;
     --tos;
-    if (wfp_float32_is_NaN(f1) || wfp_float32_is_NaN(f0) ) {
+    if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) ) {
       // do nothing, result will be 'i' on entry
     }
-    else if (wfp_float32_eq(f1, f0)) {
+    else if (wfp_float32_eq(float_x.f, float_y.f)) {
       i = 0;
     }
-    else if (wfp_float32_lt(f1, f0)) {
+    else if (wfp_float32_lt(float_x.f, float_y.f)) {
       i = -1;
     }
     else {
@@ -1477,11 +1491,16 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_i2f: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_int32_to_float32(tos_cache);
+    float_x.f = wfp_int32_to_float32((w_int)tos_cache);
 #else
-    tos[-1].c = wfp_int32_to_float32(tos[-1].c);
+    float_x.f = wfp_int32_to_float32((w_int)tos[-1].c);
 #endif
+#ifdef CACHE_TOS
+    tos_cache = 
+#endif
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -1526,12 +1545,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fmul: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_mul(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_mul(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_mul(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2407,12 +2435,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fadd: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_add(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_add(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_add(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2447,12 +2484,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fsub: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_sub(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_sub(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_sub(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2598,12 +2644,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fdiv: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_div(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_div(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_div(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2682,11 +2737,17 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fneg: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_negate(tos_cache);
+    float_x.w = tos_cache;
 #else
-    tos[-1].c = wfp_float32_negate(tos[-1].c);
+    float_x.w = tos[-1].c;
 #endif
+    float_x.f = wfp_float32_negate(float_x.f);
+#ifdef CACHE_TOS
+    tos_cache = 
+#endif
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -2854,9 +2915,9 @@ void interpret(w_frame caller, w_method method) {
     union {w_double d; w_word w[2];} double_x;
     double_x.d = wfp_int32_to_float64
 #ifdef CACHE_TOS
-                                     (tos_cache);
+                                     ((w_int)tos_cache);
 #else
-                                     (tos[-1].c);
+                                     ((w_int)tos[-1].c);
 #endif
     tos[ 0].s = stack_notrace;
     tos += 1;
@@ -2867,21 +2928,18 @@ void interpret(w_frame caller, w_method method) {
 
   c_f2l: {
     union{w_long l; w_word w[2];} long_x;
+    union{w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    if (wfp_float32_is_NaN(tos_cache)) {
-      long_x.l = 0LL;
-    }
-    else {
-      long_x.l = wfp_float32_to_int64_round_to_zero(tos_cache);
-    }
+    float_x.w = tos_cache;
 #else
-    if (wfp_float32_is_NaN(tos[-1].c)) {
+    float_x.w = tos[-1].c;
+#endif
+    if (wfp_float32_is_NaN(float_x.f)) {
       long_x.l = 0LL;
     }
     else {
-      long_x.l = wfp_float32_to_int64_round_to_zero(tos[-1].c);
+      long_x.l = wfp_float32_to_int64_round_to_zero(float_x.f);
     }
-#endif
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = long_x.w[0];
@@ -2891,12 +2949,13 @@ void interpret(w_frame caller, w_method method) {
 
   c_f2d: {
     union {w_double d; w_word w[2];} double_x;
-    double_x.d = wfp_float32_to_float64
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-                                       (tos_cache);
+    float_x.w = tos_cache;
 #else
-                                       (tos[-1].c);
+    float_x.w = tos[-1].c;
 #endif
+    double_x.d = wfp_float32_to_float64(float_x.f);
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = double_x.w[0];
@@ -2906,13 +2965,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_l2f: {
     union {w_long l; w_word w[2];} long_x;
+    union {w_float f; w_word w;} float_x;
     long_x.w[0] = tos[-2].c;
     long_x.w[1] = tos[-1].c;
+    float_x.f = wfp_int64_to_float32(long_x.l);
     tos -= 1;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
-    tos[-1].c = wfp_int64_to_float32(long_x.l);
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -2927,21 +2988,16 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_f2i: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    if (wfp_float32_is_NaN(tos_cache)) {
-      tos_cache = tos[-1].c = 0;
-    }
-    else {
-      tos_cache = tos[-1].c = wfp_float32_to_int32_round_to_zero(tos_cache);
-    }
+    float_x.w = tos_cache;
 #else
-    if (wfp_float32_is_NaN(tos[-1].c)) {
-      tos[-1].c = 0;
-    }
-    else {
-      tos[-1].c = wfp_float32_to_int32_round_to_zero(tos[-1].c);
-    }
+    float_x.w = tos[-1].c;
 #endif
+#ifdef CACHE_TOS
+    tos_cache =
+#endif
+    tos[-1].c = wfp_float32_is_NaN(float_x.f) ? 0 : wfp_float32_to_int32_round_to_zero(float_x.f);
     do_next_opcode;
   }
 
@@ -2982,13 +3038,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_d2f: {
     union {w_double d; w_word w[2];} double_x;
+    union {w_float f; w_word w;} float_x;
     double_x.w[0] = tos[-2].c;
     double_x.w[1] = tos[-1].c;
+    float_x.f = wfp_float64_to_float32(double_x.d);
     tos -= 1;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
-    tos[-1].c = wfp_float64_to_float32(double_x.d);
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -3980,38 +4038,42 @@ void interpret(w_frame caller, w_method method) {
 }
 
 void do_frem(w_Slot **tosptr) {
+  union {w_float f; w_word w;} float_x;
+  union {w_float f; w_word w;} float_y;
+  union {w_float f; w_word w;} result;
 
-  w_float result;
+  float_y.w = (*tosptr)[-1].c;
+  float_x.w = (*tosptr)[-2].c;
 
-  if (wfp_float32_is_NaN((*tosptr)[-2].c) || wfp_float32_is_NaN((*tosptr)[-1].c) || wfp_float32_eq((*tosptr)[-1].c , F_ZERO) || wfp_float32_is_Infinite((*tosptr)[-2].c)) {
-    result = F_NAN;
+  if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) || wfp_float32_eq(float_y.f , F_ZERO) || wfp_float32_is_Infinite(float_x.f)) {
+    result.f = F_NAN;
   }
   else {
-    if (wfp_float32_eq((*tosptr)[-2].c , F_ZERO) || wfp_float32_is_Infinite((*tosptr)[-1].c)) {
-      result = (*tosptr)[-2].c;
+    if (wfp_float32_eq(float_x.f , F_ZERO) || wfp_float32_is_Infinite(float_y.f)) {
+      result.f = float_x.f;
     }
     else   {
-      result = wfp_float32_mul(wfp_float32_abs((*tosptr)[-1].c), F_FLOAT_MAX_VALUE);
-      if (wfp_float32_lt(result, wfp_float32_abs((*tosptr)[-2].c))) {
+      result.f = wfp_float32_mul(wfp_float32_abs(float_y.f), F_FLOAT_MAX_VALUE);
+      if (wfp_float32_lt(result.f, wfp_float32_abs(float_x.f))) {
         woempa(1, "fmod: division would overflow, returning zero as remainder.\n");
-        if (wfp_float32_is_negative((*tosptr)[-2].c)) {
-          result = F_MINUS_ZERO;
+        if (wfp_float32_is_negative(float_x.f)) {
+          result.f = F_MINUS_ZERO;
         }
         else {
-          result = F_ZERO;
+          result.f = F_ZERO;
         }
       }
       else {
-        result = wfp_float32_div((*tosptr)[-2].c, (*tosptr)[-1].c);
-        result = wfp_int32_to_float32(wfp_float32_to_int32_round_to_zero(result));
-        result = wfp_float32_mul((*tosptr)[-1].c, result);
-        result = wfp_float32_sub((*tosptr)[-2].c, result);
+        result.f = wfp_float32_div(float_x.f, float_y.f);
+        result.f = wfp_int32_to_float32(wfp_float32_to_int32_round_to_zero(result.f));
+        result.f = wfp_float32_mul(float_y.f, result.f);
+        result.f = wfp_float32_sub(float_x.f, result.f);
       }
     }
   }
 
   (*tosptr) -= 1;
-  (*tosptr)[-1].c = result;
+  (*tosptr)[-1].c = result.w;
 
 }
 

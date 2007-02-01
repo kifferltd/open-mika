@@ -43,7 +43,8 @@ w_fastclass static_calls[FAST_STATIC_CLASSES];
 w_fastclass virtual_calls[FAST_VIRTUAL_CLASSES];
 w_fastclass special_calls[FAST_SPECIAL_CLASSES];
 
-w_string clazz_name_Charater;
+w_string clazz_name_Character;
+w_string clazz_name_Math;
 
 void fastcall_check_class(w_fastclass fclass, w_string method_name, 
  w_string method_sig, unsigned char * bytecodes) {
@@ -57,10 +58,15 @@ void fastcall_check_class(w_fastclass fclass, w_string method_name,
      woempa(7,"Using  %w.%w%w fastcalls\n",fclass->class_name,
            fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
 
-      //A bit of a hack to guarantee that Class java.lang.Character gets initialized...
-      if(fclass->class_name ==  clazz_name_Charater) {
+      //A bit of a hack to guarantee that some classes get initialized...
+      if(fclass->class_name ==  clazz_name_Character) {
         mustBeInitialized(clazzCharacter);
       }
+#ifdef NATIVE_MATH
+      if(fclass->class_name ==  clazz_name_Math) {
+        mustBeInitialized(clazzMath);
+      }
+#endif
       bytecodes[-1] = 0xd3;
       bytecodes[0]  = fclass->calls[i]->index >> 8;
       bytecodes[1]  = fclass->calls[i]->index & 0xff;
@@ -133,7 +139,8 @@ void fastcall_init_tables() {
   w_string clazz_name_String = cstring2String("java/lang/String", 16);
   w_string init = cstring2String("<init>", 6);
 
-  clazz_name_Charater = cstring2String("java/lang/Character", 19);
+  clazz_name_Character = cstring2String("java/lang/Character", 19);
+  clazz_name_Math = cstring2String("java/lang/Math", 14);
 
   current = createClassTable(1,cstring2String("java/lang/System", 16));
   current->calls[0]->index = FAST_SYSTEM_CURRENTTIMEMILLIS;
@@ -141,7 +148,7 @@ void fastcall_init_tables() {
   current->calls[0]->method_sig = cstring2String("()J", 3);
   static_calls[0] = current;
 
-  current = createClassTable(3,clazz_name_Charater);
+  current = createClassTable(3,clazz_name_Character);
   static_calls[1] = current;
   current->calls[0]->index = FAST_CHARACTER_DIGIT_CHAR_INT;
   current->calls[0]->method_name = cstring2String("digit", 5);
@@ -152,6 +159,23 @@ void fastcall_init_tables() {
   current->calls[2]->index = FAST_CHARACTER_ISDIGIT_CHAR;
   current->calls[2]->method_name = cstring2String("isDigit", 5);
   current->calls[2]->method_sig = cstring2String("(C)Z", 4);
+
+#ifdef NATIVE_MATH
+  current = createClassTable(4,clazz_name_Math);
+  current->calls[0]->index = FAST_MATH_SQRT;
+  current->calls[0]->method_name = cstring2String("sqrt", 4);
+  current->calls[0]->method_sig = cstring2String("(D)D", 4);
+  current->calls[1]->index = FAST_MATH_SIN;
+  current->calls[1]->method_name = cstring2String("sin", 3);
+  current->calls[1]->method_sig = cstring2String("(D)D", 4);
+  current->calls[2]->index = FAST_MATH_COS;
+  current->calls[2]->method_name = cstring2String("cos", 3);
+  current->calls[2]->method_sig = cstring2String("(D)D", 4);
+  current->calls[3]->index = FAST_MATH_TAN;
+  current->calls[3]->method_name = cstring2String("tan", 3);
+  current->calls[3]->method_sig = cstring2String("(D)D", 4);
+  static_calls[2] = current;
+#endif
 
   current = createClassTable(2,cstring2String("java/lang/StringBuffer", 22));
   virtual_calls[0] = current;
