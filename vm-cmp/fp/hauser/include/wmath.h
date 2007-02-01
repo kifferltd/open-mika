@@ -89,6 +89,7 @@ typedef long long           wfp_sbits64;
 #define D_LONG_MAX_VALUE               (0x43e0000000000000LL)
 #define D_DOUBLE_MAX_VALUE             (0x7fefffffffffffffLL)
 #define D_DOUBLE_MIN_VALUE             (0x0000000000000001LL)
+#define D_TINY                         (0x1ff0000000000000LL)
 
 #define D_ZERO_MSW                     (0x00000000)
 #define D_ZERO_LSW                     (0x00000000)
@@ -237,6 +238,12 @@ wfp_float64 wfp_float64_div( wfp_float64, wfp_float64 );
 
 wfp_float32 wfp_float32_abs( wfp_float32 );
 wfp_float64 wfp_float64_abs( wfp_float64 );
+#ifdef NATIVE_MATH
+wfp_float64 wfp_float64_sqrt( wfp_float64 );
+wfp_float64 wfp_float64_sin( wfp_float64 );
+wfp_float64 wfp_float64_cos( wfp_float64 );
+wfp_float64 wfp_float64_tan( wfp_float64 );
+#endif
 
 #define wfp_float64_signBit( float64_val ) ( (float64_val) & 0x8000000000000000LL )
 

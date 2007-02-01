@@ -19,16 +19,12 @@
 *   Vanden Tymplestraat 35      info@acunia.com                           *
 *   3000 Leuven                 http://www.acunia.com                     *
 *   Belgium - EUROPE                                                      *
+*                                                                         *
+* Modifications copyright (C) 2007 by Chris Gray, /k/ Embedded Java       *
+* Solutions. Permission is hereby granted to distribute these             *
+* modifications under the terms of the Wonka Public Licence.              *
+*                                                                         *
 **************************************************************************/
-
-/*
-** $Id: Math.c,v 1.4 2005/04/18 19:10:19 cvs Exp $
-**
-** Implementation of the routines of the Math class.
-**
-** TODO for all java.lang.Math routines, check the exceptions and write test cases.
-** Yeah, right, on a dull day...
-*/
 
 #include <ctype.h>
 #include <stdio.h>
@@ -255,11 +251,71 @@ static const w_double       twobypi = 0x3fe45f306dc9c883LL;    /* 0.636619772367
 static const w_double         twopi = 0x401921fb54442d18LL;    /* 6.28318530717958647693   */
 static const w_double         piby2 = 0x3ff921fb54442d18LL;    /* 1.57079632679489661923   */
 static const w_double         piby4 = 0x3fe921fb54442d18LL;    /* 0.78539816339744830962   */
-static const w_double         sqrt2 = 0x3ff6a09e667f3bcdLL;    /* 1.41421356237309505      */
-static const w_double       sqrt_f1 = 0xbfc9679a430cc50aLL;    /*-0.1984742                */
-static const w_double       sqrt_f2 = 0x3fec2cf81b2f306fLL;    /* 0.8804894                */
-static const w_double       sqrt_f3 = 0x3fd454af195d9f18LL;    /* 0.3176687                */
-static const w_double ten_e_minus_3 = 0x3f50624dd2f1a9fcLL;    /* 10e-3                    */
-static const w_double       ten_e_7 = 0x416312d000000000LL;    /* 10e7                     */
-static const w_double       	ten = 0x4024000000000000LL;    /* 10                       */
+//static const w_double         sqrt2 = 0x3ff6a09e667f3bcdLL;    /* 1.41421356237309505      */
+//static const w_double       sqrt_f1 = 0xbfc9679a430cc50aLL;    /*-0.1984742                */
+//static const w_double       sqrt_f2 = 0x3fec2cf81b2f306fLL;    /* 0.8804894                */
+//static const w_double       sqrt_f3 = 0x3fd454af195d9f18LL;    /* 0.3176687                */
+//static const w_double ten_e_minus_3 = 0x3f50624dd2f1a9fcLL;    /* 10e-3                    */
+//static const w_double       ten_e_7 = 0x416312d000000000LL;    /* 10e7                     */
+//static const w_double       	ten = 0x4024000000000000LL;    /* 10                       */
+
+#ifdef NATIVE_MATH
+void fast_Math_static_sqrt(w_frame frame) {
+  union {w_double d; w_word w[2];} double_x;
+
+  double_x.w[0] = frame->jstack_top[-2].c;
+  double_x.w[1] = frame->jstack_top[-1].c;
+  if ((double_x.d != D_ZERO) && (double_x.d != D_MINUS_ZERO) && (double_x.d != D_POSITIVE_INFINITY)) {
+    double_x.d = wfp_float64_sqrt(double_x.d);
+  }
+  frame->jstack_top[-2].c = double_x.w[0];
+  frame->jstack_top[-1].c = double_x.w[1];
+}
+ 
+void fast_Math_static_sin(w_frame frame) {
+  union {w_double d; w_word w[2];} double_x;
+
+  double_x.w[0] = frame->jstack_top[-2].c;
+  double_x.w[1] = frame->jstack_top[-1].c;
+  if (wfp_float64_is_Infinite(double_x.d)) {
+    double_x.d = D_NAN;
+  }
+  else if (!wfp_float64_is_NaN(double_x.d)) {
+    double_x.d = wfp_float64_sin(double_x.d);
+  }
+  frame->jstack_top[-2].c = double_x.w[0];
+  frame->jstack_top[-1].c = double_x.w[1];
+}
+ 
+void fast_Math_static_cos(w_frame frame) {
+  union {w_double d; w_word w[2];} double_x;
+
+  double_x.w[0] = frame->jstack_top[-2].c;
+  double_x.w[1] = frame->jstack_top[-1].c;
+  if (wfp_float64_is_Infinite(double_x.d)) {
+    double_x.d = D_NAN;
+  }
+  else if (!wfp_float64_is_NaN(double_x.d)) {
+    double_x.d = wfp_float64_cos(double_x.d);
+  }
+  frame->jstack_top[-2].c = double_x.w[0];
+  frame->jstack_top[-1].c = double_x.w[1];
+}
+ 
+void fast_Math_static_tan(w_frame frame) {
+  union {w_double d; w_word w[2];} double_x;
+
+  double_x.w[0] = frame->jstack_top[-2].c;
+  double_x.w[1] = frame->jstack_top[-1].c;
+  if (wfp_float64_is_Infinite(double_x.d)) {
+    double_x.d = D_NAN;
+  }
+  else if (!wfp_float64_is_NaN(double_x.d)) {
+    double_x.d = wfp_float64_tan(double_x.d);
+  }
+  frame->jstack_top[-2].c = double_x.w[0];
+  frame->jstack_top[-1].c = double_x.w[1];
+}
+#endif
+ 
 

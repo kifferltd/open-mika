@@ -36,6 +36,10 @@
 #define FAST_CHARACTER_FORDIGIT_INT_INT 14
 #define FAST_CHARACTER_DIGIT_CHAR_INT   15
 #define FAST_SYSTEM_CURRENTTIMEMILLIS   16
+#define FAST_MATH_SQRT                  17
+#define FAST_MATH_SIN                   18
+#define FAST_MATH_COS                   19
+#define FAST_MATH_TAN                   20
 
 typedef struct w_FastCall {
   w_string method_name;
@@ -52,7 +56,11 @@ typedef struct w_FastClass {
 
 typedef w_FastClass* w_fastclass;
 
+#ifdef NATIVE_MATH
+#define FAST_STATIC_CLASSES 3
+#else
 #define FAST_STATIC_CLASSES 2
+#endif
 #define FAST_VIRTUAL_CLASSES 2
 #define FAST_SPECIAL_CLASSES 1
 
