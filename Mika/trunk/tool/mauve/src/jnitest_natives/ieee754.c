@@ -25,6 +25,8 @@
 ** $Id: ieee754.c,v 1.2 2005/04/18 17:40:39 cvs Exp $
 */
 
+#ifdef HAUSER_FP
+
 /*
 ** To optimize for speed, define IEEE_INLINE to be 'inline'
 */
@@ -3007,4 +3009,5 @@ wfp_float64 float64_abs( wfp_float64 x ) {
   return extractFloat64Sign(x) ? float64_negate(x) : x;
 }
 
+#endif
 
