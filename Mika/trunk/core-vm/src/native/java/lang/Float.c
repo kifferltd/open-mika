@@ -20,8 +20,9 @@
 *   3001 Leuven                 http://www.acunia.com                     *
 *   Belgium - EUROPE                                                      *
 *                                                                         *
-* Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
+* Modifications copyright (C) 2004, 2005 by Chris Gray, /k/ Embedded Java *
+* Solutions. Permission is hereby granted to distribute these             *
+* modifications under the terms of the Wonka Public Licence.              *
 *                                                                         *
 **************************************************************************/
 
@@ -37,11 +38,19 @@
 #include "Math.h"
 
 w_int Float_static_floatToRawIntBits(JNIEnv *env, w_instance class, w_float f) {
-  return (w_int)f;
+  union {w_float f; w_int i;} foo;
+
+  foo.f = f;
+
+  return foo.i;
 }
 
 w_float Float_static_intToFloatBits(JNIEnv *env, w_instance class, w_int i) {
-  return (w_float) i;
+  union {w_float f; w_int i;} foo;
+
+  foo.i = i;
+
+  return foo.f;
 }
 
 w_boolean Float_static_isInfinite(JNIEnv *env, w_instance class, w_float f) {
