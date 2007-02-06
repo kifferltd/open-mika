@@ -86,10 +86,13 @@ public class ArrayList extends AbstractList
   public void ensureCapacity(int minCapacity) {
     if (this.elements.length < minCapacity) {
       Object[] oldElements = this.elements;
-      int oldlength = this.size;
+      int oldlength = this.size * 2;
+      if (minCapacity < (oldlength)) {
+        minCapacity = oldlength;
+      }
       this.elements = new Object[minCapacity];
-// JV: the new size might me more than minCapacity
-      System.arraycopy(oldElements, 0, this.elements, 0, oldlength);
+      // JV: the new size might me more than minCapacity
+      System.arraycopy(oldElements, 0, this.elements, 0, oldlength>>>1);
     }
   }
 

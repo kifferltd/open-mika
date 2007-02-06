@@ -47,6 +47,17 @@ public class GregorianCalendar extends Calendar {
   public static final int AD = 1;
   public static final int BC = 0;
 
+  private static final int[] mininumValues = new int[] {
+    GregorianCalendar.BC, Integer.MIN_VALUE, Calendar.JANUARY, 1, 1, 1, 1, 1, 1, Calendar.AM,
+    0, 0, 0, 0, 0, -12, 0
+  };
+  
+  private static final int[] maximumValues = new int[] {
+    GregorianCalendar.AD, Integer.MAX_VALUE, Calendar.DECEMBER, 53, 6, 31, 366, 7, 5, Calendar.PM,
+    12, 23, 59, 59, 999, 12, 3600000
+  };
+  
+  
   private long gregorianCutover = -12219292800000L;
 
   public GregorianCalendar() {
@@ -198,8 +209,8 @@ public class GregorianCalendar extends Calendar {
       else {
         fields[ERA] =  BC;
       }
-      fields[HOUR] = fields[HOUR_OF_DAY]%12;
-      fields[AM_PM] = fields[HOUR_OF_DAY]/12;
+      fields[HOUR] = (fields[HOUR_OF_DAY])%12;      
+      fields[AM_PM] = (fields[HOUR_OF_DAY])/12;
       fields[DAY_OF_WEEK_IN_MONTH] = (fields[DATE]-1)/7+1;
       int fdow = getFirstDayOfWeek();
       int i = Math.abs(( fields[DAY_OF_WEEK] - fdow )%7);
@@ -214,7 +225,7 @@ public class GregorianCalendar extends Calendar {
       }
       fields[ZONE_OFFSET] = rawOffset;
       fields[DST_OFFSET] = dst;      
-      for ( j=0;j<FIELD_COUNT;j++) isSet[j] = true;
+      for ( j=0;j<FIELD_COUNT;j++)  isSet[j] = true;
       areFieldsSet = true;
     }
   }
@@ -276,6 +287,9 @@ public class GregorianCalendar extends Calendar {
         date = get(DATE);
         value = month + amt;
         month = value % 12;
+        if(month < 0) {
+          month += 12;
+        }
         leap = isLeapYear(get(YEAR));
         days = (leap ? DAYS_IN_LEAPMONTH[month] : DAYS_IN_MONTH[month]);
         if(date > days){
@@ -304,33 +318,66 @@ public class GregorianCalendar extends Calendar {
       case WEEK_OF_YEAR:
       case ERA:
       case HOUR_OF_DAY:
-        //TODO
-        System.out.println("\nGregorianCalendar: calling roll on field which is not yet implemented !!!\n");
+        throw new UnsupportedOperationException("roll not implemented");
       default:
         //do nothing
     }
   }
 
   public int getGreatestMinimum(int fld){
-    //TODO ...
-    return -1;
+    //Euh, where does that differ ?
+    return mininumValues[fld];
   }
 
   public int getLeastMaximum(int fld){
-    //TODO...
-    return -1;
+    switch(fld) {
+    case Calendar.DATE:
+      return 28;
+    case Calendar.DAY_OF_WEEK_IN_MONTH:
+      return 4;
+    case Calendar.DAY_OF_YEAR:
+      return 365;
+    case Calendar.WEEK_OF_MONTH:
+      return 4;
+    }
+    return maximumValues[fld];
   }
 
   public int getMaximum(int fld){
-    //TODO ...
-    return -1;
+    return maximumValues[fld];
   }
 
   public int getMinimum(int fld){
-    //TODO ...
-    return -1;
+    return mininumValues[fld];
   }
 
+  /**
+   * @see java.util.Calendar#getActualMaximum(int)
+   */
+  public int getActualMaximum(int fld) {
+    switch(fld) {
+    case Calendar.DATE:
+      int month = get(Calendar.MONTH);
+      return isLeapYear(get(Calendar.YEAR)) ?
+          DAYS_IN_LEAPMONTH[month] : DAYS_IN_MONTH[month];
+    case Calendar.DAY_OF_YEAR:
+      return isLeapYear(get(Calendar.YEAR)) ? 366 : 365;
+    case Calendar.DAY_OF_WEEK_IN_MONTH:
+      //TODO FIXME
+      return 4;
+    case Calendar.WEEK_OF_MONTH:
+      //TODO FIXME
+      return 5;
+    }
+    return getActualMaximum(fld);
+  }
+
+  /**
+   * @see java.util.Calendar#getActualMinimum(int)
+   */
+  public int getActualMinimum(int fld) {
+    return getMinimum(fld);
+  }
   public void setGregorianChange(Date date){
     gregorianCutover = date.getTime();
   }
@@ -341,4 +388,5 @@ public class GregorianCalendar extends Calendar {
 
   private native void setfields(int offset);
   private native void settime(int First_day_of_week, int datecase);
+
 }

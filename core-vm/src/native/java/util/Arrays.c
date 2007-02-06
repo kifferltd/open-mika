@@ -51,6 +51,9 @@ void fill_bool(JNIEnv *env, w_instance thisClazz, w_instance array, w_boolean va
       memset(data, 0x00, (length + 7) / 8);
     }
   }
+  else {
+    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+  }
 }
 
 
@@ -63,6 +66,9 @@ void fill_byte(JNIEnv *env, w_instance thisClazz, w_instance array, w_sbyte valu
     w_int length = instance2Array_length(array);
     w_sbyte *data = instance2Array_byte(array);
     memset(data, (w_int)value & 0xff, length);
+  }
+  else {
+    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
   }
 }
 

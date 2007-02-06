@@ -232,10 +232,10 @@ w_int dayOfWeek(w_date date) {
     return -1;
   }
   
-  day = ((w_int)((days % 7) + 5) % 7);
+  day = (w_int)((days+5) %7);
   
   day += 1;
-  
+ 
   return day;
   
 }

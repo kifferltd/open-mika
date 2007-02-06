@@ -194,7 +194,7 @@ public class BitSet implements Cloneable, java.io.Serializable {
     }
     if (bitsInUse > bitIndex) {
       int i = bitIndex / 64;
-      bits[i] = bits[i] & ((1L<<(bitIndex%64)) ^ -1);
+      bits[i] = bits[i] & ((1L<<(bitIndex%64)) ^ -1L);
     }
     checkBitsInUse();
   }
@@ -210,17 +210,20 @@ public class BitSet implements Cloneable, java.io.Serializable {
       int bidx = begin / 64;
       int eidx = end / 64;
       if (bidx == eidx) {
-        bits[bidx] &= ((-1L>>(begin%64)) & (-1L<<(end%64))) ^ -1L;           
+        bits[bidx] &= ((-1L<<(begin%64)) & (-1L>>>(64-(end%64)))) ^ -1L;           
       } else {
         int stop = eidx > bits.length ? bits.length : eidx;
-        bits[bidx] &= (-1L>>(begin%64)) ^ -1L;
-        for (int i=begin+1 ; i<stop; i++) {
+        int rshift = begin % 64;
+        bits[bidx] &= rshift > 0 ? ((-1L<<(begin%64)) ^ -1L) : 0;
+        for (int i=bidx+1 ; i<stop; i++) {
           bits[i] = 0;
-        }
-        if(eidx < bits.length) {
-          bits[eidx] &= (-1L<<(end%64)) ^ -1L;  
+        }      
+        int shift = 64 - (end%64);
+        if(shift < 64 && eidx < bits.length) {
+          bits[eidx] &= (-1L>>>(shift)) ^ -1L;  
         }
       }      
+
       if(end >= bitsInUse) {
         checkBitsInUse();
       }
@@ -231,6 +234,9 @@ public class BitSet implements Cloneable, java.io.Serializable {
    * @since 1.4
    */
   public void flip(int bitIndex) {
+    if(bitIndex < 0) {
+      throw new IndexOutOfBoundsException(String.valueOf(bitIndex));
+    }
     int idx = bitIndex / 64;
     if(idx >= bits.length) {
       long[] newArray = new long[idx+1];
@@ -252,18 +258,19 @@ public class BitSet implements Cloneable, java.io.Serializable {
       System.arraycopy(bits,0,newArray,0,bits.length);
       bits = newArray;
     }
-
     int bidx = begin / 64;
     if (bidx == eidx) {
-      bits[bidx] ^= ((-1L>>(begin%64)) & (-1L<<(end%64)));           
+      bits[bidx] ^= ((-1L<<(begin%64)) & (-1L>>>(64-(end%64))));           
     } else {
       int stop = eidx > bits.length ? bits.length : eidx;
-      bits[bidx] ^= -1L>>(begin%64);
-      for (int i=begin+1 ; i<stop; i++) {
+      int rshift = begin % 64;
+      bits[bidx] ^= rshift > 0 ? -1L<<(rshift) : -1;
+      for (int i=bidx+1 ; i<stop; i++) {
         bits[i] ^= -1L;
       }
-      if(eidx < bits.length) {
-        bits[eidx] ^= (-1L<<(end%64));  
+      int shift = 64 - (end%64);
+      if(shift < 64 && eidx < bits.length) {
+        bits[eidx] ^= (-1L>>>(shift));  
       }
     }      
     if(end >= bitsInUse) {
@@ -271,29 +278,60 @@ public class BitSet implements Cloneable, java.io.Serializable {
     }        
   }
   
-  /**   * 
+  /*****************************************************************************
    * @since 1.4
    */
   public BitSet get(int begin, int end) {
-    BitSet set = new BitSet(end - begin);
-    if(begin <= bitsInUse) {
+    if (begin < 0 || end < begin) {
+      throw new IndexOutOfBoundsException();
+    }
+    int size = end - begin;
+    BitSet set = new BitSet(size);
+    if (size == 0) {
+      return set;
+    }
+    if (begin <= bitsInUse) {
       int bidx = begin / 64;
       int eidx = (end / 64);
-      int rshift = begin % 64;
-      int lshift = 64 - rshift;
       long word = bits[bidx];
-      int stop = bits.length > eidx ? bits.length : eidx;
-      int j=0;
-      for (int i=bidx+1; i < stop ; i++, j++) {
-        long nword = bits[i];
-        set.bits[j] = word<<rshift | nword>>lshift;  
-        word = nword;
+      int rshift = begin % 64;
+
+      if (bidx == eidx) {
+        set.bits[0] = (word >>> rshift) & (-1L >>> (64 + rshift - (end % 64)));
+      } else {
+        int lshift = 64 - rshift;
+        int need = (size % 64) - lshift;
+        int stop = bits.length < eidx ? bits.length : eidx;
+        int j = 0;
+        if (++bidx == eidx && need > 0) {
+          set.bits[j++] = (-1L >>> 64 + need)
+              & (word >>> rshift | (bits[bidx]) << lshift);
+        } else {
+          if (rshift == 0) {
+            for (int i = bidx-1; i < stop; i++) {
+              set.bits[j++] = bits[i];
+            }
+            word = set.bits[j-1];
+          } else {
+            for (int i = bidx; i <= stop; i++) {
+              long nword = bits[i];
+              set.bits[j++] = (word >>> rshift) | (nword << lshift);
+              word = nword;
+            }
+          }
+          if (need >= 0) {
+            // already wrote to many bits.
+            set.bits[j - 1] &= -1L >>> (64 - (size % 64));
+          } else if (need < 0 && j < set.bits.length) {
+            // we need some more bits
+            need = lshift + need;
+            set.bits[j] = (-1L >>> (65 - need)) | (word >>> rshift);
+          }
+        }
       }
-      //TODO ...
-      //We still need to place some depending on eidx
       set.checkBitsInUse();
     }
-    
+
     return set;
   }
   
@@ -301,7 +339,7 @@ public class BitSet implements Cloneable, java.io.Serializable {
    * @since 1.4
    */
   public boolean isEmpty() {
-    return bitsInUse != 0;
+    return bitsInUse == 0;
   }
   
   /**   * 
@@ -413,29 +451,32 @@ public class BitSet implements Cloneable, java.io.Serializable {
       throw new IndexOutOfBoundsException();
     }
     int eidx = end / 64;
-    if(eidx >= bits.length) {
-      if (value) {
-        long[] newArray = new long[eidx+1];
-        System.arraycopy(bits,0,newArray,0,bits.length);
-        bits = newArray;
-      }
+    
+    //grow the array if needed.
+    if(eidx >= bits.length && value) {
+      long[] newArray = new long[eidx+1];
+      System.arraycopy(bits,0,newArray,0,bits.length);
+      bits = newArray;
     }
 
     int bidx = begin / 64;
     if (bidx == eidx) {
-      long mask = ((-1L>>(begin%64)) & (-1L<<(end%64)));
+      //special case bidx and eidx are the same.
+      long mask = ((-1L<<(begin%64)) & (-1L>>>(64-(end%64))));
       bits[bidx] = value ? bits[bidx] | mask : bits[bidx] & (mask ^ -1L);           
     } else {
+      //first set bits[bidx].
       int stop = eidx > bits.length ? bits.length : eidx;
-      long mask = -1L>>(begin%64);
+      long mask = -1L<<(begin%64);
       bits[bidx] = value ? bits[bidx] | mask : bits[bidx] & (mask ^ -1L);
       long word = value ? -1L : 0L;
-      for (int i=begin+1 ; i<stop; i++) {
+      for (int i=bidx+1 ; i<stop; i++) {
         bits[i] = word;
       }
-      if(eidx < bits.length) {
-        mask = -1L>>(begin%64);
-        bits[eidx] = value ? bits[bidx] | mask : bits[bidx] & (mask ^ -1L);  
+      int shift = end%64;
+      if(shift > 0 && eidx < bits.length) {
+        mask = -1L>>>(64-(shift));
+        bits[eidx] = value ? bits[eidx] | mask : bits[eidx] & (mask ^ -1L);  
       }
     }      
     if(end >= bitsInUse) {
@@ -463,14 +504,17 @@ public class BitSet implements Cloneable, java.io.Serializable {
 
   public void or(BitSet bitset) {
     int k = bitset.bits.length;
-    long[] bits = this.bits;
     int l = bits.length;
 
-    if(k < l){
-      l = k;
+    if(k > l){
+      long[] newbits = new long[k];
+      System.arraycopy(bits,0, newbits, 0, l);
+      bits = newbits;
     }
+
+    long[] bits = this.bits;
     long[] others = bitset.bits;
-    for(int i=0 ; i < l ; i++){
+    for(int i=0 ; i < k ; i++){
       bits[i] = bits[i] | others[i];
     }
     checkBitsInUse();
@@ -478,14 +522,16 @@ public class BitSet implements Cloneable, java.io.Serializable {
 
   public synchronized void xor(BitSet bitset) {
     int k = bitset.bits.length;
-    long[] bits = this.bits;
     int l = bits.length;
 
-    if(k < l){
-      l = k;
+    if(k > l){
+      long[] newbits = new long[k];
+      System.arraycopy(bits,0, newbits, 0, l);
+      bits = newbits;
     }
+    long[] bits = this.bits;
     long[] others = bitset.bits;
-    for(int i=0 ; i < l ; i++){
+    for(int i=0 ; i < k ; i++){
       bits[i] = bits[i] ^ others[i];
     }
     checkBitsInUse();
@@ -513,7 +559,7 @@ public class BitSet implements Cloneable, java.io.Serializable {
         if((lbits & 0x1) == 1) {
           cardinality++;
         }
-        lbits >>= 1;
+        lbits >>>= 1;
       }
     }
     return cardinality;

@@ -103,11 +103,11 @@ void GregorianCalendar_setfields (JNIEnv * env, w_instance this, w_int offset){
 
 void GregorianCalendar_settime (JNIEnv * env, w_instance this, w_int fdw, w_int datecase){
 
- 	// fdw == First_Day_Of_Week
- 	//Sunday = 1, Monday = 2, ... Saturday = 7
+  // fdw == First_Day_Of_Week
+  //Sunday = 1, Monday = 2, ... Saturday = 7
   // let's check if we can calculate the time ...
- 	w_date wdate;
- 	w_long ttime;
+  w_date wdate;
+  w_long ttime;
   w_instance flds = getReferenceField(this, F_Calendar_fields);
   w_int * ip =  instance2Array_int(flds);
   w_int dow=0;
@@ -115,30 +115,29 @@ void GregorianCalendar_settime (JNIEnv * env, w_instance this, w_int fdw, w_int 
 
   wdate = allocMem(sizeof(w_Date));
   if (!wdate) {
-    wabort(ABORT_WONKA, "Unable to allocate wdate\n");
+    return;
   }
   wdate->year = *(ip+clazzCalendar->staticFields[F_Calendar_YEAR]);
 
-//wdate->month = *(ip+clazzCalendar->staticFields[F_Calendar_MONTH])+1;
-//wdate->day = *(ip+clazzCalendar->staticFields[F_Calendar_DATE]);
 	
-	switch (datecase) {	
-	  case 1:
+  switch (datecase) {	
+    case 1:
       wdate->month = *(ip+clazzCalendar->staticFields[F_Calendar_MONTH]);
       wdate->day = *(ip+clazzCalendar->staticFields[F_Calendar_DATE]);
       break;
-	  case 2:
+    case 2:
       wdate->month = *(ip+clazzCalendar->staticFields[F_Calendar_MONTH]);
       wdate->day = 1;
       dow = dayOfWeek(wdate);
       if (dow == -1) break;
       wdate->day = (*(ip+clazzCalendar->staticFields[F_Calendar_WEEK_OF_MONTH]))*7+
-        (*(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_WEEK])- fdw + 1)%7 -((dow-fdw)%7);
+          (*(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_WEEK])- fdw + 1)%7 -((dow-fdw)%7);
       break;
-	  case 3:
-      wdate->month = *(ip+clazzCalendar->staticFields[F_Calendar_MONTH]);
+    case 3:
+      wdate->month = *(ip+clazzCalendar->staticFields[F_Calendar_MONTH]) + 1;
       wdate->day = 1;
       dow = dayOfWeek(wdate);
+      wdate->month--;
       if (dow == -1) break;
       wdate->day = (*(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_WEEK])- dow + 1)%7;
       dow = *(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_WEEK_IN_MONTH]);
@@ -151,36 +150,41 @@ void GregorianCalendar_settime (JNIEnv * env, w_instance this, w_int fdw, w_int 
         while (wdate->day <mp[wdate->month%12]-7) {
           wdate->day += 7;
         }
-        while (dow <0 && wdate->day > 7) {
+        while (++dow <0 && wdate->day > 7) {
           wdate->day -= 7;
-          dow++;	  		                 	
         }
       }
       break;
-	  case 4:
+    case 4:
       wdate->day = *(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_YEAR]);
       wdate->month = 0;
       break;
-	  case 5:
+    case 5:
       wdate->month = 0;
       wdate->day = 1;		
       dow = dayOfWeek(wdate);
       if (dow == -1) break;
       wdate->day = (*(ip+clazzCalendar->staticFields[F_Calendar_WEEK_OF_YEAR])-1)*7+
       (*(ip+clazzCalendar->staticFields[F_Calendar_DAY_OF_WEEK])- fdw + 1)%7-((dow-fdw)%7);     	
-	}
-  wdate->year += wdate->month / 12;
-  wdate->month = (wdate->month % 12)+1;
-  //wdate->hour = *(ip+clazzCalendar->staticFields[F_Calendar_HOUR_OF_DAY]);
+  }
+
+  if (wdate->month < 0) {
+    wdate->year += wdate->month / 12 -1;
+    wdate->month = (wdate->month % 12) + 13;
+  } else {
+    wdate->year += wdate->month / 12;
+    wdate->month = (wdate->month % 12)+1;
+  }
+
   // we don't check these values ...
   wdate->msec = *(ip+clazzCalendar->staticFields[F_Calendar_HOUR_OF_DAY]);
   wdate->msec = *(ip+clazzCalendar->staticFields[F_Calendar_MINUTE]) + (60LL * wdate->msec);
   wdate->msec = *(ip+clazzCalendar->staticFields[F_Calendar_SECOND]) + (60LL * wdate->msec);
   wdate->msec = *(ip+clazzCalendar->staticFields[F_Calendar_MILLISECOND]) + (1000LL * wdate->msec);
   ttime = date2millis(wdate);
-//  printf("DEBUG got time %x %x year = %i m %i d %i\n", ((w_int *)&ttime)[1],((w_int *)&ttime)[0],wdate->year, wdate->month, wdate->day);
+  //printf("DEBUG got time %x %x year = %i m %i d %i\n", ((w_int *)&ttime)[1],((w_int *)&ttime)[0],wdate->year, wdate->month, wdate->day);
   ttime -= MSEC1970;
-//  printf("DEBUG got time %x %x year = %i m %i d %i\n", ((w_int *)&ttime)[1],((w_int *)&ttime)[0],wdate->year, wdate->month, wdate->day);
+  //printf("DEBUG got time %x %x year = %i m %i d %i\n", ((w_int *)&ttime)[1],((w_int *)&ttime)[0],wdate->year, wdate->month, wdate->day);
   releaseMem(wdate);
  	
   setLongField(this, F_Calendar_time, ttime);
