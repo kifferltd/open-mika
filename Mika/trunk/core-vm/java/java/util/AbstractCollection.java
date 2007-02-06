@@ -161,18 +161,19 @@ public abstract class AbstractCollection implements Collection {
 
 
   public String toString() {
-
-    String newString = "[";
-    Iterator it = iterator();
-
-    while (it.hasNext()) {
-      if (newString.length()>1)
-        newString = newString + ", ";
-      newString = newString + String.valueOf(it.next());
+    StringBuffer buffer = new StringBuffer("[");
+    Iterator iter = iterator();
+    while (iter.hasNext()) {
+      Object element = iter.next();
+      buffer.append(element == this ? 
+          "(this Collection)" : String.valueOf(element)).append(", ");
+      
     }
-
-    newString = newString + "]";
-
-    return newString;
+    int length = buffer.length();
+    if(length > 1) {
+      buffer.setLength(length - 2);
+      buffer.append(']');
+    }
+    return buffer.toString();
   }
 }

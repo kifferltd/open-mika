@@ -35,7 +35,7 @@ import java.io.IOException;
  */
 public class JarEntry extends ZipEntry {
 
-  private Attributes attributes=null;
+  private Attributes attributes;
 
   public JarEntry (ZipEntry child) {
     super (child);

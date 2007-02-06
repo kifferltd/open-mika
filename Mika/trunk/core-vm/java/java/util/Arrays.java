@@ -27,6 +27,8 @@
 
 package java.util;
 
+import java.io.Serializable;
+
 public class Arrays {
 
   private Arrays() {}
@@ -38,7 +40,9 @@ public class Arrays {
    	return new AsList(arr);   	
   }
 
-  private static class AsList extends AbstractList{
+  private static class AsList extends AbstractList 
+         implements RandomAccess, Serializable{
+    
    	private Object []  back;
    	
    	public AsList(Object [] arr){
@@ -61,104 +65,235 @@ public class Arrays {
 
 // binarySearch methods ...
   public static int binarySearch(byte[] arr, byte e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    int b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
-  public static int binarySearch(short[] arr, short e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
-  }
+  
   public static int binarySearch(char[] arr, char e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    int b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
+    
+  
+  public static int binarySearch(short[] arr, short e){
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    int b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
+  }
+  
   public static int binarySearch(int[] arr, int e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    int b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
+
   public static int binarySearch(long[] arr, long e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    long b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
+
   public static int binarySearch(float[] arr, float e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    float b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
+
   public static int binarySearch(double[] arr, double e){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-   	 	if (e == arr[i]) {
-  	 	 	return i;
-  	 	}
-  	 	if (e < arr[i]){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    double b;
+    do {
+      b = arr[index];
+      if(b == e) {
+        return index;          
+      }
+      if(b > e) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (e > b ? -1 : 0) -1 - index;
   }
+
   public static int binarySearch(Object[] arr, Object e){
-		return binarySearch(arr, e, new Collections.StdComparator()); 	
+		return binarySearch(arr, e, null); 	
   }
+  
   public static int binarySearch(Object[] arr, Object e,Comparator comp){
-  	int size = arr.length;
-  	for (int i=0 ; i < size ; i++){
-  	 	int cmp = comp.compare(e,arr[i]);
-  	 	if (cmp == 0) {
-  	 	 	return i;
-  	 	}
-  	 	if (cmp < 0){
-  	 	 	size = i;
-  	 	}
-  	}
-  	return -(size+1);
+  	if(comp == null) {
+     comp = new Collections.StdComparator(); 
+    }
+    int size = arr.length;
+    if(size == 0) {
+      return -1;
+    }
+    int low = -1;
+    int high = size;
+    int index = high/2;
+    int cmp;
+    do {
+      cmp = comp.compare(arr[index],e);
+      if(cmp == 0) {
+        return index;          
+      }
+      if(cmp > 0) {
+        high = index;
+      } else {
+        low = index;
+      }
+      int nindex = (high + low) / 2;
+      if(low >= nindex || nindex >= high) {
+        break;
+      }
+      index = nindex;
+    } while(true);
+    return (cmp < 0 ? -1 : 0) -1 - index;
   }
 
 // fill methods ...
@@ -297,22 +432,25 @@ public class Arrays {
     if(end < start){
       throw new IllegalArgumentException();
     }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
+    }
+    if(c == null) {
+      c = new Collections.StdComparator();
+    }
     quicksort(a,start,end -1, c);
   }
 
   public static void sort(Object[] a, Comparator c){
-    quicksort(a,0,a.length-1, c);
+    sort(a,0,a.length, c);
   }
 
   public static void sort (Object[] a) {
-    quicksort(a,0,a.length-1, new Collections.StdComparator());
+    sort(a,0,a.length, null);
   }
 
   public static void sort(Object[] a, int start, int end){
-    if(end < start){
-      throw new IllegalArgumentException();
-    }
-    quicksort(a,start,end -1, new Collections.StdComparator());
+    sort(a,start,end,null);
   }
 
   private static void quicksort(Object[] list, int start, int end,Comparator c) {
@@ -368,6 +506,9 @@ public class Arrays {
    public static void sort(short[]s, int start, int end) {
      if(end < start){
        throw new IllegalArgumentException();
+     }
+     if(start < 0) {
+       throw new ArrayIndexOutOfBoundsException(start);
      }
      quicksort(s,start,end-1);
    }
@@ -613,6 +754,9 @@ public class Arrays {
   public static void sort(byte[] s, int start, int end) {
     if(end < start){
       throw new IllegalArgumentException();
+    } 
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
     }
     quicksort(s,start,end-1);
   }
@@ -628,7 +772,7 @@ public class Arrays {
 
   private static int partition (byte[] list, int start, int end) {
     byte pivot = list[end];
-    int bottom = start -1;
+    int bottom = start - 1;
     int top = end;
     boolean done = false;
 
@@ -669,6 +813,9 @@ public class Arrays {
   public static void sort(char[] s, int start, int end) {
     if(end < start){
       throw new IllegalArgumentException();
+    }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
     }
     quicksort(s,start,end-1);
   }
@@ -726,6 +873,9 @@ public class Arrays {
     if(end < start){
       throw new IllegalArgumentException();
     }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
+    }
     quicksort(s,start,end-1);
   }
 
@@ -780,6 +930,9 @@ public class Arrays {
   public static void sort(float[] s, int start, int end) {
     if(end < start){
       throw new IllegalArgumentException();
+    }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
     }
     quicksort(s,start,end-1);
   }
@@ -836,6 +989,9 @@ public class Arrays {
     if(end < start){
       throw new IllegalArgumentException();
     }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
+    }
     quicksort(s,start,end-1);
   }
 
@@ -891,6 +1047,9 @@ public class Arrays {
   public static void sort(long[] s, int start, int end) {
     if(end < start){
       throw new IllegalArgumentException();
+    }
+    if(start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
     }
     quicksort(s,start,end-1);
   }

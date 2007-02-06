@@ -123,39 +123,21 @@ public class Vector extends AbstractList
 
   }
 
-  public String toString() {
-    String result = "[";
-    int i;
-    boolean exhausted = false;
-    Object element;
-
-
-    i = 0;
-
-    synchronized(this) {
-      while(!exhausted) {
-        if(i==elementCount) {
-          exhausted = true;
-        }
-        else {
-          element = elementData[i];
-
-          if(result.length()>1) result = result + ", ";
+  public synchronized String toString() {
+    StringBuffer buffer = new StringBuffer("[");
   
-          if(element==null) {
-            result = result + "null";
-          } else {
-            result = result + element;
-          }
-
-          ++i;
-        }
-      }
+    for(int i=0 ; i < elementCount ; i++) {
+      Object element = elementData[i];
+      buffer.append(element == this ? 
+          "(this Collection)" : String.valueOf(element)).append(", ");
+      
     }
-
-    result = result + "]";
-
-    return result;
+    int length = buffer.length();
+    if(length > 1) {
+      buffer.setLength(length - 2);
+      buffer.append(']');
+    }
+    return buffer.toString();
   }
   
   public synchronized Object clone() {

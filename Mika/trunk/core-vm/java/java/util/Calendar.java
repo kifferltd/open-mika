@@ -57,7 +57,7 @@ public abstract class Calendar implements java.io.Serializable, Cloneable {
   public final static int ZONE_OFFSET          = 15;
   public final static int DST_OFFSET           = 16;
   public final static int FIELD_COUNT          = 17;
-
+  
   // MONTH Constants
   public final static int JANUARY   = 0;
   public final static int FEBRUARY	= 1;
@@ -396,7 +396,12 @@ public abstract class Calendar implements java.io.Serializable, Cloneable {
   }
 
   public String toString() {
-    return "";
+    StringBuffer buf = new StringBuffer(getClass().getName()).append('@')
+            .append(Integer.toHexString(System.identityHashCode(this)));
+    for(int i = 0 ; i < (FIELD_COUNT - 1) ; i++) {
+      buf.append(" Field[").append(i).append("] = ").append(get(i)).append(',');
+    }
+    return buf.append(" Field[").append(FIELD_COUNT-1).append("] = ").append(get(FIELD_COUNT-1)).toString();
   }
 
   public void setFirstDayOfWeek(int value){

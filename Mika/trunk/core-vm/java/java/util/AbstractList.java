@@ -309,17 +309,17 @@ public abstract class AbstractList extends AbstractCollection implements List {
    	 	return length;
    	} 	
    	public Object get(int pos) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException("in SubList from AbstractList method get");
+   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
    	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
    	 	return backList.get(start+pos);
    	}
    	public Object set(int pos, Object o) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException("in SubList from AbstractList method set");
+   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
    	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
    	 	return backList.set(start+pos,o);
    	}
 	public void add(int pos, Object o) {   	
-   	 	if ( pos < 0 || pos > length )  throw new IndexOutOfBoundsException("in SubList from AbstractList method add");
+   	 	if ( pos < 0 || pos > length )  throw new IndexOutOfBoundsException();
    	 	if (this.modCount++ != backList.modCount) throw new ConcurrentModificationException();
    	 	length++;
    	 	backList.add(start+pos, o);
@@ -342,7 +342,7 @@ public abstract class AbstractList extends AbstractCollection implements List {
    		return new SubListListIterator(0,start,length);
    	}
    	public Object remove(int pos) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException("in SubList from AbstractList method remove");
+   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
    	 	if (this.modCount++ != backList.modCount) throw new ConcurrentModificationException();
    	 	length--;
    	 	return backList.remove(start+pos);
@@ -416,7 +416,7 @@ public abstract class AbstractList extends AbstractCollection implements List {
     public void remove() {
       	if (modCount!=m) throw new ConcurrentModificationException();
     	if ( status == 0 ) throw new IllegalStateException("remove must be called after next or previous");
-      AbstractList.this.remove(start+current+status);
+      AbstractList.this.remove(current+status);
     	if ( status == -1 ) current--;
     	status = 0;
     	size--;
