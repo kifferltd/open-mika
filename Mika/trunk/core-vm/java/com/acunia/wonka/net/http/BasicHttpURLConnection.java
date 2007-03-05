@@ -115,6 +115,12 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private static String proxyPassword;
 
   /**
+   ** Mapping of protection spaces (represented as InetAddress ":" realm)
+   ** onto credentials (represented as base64-encoded userid:password).
+   */
+  private static Hashtable basicCredentials = new Hashtable();
+
+  /**
    ** Default value for instanceFollowRedirects.
    */
   private static boolean defaultFollowRedirects = true;
@@ -196,6 +202,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** to perform the resolution.
    */
   InetAddress hostAddr;
+
+  /**
+   ** The realm extracted from a WWW-Authenticate challenge, or null if no challenge has been received.
+   */
+  private String realm;
+
+  /**
+   ** Set true iff we already sent basic authentication on this connection.
+   */
+  private boolean sentBasicAuthentication;
 
   /**
    ** The value of the <code>Content-Length</code> request header,
@@ -586,6 +602,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   private String getRequestHeaders() throws UnknownHostException {
     addProxyAuthenticationHeader();	
+    addBasicAuthenticationHeader();	
     StringBuffer request = new StringBuffer(1024);
     request.append("Connection: close\r\n");
     request.append("Date: ");
@@ -613,6 +630,20 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     request.append("\r\n");
 
     return request.toString();
+  }
+
+  /**
+   ** If we have basic credentials for this protection space, add basic 
+   ** authentication headers to the request headers held in <var>buffer</var>.
+   */
+  private void addBasicAuthenticationHeader() throws UnknownHostException {
+    if (realm != null) {
+      String credentials = (String)basicCredentials.get(hostAddr + ":" + realm);
+      if (credentials != null) {
+        requestHeaders.put(new Attributes.Name("authorization"), "Basic " + credentials);
+        sentBasicAuthentication = true;
+      }
+    }
   }
 
   /**
@@ -645,6 +676,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     requestHeaders.remove(new Attributes.Name("connection"));
     request.append("Connection: close\r\n"); //connection will be closed after the response
     addProxyAuthenticationHeader();	
+    addBasicAuthenticationHeader();	
     request.append("Date: ");
     dateFormatter.format(new Date(), request, new java.text.FieldPosition(0));
     request.append("\r\n");
@@ -662,6 +694,23 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     request.getChars(0,length,chars,0);
 
     out.write(decoder.cToB(chars,0,length));
+  }
+
+  /**
+   * Add username:password to the table as an authorisation for addr:realm.
+   */
+  private void addAuthorisation(InetAddress addr, String realm, String username, char[] password) {
+    StringBuffer unencoded = new StringBuffer(username);
+    unencoded.append(':');
+    unencoded.append(password);
+    basicCredentials.put(addr + ":" + realm, Base64Encoder.encode(unencoded.toString()));
+  }
+
+  /**
+   * Remove username:password from the table as an authorisation for addr:realm.
+   */
+  private void removeAuthorisation(InetAddress addr, String realm) {
+    basicCredentials.remove(addr + ":" + realm);
   }
 
   /**
@@ -684,30 +733,28 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     String prompt = name + " requires authorization";
     String scheme = "[not set]";
     int space1 = challenge.indexOf(' ');
-    int space2 = -1;
 
     if (space1 >= 0) {
-      space2 = challenge.indexOf(' ', space1 + 1);
-      if (space2 < 0) {
-        space2 = challenge.length();
-      }
-    }
-    if (space2 >= 0) {
-      scheme = challenge.substring(space1 + 1, space2);
-      String rest = challenge.substring(space2 + 1);
-      //challenge = challenge.substring(0, space2);
+      scheme = challenge.substring(0, space1);
+      String rest = challenge.substring(space1 + 1);
       int realmstart = rest.indexOf("realm=\"");
       int realmend = (realmstart < 0) ? -1 : rest.indexOf("\"", realmstart + 7);
       if (realmend >= 0) {
-        prompt += " for realm " + rest.substring(realmstart + 6, realmend + 1);
+        realm = rest.substring(realmstart + 6, realmend + 1);
+        prompt += " for realm " + realm;
       }
     }
 
     PasswordAuthentication passwordAuth = Authenticator.requestPasswordAuthentication(addr, port, "HTTP", prompt, scheme);
 
-    if (passwordAuth!=null) {		
-      proxyUser = passwordAuth.getUserName();
-      proxyPassword = new String(passwordAuth.getPassword());	
+    if (passwordAuth!=null) {
+      if ("Proxy".equalsIgnoreCase(name)) {
+        proxyUser = passwordAuth.getUserName();
+        proxyPassword = new String(passwordAuth.getPassword());
+      }
+      else {
+        addAuthorisation(addr, realm, passwordAuth.getUserName(), passwordAuth.getPassword());
+      }
 
       return true;
     }
@@ -831,7 +878,14 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 		//connect();
                 parseResponse();
     }
-    else if(responseCode==HTTP_UNAUTHORIZED) {
+    else if (responseCode==HTTP_UNAUTHORIZED) {
+      if (sentBasicAuthentication) {
+        // Our credentials are no good, it seems ...
+        removeAuthorisation(hostAddr, realm);
+        responseParsed = true;
+        throw new IOException(url + " refused our credentials");
+      }
+
       String challenge = internal_getResponseProperty("www-authenticate").trim();
       if (getAuthorisation(challenge, url.toString(), hostAddr, url.getPort())) {
 
