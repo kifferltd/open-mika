@@ -362,7 +362,7 @@ void return_iconst(w_frame caller, w_method method) {
   woempa(1, "Dispatching %m()\n", method);
   caller->jstack_top -= method->exec.arg_i - 1;
   caller->jstack_top[-1].s = stack_notrace;
-  caller->jstack_top[-1].c = caller->current[0] == iconst_m1 ? -1 : caller->current[0] - iconst_0;
+  caller->jstack_top[-1].c = method->exec.code[0] == iconst_m1 ? -1 : method->exec.code[0] - iconst_0;
 }
 
 void interpret_getter(w_frame caller, w_method method) {
@@ -1287,7 +1287,7 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
 
       case METHOD_IS_RETURN_ICONST:
         woempa(7, "Setting dispatcher of %M to 'return_iconst'\n", method);
-        dispatcher_index = 26;
+        dispatcher_index = 27;
         break;
     
       default:
