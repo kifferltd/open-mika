@@ -72,6 +72,7 @@ public class SimpleDateFormat extends DateFormat {
     }
     calendar = Calendar.getInstance();
     numberFormat = NumberFormat.getInstance();
+    numberFormat.setParseIntegerOnly(true);
     formatData = dfs;
     this.pattern = pattern;
   }
@@ -202,7 +203,7 @@ public class SimpleDateFormat extends DateFormat {
                 return null;
               }
               p = pos.getIndex()-1;
-              //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str);
+              //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str.substring(0,p+1) + "^" + str.substring(p+1));
               continue;
             }
           }
@@ -345,7 +346,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = nr > 3 ? nr : 3;
         Number num4 =  numberFormat.parse(dest, pos);
         if(num4 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num4.intValue());
           calendar.set(FIELDMAP[field],num4.intValue());
         }
         else {
@@ -357,7 +358,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = 3;
         Number num5 =  numberFormat.parse(dest, pos);
         if(num5 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num5.intValue());
           calendar.set(FIELDMAP[field],num5.intValue());
         }
         else {
@@ -369,7 +370,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = nr;
         Number num6 =  numberFormat.parse(dest, pos);
         if(num6 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num6.intValue());
           calendar.set(FIELDMAP[field],num6.intValue());
         }
         else {
