@@ -331,6 +331,10 @@ w_long Java_RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
 
   if(vfs_stat(pathname, &statbuf) != -1) {
     result = statbuf.st_size;
+    woempa(7, "vfs_stat(%s, %p) returned length %d\n", pathname, &statbuf, result);
+  }
+  else {
+    woempa(9, "vfs_stat(%s, %p) returned -1, %s\n", pathname, &statbuf, strerror(errno));
   }
   
   releaseMem(pathname - 2);
