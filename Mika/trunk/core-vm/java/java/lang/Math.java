@@ -155,7 +155,7 @@ public final class Math {
   /**
    ** Trying to calculate the exponent of anything bigger than this would be foolish.
   */
-  private static final double logbignum = log(Double.MAX_VALUE);
+  private static final double logbignum = 709.782712893384; // log(Double.MAX_VALUE)
 
   /**
    ** The (pseudo-)random number generator used by random().
@@ -1077,18 +1077,6 @@ public final class Math {
     String fractpart;
     String exppart;
 
-// System.out.println("floatValue: input is \""+s+"\"");
-
-/*    while (Character.isWhitespace(s.charAt(index))) {
-      ++index;
-    }
-// System.out.println("floatValue: skipped "+index+" whitespace chars at start");
-
-    while (Character.isWhitespace(s.charAt(length-1))) {
-      --length;
-    }
-// System.out.println("floatValue: skipped "+(s.length()-length)+" whitespace chars at end");
-*/
     try {
       if (s.charAt(index) == '-') {
         negative = true;
@@ -1109,25 +1097,21 @@ public final class Math {
          --length;
       }
       
-//   System.out.println("floatValue: negative is "+negative+", now at char #"+index);
       int point = s.indexOf('.', index);
       int e;
 
       if (point >= 0) {
-//   System.out.println("floatValue: found a decimal point at char#"+point);
         e = s.indexOf('e', point+1);
         if (e < 0) {
           e = s.indexOf('E', point+1);
         }
         wholepart = s.substring(index, point);
         if (e < 0) {
-// System.out.println("floatValue: did not find an e/E");
           fractpart = s.substring(point+1, length);
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           fractpart = s.substring(point+1, e);
           exppart = s.substring(e+1, length);
           if (exppart.charAt(0) == '-') {
@@ -1139,20 +1123,17 @@ public final class Math {
         }
       }
       else {
-// System.out.println("floatValue: did not find a decimal point");
         e = s.indexOf('e', index);
         if (e < 0) {
           e = s.indexOf('E', index);
         }
         if (e < 0) {
-// System.out.println("floatValue: did not find an e/E");
           wholepart = s.substring(index, length);
           fractpart = "";
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           wholepart = s.substring(index, e);
           fractpart = "";
           exppart = s.substring(e+1, length);
@@ -1203,7 +1184,6 @@ public final class Math {
     if (exponent != 0) {
       result *= pow(10.0, expnegative ? -exponent : exponent);
     }
-// System.out.println("floatValue: returning "+(negative ? -result : result));
     return (float)(negative ? -result : result);
   }
 
@@ -1232,17 +1212,6 @@ public final class Math {
 
 
 // System.out.println("doubleValue: input is \""+s+"\"");
-/*
-    while (Character.isWhitespace(s.charAt(index))) {
-      ++index;
-    }
-// System.out.println("doubleValue: skipped "+index+" whitespace chars at start");
-
-    while (Character.isWhitespace(s.charAt(length-1))) {
-      --length;
-    }
-// System.out.println("doubleValue: skipped "+(s.length()-length)+" whitespace chars at end");
-*/
     try {
       if (s.charAt(index) == '-') {
         negative = true;
@@ -1263,25 +1232,21 @@ public final class Math {
         --length;
      }
 
-// System.out.println("doubleValue: negative is "+negative+", now at char #"+index);
       int point = s.indexOf('.', index);
       int e;
 
       if (point >= 0) {
-// System.out.println("doubleValue: found a decimal point at char#"+point);
       e = s.indexOf('e', point+1);
         if (e < 0) {
           e = s.indexOf('E', point+1);
         }
         wholepart = s.substring(index,point);
         if (e < 0) {
-// System.out.println("doubleValue: did not find an e/E");
           fractpart = s.substring(point+1, length);
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           fractpart = s.substring(point+1, e);
           exppart = s.substring(e+1, length);
           if (exppart.charAt(0) == '-') {
@@ -1294,20 +1259,17 @@ public final class Math {
         }
       }
       else {
-// System.out.println("doubleValue: did not find a decimal point");
         e = s.indexOf('e', index);
         if (e < 0) {
           e = s.indexOf('E', index);
         }
         if (e < 0) {
-// System.out.println("doubleValue: did not find an e/E");
           wholepart = s.substring(index, length);
           fractpart = "";
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           wholepart = s.substring(index, e);
           fractpart = "";
           exppart = s.substring(e+1, length);
