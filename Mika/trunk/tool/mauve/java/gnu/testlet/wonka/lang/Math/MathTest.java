@@ -57,7 +57,7 @@ public class MathTest implements Testlet
 		harness.check(!( Math.sin( Math.PI / 2.0 + Math.PI /6.0 ) <= 0.0),
 			"test:value of sin(4*PI/6)>= 0.0");
 		harness.check((Math.cos(Math.PI/4.0)-Math.sin(Math.PI/4.0)<=0.000000001),
-		"test:value of sin(PI/4)= cos(PI/4)");
+		"test:value of sin(PI/4)= cos(PI/4): " + Math.sin(Math.PI/4.0) + " != " + Math.cos(Math.PI/4.0));
 
 	    harness.checkPoint("cos(double)double");
 
@@ -88,8 +88,11 @@ public class MathTest implements Testlet
 		
 	}
 
-	public void test_asinacosatan()
-	{
+  public void test_asinacosatan()
+  {
+    int i;
+    double d1, d2, d3;
+
 	     harness.checkPoint("asin(double)double");
 		harness.check(!(  !(new Double(Math.asin( Double.NaN ))).isNaN() ), 
 			"test:value of asin(NaN)=NaN");
@@ -107,6 +110,23 @@ public class MathTest implements Testlet
 		harness.check(!(  !(new Double(Math.asin( -10.0 ))).isNaN() ), 
 			"test:value of asin(-10.0)= NaN");
 
+  // Tests added by CG 20070331
+    for (i = 0; i < 100; ++i) {
+      d1 = (i - 50) * 0.02d;
+      d2 = Math.asin(d1);
+      d3 = Math.sin(d2);
+      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "asin(" + d1 + ") = " + d2 + ", sin(" + d2 + ") = " + d3);
+    }
+
+    for (i = 0; i < 100; ++i) {
+      d1 = (i - 50) * 0.01d * Math.PI;
+      d2 = Math.sin(d1);
+      d3 = Math.asin(d2);
+      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "sin(" + d1 + ") = " + d2 + ", asin(" + d2 + ") = " + d3);
+    }
+
 
 	     harness.checkPoint("acos(double)double");
 		harness.check(!(  !(new Double(Math.acos( Double.NaN ))).isNaN() ), 
@@ -120,6 +140,22 @@ public class MathTest implements Testlet
 		harness.check(!(  !(new Double(Math.acos( -1.01 ))).isNaN() ), 
 			"test:value of acos(-1.01)= NaN");
 
+  // Tests added by CG 20070331
+    for (i = 0; i < 100; ++i) {
+      d1 = (i - 50) * 0.02d;
+      d2 = Math.acos(d1);
+      d3 = Math.cos(d2);
+      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "acos(" + d1 + ") = " + d2 + ", cos(" + d2 + ") = " + d3);
+    }
+
+    for (i = 0; i < 100; ++i) {
+      d1 = i * 0.01d * Math.PI;
+      d2 = Math.cos(d1);
+      d3 = Math.acos(d2);
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "cos(" + d1 + ") = " + d2 + ", acos(" + d2 + ") = " + d3);
+    }
 
 	     harness.checkPoint("atan(double)double");
 		harness.check(!(  !(new Double(Math.atan( Double.NaN ))).isNaN() ),
@@ -130,12 +166,29 @@ public class MathTest implements Testlet
 			"test:value of atan(0.0)= 0.0.");
 		// atan of infinity is not defined --> this makes sense
 		// because tan (PI/2) != POSITIVE_INFINITY
-		harness.check(!(  !(new Double(Math.asin( Double.POSITIVE_INFINITY ))).isNaN() ), 
+		harness.check(!(  !(new Double(Math.atan( Double.POSITIVE_INFINITY ))).isNaN() ), 
 			"test:value of atan(POSITIVE_INFINITY)= NaN");
-		harness.check(!(  !(new Double(Math.asin( Double.NEGATIVE_INFINITY ))).isNaN() ), 
+		harness.check(!(  !(new Double(Math.atan( Double.NEGATIVE_INFINITY ))).isNaN() ), 
 		"test:value of atan(NEGATIVE_INFINITY)= NaN");
 		
-	}
+  // Tests added by CG 20070331
+    for (i = 0; i < 100; ++i) {
+      d1 = 7.0d / (i - 50);
+      d2 = Math.atan(d1);
+      d3 = Math.tan(d2);
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "atan(" + d1 + ") = " + d2 + ", tan(" + d2 + ") = " + d3);
+    }
+
+    for (i = 0; i < 100; ++i) {
+      d1 = (i - 50) * 0.01d * Math.PI;
+      d2 = Math.tan(d1);
+      d3 = Math.atan(d2);
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "tan(" + d1 + ") = " + d2 + ", atan(" + d2 + ") = " + d3);
+    }
+
+  }
 
 	public void test_atan2()
 	{
@@ -247,6 +300,31 @@ public class MathTest implements Testlet
 			"Error : test_log failed - 6 got: "+Math.log(0.0));
 		harness.check(	Math.log(-0.0) == Double.NEGATIVE_INFINITY, 
 			"Error : test_log failed - 7 got: "+Math.log(-0.0));
+  // Added CG 20070331
+		System.out.println("log(E) = " + Math.log(Math.E)); 
+		harness.check(( Math.log(Math.E)-(1.0d))<=0.0000000001, 
+			"Error : test_log failed - 8");
+
+    int i;
+    double d1, d2, d3;
+
+    for (i = 0; i < 100; ++i) {
+      d1 = i * 0.1d;
+      d1 = d1 * d1 * d1;
+      d2 = Math.log(d1);
+      d3 = Math.exp(d2);
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "log(" + d1 + ") = " + d2 + ", exp(" + d2 + ") = " + d3);
+    }
+
+    for (i = 0; i < 100; ++i) {
+      d1 = (i - 50) * 0.01d;
+      d2 = Math.exp(d1);
+      d3 = Math.log(d2);
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+        "exp(" + d1 + ") = " + d2 + ", log(" + d2 + ") = " + d3);
+    }
+
 			
 	}
 
@@ -263,19 +341,19 @@ public class MathTest implements Testlet
 		harness.check(!( !(new Double(Math.sqrt( Double.POSITIVE_INFINITY))).isInfinite()), 
 			"Error : test_sqrt failed - 3");
 
-		harness.check(!( Math.sqrt( -0.0) != -0.0 ||  Math.sqrt( 0.0) != 0.0 ), 
-			"Error : test_sqrt failed - 4");
+		harness.check(!( Math.sqrt( -0.0) != -0.0), 
+			"Error : test_sqrt failed - 4: " + Math.sqrt(-0.0));
 
-		harness.check(!( Math.sqrt( -0.0) != -0.0 ||  Math.sqrt( 0.0) != 0.0 ), 
-			"Error : test_sqrt failed - 5");
+		harness.check(!(Math.sqrt( 0.0) != 0.0), 
+			"Error : test_sqrt failed - 5: " + Math.sqrt(0.0));
 
 
 		double sq = Math.sqrt(4.0);
 		harness.check(!(!( sq >= 1.9999 &&  sq <= 2.0001 )), 
-			"Error : test_sqrt failed - 6");
+			"Error : test_sqrt failed - 6: " + sq);
 
 		harness.check(!( !(new Double(Math.sqrt(Double.NEGATIVE_INFINITY))).isNaN()), 
-			"Error : test_sqrt failed - 5");
+			"Error : test_sqrt failed - 7: expected NaN, got " + Math.sqrt(Double.NEGATIVE_INFINITY));
 
 	}
 
