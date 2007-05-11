@@ -592,6 +592,10 @@ extern void fast_Math_static_sqrt(w_frame);
 extern void fast_Math_static_sin(w_frame);
 extern void fast_Math_static_cos(w_frame);
 extern void fast_Math_static_tan(w_frame);
+extern void fast_Math_static_asin(w_frame);
+extern void fast_Math_static_atan(w_frame);
+extern void fast_Math_static_log(w_frame);
+extern void fast_Math_static_exp(w_frame);
 #endif
 
 typedef void (*w_fast_method)(w_frame);
@@ -618,6 +622,10 @@ static w_fast_method fast_method_table[] = {
   fast_Math_static_sin,
   fast_Math_static_cos,
   fast_Math_static_tan,
+  fast_Math_static_asin,
+  fast_Math_static_atan,
+  fast_Math_static_log,
+  fast_Math_static_exp,
 #endif
 };
 
