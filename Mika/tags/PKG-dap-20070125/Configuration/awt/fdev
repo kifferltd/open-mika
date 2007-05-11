@@ -1,0 +1,30 @@
+# AWT can have values 'rudolph' or 'none'. If it's a rudolph version of Mika only
+# please configure following properties. When AWT is none these all are irelevant.
+# when AWT_DEVICE = rudolph, AWT_DEVICE can have values 'fdev' for frame buffer
+# or 'xsim' for simulation under X; AWT_PIXELFORMAT can take the following
+# values:      c565 : 16-bit color
+#              c332 : 8-bit color
+#                g4 : 4-bit grayscale;
+# and AWT_INVERSENIBBLES and AWT_INVERSEDISPLAY handle various display driver
+# characteristics, see the source for more details.
+#
+AWT_DEVICE = fdev ;
+AWT_PIXELFORMAT = c555 ;
+AWT_INVERSENIBBLES default = false ;
+AWT_INVERSEDISPLAY default = false ;
+
+#
+# GIF support is disabled by default.
+#
+
+AWT_GIF_SUPPORT = true ;
+
+#
+# JPEG support is disabled by default.
+#
+
+AWT_JPEG_SUPPORT = true ;
+
+AWT_MOUSE = touchscreen ;
+
+CCFLAGS += -DRUDOLPH_DEFAULT_FRAME_TITLE='\"Mika\"' ;

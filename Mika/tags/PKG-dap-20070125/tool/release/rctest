@@ -1,0 +1,50 @@
+# MAIN ------------------------------------------------------------------------
+
+# Test for race conditions
+
+# This script tests after $sleeptime seconds whether 
+# wonka, running vte, successfully started.
+# if it did, it is stopped and a new wonka is started.
+# if it did not, the script is stopped with an exit value different from 0.
+# make sure no $PWD/wonka's are running
+
+
+if [ -z $RTTOOL ] ; then
+  echo "Environment variable RTTOOL not defined. Cannot proceed."
+  exit
+else
+  source $RTTOOL/j_include
+  if [ $? -ne 0 ]; then
+    echo "Aborting ..."
+    exit 1
+  fi
+fi
+
+#getArgs $*
+let cycles=200
+let sleeptime=5
+
+while [ $cycles -gt 0 ]; do
+  $PWD/wonka &> /dev/null &
+  j_seterror $? "starting wonka failed."
+  if [ $J_ERROR -ne 0 ]; then
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  sleep $sleeptime
+  wpid=$(pidof  $PWD/wonka)
+  if [ -z $wpid ]; then
+    j_abort 1 "wonka run $cycles crashed."
+  else
+    echo "wonka run $cycles pass"
+    kill -9 $wpid
+  fi
+  
+  let cycles=cycles-1
+done
+
+
+
+
+
+
+

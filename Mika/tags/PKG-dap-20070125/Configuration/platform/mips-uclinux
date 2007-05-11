@@ -1,0 +1,18 @@
+###########################################################################
+# Copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions           #
+#                                          All rights reserved.           #
+###########################################################################
+
+AWT = none ;
+CPU_MIPS = 200 ;
+DEFAULT_HEAP_SIZE default = 16M ;
+MATH = native ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = false ;
+
+CPU = mips ;
+HOSTOS = uclinux ;
+SCHEDULER = o4p ;
+STATIC = true ;
+

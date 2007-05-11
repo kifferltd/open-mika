@@ -1,0 +1,285 @@
+#!/bin/bash
+
+# -------------------------------------------------------------------
+
+function checkTools() {
+  if [ -z $RTTOOL ] ; then
+    echo "Environment variable RTTOOL not defined. Cannot proceed."
+    exit 1
+  else
+    source $RTTOOL/j_include
+    if [ $? -ne 0 ]; then
+      echo "Aborting ..."
+      exit 1
+    fi
+  fi
+}
+
+# -------------------------------------------------------------------
+function showHelp() {
+cat <<EOF
+  Usage 1: $0 [-x] <cvs tag> <target dir for 'javadoc' subdir>
+
+  e.g. execution of
+     ./mkdoc WONKA-1-5-2-RELEASE /open-wonka/1.5.2
+
+  results in the creation of html files
+  in the target directory /open-wonka/1.5.2/javadoc and
+  a tar.gz file 'javadoc.tar.gz' in directory /open-wonka/1.5.2
+  A temporary directory /open-wonka/1.5.2/javadoc/tmpdoc is left
+  behind and can be removed after inspection
+
+  -x sets script debug mode on; if specified, it must be the first argument
+
+  Usage 2: $0 [-h|--help]
+    generates this help text
+EOF
+}
+
+# MAIN -------------------------------------------------------------------------
+
+checkTools
+
+VERBOSE=off
+if [ $1 ] && [ $1 = -x ]; then
+  VERBOSE=on
+  j_verbose on
+fi
+
+if [ $# -lt 2 ] || [ $1 = "--help" ] || [ $1 = "-h" ]; then
+  showHelp
+  exit
+fi
+
+STARTDIR=$PWD
+DUMP=/dev/null
+ERROR=/dev/null
+
+echo $(date ) > $DUMP
+echo $(date ) > $ERROR
+
+if [ ! -d $2 ]; then
+  j_continue "Directory '$2' not found. Create it?"
+  if [ "$REPLY" = "y" ]; then
+    mkdir $2
+    j_abort $? "Cannot create dir $2."
+  else
+    j_abort
+  fi
+fi
+
+#j_step
+# at this point dir $2 definitely exists !
+cd $2
+TARGET=$PWD
+
+GENERATEDOC=true
+if [ -e ./javadoc/java/io/File.html ] ; then
+  j_continue "Doc files already exist. Generate new?"
+  if [ $REPLY = "n" ]; then
+    GENERATEDOC=false
+  else
+    rm -rf ./javadoc/java
+    j_abort $? "Could not remove $2/javadoc/java."
+    rm -f  ./javadoc/*
+    j_abort $? "Could not remove $2/javadoc/*."
+  fi
+fi
+
+if [ $GENERATEDOC = "true" ]; then
+
+  if [ -d "./javadoc" ]; then
+    j_continue "Directory '$2/javadoc' already exists. overwrite it?"
+    if [ "$REPLY" = "y" ]; then
+      rm -rf $2/javadoc
+      j_abort $? "Can not remove '$2/javadoc'."
+    fi
+  fi
+
+  #j_step
+  # at this point $2/javadoc does or does not exist
+
+  if [ ! -d ./javadoc ]; then
+    mkdir ./javadoc
+    j_abort $? "Cannot create dir  '$2/javadoc'."
+  fi
+
+  # at this point $2/javadoc/ does exist
+  cd javadoc
+
+  if [ -d "./tmpdoc" ]; then
+    j_continue "Directory '$2/javadoc/tmpdoc' already exists. Overwrite it?"
+    if [ "$REPLY" = "y" ]; then
+      rm -rf ./javadoc/tmpdoc
+      j_abort $? "Cannot remove '$2/javadoc/tmpdoc'."
+    fi
+  fi
+
+  # create temporary dir
+  if [ ! -d ./tmpdoc ]; then
+    mkdir ./tmpdoc
+    j_abort $? "Cannot create temporary dir '$2/javadoc/tmpdoc'."
+  fi
+
+  # at this point $2/javadoc/tmpdoc definitely exists
+  cd tmpdoc
+
+  #j_step
+
+  if [ -e ./open-wonka/wonka/java/java/io/File.java ]; then
+    j_continue "Wonka sources already exist. Overwrite with new sources?"
+    if [ "$REPLY" = "y" ]; then
+      rm -rf ./open-wonka
+      j_abort $? "Cannot remove old wonka sources $2/javadoc/tmpdoc/open-wonka'."
+    fi
+  fi
+
+  # get cvs sources; how to test that it was successfull?
+  if [ ! -e ./open-wonka/wonka/java/java/io/File.java ]; then
+    echo "getting wonka sources from cvs ..."
+    echo "" >> $DUMP
+    echo "getting wonka sources from cvs ..." >> $DUMP
+    echo "" >> $DUMP
+    cvs export -r $1 open-wonka >> $DUMP
+    j_abort $? "Getting new wonka sources not successful."
+  fi
+
+  #j_step
+
+  export CLASSPATH=
+  cd open-wonka
+  export WONKA_TOP=$PWD
+
+  if [ -e ./build-x86-linux/wonka/wonka ]; then
+    j_continue "Wonka executable already exists. Overwrite with new build?"
+    if [ "$REPLY" = "y" ]; then
+      jam mrproper >> $DUMP
+      j_abort $? "Removal of old wonka build not successful."
+    fi
+  fi
+
+  if [ ! -e ./build-x86-linux/wonka/wonka ]; then
+    echo "Jamming wonka..."
+    echo "" >> $DUMP
+    echo "Jamming wonka..." >> $DUMP
+    echo "" >> $DUMP
+    jam -sDEBUG=false install >> $DUMP
+    j_abort $? "Building wonka not successful."
+  fi
+
+
+  #j_step
+
+  if [ -e ./class/doclet/doclet.jar ]; then
+    j_continue "doclet.jar already exists. Overwrite with new build?"
+    if [ "$REPLY" = "y" ]; then
+      rm ./class/doclet/doclet.jar
+      j_abort $? "Removal of old doclet.jar not successful."
+    fi
+  fi
+
+  if [ ! -e ./class/doclet/doclet.jar ]; then
+    export CLASSPATH=/usr/local/jdk1.2.2/jre/lib/rt.jar:./:/usr/local/jdk1.2.2/lib/tools.jar
+    #export CLASSPATH=/usr/java/jdk1.3.1_01/jre/lib/rt.jar:./:/usr/javar/jdk1.3.1_01/lib/tools.jar
+
+    echo "Jamming doclet.jar..."
+    echo "" >> $DUMP
+    echo "Jamming doclet.jar..." >> $DUMP
+    echo "" >> $DUMP
+    jam doclet.jar >> $DUMP
+    j_abort $? "Building doclet.jar not successful."
+  fi
+
+  #j_step
+
+  if [ -e ./tool/mauve/mauve.log ] ; then
+    j_continue "Mauve results already exists. Perform new run anyway?"
+    if [ "$REPLY" = "y" ]; then
+      rm ./tool/mauve/mauve.log
+      j_abort $? "Removal of old mauve results not successful."
+    fi
+  fi
+
+  if [ ! -e ./tool/mauve/mauve.log ]; then
+    #remove comment slashes in wonka/fsroot/wonkatest.properties
+    J_FILEPATH=
+    j_filePath ./build-x86-linux wonkatest.properties
+    cp ${J_FILEPATH}wonkatest.properties ${J_FILEPATH}wonkatest.copy
+    sed -e /VERBOSE/s/"\/\/"/""/g -e /DEBUG/s/"\/\/"/""/g -e /FILE/s/"\/\/"/""/g ${J_FILEPATH}wonkatest.copy > ${J_FILEPATH}wonkatest.properties
+    j_abort $? "Replacements in file 'wonkatest.properties' not successful."
+
+    #run the mauve tests
+    export LD_LIBRARY_PATH=$PWD/build-x86-linux/wonka/fsroot/test
+    cd ./tool/mauve
+    echo "running mauve tests ..."
+    echo "" >> $DUMP
+    echo "running mauve tests ..." >> $DUMP
+    echo "" >> $DUMP
+    ./run  >> $DUMP
+    j_abort $? "Run of mauvetests not successful."
+  fi
+
+
+  #j_step
+
+  #run the javadoc tool
+  cd ../doclet
+  echo "generating doc files ..."
+  echo "" >> $DUMP
+  echo "generating doc files ..." >> $DUMP
+  echo "" >> $DUMP
+  ./wonkadoc $TARGET/javadoc >> $DUMP
+  j_abort $? "Generation of doc files not successful."
+
+
+fi
+
+
+#j_step
+
+
+# give opportunity to remove existing javadoc.tar.gz file
+cd $TARGET
+if [ -e ./javadoc.tar.gz ]; then
+  j_continue "$2/javadoc.tar.gz already exists. Overwrite it?"
+  if [ "$REPLY" = "y" ]; then
+    rm ./javadoc.tar.gz
+    j_abort $? "Could not remove file '$2/javadoc.tar.gz'."
+  fi
+fi
+
+if [ ! -e ./javadoc.tar.gz ]; then
+
+  echo "making file javadoc.tar.gz ..."
+  echo "" 1>> $DUMP
+  echo "making file javadoc.tar.gz ..." 1>> $DUMP
+  echo "" 1>> $DUMP
+  tar -zcvf javadoc.tar.gz --exclude tmpdoc javadoc 1>> $DUMP
+  j_abort $? "Could not create file 'javadoc.tar.gz'."
+
+fi
+
+
+j_continue "Would you like to check the doc files using netscape?"
+if [ "$REPLY" = "y" ]; then
+  netscape file:///$TARGET/javadoc/index.html
+  if [ $? -ne 0 ]; then
+    j_continue "Viewing of doc files not successful. Continue?"
+    if [ "$REPLY" = "n" ]; then
+      j_abort
+    fi
+  fi
+fi
+
+if [ -d ./javadoc/tmpdoc ]; then
+  j_continue "Remove temporary directory '$2/javadoc/tmpdoc'?"
+  if [ "$REPLY" = "y" ]; then
+    rm -rf  $TARGET/javadoc/tmpdoc
+    j_abort $? "Could not remove directory '$2/javadoc/tmpdoc'."
+  fi
+fi
+
+# END MAIN ---------------------------------------------------------------------
+
+set -
+exit
