@@ -239,6 +239,10 @@ final class Init {
         effective_args = (String[])l.toArray(new String[0]);
         l = null;
       }
+      else {
+        System.err.println("Init: no command line parameters found. Game over.");
+        System.exit(1);
+      }
     }
 
     String verboseProperty = System.getProperty("mika.verbose","");
