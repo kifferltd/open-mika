@@ -424,17 +424,20 @@ void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
 
 }
 
+#define ONE_MINUTE_MICROS 60000000LL
+#define ONE_MINUTE_TICKS (x_usecs2ticks(60000000))
+
 void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
 
   w_thread thread = getWotsitField(Thread, F_Thread_wotsit);
-  w_size snooze = 0;
+  volatile w_long micros = 0;
 
   if (millis < 0 || nanos < 0 || nanos >= 1000000) {
     throwException(thread, clazzIllegalArgumentException, NULL);
     return;
   }
 
-  snooze = millis ? (w_word)((w_int)millis * 1000) + (nanos / 1000) : 1000 ;
+  micros = millis ? (millis * 1000) + (nanos / 1000) : 1000 ;
   
   woempa(1, "thread will go to sleep!!! %t\n", thread);
 
@@ -450,7 +453,18 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   }
   else {
     thread->state = wt_sleeping;
-    x_thread_sleep(x_usecs2ticks(snooze));
+    /* [CG 20070509]
+    ** This isn't ideal, because the time taken to go around the loop is
+    ** additional to the sleep time, so we could build up a cumulative
+    ** excess of somnolence. However I don't think it's worth it to try
+    ** to read the system clock and perform arithmetic on it.
+    ** All of this because x_sleep is 32 bits instead of 64 ...
+    */
+    while (micros > ONE_MINUTE_MICROS) {
+      x_thread_sleep(ONE_MINUTE_TICKS);
+      micros -= ONE_MINUTE_MICROS;
+    }
+    x_thread_sleep(x_usecs2ticks(micros));
     woempa(6, "thread woke up!!! %t\n", thread);
 
     if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
