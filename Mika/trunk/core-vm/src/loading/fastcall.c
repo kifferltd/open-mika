@@ -55,7 +55,7 @@ void fastcall_check_class(w_fastclass fclass, w_string method_name,
     if((method_name == fclass->calls[i]->method_name)
       && (fclass->calls[i]->method_sig == method_sig)){
 
-     woempa(7,"Using  %w.%w%w fastcalls\n",fclass->class_name,
+     woempa(1,"Using  %w.%w%w fastcalls\n",fclass->class_name,
            fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
 
       //A bit of a hack to guarantee that some classes get initialized...
@@ -119,7 +119,7 @@ void fastcall_check_invoke_special(w_clazz clazz, unsigned char * bytecodes) {
 #endif
 }
 
-w_fastclass createClassTable(w_int size, w_string name) {
+w_fastclass createClassTable(w_size size, w_string name) {
   w_int i=0;
   w_fastclass current = (w_fastclass) allocMem(sizeof(w_FastClass));
   current->class_name = name;
@@ -161,7 +161,7 @@ void fastcall_init_tables() {
   current->calls[2]->method_sig = cstring2String("(C)Z", 4);
 
 #ifdef NATIVE_MATH
-  current = createClassTable(4,clazz_name_Math);
+  current = createClassTable(8,clazz_name_Math);
   current->calls[0]->index = FAST_MATH_SQRT;
   current->calls[0]->method_name = cstring2String("sqrt", 4);
   current->calls[0]->method_sig = cstring2String("(D)D", 4);
@@ -174,6 +174,18 @@ void fastcall_init_tables() {
   current->calls[3]->index = FAST_MATH_TAN;
   current->calls[3]->method_name = cstring2String("tan", 3);
   current->calls[3]->method_sig = cstring2String("(D)D", 4);
+  current->calls[4]->index = FAST_MATH_ASIN;
+  current->calls[4]->method_name = cstring2String("asin", 4);
+  current->calls[4]->method_sig = cstring2String("(D)D", 4);
+  current->calls[5]->index = FAST_MATH_ATAN;
+  current->calls[5]->method_name = cstring2String("atan", 4);
+  current->calls[5]->method_sig = cstring2String("(D)D", 4);
+  current->calls[6]->index = FAST_MATH_LOG;
+  current->calls[6]->method_name = cstring2String("log", 3);
+  current->calls[6]->method_sig = cstring2String("(D)D", 4);
+  current->calls[7]->index = FAST_MATH_EXP;
+  current->calls[7]->method_name = cstring2String("exp", 3);
+  current->calls[7]->method_sig = cstring2String("(D)D", 4);
   static_calls[2] = current;
 #endif
 
