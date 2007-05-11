@@ -179,7 +179,7 @@ static w_int getSize(char *str) {
   w_int n = 0;
   char  ch;
 
-  for (j = 0; j < strlen(str); ++j) {
+  for (j = 0; j < (w_int)strlen(str); ++j) {
     ch = str[j];
     if (ch == '=') {
       continue;
