@@ -40,6 +40,10 @@
 #define FAST_MATH_SIN                   18
 #define FAST_MATH_COS                   19
 #define FAST_MATH_TAN                   20
+#define FAST_MATH_ASIN                  21
+#define FAST_MATH_ATAN                  22
+#define FAST_MATH_LOG                   23
+#define FAST_MATH_EXP                   24
 
 typedef struct w_FastCall {
   w_string method_name;
