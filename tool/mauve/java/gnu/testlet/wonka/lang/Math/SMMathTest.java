@@ -112,7 +112,7 @@ public class SMMathTest implements Testlet
 
 //SIN
      th.checkPoint("sin(double)double"); 	
-   	th.check (Math.abs(Math.sin (1e50)) <= 1.0, "sin of large Number");
+   	th.check (Math.abs(Math.sin (1e50)) <= 1.0, "sin(1e50) results in " + Math.sin(1e50));
 
 //COS
      th.checkPoint("cos(double)double"); 	
