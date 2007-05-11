@@ -376,7 +376,7 @@ static w_int inheritMethods(w_clazz clazz) {
     m1 = &clazz->own_methods[i];
     if (isNotSet(m1->flags, ACC_STATIC)) {
       woempa(1, "%k declares a method %m\n", clazz, m1);
-      ht2k_write_no_lock(temp, (w_word)m1->spec.name, m1->desc, (w_word)m1);
+      ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc, (w_word)m1);
     }
   }
 
