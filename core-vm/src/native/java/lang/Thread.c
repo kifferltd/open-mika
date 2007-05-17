@@ -424,6 +424,19 @@ void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
 
 }
 
+static w_boolean checkForInterrupt(w_thread thread) {
+  if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+    unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
+    throwException(thread, clazzInterruptedException, NULL);
+    woempa(6, "THROWING an InterruptedException\n");
+
+    return TRUE;
+
+  }
+
+  return FALSE;
+}
+
 #define ONE_MINUTE_MICROS 60000000LL
 #define ONE_MINUTE_TICKS (x_usecs2ticks(60000000))
 
@@ -441,38 +454,39 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   
   woempa(1, "thread will go to sleep!!! %t\n", thread);
 
-  if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+  if (checkForInterrupt(thread)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
       wprintf("Thread.sleep(): %t has been interrupted before sleep()\n", thread);
     }
-    unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
-    throwException(thread, clazzInterruptedException, NULL);
-    woempa(6, "THROWING an InterruptedException\n");
+
     return;
 
   }
-  else {
-    thread->state = wt_sleeping;
-    /* [CG 20070509]
-    ** This isn't ideal, because the time taken to go around the loop is
-    ** additional to the sleep time, so we could build up a cumulative
-    ** excess of somnolence. However I don't think it's worth it to try
-    ** to read the system clock and perform arithmetic on it.
-    ** All of this because x_sleep is 32 bits instead of 64 ...
-    */
-    while (micros > ONE_MINUTE_MICROS) {
-      x_thread_sleep(ONE_MINUTE_TICKS);
-      micros -= ONE_MINUTE_MICROS;
-    }
-    x_thread_sleep(x_usecs2ticks(micros));
-    woempa(6, "thread woke up!!! %t\n", thread);
 
-    if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+  thread->state = wt_sleeping;
+  /* [CG 20070509]
+  ** This isn't ideal, because the time taken to go around the loop is
+  ** additional to the sleep time, so we could build up a cumulative
+  ** excess of somnolence. However I don't think it's worth it to try
+  ** to read the system clock and perform arithmetic on it.
+  ** All of this because x_sleep is 32 bits instead of 64 ...
+  */
+  while (micros > ONE_MINUTE_MICROS) {
+    x_thread_sleep(ONE_MINUTE_TICKS);
+    micros -= ONE_MINUTE_MICROS;
+    if (checkForInterrupt(thread)) {
       if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
         wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
       }
-      unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
-      throwException(thread, clazzInterruptedException, NULL);
+
+      return;
+    }
+  }
+
+  x_thread_sleep(x_usecs2ticks(micros));
+  if (checkForInterrupt(thread)) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
     }
   }
 }
