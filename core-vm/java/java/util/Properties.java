@@ -203,6 +203,10 @@ public class Properties extends Hashtable {
               }
             case '\n':
               //continuation.	     
+              //[CG 20070522] comment lines cannot be extended using backslash
+              if (!nocomment) {
+                idx--;
+              }
               break;
             case 'u':
 	      int unicode = 0;
@@ -358,6 +362,10 @@ public class Properties extends Hashtable {
               }
             case '\n':
               //continuation.             
+              //[CG 20070522] comment lines cannot be extended using backslash
+              if (!nocomment) {
+                idx--;
+              }
 	      break;
 	    case 'u':
 	      int unicode = 0;
