@@ -13,4 +13,6 @@ HOSTOS = linux ;
 CPU = x86 ;
 SCHEDULER = o4p ;
 
+AWT = none ;
+
 CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
