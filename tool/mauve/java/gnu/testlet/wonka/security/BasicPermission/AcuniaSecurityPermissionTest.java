@@ -205,13 +205,13 @@ public class AcuniaSecurityPermissionTest implements Testlet
     catch(Exception e) { th.fail("Enumeration elements() was bad"); }
 
     Enumeration e = pc.elements();
-    for (int i=0 ; i < 50 && e.hasMoreElements(); i++) {
-      	th.debug("got "+e.nextElement()+", i = "+i);
-    }
+    //for (int i=0 ; i < 50 && e.hasMoreElements(); i++) {
+    //  	th.debug("got "+e.nextElement()+", i = "+i);
+    //}
 
     // String toString()
     s = pc.toString();
-    th.debug(s);
+    //th.debug(s);
     th.check(s.indexOf(bp.toString()) >= 0 ,"checking toString ...");
     th.check(s.indexOf(new SecurityPermission("be.*").toString()) >= 0 ,"checking toString ...");
     th.check(s.indexOf(new SecurityPermission("vm.smartmove").toString()) >= 0 ,"checking toString ...");
