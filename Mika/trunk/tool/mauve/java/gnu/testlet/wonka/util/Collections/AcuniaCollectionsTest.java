@@ -381,13 +381,13 @@ public class AcuniaCollectionsTest implements Testlet
     ArrayList als = (ArrayList) buildList(7);
     ArrayList alo = new ArrayList(als);
     Collections.shuffle(als);
-    th.debug("shuffled result 1 = \n"+als);
+    //th.debug("shuffled result 1 = \n"+als);
     ArrayList al1 = new ArrayList(alo);
-    th.debug("shuffled result 2 = \n"+al1);
+    //th.debug("shuffled result 2 = \n"+al1);
     Collections.shuffle(al1);
     ArrayList al2 = new ArrayList(alo);
     Collections.shuffle(al2);
-    th.debug("shuffled result 3 = \n"+al2);
+    //th.debug("shuffled result 3 = \n"+al2);
 
     th.checkPoint("shuffle(java.util.List,java.util.Random)void");
 
@@ -460,7 +460,7 @@ public class AcuniaCollectionsTest implements Testlet
     th.check("string 9".equals(l.get(0)) && "string 8".equals(l.get(1))&& "string 7".equals(l.get(2)));
     th.check("string 6".equals(l.get(3)) && "string 5".equals(l.get(4))&& "string 4".equals(l.get(5)));
     th.check("string 3".equals(l.get(6)) && "string 2".equals(l.get(7))&& "string 1".equals(l.get(8))&& "string 0".equals(l.get(9)));
-    th.debug(""+l);
+    //th.debug(""+l);
   }
 
 /**

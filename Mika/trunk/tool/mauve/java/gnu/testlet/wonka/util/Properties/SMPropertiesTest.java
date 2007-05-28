@@ -574,9 +574,9 @@ public class SMPropertiesTest implements Testlet
     Properties p = new Properties();
     buffer =new String("   !comment\n \t  \nname = no\r    #comment ending with backslash-cr-lf\\\r\nfollowing=no comment\n!\tcomment = ending with backslash-lf\\\ndog=no\\\\cat   \nburps    :\ntest=\ndate today\n\n\nlong\\\nvalue=trying  \\\nto\n4:vier\nvier     :4\nA\u0061=B\u0062").getBytes();
     bin = new ByteArrayInputStream(buffer); 
-    th.debug("p ='"+p+"'");  	
+    //th.debug("p ='"+p+"'");  	
     try {p.load(bin);} catch (Exception e) {}
-    th.debug("p ='"+p+"'");  	   
+    //th.debug("p ='"+p+"'");  	   
     Enumeration e = p.keys();
     Vector v = new Vector();
     v.add("name=no");
