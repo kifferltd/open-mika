@@ -177,10 +177,10 @@ public class SMDateTest implements Testlet
           th.fail("should throw NullPointerException");
         }
     catch (NullPointerException ne) { th.check(true); }
-    th.debug(d1.toString());
-    th.debug(d2.toString());
-    th.debug(d3.toString());
-    th.debug(d4.toString());
+    //th.debug(d1.toString());
+    //th.debug(d2.toString());
+    //th.debug(d3.toString());
+    //th.debug(d4.toString());
   }
 
 /**
@@ -288,17 +288,17 @@ public class SMDateTest implements Testlet
   public void test_toString(){
     th.checkPoint("toString()java.lang.String");
     Date d = new Date();
-    th.debug("Debuging -- printing current Date\n"+d.toString());
+    //th.debug("Debuging -- printing current Date\n"+d.toString());
     d = new Date(0);
-    th.debug("Debuging -- printing reference Date\n"+d.toString());
+    //th.debug("Debuging -- printing reference Date\n"+d.toString());
     d = new Date(31536000000555L);
-    th.debug("Debuging -- printing futere Date\n"+d.toString());
+    //th.debug("Debuging -- printing futere Date\n"+d.toString());
     d = new Date(-31536000000000L);
-    th.debug("Debuging -- printing past Date\n"+d.toString());
+    //th.debug("Debuging -- printing past Date\n"+d.toString());
     d = new Date(31876576555L);
-    th.debug("Debuging -- printing a random Date\n"+d.toString());
+    //th.debug("Debuging -- printing a random Date\n"+d.toString());
     d = new Date(31876576555L+86400000L);
-    th.debug("Debuging -- printing a random Date\n"+d.toString());
+    //th.debug("Debuging -- printing a random Date\n"+d.toString());
 //    try {Thread.sleep(2000);}
 //    catch(Exception e){}
 //    d = new Date();

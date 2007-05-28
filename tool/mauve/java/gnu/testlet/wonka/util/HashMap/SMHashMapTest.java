@@ -598,7 +598,7 @@ public class SMHashMapTest implements Testlet
     }
     th.check(h.size() == 5  ,"size checking -- 6 got: "+h.size());
 
-    th.debug(h.toString());
+    //th.debug(h.toString());
     check_presence(h);
    // sleep(500);
 

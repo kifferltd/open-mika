@@ -128,7 +128,7 @@ public class SMAbstractSequentialListTest implements Testlet
     th.check(al.addAll(c) ,"checking returnvalue -- 2");
     th.check(al.containsAll(c), "extra on containsAll -- 1");
     th.check(al.get(14)=="a" && al.get(15)=="b" && al.get(16)=="c", "checking added on right positions");
-    th.debug(al.toString());
+    //th.debug(al.toString());
     th.checkPoint("addAll(int,java.util.Collection)boolean");
     al =new SMExASList();
     c = (Collection) al;
@@ -146,13 +146,13 @@ public class SMAbstractSequentialListTest implements Testlet
     catch (IndexOutOfBoundsException ae) { th.check(true); }
     try { th.check(al.addAll(11,c),"checking returnvalue -- 2"); }
     catch (ArrayIndexOutOfBoundsException ae) { th.fail("shouldn't throw exception -- 1"); }
-    th.debug(al.toString());
+    //th.debug(al.toString());
     th.check(al.containsAll(c), "extra on containsAll -- 1");
     th.check(al.get(11)=="a" && al.get(12)=="b" && al.get(13)=="c", "checking added on right positions -- 1");
-    th.debug(al.toString());
+    //th.debug(al.toString());
     th.check(al.addAll(1,c),"checking returnvalue -- 3");
     th.check(al.get(1)=="a" && al.get(2)=="b" && al.get(3)=="c", "checking added on right positions -- 2");
-    th.debug(al.toString());
+    //th.debug(al.toString());
 
   }
 

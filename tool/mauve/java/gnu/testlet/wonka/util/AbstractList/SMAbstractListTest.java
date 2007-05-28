@@ -240,7 +240,7 @@ public class SMAbstractListTest implements Testlet
     eal.removeRange(5,7);
     v.remove(5);
     v.remove(5);
-    th.debug("got v = "+v+", and eal.v = "+eal.v);
+    //th.debug("got v = "+v+", and eal.v = "+eal.v);
     th.check(eal.v.equals(v) , "two elements removed");
     eal.removeRange(2,1);
     th.check(eal.v.equals(v) , "nothing removed -- 2");
