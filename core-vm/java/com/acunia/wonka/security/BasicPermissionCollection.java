@@ -174,13 +174,13 @@ public class BasicPermissionCollection extends PermissionCollection {
         Object old_data = table.get(target_matched);
         if (longest_prefix_length < target_matched.length()
             || old_data instanceof Permission) {
-          System.out.println("  Partial match found, splitting entry for '"+target_matched+"' after '"+longest_prefix+"'");
+          //System.out.println("  Partial match found, splitting entry for '"+target_matched+"' after '"+longest_prefix+"'");
           Hashtable new_table = new Hashtable(INITIAL_TABSIZE);
           new_table.put(target_matched.substring(longest_prefix_length),old_data);
-          System.out.println("  New hashtable: "+new_table);
+          //System.out.println("  New hashtable: "+new_table);
           table.remove(target_matched);
           table.put(longest_prefix,new_table);
-          System.out.println("  Old hashtable: "+table);
+          //System.out.println("  Old hashtable: "+table);
           table = new_table;
         }
         else {
