@@ -337,7 +337,7 @@ public class SMBitSetTest implements Testlet
     BitSet bs3 = new BitSet(3);
     BitSet bs4 = new BitSet(127);
     bs3.or(bs2);
-    th.check(bs1, bs3 , "extra bits from bs2 are unused -- got: "+bs3);
+    th.check(bs2, bs3 , "extra bits from bs2 are used -- got: "+bs3+" but expected: "+bs2);
     bs4.or(bs1);
     th.check(bs4.equals(bs1) , "extra bits in bs4 are left"+bs1);
     bs1.clear(0); bs2.clear(0);
@@ -390,7 +390,7 @@ public class SMBitSetTest implements Testlet
     for (i=64 ; i < 128 ; i++ ) { bs1.set(i); }
     BitSet bs3 = new BitSet(3);
     bs3.xor(bs1);
-    th.check(bs2.equals(bs3) , "extra bits from bs1 are unused -- got: "+bs3);
+    th.check(bs1.equals(bs3) , "extra bits from bs1 are used -- got: "+bs3);
     bs1.xor(bs2);
     boolean ok=true;
     for (i=0 ; i < 64 ; i++ ) { if (bs1.get(i)) ok = false; }
