@@ -178,7 +178,7 @@ public class AcuniaAllPermissionTest implements Testlet
 
     // String toString()
     s = pc.toString();
-    th.debug(s);
+    //th.debug(s);
     th.check(s.indexOf(bp.toString()) >= 0 ,"checking toString ...");
 
     // boolean implies(Permission permission)
