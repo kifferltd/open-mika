@@ -135,8 +135,8 @@ public class Vector extends AbstractList
     int length = buffer.length();
     if(length > 1) {
       buffer.setLength(length - 2);
-      buffer.append(']');
     }
+    buffer.append(']');
     return buffer.toString();
   }
   
