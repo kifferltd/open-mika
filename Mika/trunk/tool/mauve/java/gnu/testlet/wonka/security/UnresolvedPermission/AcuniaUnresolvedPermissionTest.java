@@ -189,7 +189,7 @@ public class AcuniaUnresolvedPermissionTest implements Testlet
 
     // String toString()
     s = pc.toString();
-    th.debug(s);
+    //th.debug(s);
     th.check(s.indexOf(bp.toString()) >= 0 ,"checking toString ...");
     th.check(s.indexOf(new UnresolvedPermission(cname,"be.*",action,cert).toString()) >= 0 ,"checking toString ...");
     th.check(s.indexOf(new UnresolvedPermission(cname,"vm.smartmove",action,cert).toString()) >= 0 ,"checking toString ...");
