@@ -54,6 +54,8 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
   int         fdesc;
   vfs_FILE    *file;
   w_instance  fd_obj;
+  struct vfs_STAT statbuf;
+  int rc;
 
   pathname_string = String2string(path);
   pathname = (char*)string2UTF8(pathname_string, NULL) + 2;	  
@@ -74,6 +76,22 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
     default:
      openmode = 0;
   }
+
+  rc = vfs_stat(pathname, &statbuf);
+
+  switch(mode) {
+    case 0:
+      if (rc != 0 || !VFS_S_ISREG(statbuf.st_mode) || (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IRUSR) != VFS_S_IRUSR)) {
+        return 1;
+      }
+      break;
+
+    default:
+      if (rc == 0 && (!VFS_S_ISREG(statbuf.st_mode) || (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IWUSR) != VFS_S_IWUSR))) {
+        return 1;
+      }
+  }
+
   fdesc = vfs_open(pathname, openmode, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
   releaseMem(pathname - 2);
