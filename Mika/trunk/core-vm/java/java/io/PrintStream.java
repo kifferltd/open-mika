@@ -35,6 +35,7 @@ public class PrintStream extends FilterOutputStream {
   private boolean   caughtException;
   private boolean   closed;
   private boolean   autoFlush;
+  private String    encoding;
 
   public PrintStream(OutputStream outputstream) {
     super(outputstream);
@@ -48,7 +49,9 @@ public class PrintStream extends FilterOutputStream {
     
     this(outputstream);
     this.autoFlush = autoflush;
-    //TODO: use enc to encode strings ...
+    this.encoding = enc;
+    // just to throw an exception if the encoding is unsupported ...
+    "".getBytes(enc);
   }
   
   public PrintStream(OutputStream outputstream, boolean autoflush) {
@@ -153,7 +156,12 @@ public class PrintStream extends FilterOutputStream {
         int flushed = s.lastIndexOf(line_separator);
         if (flushed >= 0) {
           flushed += line_separator.length();
-          b = s.substring(0, flushed).getBytes();
+          if (encoding == null) {
+            b = s.substring(0, flushed).getBytes();
+          }
+          else {
+            b = s.substring(0, flushed).getBytes(encoding);
+          }
           internalwrite(b,0,b.length);
           flush();
           s = s.substring(flushed);
@@ -162,7 +170,12 @@ public class PrintStream extends FilterOutputStream {
           flush();
         }
       }
-      b = s.getBytes();
+      if (encoding == null) {
+        b = s.getBytes();
+      }
+      else {
+        b = s.getBytes(encoding);
+      }
       internalwrite(b,0,b.length);
     }
     catch(Exception e) {
@@ -214,7 +227,7 @@ public class PrintStream extends FilterOutputStream {
       println("null");
     }
     else try {
-      byte[] b = s.getBytes();
+      byte[] b = (encoding == null) ? s.getBytes() : s.getBytes(encoding);
       write(b);
       write(newline_bytes);
     }
