@@ -78,22 +78,6 @@ public class AcuniaFilePermissionTest implements Testlet
     catch(IllegalArgumentException iae) { th.check(true);
     	th.debug("wanted a NullPointerException though");
     }
-/*    try {
-     	new FilePermission("*.*","read");
-     	th.fail("should throw a IllegalArgumentException -- 3");
-    }
-    catch(IllegalArgumentException iae) { th.check(true); }
-    try {
-     	new FilePermission("wr*te","read");
-     	th.fail("should throw a IllegalArgumentException -- 4");
-    }
-    catch(IllegalArgumentException iae) { th.check(true); }
-    try {
-     	new FilePermission("**","read");
-     	th.fail("should throw a IllegalArgumentException -- 5");
-    }
-    catch(IllegalArgumentException iae) { th.check(true); }
-*/
     try {
      	new FilePermission("write","read write");
      	th.fail("should throw a IllegalArgumentException -- 6");
@@ -271,7 +255,7 @@ public class AcuniaFilePermissionTest implements Testlet
 
     // String toString()
     s = pc.toString();
-    th.debug(s);
+    //th.debug(s);
     th.check(s.indexOf(bp.toString()) >= 0 ,"checking toString ...");
 
     // boolean implies(Permission permission)
