@@ -249,9 +249,30 @@ public class RandomAccessFile implements DataOutput, DataInput {
     this.writeLong(Double.doubleToLongBits(v));
   }
 
-  public final String readLine()
-    throws IOException {
-    return null;
+  public final String readLine() throws IOException {
+    StringBuffer sb = new StringBuffer();
+    long pos = getFilePointer();
+    long l = length();
+    char ch;
+
+    while (pos < l) {
+      ch = (char)(read() & 255);
+      if (ch == 13) { // CR
+        if (pos < l - 1) {
+          if (read() != 10) { // LF
+            seek(pos + 1);
+          }
+        }
+        break;
+      }
+      else if (ch == 10) { // LF
+        break;
+      }
+      sb.append(ch);
+      ++pos;
+    }
+
+    return sb.toString();
   }
 
   public final String readUTF() 
