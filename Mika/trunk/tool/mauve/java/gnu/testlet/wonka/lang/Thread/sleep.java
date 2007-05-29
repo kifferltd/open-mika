@@ -123,7 +123,7 @@ public class sleep implements Testlet, Runnable
 	// About half the time should have been spent sleeping.
 	long present = System.currentTimeMillis();
 	long diff = present - past;
-	harness.debug("diff: " + diff);
+	//harness.debug("diff: " + diff);
 	harness.check(diff >= SLEEP_TIME / 2);
 	harness.check(diff < SLEEP_TIME);
 
@@ -210,7 +210,7 @@ public class sleep implements Testlet, Runnable
     // But certainly not more than 500 miliseconds.
     long present = System.currentTimeMillis();
     long diff = present - past;
-    harness.debug("diff: " + diff);
+    //harness.debug("diff: " + diff);
     harness.check(diff > 5);
     harness.check(diff < 500);
 
