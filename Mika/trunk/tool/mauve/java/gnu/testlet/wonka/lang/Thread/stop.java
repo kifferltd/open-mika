@@ -73,7 +73,7 @@ public class stop extends Thread implements Testlet
 	int x = 0;
 	Thread current = Thread.currentThread();
 	ThreadGroup group = current.getThreadGroup();
-	x = group.activeCount() + 10;
+	x = group.activeCount() + 100;
 	thread_list = new Thread[x];
 	initial_thread_count = group.enumerate(thread_list, true);
 
@@ -87,7 +87,7 @@ public class stop extends Thread implements Testlet
 	      {
 		lock.wait();
 	      }
-	    x = group.activeCount() + 10;
+	    x = group.activeCount() + 100;
 	    thread_list = new Thread[x];
 	    running_thread_count = group.enumerate(thread_list, true);
 	    tgroup = t.getThreadGroup();
@@ -95,7 +95,7 @@ public class stop extends Thread implements Testlet
 	  }
 	t.stop();
 	t.join(2000, 0);
-	x = group.activeCount() + 10;
+	x = group.activeCount() + 100;
 	thread_list = new Thread[x];
 	stopped_thread_count = group.enumerate(thread_list, true);
 
