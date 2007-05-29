@@ -40,7 +40,7 @@ public class priority implements Testlet, Runnable
     // Remember old thread group priority
     ThreadGroup tg = t.getThreadGroup();
     harness.debug("ThreadGroup: " + tg);
-    int thread_group_prio = t.getThreadGroup().getMaxPriority();
+    int thread_group_prio = tg.getMaxPriority();
 
     t.getThreadGroup().setMaxPriority(Thread.MAX_PRIORITY);
     for (int i = Thread.MIN_PRIORITY; i <= Thread.MAX_PRIORITY; i++)
