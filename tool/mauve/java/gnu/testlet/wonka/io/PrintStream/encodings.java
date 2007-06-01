@@ -44,7 +44,7 @@ public class encodings implements Testlet {
       ps.flush();
       output = b.toByteArray();
     } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
+      //e.printStackTrace();
     }
     if (output == null && expected == null) {
       harness.check(true);
