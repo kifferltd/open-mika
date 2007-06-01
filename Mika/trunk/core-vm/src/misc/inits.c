@@ -293,15 +293,12 @@ void args_read(void) {
     fsroot = FSROOT;
   }
 
-  if (fsroot[0] == '.') {
+  {
     char *new_fsroot;
     char *path = host_getCommandPath();
     int l = strlen(path);
 
     woempa(7, "fsroot was '%s', path is '%s'\n", fsroot, path);
-    if (fsroot[1] == '/') {
-      fsroot += 2;
-    }
     while (path[--l] != '/') {
       if(l <= 0) {
         woempa(9,"Panic mode: where are we called from ?\n\tNo slash found in '%s'\n",path); 
@@ -309,6 +306,19 @@ void args_read(void) {
       }
     } 
 
+    while (strlen(fsroot) >= 2 && fsroot[0] == '.' && fsroot[1] == '/') {
+      fsroot += 2;
+    }
+
+    while (strlen(fsroot) >= 3 && fsroot[0] == '.' && fsroot[1] == '.' && fsroot[2] == '/') {
+      fsroot += 3;
+      while (path[--l] != '/') {
+        if(l <= 0) {
+          woempa(9,"Panic mode: too many ../ in fsroot\n"); 
+          wabort(ABORT_WONKA, "Unable to locate binary !\n");
+        }
+      } 
+    }
     woempa(7, "Allocating %d bytes for new fsroot\n", l + strlen(fsroot) + 2);
     new_fsroot = allocClearedMem(l + strlen(fsroot) + 2);
     memcpy(new_fsroot, path, l + 1);
