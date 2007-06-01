@@ -30,7 +30,6 @@
     <jar destfile="${test.dir}vte.jar"
          manifest="${vte.dir}vte.mf">
       <fileset dir="${tools.class.dir}" includes="com/acunia/wonka/test/**"/>
-      <fileset dir="${vte.dir}java/com/acunia/wonka/test/awt/" includes="vte.properties"/>
       <fileset dir="${vte.dir}resource" defaultexcludes="true"/>
     </jar>
 
