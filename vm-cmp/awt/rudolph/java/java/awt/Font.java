@@ -120,6 +120,9 @@ public class Font implements java.io.Serializable {
    */
 
   public Font(String name, int style, int size) {
+    if (name == null) {
+      name = "Default";
+    }
     this.create(FontMapping.map(name), style, size);
   }
 
