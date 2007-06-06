@@ -61,8 +61,6 @@ w_instance Thread_currentThread(JNIEnv *env, w_instance ThreadClass) {
 
 static w_int seqnum = 0;
 
-void bogus(void) {}
-
 static void threadEntry(void * athread) {
 
 #ifdef DEBUG_STACKS
@@ -99,9 +97,8 @@ static void threadEntry(void * athread) {
   thread->state = wt_ready;
   callMethod(thread->top, run_method);
   thread->top = & thread->rootFrame;
-  if (exceptionThrown(thread)) {
-    bogus();
-    wabort(ABORT_WONKA, "Uncaught exception in %t: %e\n", thread, exceptionThrown(thread));
+  if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
+    wprintf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
   }
   removeThreadCount(thread);
   deleteGlobalReference(thread->Thread);
