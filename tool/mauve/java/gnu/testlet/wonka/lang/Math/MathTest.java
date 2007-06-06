@@ -115,7 +115,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.02d;
       d2 = Math.asin(d1);
       d3 = Math.sin(d2);
-      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "asin(" + d1 + ") = " + d2 + ", sin(" + d2 + ") = " + d3);
     }
 
@@ -123,7 +123,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.01d * Math.PI;
       d2 = Math.sin(d1);
       d3 = Math.asin(d2);
-      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "sin(" + d1 + ") = " + d2 + ", asin(" + d2 + ") = " + d3);
     }
 
@@ -145,7 +145,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.02d;
       d2 = Math.acos(d1);
       d3 = Math.cos(d2);
-      harness.check(d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "acos(" + d1 + ") = " + d2 + ", cos(" + d2 + ") = " + d3);
     }
 
@@ -167,7 +167,7 @@ public class MathTest implements Testlet
 		// atan of infinity is not defined --> this makes sense
 		// because tan (PI/2) != POSITIVE_INFINITY
 		harness.check(!(  !(new Double(Math.atan( Double.POSITIVE_INFINITY ))).isNaN() ), 
-			"test:value of atan(POSITIVE_INFINITY)= NaN");
+			"test:value of atan(POSITIVE_INFINITY) should be NaN, got " + Math.atan(Double.POSITIVE_INFINITY));
 		harness.check(!(  !(new Double(Math.atan( Double.NEGATIVE_INFINITY ))).isNaN() ), 
 		"test:value of atan(NEGATIVE_INFINITY)= NaN");
 		
@@ -176,7 +176,7 @@ public class MathTest implements Testlet
       d1 = 7.0d / (i - 50);
       d2 = Math.atan(d1);
       d3 = Math.tan(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "atan(" + d1 + ") = " + d2 + ", tan(" + d2 + ") = " + d3);
     }
 
@@ -184,7 +184,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.01d * Math.PI;
       d2 = Math.tan(d1);
       d3 = Math.atan(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "tan(" + d1 + ") = " + d2 + ", atan(" + d2 + ") = " + d3);
     }
 
@@ -313,7 +313,7 @@ public class MathTest implements Testlet
       d1 = d1 * d1 * d1;
       d2 = Math.log(d1);
       d3 = Math.exp(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "log(" + d1 + ") = " + d2 + ", exp(" + d2 + ") = " + d3);
     }
 
@@ -321,7 +321,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.01d;
       d2 = Math.exp(d1);
       d3 = Math.log(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "exp(" + d1 + ") = " + d2 + ", log(" + d2 + ") = " + d3);
     }
 
