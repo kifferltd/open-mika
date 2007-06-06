@@ -23,7 +23,6 @@
         <include name="gnu/**"/>
         <include name="JUnitTests/**"/>
       </fileset>
-      <fileset dir="${tool.dir}/mauve/java/gnu" includes="wonkatest.properties"/>
       <fileset dir="${tool.dir}/mauve/resource" defaultexcludes="true"/>
     </jar>
 
