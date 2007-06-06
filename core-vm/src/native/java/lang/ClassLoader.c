@@ -254,38 +254,10 @@ ClassLoader_setSigners
 }
 
 /*
-** Load the named class, and "resolve" it if resolve==true.
-*/
-w_instance ClassLoader_loadClass(JNIEnv *env, w_instance thisClassLoader, w_instance nameString, w_boolean resolve) {
-
-  w_thread thread = JNIEnv2w_thread(env);
-  w_clazz  clazz;
-  w_string name = String2string(nameString);
-
-  woempa(1, "Loading class %w.\n", name);
-  
-  woempa(7, "Loader: %j, name: %w\n", NULL, name);
-  clazz = namedClassMustBeLoaded(NULL, name);
-
-  if (clazz) {
-    clazz2Class(clazz);  
-
-    if (resolve) {
-      mustBeLinked(clazz);
-    }
-
-    woempa(1, "--> clazz at %p.\n", clazz);
-    return exceptionThrown(thread) ? NULL : clazz->Class;
-  }
-
-  return NULL;
-}
-
-/*
 ** Returns the class loader of the class which called ClassLoader.getCallingClassLoader().
 **
 ** This logic is also needed by the java.util.ResourceBundle Class's getBundle(...)
-** it will call this method straigth from java so w_instance pointer will not always be the Class of ClassLoader
+** it will call this method straight from java so w_instance pointer will not always be the Class of ClassLoader
 */
 
 w_instance ClassLoader_getCallingClassLoader(JNIEnv *env, w_instance thisClassLoader) {
