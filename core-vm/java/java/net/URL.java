@@ -37,6 +37,8 @@ public final class URL implements java.io.Serializable {
 
   private static final char OR='|';
 
+  
+  private static final Object lock = new Object();
   /**
    ** The factory for URL stream handlers, if one has been set
    ** (using setURLStreamHandlerFactory).
@@ -46,7 +48,7 @@ public final class URL implements java.io.Serializable {
   /**
    ** Our cache of URL stream handlers, indexed by protocol.
    */
-  private static Hashtable handlers;
+  private static Hashtable handlers = new Hashtable(11);
 
   /**
    ** The protocol, i.e. the part before the first colon (:).
@@ -279,8 +281,10 @@ public final class URL implements java.io.Serializable {
     return hashCode;
   }
 
-  public synchronized static void setURLStreamHandlerFactory(URLStreamHandlerFactory newfact) {
-     factory = newfact;
+  public static void setURLStreamHandlerFactory(URLStreamHandlerFactory newfact) {
+     synchronized(lock) {
+       factory = newfact;
+     }
   }
 
   public URLConnection openConnection() throws IOException {
@@ -399,49 +403,48 @@ public final class URL implements java.io.Serializable {
    ** We cache the ones we already found in a Hashtable, so we never try
    ** to create the same URLStreamHandler twice.
    */
-  private static synchronized URLStreamHandler getHandler(String protocol) throws MalformedURLException {
+  private static URLStreamHandler getHandler(String protocol) throws MalformedURLException {
     URLStreamHandler handler = null;
-    if (handlers == null) {
-      handlers = new Hashtable(11);
-    }
-    else {
-      handler = (URLStreamHandler)handlers.get(protocol);
-    }
+    handler = (URLStreamHandler)handlers.get(protocol);    
 
     if (handler != null) {
       return handler;
     }
 
-    if (factory != null) {
-      handler = factory.createURLStreamHandler(protocol);
-      if (handler != null) {
-        handlers.put(protocol, handler);
-        return handler;
-     }
-    }
+    
+    synchronized(lock) {
+    
+      if (factory != null) {
+        handler = factory.createURLStreamHandler(protocol);
+        if (handler != null) {
+          handlers.put(protocol, handler);
+          return handler;
+       }
+      }
 
-    String pkgs = GetSystemProperty.PROTOCOL_HANDLER_PKGS;
-    String name;
-    while (pkgs.length() > 0 ) {
-      int i = pkgs.indexOf(OR);
-      if(i == -1) {
-        name = pkgs;
-        pkgs = "";
+      String pkgs = GetSystemProperty.PROTOCOL_HANDLER_PKGS;
+      String name;
+      while (pkgs.length() > 0 ) {
+        int i = pkgs.indexOf(OR);
+        if(i == -1) {
+          name = pkgs;
+          pkgs = "";
+        }
+        else {
+          name = pkgs.substring(0,i);
+          pkgs = pkgs.substring(i+1);
+        }
+        name = name+"."+protocol+".Handler";
+        try {
+          handler = (URLStreamHandler)Class.forName(name, true , ClassLoader.getSystemClassLoader()).newInstance();
+          handlers.put(protocol, handler);
+          return handler;
+        }
+        catch(Exception e){
+          /*if we catch an Exception here we should continue looking ...*/
+        }        
       }
-      else {
-        name = pkgs.substring(0,i);
-        pkgs = pkgs.substring(i+1);
-      }
-      name = name+"."+protocol+".Handler";
-      try {
-        handler = (URLStreamHandler)Class.forName(name, true , ClassLoader.getSystemClassLoader()).newInstance();
-        handlers.put(protocol, handler);
-        return handler;
-      }
-      catch(Exception e){
-        /*if we catch an Exception here we should continue looking ...*/
-      }
-    }
-    throw new MalformedURLException("no Handler found for the "+protocol+" protocol");
+    }  
+    throw new MalformedURLException("no Handler found for the "+protocol+" protocol");    
   }
 }
