@@ -2595,57 +2595,46 @@ static wfp_float64 wfp_float64_tancrat(wfp_float64 x) {
  ** N.B. We assume that 'x' is finite and not a NaN.
  */
 wfp_float64 wfp_float64_atan(wfp_float64 x) {
-  wfp_float64 absval;
-  wfp_float64 temp;
+  wfp_float64 temp1 = x;
+  wfp_float64 temp2;
+  wfp_flag flipped = 0;
+  wfp_flag negated = 0;
 
-  if (wfp_float64_lt(x, D_MINUS_ONE)) {
-    // return -x + -x * tancrat(-x * -x) - halfpi;
-    absval = wfp_float64_negate(x);
-    temp = wfp_float64_mul(absval, absval);
-    temp = wfp_float64_tancrat(temp);
-    temp = wfp_float64_mul(temp, absval);
-    temp = wfp_float64_add(temp, absval);
-    temp = wfp_float64_sub(temp, D_HALF_PI);
-
-    return temp;
-  }
-
-  if (wfp_float64_lt(x, D_MINUS_TINY)) {
-    // return -(-x + -x * tancrat(-x * -x));
-    absval = wfp_float64_negate(x);
-    temp = wfp_float64_mul(absval, absval);
-    temp = wfp_float64_tancrat(temp);
-    temp = wfp_float64_mul(temp, absval);
-    temp = wfp_float64_add(temp, absval);
-
-    return wfp_float64_negate(temp);
-  }
-
-  if (wfp_float64_lt(x, D_TINY)) {
+  if (wfp_float64_eq(x, D_ZERO)) {
 
     return x;
 
   }
 
-  if (wfp_float64_lt(x, D_ONE)) {
-    // return x + x * tancrat(x * x));
-    temp = wfp_float64_mul(x, x);
-    temp = wfp_float64_tancrat(temp);
-    temp = wfp_float64_mul(temp, x);
-    temp = wfp_float64_add(temp, x);
-
-    return temp;
+  if (wfp_float64_lt(x, D_ZERO)) {
+    temp1 = wfp_float64_negate(x);
+    negated = 1;
   }
 
-  // if we get here, x > 1.0
-  // return halfpi - (x + x * tancrat(x * x));
-  temp = wfp_float64_mul(x, x);
-  temp = wfp_float64_tancrat(temp);
-  temp = wfp_float64_mul(temp, x);
-  temp = wfp_float64_add(temp, x);
-  temp = wfp_float64_sub(D_HALF_PI, temp);
+  if (wfp_float64_lt(D_ONE, temp1)) {
+    temp1 = wfp_float64_div(D_ONE, temp1);
+    flipped = 1;
+  }
 
-  return temp;
+  if (!wfp_float64_lt(temp1, D_TINY)) {
+    // temp2 = temp1 + temp1 * tancrat(temp1 * temp1);
+    temp2 = wfp_float64_mul(temp1, temp1);
+    temp2 = wfp_float64_tancrat(temp2);
+    temp2 = wfp_float64_mul(temp1, temp2);
+    temp2 = wfp_float64_add(temp1, temp2);
+  }
+
+  if (flipped) {
+    // temp2 = halfpi - temp2;
+    temp2 = wfp_float64_sub(D_HALF_PI, temp2);
+  }
+
+  if (negated) {
+    // temp2 = - temp2;
+    temp2 = wfp_float64_negate(temp2);
+  }
+
+  return temp2;
 }
 
 #define D_OFFSETBITS 0x3ff0000000000000LL
@@ -2679,7 +2668,7 @@ wfp_float64 wfp_float64_log(wfp_float64 arg) {
   /*
   ** Extract the exponent and fractional part.
   */
-  exponent = (arg - D_OFFSETBITS) >> 52;
+  exponent = (wfp_int64)(arg - D_OFFSETBITS) >> 52;
   fraction = (arg & D_MANTBITS) | D_OFFSETBITS;
 
   /*
@@ -2751,21 +2740,25 @@ wfp_float64 wfp_float64_exp(wfp_float64 arg) {
 
   }
 
-  if (wfp_float64_lt(D_MINUS_TINY, arg) && wfp_float64_lt(arg, D_TINY)) {
+  if (wfp_float64_lt(arg, D_MINUS_TINY)) {
+    temp1 = D_MINUS_ZERO_POINT_FIVE;
+  }
+  else if (wfp_float64_lt(arg, D_TINY)) {
 
     return D_ONE;
 
   }
+  else {
+    temp1 =  D_ZERO_POINT_FIVE;
+  }
 
-  temp1 = wfp_float64_div(arg, D_LN_2);
-  temp2 = wfp_float64_lt(arg, D_MINUS_ZERO) ? D_ZERO_POINT_FIVE : D_MINUS_ZERO_POINT_FIVE;
-  temp1 = wfp_float64_add(temp1, temp2); // arg / log(2) + (arg < 0 ? -0.5 : 0.5);
+  temp2 = wfp_float64_div(arg, D_LN_2);
+  temp1 = wfp_float64_add(temp1, temp2); // arg / log(2) + sign(arg) * 0.5;
   exponent = wfp_float64_to_int64_round_to_zero(temp1);
 
-  temp1 = wfp_float64_mul(temp1, D_LN_2);
-  difference = wfp_float64_sub(arg, wfp_int64_to_float64(exponent)); // arg - (exponent * log(2))
+  temp1 = wfp_float64_mul(wfp_int64_to_float64(exponent), D_LN_2);
+  difference = wfp_float64_sub(arg, temp1); // arg - (exponent * log(2))
 
-printf("exponent = %lld, x = %g, difference = %g\n", exponent, temp1, difference);
   temp1 = wfp_float64_div(difference, D_TWELVE);
   temp2 = wfp_float64_add(temp1, D_ONE);
   temp1 = wfp_float64_div(difference, D_ELEVEN);

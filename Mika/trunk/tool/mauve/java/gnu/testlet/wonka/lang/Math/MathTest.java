@@ -215,19 +215,23 @@ public class MathTest implements Testlet
 		harness.check(Math.atan2(-2.0 , Double.NEGATIVE_INFINITY), -Math.PI ,
 		  "Error : test_atan2 failed - 6b - got "+Math.atan2(-2.0, Double.NEGATIVE_INFINITY)+", but exp "+(-Math.PI));
 
-		harness.check(!(( Math.atan2(10.0, 0.0 ) != Math.PI/2.0) ||
-			( Math.atan2(Double.POSITIVE_INFINITY , 3.0) != Math.PI /2.0)), 
-			"Error : test_atan2 failed - 7");
-		harness.check(!(( Math.atan2(10.0,- 0.0 ) != Math.PI/2.0) ||
-			( Math.atan2(Double.POSITIVE_INFINITY ,- 3.0) != Math.PI /2.0)), 
-			"Error : test_atan2 failed - 8");
+		harness.check(Math.atan2(10.0, 0.0 ) == Math.PI/2.0,
+			"Error : test_atan2 failed - 7a - got " + Math.atan2(10.0, 0.0) + " but expected " + Math.PI / 2.0);
+		harness.check(Math.atan2(Double.POSITIVE_INFINITY , 3.0) == Math.PI /2.0, 
+			"Error : test_atan2 failed - 7b - got " + Math.atan2(Double.POSITIVE_INFINITY, 3.0) + " but expected " + Math.PI / 2.0);
+		harness.check(Math.atan2(10.0, -0.0 ) == Math.PI/2.0,
+			"Error : test_atan2 failed - 8a - got " + Math.atan2(10.0, -0.0) + " but expected " + Math.PI / 2.0);
+		harness.check(Math.atan2(Double.POSITIVE_INFINITY , -3.0) == Math.PI /2.0, 
+			"Error : test_atan2 failed - 8b - got " + Math.atan2(Double.POSITIVE_INFINITY, -3.0) + " but expected " + Math.PI / 2.0);
+		harness.check(Math.atan2(-10.0, 0.0 ) == -Math.PI/2.0,
+			"Error : test_atan2 failed - 9a - got " + Math.atan2(-10.0, 0.0) + " but expected " + -Math.PI / 2.0);
+		harness.check(Math.atan2(Double.NEGATIVE_INFINITY , 3.0) == -Math.PI /2.0, 
+			"Error : test_atan2 failed - 9b - got " + Math.atan2(Double.NEGATIVE_INFINITY, 3.0) + " but expected " + -Math.PI / 2.0);
+		harness.check(Math.atan2(-10.0, -0.0 ) == -Math.PI/2.0,
+			"Error : test_atan2 failed - 10a - got " + Math.atan2(-10.0, -0.0) + " but expected " + -Math.PI / 2.0);
+		harness.check(Math.atan2(Double.NEGATIVE_INFINITY , -3.0) == -Math.PI /2.0, 
+			"Error : test_atan2 failed - 10b - got " + Math.atan2(Double.NEGATIVE_INFINITY, -3.0) + " but expected " + -Math.PI / 2.0);
 
-		harness.check(!(( Math.atan2(-10.0, 0.0 ) != -Math.PI/2.0) ||
-			( Math.atan2(Double.NEGATIVE_INFINITY , 3.0) != -Math.PI /2.0)), 
-			"Error : test_atan2 failed - 9");
-		harness.check(!(( Math.atan2(-10.0, -0.0 ) != -Math.PI/2.0) ||
-			( Math.atan2(Double.NEGATIVE_INFINITY ,- 3.0) != -Math.PI /2.0)), 
-			"Error : test_atan2 failed - 10");
 
 		harness.check(Math.abs( Math.atan2(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY ) - Math.PI/4.0) < 1.0E-15,
 			"Error : test_atan2 failed - 11 got: "+Math.atan2(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY ));
