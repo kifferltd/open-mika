@@ -537,10 +537,17 @@ public final class Math {
        return Double.longBitsToDouble(l);
     }
 
-    if (Double.isInfinite(y) && Double.isInfinite(x)) {
+    if (Double.isInfinite(y)) {
+      if (Double.isInfinite(x)) {
 
-      return (y > 0 ? 1.0 : -1.0) * (x > 0 ? quarterpi : Math.PI - quarterpi);
+        return (y > 0 ? 1.0 : -1.0) * (x > 0 ? quarterpi : Math.PI - quarterpi);
 
+      }
+      else {
+
+        return y > 0 ? halfpi : -halfpi;
+
+      }
     }
 
     double temp = atan(y/x);

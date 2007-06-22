@@ -339,7 +339,9 @@ void fast_Math_static_atan(w_frame frame) {
   double_x.w[0] = frame->jstack_top[-2].c;
   double_x.w[1] = frame->jstack_top[-1].c;
   if (wfp_float64_is_Infinite(double_x.d)) {
-    double_x.d = wfp_float64_is_negative(double_x.d) ? D_MINUS_HALF_PI : D_HALF_PI;
+    // Following looks reasonable, but seems that Sun return NaN
+    // double_x.d = wfp_float64_is_negative(double_x.d) ? D_MINUS_HALF_PI : D_HALF_PI;
+    double_x.d = D_NAN;
   }
   else if (!wfp_float64_is_NaN(double_x.d)) {
     double_x.d = wfp_float64_atan(double_x.d);
