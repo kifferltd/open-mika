@@ -72,9 +72,19 @@ public final class Boolean implements java.io.Serializable {
   }
 
   public static boolean getBoolean(String nm) {
-    String s = System.getProperty(nm);
+    String property = null;
 
-    return (s!=null && s.equalsIgnoreCase("true"));
+    if (nm != null && nm.length() != 0) {
+      property = System.getProperty(nm);
+    }
+
+    if (property == null) {
+
+      return false;
+
+    }
+
+    return property.equalsIgnoreCase("true");
   }
 
   private native static Class getWrappedClass();

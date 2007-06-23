@@ -138,22 +138,52 @@ public final class Long extends Number implements Comparable{
   public static Long getLong(String nm, long val) {
     Long result = getLong(nm,null);
 
-    if (result==null) result = new Long(val);
+    if (result == null) {
+      result = new Long(val);
+    }
 
     return result;
   }
 
   public static Long getLong(String nm, Long val) {
-    String property = System.getProperty(nm);
+    String property = null;
 
-    if (property==null) return val;
-
-	  try {
-      return Long.decode(property);
+    if (nm != null && nm.length() != 0) {
+      property = System.getProperty(nm);
     }
-    catch (NumberFormatException n){
+
+    if (property == null) {
+
       return val;
+
     }
+
+    try {
+      if (property.startsWith("0x") && !property.startsWith("0x-")) {
+
+        return valueOf(property.substring(2), 16);
+
+      }
+      if (property.startsWith("#") && !property.startsWith("#-")) {
+
+        return valueOf(property.substring(1), 16);
+
+      }
+      if (property.startsWith("0")) {
+
+        return valueOf(property.substring(1), 8);
+
+      }
+
+      return valueOf(property, 10);
+
+    }
+    catch (NumberFormatException e){
+
+      return val;
+
+    }
+
   }
 
   public static String toHexString(long j) {
