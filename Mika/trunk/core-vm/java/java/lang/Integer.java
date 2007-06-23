@@ -185,46 +185,50 @@ public final class Integer extends Number implements Comparable {
   public static Integer getInteger(String nm, int val) {
     Integer result = getInteger(nm,null);
 
-    if (result==null) result = new Integer(val);
+    if (result == null) {
+      result = new Integer(val);
+    }
 
     return result;
   }
 
-/* Earlier version did not allow e.g. -#f0
-  public static Integer decode(String s) 
-    throws NumberFormatException
-  {
-    if (s.startsWith("0x")) {
-
-      return Integer.valueOf(s.substring(2),16);
-
-    }
-    else if (s.charAt(0)=='#'&&s.charAt(1)!='-') {
-
-      return Integer.valueOf(s.substring(1),16);
-
-    }
-    else if (s.charAt(0)=='0'&&s.length()>1) {
-
-      return Integer.valueOf(s.substring(1),8);
-
-    }
-    else
-
-      return Integer.valueOf(s.substring(1),10);
-
-  }
-*/
-
   public static Integer getInteger(String nm, Integer val) {
-    String property = System.getProperty(nm);
+    String property = null;
 
-    if (property==null) return val;
+    if (nm != null && nm.length() != 0) {
+      property = System.getProperty(nm);
+    }
+
+    if (property == null) {
+
+      return val;
+
+    }
+
     try {
-      return Integer.decode(property);
+      if (property.startsWith("0x") && !property.startsWith("0x-")) {
+
+        return valueOf(property.substring(2), 16);
+
+      }
+      if (property.startsWith("#") && !property.startsWith("#-")) {
+
+        return valueOf(property.substring(1), 16);
+
+      }
+      if (property.startsWith("0")) {
+
+        return valueOf(property.substring(1), 8);
+
+      }
+
+      return valueOf(property, 10);
+
     }
     catch (NumberFormatException e){
+
       return val;
+
     }
 
   }
