@@ -342,8 +342,11 @@ r_screen screen_init(void) {
       fb_cnt = finfo.smem_len / real_screensize;
       if(fb_cnt < 2) {
         fb_cnt = 1;
+        fb_page = fbp;
       }
-      fb_page = fbp + real_screensize;
+      else {
+        fb_page = fbp + real_screensize;
+      }
     }
     else {
       fb_page = fbp;
