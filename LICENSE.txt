@@ -1,0 +1,127 @@
+LICENSE.txt file for Mika
+=========================
+
+Parts of the Mika source code are derived from the Wonka project, and are
+copyright ACUNIA NV. These parts are distrubuted under the "Wonka Public 
+License", see below. This is the license which is referred to by the statement
+"This software may only be used in accordance with the corresponding license
+agreement" in the source file headers.
+
+ACUNIA NV ceased trading in December 2003, and their assets were acquired
+by Punch Telematix. Punch Telematix are definitely not interested in
+receiving "any improvements or extensions that [you] make". 
+
+Parts of the Mika source code are copyright Chris Gray, /k/ Embedded Java
+Solutions. These parts are licensed under the Mika BSD License, see below.
+This license applies even if the copyright header simply says "all rights
+reserved" (we are in the process of updating the copyright headers). 
+
+Parts of the class libraries are taken from the CLasspath project, and
+are covered by the Classpath license (GPL + exception). This applies to
+the following files:
+    core-vm/java/java/io/StreamTokenizer.java
+    core-vm/java/java/util/AbstractMap.java
+    core-vm/java/java/util/IdentityHashMap.java
+    core-vm/java/java/util/HashMap.java
+    core-vm/java/java/util/LinkedHashMap.java
+    core-vm/java/java/util/LinkedHashSet.java
+    core-vm/java/java/security/cert/CertPathBuilderSpi.java
+    core-vm/java/java/security/cert/CertPathValidator.java
+    core-vm/java/java/security/cert/PKIXCertPathValidatorResult.java
+    core-vm/java/java/security/cert/X509CertSelector.java
+    core-vm/java/java/security/cert/CertPathBuilderException.java
+    core-vm/java/java/security/cert/X509CRLSelector.java
+    core-vm/java/java/security/cert/CertPathValidatorResult.java
+    core-vm/java/java/security/cert/CertPathParameters.java
+    core-vm/java/java/security/cert/CertStoreSpi.java
+    core-vm/java/java/security/cert/CertPathValidatorSpi.java
+    core-vm/java/java/security/cert/CertPathBuilderResult.java
+    core-vm/java/java/security/cert/PKIXCertPathChecker.java
+    core-vm/java/java/security/cert/PKIXBuilderParameters.java
+    core-vm/java/java/security/cert/TrustAnchor.java
+    core-vm/java/java/security/cert/CollectionCertStoreParameters.java
+    core-vm/java/java/security/cert/PolicyNode.java
+    core-vm/java/java/security/cert/PKIXParameters.java
+Refer to the copyright header of those files for more information.
+
+The BDF font files contained in directory vm-cmp/awt/rudolph/resource/font/
+are copyright Adobe Systems Incorporated and Digital Equipment Corporation.
+See the copyright header in those files.
+
+<<<<<<<<<<<<< Begin Wonka Public License <<<<<<<<<<<<<<<<<<<<<<<<
+
+All of the documentation and software included in the Wonka Virtual Kernel
+is copyrighted by ACUNIA NV unless clearly stated otherwise.
+
+Copyright 1999, 2000, 2001, 2002 ACUNIA NV.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of ACUNIA NV nor the names of other contributors 
+   may be used to endorse or promote products derived from this software 
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY ACUNIA NV AND THE CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL ACUNIA NV OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
+
+ACUNIA NV requests users of this software to return to
+
+ ACUNIA NV
+ Philips-site 5, box 3
+ B-3001 Leuven Belgium
+
+any improvements or extensions that they make and to grant ACUNIA NV
+the rights to redistribute these changes.
+
+The views and conclusions contained in the software and documentation are
+those of the authors and should not be interpreted as representing official
+policies, either expressed or implied, of ACUNIA NV.
+
+>>>>>>>>>>>>> End Wonka Public License >>>>>>>>>>>>>>>>>>>>>>>>>>
+
+<<<<<<<<<<<<< Begin Mika BSD License <<<<<<<<<<<<<<<<<<<<<<<<
+
+Copyright (c) 2003, 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded Java
+Solutions.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of /k/ Embedded Java Solutions nor the names of other
+   contributors may be used to endorse or promote products derived from this
+   software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL /K/
+EMBEDDED SOLUTIONS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+>>>>>>>>>>>>> End Mika BSD License >>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
