@@ -23,12 +23,12 @@
 
 ECHO Configuring build for an arm cpu. ;
 
-CC = arm-linux-gcc ;
-AR = arm-linux-ar ru ;
-AS = arm-linux-as ;
-RANLIB = arm-linux-ranlib ;
-LINK = arm-linux-gcc ;
+CC = arm-926ejs-linux-gcc ;
+AR = arm-926ejs-linux-ar ru ;
+AS = arm-926ejs-linux-as ;
+RANLIB = arm-926ejs-linux-ranlib ;
+LINK = arm-926ejs-linux-gcc ;
 
-LD_TOOL = arm-linux-ld ;
-AR_TOOL = arm-linux-ar ;
+LD_TOOL = arm-926ejs-linux-ld ;
+AR_TOOL = arm-926ejs-linux-ar ;
 
