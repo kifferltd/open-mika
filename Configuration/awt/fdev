@@ -9,7 +9,7 @@
 # characteristics, see the source for more details.
 #
 AWT_DEVICE = fdev ;
-AWT_PIXELFORMAT = c555 ;
+AWT_PIXELFORMAT = c565 ;
 AWT_INVERSENIBBLES default = false ;
 AWT_INVERSEDISPLAY default = false ;
 
