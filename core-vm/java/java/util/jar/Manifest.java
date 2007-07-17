@@ -122,11 +122,8 @@ public class Manifest implements Cloneable {
 // space). I don't see anything in the JAR spec about trailing whitespace,
 // so we should probably leave it be.
 //      att = att.trim();
-      if (!att.equals("")) { //Skip empty line
+      if (att.trim().length() > 0) { //Skip empty line
         int sep = att.indexOf(NVSep);
-        if (sep<0) {
-          throw new IOException("Invalid manifest entry: '" + att +"'");
-        }
         if(validEntry){
           String name = att.substring(0,sep);
           String value = att.substring(sep+2);
