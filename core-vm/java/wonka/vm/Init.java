@@ -247,6 +247,8 @@ final class Init {
 
     String verboseProperty = System.getProperty("mika.verbose","");
     Wonka.setWonkaVerbose(verboseProperty);
+    debug("Init: loading extensions");
+    Wonka.loadExtensions();
 
     String debugLineNumbers = System.getProperty("mika.debug.line.numbers", "");
     if (debugLineNumbers.equalsIgnoreCase("true")) {
@@ -344,7 +346,6 @@ final class Init {
       }
       System.setSecurityManager(new SecurityManager());
     }
-    Wonka.loadExtensions();
   // Start up the Garbage Collector
     debug("Init: starting Garbage Collector");
     GarbageCollector gc = GarbageCollector.getInstance();
