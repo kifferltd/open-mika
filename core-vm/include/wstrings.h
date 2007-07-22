@@ -60,7 +60,11 @@ extern w_int F_String_wotsit;
 typedef struct w_String {
   w_word      refcount;
   w_word      wonka_hash;
+#ifdef USE_INTERNED_STRING_HASHTABLE
   w_word      dummy;
+#else
+  w_instance  interned;
+#endif
   w_size      length_and_flags;
   union {
   w_ubyte     bytes[8];

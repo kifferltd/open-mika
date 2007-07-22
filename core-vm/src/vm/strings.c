@@ -54,11 +54,13 @@
  */ 
 w_hashtable string_hashtable;
 
+#ifdef USE_INTERNED_STRING_HASHTABLE
 /*
  * Hashtable which maps interned w_strings onto their canonical instances,
  * i.e. key = w_string, value = w_instance.
  */
 w_hashtable interned_string_hashtable;
+#endif
 
 //x_mutex string_mutex;
 
@@ -86,9 +88,9 @@ static inline w_string allocString(w_size length, w_boolean is_latin1) {
     return NULL;
   }
   string->refcount = 0;
-  /* [CG 20050616] No more string->instance
-  string->instance = NULL;
-  */
+#ifndef USE_INTERNED_STRING_HASHTABLE
+  string->interned = NULL;
+#endif
   string->length_and_flags = length + (is_latin1 ? STRING_IS_LATIN1 : 0);
 
   return string;
@@ -771,14 +773,23 @@ void deregisterString(w_string string) {
 */
 w_instance internString(w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+  w_instance existing = 
+#ifdef USE_INTERNED_STRING_HASHTABLE
+    (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+#else
+    s->interned;
+#endif
   if (existing) {
 
     return existing;
 
   }
 
+#ifdef USE_INTERNED_STRING_HASHTABLE
   ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)theString);
+#else
+    s->interned = theString;
+#endif
 
   return theString;
 }
@@ -790,10 +801,19 @@ w_instance internString(w_instance theString) {
 */
 void uninternString(w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+  w_instance existing = 
+#ifdef USE_INTERNED_STRING_HASHTABLE
+    (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+#else
+    s->interned;
+#endif
   
   if (existing == theString) {
+#ifdef USE_INTERNED_STRING_HASHTABLE
     ht_erase_no_lock(interned_string_hashtable, (w_word)s);
+#else
+    s->interned = NULL;
+#endif
   }
 }
 
@@ -928,12 +948,14 @@ void startStrings() {
   string_hashtable = ht_create((char *)"hashtable:strings", STRING_HASHTABLE_SIZE, ht_stringHash, ht_stringCompare, 0, 0);
   woempa(7, "created string_hashtable at %p\n", string_hashtable);
 
+#ifdef USE_INTERNED_STRING_HASHTABLE
   /*
   ** Allocate the hashtable in which interned strings will be stored.
   */
 
   interned_string_hashtable = ht_create((char *)"hashtable:internees", INTERNED_STRING_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "created interned_string_hashtable at %p\n", interned_string_hashtable);
+#endif
 
   /*
   ** Create the mutex used to prevent race problems
@@ -1139,7 +1161,11 @@ w_instance getStringInstance(w_string s) {
   ** it will see our O_BLACK flag and not reclaim the instance).
   */
   ht_lock(string_hashtable);
+#ifdef USE_INTERNED_STRING_HASHTABLE
   canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)r);
+#else
+  canonical = r->interned;
+#endif
   if (canonical) {
     enterUnsafeRegion(thread);
     addLocalReference(thread, canonical);
@@ -1177,6 +1203,7 @@ w_instance getStringInstance(w_string s) {
 
   ht_lock(string_hashtable);
   setWotsitField(new_instance, F_String_wotsit, r);
+#ifdef USE_INTERNED_STRING_HASHTABLE
   canonical = (w_instance)ht_write_no_lock(interned_string_hashtable, r, new_instance);
   /*
   ** If we just overwrote a canonical instance, back everything out (and
@@ -1191,6 +1218,20 @@ w_instance getStringInstance(w_string s) {
     return canonical;
 
   }
+#else
+  if (r->interned) {
+    new_instance = r->interned;
+    deregisterString(r);
+    ht_unlock(string_hashtable);
+    removeLocalReference(thread, new_instance);
+
+    return canonical;
+
+  }
+  else {
+    r->interned = new_instance;
+  }
+#endif
 
   /*
   ** Otherwise, everything's just fine.
