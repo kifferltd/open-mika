@@ -20,8 +20,9 @@
 *   3000 Leuven                 http://www.acunia.com                     *
 *   Belgium - EUROPE                                                      *
 *                                                                         *
-* Modifications copyright (c) 2005 by Chris Gray, /k/ Embedded Java       *
-* Solutions. All rights reserved.                                         *
+* Modifications copyright (c) 2005, 2007 by Chris Gray, /k/ Embedded Java *
+* Solutions. Permission is hereby granted to copy and distribute this     *
+* code under the terms of the Wonka Public Licence.                       *
 *                                                                         *
 **************************************************************************/
 
@@ -287,13 +288,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       responseHeaders = new Hashtable();
       keys = new ArrayList();
       int port = url.getPort();
+      if (port < 0) {
+        port = url.getDefaultPort();
+      }
       resolveHost();
       
       if (usingProxy()) {
   	socket = new Socket(proxyHost, getProxyPort());
       }
       else {
-        socket = new Socket(url.getHost(), port == -1 ? 80 : port);
+        socket = new Socket(url.getHost(), port);
       }
 	  
       socket.setSoTimeout(timeout);
