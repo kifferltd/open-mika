@@ -241,25 +241,6 @@ extern w_boolean join_sleeping_threads(x_thread);
 extern void leave_sleeping_threads(x_thread);
 #endif
 
-void terminate_function(void *thread_ptr) {
-  x_thread thread = (x_thread)thread_ptr;
-
-  if (thread->sleeping_on_cond) {
-    pthread_cond_broadcast(thread->sleeping_on_cond);
-  }
-  thread->state = xt_ended;
-
-  if (thread->xref) {
-    loempa(7,"Mika thread %t terminated\n", thread->xref);
-  }
-  else {
-    loempa(7,"Native thread %p terminated\n", thread);
-  }
-#ifndef HAVE_TIMEDWAIT
-  leave_sleeping_threads(thread);
-#endif
-}
-
 void *start_routine(void *thread_ptr) {
   x_thread thread;
 
@@ -275,7 +256,6 @@ void *start_routine(void *thread_ptr) {
 
   thread->state = xt_ready;
 
-  pthread_cleanup_push(terminate_function, thread);
   if (thread->xref) {
     loempa(7,"Mika thread %t started\n", thread->xref);
   }
@@ -289,9 +269,16 @@ void *start_routine(void *thread_ptr) {
   else {
     loempa(7,"Native thread %p returned normally\n", thread);
   }
-  pthread_cleanup_pop(1);
 
-  return thread_ptr;
+  if (thread->sleeping_on_cond) {
+    pthread_cond_broadcast(thread->sleeping_on_cond);
+  }
+  thread->state = xt_ended;
+#ifndef HAVE_TIMEDWAIT
+  leave_sleeping_threads(thread);
+#endif
+
+  return NULL;
   
 }
 
