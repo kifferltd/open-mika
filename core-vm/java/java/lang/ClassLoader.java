@@ -31,8 +31,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.security.CodeSource;
 import java.security.Policy;
 import java.security.ProtectionDomain;
@@ -42,6 +40,7 @@ import java.util.Hashtable;
 import java.util.Properties;
 import java.util.Vector;
 
+import wonka.vm.JDWP;
 import wonka.vm.SystemClassLoader;
 
 public abstract class ClassLoader {
@@ -89,16 +88,6 @@ public abstract class ClassLoader {
    ** N.B. The assertion status mechanism is not yet implemented!
    */
   HashMap classAssertionStatus;
-
-  /** The list of packages known to the bootstrap class loader.
-  private static Vector bootstrap_packages;
-   */
-
-  /** A Vector of WeakReference's to all existing instances of ClassLoader.
-   */
-  private static Vector refsToClassLoaders;
-
-  private static ReferenceQueue refQ;
 
   /** The packages which have been defined by this ClassLoader.
    ** Only includes those for which a definePackage() was done.
@@ -175,31 +164,6 @@ public abstract class ClassLoader {
     }
   }
 
-  /** Remove from refsToClassLoaders all references which have been cleared.
-   */
-  private static void purgeClassLoaders() {
-    synchronized(refsToClassLoaders) {
-      WeakReference wr = (WeakReference)refQ.poll();
-      while (wr != null) {
-        refsToClassLoaders.remove(wr);
-        wr = (WeakReference)refQ.poll();
-      }
-    }
-  }
-
-  /** Add a WeakReference to this ClassLoader to refsToClassLoaders.
-   */
-  private static synchronized void registerClassLoader(ClassLoader cl) {
-    if (refQ == null) {
-      refQ = new ReferenceQueue();
-      refsToClassLoaders = new Vector();
-    }
-    else {
-      purgeClassLoaders();
-    }
-    refsToClassLoaders.add(new WeakReference(cl, refQ));
-  }
-
   /** Any ClassLoader created using the default constructor will
    ** have as its parent the system ClassLoader.
    */
@@ -212,7 +176,7 @@ public abstract class ClassLoader {
    ** specified by the caller.
    */
   protected ClassLoader(ClassLoader parent) throws SecurityException {
-    registerClassLoader(this);
+    JDWP.registerClassLoader(this);
     if (getCallingClassLoader() != null || applicationClassLoader != null) {
       if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
         java.security.AccessController.checkPermission(new RuntimePermission("createClassLoader"));

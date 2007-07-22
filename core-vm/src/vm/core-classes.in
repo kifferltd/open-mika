@@ -93,7 +93,9 @@ wonka/vm/Heartbeat
 	setThread               (Ljava/lang/Thread;)V   Heartbeat_setThread
 wonka/vm/Init
 wonka/vm/JDWP
-	isRunning		()Z		JDWP_isRunning
+	refsToClassLoaders	Ljava/util/Vector;
+	isEnabled		()Z		JDWP_static_isEnabled
+	isRunning		()Z		JDWP_static_isRunning
 	run			()V		JDWP_run
 wonka/vm/Wonka
         suid            (Ljava/lang/Class;)J    Wonka_suid
@@ -308,7 +310,6 @@ java/lang/StringBuffer
 	toString		()Ljava/lang/String;				StringBuffer_toString
 java/lang/ClassLoader
 	ownname			Ljava/lang/String;
-	refsToClassLoaders	Ljava/util/Vector;
 	loaded_classes          +
 	unloaded_classes        +
         create                  ()V                                             ClassLoader_create
