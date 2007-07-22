@@ -1,29 +1,30 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
-
-/*
-** $Id: URL.java,v 1.4 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 package java.net;
 
@@ -159,7 +160,7 @@ public final class URL implements java.io.Serializable {
        netPermissionCheck("specifyStreamHandler");
        streamHandler = handler;
     }
-    this.port = (port == -1 ? streamHandler.getDefaultPort() : port);
+    this.port = port;
     this.host = host;
     this.path = File;
   }
@@ -176,8 +177,18 @@ public final class URL implements java.io.Serializable {
   public URL(URL context, String spec, URLStreamHandler handler) throws MalformedURLException {
     // we should find out if spec is a relative URL or not
     int hash = spec.lastIndexOf("#");
-    int i = spec.indexOf(':', spec.indexOf(']') + 1);
-    if(i > -1) { // we have a winner it is a non relative URL ...
+    int i = spec.indexOf(':');
+    int j = spec.indexOf('/');
+
+    // RFC 1630 allowed relative URLs to begin with the scheme name if this
+    // was the same as for the base URL. Work around this.
+    if (i == context.protocol.length() && spec.startsWith(context.protocol) && j != i + 1) {
+      spec = spec.substring(i + 1);
+      j -= i + 1;
+      i = -1;
+    }
+
+    if (i > 0 && (j < 0 || i < j)) { // absolute URL
         protocol = spec.substring(0,i);
       if (handler == null) {
         streamHandler = getHandler(this.protocol);
@@ -200,10 +211,17 @@ public final class URL implements java.io.Serializable {
         fragment = spec.substring(hash+1);
       }
     }
-    else { // we have a relative URL we copy protocol, host and port from ohter
+    else { // relative URL 
+      if (spec.startsWith("//")) {
         this.protocol = context.protocol;
+      }
+      else {
+        this.protocol = context.protocol;
+        this.userInfo = context.userInfo;
+        this.authority = context.authority;
         this.host = context.host;
         this.port = context.port;
+      }
         if (handler == null) {
           streamHandler = getHandler(this.protocol);
       }
@@ -365,28 +383,43 @@ public final class URL implements java.io.Serializable {
     }
     hashCode=0;
     this.host = host;
-  }  
+  }
+
   void setProtocol(String protocol) {
     if (!protocol.equals(this.protocol)) {
           streamHandler = null;
       hashCode=0;
       this.protocol = protocol;
     }
-  }  
+  }
+
+  void setUserInfo(String userinfo) {
+    hashCode=0;
+    this.userInfo = userinfo;
+  }
+
+  void setAuthority(String auth) {
+    hashCode=0;
+    this.authority = auth;
+  }
+
   void setFile(String path) {
     if (path == null) {
        throw new NullPointerException();
     }
     hashCode=0;
     this.path = path;
-  }  
+  }
+
   void setRef(String ref) {
     this.fragment = ref;
-  }  
+  }
+
   void setQuery(String query) {
     this.query = query;
     //System.out.println("Q: " + query);
-  }  
+  }
+
   void setPort(int port) {
     if (port <-1 || port > 65535) {
        throw new IllegalArgumentException();
