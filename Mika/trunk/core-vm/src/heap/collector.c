@@ -1,28 +1,33 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika copyright (c) 2004, 2005, 2006 by Chris Gray,    *
- /k/ Embedded Java Solutions. All rights reserved.                        *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 /*
@@ -589,7 +594,6 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
 ** Mark a class (possibly an unloaded class) which is reachable via the
 ** current class. For unloaded classes we just mark the classloader,
 ** for loaded classes we mark the Class instance. 'child' must not be NULL.
-*/
 static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word flag) {
   if (child == parent) {
 
@@ -612,6 +616,7 @@ static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word f
 
   return 0;
 }
+*/
 
 /*
 ** If a Class is reachable (because instances exist, or because it is
@@ -1143,6 +1148,26 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       wabort(ABORT_WONKA, "No Class instance for class %k\n", parent_object->clazz);
     }
 #endif
+
+    /*
+    ** Mark the Thread which owns this instance's lock, if any.
+    */
+    if (isSet(parent_object->flags, O_HAS_LOCK)) {
+      w_thread owner_thread = monitorOwner(parent_instance);
+      if (owner_thread) {
+        woempa(1, "Lock on %j is owned by %t\n", parent_instance, owner_thread);
+        if (owner_thread->Thread) {
+          woempa(1, "Marking %j reachable\n", owner_thread->Thread);
+          retcode = markThreadReachable(instance2object(owner_thread->Thread), strongly_reachable_fifo, O_BLACK);
+          if (retcode < 0) {
+
+            return retcode;
+
+          }
+          queued += retcode;
+        }
+      }
+    }
 
     /*
     ** If this is an instance of java.lang.Class, we have extra work to do.
@@ -1741,12 +1766,106 @@ static w_boolean checkPhantomRefs(w_object object) {
 }
 
 /*
+** Array used to sort the dead classes which must be collected.
+*/
+static w_clazz *dead_clazz_array;
+
+/*
+** Hashtable used to aid in the sorting.
+*/
+static w_hashtable dead_clazz_hashtable;
+
+/*
+** Swap function for the sort.
+*/
+static inline void dead_clazz_swap(int i, int j) {
+  w_clazz this_clazz = dead_clazz_array[i];
+  w_clazz other_clazz = dead_clazz_array[j];
+
+  dead_clazz_array[i] = other_clazz;
+  dead_clazz_array[j] = this_clazz;
+  ht_write(dead_clazz_hashtable, (w_word)this_clazz, (w_word)j);
+  ht_write(dead_clazz_hashtable, (w_word)other_clazz, (w_word)i);
+}
+
+/*
+** Collect all the classes on dead_clazz_fifo.
+** First we sort them such that a subclass always precedes its superclass and
+** an implementation always precedes the interface - it's safer that way.
+*/
+static w_int collect_dead_clazzes(void) {
+  w_int bytes_freed = 0;
+  int i = 0;
+  int j;
+  int k;
+  int n = dead_clazz_fifo->numElements;
+  w_clazz this_clazz;
+  w_clazz other_clazz;
+
+  dead_clazz_array = allocMem(n * sizeof(w_clazz));
+  dead_clazz_hashtable = ht_create("hashtable:dead classes", n * 2 + 7, NULL, NULL, 0, 0xffffffff);
+  while ((this_clazz = getFifo(dead_clazz_fifo))) {
+    ht_write(dead_clazz_hashtable, (w_word)this_clazz, i);
+    dead_clazz_array[i++] = this_clazz;
+  }
+
+  for (i = 1; i < n; ++i) {
+    this_clazz = dead_clazz_array[i];
+    if (getClazzState(this_clazz) == CLAZZ_STATE_BROKEN) {
+      continue;
+    }
+
+    for (k = 0; k < this_clazz->numSuperClasses; ++k) {
+      other_clazz = this_clazz->supers[k];
+      j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      if (j >= 0 && j < i) {
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+
+    for (k = 0; k < this_clazz->numDirectInterfaces; ++k) {
+      other_clazz = this_clazz->interfaces[k];
+      j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      if (j >= 0 && j < i) {
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+
+    other_clazz = this_clazz->previousDimension;
+    if (other_clazz) {
+       j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+        if (j >= 0 && j < i) {
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+  }
+
+  for (i = 0; i < n; ++i) {
+    this_clazz = dead_clazz_array[i];
+    woempa(7, "Burying dead %K\n", this_clazz);
+    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
+      wprintf("GC: dead %K\n", this_clazz);
+    }
+    if (this_clazz->previousDimension) {
+      this_clazz->previousDimension->nextDimension = NULL;
+    }
+    bytes_freed += destroyClazz(this_clazz);
+  }
+  ht_destroy(dead_clazz_hashtable);
+  releaseMem(dead_clazz_array);
+
+  return bytes_freed;
+}
+
+/*
 ** Sweep the window_fifo until either at least `target' bytes are freed
 ** or the fifo is exhausted.  Caller must own gc_monitor.
 */
 
 w_size sweep(w_int target) {
-  w_clazz    clazz;
   w_instance instance;
   w_object   object;
   w_int      object_size;
@@ -1776,11 +1895,10 @@ w_size sweep(w_int target) {
       }
 
       woempa(7, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
-      while ((clazz = getFifo(dead_clazz_fifo))) {
-        woempa(7, "Cleaning up dead class %w\n", clazz->dotified);
-        bytes_freed += destroyClazz(clazz);
-      }
 
+      if (dead_clazz_fifo->numElements) {
+        bytes_freed += collect_dead_clazzes();
+      }
       break;
 
     }
