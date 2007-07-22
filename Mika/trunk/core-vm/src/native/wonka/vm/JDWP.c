@@ -12,7 +12,11 @@
 #ifdef JDWP
 #include "jdwp.h"
 
-w_boolean JDWP_isRunning(JNIEnv *env, w_instance theJDWP) {
+w_boolean JDWP_static_isEnabled(JNIEnv *env, w_instance classJDWP) {
+  return TRUE;
+}
+
+w_boolean JDWP_static_isRunning(JNIEnv *env, w_instance theJDWP) {
   return jdwp_state != jdwp_state_unstarted;
 }
 
@@ -22,7 +26,11 @@ void JDWP_run(JNIEnv *env, w_instance theJDWP) {
 
 #else
 
-w_boolean JDWP_isRunning(JNIEnv *env, w_instance theJDWP) {
+w_boolean JDWP_static_isEnabled(JNIEnv *env, w_instance classJDWP) {
+  return FALSE;
+}
+
+w_boolean JDWP_static_isRunning(JNIEnv *env, w_instance theJDWP) {
   // Don't wait before entering main()
   return TRUE;
 }

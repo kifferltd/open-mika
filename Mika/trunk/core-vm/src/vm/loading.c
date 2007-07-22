@@ -417,14 +417,16 @@ void setSystemClassLoader(w_instance scl) {
   x_monitor_exit(&system_loaded_class_hashtable->monitor);
 }
 
+#ifdef JDWP
 /*
 ** Execute a given function for every ClassLoader registered with the system.
-** Uses the static Vector refsToClassLoaders, which contains weak references
+** Uses the static Vector JDWP.refsToClassLoaders, which contains weak references
 ** to class loaders. Returns a w_fifo which contains an entry for each class
 ** loader processed, or NULL if no ClassLoader was found.
+** Note: only used by JDWP, and the Vector is only maintained if JDWP is enabled.
 */
 w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
-  w_instance refsToClassLoaders = getStaticReferenceField(clazzClassLoader, F_ClassLoader_refsToClassLoaders);
+  w_instance refsToClassLoaders = getStaticReferenceField(clazzJDWP, F_JDWP_refsToClassLoaders);
   w_instance elementData;
   w_instance *weakrefs;
   w_int elementCount;
@@ -452,6 +454,7 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
 
   return outer_fifo;
 }
+#endif
 
 /*
 ** Create the w_Clazz structure for a given primitive type, given its name
