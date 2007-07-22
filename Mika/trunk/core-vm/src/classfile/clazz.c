@@ -1,28 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.     *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 /*
@@ -1891,33 +1896,37 @@ w_int destroyClazz(w_clazz clazz) {
     return 0;
   }
 
-  woempa(7, "Releasing class members\n");
-  for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
-    destroyMethod(&clazz->own_methods[i]);
+  if (!clazz->loader || clazz->loader == systemClassLoader) {
+    // TODO: [CG 20070718] can we really get here? I don't think so ...
+
+    return 0;
+
   }
 
-  if (clazz->own_methods) {
-    releaseMem(clazz->own_methods);
-  }
-  for (i = 0; i < (w_int)clazz->numFields; i++) {
-    destroyField(&clazz->own_fields[i]);
-  }
-  if (clazz->own_fields) {
-    releaseMem(clazz->own_fields);
-  }
+  if (!clazz->dims) {
+    woempa(7, "Releasing class members\n");
+    if (clazz->own_methods) {
+      for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
+        destroyMethod(&clazz->own_methods[i]);
+      }
+      releaseMem(clazz->own_methods);
+    }
 
-  if (clazz->vmlt) {
-    woempa(7, "Releasing vmlt and references\n");
-    releaseMem(clazz->vmlt);
-  }
+    if (clazz->own_fields) {
+      for (i = 0; i < (w_int)clazz->numFields; i++) {
+        destroyField(&clazz->own_fields[i]);
+      }
+      releaseMem(clazz->own_fields);
+    }
 
-  if (clazz->references) {
-    releaseWordset(&clazz->references);
-  }
-  if (clazz->dims) {
-  // array classes use a static `supers' and `interfaces', so don't release 'em
-  }
-  else {
+    if (clazz->vmlt) {
+      woempa(7, "Releasing vmlt and references\n");
+      releaseMem(clazz->vmlt);
+    }
+
+    if (clazz->references) {
+      releaseWordset(&clazz->references);
+    }
     woempa(7, "Releasing supers and interfaces\n");
     if (clazz->supers) {
       releaseMem(clazz->supers);
@@ -1926,24 +1935,24 @@ w_int destroyClazz(w_clazz clazz) {
       destroyImplementations(clazz);
       releaseMem(clazz->interfaces);
     }
-  }
 
-  if (clazz->staticFields) {
-    releaseMem(clazz->staticFields);
-  }
+    if (clazz->staticFields) {
+      releaseMem(clazz->staticFields);
+    }
 
-  if (clazz->filename) {
-    deregisterString(clazz->filename);
-  }
+    if (clazz->filename) {
+      deregisterString(clazz->filename);
+    }
 
-  if (clazz->temp.interface_index) {
-    woempa(7, "Releasing temp.interface_index\n");
-    releaseMem(clazz->temp.interface_index);
-  }
+    if (clazz->temp.interface_index) {
+      woempa(7, "Releasing temp.interface_index\n");
+      releaseMem(clazz->temp.interface_index);
+    }
 
-  if (clazz->temp.inner_class_info) {
-    woempa(7, "Releasing temp.inner_class_info\n");
-    releaseMem(clazz->temp.inner_class_info);
+    if (clazz->temp.inner_class_info) {
+      woempa(7, "Releasing temp.inner_class_info\n");
+      releaseMem(clazz->temp.inner_class_info);
+    }
   }
 
   woempa(7,"Deregistering %k\n", clazz);
@@ -1957,15 +1966,17 @@ w_int destroyClazz(w_clazz clazz) {
     deregisterString(clazz->failure_message);
   }
 
-  woempa(7, "Releasing constant pool\n");
-  for (i = 1; i < (w_int)clazz->numConstants; i++) {
-    dissolveConstant(clazz, i);
-  }
-  if (clazz->tags){
-    releaseMem((void*)clazz->tags);
-  }
-  if (clazz->values){
-    releaseMem((void*)clazz->values);
+  if (!clazz->dims) {
+    woempa(7, "Releasing constant pool\n");
+    for (i = 1; i < (w_int)clazz->numConstants; i++) {
+      dissolveConstant(clazz, i);
+    }
+    if (clazz->tags){
+      releaseMem((void*)clazz->tags);
+    }
+    if (clazz->values){
+      releaseMem((void*)clazz->values);
+    }
   }
 
   woempa(7, "Deregistering [dotified] class name\n");
