@@ -26,7 +26,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package java.net;
 package com.acunia.resource;
 
 import java.util.ListResourceBundle;
