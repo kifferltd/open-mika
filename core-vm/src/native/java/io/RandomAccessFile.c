@@ -1,44 +1,40 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
 
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
 #include "vfs.h"
 #include "wstrings.h"
-
-static void throwArrayIndexOutOfBoundsException(JNIEnv *env) {
-  throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, NULL);
-}
-
-static void throwIOException(JNIEnv *env) {
-  throwException(JNIEnv2w_thread(env), clazzIOException, "%s", strerror(errno));
-}
-
-static void throwNullPointerException(JNIEnv *env) {
-  throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
-}
 
 /*
  * Class:     RandomAccessFile
@@ -131,7 +127,7 @@ w_int Java_RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     result = vfs_fgetc(file);
@@ -155,7 +151,7 @@ w_int Java_RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_i
   w_sbyte     *data;
 
   if ((offset < 0) || (offset > instance2Array_length(buffer) - length)) {
-    throwArrayIndexOutOfBoundsException(env);
+    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
 
     return -1;
   }
@@ -165,7 +161,7 @@ w_int Java_RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_i
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     data = bytes + offset;
@@ -185,25 +181,25 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
 
   w_instance  fd_obj;
   vfs_FILE    *file;
-  jlong       result = 0;
-  jlong       prev_pos;
+  w_long       result = 0;
+  w_long       prev_pos;
 
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
   } else {
     w_string pathname_string;
     const char *pathname;
     w_instance path;
-    w_int len;
+    w_int pathlen;
     struct vfs_STAT statbuf;
-    jlong size = 0;
+    w_long size = 0;
 
     path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
     pathname_string = String2string(path);
-    pathname = (char*)string2UTF8(pathname_string, &len) + 2;
+    pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;
 
     if(vfs_stat(pathname, &statbuf) != -1) {
       size = statbuf.st_size;
@@ -223,7 +219,7 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
     if(result == 0) {
       result = vfs_ftell(file) - prev_pos;
     } else {
-      throwIOException(env);
+      throwIOException(JNIEnv2w_thread(env));
     }
   }
 
@@ -244,7 +240,7 @@ void Java_RandomAccessFile_write (JNIEnv *env, w_instance thisRAF, w_int oneByte
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
   } else {
     vfs_fputc(oneByte, file);
   }
@@ -263,7 +259,7 @@ void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_i
   w_sbyte     *data;
 
   if ((offset < 0) || (offset > instance2Array_length(buffer) - length)) {
-    throwArrayIndexOutOfBoundsException(env);
+    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
 
     return;
   }
@@ -273,7 +269,7 @@ void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_i
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
   } else {
     data = bytes + offset;
     vfs_fwrite(data, 1, (w_word)length, file);
@@ -290,13 +286,13 @@ w_long Java_RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
 
   w_instance  fd_obj;
   vfs_FILE    *file;
-  jlong       result = -1;
+  w_long       result = -1;
 
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     result = vfs_ftell(file);
@@ -310,7 +306,7 @@ w_long Java_RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
  * Method:    seek
  * Signature: (J)V
  */
-void Java_RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, jlong pos) {
+void Java_RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, w_long pos) {
 
   w_instance  fd_obj;
   vfs_FILE    *file;
@@ -319,10 +315,10 @@ void Java_RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, jlong pos) {
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
   } else {
     if(vfs_fseek(file, (long)pos, SEEK_SET) == -1) {
-      throwIOException(env);
+      throwIOException(JNIEnv2w_thread(env));
     }
   }
 }
@@ -338,23 +334,20 @@ w_long Java_RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
   w_string pathname_string;
   const char *pathname;
   w_instance path;
-  w_int len;
+  w_int pathlen;
   struct vfs_STAT statbuf;
-  jlong result = 0;
+  w_long result = 0;
   
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
   path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
   pathname_string = String2string(path);
-  pathname = (char*)string2UTF8(pathname_string, &len) + 2;	  
+  pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;	  
 
-  if(vfs_stat(pathname, &statbuf) != -1) {
-    result = statbuf.st_size;
-    woempa(7, "vfs_stat(%s, %p) returned length %d\n", pathname, &statbuf, result);
+  if (vfs_stat(pathname, &statbuf) == -1) {
+    throwIOException(JNIEnv2w_thread(env));
   }
-  else {
-    woempa(9, "vfs_stat(%s, %p) returned -1, %s\n", pathname, &statbuf, strerror(errno));
-  }
-  
+  result = statbuf.st_size;
+  woempa(7, "vfs_stat(%s, %p) returned length %d\n", pathname, &statbuf, result);
   releaseMem(pathname - 2);
 
   return result;
@@ -365,8 +358,39 @@ w_long Java_RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
  * Method:    setLength
  * Signature: (J)V
  */
-void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, jlong len) {
+void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen) {
 
+  w_instance  fd_obj;
+  vfs_FILE    *file;
+
+  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
+  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  
+  if(file == NULL) {
+    throwNullPointerException(JNIEnv2w_thread(env));
+  } else {
+    w_string pathname_string;
+    const char *pathname;
+    w_instance path;
+    w_int pathlen;
+    w_long oldptr;
+
+    path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
+    pathname_string = String2string(path);
+    pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;
+
+    oldptr = vfs_ftell(file);
+
+    if(vfs_truncate(pathname, newlen) == -1) {
+      throwIOException(JNIEnv2w_thread(env));
+    }
+
+    releaseMem(pathname - 2);
+
+    if(newlen < oldptr && vfs_fseek(file, newlen, SEEK_SET) == -1) {
+      throwIOException(JNIEnv2w_thread(env));
+    }
+  }
 }
 
 /*
@@ -381,7 +405,7 @@ void Java_RandomAccessFile_close (JNIEnv *env, w_instance thisRAF) {
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
 
   if(fd_obj == NULL) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
   } else {
     
     file = getWotsitField(fd_obj, F_FileDescriptor_fd);
