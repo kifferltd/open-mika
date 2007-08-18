@@ -1,64 +1,52 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
 #include "core-classes.h"
+#include "exception.h"
 #include "fields.h"
 #include "vfs.h"
 #include "vfs_fcntl.h"
-/* Header for class FileInputStream */
 
-#ifndef _Included_FileInputStream
-#define _Included_FileInputStream
-#ifdef __cplusplus
-extern "C" {
-#endif
-#undef FileInputStream_SKIP_BUFFER_SIZE
-#define FileInputStream_SKIP_BUFFER_SIZE 2048L
-
-static jclass   fileinput_clazz;
-static jclass   filedesc_clazz;
-static jclass   exception_clazz;
-static jclass   aioob_clazz;
-static jclass   npe_clazz;
-static jmethodID exception_constructor;
-static jmethodID aioob_constructor;
-static jmethodID npe_constructor;
-static jmethodID filedesc_constructor;
-static jfieldID fd_field;
-static jfieldID fd;
-static jfieldID name;
-static jfieldID filedesc_validFD;
+static w_instance fileinput_clazz;
+static w_instance filedesc_clazz;
+static w_method filedesc_constructor;
+static w_field fd_field;
+static w_field fd;
+static w_field name;
+static w_field filedesc_validFD;
 
 static void FileInputStreamInit(JNIEnv *env, jobject thisObj) {
   fileinput_clazz = (*env)->GetObjectClass(env, thisObj);
   filedesc_clazz = (*env)->FindClass(env, "java/io/FileDescriptor");
-  exception_clazz = (*env)->FindClass(env, "java/io/IOException");
-  aioob_clazz = (*env)->FindClass(env, "java/lang/ArrayIndexOutOfBoundsException");
-  npe_clazz = (*env)->FindClass(env, "java/lang/NullPointerException");
-  exception_constructor = (*env)->GetMethodID(env, exception_clazz, "<init>", "()V");
-  aioob_constructor = (*env)->GetMethodID(env, aioob_clazz, "<init>", "()V");
-  npe_constructor = (*env)->GetMethodID(env, npe_clazz, "<init>", "()V");
   filedesc_constructor = (*env)->GetMethodID(env, filedesc_clazz, "<init>", "()V");
   fd_field = (*env)->GetFieldID(env, fileinput_clazz, "fd", "Ljava/io/FileDescriptor;");
   fd = (*env)->GetFieldID(env, filedesc_clazz, "fd", "I");
@@ -66,22 +54,6 @@ static void FileInputStreamInit(JNIEnv *env, jobject thisObj) {
   filedesc_validFD = (*env)->GetFieldID(env, filedesc_clazz, "validFD", "Z");
 }
 
-static void throwIOException(JNIEnv *env) {
-  jthrowable throwObj = (jthrowable)(*env)->NewObject(env, exception_clazz, exception_constructor);
-  (*env)->Throw(env, throwObj);
-}
-
-static inline void throwArrayIndexOutOfBoundsException(JNIEnv *env) {
-	jthrowable throwObj = (jthrowable)(*env)->NewObject(env, aioob_clazz, aioob_constructor);
-	(*env)->Throw(env, throwObj);
-}
-
-static inline void throwNullPointerException(JNIEnv *env) {
-	jthrowable throwObj = (jthrowable)(*env)->NewObject(env, npe_clazz, npe_constructor);
-	(*env)->Throw(env, throwObj);
-}
-
-/* Inaccessible static: skipBuffer */
 /*
  * Class:     FileInputStream
  * Method:    createFromString
@@ -151,7 +123,7 @@ JNIEXPORT jint JNICALL Java_FileInputStream_read
   file = getWotsitField(obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(env);
+    throwIOException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     if(!vfs_feof(file)) result = vfs_fgetc(file);
@@ -176,14 +148,14 @@ JNIEXPORT jint JNICALL Java_FileInputStream_readIntoBuffer
   jbyte       *data;
 
   if(!buffer) {
-    throwNullPointerException(env);
+    throwNullPointerException(JNIEnv2w_thread(env));
     return -1;
   }
   
   bytes = (*env)->GetByteArrayElements(env, buffer, &isCopy);
   
   if(offset < 0 || length < 0 || offset > (*env)->GetArrayLength(env, buffer) - length) {
-    throwArrayIndexOutOfBoundsException(env);
+    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
     return -1;
   }
 
@@ -195,7 +167,7 @@ JNIEXPORT jint JNICALL Java_FileInputStream_readIntoBuffer
   file = getWotsitField(obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(env);
+    throwIOException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     data = bytes + offset;
@@ -227,7 +199,7 @@ JNIEXPORT jlong JNICALL Java_FileInputStream_skip
   file = getWotsitField(obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(env);
+    throwIOException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     prev_pos = vfs_ftell(file);
@@ -236,7 +208,7 @@ JNIEXPORT jlong JNICALL Java_FileInputStream_skip
     if(result != (long)-1) {
       result = vfs_ftell(file) - prev_pos;
     } else {
-      throwIOException(env);
+      throwIOException(JNIEnv2w_thread(env));
       result = 0; 
     }
   }
@@ -267,13 +239,13 @@ JNIEXPORT jint JNICALL Java_FileInputStream_available
   filename = (*env)->GetStringUTFChars(env, path, &isCopy);	 
   
   if(file == NULL) {
-    throwIOException(env);
+    throwIOException(JNIEnv2w_thread(env));
     result = 0;
   } else {
     if(vfs_stat((w_ubyte *)filename, &statbuf) != -1) {
       result = (statbuf.st_size - vfs_ftell(file));
     } else {
-      throwIOException(env);
+      throwIOException(JNIEnv2w_thread(env));
       result = 0;
     }
   }
@@ -306,7 +278,3 @@ JNIEXPORT void JNICALL Java_FileInputStream_close
   }
 }
 
-#ifdef __cplusplus
-}
-#endif
-#endif
