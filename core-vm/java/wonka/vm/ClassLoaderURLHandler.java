@@ -49,6 +49,7 @@ public class ClassLoaderURLHandler {
     int length = urls.length;
     ClassLoaderURLHandler[] handlers = new ClassLoaderURLHandler[length];
     for(int i = 0 ; i < length ; i++){
+      debug("Loading: URL [" + i + "] = " + urls[i]);
       handlers[i] = createClassLoaderURLHandler(urls[i]);
       debug("Loading: URL handler [" + i + "] = " + handlers[i]);
     }

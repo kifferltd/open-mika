@@ -48,7 +48,7 @@ public class URLClassLoader extends SecureClassLoader{
   URL [] urls;
   ClassLoaderURLHandler[] handlers;
 
-  private static boolean verbose = true;
+  private static boolean verbose = false;
 
   private static void debug(String s) {
     if (verbose) {

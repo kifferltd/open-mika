@@ -56,7 +56,7 @@ public final class Security {
           Provider p = (Provider) Class.forName(s,true,ClassLoader.getSystemClassLoader()).newInstance();          
           providers.add(p);
         } catch(Exception e){
-          //e.printStackTrace();
+          e.printStackTrace();
         }
       }
     }

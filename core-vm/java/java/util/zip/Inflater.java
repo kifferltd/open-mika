@@ -138,7 +138,7 @@ public class Inflater {
 */
  	public synchronized void setInput(byte[] buf, int off, int len) {
    	if (off < 0 || len < 0 || buf.length - len < off) {
-   	 	throw new ArrayIndexOutOfBoundsException();
+   	 	throw new ArrayIndexOutOfBoundsException("offset = " + off + ", length = " + len + ", buffer length = " + buf.length);
    	}
    	if (len != 0) { 	        	
    	  if(skip){
