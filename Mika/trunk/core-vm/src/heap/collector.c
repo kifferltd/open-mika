@@ -30,10 +30,6 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-/*
-** $Id: collector.c,v 1.35 2006/10/04 14:24:16 cvsroot Exp $
-*/
-
 #define PRINTRATE 10
 
 #include <string.h>
@@ -336,7 +332,9 @@ static void Class_destructor(w_instance theClass) {
   }
 
   clearWotsitField(theClass, F_Class_wotsit);
-  putFifo(clazz, dead_clazz_fifo);
+  if (putFifo(clazz, dead_clazz_fifo) < 0) {
+    wprintf("Failed to put %K on dead_clazz_fifo\n", clazz);
+  };
 }
 
 /*
@@ -531,6 +529,7 @@ static inline w_int tryPutFifo(w_instance instance, w_fifo fifo) {
   woempa(1, "Pushing %j onto fifo %p\n", instance, fifo);
   if (putFifo(instance, fifo) < 0) {
     woempa(9, "Shiver my timbers! Couldn't push instance %j onto fifo %p\n", instance, fifo);
+    wabort(ABORT_WONKA, "Could not push %j onto fifo %p!\n", instance, fifo);
 
     return -1;
 
@@ -1107,7 +1106,9 @@ static void finalizeReference(w_instance instance) {
 */
 
 void enqueuedReference(void* reference) {
-  putFifo(reference, enqueue_fifo);
+  if (putFifo(reference, enqueue_fifo) < 0) {
+    wabort(ABORT_WONKA, "Could not push %j onto enqueue_fifo!\n", reference);
+  }
 }
 
 w_int markFifo(w_fifo fifo, w_word flag) {
@@ -1890,7 +1891,6 @@ w_size sweep(w_int target) {
     if (!instance) {
       if (window_fifo->numElements) {
         woempa(9, "Hole in window fifo!\n");
-        wprintf("Hole in window fifo!\n");
         continue;
       }
 
