@@ -1,32 +1,33 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved. Parts copyright (c) 2005, 2006 by Chris Gray, /k/ Embedded    *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2005, 2006 by Chris Gray, /k/ Embedded Java *
-* Solutions. Permission is hereby granted to reproduce, modify, and       *
-* distribute these modifications under the terms of the Wonka Public      *
-* Licence.                                                                *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/* $Id: rudolph.c,v 1.5 2006/05/16 06:59:08 cvs Exp $ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -271,9 +272,11 @@ r_screen screen_init(void) {
 */
 
   if(awt_args) {
+  wprintf("awt_args: %s\n", awt_args);
     if (strcmp(awt_args, "zoom") == 0) {
       awt_zoom = 1;
       woempa(7, "AWT zoom enabled\n");
+      wprintf("AWT zoom enabled\n");
     }
 #ifdef AWT_VIRTUAL_SCREEN_SUPPORT
     else if (index(awt_args, 'x')) {
@@ -555,6 +558,9 @@ static void blitter(w_word * dst, w_word * src, w_size size) {
 
 int awt_enabled = 1;
 
+/**
+ * If there are multiple frame buffers available, flip to the next one (cyclically).
+ */
 static inline void page_flip(void) {
   if(fb_cnt > 1) {
     vinfo.xoffset = 0;
@@ -569,6 +575,160 @@ static inline void page_flip(void) {
     ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
   }
 }
+
+#ifdef HQ2X
+/**
+ * Swap and double pixels for some forgotten output device.
+ */
+static void do_awt_zoom_hq2x(void *buffer) {
+    hq2x_32((unsigned char *)video, (unsigned char *)buffer, screen->width, screen->height, screen->width * 4 * 2);
+   
+    for(y = 0; y < screen->height * 2; y++) {
+      for(x = 0; x < screen->width * 2; x++) {
+        int pixel = buffer[y * screen->width * 2 + x];
+        ((short *)buffer)[y * screen->width * 2 + x]  = rgb2pixel((pixel >> 16) & 0xff, (pixel >> 8) & 0xff, pixel & 0xff);
+      }
+    }
+}
+#else
+
+/**
+ * Implement zooming, i.e. expand every point in the video buffer to fill 4
+ * pixels on the screen.
+ *
+ * In the following diagram coordinates such as 0,0 represent points in the
+ * video buffer and the letters a..o represent interpolated points.
+ *
+ * a  b  c  d  e  f  ...    a = b = 0,0; c = d = 1,0; e = f = 2,0; etc..
+ * g 0,0 h 1,0 i 2,0 ...    g = 0,0; h = (0,0+1,0)/2; i = (1,0+2,0)/2; etc..
+ * j  k  l  m  n  o  ...    j = k = (0,0+0,1)/2; l = (0,0+0,1+1,0+1,1)/4; m = (1,0+1,1)/2; etc..
+ * p 0,1 q 1,1 r 2,1 ...    p = 0,1; q = (0,1+1,1)/2; r = (1,1+2,1)/2; etc..
+ * ...
+ *
+ * The first row and the first column are special in that they are cloned from
+ * the second row and second column respectively. The rest form a repeating 
+ * pattern:
+ *             1 a 2                      a = (1+2)/2
+ *             b c d     b = (1+3)/2    c = (1+2+3+4)/4    d = (2+4)/2
+ *             3 e 4                      e = (3+4)/2
+ * The algorithm scans the video buffer in the conventional order, generating
+ * four output pixels each time. After the first column we take advantage of
+ * the fact that the new point 1 is the old point 2 and the new point 4 is the
+ * old point 3, and avoid re-extracting the three individual colours. This
+ * makes the code a bit noisy, for which I apologise.       [CG 20070819]
+ */
+static void do_awt_zoom(void *buffer) {
+    w_ushort *video = (w_ushort *)screen->video;
+    w_int x = 0;
+    w_int y = 0;
+    w_int buffer_offset = 0;
+    w_int video_offset = 0;
+    w_ushort *pixelbuffer = buffer;
+    w_int pixel1;
+    w_int pixel2;
+    w_int pixel3;
+    w_int pixel4;
+    w_int red1;
+    w_int green1;
+    w_int blue1;
+    w_int red2;
+    w_int green2;
+    w_int blue2;
+    w_int red3;
+    w_int green3;
+    w_int blue3;
+    w_int red4;
+    w_int green4;
+    w_int blue4;
+
+    // video buffer 0,0 => output 0,0 0,1 1,0 1,1
+//printf("x = 0 y = 0 video_offset = %d (%d, %d) buffer_offset = %d (%d, %d)\n", video_offset, video_offset % screen->width, video_offset / screen->width, buffer_offset, buffer_offset % (screen->width * 2), buffer_offset / (screen->width * 2));
+    pixel1 = video[0];
+    red1 = pixel2red(pixel1);
+    green1 = pixel2green(pixel1);
+    blue1 = pixel2blue(pixel1);
+    pixelbuffer[buffer_offset] = 
+    pixelbuffer[buffer_offset + 1] = 
+    pixelbuffer[buffer_offset + screen->width * 2] = 
+    pixelbuffer[buffer_offset + screen->width * 2 + 1] = pixel1;
+    ++video_offset;
+    buffer_offset += 2;
+
+    // remainder of video buffer row 0 => output buffer rows 0, 1
+    for (x = 1; x < screen->width; ++x) {
+//printf("x = %d y = 0 video_offset = %d (%d, %d) buffer_offset = %d (%d, %d)\n", x, video_offset, video_offset % screen->width, video_offset / screen->width, buffer_offset, buffer_offset % (screen->width * 2), buffer_offset / (screen->width * 2));
+      pixel2 = video[video_offset];
+      red2 = pixel2red(pixel2);
+      green2 = pixel2green(pixel2);
+      blue2 = pixel2blue(pixel2);
+      pixelbuffer[buffer_offset] = 
+      pixelbuffer[buffer_offset + screen->width * 2] = 
+        rgb2pixel((red1 + red2) / 2, (green1 + green2) / 2, (blue1 + blue2) / 2);
+      pixelbuffer[buffer_offset + 1] = 
+      pixelbuffer[buffer_offset + screen->width * 2 + 1] = pixel2;
+      ++video_offset;
+      buffer_offset += 2;
+
+      // copy pixel2 to pixel1 ready for next column
+      pixel1 = pixel2;
+      red1 = pixel2red(pixel1);
+      green1 = pixel2green(pixel1);
+      blue1 = pixel2blue(pixel1);
+    }
+
+    // remaining rows
+    for (y = 1; y < screen->height; ++y) {
+      buffer_offset = screen->width * y * 4;
+
+      // first column (cf. 0,0)
+//printf("x = 0 y = %d video_offset = %d (%d, %d) buffer_offset = %d (%d, %d)\n", y, video_offset, video_offset % screen->width, video_offset / screen->width, buffer_offset, buffer_offset % (screen->width * 2), buffer_offset / (screen->width * 2));
+      pixel1 = video[video_offset - screen->width];
+      red1 = pixel2red(pixel1);
+      green1 = pixel2green(pixel1);
+      blue1 = pixel2blue(pixel1);
+      pixel3 = video[video_offset];
+      red3 = pixel2red(pixel3);
+      green3 = pixel2green(pixel3);
+      blue3 = pixel2blue(pixel3);
+      pixelbuffer[buffer_offset] = 
+      pixelbuffer[buffer_offset + 1] = 
+        rgb2pixel((red1 + red3) / 2, (green1 + green3) / 2, (blue1 + blue3) / 2);
+      pixelbuffer[buffer_offset + screen->width * 2] =
+      pixelbuffer[buffer_offset + screen->width * 2 + 1] = pixel3;
+      ++video_offset;
+      buffer_offset += 2;
+
+      // remaining columns
+      for (x = 1; x < screen->width; ++x) {
+//printf("x = %d y = %d video_offset = %d (%d, %d) buffer_offset = %d (%d, %d)\n", x, y, video_offset, video_offset % screen->width, video_offset / screen->width, buffer_offset, buffer_offset % (screen->width * 2), buffer_offset / (screen->width * 2));
+        pixel2 = video[video_offset - screen->width];
+        red2 = pixel2red(pixel2);
+        green2 = pixel2green(pixel2);
+        blue2 = pixel2blue(pixel2);
+        pixel4 = video[video_offset];
+        red4 = pixel2red(pixel4);
+        green4 = pixel2green(pixel4);
+        blue4 = pixel2blue(pixel4);
+        pixelbuffer[buffer_offset] = rgb2pixel((red1 + red2 + red3 + red4) / 4, (green1 + green2 + green3 + green4) / 4, (blue1 + blue2 + blue3 + blue4) / 4);
+        pixelbuffer[buffer_offset + 1] = rgb2pixel((red2 + red4) / 2, (green2 + green4) / 2, (blue2 + blue4) / 2);
+        pixelbuffer[buffer_offset + screen->width * 2] = rgb2pixel((red3 + red4) / 2, (green3 + green4) / 2, (blue3 + blue4) / 2);
+        pixelbuffer[buffer_offset + screen->width * 2 + 1] = pixel4;
+        ++video_offset;
+        buffer_offset += 2;
+
+      // copy pixel2 to pixel1, pixel4 to pixel3 ready for next column
+        pixel1 = pixel2;
+        red1 = red2;
+        green1 = green2;
+        blue1 = blue2;
+        pixel3 = pixel4;
+        red3 = red4;
+        green3 = green4;
+        blue3 = blue4;
+      }
+    }
+}
+#endif
 
 #ifdef AWT_VIRTUAL_SCREEN_SUPPORT
 
@@ -755,25 +915,9 @@ void screen_update(int x1, int y1, int x2, int y2) {
 
   if(awt_zoom) {
 #ifdef HQ2X
-    hq2x_32((unsigned char *)video, (unsigned char *)buffer, screen->width, screen->height, screen->width * 4 * 2);
-   
-    for(y = 0; y < screen->height * 2; y++) {
-      for(x = 0; x < screen->width * 2; x++) {
-        int pixel = buffer[y * screen->width * 2 + x];
-        ((short *)buffer)[y * screen->width * 2 + x]  = rgb2pixel((pixel >> 16) & 0xff, (pixel >> 8) & 0xff, pixel & 0xff);
-      }
-    }
+    do_awt_zoom_hq2x(buffer);
 #else
-    w_int offset = 0;
-    w_int toggle = 0;
-    for(y = 0; y < screen->height; y += toggle % 2) {
-      w_int offset2 = screen->width * y;
-      for(x = 0; x < screen->width; x++) {
-        w_int pixel = video[offset2++];
-        buffer[offset++] = (pixel) << 16 | pixel;
-      }
-      toggle++;
-    }
+    do_awt_zoom(buffer);
 #endif
   }
 #ifdef AWT_VIRTUAL_SCREEN_SUPPORT
