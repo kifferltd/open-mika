@@ -75,12 +75,28 @@ public class URLTest implements Testlet
 			baseurl.hashCode();
 			URL.setURLStreamHandlerFactory( null );
 			harness.check (url.getProtocol(), "http");
-			// CG 20051030 - is not 80 the/a correct answer?
-			// harness.check (url.getPort(), -1);
+			harness.check (url.getPort(), -1);
 			harness.check (url.getHost(), "sources.redhat.com");
+                        // CG 20060703 - this is how I read RFC 2396 ...
+			harness.check (url.getAuthority(), "sources.redhat.com");
 			harness.check (url.getFile(), "/index.html");
 			harness.check (url.equals(new URL("http://sources.redhat.com/index.html")));
-			harness.check (url.hashCode() != 0);
+                        // CG 20070702 - it can be 0 if it wants to be
+			// harness.check (url.hashCode() != 0);
+
+			url = new URL("http://username:password@sources.redhat.com");
+			url.hashCode();
+			harness.check (url.getHost(), "sources.redhat.com");
+                        // CG 20060703 - this is how I read RFC 2396 ...
+			harness.check (url.getAuthority(), "username:password@sources.redhat.com");
+			harness.check (url.getFile(), "");
+                        // test our workaround for a common bogosity
+			url = new URL ( baseurl, "http:index.html");
+			harness.check (url.getProtocol(), "http");
+			harness.check (url.getPort(), -1);
+			harness.check (url.getHost(), "sources.redhat.com");
+			harness.check (url.getAuthority(), "sources.redhat.com");
+			harness.check (url.getFile(), "/index.html");
 		}
 		catch ( MalformedURLException e ){
 				harness.fail(" Error in test_Basics  - 9 " + 
@@ -155,10 +171,9 @@ public class URLTest implements Testlet
 	{
 		harness.checkPoint("openStream");
 		try {
-			URL url = new URL ( "http://sources.redhat.com/mauve/testarea/index.html");
+			byte[] b = new byte[6];
+			URL url = new URL("http://sources.redhat.com/mauve/testarea/index.html");
 			java.io.InputStream conn = url.openStream();
-
-			byte b [] = new byte[6];
 			conn.read(b , 0 , 6 );
 
 			String str = new String( b ) ;
@@ -168,7 +183,6 @@ public class URLTest implements Testlet
 			harness.fail(" Error in test_openStream  - 2 " + 
 					e + " should not be thrown here");
 		}		
-
 	}
 
 
@@ -495,6 +509,7 @@ public class URLTest implements Testlet
   public void test (TestHarness the_harness)
   {
     harness = the_harness;
+    harness.setclass("java.net.URL");
     testall ();
   }
 
