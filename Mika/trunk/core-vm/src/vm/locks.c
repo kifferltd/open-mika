@@ -285,7 +285,6 @@ w_thread monitorOwner(w_instance instance) {
     return NULL;
 
   }
-
   return mon->owner->xref;
 }
 

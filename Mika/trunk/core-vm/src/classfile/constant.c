@@ -520,7 +520,7 @@ static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
     }
   }
 
-  woempa(1, "%K references %K\n", ref_clazz, this_clazz);
+  woempa(7, "%K references %K\n", ref_clazz, this_clazz);
   if (!addToWordset(&this_clazz->references, (w_word)ref_clazz)) {
     wabort(ABORT_WONKA, "Could not add entry to clazz->references\n");
   }

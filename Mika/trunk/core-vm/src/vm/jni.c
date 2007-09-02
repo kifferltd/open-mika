@@ -2531,6 +2531,29 @@ const jbyte * GetStringUTFChars(JNIEnv *env, jstring String, jboolean *isCopy) {
 
 }
 
+void GetStringRegion(JNIEnv *env, jstring String, jsize start, jsize len, jchar * buf) {
+
+  w_string string = String2string(String);
+  jchar *  bufptr = (jchar*)buf;
+  jsize    i;
+  w_thread thread = JNIEnv2w_thread(env);
+  
+  if (start > (jsize) string_length(string)) {
+    throwException(thread, clazzStringIndexOutOfBoundsException, "start %d > String %d chars.\n", start, string_length(string));
+    return;
+  }
+  
+  if (len > (jsize) string_length(string) - start) {
+    throwException(thread, clazzStringIndexOutOfBoundsException, "start %d + len %d > String %d chars.\n", start, len, string_length(string));
+    return;
+  }
+
+  for (i = 0; i < len; i++) {
+    *bufptr++ = string_char(string, start + i);
+  }
+
+}
+
 void GetStringUTFRegion(JNIEnv *env, jstring String, jsize start, jsize len, char * buf) {
 
   w_string string = String2string(String);
@@ -3003,7 +3026,7 @@ void  ReleasePrimitiveArrayCritical(JNIEnv *env, jarray array, void *carray, jin
       releaseMem(carray);
     }
   }
-  enterUnsafeRegion(thread);
+  enterSafeRegion(thread);
 }
 
 /*
@@ -3515,7 +3538,7 @@ const struct JNINativeInterface w_JNINativeInterface = {
   MonitorExit,
 
   GetJavaVM, //reserved219,
-  NULL, //GetStringRegion,              /* 220 */
+  GetStringRegion,           /* 220 */
   GetStringUTFRegion,
   GetPrimitiveArrayCritical,
   ReleasePrimitiveArrayCritical,

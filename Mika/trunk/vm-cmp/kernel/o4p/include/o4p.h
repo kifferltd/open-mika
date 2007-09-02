@@ -228,7 +228,21 @@ typedef struct x_Thread {
 
   void *                xref;                   /* May be used to point to user thread control block */
   x_report              report;
+#ifdef JAVA_PROFILE
+  w_long     time_delta;
+#endif
 } x_Thread;
+
+#ifdef JAVA_PROFILE
+
+#include <sys/time.h>
+
+static inline x_long x_systime_get(void) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+#endif
 
 #define O4P_ENV_STATUS_INIT     0
 #define O4P_ENV_STATUS_NORMAL   1

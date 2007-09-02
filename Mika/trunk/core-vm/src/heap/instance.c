@@ -201,9 +201,11 @@ static w_boolean heap_request(w_thread thread, w_int bytes) {
 static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
   object->clazz = clazz;
 
+/*
 #ifdef JAVA_PROFILE
   profileAllocInstance(thread, clazz);
-#endif 
+#endif
+*/ 
   
   registerObject(object,thread);
 
