@@ -87,7 +87,9 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
           while(tableEntry < METHOD_CALL_TABLE_SIZE) {
             data = ((w_profileMethodCallData *)method->exec.callData)[tableEntry];
             while(data) {
-              external_time += (data->child->exec.runtime * data->count / data->child->exec.runs);
+              if (data->child->exec.runs) {
+                external_time += (data->child->exec.runtime * data->count / data->child->exec.runs);
+              }
               data = data->next;
             }
             tableEntry++;
@@ -151,10 +153,17 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
           while(tableEntry < METHOD_CALL_TABLE_SIZE) {
             data = ((w_profileMethodCallData *)method->exec.callData)[tableEntry];
             while(data) {
-              w_dump("TD%03dc: %10d (%8d %11lld) -> %11lld %w.%m\n", cl, data-count, 
+              if (data->child->exec.runs) {
+                w_dump("TD%03dc: %10d (%8d %11lld) -> %11lld %w.%m\n", cl, data->count, 
                   data->child->exec.runs, data->child->exec.runtime,
                   (data->child->exec.runtime * data->count / data->child->exec.runs),
                   data->child->spec.declaring_clazz->dotified, data->child);
+              }
+              else {
+                w_dump("TD%03dc: %10d (%8d ???????????) -> %11lld %w.%m\n", cl, data->count, 
+                  data->child->exec.runs, data->child->exec.runtime,
+                  data->child->spec.declaring_clazz->dotified, data->child);
+              }
               data = data->next;
             }
             tableEntry++;
@@ -182,7 +191,7 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
     releaseFifo(fifo);
   }
 
-  return true;
+  return TRUE;
 }
 
 static void statistics_timings(void) {
@@ -223,7 +232,7 @@ static x_boolean statistics_instances_callback(void * mem, void * arg) {
     releaseFifo(fifo);
   } 
 
-  return true;
+  return TRUE;
 }
 
 static void statistics_instances(void) {
