@@ -159,6 +159,36 @@ static char *buildLibPath(char *path, int pathlen, char *filename, int filenamel
   return result;
 }
 
+/*
+ * Call the JNI_OnLoad function if it exists.
+ */
+void callOnLoad(void *handle) {
+  void *sym;
+  jint  (*function_OnLoad)(JavaVM*,void*);
+  jint version; // TODO use this for something?
+  JNIEnv *env;
+  JavaVM *vm;
+
+  sym = dlsym(handle, "JNI_OnLoad");
+  function_OnLoad = sym;
+  if (!function_OnLoad) {
+
+    return;
+
+  }
+  env = w_thread2JNIEnv(currentWonkaThread);
+  if ((*env)->GetJavaVM(env, &vm) != 0) {
+
+    return;
+
+  }
+  version = function_OnLoad(vm, NULL);
+
+  if ((version & 0xffff0000) != 0x00010000 || (version & 0x0000ffff) == 0 || (version & 0x0000ffff) > 4) {
+    // TODO: refuse to load library
+  }
+}
+
 void *loadModule(char *name, char *path) {
   char *filename = NULL;
   void *handle = NULL;
@@ -242,6 +272,7 @@ void *loadModule(char *name, char *path) {
   if(handle) {
     *current++ = handle;
     woempa(7, "Added handle %p to list, now have %d entries\n", handle, current - handles);
+    callOnLoad(handle);
   }
   else {
     loading_problem = dlerror();
