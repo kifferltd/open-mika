@@ -472,5 +472,9 @@ typedef struct Wonka_AttachArgs {
   char *name;
 } Wonka_AttachArgs;
 
+#define JNI_VERSION_1_1 0x00010001
+#define JNI_VERSION_1_2 0x00010002
+#define JNI_VERSION_1_4 0x00010004
+
 #endif /* _JNI_H */
 
