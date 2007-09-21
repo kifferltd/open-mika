@@ -434,6 +434,61 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
 
 /*
  * Prototype:
+ *   x_status x_thread_attach_current(x_thread thread_ptr);
+ * Description:
+ *   This service fills in a x_Thread structure corresponding to the
+ *   currently executing pthread.
+ */
+
+x_status x_thread_attach_current(x_thread thread) {
+   loempa(2, "x_thread_attach_current\n");
+   if (thread == NULL) {
+     loempa(9, "Thread is null\n");
+     return xs_bad_argument;
+   }
+
+   loempa(2, "x_thread_attach_current: setting up x_thread\n");
+   pthread_mutex_init(&thread->sleep_timer, NULL);
+   pthread_cond_init(&thread->sleep_cond, NULL);
+   thread->o4p_thread_function = NULL;
+   // not needed?
+   // pthread_attr_init(&thread->attributes);
+
+   thread->pid = getpid();
+   thread->waiting_on = NULL;
+   thread->waiting_with = 0;
+   thread->flags = 0;
+   thread->state = xt_ready;
+   x_list_init(thread);
+   thread->o4p_thread_argument = NULL;
+   threadRegister(thread);
+
+   return xs_success;
+}
+
+/*
+ * Prototype:
+ *   x_status x_thread_detach(x_thread thread_ptr);
+ * Description:
+ *   This service cleans up in a x_Thread structure corresponding to  a pthread
+ */
+
+x_status x_thread_detach(x_thread thread) {
+   loempa(2, "x_thread_detach\n");
+   if (thread == NULL) {
+     loempa(9, "Thread is null\n");
+     return xs_bad_argument;
+   }
+
+   pthread_mutex_destroy(&thread->sleep_timer);
+   pthread_cond_destroy(&thread->sleep_cond);
+   threadUnregister(thread);
+
+   return xs_success;
+}
+
+/*
+ * Prototype:
  *   x_status x_thread_delete(x_thread thread_ptr);
  * Description:
  *   Deletes the specified application thread.  Since the specified
