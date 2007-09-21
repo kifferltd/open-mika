@@ -81,6 +81,41 @@ typedef union JNITypes {
   w_word    w[2];
 } JNITypes;
 
+static jclass class_NativeThread;
+static jmethodID jmethodID_underscore;
+static jclass class_Runtime;
+static jmethodID jmethodID_loadLibrary0;
+
+static jmethodID get_underscore_jmethodID(JNIEnv *env) {
+  if (!class_NativeThread) {
+    class_NativeThread = clazz2Class(clazzNativeThread);
+  }
+
+  if (!jmethodID_underscore) {
+    jmethodID_underscore = (*env)->GetMethodID(env, class_NativeThread, "_", "()V");
+    if (!jmethodID_underscore) {
+      wabort(ABORT_WONKA, "Unable to locate method NativeThread._\n");
+    }
+  }
+
+  return jmethodID_underscore;
+}
+
+static jmethodID get_loadLibrary0_jmethodID(JNIEnv *env) {
+  if (!class_Runtime) {
+    class_Runtime = clazz2Class(clazzRuntime);
+  }
+
+  if (!jmethodID_loadLibrary0) {
+    jmethodID_loadLibrary0 = (*env)->GetMethodID(env, class_Runtime, "loadLibrary0", "(Ljava/lang/String;Ljava/lang/String;)V");
+    if (!jmethodID_loadLibrary0) {
+      wabort(ABORT_WONKA, "Unable to locate method Runtime._\n");
+    }
+  }
+
+  return jmethodID_loadLibrary0;
+}
+
 /*
 ** Write a C array of booleans (stored one per byte) into a Java array instance.
 */
@@ -437,7 +472,7 @@ static w_dword run_64_method(w_thread thread, w_frame frame, w_method method) {
 }
 
 jint GetVersion(JNIEnv *env) {
-  return 0x00010002;
+  return JNI_VERSION_1_2;
 }
 
 jclass DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize buflen) {
@@ -520,6 +555,7 @@ void FatalError(JNIEnv *env, const char *message) {
   wabort(ABORT_WONKA, "FatalError: %s\n",message);
 }
 
+
     
 jclass FindClass(JNIEnv *env, const char *Name) {
 
@@ -534,15 +570,22 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   if (!name) {
     wabort(ABORT_WONKA, "Unable to create name\n");
   }
-  if (caller) {
+
+  if (caller && caller == get_loadLibrary0_jmethodID(env)) {
+    // This looks like a lot of "previous->", but we need to skip 2 frames
+    // for the JNI call to loadLibrary0 plus the frame of loadLibrary ... 
+    caller = thread->top->previous->previous->previous->method;
+    woempa(1, "(JNI) Searching for class '%s'; caller is Runtime.loadLibrary0() so using previous frame %M\n", Name, caller);
+  }
+
+  if (caller && caller != get_underscore_jmethodID(env)) {
     woempa(1, "(JNI) Searching for class '%s', called from %M\n", Name, caller);
     loader = clazz2loader(caller->spec.declaring_clazz);
-    woempa(1, "(JNI) Using class loader %p of %k.\n", loader, instance2clazz(loader));
+    woempa(1, "(JNI) Using class loader %j of %m.\n", loader, caller);
   }
   else {
-    // [CG 20040315] WAS: NULL, should really be application class loader
-    loader = systemClassLoader;
-    woempa(1, "(JNI) Searching for class '%s', thread %t has no stack frame so using bootstrap class loader\n", Name, thread);
+    loader = applicationClassLoader ? applicationClassLoader : systemClassLoader;
+    woempa(1, "(JNI) Searching for class '%s', thread %t has no stack frame so using %j\n", Name, thread, loader);
   }
 
   dotified = undescriptifyClassName(name);
@@ -3116,12 +3159,11 @@ jint DestroyJavaVM(JavaVM *vm) {
   return -1;
 }
 
+extern pthread_key_t x_thread_key;
+
 /*
 ** In order to visit the Wonka Factory, you must be in possesion of valid
 ** "pieces of identity".  This function will furnish you with them.
-**
-** Note: not every field of the w_Thread structure is filled in here.
-** Maybe we need to do more?
 */
 
 jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
@@ -3134,16 +3176,28 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   w_MethodSpec spec;
   x_thread kthread = x_thread_current();
 
-  if (thread_hashtable == NULL || kthread == NULL) {
+  if (!thread_hashtable) {
     woempa(9, "Attempt to attach before VM is properly initialised\n");
     return -1;
   }
 
-  
-  thread = ht_read(thread_hashtable, kthread);
+  /*
+  ** If x_thread_current() returned null there is no x_thread corresponding
+  ** to the native thread, we need to create one.
+  */
+  if (!kthread) {
+    kthread = allocClearedMem(sizeof(x_Thread));
+    x_thread_attach_current(kthread);
+  }
 
-  if(thread) {
+  thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
+
+  /*
+  ** If the thread is already in thread_hashtable then we have nothing to do.
+  */
+  if (thread) {
     *p_env = w_thread2JNIEnv(thread);
+
     return 0;
   }
 
@@ -3157,7 +3211,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   if (!thread) {
     woempa(9, "Unable to allocate w_Thread\n");
 
-    return -1;
+    return -2;
   }
 
   setUpRootFrame(thread);
@@ -3168,8 +3222,8 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->jpriority = 5; 
   thread->isDaemon = WONKA_FALSE;
   thread->flags = WT_THREAD_IS_NATIVE;
-  thread->kthread = allocClearedMem(sizeof(x_Thread));
   thread->kthread = kthread;
+  pthread_setspecific(x_thread_key, kthread);
   thread->kthread->xref = thread;
   thread->kpriority = x_thread_priority_get(thread->kthread);
   thread->ksize = 65536; // BOGUS - TODO: what to put here?
@@ -3178,7 +3232,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   ht_write(thread_hashtable, (w_word)thread->kthread, (w_word)thread);
   if (mustBeInitialized(clazzNativeThread) == CLASS_LOADING_FAILED) {
 
-    return -1;
+    return -3;
 
   }
 
@@ -3187,23 +3241,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   setWotsitField(Thread, F_Thread_wotsit,  thread);
   thread->Thread = Thread;
   woempa(7, "Native thread %p now has instance of %j.\n", thread, Thread);
-
-  spec.declaring_clazz = clazzNativeThread;
-  spec.name = cstring2String("_", 1);
-  spec.arg_types = NULL;
-  spec.return_type = clazz_void;
-
-  woempa(1, "Seek %w in %K\n", spec.name, clazzNativeThread);
-  for (i = 0; i < clazzNativeThread->numDeclaredMethods; ++i) {
-    w_method m = &clazzNativeThread->own_methods[i];
-
-    woempa(1, "Candidate: %w\n", m->spec.name);
-    if (methodMatchesSpec(m, &spec) && isNotSet(m->flags, ACC_STATIC)) {
-      method = m;
-      break;
-    }
-  }
-  deregisterString(spec.name);
+  method = get_underscore_jmethodID(w_thread2JNIEnv(thread));
 
   if (method == NULL) {
     wabort(ABORT_WONKA,"Uh oh: class %k doesn't have a _()V method.  Game over.\n", clazzNativeThread);
@@ -3236,8 +3274,8 @@ jint DetachCurrentThread(JavaVM *vm) {
   w_thread thread = currentWonkaThread;
 
   if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
-    woempa(9, "Attemting to detach non-native thread %t\n", thread);
-    return -1;
+    woempa(9, "Attempting to detach non-native thread %t\n", thread);
+    return 0;
   }
 
   unsetFlag(thread->flags, WT_THREAD_IS_NATIVE);
@@ -3252,6 +3290,8 @@ jint DetachCurrentThread(JavaVM *vm) {
   ht_erase(thread_hashtable,(w_word)thread->kthread);
 
   if (thread->kthread) {
+    pthread_setspecific(x_thread_key, 0);
+    x_thread_detach(thread->kthread);
     releaseMem(thread->kthread);
   }  
   if (thread->kstack) {
@@ -3271,7 +3311,7 @@ jint GetEnv(JavaVM *vm, void **env, jint version) {
   x_thread kthread = x_thread_current();
 
   if(kthread) {
-    w_thread thread = ht_read(thread_hashtable, kthread);
+    w_thread thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
 
     if (thread != NULL) {
       *env =  w_thread2JNIEnv(thread); 

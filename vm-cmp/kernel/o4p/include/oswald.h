@@ -189,6 +189,8 @@ x_status x_thread_suspend(x_thread thread);
 x_status x_thread_join(x_thread thread, void **result, x_sleep timeout);
 x_status x_thread_stop_waiting(x_thread);
 x_status x_thread_wakeup(x_thread);
+x_status x_thread_attach_current(x_thread);
+x_status x_thread_detach(x_thread);
 
 inline static x_state x_thread_state(x_thread thread) {
   return thread->state;
