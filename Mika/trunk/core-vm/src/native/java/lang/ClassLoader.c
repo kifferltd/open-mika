@@ -52,6 +52,7 @@
 extern Wonka_InitArgs *system_vm_args;
 
 w_instance extensionClassLoader;
+w_instance applicationClassLoader;
 
 #define CLASSLOADER_HASHTABLE_SIZE       89
 
@@ -305,6 +306,10 @@ w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
 
 void ClassLoader_static_installExtensionClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theExtensionClassLoader) {
   extensionClassLoader = theExtensionClassLoader;
+}
+
+void ClassLoader_static_installApplicationClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theApplicationClassLoader) {
+  applicationClassLoader = theApplicationClassLoader;
 }
 
 void ClassLoader_static_setProxyFlag(JNIEnv *env, w_instance classClassLoader, w_instance theClass) {

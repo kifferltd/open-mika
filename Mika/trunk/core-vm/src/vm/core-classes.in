@@ -322,6 +322,7 @@ java/lang/ClassLoader
 	getCommandLineClasspath	()Ljava/lang/String;		ClassLoader_getCommandLineClasspath
       setProxyFlag		(Ljava/lang/Class;)V		ClassLoader_static_setProxyFlag
 	installExtensionClassLoader (Ljava/lang/ClassLoader;)V	ClassLoader_static_installExtensionClassLoader
+	installApplicationClassLoader (Ljava/lang/ClassLoader;)V	ClassLoader_static_installApplicationClassLoader
 java/lang/Boolean
         value                   Z
         getWrappedClass         ()Ljava/lang/Class;                             Boolean_getWrappedClass

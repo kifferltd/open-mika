@@ -729,6 +729,8 @@ ClassFormatError
 
   private static native void installExtensionClassLoader(ClassLoader cl);
 
+  private static native void installApplicationClassLoader(ClassLoader cl);
+
   private static void getApplicationClasspath(String classpath) {
     Vector v;
     int i;
@@ -768,6 +770,7 @@ ClassFormatError
     ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
 
     applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
+    installApplicationClassLoader(applicationClassLoader);
   }
 
   static void createApplicationClassLoader() {
