@@ -188,6 +188,12 @@ extern w_instance systemClassLoader;
 extern w_instance extensionClassLoader;
 
 /*
+** The unique instance of ApplicationClassLoader, or NULL if none exists.
+** Set up by static method installApplicationClassLoader() of java.lang.ClassLoader.
+*/
+extern w_instance applicationClassLoader;
+
+/*
 ** Function to compare two w_[Unloaded}Clazz pointers.
 ** Returns WONKA_TRUE if they are either both unloaded (state == 0) or both
 ** loading or loaded (state != 0), and both refer to the same class name
