@@ -27,15 +27,24 @@
 **************************************************************************/
 
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
-interface RegistryConstants {
+public interface RMIConstants {
 
-  public static final java.rmi.server.ObjID NULLID = new java.rmi.server.ObjID(0);
-  public static final long HASH = 0x44154dc9d4e63bdfL;
-  public static final int BIND   = 0;
-  public static final int LIST   = 1;
-  public static final int LOOKUP = 2;
-  public static final int REBIND = 3;
-  public static final int UNBIND = 4;
+  public static final int CALL = 0x50;
+  public static final int RETURN_DATA = 0x51;
+
+  public static final int RETURN_VALUE = 0x01;
+  public static final int EXCEPTION = 0x02;
+
+  public static final int PING = 0x52;
+  public static final int PING_ACK = 0x53;
+  public static final int DGC_ACK = 0x54;
+
+  public static final int PROTOCOL_ACK = 0x4e;
+  public static final int PROTOCOL_NOT_SUPPORTED = 0x4f;
+
+  public static final long HASH_DIRTY = -669196253586618813L;
+  public static final int OPERATION_DIRTY = 1;
+  public static final int OPERATION_CLEAN = 0;
 }

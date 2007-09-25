@@ -31,7 +31,7 @@ package java.rmi.server;
 import java.rmi.Remote;
 import java.rmi.NoSuchObjectException;
 import java.io.*;
-import com.acunia.wonka.rmi.ObjIDData;
+import wonka.rmi.ObjIDData;
 
 public abstract class RemoteObject implements Remote, Serializable {
 

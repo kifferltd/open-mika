@@ -26,22 +26,39 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+package wonka.rmi;
 
-package com.acunia.wonka.rmi;
+import java.net.ServerSocket;
+import java.rmi.Remote;
+import java.rmi.server.RemoteStub;
+import java.rmi.server.ObjID;
 
-public final class DefaultRMISocketFactory extends java.rmi.server.RMISocketFactory {
+public final class ObjIDData {
 
-  static final DefaultRMISocketFactory theDefault = new DefaultRMISocketFactory();
+  public final ServerSocket server;
+  public final Remote impl;
+  public final RemoteStub stub;
+  public final ObjID id;
 
-  public static DefaultRMISocketFactory getFactory(){
-    return theDefault;
+  java.util.HashMap methods;
+
+  public ObjIDData(ServerSocket server, Remote impl, RemoteStub stub, ObjID id){
+    this.server = server;
+    this.impl = impl;
+    this.stub = stub;
+    this.id = id;
   }
 
-  public java.net.ServerSocket createServerSocket(int port) throws java.io.IOException {
-    return new java.net.ServerSocket(port);
-  }
-
-  public java.net.Socket createSocket(String host, int port) throws java.io.IOException {
-    return new java.net.Socket(host, port);
+  public String toString(){
+    if(RMIConnection.DEBUG < 8){
+      return super.toString() +" server "+server+
+        "\n\t Remote impl = "+impl+
+        "\n\t RemoteStub stub = "+stub+
+        "\n\t ObjID id = "+id+
+        "\n\t exported methods: "+methods;
+    }
+    else {
+      return super.toString();
+    }
   }
 }

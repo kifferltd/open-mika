@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
 import java.io.IOException;
 import java.net.ServerSocket;

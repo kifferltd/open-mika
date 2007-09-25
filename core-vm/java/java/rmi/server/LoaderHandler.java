@@ -33,7 +33,7 @@ import java.net.URL;
 
 public interface LoaderHandler {
 
-  public static final String packagePrefix = "com.acunia.wonka.rmi";
+  public static final String packagePrefix = "wonka.rmi";
   
   public Object getSecurityContext(ClassLoader loader);
   public Class loadClass(String name) throws MalformedURLException, ClassNotFoundException;

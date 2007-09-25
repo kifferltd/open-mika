@@ -26,15 +26,44 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
-import java.security.BasicPermission;
+import java.io.*;
+import java.rmi.server.RMIClassLoader;
 
-class RMIPermission extends BasicPermission {
+public class RMIObjectInputStream extends ObjectInputStream {
 
-  RMIPermission(){
-    super("RMIregistration");
+  private PushbackInputStream in;
+
+  public RMIObjectInputStream(PushbackInputStream in) throws IOException {
+    super(in);
+    this.in = in;
   }
 
+  protected Class resolveClass(ObjectStreamClass osclass) throws IOException, ClassNotFoundException {
+    String name = osclass.getName();
+    int rd = in.read();
+    if(rd != TC_ENDBLOCKDATA){
+      if(RMIConnection.DEBUG < 5) {System.out.println(osclass+" was annotated rd = "+Integer.toHexString(rd));}
+      if(rd == -1){
+        throw new EOFException();
+      }
+      if(rd != TC_NULL){
+        in.unread(rd);
+        if(rd == TC_REFERENCE || rd == TC_STRING){
+          Object o = readObject();
+          if(RMIConnection.DEBUG < 8) {System.out.println(osclass+" was annotated with '"+o+"' of "+o.getClass());}
+          return RMIClassLoader.loadClass((String)o, name);
+        }
+      }
+    }
+    else {
+      in.unread(rd);
+      if(RMIConnection.DEBUG < 5) {System.out.println("\n\n"+osclass+" was not annotated rd = "+Integer.toHexString(rd)+"\n\n");}
+
+    }
+
+    return Class.forName(name,true, ClassLoader.getSystemClassLoader());
+  }
 }
 

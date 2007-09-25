@@ -34,7 +34,7 @@ import java.io.IOException;
 
 public abstract class RMISocketFactory implements RMIClientSocketFactory, RMIServerSocketFactory {
 
-  static final RMISocketFactory theDefaultSocketFactory = new com.acunia.wonka.rmi.DefaultRMISocketFactory();
+  static final RMISocketFactory theDefaultSocketFactory = new wonka.rmi.DefaultRMISocketFactory();
   static RMISocketFactory currentSocketFactory = null;
   static RMIFailureHandler theFailureHandler = null;
 

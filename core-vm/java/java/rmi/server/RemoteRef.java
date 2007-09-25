@@ -36,7 +36,7 @@ import java.lang.reflect.Method;
 
 public interface RemoteRef extends Externalizable {
 
-  public static final String packagePrefix = "com.acunia.wonka.rmi";
+  public static final String packagePrefix = "wonka.rmi";
   public static final long serialVersionUID = 3632638527362204081L;
 
   public void done(RemoteCall call) throws RemoteException;

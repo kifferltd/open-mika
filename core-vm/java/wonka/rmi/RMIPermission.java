@@ -26,32 +26,15 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
-import java.io.IOException;
-import java.net.*;
+import java.security.BasicPermission;
 
-public class RMIAcceptThread extends Thread {
+class RMIPermission extends BasicPermission {
 
-  private ServerSocket ss;
-
-  public RMIAcceptThread(ServerSocket ss){
-    super("RMIAcceptThread for "+ss);
-    this.ss = ss;
-    this.start();
+  RMIPermission(){
+    super("RMIregistration");
   }
 
-  public void run(){
-    try {
-      while(true){
-        Socket s = ss.accept();
-        new RMIRequestHandler(s);
-        if(RMIConnection.DEBUG < 5) {System.out.println("ACCECPTED CONNECTION on "+ss);}
-      }
-    }
-    catch(IOException ioe){
-      //typically when serversocket gets closed ...
-    }
-  }
 }
 
