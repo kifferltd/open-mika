@@ -33,7 +33,7 @@
 
 package java.util;
 
-import com.acunia.resource.LocaleResourceManager;
+import wonka.resource.LocaleResourceManager;
 
 import java.io.*;
 

@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Copyright (c) 2001, 2002 by Punch Telematix. All rights reserved.       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,42 +26,35 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+package wonka.net.jar;
 
+import java.net.URLStreamHandler;
+import java.net.URLConnection;
+import java.net.URL;
 
-package com.acunia.resource;
+import java.io.IOException;
 
-import java.util.ResourceBundle;
-import java.util.Properties;
-import java.util.Enumeration;
-import java.util.MissingResourceException;
+public class Handler extends URLStreamHandler {
 
-public class LocaleDisplayVariantResourceBundle extends ResourceBundle {
+  public URLConnection openConnection(URL url) throws IOException {
+    return new BasicJarURLConnection(url);    
+  }
 
+ /**
+  ** Reverse the parsing of a URL, i.e. recreate the string from which it was created.
+  */
+  protected String toExternalForm(URL url) {
+    StringBuffer buf = new StringBuffer("jar:");
+    buf.append(url.getFile());
 
-     private Properties variants;	
+    String ref = url.getRef();
+    if (ref != null) {
+      buf.append('#');
+      buf.append(ref);               
+    }
 
-/**
-** the constructor build a hashtable with String keys and TimeZoneResource Objects as value <br>
-** the keys are the TimeZoneIDs and the TimeZoneResource can be used to create (Simple)TimeZone Objects
-**
-*/
-     public LocaleDisplayVariantResourceBundle() {
-	  variants = new Properties();
-	  //many more to come ...
-     }
-
-// required implementation of abstract methods of ResourceBundle
-
-     protected Object handleGetObject(String key) throws MissingResourceException {
-      	Object o = variants.get(key);
-      	if (o != null) {
-      		return o;
-      	}
-      	throw new MissingResourceException("Oops, resource not found","LocaleDisplayVariantResourceBundle","key");
-     }
-
-     public Enumeration getKeys() {
-     	return variants.keys();
-     }
+    return buf.toString();
+  }
 
 }
+

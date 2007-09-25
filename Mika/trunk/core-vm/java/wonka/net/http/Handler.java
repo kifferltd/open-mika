@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.ftp;
+package wonka.net.http;
 
 import java.net.URLStreamHandler;
 import java.net.URLConnection;
@@ -37,10 +37,10 @@ import java.io.IOException;
 public class Handler extends URLStreamHandler {
 
   public URLConnection openConnection(URL url) throws IOException {
-    return new FtpURLConnection(url);
+    return new BasicHttpURLConnection(url);
   }
 
   protected int getDefaultPort(){
-    return 21;
+    return 80;
   }
 }

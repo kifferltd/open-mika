@@ -41,7 +41,7 @@ import java.util.Enumeration;
 /**
  ** Class for manipulating zip files.
  ** IMPORTANT: if you add any set...() methods to this class, be sure to
- ** override them in com.acunia.wonka.net.jar.ImmutableJarFile!
+ ** override them in wonka.net.jar.ImmutableJarFile!
  */
 public class ZipFile implements ZipConstants {
 

@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.ftp;
+package wonka.net.ftp;
 
 import java.io.IOException;
 import java.io.InputStream;

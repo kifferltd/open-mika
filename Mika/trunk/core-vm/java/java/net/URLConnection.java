@@ -313,7 +313,7 @@ public abstract class URLConnection {
       }
     }
     //get wonka classes to save the day (or at least try ...)
-    cth = (new com.acunia.wonka.net.DefaultContentHandlerFactory()).createContentHandler(ct);
+    cth = (new wonka.net.DefaultContentHandlerFactory()).createContentHandler(ct);
     if(cth != null) {
       return cth.getContent(this);
     }
@@ -355,7 +355,7 @@ public abstract class URLConnection {
 
   	public DefaultFileNameMap() {
 		try {
-			filenameMap = ResourceBundle.getBundle("com.acunia.wonka.net.MimeTypeMap");			 	
+			filenameMap = ResourceBundle.getBundle("wonka.net.MimeTypeMap");			 	
 		}	
 		catch(MissingResourceException mre){}	  	
   	}

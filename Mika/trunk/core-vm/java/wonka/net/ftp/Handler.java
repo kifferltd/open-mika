@@ -26,51 +26,21 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+package wonka.net.ftp;
 
+import java.net.URLStreamHandler;
+import java.net.URLConnection;
+import java.net.URL;
 
-package com.acunia.resource;
+import java.io.IOException;
 
-import java.util.ResourceBundle;
-import java.util.Properties;
-import java.util.Enumeration;
-import java.util.MissingResourceException;
+public class Handler extends URLStreamHandler {
 
-public class ISO3166countryResourceBundle extends ResourceBundle {
+  public URLConnection openConnection(URL url) throws IOException {
+    return new FtpURLConnection(url);
+  }
 
-
-     private Properties ISO3countryCodes;	
-
-/**
-** the constructor build a hashtable with String keys and TimeZoneResource Objects as value <br>
-** the keys are the TimeZoneIDs and the TimeZoneResource can be used to create (Simple)TimeZone Objects
-**
-*/
-     public ISO3166countryResourceBundle() {
-	  ISO3countryCodes = new Properties();
-          ISO3countryCodes.put("CA", "CAN");
-          ISO3countryCodes.put("CN", "CHN");
-          ISO3countryCodes.put("US", "USA");
-          ISO3countryCodes.put("DE", "DEU");
-          ISO3countryCodes.put("IT", "ITA");
-          ISO3countryCodes.put("BE", "BEL");
-          ISO3countryCodes.put("JP", "JPN");
-          ISO3countryCodes.put("FR", "FRA");
-          ISO3countryCodes.put("KR", "KOR");
-          ISO3countryCodes.put("GB", "GBR");
-          ISO3countryCodes.put("TW", "TWN");
-	  //many more to come ...
-     }
-
-// required implementation of abstract methods of ResourceBundle
-
-     protected Object handleGetObject(String key) throws MissingResourceException {
-      	Object o =  ISO3countryCodes.get(key);
-      	if (o != null) return o;
-      	throw new MissingResourceException("Oops resource not found","ISO3166countryResourceBundle",key);
-     }
-
-     public Enumeration getKeys() {
-     	return ISO3countryCodes.keys();
-     }
-
+  protected int getDefaultPort(){
+    return 21;
+  }
 }

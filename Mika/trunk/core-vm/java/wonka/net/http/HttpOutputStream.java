@@ -29,7 +29,7 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-package com.acunia.wonka.net.http;
+package wonka.net.http;
 
 import java.io.*;
 

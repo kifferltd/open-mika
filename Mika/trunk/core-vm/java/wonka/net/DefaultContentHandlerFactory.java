@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net;
+package wonka.net;
 
 import java.net.ContentHandler;
 import java.net.ContentHandlerFactory;
@@ -39,7 +39,7 @@ public class DefaultContentHandlerFactory implements ContentHandlerFactory {
     if(contentType.startsWith("image/")) {
       if (ich == null) {
         try {
-          ich = Class.forName("com.acunia.wonka.net.handlers.ImageContentHandler");
+          ich = Class.forName("wonka.net.handlers.ImageContentHandler");
         }
         catch (ClassNotFoundException cnfe) {
           // No ImageContentHandler - probably non-AWT build

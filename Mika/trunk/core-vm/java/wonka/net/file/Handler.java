@@ -26,55 +26,41 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+package wonka.net.file;
 
+import java.net.URLStreamHandler;
+import java.net.URLConnection;
+import java.net.URL;
 
-package com.acunia.resource;
+import java.io.IOException;
 
-import java.util.ResourceBundle;
-import java.util.Properties;
-import java.util.Enumeration;
-import java.util.MissingResourceException;
+public class Handler extends URLStreamHandler {
 
-public class ISO3166languageResourceBundle extends ResourceBundle {
+  public URLConnection openConnection(URL url) throws IOException {
+    return new FileURLConnection(url);
+  }
 
+ /**
+  ** Reverse the parsing of a URL, i.e. recreate the string from which it was
+  ** created.  We omit host if it is empty, and we always omit port and query.
+  */
+  protected String toExternalForm(URL url) {
+    StringBuffer buf = new StringBuffer("file:");
+    String host = url.getHost();
+    if (host.length() > 0) {
+      buf.append("//");
+      buf.append(url.getHost());
+      buf.append('/');
+    }
+    buf.append(url.getFile());
 
-     private Properties ISO3languageCodes;	
+    String ref = url.getRef();
+    if (ref != null) {
+      buf.append('#');
+      buf.append(ref);               
+    }
 
-/**
-** the constructor build a hashtable with String keys and TimeZoneResource Objects as value <br>
-** the keys are the TimeZoneIDs and the TimeZoneResource can be used to create (Simple)TimeZone Objects
-**
-*/
-     public ISO3166languageResourceBundle() {
-	  ISO3languageCodes = new Properties();
-          ISO3languageCodes.put("fr", "fra");
-          ISO3languageCodes.put("en", "eng");
-          ISO3languageCodes.put("zh", "chs");
-          ISO3languageCodes.put("de", "deu");
-          ISO3languageCodes.put("it", "ita");
-          ISO3languageCodes.put("ja", "jpn");
-          ISO3languageCodes.put("ko", "kor");
-          ISO3languageCodes.put("en", "eng");
-	  ISO3languageCodes.put("nl", "nld");
-	  //many more to come ...
-	  try {
-	    ISO3languageCodes.load(getClass().getResourceAsStream("/ISO3languageCodes.properties"));
-	  } catch (Exception e) {
-	  }
-     }
-
-// required implementation of abstract methods of ResourceBundle
-
-     protected Object handleGetObject(String key) throws MissingResourceException {
-      	Object o = ISO3languageCodes.get(key);
-      	if (o != null) {
-      		return o;
-      	}
-      	throw new MissingResourceException("Oops, resource not found","ISO3166languageResourceBundle","key");
-     }
-
-     public Enumeration getKeys() {
-     	return ISO3languageCodes.keys();
-     }
+    return buf.toString();
+  }
 
 }
