@@ -71,7 +71,7 @@ public class DateFormatSymbols implements Cloneable,Serializable {
   }
 
   public DateFormatSymbols(Locale loc){
-    ResourceBundle resource = ResourceBundle.getBundle("com.acunia.resource.DateFormatSymbolBundle",loc);
+    ResourceBundle resource = ResourceBundle.getBundle("wonka.resource.DateFormatSymbolBundle",loc);
 
     ampms = (String[])resource.getObject("ampms");
     eras = (String[])resource.getObject("eras");

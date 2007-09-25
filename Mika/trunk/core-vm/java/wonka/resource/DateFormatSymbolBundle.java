@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.resource;
+package wonka.resource;
 
 import java.util.ListResourceBundle;
 

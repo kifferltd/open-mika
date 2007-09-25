@@ -26,8 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
-package com.acunia.resource;
+package wonka.resource;
 
 import java.util.ResourceBundle;
 import java.util.Hashtable;
@@ -40,7 +39,7 @@ public class TimeZoneDisplayNameResourceBundle extends ResourceBundle {
 
   private synchronized static void createZoneNames(){
   	if (timeZonesNames==null) {
-      ResourceBundle resource = new com.acunia.resource.DateFormatSymbolBundle();
+      ResourceBundle resource = new wonka.resource.DateFormatSymbolBundle();
       String[][] zoneStrings = (String[][])resource.getObject("zones");
   	  int length = zoneStrings.length;
   	  timeZonesNames = new Hashtable(length*2);
