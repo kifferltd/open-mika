@@ -26,44 +26,16 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
 
-import java.io.*;
-import java.rmi.server.RMIClassLoader;
+package wonka.rmi;
 
-public class RMIObjectInputStream extends ObjectInputStream {
+interface RegistryConstants {
 
-  private PushbackInputStream in;
-
-  public RMIObjectInputStream(PushbackInputStream in) throws IOException {
-    super(in);
-    this.in = in;
-  }
-
-  protected Class resolveClass(ObjectStreamClass osclass) throws IOException, ClassNotFoundException {
-    String name = osclass.getName();
-    int rd = in.read();
-    if(rd != TC_ENDBLOCKDATA){
-      if(RMIConnection.DEBUG < 5) {System.out.println(osclass+" was annotated rd = "+Integer.toHexString(rd));}
-      if(rd == -1){
-        throw new EOFException();
-      }
-      if(rd != TC_NULL){
-        in.unread(rd);
-        if(rd == TC_REFERENCE || rd == TC_STRING){
-          Object o = readObject();
-          if(RMIConnection.DEBUG < 8) {System.out.println(osclass+" was annotated with '"+o+"' of "+o.getClass());}
-          return RMIClassLoader.loadClass((String)o, name);
-        }
-      }
-    }
-    else {
-      in.unread(rd);
-      if(RMIConnection.DEBUG < 5) {System.out.println("\n\n"+osclass+" was not annotated rd = "+Integer.toHexString(rd)+"\n\n");}
-
-    }
-
-    return Class.forName(name,true, ClassLoader.getSystemClassLoader());
-  }
+  public static final java.rmi.server.ObjID NULLID = new java.rmi.server.ObjID(0);
+  public static final long HASH = 0x44154dc9d4e63bdfL;
+  public static final int BIND   = 0;
+  public static final int LIST   = 1;
+  public static final int LOOKUP = 2;
+  public static final int REBIND = 3;
+  public static final int UNBIND = 4;
 }
-

@@ -26,20 +26,31 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
-import java.io.*;
+import java.lang.ref.*;
+import java.rmi.server.ObjID;
 
-import java.rmi.server.RMIClassLoader;
+/**
+** this class is designed to be used as a key in Hashtable.
+*/
+final class DGCClientReference extends WeakReference {
 
-public class RMIObjectOutputStream extends ObjectOutputStream {
+  ObjID id;
 
-  public RMIObjectOutputStream(OutputStream out) throws IOException {
-    super(out);
+  private int hashcode;
+
+  DGCClientReference(Object o, ReferenceQueue queue, ObjID id){
+    super(o,queue);
+    hashcode = o.hashCode();
+    this.id = id;
   }
 
-  protected void annotateClass(Class osclass) throws IOException {
-    if(RMIConnection.DEBUG < 8) {System.out.println("annotateClass "+osclass+" with '"+RMIClassLoader.getClassAnnotation(osclass)+"'");}
-    writeObject(RMIClassLoader.getClassAnnotation(osclass));
+  public boolean equals(Object o){
+    return this == o || this.get() == o;
+  }
+
+  public int hashCode(){
+    return hashcode;
   }
 }

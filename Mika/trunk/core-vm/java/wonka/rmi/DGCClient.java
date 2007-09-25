@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;

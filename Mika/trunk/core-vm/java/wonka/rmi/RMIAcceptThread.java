@@ -26,39 +26,32 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
-import java.net.ServerSocket;
-import java.rmi.Remote;
-import java.rmi.server.RemoteStub;
-import java.rmi.server.ObjID;
+import java.io.IOException;
+import java.net.*;
 
-public final class ObjIDData {
+public class RMIAcceptThread extends Thread {
 
-  public final ServerSocket server;
-  public final Remote impl;
-  public final RemoteStub stub;
-  public final ObjID id;
+  private ServerSocket ss;
 
-  java.util.HashMap methods;
-
-  public ObjIDData(ServerSocket server, Remote impl, RemoteStub stub, ObjID id){
-    this.server = server;
-    this.impl = impl;
-    this.stub = stub;
-    this.id = id;
+  public RMIAcceptThread(ServerSocket ss){
+    super("RMIAcceptThread for "+ss);
+    this.ss = ss;
+    this.start();
   }
 
-  public String toString(){
-    if(RMIConnection.DEBUG < 8){
-      return super.toString() +" server "+server+
-        "\n\t Remote impl = "+impl+
-        "\n\t RemoteStub stub = "+stub+
-        "\n\t ObjID id = "+id+
-        "\n\t exported methods: "+methods;
+  public void run(){
+    try {
+      while(true){
+        Socket s = ss.accept();
+        new RMIRequestHandler(s);
+        if(RMIConnection.DEBUG < 5) {System.out.println("ACCECPTED CONNECTION on "+ss);}
+      }
     }
-    else {
-      return super.toString();
+    catch(IOException ioe){
+      //typically when serversocket gets closed ...
     }
   }
 }
+

@@ -27,7 +27,7 @@
 **************************************************************************/
 
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -44,21 +44,21 @@ import java.rmi.server.RemoteObject;
 import java.rmi.server.RemoteRef;
 
 /**
- * Implementation class for rmi unicast references with custom client socket factories.
+ * Implementation class for rmi unicast references.
  */
-public class UnicastRef2 implements RemoteRef {
-  static final String REF_TYPE = "UnicastRef2";
+public class UnicastRef implements RemoteRef {
+  static final String REF_TYPE = "UnicastRef";
 
-  private String address;
-  private int port;
-  private ObjID id;
-  private RMIClientSocketFactory csf;
+  String address;
+  int port;
+  ObjID id;
+  RMIClientSocketFactory csf;
 
 
   /**
    * Default non-arg constructor.
    */
-  public UnicastRef2(){
+  public UnicastRef() {
     csf = DefaultRMISocketFactory.theDefault;
   }
 
@@ -70,7 +70,7 @@ public class UnicastRef2 implements RemoteRef {
    * @param id Object identifier
    * @param csf Client socket factory
    */
-  public UnicastRef2(String address, int port, ObjID id, RMIClientSocketFactory csf){
+  public UnicastRef(String address, int port, ObjID id, RMIClientSocketFactory csf) {
     this.address = address;
     this.port = port;
     this.id = id;
@@ -127,8 +127,8 @@ public class UnicastRef2 implements RemoteRef {
    * @return true if these Objects are equal; false otherwise.
    */
   public boolean remoteEquals(RemoteRef obj) {
-    if (obj instanceof UnicastRef2) {
-      UnicastRef2 ref = (UnicastRef2)obj;
+    if (obj instanceof UnicastRef) {
+      UnicastRef ref = (UnicastRef)obj;
 
       return ( address.equals(ref.address) && (port == ref.port) && id.equals(ref.id) );
     }
@@ -141,14 +141,14 @@ public class UnicastRef2 implements RemoteRef {
    * 
    * @return remote object hashcode
    */
-  public int remoteHashCode(){
+  public int remoteHashCode() {
     return hashCode();
   }
 
   /**
    * Returns a String that represents the reference of this remote object.
    */
-  public String remoteToString(){
+  public String remoteToString() {
     return toString();
   }
 
@@ -163,18 +163,11 @@ public class UnicastRef2 implements RemoteRef {
    * @exception ClassNotFoundException If the class for an object being restored cannot be found
    */
   public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-      final byte useClientSocket = in.readByte();
-
-      address = in.readUTF();
-      port = in.readInt();
-      
-      if (useClientSocket == 0x01) {
-          csf = (RMIClientSocketFactory)in.readObject();
-      }
-
-      id = ObjID.read(in);
-      //final boolean bool = 
-      in.readBoolean();
+    address = in.readUTF();
+    port = in.readInt();
+    id = ObjID.read(in);
+    //final boolean bool = 
+    in.readBoolean(); // MODIFIED: Was missing. See serialization spec.
   }
 
   /**
@@ -186,25 +179,10 @@ public class UnicastRef2 implements RemoteRef {
    * @exception IOException Includes any I/O exceptions that may occur
    */
   public void writeExternal(ObjectOutput out) throws IOException {
-      boolean writeFactory = false;
-
-      if ( csf.equals(DefaultRMISocketFactory.theDefault) ) {
-          out.writeByte(0x00);          
-      }
-      else {
-          out.writeByte(0x01);
-          writeFactory = true;
-      }
-
-      out.writeUTF(address);
-      out.writeInt(port);
-
-      if (writeFactory) {
-        out.writeObject(csf);
-      }
-
-      id.write(out);
-      out.writeBoolean(false);
+    out.writeUTF(address);
+    out.writeInt(port);
+    id.write(out);
+    out.writeBoolean(false); // MODIFIED: Was missing. See serialization spec.
   }
 
   /**
@@ -212,7 +190,7 @@ public class UnicastRef2 implements RemoteRef {
    */
   public String toString() {
     StringBuffer str = new StringBuffer( super.toString() );
-    // TBD: Conform SUN toString
+    // TBD: Print string conform SUN toString(): port nr. hostname etc.
     return str.toString();
   }
 

@@ -31,7 +31,7 @@ package java.rmi.registry;
 import java.rmi.*;
 import java.rmi.server.RMIClientSocketFactory;
 import java.rmi.server.RMIServerSocketFactory;
-import com.acunia.wonka.rmi.*;
+import wonka.rmi.*;
 
 public final class LocateRegistry {
 

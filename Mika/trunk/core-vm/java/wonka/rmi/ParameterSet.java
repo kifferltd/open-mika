@@ -27,7 +27,7 @@
 **************************************************************************/
 
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
 import java.lang.reflect.Method;
 import java.io.IOException;

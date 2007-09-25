@@ -27,15 +27,16 @@
 **************************************************************************/
 
 
-package com.acunia.wonka.rmi;
+package wonka.rmi;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.lang.reflect.Method;
-import java.net.Socket;
+import java.rmi.MarshalException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.rmi.activation.ActivationID;
 import java.rmi.server.ObjID;
 import java.rmi.server.Operation;
 import java.rmi.server.RMIClientSocketFactory;
@@ -44,22 +45,21 @@ import java.rmi.server.RemoteObject;
 import java.rmi.server.RemoteRef;
 
 /**
- * Implementation class for rmi unicast references.
+ * Implementation class for activatable rmi references.
  */
-public class UnicastRef implements RemoteRef {
-  static final String REF_TYPE = "UnicastRef";
+public class ActivatableRef implements RemoteRef {
+  private static final long serialVersionUID = 1547558010681608306L;
 
-  String address;
-  int port;
-  ObjID id;
-  RMIClientSocketFactory csf;
+  static final String REF_TYPE = "ActivatableRef";
+
+  private ActivationID activationID;
+  private UnicastRef2 ref;
 
 
   /**
    * Default non-arg constructor.
    */
-  public UnicastRef() {
-    csf = DefaultRMISocketFactory.theDefault;
+  public ActivatableRef(){
   }
 
   /**
@@ -70,11 +70,9 @@ public class UnicastRef implements RemoteRef {
    * @param id Object identifier
    * @param csf Client socket factory
    */
-  public UnicastRef(String address, int port, ObjID id, RMIClientSocketFactory csf) {
-    this.address = address;
-    this.port = port;
-    this.id = id;
-    this.csf = (csf != null ? csf : DefaultRMISocketFactory.theDefault);
+  public ActivatableRef(ActivationID activationID, String address, int port, ObjID id, RMIClientSocketFactory csf){
+    this.activationID = activationID;
+    ref = new UnicastRef2(address, port, id, csf);
   }
 
   /**
@@ -103,20 +101,7 @@ public class UnicastRef implements RemoteRef {
    * @exception Exception if any exception occurs during remote method invocation
    */
   public Object invoke(Remote obj, Method method, Object[] params, long opnum) throws Exception {
-    if(RMIConnection.DEBUG < 6) {System.out.println("creating socket to "+address+" @ "+port+" using "+csf);}
-    Socket s = csf.createSocket(address, port);
-    if(RMIConnection.DEBUG < 6) {System.out.println("invoking "+method);}
-    Object o;
-    Class ret = method.getReturnType();
-    boolean type = (ret != Void.TYPE);
-    if(type && ret.isPrimitive()){
-      o = RMIConnection.requestPrimitive(s, opnum, -1, id, new ParameterSet(method,params), ret);
-    }
-    else {
-      o = RMIConnection.requestObject(s, opnum, -1, id, new ParameterSet(method,params),type);
-    }
-    if(RMIConnection.DEBUG < 6) {System.out.println("Done invoking "+method+" got "+o);}
-    return o;
+    return ref.invoke(obj, method, params, opnum);
   }
 
   /**
@@ -127,28 +112,29 @@ public class UnicastRef implements RemoteRef {
    * @return true if these Objects are equal; false otherwise.
    */
   public boolean remoteEquals(RemoteRef obj) {
-    if (obj instanceof UnicastRef) {
-      UnicastRef ref = (UnicastRef)obj;
+    if (obj instanceof ActivatableRef) {
+      ActivatableRef activatableRef = (ActivatableRef)obj;
 
-      return ( address.equals(ref.address) && (port == ref.port) && id.equals(ref.id) );
+      return ( ref.remoteEquals(activatableRef.ref) ); // TBD Check ActivationID equals?
     }
     return false;
   }
 
   /**
-   * Returns a hashcode for a remote object. Two remote object stubs that refer to the same remote object will
-   * have the same hash code (in order to support remote objects as keys in hash tables).
-   * 
-   * @return remote object hashcode
+   * Compares two remote objects for equality. Returns a boolean that indicates whether this remote object is
+   * equivalent to the specified Object. This method is used when a remote object is stored in a hashtable.
+   *
+   * @param obj the Object to compare with
+   * @return true if these Objects are equal; false otherwise.
    */
-  public int remoteHashCode() {
+  public int remoteHashCode(){
     return hashCode();
   }
 
   /**
    * Returns a String that represents the reference of this remote object.
    */
-  public String remoteToString() {
+  public String remoteToString(){
     return toString();
   }
 
@@ -163,11 +149,30 @@ public class UnicastRef implements RemoteRef {
    * @exception ClassNotFoundException If the class for an object being restored cannot be found
    */
   public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-    address = in.readUTF();
-    port = in.readInt();
-    id = ObjID.read(in);
-    //final boolean bool = 
-    in.readBoolean(); // MODIFIED: Was missing. See serialization spec.
+    activationID = (ActivationID)in.readObject();
+
+    String refType = in.readUTF();
+
+
+    if ( refType.equals(UnicastRef2.REF_TYPE) ) {
+      String name = RemoteRef.packagePrefix + "." + refType;
+
+      try {
+        ref = (UnicastRef2)Class.forName(name).newInstance();
+        ref.readExternal(in);
+      }
+      catch(IllegalAccessException ie){
+        throw new MarshalException("no access for "+name);
+      }
+      catch(InstantiationException ie){
+        throw new MarshalException("failed to instantiate "+name);
+      }
+    }
+    else {
+      if ( !refType.equals("") ) { // Could be a null remote reference
+        throw new MarshalException("illegal nested remote reference type " + refType);
+      }
+    }
   }
 
   /**
@@ -179,11 +184,17 @@ public class UnicastRef implements RemoteRef {
    * @exception IOException Includes any I/O exceptions that may occur
    */
   public void writeExternal(ObjectOutput out) throws IOException {
-    out.writeUTF(address);
-    out.writeInt(port);
-    id.write(out);
-    out.writeBoolean(false); // MODIFIED: Was missing. See serialization spec.
+    out.writeObject(activationID);
+
+    if (ref != null) {
+      out.writeUTF(UnicastRef2.REF_TYPE);
+      ref.writeExternal(out);
+    }
+    else {
+      out.writeUTF("");
+    }
   }
+
 
   /**
    * Returns a string representation of this object.

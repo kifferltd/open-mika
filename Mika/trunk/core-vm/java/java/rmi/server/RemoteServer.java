@@ -43,7 +43,7 @@ public abstract class RemoteServer extends RemoteObject {
   }
 
   public static String getClientHost() throws ServerNotActiveException {
-    return com.acunia.wonka.rmi.RMIConnection.getClientHost();
+    return wonka.rmi.RMIConnection.getClientHost();
   }
   
   public static PrintStream getLog() {

@@ -41,10 +41,10 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 
-import com.acunia.wonka.rmi.ObjIDData;
-import com.acunia.wonka.rmi.RMIAcceptThread;
-import com.acunia.wonka.rmi.RMIConnection;
-import com.acunia.wonka.rmi.UnicastRef;
+import wonka.rmi.ObjIDData;
+import wonka.rmi.RMIAcceptThread;
+import wonka.rmi.RMIConnection;
+import wonka.rmi.UnicastRef;
 
 public class UnicastRemoteObject extends RemoteServer {
 
