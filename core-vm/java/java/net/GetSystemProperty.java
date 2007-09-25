@@ -56,13 +56,13 @@ class GetSystemProperty implements java.security.PrivilegedAction {
       AccessController.doPrivileged(gsp);
       IMPL_PREFIX = gsp.get();
 
-      gsp = new GetSystemProperty("java.protocol.handler.pkgs","com.acunia.wonka.net");
+      gsp = new GetSystemProperty("java.protocol.handler.pkgs","wonka.net");
       AccessController.doPrivileged(gsp);
       PROTOCOL_HANDLER_PKGS = gsp.get();
     }
     else {
       IMPL_PREFIX = System.getProperty("impl.prefix", "Plain");
-      PROTOCOL_HANDLER_PKGS = System.getProperty("java.protocol.handler.pkgs", "com.acunia.wonka.net");
+      PROTOCOL_HANDLER_PKGS = System.getProperty("java.protocol.handler.pkgs", "wonka.net");
     }
   }
 

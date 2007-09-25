@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.file;
+package wonka.net.file;
 
 import java.io.IOException;
 import java.io.InputStream;

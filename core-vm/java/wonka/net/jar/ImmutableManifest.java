@@ -26,55 +26,32 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.file;
+package wonka.net.jar;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.OutputStream;
-import java.io.FileOutputStream;
-import java.io.File;
-import java.io.FilePermission;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.jar.Manifest;
 
-import java.net.URL;
-import java.net.URLConnection;
+/**
+ *
+ * @version	$Id: ImmutableManifest.java,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
+ *
+ * A Manifest which cannot be changed, because we override the methods 
+ * which would change it.
+ */
+public class ImmutableManifest extends Manifest {
 
-import java.security.Permission;
-
-public class FileURLConnection extends URLConnection {
-
-  public FileURLConnection(URL url) {
-    super(url);
+  public ImmutableManifest(Manifest m) {
+    super(m);
   }
 
-  public void connect() throws IOException {
-    if (url.getHost().length() > 0){
-      throw new IOException("file is not on localhost -->"+url);
-    }
-    if(!new File(url.getFile()).isFile()){
-      throw new FileNotFoundException("file "+url.getFile()+" does not exist or is no file");
-    }
-
-    connected = true;
-  }    
-
-  public Permission getPermission() throws IOException {
-    //WE ONLY ALLOW READING FROM THIS FILE ... SEE ALSO POLICY
-    return new FilePermission(url.getFile() , "read");
+  public void clear() {
+    throw new UnsupportedOperationException();
   }
 
-  public InputStream getInputStream() throws IOException {
-    if (!connected) {
-      connect();
-    }
-    return new FileInputStream(url.getFile());
+  public void read(InputStream in) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
-  public OutputStream getOutputStream() throws IOException {
-    if (!connected) {
-      connect();
-    }
-    return new FileOutputStream(url.getFile());
-  }
 }
+

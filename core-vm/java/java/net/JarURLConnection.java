@@ -28,8 +28,8 @@
 
 package java.net;
 
-import com.acunia.wonka.net.jar.ImmutableJarEntry;
-import com.acunia.wonka.net.jar.ImmutableManifest;
+import wonka.net.jar.ImmutableJarEntry;
+import wonka.net.jar.ImmutableManifest;
 
 import java.io.IOException;
 import java.security.cert.Certificate;
@@ -41,7 +41,7 @@ import java.util.jar.Manifest;
 /**
 ** Base implementation for Jar URL.
 **
-** Look in com.acunia.wonka.net.jar for more informartion an actual implementation
+** Look in wonka.net.jar for more informartion an actual implementation
 */
 public abstract class JarURLConnection extends URLConnection {
 

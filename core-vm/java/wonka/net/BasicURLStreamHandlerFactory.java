@@ -27,7 +27,7 @@
 **************************************************************************/
 
 
-package com.acunia.wonka.net;
+package wonka.net;
 
 import java.net.URLStreamHandlerFactory;
 import java.net.URLStreamHandler;

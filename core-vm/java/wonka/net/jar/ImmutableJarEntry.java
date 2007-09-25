@@ -26,32 +26,56 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.jar;
+package wonka.net.jar;
 
-import java.io.InputStream;
-import java.io.IOException;
-import java.util.jar.Manifest;
+import java.util.jar.JarEntry;
+import java.util.zip.ZipEntry;
 
 /**
  *
- * @version	$Id: ImmutableManifest.java,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
+ * @version     $Id: ImmutableJarEntry.java,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
  *
- * A Manifest which cannot be changed, because we override the methods 
- * which would change it.
  */
-public class ImmutableManifest extends Manifest {
+public class ImmutableJarEntry extends JarEntry {
 
-  public ImmutableManifest(Manifest m) {
-    super(m);
+  public ImmutableJarEntry (JarEntry je) {
+    super(je);
   }
 
-  public void clear() {
-    throw new UnsupportedOperationException();
+  public ImmutableJarEntry (ZipEntry ze) {
+    super(ze);
   }
 
-  public void read(InputStream in) throws IOException {
-    throw new UnsupportedOperationException();
+  public Object clone() {
+     return new ImmutableJarEntry(this);
+  }
+
+  public void setComment(String comment) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setExtra(byte[] extra) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setMethod(int method) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setCrc(long crc) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setCompressedSize(long size) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setSize(long size) {
+     throw new UnsupportedOperationException();
+  }
+
+  public void setTime(long time) {
+     throw new UnsupportedOperationException();
   }
 
 }
-

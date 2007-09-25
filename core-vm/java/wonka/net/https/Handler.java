@@ -26,7 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.net.http;
+package wonka.net.https;
 
 import java.net.URLStreamHandler;
 import java.net.URLConnection;
@@ -37,10 +37,11 @@ import java.io.IOException;
 public class Handler extends URLStreamHandler {
 
   public URLConnection openConnection(URL url) throws IOException {
-    return new BasicHttpURLConnection(url);
+    throw new IOException("No URLConnection implementation available for https protocol");
   }
 
   protected int getDefaultPort(){
-    return 80;
+    return 443;
   }
 }
+
