@@ -26,7 +26,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
 package com.acunia.wonka.net.file;
 
 import java.net.URLStreamHandler;
