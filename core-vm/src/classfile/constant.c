@@ -201,96 +201,6 @@ w_string resolveUtf8Constant(w_clazz clazz, w_int i) {
 }
 
 /*
-** Check whether any constant still refers to the specified UTF8 constant.
-** If not, deregister the string (later we may also compact the values array).
-*/
-void checkUTF8References(w_clazz clazz, w_int idx) {
-  w_size i;
-
-  woempa(1, "We just deleted a reference to constant[%d] of %k, which holds the string `%w'.\n", idx, clazz, clazz->values[idx]);
-  for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
-    if (clazz->temp.inner_class_info[i].inner_class_info_index == idx || clazz->temp.inner_class_info[i].outer_class_info_index == idx || clazz->temp.inner_class_info[i].inner_name_index == idx) {
-      woempa(7, "Inner class[%d] needs this UTF8 constant, so we keep it\n", i
-);
-
-      return;
-    }
-  }
-
-  for (i = 1; i < clazz->numConstants; ++i) {
-
-    switch (clazz->tags[i]) {
-    case CONSTANT_CLASS:
-      if ((w_int)clazz->values[i] == idx) {
-        woempa(1, "Unresolved Class constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    case CONSTANT_STRING:
-      if ((w_int)clazz->values[i] == idx) {
-        woempa(1, "Unresolved String constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    case CONSTANT_NAME_AND_TYPE:
-      {
-        u4 nat = clazz->values[i];
-        if ((w_int)Name_and_Type_get_name_index(nat) == idx || (w_int)Name_and_Type_get_type_index(nat) == idx) {
-          woempa(1, "Name&type constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-          return;
-
-        }
-      }
-      break;
-
-    default:
-      break;
-    }
-  }
-  woempa(1, "Nobody needs this UTF8 constant, so we scrap it\n");
-  clazz->tags[idx] = CONSTANT_DELETED;
-  deregisterString((w_string)clazz->values[idx]);
-}
-
-/*
-** Check whether any constant still refers to the specified Name&Type constant.
-** If not, delete the constant (later we may also compact the values array).
-*/
-static void checkNatReferences(w_clazz clazz, w_int idx) {
-  u4 nat = clazz->values[idx];
-  w_size i;
-
-  for (i = 1; i < clazz->numConstants; ++i) {
-    u4 m = clazz->values[i];
-
-    switch (clazz->tags[i]) {
-    case CONSTANT_FIELD:
-    case CONSTANT_METHOD:
-    case CONSTANT_IMETHOD:
-      if (Member_get_nat_index(m) == idx) {
-        woempa(1, "Unresolved member constant[%d] needs this Name&Type constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    default:
-      break;
-    }
-  }
-
-  woempa(1, "Nobody needs this Name&Type constant, so we scrap it\n");
-  clazz->tags[idx] = CONSTANT_DELETED;
-  checkUTF8References(clazz, Name_and_Type_get_name_index(nat));
-  checkUTF8References(clazz, Name_and_Type_get_type_index(nat));
-}
-
-/*
 ** Add one more slot to the tag and values arrays. TODO: make this work
 ** more efficiently if called repeatedly. Result is old size = new size - 1.
 ** (This slot is guaranteed to be free, in fact it is uninitialised and
@@ -545,7 +455,6 @@ void resolveStringConstant(w_clazz clazz, w_int i) {
       wabort(ABORT_WONKA, "Unable to get String instance for String constant\n");
     }
     woempa(1, "Resolved String constant[%d] of %k to `%w'\n", i, clazz, s);
-    checkUTF8References(clazz, utf8index);
     enterUnsafeRegion(thread);
     *v = (w_word)theString;
     *c = RESOLVED_STRING;
@@ -639,7 +548,6 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
     x_monitor_eternal(clazz->resolution_monitor);
     *v = (w_word)target_clazz;
     *c = RESOLVED_CLASS;
-    checkUTF8References(clazz, utf8index);
     x_monitor_notify_all(clazz->resolution_monitor);
 
     return;
@@ -850,7 +758,6 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
       x_monitor_eternal(clazz->resolution_monitor);
       *v = (w_word)field;
       *c = RESOLVED_FIELD;
-      checkNatReferences(clazz, nat_index);
       x_monitor_notify_all(clazz->resolution_monitor);
 
       return;
@@ -1027,7 +934,6 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
         x_monitor_eternal(clazz->resolution_monitor);
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
-        checkNatReferences(clazz, Member_get_nat_index(member));
         x_monitor_notify_all(clazz->resolution_monitor);
         return;
       }
@@ -1200,7 +1106,6 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
         x_monitor_eternal(clazz->resolution_monitor);
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
-        checkNatReferences(clazz, Member_get_nat_index(member));
         x_monitor_notify_all(clazz->resolution_monitor);
         return;
       }

@@ -804,14 +804,6 @@ static w_int referenceClazz(w_clazz clazz) {
   clazz->bytes_needed = (((clazz->instanceSize + 1) & ~1) * sizeof(w_word)) + sizeof(w_Object);
   woempa(1,"class %k has instance size %d words and %d words of static fields, each instance requires %d bytes\n", clazz, clazz->instanceSize, clazz->numStaticWords, clazz->bytes_needed);
 
-  x_monitor_eternal(clazz->resolution_monitor);
-  for (i = 1; i < (w_int)clazz->numConstants; i++) {
-    if (clazz->tags[i] == CONSTANT_UTF8) {
-      checkUTF8References(clazz, i);
-    }
-  }
-  x_monitor_exit(clazz->resolution_monitor);
-
 #ifdef JDWP
   jdwp_event_class_prepare(clazz);
 #endif
