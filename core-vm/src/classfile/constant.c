@@ -397,12 +397,17 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
 
 static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
   w_int i;
+  w_thread thread;
 
   if (ref_clazz->loader == NULL || ref_clazz->loader == systemClassLoader) {
     woempa(1, "%K is a system class, doing nowt\n", ref_clazz);
 
     return;
 
+  }
+
+  if (isInWordset(&this_clazz->references, (w_word)ref_clazz)) {
+    woempa(1, "%K is already referenced by %K, doing nowt\n", ref_clazz, this_clazz);
   }
 
   if (ref_clazz == this_clazz) {
@@ -430,10 +435,16 @@ static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
     }
   }
 
+  thread = currentWonkaThread;
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+
   woempa(7, "%K references %K\n", ref_clazz, this_clazz);
   if (!addToWordset(&this_clazz->references, (w_word)ref_clazz)) {
     wabort(ABORT_WONKA, "Could not add entry to clazz->references\n");
   }
+
+  enterSafeRegion(thread);
 }
 
 /*
