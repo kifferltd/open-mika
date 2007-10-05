@@ -280,9 +280,10 @@ typedef enum {
   wt_waiting      =  10,
   wt_sleeping     =  12,
   wt_ended        =  14,
-  wt_unstarted    =  15,   /* The states [15 - 17] are Wonka thread specific states. */
-  wt_dying        =  16,
-  wt_dead         =  17,
+  wt_unstarted    =  15,   /* The states [15 - 18] are Wonka thread specific states. */
+  wt_starting     =  16,
+  wt_dying        =  17,
+  wt_dead         =  18,
 } wt_state;
 
 inline static wt_state threadState(w_thread thread) {
