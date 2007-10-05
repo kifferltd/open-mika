@@ -223,6 +223,7 @@ void Thread_setName0(JNIEnv *env, w_instance thisThread, w_instance nameString) 
 }
 
 w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
+  w_thread current_thread = JNIEnv2w_thread(env);
   w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
   w_thread oldthread;
   x_status status;
@@ -243,23 +244,10 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   }
 #endif
 
+  threadMustBeSafe(current_thread);
 
-  /*
-  ** Don't futz with the thread_hashtable etc. while prepare/mark is in progress
-  */
-  if (gc_is_running) {
-    monitor_status = x_monitor_eternal(gc_monitor);
-    if (monitor_status != xs_success) {
-      wabort(ABORT_WONKA, "Unable to enter gc_monitor!\n");
-    }
-    while (gc_phase == GC_PHASE_PREPARE || gc_phase == GC_PHASE_MARK) {
-      monitor_status = x_monitor_wait(gc_monitor, 10);
-      if (monitor_status == xs_interrupted) {
-        monitor_status = x_monitor_eternal(gc_monitor);
-      }
-    }
-  }
-
+  this_thread->state = wt_starting;
+  enterUnsafeRegion(current_thread);
   oldthread = (w_thread)ht_write(thread_hashtable, (w_word)this_thread->kthread, (w_word)this_thread);
 
   if (oldthread) {
@@ -268,14 +256,12 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
 
   x_thread_create(this_thread->kthread, threadEntry, this_thread, this_thread->kstack, this_thread->ksize, this_thread->kpriority, TF_SUSPENDED);
   this_thread->kthread->report = running_thread_report;
-  if (gc_is_running) {
-    x_monitor_exit(gc_monitor);
-  }
 
   woempa(7, "Starting Java Thread %t.\n", this_thread);
 
   newGlobalReference(thisThread);
   addThreadCount(this_thread);
+  enterSafeRegion(current_thread);
   status = x_thread_resume(this_thread->kthread);
   if (status == xs_success) {
     if(jpda_hooks) {
