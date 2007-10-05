@@ -315,8 +315,6 @@ void dissolveConstant(w_clazz, int idx);
 
 void dumpPools(int fd, w_clazz clazz);
 
-void checkUTF8References(w_clazz clazz, w_int idx);
-
 /**
  ** Add a UTF8 constant to the pool (or find an identical existing
  ** one), returning theindex of the result.
