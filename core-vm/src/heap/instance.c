@@ -109,11 +109,18 @@ w_int instance_returned = 0;
 w_object instance_first = NULL;
 
 inline static void registerObject(w_object object, w_thread thread) {
+  if (thread) {
+    threadMustBeSafe(thread);
+    enterUnsafeRegion(thread);
+  }
   woempa(1, "Registering %j\n", object->fields);
   instance_use += 1;
   instance_allocated += 1;
   addLocalReference(thread, object->fields);
-  setFlag(object->flags, O_IS_JAVA_INSTANCE);
+  setFlag(object->flags, O_IS_JAVA_INSTANCE | O_BLACK);
+  if (thread) {
+    enterSafeRegion(thread);
+  }
 #ifdef USE_OBJECT_HASHTABLE
   if (ht_write(object_hashtable, (w_word)object, (w_word)object)) {
     wabort(ABORT_WONKA, "Sky! Could not add object %p to object hashtable!\n", object);
