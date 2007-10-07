@@ -1,10 +1,40 @@
 /**************************************************************************
- * Copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.          *
- *                                                                         *
- * Derived from the BouncyCastle lightweight cryptographic API for J2ME,   *
- * with additions from the Wonka implementation. The BouncyCastle code     *
- * carries the following copyright notice:                                 *
- *   ------------------------------------------------------------------    *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+**************************************************************************/
+
+/**************************************************************************
+*                                                                         *
+* Some amgorithms shamelessly cribbed from the BouncyCastle lightweight   *
+* cryptographic API for J2ME. The BouncyCastle code carries the following *
+* copyright notice:                                                       *
+*   ------------------------------------------------------------------    *
  *   Copyright (c) 2000 The Legion Of The Bouncy Castle                    *
  *   (http://www.bouncycastle.org)                                         *
  *                                                                         *
@@ -27,29 +57,9 @@
  *   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     *
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                *
  *   ------------------------------------------------------------------    *
- * The Wonka code carries the following notice:                            *
- *   ------------------------------------------------------------------    *
- * This software is copyrighted by and is the sole property of Acunia N.V. *
- * and its licensors, if any. All rights, title, ownership, or other       *
- * interests in the software remain the property of Acunia N.V. and its    *
- * licensors, if any.                                                      *
- *                                                                         *
- * This software may only be used in accordance with the corresponding     *
- * license agreement. Any unauthorized use, duplication, transmission,     *
- *  distribution or disclosure of this software is expressly forbidden.    *
- *                                                                         *
- * This Copyright notice may not be removed or modified without prior      *
- * written consent of Acunia N.V.                                          *
- *                                                                         *
- * Acunia N.V. reserves the right to modify this software without notice.  *
- *                                                                         *
- *   Acunia N.V.                                                           *
- *   Vanden Tymplestraat 35      info@acunia.com                           *
- *   3000 Leuven                 http://www.acunia.com                     *
- *   Belgium - EUROPE                                                      *
  **************************************************************************/
-package java.math;
 
+package java.math;
 
 public class BigIntegerJava {
 
@@ -221,140 +231,6 @@ public class BigIntegerJava {
     }
   }
 
-  /*
-   * public BigInteger modPow(BigInteger exponent, BigInteger m) throws
-   * ArithmeticException { int[] zVal = null; int[] yAccum = null; int[] yVal;
-   *  // Montgomery exponentiation is only possible if the modulus is odd, //
-   * but AFAIK, this is always the case for crypto algo's boolean useMonty =
-   * ((m.mag[m.mag.length - 1] & 1) == 1); long mQ = 0; if (useMonty) { mQ =
-   * m.getMQuote();
-   *  // tmp = this * R mod m BigInteger tmp = this.shiftLeft(32 *
-   * m.mag.length).mod(m); zVal = tmp.mag;
-   * 
-   * useMonty = (zVal.length == m.mag.length);
-   * 
-   * if (useMonty) { yAccum = new int[m.mag.length + 1]; } }
-   * 
-   * if (!useMonty) { if (mag.length <= m.mag.length) { //zAccum = new
-   * int[m.mag.length * 2]; zVal = new int[m.mag.length];
-   * 
-   * System.arraycopy(mag, 0, zVal, zVal.length - mag.length, mag.length); }
-   * else { // // in normal practice we'll never see this... // BigInteger tmp =
-   * this.remainder(m);
-   * 
-   * //zAccum = new int[m.mag.length * 2]; zVal = new int[m.mag.length];
-   * 
-   * System.arraycopy(tmp.mag, 0, zVal, zVal.length - tmp.mag.length,
-   * tmp.mag.length); }
-   * 
-   * yAccum = new int[m.mag.length * 2]; }
-   * 
-   * yVal = new int[m.mag.length];
-   *  // // from LSW to MSW // for (int i = 0; i < exponent.mag.length; i++) {
-   * int v = exponent.mag[i]; int bits = 0;
-   * 
-   * if (i == 0) { while (v > 0) { v <<= 1; bits++; }
-   *  // // first time in initialise y // System.arraycopy(zVal, 0, yVal, 0,
-   * zVal.length);
-   * 
-   * v <<= 1; bits++; }
-   * 
-   * while (v != 0) { if (useMonty) { // Montgomery square algo doesn't exist,
-   * and a normal // square followed by a Montgomery reduction proved to // be
-   * almost as heavy as a Montgomery mulitply. multiplyMonty(yAccum, yVal, yVal,
-   * m.mag, mQ); } else { square(yAccum, yVal); remainder(yAccum, m.mag);
-   * System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-   * yVal.length); zero(yAccum); } bits++;
-   * 
-   * if (v < 0) { if (useMonty) { multiplyMonty(yAccum, yVal, zVal, m.mag, mQ); }
-   * else { multiply(yAccum, yVal, zVal); remainder(yAccum, m.mag);
-   * System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-   * yVal.length); zero(yAccum); } }
-   * 
-   * v <<= 1; }
-   * 
-   * while (bits < 32) { if (useMonty) { multiplyMonty(yAccum, yVal, yVal,
-   * m.mag, mQ); } else { square(yAccum, yVal); remainder(yAccum, m.mag);
-   * System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-   * yVal.length); zero(yAccum); } bits++; } }
-   * 
-   * if (useMonty) { // Return y * R^(-1) mod m by doing y * 1 * R^(-1) mod m
-   * zero(zVal); zVal[zVal.length - 1] = 1; multiplyMonty(yAccum, yVal, zVal,
-   * m.mag, mQ); }
-   * 
-   * return new BigInteger(1, yVal); }
-   */
-  /**
-   * return w with w = x * x - w is assumed to have enough space.
-   */
-  static int[] square(int[] w, int[] x) {
-    long u1, u2, c;
-
-    if (w.length != 2 * x.length) {
-      throw new IllegalArgumentException("no I don't think so...");
-    }
-
-    for (int i = x.length - 1; i != 0; i--) {
-      long v = (x[i] & IMASK);
-
-      u1 = v * v;
-      u2 = u1 >>> 32;
-      u1 = u1 & IMASK;
-
-      u1 += (w[2 * i + 1] & IMASK);
-
-      w[2 * i + 1] = (int) u1;
-      c = u2 + (u1 >> 32);
-
-      for (int j = i - 1; j >= 0; j--) {
-        u1 = (x[j] & IMASK) * v;
-        u2 = u1 >>> 31; // multiply by 2!
-        u1 = (u1 & 0x7fffffff) << 1; // multiply by 2!
-        u1 += (w[i + j + 1] & IMASK) + c;
-
-        w[i + j + 1] = (int) u1;
-        c = u2 + (u1 >>> 32);
-      }
-      c += w[i] & IMASK;
-      w[i] = (int) c;
-      w[i - 1] = (int) (c >> 32);
-    }
-
-    u1 = (x[0] & IMASK);
-    u1 = u1 * u1;
-    u2 = u1 >>> 32;
-    u1 = u1 & IMASK;
-
-    u1 += (w[1] & IMASK);
-
-    w[1] = (int) u1;
-    w[0] = (int) (u2 + (u1 >> 32) + w[0]);
-
-    return w;
-  }
-
-  /**
-   * return x with x = y * z - x is assumed to have enough space.
-   */
-  static int[] multiply(int[] x, int[] y, int[] z) {
-    for (int i = z.length - 1; i >= 0; i--) {
-      long a = z[i] & IMASK;
-      long value = 0;
-
-      for (int j = y.length - 1; j >= 0; j--) {
-        value += a * (y[j] & IMASK) + (x[i + j + 1] & IMASK);
-
-        x[i + j + 1] = (int) value;
-
-        value >>>= 32;
-      }
-
-      x[i] = (int) value;
-    }
-
-    return x;
-  }
-
   /**
    * Calculate mQuote = -m^(-1) mod b with b = 2^32 (32 = word size)
    */
@@ -427,73 +303,6 @@ public class BigIntegerJava {
     for (int i = 0; i < n; i++) {
       x[i] = a[i + 1];
     }
-  }
-
-  /**
-   * return x = x % y - done in place (y value preserved)
-   */
-  static int[] remainder(int[] x, int[] y) {
-    int xyCmp = compareTo(0, x, 0, y);
-
-    if (xyCmp > 0) {
-      int[] c;
-      int shift = bitLength(0, x) - bitLength(0, y);
-
-      if (shift > 1) {
-        c = shiftLeft(y, shift - 1);
-      } else {
-        c = new int[x.length];
-
-        System.arraycopy(y, 0, c, c.length - y.length, y.length);
-      }
-
-      subtract(0, x, 0, c);
-
-      int xStart = 0;
-      int cStart = 0;
-
-      for (;;) {
-        int cmp = compareTo(xStart, x, cStart, c);
-
-        while (cmp >= 0) {
-          subtract(xStart, x, cStart, c);
-          cmp = compareTo(xStart, x, cStart, c);
-        }
-
-        xyCmp = compareTo(xStart, x, 0, y);
-
-        if (xyCmp > 0) {
-          if (x[xStart] == 0) {
-            xStart++;
-          }
-
-          shift = bitLength(cStart, c) - bitLength(xStart, x);
-
-          if (shift == 0) {
-            c = shiftRightOne(cStart, c);
-          } else {
-            c = shiftRight(cStart, c, shift);
-          }
-
-          if (c[cStart] == 0) {
-            cStart++;
-          }
-        } else if (xyCmp == 0) {
-          for (int i = xStart; i != x.length; i++) {
-            x[i] = 0;
-          }
-          break;
-        } else {
-          break;
-        }
-      }
-    } else if (xyCmp == 0) {
-      for (int i = 0; i != x.length; i++) {
-        x[i] = 0;
-      }
-    }
-
-    return x;
   }
 
   /**
