@@ -1684,5 +1684,375 @@ w_instance BigInteger_nativeSubtract(JNIEnv *env, w_instance ThisBigInt, w_insta
   }
 }
 
+#define IMASK 0xffffffffL
 
+static w_int compareTo(w_int xIndx, w_int x_length, w_int *x, w_int yIndx, w_int y_length, w_int *y) {
+  while (xIndx != x_length && x[xIndx] == 0) {
+    xIndx++;
+  }
+
+  while (yIndx != y_length && y[yIndx] == 0) {
+    yIndx++;
+  }
+
+  if ((x_length - xIndx) < (y_length - yIndx)) {
+    return -1;
+  }
+
+  if ((x_length - xIndx) > (y_length - yIndx)) {
+    return 1;
+  }
+
+  // lengths of magnitudes the same, test the magnitude values
+
+  while (xIndx < x_length) {
+    w_long v1 = ((w_long)x[xIndx++]) & IMASK;
+    w_long v2 = ((w_long)y[yIndx++]) & IMASK;
+
+    if (v1 < v2) {
+      return -1;
+    }
+    if (v1 > v2) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+static char bitCounts[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3,
+      2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3,
+      2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5,
+      4, 5, 5, 6, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4,
+      3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5,
+      4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 1, 2, 2, 3,
+      2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5,
+      4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5,
+      4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5,
+      4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5,
+      4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7,
+      6, 7, 7, 8 };
+
+/*
+** bitLen(w) is the number of bits in w.
+*/
+static w_int bitLen(w_int w) {
+  // Binary search - decision tree (5 tests, rarely 6)
+  return (w < (1 << 15) ? (w < (1 << 7) ? (w < (1 << 3) ? (w < (1 << 1) ? (w < (1 << 0) ? (w < 0 ? 32
+      : 0)
+      : 1)
+      : (w < (1 << 2) ? 2 : 3))
+      : (w < (1 << 5) ? (w < (1 << 4) ? 4 : 5) : (w < (1 << 6) ? 6 : 7)))
+      : (w < (1 << 11) ? (w < (1 << 9) ? (w < (1 << 8) ? 8 : 9) : (w < (1 << 10) ? 10
+          : 11)) : (w < (1 << 13) ? (w < (1 << 12) ? 12 : 13) : (w < (1 << 14) ? 14
+          : 15))))
+      : (w < (1 << 23) ? (w < (1 << 19) ? (w < (1 << 17) ? (w < (1 << 16) ? 16 : 17)
+          : (w < (1 << 18) ? 18 : 19)) : (w < (1 << 21) ? (w < (1 << 20) ? 20 : 21)
+          : (w < (1 << 22) ? 22 : 23)))
+          : (w < (1 << 27) ? (w < (1 << 25) ? (w < (1 << 24) ? 24 : 25)
+              : (w < (1 << 26) ? 26 : 27)) : (w < (1 << 29) ? (w < (1 << 28) ? 28
+              : 29) : (w < (1 << 30) ? 30 : 31)))));
+}
+
+static w_int bitLength(w_int indx, w_int mag_length, w_int *mag) {
+  w_int length;
+
+  if (mag_length == 0) {
+    return 0;
+  } else {
+    while (indx != mag_length && mag[indx] == 0) {
+      indx++;
+    }
+
+    if (indx == mag_length) {
+      return 0;
+    }
+
+    // bit length for everything after the first int
+    length = 32 * ((mag_length - indx) - 1);
+
+    // and determine bitlength of first int
+    length += bitLen(mag[indx]);
+  }
+
+  return length;
+}
+
+/**
+ * do a left shift - this returns a new array.
+ */
+static w_int *shiftLeft(w_int *mag, w_int mag_length, w_int n, w_int *result_length) {
+  w_int nInts = n >> 5;
+  w_int bitCount = n & 0x1f;
+  w_int *newMag = NULL;
+  w_int i = 0;
+
+  if (bitCount == 0) {
+    *result_length = mag_length + nInts;
+    newMag = allocClearedMem((mag_length + nInts) * sizeof(w_int));
+    for (i = 0; i < mag_length; i++) {
+      newMag[i] = mag[i];
+    }
+  } else {
+    w_int j;
+    w_int bitCount2 = 32 - bitCount;
+    w_int highBits = (unsigned)mag[0] >> bitCount2;
+
+    if (highBits) {
+      *result_length = mag_length + nInts + 1;
+      newMag = allocClearedMem((mag_length + nInts + 1) * sizeof(w_int));
+      newMag[i++] = highBits;
+    } else {
+      *result_length = mag_length + nInts;
+      newMag = allocClearedMem((mag_length + nInts) * sizeof(w_int));
+    }
+
+    w_word m = (unsigned)mag[0];
+    for (j = 0; j < mag_length - 1; j++) {
+      w_word next = (unsigned)mag[j + 1];
+
+      newMag[i++] = (m << bitCount) | (next >> bitCount2);
+      m = next;
+    }
+
+    newMag[i] = mag[mag_length - 1] << bitCount;
+  }
+
+  return newMag;
+}
+
+/**
+ * do a right shift - this does it in place.
+ */
+static void shiftRight(w_int start, w_int mag_length, w_int *mag, w_int n) {
+  w_int nInts = (n >> 5) + start;
+  w_int bitCount = n & 0x1f;
+  w_int i;
+
+  if (nInts != start) {
+    w_int delta = (nInts - start);
+
+    for (i = mag_length - 1; i >= nInts; i--) {
+      mag[i] = mag[i - delta];
+    }
+    for (i = nInts - 1; i >= start; i--) {
+      mag[i] = 0;
+    }
+  }
+
+  if (bitCount != 0) {
+    w_int bitCount2 = 32 - bitCount;
+    w_word m = (unsigned)mag[mag_length - 1];
+
+    for (i = mag_length - 1; i >= nInts + 1; i--) {
+      w_word next = (unsigned)mag[i - 1];
+
+      mag[i] = (m >> bitCount) | (next << bitCount2);
+      m = next;
+    }
+
+    mag[nInts] = (unsigned)mag[nInts] >> bitCount;
+  }
+}
+
+/**
+ * do a right shift by one - this does it in place.
+ */
+static void shiftRightOne(w_int start, w_int mag_length, w_int *mag) {
+
+  w_word m = (unsigned)mag[mag_length - 1];
+  w_int i;
+
+  for (i = mag_length - 1; i >= start + 1; i--) {
+    w_word next = (unsigned)mag[i - 1];
+
+    mag[i] = (m >> 1) | (next << 31);
+    m = next;
+  }
+
+  mag[start] = (unsigned)mag[start] >> 1;
+}
+
+/**
+ * returns x = x - y - we assume x is >= y
+ */
+static void subtract(w_int xStart, w_int x_length, w_int *x, w_int yStart, w_int y_length, w_int *y) {
+  w_int iT = x_length - 1;
+  w_int iV = y_length - 1;
+  w_long m;
+  w_int borrow = 0;
+
+  do {
+    m = ((w_long)x[iT]) & IMASK;
+    m -= ((w_long)y[iV--]) & IMASK;
+    m += borrow;
+
+    x[iT--] = (w_int) (m & IMASK);
+
+    if (m < 0) {
+      borrow = -1;
+    } else {
+      borrow = 0;
+    }
+  } while (iV >= yStart);
+
+  while (iT >= xStart) {
+    m = ((w_long)x[iT]) & IMASK;
+    m += borrow;
+    x[iT--] = (w_int) (m & IMASK);
+
+    if (m < 0) {
+      borrow = -1;
+    } else {
+      break;
+    }
+  }
+}
+
+w_instance BigInteger_static_squareArray(JNIEnv *env, w_instance classBigInteger, w_instance multiplicandArray, w_instance multiplierArray) {
+  w_int *w = instance2Array_int(multiplicandArray);
+  w_int *x = instance2Array_int(multiplierArray);
+  w_int w_length = instance2Array_length(multiplicandArray);
+  w_int x_length = instance2Array_length(multiplierArray);
+  w_ulong u1;
+  w_ulong u2;
+  w_ulong v;
+  w_ulong c;
+  w_int i;
+  w_int j;
+
+  for (i = x_length - 1; i > 0; --i) {
+    v = ((w_long)x[i]) & IMASK;
+
+    u1 = v * v;
+    u2 = u1 >> 32;
+    u1 = u1 & IMASK;
+
+    u1 += ((w_long)w[2 * i + 1]) & IMASK;
+    w[2 * i + 1] = (w_int) u1;
+    c = u2 + (u1 >> 32);
+
+    for (j = i - 1; j >= 0; j--) {
+      u1 = ((w_long)x[j] & IMASK);
+      u1 = u1 * v;
+      u2 = u1 >> 31; // multiply by 2!
+      u1 = (u1 & 0x7fffffff) << 1; // multiply by 2!
+      u1 += (((w_long)w[i + j + 1]) & IMASK) + c;
+
+      w[i + j + 1] = (w_int) u1;
+      c = u2 + (u1 >> 32);
+    }
+    c += ((w_long)w[i]) & IMASK;
+    w[i] = (w_int) c;
+    w[i - 1] = (w_int) (c >> 32);
+  }
+
+  u1 = ((w_long)x[0]) & IMASK;
+  u1 = u1 * u1;
+  u2 = u1 >> 32;
+  u1 = u1 & IMASK;
+
+  u1 += (((w_long)w[1]) & IMASK);
+
+  w[1] = (w_int) u1;
+  w[0] = (w_int) (u2 + (u1 >> 32) + w[0]);
+
+  return multiplicandArray;
+}
+
+w_instance BigInteger_static_remainderArrays(JNIEnv *env, w_instance classBigInteger, w_instance dividendArray, w_instance divisorArray) {
+  w_int *x = instance2Array_int(dividendArray);
+  w_int *y = instance2Array_int(divisorArray);
+  w_int x_length = instance2Array_length(dividendArray);
+  w_int y_length = instance2Array_length(divisorArray);
+  w_int xyCmp = compareTo(0, x_length, x, 0, y_length, y);
+
+  if (xyCmp > 0) {
+    w_int *c;
+    w_int c_length;
+    w_int shift = bitLength(0, x_length, x) - bitLength(0, y_length, y);
+    w_int xStart = 0;
+    w_int cStart = 0;
+
+
+    if (shift > 1) {
+      c = shiftLeft(y, y_length, shift - 1, &c_length);
+    } else {
+      c_length = x_length;
+      c = allocClearedMem(x_length * sizeof(w_int));
+
+      w_memcpy(c + (c_length - y_length), y, y_length * sizeof(w_int));
+    }
+
+    subtract(0, x_length, x, 0, c_length, c);
+
+    for (;;) {
+      w_int cmp = compareTo(xStart, x_length, x, cStart, c_length, c);
+
+      while (cmp >= 0) {
+        subtract(xStart, x_length, x, cStart, c_length, c);
+        cmp = compareTo(xStart, x_length, x, cStart, c_length, c);
+      }
+
+      xyCmp = compareTo(xStart, x_length, x, 0, y_length, y);
+
+      if (xyCmp > 0) {
+        if (x[xStart] == 0) {
+          xStart++;
+        }
+
+        shift = bitLength(cStart, c_length, c) - bitLength(xStart, x_length, x);
+
+        if (shift == 0) {
+          shiftRightOne(cStart, c_length, c);
+        } else {
+          shiftRight(cStart, c_length, c, shift);
+        }
+
+        if (c[cStart] == 0) {
+          cStart++;
+        }
+      } else if (xyCmp == 0) {
+        memset(x + xStart, 0, x_length - xStart);
+        break;
+      } else {
+        break;
+      }
+    }
+    releaseMem(c);
+  } else if (xyCmp == 0) {
+    memset(x, 0, x_length);
+  }
+
+  return dividendArray;
+}
+
+
+w_instance BigInteger_static_multiplyArrays(JNIEnv *env, w_instance classBigInteger, w_instance resultArray, w_instance yArray, w_instance zArray) {
+  w_int *x = instance2Array_int(resultArray);
+  w_int *y = instance2Array_int(yArray);
+  w_int *z = instance2Array_int(zArray);
+  w_int x_length = instance2Array_length(resultArray);
+  w_int y_length = instance2Array_length(yArray);
+  w_int z_length = instance2Array_length(zArray);
+  w_int i;
+  w_int j;
+
+  for (i = z_length - 1; i >= 0; i--) {
+    w_long a = (w_long)z[i] & IMASK;
+    w_long value = 0;
+
+    for (j = y_length - 1; j >= 0; j--) {
+      value += a * ((w_long)y[j] & IMASK) + ((w_long)x[i + j + 1] & IMASK);
+
+      x[i + j + 1] = (w_int) value;
+
+      value = (w_ulong)value >> 32;
+    }
+
+      x[i] = (w_int) value;
+    }
+
+    return resultArray;
+  }
 

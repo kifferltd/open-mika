@@ -459,6 +459,9 @@ java/math/BigInteger
         add             (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_add
 #       divideAndRemainder      (Ljava/math/BigInteger;)Ljava/math/BigInteger;  BigInteger_divideAndRemainder
         nativeNegateBytes       ()[B    BigInteger_negateBytes
+	multiplyArrays	([I[I[I)[I	BigInteger_static_multiplyArrays
+	squareArray	([I[I)[I	BigInteger_static_squareArray
+	remainderArrays	([I[I)[I	BigInteger_static_remainderArrays
 wonka/rmi/RMIConnection
         getStringHash   (Ljava/lang/String;)J  RMIConnection_getStringHash
 wonka/decoders/Latin1Decoder

@@ -26,11 +26,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
-/**
- * $Id: BigInteger.java,v 1.9 2006/06/20 11:45:04 cvs Exp $
- */
-
 package java.math;
 
 import java.util.Random;
@@ -100,6 +95,21 @@ public class BigInteger extends Number implements Comparable {
   private int firstNonzeroByteNum=-2;
   private int bitCount=-1;
   private int bitLength=-1;
+
+  /**
+   * return w with w = x * x . w must be twice as long as x
+   */
+  private static native int[] squareArray(int[] w, int[] x);
+
+  /**
+   * return x = x % y - done in place (y value preserved)
+   */
+  private native static int[] remainderArrays(int[] x, int[] y);
+
+  /**
+   * return x with x = y * z - x is assumed to have enough space.
+   */
+  private native static int[] multiplyArrays(int[] x, int[] y, int[] z);
 
   private BigInteger(byte[] magn, int sign){
    	magnitude = magn;
@@ -877,7 +887,7 @@ public class BigInteger extends Number implements Comparable {
             
   }
 */
-  
+
   public BigInteger modPow(BigInteger exponent, BigInteger m) {
     if (m.signum != 1) {
       throw new ArithmeticException();
@@ -952,7 +962,6 @@ public class BigInteger extends Number implements Comparable {
         v <<= 1;
         bits++;
       }
-
       while (v != 0) {
         if (useMonty) {
           // Montgomery square algo doesn't exist, and a normal
@@ -960,8 +969,8 @@ public class BigInteger extends Number implements Comparable {
           // be almost as heavy as a Montgomery mulitply.
           BigIntegerJava.multiplyMonty(yAccum, yVal, yVal, mmag, mQ);
         } else {
-          BigIntegerJava.square(yAccum, yVal);
-          BigIntegerJava.remainder(yAccum, mmag);
+          BigInteger.squareArray(yAccum, yVal);
+          BigInteger.remainderArrays(yAccum, mmag);
           System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
               yVal.length);
           BigIntegerJava.zero(yAccum);
@@ -972,8 +981,8 @@ public class BigInteger extends Number implements Comparable {
           if (useMonty) {
             BigIntegerJava.multiplyMonty(yAccum, yVal, zVal, mmag, mQ);
           } else {
-            BigIntegerJava.multiply(yAccum, yVal, zVal);
-            BigIntegerJava.remainder(yAccum, mmag);
+            BigInteger.multiplyArrays(yAccum, yVal, zVal);
+            BigInteger.remainderArrays(yAccum, mmag);
             System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
                 yVal.length);
             BigIntegerJava.zero(yAccum);
@@ -987,8 +996,8 @@ public class BigInteger extends Number implements Comparable {
         if (useMonty) {
           BigIntegerJava.multiplyMonty(yAccum, yVal, yVal, mmag, mQ);
         } else {
-          BigIntegerJava.square(yAccum, yVal);
-          BigIntegerJava.remainder(yAccum, mmag);
+          BigInteger.squareArray(yAccum, yVal);
+          BigInteger.remainderArrays(yAccum, mmag);
           System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
               yVal.length);
           BigIntegerJava.zero(yAccum);
