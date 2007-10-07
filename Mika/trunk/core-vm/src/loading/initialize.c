@@ -198,7 +198,7 @@ static void scanMethods(w_clazz clazz) {
 
         if (isSet(m->flags, ACC_ABSTRACT)) {
           woempa(1,"AbstractMethodError detected: non-abstract class %k fails to implement %M\n",clazz, m);
-          throwException(currentWonkaThread, clazzAbstractMethodError, "%w", clazz->dotified);
+          throwException(currentWonkaThread, clazzAbstractMethodError, "%M", m);
 
           return;
 
