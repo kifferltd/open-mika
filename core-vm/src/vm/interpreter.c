@@ -3448,7 +3448,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    x = virtualLookup(x, instance2object(objectref)->clazz);
+    clazz = instance2clazz(objectref);
+    x = virtualLookup(x, clazz);
     if (!x) {
       do_the_exception;
     }
@@ -3550,6 +3551,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     if (isSet(x->flags, ACC_ABSTRACT)) {
+      clazz = super;
       do_AbstractMethodError;
     }
 
@@ -3667,6 +3669,8 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     if (!actual_method || isSet(actual_method->flags, ACC_ABSTRACT)) {
+      x = interf_method;
+      clazz = actual_clazz;
       do_AbstractMethodError;
     }
     if (isSet(actual_method->flags, ACC_STATIC)) {
@@ -3981,23 +3985,22 @@ void interpret(w_frame caller, w_method method) {
   ** c_AbstractMethodError: allocates an AbstractMethodError with a message
   ** describing the offending method, records the current opcode in the frame,
   ** and jumps to c_find_handler
-  ** c_clazz2exception: allocates the exeception instance given by clazz 'c' and falls through to c_exception
-  **       c_exception: (opcode at -1) records the current opcode in the frame, falls through to c_find_handler
-  **    c_find_handler: tries to find a handler, handler returns correct code pointer or code pointer for 'c_no_handler'
-  **      c_no_handler: (opcode at -2) is called when there is no handler and returns
   */
 
   c_AbstractMethodError: 
     {
       // Assuming that frame->jstack_top is up to date
       enterSafeRegion(thread);
-      throwException(thread, clazzAbstractMethodError, "%M", x);
+      throwException(thread, clazzAbstractMethodError, "%M in %K", x, clazz);
       enterUnsafeRegion(thread);
       frame->current = current;
       frame->jstack_top = tos;
     }
     goto c_find_handler;
 
+  /*
+  ** c_clazz2exception: allocates the exeception instance given by clazz 'c' and falls through to c_exception
+  */
   c_clazz2exception: {
     threadMustBeUnsafe(thread);
     if (!thread->exception) {
@@ -4012,11 +4015,17 @@ void interpret(w_frame caller, w_method method) {
     }
   }
   
+  /*
+  **       c_exception: (opcode at -1) records the current opcode in the frame, falls through to c_find_handler
+  */
   c_exception: {
     throwExceptionInstance(thread, thread->exception);
     frame->current = current;
   }
   
+  /*
+  **    c_find_handler: tries to find a handler, handler returns correct code pointer or code pointer for 'c_no_handler'
+  */
   c_find_handler: {
     frame->jstack_top = tos;
     current = searchHandler(frame);
@@ -4027,6 +4036,9 @@ void interpret(w_frame caller, w_method method) {
     do_next_opcode;
   }
 
+  /*
+  **      c_no_handler: (opcode at -2) is called when there is no handler and returns
+  */
   c_no_handler: {
     frame->auxstack_top = frame->auxstack_base;
     goto c_common_return;
