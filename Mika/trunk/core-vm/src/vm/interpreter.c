@@ -1936,7 +1936,7 @@ void interpret(w_frame caller, w_method method) {
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
-      target_clazz = getClassConstant_unsafe(cclazz, i);
+      target_clazz = getClassConstant_unsafe(cclazz, i, thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -2010,7 +2010,7 @@ void interpret(w_frame caller, w_method method) {
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
-      target_clazz = getClassConstant_unsafe(cclazz, i);
+      target_clazz = getClassConstant_unsafe(cclazz, i, thread);
       if (thread->exception) {
         do_the_exception;
       }
