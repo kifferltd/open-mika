@@ -30,11 +30,6 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-/*
-** References of the form [J+JVM ...] are to the book _Java and the Java
-** Virtual Machine_ by Robert Staerk, Joachim Schmid, and Egon Boerger.
-*/
-
 #include <string.h>
 
 #include "fields.h"
@@ -2079,7 +2074,7 @@ void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
     setFlag(instance2flags(child), O_BLACK);
   }
 
-  if (!unsafe) {
+  if (thread && !unsafe) {
     enterSafeRegion(thread);
   }
 }
