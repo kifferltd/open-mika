@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: interpreter.c,v 1.31 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -318,9 +319,9 @@ static void do_drem(w_Slot**);
 #define int_operand              ((signed int)((current[1] << 24) | (current[2] << 16) | (current[3] << 8) | current[4]))
 
 #ifdef DEBUG
-inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) { 
+inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
-//  frame->jstack_top = tos;
+  frame->jstack_top = tos;
   woempa(7, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
 //  wprintf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
@@ -351,7 +352,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
 ** 3. If step->frame is non-NULL and is not current frame, exit.
 ** 4. If we make it this far, set up step->location and trigger the event.
 */
-static void checkSingleStep1(w_frame frame, w_code current) {
+static void checkSingleStep1(w_frame frame, w_code current, w_slot tos) {
   jdwp_step step = frame->thread->step;
 
   if (!step) {
@@ -397,6 +398,7 @@ static void checkSingleStep1(w_frame frame, w_code current) {
   step->location.pc = current - frame->method->exec.code;
 
   frame->current = current;
+  frame->jstack_top = tos;
   enterSafeRegion(frame->thread);
   jdwp_event_step(frame->thread);
   enterUnsafeRegion(frame->thread);
@@ -418,21 +420,21 @@ static void checkSingleStep2(w_frame frame) {
   }
 }
 #else
-#define checkSingleStep1(frame,current)
+#define checkSingleStep1(frame,current,tos)
 #define checkSingleStep2(frame)
 #endif
 
 #define do_next_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current + 1, tos); \
-  checkSingleStep1(frame, current + 1);     \
+  checkSingleStep1(frame, current + 1, tos);\
   goto * jumps[*(++current)];             \
 }
 
 #define do_this_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep1(frame, current);       \
+  checkSingleStep1(frame, current, tos);  \
   goto * jumps[*current];                 \
 }
 
@@ -440,7 +442,7 @@ static void checkSingleStep2(w_frame frame) {
   updateProfileBytecodes(frame);          \
   current += (a);                         \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep1(frame, current);       \
+  checkSingleStep1(frame, current, tos);  \
   goto * jumps[*current];                 \
 }
 
@@ -449,7 +451,7 @@ static void checkSingleStep2(w_frame frame) {
   if (!(c)) {                             \
     current += 3;                         \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep1(frame, current);     \
+    checkSingleStep1(frame, current, tos);\
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
@@ -458,7 +460,7 @@ static void checkSingleStep2(w_frame frame) {
     }                                     \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep1(frame, current);     \
+    checkSingleStep1(frame, current, tos);\
     goto * jumps[*current];               \
   }                                       \
 }
@@ -732,7 +734,7 @@ void interpret(w_frame caller, w_method method) {
   thread->top = frame;
   tos = (w_Slot*)frame->jstack_top;
   updateDebugInfo(frame, current, tos);
-  checkSingleStep1(frame, current);
+  checkSingleStep1(frame, current, tos);
 
   /*
   ** Note that pc is a signed integer and that values -1 and -2, currently, are used to store Wonka specific
@@ -1933,9 +1935,8 @@ void interpret(w_frame caller, w_method method) {
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
-      enterSafeRegion(thread);
-      target_clazz = getClassConstant(cclazz, i);
-      enterUnsafeRegion(thread);
+      frame->jstack_top = tos;
+      target_clazz = getClassConstant_unsafe(cclazz, i);
       if (thread->exception) {
         do_the_exception;
       }
@@ -2008,9 +2009,8 @@ void interpret(w_frame caller, w_method method) {
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
-      enterSafeRegion(thread);
-      target_clazz = getClassConstant(cclazz, i);
-      enterUnsafeRegion(thread);
+      frame->jstack_top = tos;
+      target_clazz = getClassConstant_unsafe(cclazz, i);
       if (thread->exception) {
         do_the_exception;
       }
@@ -4307,12 +4307,8 @@ w_frame activateFrame(w_thread thread, w_method method, w_word flags, w_int narg
   w_frame frame = pushFrame(thread, method);
   w_int i = 0;
 
+  threadMustBeSafe(thread);
   if (frame) {
-#ifdef RUNTIME_CHECKS
-    if (threadIsUnsafe(thread)) {
-      wabort(ABORT_WONKA, "Thread %t is unsafe when calling %M from %M!\n", thread, method, frame->previous->method);
-    }
-#endif
     va_start(args, nargs);
     while (i < nargs) {
       frame->jstack_top[0].c = va_arg(args, w_word);
