@@ -26,10 +26,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/*
-** $Id: chars.c,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
-
 #include "chars.h"
 #include "wstrings.h"
 #include "ts-mem.h"
