@@ -26,10 +26,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/*
-** $Id: RuleBasedCollator.c,v 1.2 2004/11/30 10:08:10 cvs Exp $
-*/
-
 #include "core-classes.h"
 #include "hashtable.h"
 #include "wstrings.h"
