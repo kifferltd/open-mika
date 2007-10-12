@@ -172,7 +172,7 @@ public final class URL implements java.io.Serializable {
 /**
 ** if spec is a relative url it should only contain a path (or path + fragment).
 ** The given context should be non-null in case of a relative url, otherwise null is allowed
-** The specified handler can be null
+** The specified handler can be null, as can the context.
 */
   public URL(URL context, String spec, URLStreamHandler handler) throws MalformedURLException {
     // we should find out if spec is a relative URL or not
@@ -182,7 +182,7 @@ public final class URL implements java.io.Serializable {
 
     // RFC 1630 allowed relative URLs to begin with the scheme name if this
     // was the same as for the base URL. Work around this.
-    if (i == context.protocol.length() && spec.startsWith(context.protocol) && j != i + 1) {
+    if (context != null && i == context.protocol.length() && spec.startsWith(context.protocol) && j != i + 1) {
       spec = spec.substring(i + 1);
       j -= i + 1;
       i = -1;
