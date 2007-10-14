@@ -502,7 +502,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
         w_clazz array_osfclazz = getNextDimension(clazzObjectStreamField, NULL);
         w_clazz array_fclazz = getNextDimension(clazzField, NULL);
 
-        if(array_fclazz && array_osfclazz){
+        if(array_fclazz && array_osfclazz && mustBeInitialized(array_fclazz) != CLASS_LOADING_FAILED && mustBeInitialized(array_osfclazz) != CLASS_LOADING_FAILED) {
           OSFIELDS = allocArrayInstance_1d(thread, array_osfclazz, count);
 
           if(OSFIELDS){

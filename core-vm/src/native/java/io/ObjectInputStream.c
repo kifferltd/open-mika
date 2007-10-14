@@ -329,7 +329,7 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
 
   aclazz = type->nextDimension;
 
-  if(!aclazz){ //remove this check if possible ...
+  if(!aclazz || mustBeInitialized(aclazz) == CLASS_LOADING_FAILED) { //remove this check if possible ...
     woempa(9,"What do you mean the array clazz of %k is not yet defined\n",type);
     throwException(thread, clazzInternalError, "trying to deserialize a primitive Array, but no arrayclass defined");
     return NULL;

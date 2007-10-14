@@ -887,8 +887,11 @@ void startLoading(void) {
   primitive2wrapper[P_long] = clazzLong;
   primitive2wrapperSlot[P_long] = F_Long_value;
 
-//  createOutOfMemoryErrorCache();
+  mustBeInitialized(clazzClass);
   mustBeInitialized(clazzInvocationTargetException);
+  mustBeInitialized(clazzArrayOf_Object);
+  mustBeInitialized(clazzArrayOf_String);
+  mustBeInitialized(clazzArrayOf_Class);
 
   woempa(7, "Forced class loading complete, loaded %d classes.\n",system_loaded_class_hashtable->occupancy);
 

@@ -83,7 +83,7 @@ w_instance Reference_get(JNIEnv *env, w_instance this) {
   w_thread thread = JNIEnv2w_thread(env);
   w_instance referent;
 
-  enterUnsafeRegion(thread);
+  w_boolean unsafe = enterUnsafeRegion(thread);
 
   referent = getWotsitField(this, F_Reference_referent);
   woempa(1, "Getting reference from %j to %j\n", this, referent);
@@ -96,7 +96,9 @@ w_instance Reference_get(JNIEnv *env, w_instance this) {
 */
     addLocalReference(thread, referent);
   }
-  enterSafeRegion(thread);
+  if (!unsafe) {
+    enterSafeRegion(thread);
+  }
 
   return referent;
 }

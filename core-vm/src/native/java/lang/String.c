@@ -1070,9 +1070,9 @@ void fast_String_substring(w_frame frame) {
   enterSafeRegion(thread);
   if (objectref) {
     w_instance subString = i_String_substring(frame->thread, objectref, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
-    frame->jstack_top[-3].c = (w_word)subString;
     enterUnsafeRegion(thread);
-    if (!exceptionThrown(thread)) {
+    frame->jstack_top[-3].c = (w_word)subString;
+    if (subString) {
       setFlag(instance2flags(subString), O_BLACK);
     }
     frame->jstack_top -= 2;

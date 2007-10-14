@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2006, 2007 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -216,6 +216,7 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
   dimensions = length;
   array_clazz = getNextDimension(component_clazz);
   if (array_clazz) {
+    mustBeInitialized(array_clazz);
     if (!exceptionThrown(thread)) {
       mustBeLinked(array_clazz);
     }
@@ -259,6 +260,7 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
 
   array_clazz = getNextDimension(component_clazz, initiating_loader);
   if (array_clazz) {
+    mustBeInitialized(array_clazz);
     if (!exceptionThrown(thread)) {
       mustBeLinked(array_clazz);
     }
@@ -334,8 +336,8 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
           if (exceptionThrown(thread)) {
             break;
           }
-          woempa(7, "Resolving class %k\n", clazz);
-          mustBeLinked(clazz);
+          woempa(7, "Initializing class %k\n", clazz);
+          mustBeInitialized(clazz);
           if (exceptionThrown(thread)) {
             break;
           }

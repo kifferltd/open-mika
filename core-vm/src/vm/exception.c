@@ -112,6 +112,7 @@ void _throwOutOfMemoryError(w_thread thread, const char *file, const char *funct
   }
   else if(!exceptionThrown(thread)) {
     woempa(9, "First OutOfMemoryError thrown in %t at line %d in %s (%s)\n", thread, line, function, file);
+    enterUnsafeRegion(thread);
     oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
     if (!oome) {
       wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
@@ -126,6 +127,7 @@ void _throwOutOfMemoryError(w_thread thread, const char *file, const char *funct
     else {
       bootstrap_exception = oome;
     }
+    enterSafeRegion(thread);
   }
   else {
     woempa(9, "OutOfMemoryError thrown when %e already pending - ignoring OutOfMemoryError at line %d in %s (%s)\n", exceptionThrown(thread), line, function, file);
@@ -140,6 +142,7 @@ void _throwOutOfMemoryError(w_thread thread) {
   }
 
   if (instance2clazz(exceptionThrown(thread)) != clazzOutOfMemoryError && !exceptionThrown(thread)) {
+    enterUnsafeRegion(thread);
     oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
     if (!oome) {
       wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
@@ -154,6 +157,7 @@ void _throwOutOfMemoryError(w_thread thread) {
     else {
       bootstrap_exception = oome;
     }
+    enterSafeRegion(thread);
   }
   // else ignore, exception already pending
 }
@@ -248,8 +252,17 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
   w_instance theMessage = NULL;
   w_instance theThrowable;
 
+  threadMustBeSafe(thread);
+
   if (exceptionThrown(thread)) {
     woempa(7, "Not throwing %k in %t : exception %j is already there\n", exception, thread, exceptionThrown(thread));
+
+    return;
+
+  }
+
+  if (mustBeInitialized(exception) == CLASS_LOADING_FAILED) {
+    woempa(7, "Not throwing %k in %t : cannot initialise %k\n", exception, thread, exception);
 
     return;
 
@@ -270,7 +283,7 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
   }
   
   woempa(7, "Throwing %k with message `%w' in %t\n", exception, message, thread);
-  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
 
   theThrowable = allocThrowableInstance(thread, exception);
 
@@ -300,5 +313,6 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
     woempa(9, "Unable to allocate instance of %k\n", exception);
     throwOutOfMemoryError(thread);
   }
+  enterSafeRegion(thread);
 }
 

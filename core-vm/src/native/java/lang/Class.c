@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded        *
+* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
 * Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -339,8 +339,10 @@ Class_get_constructors
   w_method method;
   w_instance Constructor;
   w_instance Array;
-  w_instance exception;
+  w_instance exception = NULL;
   w_clazz   clazzArrayOf_Constructor = getNextDimension(clazzConstructor, NULL);
+
+  mustBeInitialized(clazzArrayOf_Constructor);
 
   if (clazz) {
     numMethods = clazz->numInheritableMethods;
@@ -358,8 +360,6 @@ Class_get_constructors
       numRelevantConstructors += 1;
     }
   }
-
-  exception = NULL;
 
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Constructor, numRelevantConstructors);
 
@@ -418,8 +418,10 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_int numRelevantFields;
   w_fifo fields;
   w_instance Array;
-  w_instance exception;
+  w_instance exception = NULL;
   w_clazz   clazzArrayOf_Field = getNextDimension(clazzField, NULL);
+
+  mustBeInitialized(clazzArrayOf_Field);
 
   /*
   ** Find the number of appropriate fields first.  
@@ -455,9 +457,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
     }
   }
   
-  exception = NULL;
   numRelevantFields = fields->numElements;
-
 
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
 
@@ -508,6 +508,8 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_instance Array;
   w_fifo relevantMethods;
   w_clazz   clazzArrayOf_Method = getNextDimension(clazzMethod, NULL);
+
+  mustBeInitialized(clazzArrayOf_Method);
 
   if (clazz) {
     numMethods = clazz->numInheritableMethods;
@@ -1005,6 +1007,7 @@ w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
 }
 
 w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
+  w_thread   thread = JNIEnv2w_thread(env);
   w_clazz clazz = Class2clazz(Class);
   int i;
 
@@ -1014,7 +1017,7 @@ w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
     if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
       int j = clazz->temp.inner_class_info[i].outer_class_info_index;
-      w_clazz outer_clazz = getClassConstant(clazz, j);
+      w_clazz outer_clazz = getClassConstant(clazz, j, thread);
 
       return clazz2Class(outer_clazz);
     }
@@ -1037,7 +1040,7 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
     if (clazz->temp.inner_class_info[i].outer_class_info_index == clazz->temp.this_index) {
       int j = clazz->temp.inner_class_info[i].inner_class_info_index;
 
-      inner_clazz[n++] = getClassConstant(clazz, j);
+      inner_clazz[n++] = getClassConstant(clazz, j, thread);
       if (exceptionThrown(thread)) {
 
         return NULL;
@@ -1076,7 +1079,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   while (super) {
     for (i = 0; i < super->temp.inner_class_info_count; ++i) {
       if (super->temp.inner_class_info[i].outer_class_info_index == super->temp.this_index) {
-        w_clazz inner_clazz = getClassConstant(super, super->temp.inner_class_info[i].inner_class_info_index);
+        w_clazz inner_clazz = getClassConstant(super, super->temp.inner_class_info[i].inner_class_info_index, thread);
 
         if (exceptionThrown(thread)) {
           releaseFifo(inner_clazz_fifo);

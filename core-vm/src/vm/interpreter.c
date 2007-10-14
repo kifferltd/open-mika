@@ -1224,7 +1224,9 @@ void interpret(w_frame caller, w_method method) {
 
   c_checkcast: {
     frame->jstack_top = tos;
-    clazz = getClassConstant_unsafe(cclazz, (unsigned short) short_operand, thread);
+    enterSafeRegion(thread);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
+    enterUnsafeRegion(thread);
     if (thread->exception) {
       do_the_exception;
     }
@@ -1519,14 +1521,18 @@ void interpret(w_frame caller, w_method method) {
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    o = allocInstance(thread, clazz);
+    mustBeInitialized(clazz);
     enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
+    o = allocInstance_initialized(thread, clazz);
     tos[0].s = stack_trace;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
     tos[0].c = (w_word)o;
-    if (!o) {
+    if (thread->exception) {
       do_the_exception;
     }
     tos += 1;
@@ -1936,7 +1942,9 @@ void interpret(w_frame caller, w_method method) {
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
-      target_clazz = getClassConstant_unsafe(cclazz, i, thread);
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i, thread);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -2010,7 +2018,9 @@ void interpret(w_frame caller, w_method method) {
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
-      target_clazz = getClassConstant_unsafe(cclazz, i, thread);
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i, thread);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -3243,6 +3253,9 @@ void interpret(w_frame caller, w_method method) {
     enterSafeRegion(thread);
     mustBeInitialized(field->declaring_clazz);
     enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
 
     i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
     current[1] = (i >> 8) & 0xff;
@@ -3286,6 +3299,9 @@ void interpret(w_frame caller, w_method method) {
     enterSafeRegion(thread);
     mustBeInitialized(field->declaring_clazz);
     enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
 
     i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
     current[1] = (i >> 8) & 0xff;
@@ -3696,7 +3712,7 @@ void interpret(w_frame caller, w_method method) {
   c_new: {
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
 
     if (clazz) {
       mustBeInitialized(clazz);
@@ -3732,10 +3748,13 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     enterSafeRegion(thread);
     mustBeInitialized(clazz);
+    enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
     woempa(1, "Allocating array of %d %k\n", s, clazz->previousDimension);
     a = allocArrayInstance_1d(thread, clazz, (w_int)s);
 
-    enterUnsafeRegion(thread);
     if (!a) {
       do_the_exception;
     }
@@ -3759,7 +3778,7 @@ void interpret(w_frame caller, w_method method) {
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
 
     if (clazz) {
       clazz = getNextDimension(clazz, clazz2loader(frame->method->spec.declaring_clazz));
@@ -3771,10 +3790,10 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    enterSafeRegion(thread);
+    //enterSafeRegion(thread);
     woempa(1, "Allocating array of %d %k\n", s, clazz->previousDimension);
     a = allocArrayInstance_1d(thread, clazz, s);
-    enterUnsafeRegion(thread);
+    //enterUnsafeRegion(thread);
     if (!a) {
       do_the_exception;
     }
@@ -3805,7 +3824,9 @@ void interpret(w_frame caller, w_method method) {
 
   c_instanceof: {
     frame->jstack_top = tos;
-    clazz = getClassConstant_unsafe(cclazz, (unsigned short) short_operand, thread);
+    enterSafeRegion(thread);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
+    enterUnsafeRegion(thread);
     if (thread->exception) {
       do_the_exception;
     }
@@ -3910,7 +3931,7 @@ void interpret(w_frame caller, w_method method) {
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
     if (clazz) {
       mustBeInitialized(clazz);
     }
@@ -3920,9 +3941,9 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    enterSafeRegion(thread);
+    //enterSafeRegion(thread);
     a = allocArrayInstance(thread, clazz, s, dimensions);
-    enterUnsafeRegion(thread);
+    //enterUnsafeRegion(thread);
     releaseMem(dimensions);
     
     if (!a) {
@@ -4007,8 +4028,8 @@ void interpret(w_frame caller, w_method method) {
       frame->jstack_top = tos;
       enterSafeRegion(thread);
       mustBeInitialized(clazz);
-      thread->exception = allocThrowableInstance(thread, clazz);
       enterUnsafeRegion(thread);
+      thread->exception = allocThrowableInstance(thread, clazz);
       if (thread->exception) {
         removeLocalReference(thread, thread->exception);
       }
@@ -4204,7 +4225,9 @@ static w_code searchHandler(w_frame frame) {
   for (i = 0; i <  frame->method->exec.numExceptions; i++) {
       ex = &frame->method->exec.exceptions[i];
       if (ex->type_index) {
-        cc = getClassConstant_unsafe(frame->method->spec.declaring_clazz, ex->type_index, thread);
+        enterSafeRegion(thread);
+        cc = getClassConstant(frame->method->spec.declaring_clazz, ex->type_index, thread);
+        enterUnsafeRegion(thread);
         if (thread->exception) {
           pending = thread->exception;
           pushLocalReference(frame, pending);

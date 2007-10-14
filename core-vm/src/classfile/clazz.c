@@ -1753,6 +1753,7 @@ w_instance attachClassInstance(w_clazz clazz) {
   w_thread thread = currentWonkaThread;
   w_instance Class;
   w_int      i;
+  w_boolean unsafe;
 
 #ifdef RUNTIME_CHECKS
   if (clazzClass == NULL) {
@@ -1768,10 +1769,9 @@ w_instance attachClassInstance(w_clazz clazz) {
 #endif
 
   if (thread) {
-    threadMustBeSafe(thread);
+    unsafe = enterUnsafeRegion(thread);
   }
-
-  Class = allocInstance(thread, clazzClass);
+  Class = allocInstance_initialized(thread, clazzClass);
 
   if (Class) {
     clazz->Class = Class;
@@ -1786,9 +1786,13 @@ w_instance attachClassInstance(w_clazz clazz) {
       }
     }
     else {
-      setReferenceField(Class, clazz->loader, F_Class_loader);
+      setReferenceField_unsafe(Class, clazz->loader, F_Class_loader);
     }
     setWotsitField(Class, F_Class_wotsit, clazz);
+  }
+
+  if (thread && !unsafe) {
+    enterSafeRegion(thread);
   }
 
   return Class;

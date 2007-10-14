@@ -109,18 +109,16 @@ w_int instance_returned = 0;
 w_object instance_first = NULL;
 
 inline static void registerObject(w_object object, w_thread thread) {
+
   if (thread) {
-    threadMustBeSafe(thread);
-    enterUnsafeRegion(thread);
+    threadMustBeUnsafe(thread);
   }
+
   woempa(1, "Registering %j\n", object->fields);
   instance_use += 1;
   instance_allocated += 1;
   addLocalReference(thread, object->fields);
   setFlag(object->flags, O_IS_JAVA_INSTANCE | O_BLACK);
-  if (thread) {
-    enterSafeRegion(thread);
-  }
 #ifdef USE_OBJECT_HASHTABLE
   if (ht_write(object_hashtable, (w_word)object, (w_word)object)) {
     wabort(ABORT_WONKA, "Sky! Could not add object %p to object hashtable!\n", object);
@@ -206,6 +204,7 @@ static w_boolean heap_request(w_thread thread, w_int bytes) {
 }
 
 static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
+  w_boolean unsafe = thread && enterUnsafeRegion(thread);
   object->clazz = clazz;
 
 /*
@@ -215,6 +214,11 @@ static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz
 */ 
   
   registerObject(object,thread);
+
+  if (thread && !unsafe) {
+    enterSafeRegion(thread);
+  }
+
 
   return object->fields;
 }
@@ -258,8 +262,6 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
   }
 
-  threadMustBeSafe(thread);
-
   /*
   ** The class must be initialized.
   */
@@ -277,17 +279,24 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
 #ifdef RUNTIME_CHECKS
   checkClazz(clazz);
+
+  if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
+   && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
+    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
+    return NULL;
+  }
 #endif
 
-  threadMustBeSafe(thread);
+
+  threadMustBeUnsafe(thread);
 
   /*
   ** The class must be initialized.
-  */
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
+  */
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
@@ -323,10 +332,18 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
 
   w_object object = NULL;
   w_size   bytes;
+  w_boolean unsafe;
+  w_boolean initialisation_result;
 
   checkClazz(clazz);  
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  unsafe = enterSafeRegion(thread);
+  initialisation_result = mustBeInitialized(clazz);
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
+
+  if (initialisation_result == CLASS_LOADING_FAILED) {
 
     return NULL;
 
@@ -377,7 +394,7 @@ typedef struct w_Aas {
 */
 
 static void fillParentArray(w_thread thread, w_aas parent) {
-
+  w_boolean unsafe;
   w_int x;
 
   if (parent->next) {
@@ -389,10 +406,12 @@ static void fillParentArray(w_thread thread, w_aas parent) {
       }
       parent->next->Array[F_Array_length] = parent->next->length;
 
-      enterUnsafeRegion(thread);      
+      unsafe = enterUnsafeRegion(thread);      
       setArrayReferenceField_unsafe(parent->Array, parent->next->Array, x);
       popLocalReference(thread->top);
-      enterSafeRegion(thread);
+      if (!unsafe) {
+        enterSafeRegion(thread);
+      }
       fillParentArray(thread, parent->next);
     }
   }
@@ -401,9 +420,7 @@ static void fillParentArray(w_thread thread, w_aas parent) {
 w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
 
   w_instance result;
-  jlong size;
-
-  threadMustBeSafe(thread);
+  w_long size;
 
   woempa(1, "Allocating an instance of %k (1 dimension, length %d)\n", clazz, length);
 
@@ -433,7 +450,7 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
   w_instance newarray = NULL;
   w_size bytes;
 
-  threadMustBeSafe(thread);
+  threadMustBeUnsafe(thread);
 
   woempa(7, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
 
@@ -475,7 +492,7 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   w_clazz current;
   w_instance result;
 
-  threadMustBeSafe(thread);
+  //threadMustBeSafe(thread);
 
   if (dimensions == 1) {
     return allocArrayInstance_1d(thread, clazz, lengths[0]);
