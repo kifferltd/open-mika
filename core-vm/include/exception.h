@@ -1,6 +1,3 @@
-#ifndef _EXCEPTION_H
-#define _EXCEPTION_H
-
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
@@ -32,6 +29,9 @@
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
+
+#ifndef _EXCEPTION_H
+#define _EXCEPTION_H
 
 #include "threads.h"
 #include "wonka.h"
