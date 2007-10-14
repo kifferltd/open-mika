@@ -98,6 +98,7 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
   w_int oldsize = instance2Array_length(oldbuffer);
   w_instance newbuffer;
 
+  threadMustBeSafe(thread);
   woempa(1, "%j: minimum capacity is %d, current is %d\n", StringBuffer, minimum, oldsize);
 
   if (minimum > oldsize) {
@@ -321,7 +322,7 @@ void fast_StringBuffer_toString(w_frame frame) {
   w_instance theString;
   w_thread   thread = frame->thread;
 
-    enterSafeRegion(thread);
+  enterSafeRegion(thread);
   if (objectref) {
     theString = i_StringBuffer_toString(objectref);
     enterUnsafeRegion(thread);
@@ -333,7 +334,7 @@ void fast_StringBuffer_toString(w_frame frame) {
   }
   else {
     throwException(thread, clazzNullPointerException, NULL);
-  enterUnsafeRegion(thread);
+    enterUnsafeRegion(thread);
   }
 }
 

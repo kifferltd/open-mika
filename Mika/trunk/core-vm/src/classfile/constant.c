@@ -52,11 +52,12 @@
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must be GC safe!
  */
-w_clazz getClassConstant(w_clazz clazz, w_int i) {
+w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
   int tag = clazz->tags[i];
 
 #ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
+  //
+if (thread) threadMustBeSafe(thread);
 
   if (tag == CONSTANT_DELETED) {
     wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
@@ -65,41 +66,11 @@ w_clazz getClassConstant(w_clazz clazz, w_int i) {
 
   while (tag < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
-      throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
+      throwExceptionInstance(thread, (w_instance)clazz->values[i]);
       return NULL;
     }
     
     resolveClassConstant(clazz, i);
-    tag = clazz->tags[i];
-  }
-
-  return (w_clazz)clazz->values[i];
-}
-
-/**
- * Same as getClassConstant, but the calling thread is GC-unsafe on entry and exit.
- * Since this function may call enterSafeRegion, the thread's GC affairs must
- * already be in order before calling this function.
- */
-w_clazz getClassConstant_unsafe(w_clazz clazz, w_int i, w_thread thread) {
-  int tag = clazz->tags[i];
-
-#ifdef RUNTIME_CHECKS
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
-#endif
-
-  while (tag < RESOLVED_CONSTANT) {
-    if (tag == COULD_NOT_RESOLVE) {
-      throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
-
-      return NULL;
-    }
-    
-    enterSafeRegion(thread);
-    resolveClassConstant(clazz, i);
-    enterUnsafeRegion(thread);
     tag = clazz->tags[i];
   }
 
@@ -594,6 +565,8 @@ void waitForClassConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 }
 
+/*
+*/
 void resolveClassConstant(w_clazz clazz, w_int i) {
 
   w_ConstantType *c = &clazz->tags[i];
@@ -682,7 +655,8 @@ static w_field seekFieldInClass(w_string name, w_string descriptor, w_clazz valu
 }
 
 /*
-** Resolve a Field constant.
+** Resolve a Field constant. Can result in the thread being temporarily
+** declared GC-safe, so the stack must be in order.
 */
 static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
 
@@ -699,11 +673,12 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   w_size     start;
   w_size     end;
   w_clazz    value_clazz;
+  w_boolean  class_loading_result;
 
   x_monitor_exit(clazz->resolution_monitor);
   member = *v;
   woempa(1, "Resolving field constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
   if (!search_clazz) {
     woempa(9, "  failed to load the class referenced by field constant[%d] of %K!\n", v - clazz->values, clazz);
     *v = (w_word)exceptionThrown(thread);
@@ -720,7 +695,9 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   start = 0;
   end = string_length(desc_string);
   value_clazz = parseDescriptor(desc_string, &start, end, clazz->loader);
-  if (mustBeLoaded(&value_clazz) == CLASS_LOADING_FAILED) {
+
+  class_loading_result = mustBeLoaded(&value_clazz);
+  if (class_loading_result == CLASS_LOADING_FAILED) {
     woempa(9, "  failed to load %K, the type of field %w of %K!\n", value_clazz, name, search_clazz);
     *v = (w_word)exceptionThrown(thread);
     *c = COULD_NOT_RESOLVE;
@@ -803,6 +780,11 @@ void waitForFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 }
 
+/**
+ ** Resolve a Field constant.
+ ** Can result in the thread being temporarily
+ ** declared GC-safe, so the stack must be in order.
+ */
 void resolveFieldConstant(w_clazz clazz, w_int i) {
   w_ConstantType *c;
   w_ConstantValue *v;
@@ -891,7 +873,7 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
   *c += RESOLVING_CONSTANT;
   x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Resolving method constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
 
   if (search_clazz) {
     woempa(1, "Method was declared in class %k.\n", search_clazz);
@@ -1038,7 +1020,7 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
   *c += RESOLVING_CONSTANT;
   x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Resolving imethod constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
   nat = clazz->values[Member_get_nat_index(member)];
   woempa(1, "Name & Type = '0x%08x'\n", nat);
   name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));

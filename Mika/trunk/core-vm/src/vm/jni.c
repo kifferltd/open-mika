@@ -2672,7 +2672,10 @@ jarray NewObjectArray(JNIEnv *env, jsize length, jclass elementType, jobject ini
   woempa(1, "Asked to construct an array of %d %k's, all set to 0x%08x\n", length, elementClazz, initval);
 
   arrayClazz = getNextDimension(elementClazz, loader);
-
+  if (exceptionThrown(thread)) {
+    return NULL;
+  }
+  mustBeInitialized(arrayClazz);
   if (exceptionThrown(thread)) {
     return NULL;
   }
@@ -2711,8 +2714,14 @@ void SetObjectArrayElement(JNIEnv *env, jobjectArray Array, jsize aindex, jobjec
 }
 
 static w_instance newTypeArray(w_thread thread, w_clazz clazz, w_int length) {
+  w_instance Array;
 
-  w_instance Array = allocArrayInstance_1d(thread, clazz, length);
+  mustBeInitialized(clazz);
+  if (exceptionThrown(thread)) {
+    return NULL;
+  }
+
+  Array = allocArrayInstance_1d(thread, clazz, length);
 
   woempa(1, "(JNI) Length %d, type %k, Array = %p.\n", length, clazz, Array);
  

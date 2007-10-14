@@ -194,6 +194,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   ** Instantiate a Process object.
   */
 
+  mustBeInitialized(clazzProcessInfo);
   process = allocInstance(thread, clazzProcessInfo);
 
   if (process) {

@@ -76,7 +76,8 @@ void AccessController_static_initialize(JNIEnv *env, w_instance classAccessContr
 
   clazzArrayOf_ProtectionDomain = namedArrayClassMustBeLoaded(NULL, string_ArrayOf_ProtectionDomain);
   // TODO: handle exception
-
+  mustBeInitialized(clazzArrayOf_ProtectionDomain);
+  // TODO: handle exception
 }
 
 w_instance 
@@ -136,6 +137,7 @@ w_instance AccessController_static_get_calling_domains(JNIEnv *env, w_instance A
   woempa(1,"Found %d protection domains on stack\n", count);
 
   item = count;
+  mustBeInitialized(clazzArrayOf_ProtectionDomain);
   result = allocArrayInstance_1d(thread, clazzArrayOf_ProtectionDomain, item);
 
   if (count == 0) {

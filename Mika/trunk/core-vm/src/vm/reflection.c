@@ -511,6 +511,8 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
   w_instance wrappee = exceptionThrown(thread);
   w_instance wrapper;
 
+  threadMustBeSafe(thread);
+
   if (wrappee) {
     addLocalReference(thread, wrappee);
   // First clear the exception or allocating an instance won't work!
@@ -519,14 +521,15 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
       // Ouch, we had a problem loading the wrapper class. Better get the hell out ...
       return;
     }
+    enterUnsafeRegion(thread);
     wrapper = allocInstance(thread, wrapper_clazz);
-    if (!wrapper) {
-      return;
+    if (wrapper) {
+      woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
+      setReferenceField_unsafe(wrapper, wrappee, field_offset);
+      throwExceptionInstance(thread, wrapper);
+      removeLocalReference(thread, wrappee);
     }
-    woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
-    setReferenceField(wrapper, wrappee, field_offset);
-    throwExceptionInstance(thread, wrapper);
-    removeLocalReference(thread, wrappee);
+    enterSafeRegion(thread);
   }
 }
 
@@ -808,7 +811,7 @@ static void wrapProxyException(w_thread thread, w_method current_method) {
   int i;
 
   for (i = 0; i < current_method->numThrows; ++i) {
-    allowed_clazz = getClassConstant(current_method->spec.declaring_clazz, current_method->throws[i]);
+    allowed_clazz = getClassConstant(current_method->spec.declaring_clazz, current_method->throws[i], thread);
     //wprintf("    allowed: %k\n", allowed_clazz);
     if (allowed_clazz && isSuperClass(allowed_clazz, thrown_clazz)) {
       found = TRUE;

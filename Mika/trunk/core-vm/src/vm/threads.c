@@ -373,6 +373,7 @@ void startInitialThreads(void* data) {
 */
 
   if (command_line_argument_count > 0) {
+    enterUnsafeRegion(W_Thread_sysInit);
     dims = command_line_argument_count;
     woempa(7,"Allocating array of %d String[s]\n",dims);
     arglist = allocArrayInstance_1d(W_Thread_sysInit, clazzArrayOf_String, dims);
@@ -385,6 +386,7 @@ void startInitialThreads(void* data) {
       // CG 20040114 removeLocalReference(W_Thread_sysInit, String);
       woempa(9,"args[%d] = \"%w\" bytecodecount = %d\n",i,String2string(instance2Array_instance(arglist)[i]), woempa_bytecodecount);
     }
+    enterSafeRegion(W_Thread_sysInit);
   }
   else {
     dims = 0;
@@ -483,6 +485,9 @@ void startKernel() {
 
   setUpRootFrame(W_Thread_sysInit);
 
+  mustBeInitialized(clazzClass);
+  mustBeInitialized(clazzExceptionInInitializerError);
+  mustBeInitialized(clazzAbstractMethodError);
   class_ThreadGroup = clazz2Class(clazzThreadGroup);
 #ifndef GC_SAFE_POINTS_USE_NO_MONITORS
   x_monitor_create(safe_points_monitor);
