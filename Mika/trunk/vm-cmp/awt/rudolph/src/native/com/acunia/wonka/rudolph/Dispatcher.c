@@ -125,21 +125,37 @@ void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
     defaultEventQueue = theEventQueue;
 
     /*
-    ** Make sure we have a default Toolkit:
+    ** Make sure some key classes are initialized.
     */
     
     if (mustBeInitialized(clazzToolkit) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.Toolkit: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Toolkit: %e", exceptionThrown(JNIEnv2w_thread(env)));
     }
-    
-    /*
-    ** Make sure we have system colors:
-    */ 
     
     if (mustBeInitialized(clazzSystemColor) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.SystemColor: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.SystemColor: %e", exceptionThrown(JNIEnv2w_thread(env)));
     }
 
+    if (mustBeInitialized(clazzGraphics) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Graphics: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+    
+    if (mustBeInitialized(clazzFont) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Font: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+
+    if (mustBeInitialized(clazzMouseEvent) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.MouseEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+    
+    if (mustBeInitialized(clazzKeyEvent) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.KeyEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+
+    if (mustBeInitialized(clazzFocusEvent) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.FocusEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+    
     /*
     ** Initialize screen:
     */

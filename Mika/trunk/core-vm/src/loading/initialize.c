@@ -45,13 +45,16 @@
 #include "wonka.h"
 
 void initializeStaticFields(w_thread thread, w_clazz clazz) {
-
   w_size  i;
   w_field field;
   w_ConstantType *c;
+  w_instance instance;
 
-  threadMustBeSafe(thread);
   woempa(1, "Setting the static fields of '%k' to default values.\n", clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
+    enterUnsafeRegion(thread);
+  }
 
   for (i = 0; i < clazz->numStaticFields; i++) {
     field = &clazz->own_fields[i];
@@ -60,17 +63,14 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
       switch (*c) {
         case CONSTANT_STRING:
         case RESOLVED_STRING:
-          {
-            w_instance instance = getStringConstant(clazz, field->initval);
-
-            if (thread) {
-              enterUnsafeRegion(thread);
-            }
-            clazz->staticFields[field->size_and_slot] = (w_word) instance;
-            if (thread) {
-              enterSafeRegion(thread);
-            }
+          if (thread) {
+            enterSafeRegion(thread);
           }
+          instance = getStringConstant(clazz, field->initval);
+          if (thread) {
+            enterUnsafeRegion(thread);
+          }
+          clazz->staticFields[field->size_and_slot] = (w_word) instance;
           woempa(1, "Initialized static field '%w' (type %k) of '%k' to 0x%08x.\n", NM(field), field->value_clazz, clazz, clazz->staticFields[field->size_and_slot]);
           break;
       
@@ -112,6 +112,9 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
           wabort(ABORT_WONKA, "Static field '%w' of %k has initializer with cnt_tag %d.\n", field->name, clazz, *c);
       }
     }
+  }
+  if (thread) {
+    enterSafeRegion(thread);
   }
 }
 
@@ -247,21 +250,13 @@ static void cleanUpClinit(w_method clinit) {
 ** The result returned is CLASS_LOADING_xxxxx.
 */
 
-w_int initializeClazz(w_clazz clazz) {
-
-  w_thread   thread = currentWonkaThread;
+w_int initializeClazz(w_thread thread, w_clazz clazz) {
   w_frame    frame;
   w_size     i;
   w_fixup    fixup;
   w_int      result = CLASS_LOADING_DID_NOTHING;
 
-// These two classes can be needed if things go wrong later, so just make
-// sure that they are already initialized. We trust them not to throw an
-// exception during initialization.
-  if (clazz->clinit) {
-    mustBeInitialized(clazzExceptionInInitializerError);
-    mustBeInitialized(clazzAbstractMethodError);
-  }
+  threadMustBeSafe(thread);
 
 #ifdef USE_BYTECODE_VERIFIER
   /*
@@ -441,7 +436,7 @@ w_int mustBeInitialized(w_clazz clazz) {
     }
 
     if (result != CLASS_LOADING_FAILED) {
-      result = initializeClazz(clazz);
+      result = initializeClazz(thread, clazz);
     }
 
     x_monitor_eternal(clazz->resolution_monitor);

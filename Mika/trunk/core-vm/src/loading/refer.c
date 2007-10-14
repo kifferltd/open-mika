@@ -844,8 +844,6 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   }
 
-  threadMustBeSafe(thread);
-
   result = mustBeSupersLoaded(clazz);
 
 

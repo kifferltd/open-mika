@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -92,7 +92,7 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
     }
 #endif
 
-    super = getClassConstant(super, super->temp.super_index);
+    super = getClassConstant(super, super->temp.super_index, thread);
     if (!super) {
       throwException(thread, clazzLinkageError, "Cannot resolve superclass of %k", clazz);
 
@@ -209,7 +209,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
 
     }
 #endif
-    interfaze = getClassConstant(clazz, clazz->temp.interface_index[i]);
+    interfaze = getClassConstant(clazz, clazz->temp.interface_index[i], thread);
     if(interfaze == NULL){
 
       return CLASS_LOADING_FAILED;
@@ -331,8 +331,6 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
     return CLASS_LOADING_DID_NOTHING;
 
   }
-
-  threadMustBeSafe(thread);
 
   x_monitor_eternal(clazz->resolution_monitor);
   state = getClazzState(clazz);
