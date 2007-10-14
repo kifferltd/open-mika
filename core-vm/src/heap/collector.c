@@ -1446,8 +1446,9 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 
 static void prepreparation(w_thread thread) {
   x_status status;
+  w_int max_unsafe_threads = threadIsUnsafe(thread);
 
-  woempa(7, "%t: start locking other threads\n", marking_thread);
+  woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
@@ -1464,9 +1465,9 @@ static void prepreparation(w_thread thread) {
     }
   }
 #endif
-  woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", marking_thread);
+  woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
   blocking_all_threads = BLOCKED_BY_GC;
-  while (number_unsafe_threads > 0) {
+  while (number_unsafe_threads > max_unsafe_threads) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
@@ -1497,6 +1498,7 @@ static void postmark(w_thread thread) {
   x_monitor_exit(safe_points_monitor);
 #endif
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
+  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
 
 w_int preparationPhase(void) {
@@ -2152,7 +2154,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
 #endif
   
-  threadMustBeSafe(thread);
+  //threadMustBeSafe(thread);
 
   reclaim_accumulator += requested * (memory_load_factor + 1);
   remaining = initial = reclaim_accumulator;
@@ -2163,14 +2165,14 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
     }
 
     if (enter_reclaim_listener_monitor()) {
-      i = 0;
       reclaimed_this_cycle = 0;
-      n = sizeOfWordset(&reclaim_listener_list);
-      while (remaining > 0 && i < n) {
+      for (i= 0; remaining > 0 && i < sizeOfWordset(&reclaim_listener_list); ++i) {
         w_reclaim_callback callback = (w_reclaim_callback)elementOfWordset(&reclaim_listener_list, i);
+        exit_reclaim_listener_monitor();
         reclaimed_this_cycle += callback(remaining * (memory_load_factor + 1), caller);
-        n = sizeOfWordset(&reclaim_listener_list);
-        ++i;
+        if (!enter_reclaim_listener_monitor()) {
+          break;
+        }
       }
       exit_reclaim_listener_monitor();
       remaining = remaining - reclaimed_this_cycle;
