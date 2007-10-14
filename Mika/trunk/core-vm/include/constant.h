@@ -74,7 +74,9 @@
 
 #define DIRECT_POINTER              0x2d
 
-#define CONSTANT_DELETED            0xff
+/* [CG 20071014] Constants are no longer being deleted
+//#define CONSTANT_DELETED            0xff
+*/
 
 #define isUtf8Constant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_UTF8)
 #define isUnicodeConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_UNICODE)

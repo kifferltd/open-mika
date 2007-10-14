@@ -55,14 +55,9 @@
 w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
   int tag = clazz->tags[i];
 
-#ifdef RUNTIME_CHECKS
-  //
-if (thread) threadMustBeSafe(thread);
-
-  if (tag == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
   }
-#endif
 
   while (tag < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
@@ -82,15 +77,12 @@ if (thread) threadMustBeSafe(thread);
  * The calling thread must GC safe!
  */
 w_field getFieldConstant(w_clazz clazz, w_int i) {
+  w_thread thread = currentWonkaThread;
   int tag = clazz->tags[i];
 
-#ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
   }
-#endif
 
   while (tag < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
@@ -111,15 +103,12 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getMethodConstant(w_clazz clazz, w_int i) {
+  w_thread thread = currentWonkaThread;
   int tag = clazz->tags[i];
 
-#ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
   }
-#endif
 
   while (tag < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
@@ -140,15 +129,12 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getIMethodConstant(w_clazz clazz, w_int i) {
+  w_thread thread = currentWonkaThread;
   int tag = clazz->tags[i];
 
-#ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
   }
-#endif
 
   while (tag < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
@@ -204,6 +190,7 @@ w_int addUTF8ConstantToPool(w_clazz clazz, w_string string) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -212,6 +199,7 @@ w_int addUTF8ConstantToPool(w_clazz clazz, w_string string) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = CONSTANT_UTF8;
@@ -244,6 +232,7 @@ w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     switch (clazz->tags[i]) {
     case CONSTANT_DELETED:
@@ -253,6 +242,7 @@ w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = CONSTANT_CLASS;
@@ -282,6 +272,7 @@ w_int addNatConstantToPool(w_clazz clazz, w_string name, w_string type) {
     }
   }
     
+/. [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     switch (clazz->tags[i]) {
     case CONSTANT_DELETED:
@@ -293,6 +284,7 @@ w_int addNatConstantToPool(w_clazz clazz, w_string name, w_string type) {
       return i;
     }
   }
+./
 
   i = clazz->numConstants++;
   clazz->tags = reallocMem((void*)clazz->tags, clazz->numConstants);
@@ -323,6 +315,7 @@ w_int addResolvedFieldConstantToPool(w_clazz clazz, w_field field) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -331,6 +324,7 @@ w_int addResolvedFieldConstantToPool(w_clazz clazz, w_field field) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = RESOLVED_FIELD;
@@ -352,6 +346,7 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -360,6 +355,7 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = DIRECT_POINTER;
@@ -1461,9 +1457,11 @@ void dumpPools(int fd, w_clazz clazz) {
         }
         break;
 
+/* [CG 20071014] Constants are no longer being deleted
       case CONSTANT_DELETED:
         woempa(1,"%4d Constant was no longer needed, has been cleaned up\n", i);
         break;
+*/
 
       case COULD_NOT_RESOLVE:
         woempa(1,"%4d Failed to resolve constant: threw %k\n", i, instance2clazz((w_instance)clazz->values[i]));
