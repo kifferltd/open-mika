@@ -147,7 +147,7 @@ inline static void checkClazz(w_clazz clazz) {
 #define MAX_RETRIES 10
 static const int retry_incr = 100 / MAX_RETRIES;
 
-static w_boolean heap_request(w_thread thread, w_int bytes) {
+w_boolean heap_request(w_thread thread, w_int bytes) {
 
   w_int   count = 0;
 
@@ -166,39 +166,46 @@ static w_boolean heap_request(w_thread thread, w_int bytes) {
     return TRUE;
   }
 
-  if(thread->jpriority > 10) {
+  if (thread->jpriority > 10) {
 
     return x_mem_avail() - bytes > min_heap_free;
 
   }
 
-  if ((window_fifo->numLeaves * window_fifo->leafElements <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
-    while (!expandFifo(instance_allocated - instance_returned + 1024, window_fifo)) {
-      printf("No space to expand window_fifo ...\n");
-      gc_reclaim(8192, NULL);
+  if (threadIsSafe(thread)) {
+    if ((window_fifo->numLeaves * window_fifo->leafElements <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
+      while (!expandFifo(instance_allocated - instance_returned + 1024, window_fifo)) {
+        printf("No space to expand window_fifo ...\n");
+        gc_reclaim(8192, NULL);
+      }
+      x_monitor_exit(gc_monitor);
     }
-    x_monitor_exit(gc_monitor);
-  }
 
-  gc_reclaim(bytes, NULL);
-
-  if (x_mem_avail() - bytes > min_heap_free) {
-
-    return WONKA_TRUE;
-
-  }
-
-  do {
-    count += retry_incr;
-    if (count > 100) {
-      wprintf("TOO MANY RETRIES\n");
-
-      return WONKA_FALSE;
-
-    }
-    //wprintf("RETRY #%d for %d bytes, %d bytes available (min = %d)\n", count, bytes, x_mem_avail(), min_heap_free);
     gc_reclaim(bytes, NULL);
-  } while ((x_mem_avail() - bytes) < min_heap_free);
+
+    if (x_mem_avail() - bytes > min_heap_free) {
+
+      return WONKA_TRUE;
+
+    }
+
+    do {
+      count += retry_incr;
+      if (count > 100) {
+        wprintf("TOO MANY RETRIES\n");
+
+        return WONKA_FALSE;
+
+      }
+      //wprintf("RETRY #%d for %d bytes, %d bytes available (min = %d)\n", count, bytes, x_mem_avail(), min_heap_free);
+      gc_reclaim(bytes, NULL);
+    } while ((x_mem_avail() - bytes) < min_heap_free);
+  }
+  else {
+    thread->to_be_reclaimed += bytes;
+
+    return x_mem_avail() - bytes > min_heap_free;
+  }
 
   return WONKA_TRUE;
 }
@@ -238,10 +245,7 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  if (heap_request(thread, (w_int)clazz->bytes_needed)) {
-    object = allocClearedMem(clazz->bytes_needed);
-  }
-
+  object = allocClearedMem(clazz->bytes_needed);
   if (! object) {
     return NULL;
   }
@@ -332,35 +336,14 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
 
   w_object object = NULL;
   w_size   bytes;
-  w_boolean unsafe;
   w_boolean initialisation_result;
 
   checkClazz(clazz);  
 
-  unsafe = enterSafeRegion(thread);
-  initialisation_result = mustBeInitialized(clazz);
-  if (unsafe) {
-    enterUnsafeRegion(thread);
-  }
-
-  if (initialisation_result == CLASS_LOADING_FAILED) {
-
-    return NULL;
-
-  }
-
-  /*
-  ** Calculate the number of bytes we need. Note that checking the requirements with the quota has been
-  ** done allready by the calling function.
-  */
-  
   bytes = sizeof(w_Object) + (size * sizeof(w_word));
 
-  if (heap_request(thread, bytes)) {
-    object = allocClearedMem(bytes);
-    woempa(1, "Allocated a %k at %p, need %d bytes\n", clazz, object->fields, bytes);
-  }
-
+  object = allocClearedMem(bytes);
+  woempa(1, "Allocated a %k at %p, need %d bytes\n", clazz, object->fields, bytes);
   if (object == NULL) {
     return NULL;
   }
