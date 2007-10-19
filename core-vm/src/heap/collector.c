@@ -1446,7 +1446,6 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 
 static void prepreparation(w_thread thread) {
   x_status status;
-  w_int max_unsafe_threads = threadIsUnsafe(thread);
 
   woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
@@ -1467,7 +1466,7 @@ static void prepreparation(w_thread thread) {
 #endif
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
   blocking_all_threads = BLOCKED_BY_GC;
-  while (number_unsafe_threads > max_unsafe_threads) {
+  while (number_unsafe_threads > 0) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
@@ -1582,6 +1581,15 @@ static void miniSweepReferences(void) {
 
 static w_size gc_start_ticks;
 
+static void thread_iteration(w_word key, w_word value, void * arg1, void *arg2) {
+  w_thread thread = (w_thread)value;
+  w_instance Thread = thread->Thread;
+
+  if (Thread) {
+    markInstance(Thread, strongly_reachable_fifo, O_BLACK);
+  }
+}
+
 /*
  * In the Mark phase, we first mark all the (transient) `roots':
  *  - system thread group (and hence all threads)
@@ -1627,8 +1635,12 @@ w_int markPhase(void) {
   }
   releaseFifo(temp_fifo);
 
+  woempa(7, "(GC) Marking thread hashtable.\n");
+  ht_iterate(thread_hashtable, thread_iteration, NULL, NULL);
+
   do {
     //if (times_round++) printf("Loop %d, ticks = %ud\n", times_round, x_time_get() - gc_start_ticks);
+    // TODO: do we still need this if we are marking thread_hashtable?
     woempa(7, "(GC) Marking system ThreadGroup.\n");
     retcode = markInstance(I_ThreadGroup_system, strongly_reachable_fifo, O_BLACK);
     if (retcode < 0) {
@@ -2154,7 +2166,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
 #endif
   
-  //threadMustBeSafe(thread);
+  threadMustBeSafe(thread);
 
   reclaim_accumulator += requested * (memory_load_factor + 1);
   remaining = initial = reclaim_accumulator;
