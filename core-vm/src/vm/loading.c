@@ -531,7 +531,7 @@ static void identify_special_methods(void) {
 static w_boolean attach_class_iteration(void * name, void * cl) {
   w_clazz clazz = cl;
 
-  if (clazz->Class) {
+  if (!clazz->Class) {
     attachClassInstance(clazz);
   }
 }
@@ -749,7 +749,7 @@ void startLoading(void) {
   ****/
 
   woempa(7,"Step 3: create array pseudo-class\n");
-  clazz_Array =createClazzArray();
+  clazz_Array = createClazzArray();
   mustBeReferenced(clazz_Array);
 
  /****
@@ -829,8 +829,6 @@ void startLoading(void) {
   preparePrimitive(clazz_long, string_long, P_long);
   preparePrimitive(clazz_void, string_void, P_void);
 
-  attach_class_instances();
-
   /*
   ** For some strange reason, SUN seems to fix the SUIDs for arrays of primitives. 
   ** So we set the cached SUID for the primitive array clazzes to the one given by 'serialver'.
@@ -892,6 +890,8 @@ void startLoading(void) {
   mustBeInitialized(clazzArrayOf_Object);
   mustBeInitialized(clazzArrayOf_String);
   mustBeInitialized(clazzArrayOf_Class);
+
+  attach_class_instances();
 
   woempa(7, "Forced class loading complete, loaded %d classes.\n",system_loaded_class_hashtable->occupancy);
 
@@ -972,11 +972,13 @@ w_clazz seekClazzByName(w_string classname, w_instance initiating_loader) {
 ** Create the array clazz with one more dimension than the given clazz.
 */
 w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
-
+  w_thread thread = currentWonkaThread;
   w_clazz array_clazz;
   w_char  *name_buffer;
   w_string temp_name;
   w_string desc_name;
+
+  threadMustBeSafe(thread);
 
   /*
   ** We make a clone of clazz_Array. We don't need to increment
@@ -1045,11 +1047,16 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
     base_clazz->nextDimension = array_clazz;
   }
 
+  if (thread) enterUnsafeRegion(thread);
+  if (clazzClass && clazzClass->Class) {
+    attachClassInstance(array_clazz);
+  }
   setClazzState(array_clazz, CLAZZ_STATE_LINKED);
   registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 
   woempa(1, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
-  setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);//setup the clazz flags: Arrays are public final abstract
+  setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);
+  if (thread) enterSafeRegion(thread);
 
   return array_clazz;
 
@@ -1071,8 +1078,9 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 
   }
 
-//  defining_loader = base_clazz->loader ? base_clazz->loader : systemClassLoader;
-
+  // We take advantage of the fact that all array classes share a common 
+  // resolution_monitor (although this may in fact be a bug).
+  x_monitor_enter(clazz_Array->resolution_monitor, x_eternal);
   array_clazz = base_clazz->nextDimension;
   if (!array_clazz) {
     woempa(1, "Clazz %k doesn't yet have a nextDimension, creating it\n", base_clazz);
@@ -1081,6 +1089,7 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   else {
     woempa(1, "Clazz %k already has nextDimension %k\n", base_clazz, array_clazz);
   }
+  x_monitor_exit(clazz_Array->resolution_monitor);
 
   return array_clazz;
 
