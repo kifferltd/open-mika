@@ -697,6 +697,10 @@ w_boolean enterSafeRegion(const w_thread thread) {
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 #endif
+  if (thread->to_be_reclaimed) {
+    gc_reclaim(thread->to_be_reclaimed, NULL);
+    thread->to_be_reclaimed = 0;
+  }
 
   return TRUE;
 }
