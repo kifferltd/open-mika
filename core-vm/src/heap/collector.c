@@ -1585,7 +1585,7 @@ static void thread_iteration(w_word key, w_word value, void * arg1, void *arg2) 
   w_thread thread = (w_thread)value;
   w_instance Thread = thread->Thread;
 
-  if (Thread) {
+  if (Thread && thread->state != wt_dead && thread->state != wt_unstarted) {
     markInstance(Thread, strongly_reachable_fifo, O_BLACK);
   }
 }
