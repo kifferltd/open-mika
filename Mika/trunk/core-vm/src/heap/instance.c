@@ -211,8 +211,9 @@ w_boolean heap_request(w_thread thread, w_int bytes) {
 }
 
 static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
-  w_boolean unsafe = thread && enterUnsafeRegion(thread);
   object->clazz = clazz;
+
+  threadMustBeUnsafe(thread);
 
 /*
 #ifdef JAVA_PROFILE
@@ -221,11 +222,6 @@ static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz
 */ 
   
   registerObject(object,thread);
-
-  if (thread && !unsafe) {
-    enterSafeRegion(thread);
-  }
-
 
   return object->fields;
 }
@@ -291,17 +287,6 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
   }
 #endif
 
-
-  threadMustBeUnsafe(thread);
-
-  /*
-  ** The class must be initialized.
-
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    return NULL;
-  }
-  */
-
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
   object = allocClearedMem(clazz->bytes_needed);
@@ -349,10 +334,6 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
   }
 
   return allocInstance_common(thread, object, clazz);
-}
-
-inline static w_size roundBitsToWords(w_int bits) {
-  return ((bits + 31) & ~31) >> 5;
 }
 
 /*
@@ -430,6 +411,8 @@ w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
 
 w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int newlength) {
   w_clazz clazz = instance2clazz(oldarray);
+  w_object oldobject;
+  w_object newobject;
   w_instance newarray = NULL;
   w_size bytes;
 
@@ -441,28 +424,23 @@ w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int n
   woempa(7, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
   bytes += sizeof(w_Object);
 
-  if (heap_request(thread, bytes)) {
-    w_object oldobject = instance2object(oldarray);
-    w_object newobject = reallocMem(oldobject, bytes);
+  oldobject = instance2object(oldarray);
+  newobject = reallocMem(oldobject, bytes);
 
-    if (newobject) {
-      if (newobject != oldobject) {
-        woempa(7, "New array is different to old\n");
-        registerObject(newobject, thread);
-        newarray = newobject->fields;
-      }
-      else {
-        woempa(7, "New array is same as old\n");
-        newarray = oldarray;
-      }
-      newarray[F_Array_length] = newlength;
+  if (newobject) {
+    if (newobject != oldobject) {
+      woempa(7, "New array is different to old\n");
+      registerObject(newobject, thread);
+      newarray = newobject->fields;
     }
     else {
-      woempa(9, "Unable to allocate new array!\n");
+      woempa(7, "New array is same as old\n");
+      newarray = oldarray;
     }
+    newarray[F_Array_length] = newlength;
   }
   else {
-    throwOutOfMemoryError(thread);
+    woempa(9, "Unable to allocate new array!\n");
   }
 
   return newarray;
