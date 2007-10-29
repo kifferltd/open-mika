@@ -74,7 +74,7 @@
 ** found to be unreachable a second time. This of course raises the possibility
 ** that objects which were found to be unreachable on one pass will turn out
 ** to be reachable on the next, which ain't supposed to happen - it probably
-** means that someone has sauirreled away a reference to the object, out of
+** means that someone has squirreled away a reference to the object, out of
 ** sight of the garbage collector. If CATCH_FLYING_PIGS is defined, we detect
 ** this case and abort the VM if it happens.
 ** For production code you shouldn't need to define either PIGS_MIGHT_FLY or
@@ -130,10 +130,8 @@ static void reportInstanceStat(void) {
 }
 #endif
 
-#ifndef GC_SAFE_POINTS_USE_NO_MONITORS
 x_Monitor safe_points_Monitor;
 x_monitor safe_points_monitor = &safe_points_Monitor;
-#endif
 volatile w_int number_unsafe_threads;
 
 /*
@@ -577,7 +575,7 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
 
   }
 
-  woempa(1, "Pushing %j onto fifo @ %p, setting flag %d\n", instance, fifo, flag);
+  woempa(1, "Pushing %j onto %s, setting flag %d\n", instance, fifo2name(fifo), flag);
   setFlag(object->flags, flag);
   retcode = tryPutFifo(instance, fifo);
   if (retcode < 0) {
@@ -631,6 +629,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
+  woempa(1, "(GC) Marking clazz %p on %s with colour %d\n", clazz, fifo2name(fifo), flag);
   child_instance = clazz->loader;
   if (!child_instance) {
     child_instance = systemClassLoader;
@@ -646,6 +645,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     queued += retcode;
   }
 
+  woempa(1, "(GC) Marking Class instance of %k\n", clazz);
   child_instance = clazz2Class(clazz);
   if (child_instance) {
     retcode = markInstance(child_instance, fifo, flag);
@@ -669,8 +669,12 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   }
 
   if (clazz->references) {
-    w_int n = sizeOfWordset(&clazz->references);
+    w_int n;
 
+    x_monitor_eternal(clazz->resolution_monitor);
+    n = sizeOfWordset(&clazz->references);
+
+    woempa(1, "(GC) Marking Class instances of classes referenced from %k\n", clazz);
     for (i = 0; i < n; ++i) {
       woempa(1, "(GC) %K references %K\n", clazz, elementOfWordset(&clazz->references, i));
       child_instance = clazz2Class((w_clazz)elementOfWordset(&clazz->references, i));
@@ -689,6 +693,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
       }
 #endif
     }
+    x_monitor_exit(clazz->resolution_monitor);
   }
 
   woempa(1, "(GC) Marking constant pool of class %k\n",clazz);
@@ -723,6 +728,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   }
 
   if (clazz->previousDimension) {
+    woempa(1, "(GC) Marking previous dimension of %k\n", clazz);
     child_instance = clazz2Class(clazz->previousDimension);
     if (child_instance) {
       retcode = markInstance(child_instance, fifo, flag);
@@ -743,7 +749,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   if (state >= CLAZZ_STATE_SUPERS_LOADED) {
     w_clazz super = getSuper(clazz);
     if (super) {
-      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super[0], clazz);
+      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super, clazz);
       child_instance = clazz2Class(super);
       if (child_instance) {
         retcode = markInstance(child_instance, fifo, flag);
@@ -763,6 +769,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
 
     if (clazz->interfaces) {
       for (i = 0; i < clazz->numInterfaces; ++i) {
+        woempa(1, "(GC) Marking Class instance of superinterface[%d] (%K) of %K\n", i, clazz->interfaces[i], clazz);
         child_instance = clazz2Class(clazz->interfaces[i]);
         if (child_instance) {
           retcode = markInstance(child_instance, fifo, flag);
@@ -1014,7 +1021,7 @@ void markLoadedClass(w_word key, w_word value, void *pointer, void*dummy) {
   w_int  *counter = pointer;
   w_int retcode;
 
-  if (*counter >= 0) {
+  if (*counter >= 0 && getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
     woempa(1, "--> marking %K\n", clazz);
     retcode = markClazzReachable(clazz, strongly_reachable_fifo, O_BLACK);
     if (retcode < 0) {
@@ -1451,9 +1458,6 @@ static void prepreparation(w_thread thread) {
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  blocking_all_threads = BLOCKED_BY_GC;
-#else
   x_monitor_eternal(safe_points_monitor);
 #ifdef JDWP
   while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
@@ -1465,7 +1469,7 @@ static void prepreparation(w_thread thread) {
   }
 #endif
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
-  blocking_all_threads = BLOCKED_BY_GC;
+  setFlag(blocking_all_threads, BLOCKED_BY_GC);
   while (number_unsafe_threads > 0) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
@@ -1475,7 +1479,6 @@ static void prepreparation(w_thread thread) {
   }
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-#endif
   woempa(7, "%t: finished locking other threads\n", marking_thread);
 #ifdef TRACE_MEM_ALLOC
   _heapCheck("collector.c", 1571);
@@ -1487,15 +1490,11 @@ static void postmark(w_thread thread) {
   x_thread_priority_set(thread->kthread, thread->kpriority);
 
   woempa(7, "%t: start unlocking other threads\n", marking_thread);
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  blocking_all_threads = 0;
-#else
   x_monitor_eternal(safe_points_monitor);
   woempa(2, "postmark: %t setting blocking_all_threads to 0\n", marking_thread);
-  blocking_all_threads = 0;
+  unsetFlag(blocking_all_threads, BLOCKED_BY_GC);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-#endif
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
   x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
