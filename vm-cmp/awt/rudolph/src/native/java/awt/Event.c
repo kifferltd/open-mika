@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions. Permission is hereby granted to reproduce, modify, and       *
-* distribute these modifications under the terms of the Wonka Public      *
-* Licence.                                                                *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/* $Id: Event.c,v 1.1 2005/06/14 16:00:18 cvs Exp $ */
-
 
 #include "awt-classes.h"
 #include "checks.h"
@@ -279,8 +279,12 @@ static void addMouseEvent(r_component source, r_event event) {
   static jmethodID method = NULL;
   w_thread thread = currentWonkaThread;
   JNIEnv *env = w_thread2JNIEnv(thread);
-  w_instance mouseEvent = allocInstance(thread, clazzMouseEvent);
+  w_instance mouseEvent;
   w_int x, y, w, h, dx, dy;
+
+  enterUnsafeRegion(thread);
+  mouseEvent = allocInstance_initialized(thread, clazzMouseEvent);
+  enterSafeRegion(thread);
 
   if(!mouseEvent || !source) {
     return;
@@ -319,9 +323,13 @@ static void addMouseMotionEvent(r_component source, r_event event) {
     static jmethodID method = NULL;
     w_thread thread = currentWonkaThread;
     JNIEnv *env = w_thread2JNIEnv(thread);
-    w_instance mouseEvent = allocInstance(thread, clazzMouseEvent);
+    w_instance mouseEvent;
     w_int x, y, w, h, dx, dy;
   
+    enterUnsafeRegion(thread);
+    mouseEvent = allocInstance_initialized(thread, clazzMouseEvent);
+    enterSafeRegion(thread);
+
     if(!mouseEvent) {
       
       return;
@@ -367,11 +375,21 @@ static void addFocusEvent(r_component source, r_event event) {
     static jmethodID method = NULL;
     w_thread thread = currentWonkaThread;
     JNIEnv *env = w_thread2JNIEnv(thread);
-    w_instance focusEvent = allocInstance(thread, clazzFocusEvent);
- 
+    w_instance focusEvent;
+
     // Debug output:
     woempa(9, "called addFocusEvent(%p, %p)\n", source, event);
  
+    enterUnsafeRegion(thread);
+    focusEvent = allocInstance_initialized(thread, clazzFocusEvent);
+    enterSafeRegion(thread);
+ 
+    if (!focusEvent) {
+
+      return;
+
+    }
+
     if (method == NULL) {
       method = (*env)->GetMethodID(env, clazz2Class(clazzEventQueue), "postNativeEvent", "()V");
     }
@@ -395,8 +413,12 @@ void Event_addKeyEvent(w_int VK, w_int keychar, w_int mod, w_int pressed, w_inst
     static jmethodID method = NULL;
     w_thread thread = currentWonkaThread;
     JNIEnv *env = w_thread2JNIEnv(thread);
-    w_instance keyEvent = allocInstance(thread, clazzKeyEvent);
-  
+    w_instance keyEvent;
+
+    enterUnsafeRegion(thread);
+    keyEvent = allocInstance_initialized(thread, clazzKeyEvent);
+    enterSafeRegion(thread);
+
     if(!keyEvent) {
       
       return;
