@@ -398,7 +398,13 @@ typedef union w_u16 {
 
 extern w_boolean memoryAddressIsValid(w_size addr);
 
-//int strcmp(const char *p1, const char *p2);
+/*
+** Convert a number of bits to a number of w_words, rounding up to the next
+** whole number.
+*/
+inline static w_size roundBitsToWords(w_int bits) {
+  return ((bits + 31) & ~31) >> 5;
+}
 
 /*
 ** w_memcpy is intended to be more efficient when the return value of memcpy(3)

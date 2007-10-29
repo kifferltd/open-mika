@@ -212,6 +212,74 @@ static void stackCheck(w_frame frame) {
 #endif /* bar */
 #endif /* DEBUG */
 
+volatile w_thread jitting_thread;
+
+#define JITC_LOCK
+#ifdef JITC_LOCK
+#ifdef RUNTIME_CHECKS
+#define checkOswaldStatus(s) if ((s) != xs_success) wabort(ABORT_WONKA, "x_monitor_xxx() call returned status = %d", (s))
+#else
+#define checkOswaldStatus(s)
+#endif
+
+/*
+** Acquire the JIT compiler lock; like the GC or JDWP lock, this means that
+** no other threads can enter the Unsafe state. Currently used only for
+** bytecode-rewriting purposes within the interpreter itself.
+** This function must always be called in the GC-Unsafe state (so there can
+** be no contention with GC or JDWP).
+*/
+static void acquireJitcLock(w_thread thread) {
+  x_status status;
+
+  woempa(7, "JITC: start locking other threads\n");
+  threadMustBeSafe(thread);
+  if (number_unsafe_threads < 0) {
+    wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
+  }
+  x_monitor_eternal(safe_points_monitor);
+  while(number_unsafe_threads > 0 || blocking_all_threads) {
+    woempa(7, "waiting for %d other threads to reach a safe point\n", number_unsafe_threads - 1);
+
+    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    if (status == xs_interrupted) {
+      x_monitor_eternal(safe_points_monitor);
+    }
+    else {
+      checkOswaldStatus(status);
+    }
+
+  }
+  woempa(7, "JITC: setting blocking_all_threads to BLOCKED_BY_JITC\n");
+  setFlag(blocking_all_threads, BLOCKED_BY_JITC);
+  jitting_thread = currentWonkaThread;
+
+  x_monitor_notify_all(safe_points_monitor);
+  x_monitor_exit(safe_points_monitor);
+}
+
+/*
+** Release the JIT compiler lock.
+*/
+static void releaseJitcLock(w_thread thread) {
+  woempa(7, "JITC: finished locking other threads\n");
+  threadMustBeSafe(thread);
+  woempa(7, "JITC: start unlocking other threads\n");
+  x_monitor_eternal(safe_points_monitor);
+  unsetFlag(blocking_all_threads, BLOCKED_BY_JITC);
+  jitting_thread = NULL;
+  x_monitor_notify_all(safe_points_monitor);
+  x_monitor_exit(safe_points_monitor);
+  woempa(7, "JITC: finished unlocking other threads\n");
+}
+
+#else
+
+#define acquireJitcLock(t)
+#define releaseJitcLock(t)
+
+#endif
+
 /*
  * If OVERLAPPING_FRAMES is defined, the arguments pushed in the calling frame
  * are re-used directly in the called frame, i.e. the calling and called frame
@@ -322,7 +390,7 @@ static void do_drem(w_Slot**);
 inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
   frame->jstack_top = tos;
-  woempa(7, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+  woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
 //  wprintf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
   if (!threadIsUnsafe(frame->thread)) { 
@@ -528,7 +596,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   }
 #endif
 
-  woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
+  woempa(7, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
   if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
 #ifdef JAVA_PROFILE
     if(method->exec.dispatcher) {
@@ -549,7 +617,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
 #else
     method->exec.dispatcher(caller, method);
 #endif
-    woempa(1, "RETURNED from %M\n", method);
+    woempa(7, "RETURNED from %M\n", method);
   }
   else {
     w_boolean unsafe = enterSafeRegion(caller->thread);
@@ -796,7 +864,8 @@ void interpret(w_frame caller, w_method method) {
 
 #ifdef PACK_BYTE_FIELDS
   i_getfield_byte: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -818,7 +887,8 @@ void interpret(w_frame caller, w_method method) {
 #endif
 
   i_getfield_single: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -839,7 +909,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getfield_double: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -860,7 +931,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getfield_ref: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = field->size_and_slot;
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -874,7 +946,7 @@ void interpret(w_frame caller, w_method method) {
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[-1].c = o[instance2clazz(o)->instanceSize  - i];
+    tos[-1].c = o[instance2clazz(o)->instanceSize  + i];
     tos[-1].s = stack_trace;
     add_to_opcode(3);
   }
@@ -961,38 +1033,38 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getstatic_single: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
 
     tos[0].s = stack_notrace;
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
 
     add_to_opcode(3);
   }
 
   i_getstatic_double: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
 
     tos[0].s = stack_notrace;
-    tos[0].c = *ptr++;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
     tos[0].s = stack_notrace;
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot + 1];
     ++tos;
 
     add_to_opcode(3);
   }
 
   i_getstatic_ref: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
 
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     tos[0].s = stack_trace;
     ++tos;
 
@@ -1000,7 +1072,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_single: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
     *ptr = tos_cache;
@@ -1014,7 +1087,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_double: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
     *ptr++ = tos[-2].c;
     *ptr = tos[-1].c;
@@ -1026,14 +1100,15 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_ref: {
-    w_instance *ptr = (w_instance *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
-    *ptr = (w_instance) tos_cache;
+    *ptr = tos_cache;
     --tos;
     tos_cache = tos[-1].c;
 #else
-    *ptr = (w_instance) tos[-1].c;
+    *ptr = tos[-1].c;
     --tos;
 #endif
     add_to_opcode(3);
@@ -1307,7 +1382,8 @@ void interpret(w_frame caller, w_method method) {
   
 #ifdef PACK_BYTE_FIELDS
   i_putfield_byte: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1326,7 +1402,8 @@ void interpret(w_frame caller, w_method method) {
 #endif
 
   i_putfield_single: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1344,7 +1421,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putfield_double: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-3].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1361,18 +1439,19 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putfield_ref: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = field->size_and_slot;
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
 #ifdef CACHE_TOS
-    setReferenceField_unsafe(o, (w_instance) tos_cache, -i);
+    setReferenceField_unsafe(o, (w_instance) tos_cache, i);
     tos -= 2;
     tos_cache = tos[-1].c;
 #else
-    setReferenceField_unsafe(o, (w_instance) tos[-1].c, -i);
+    setReferenceField_unsafe(o, (w_instance) tos[-1].c, i);
     tos -= 2;
 #endif
     add_to_opcode(3);
@@ -1516,13 +1595,16 @@ void interpret(w_frame caller, w_method method) {
     do_next_opcode;
   }
 
-  i_new: {
-    clazz = (w_clazz) cclazz->values[(unsigned short) short_operand];
+  i_new:
+    clazz = getResolvedClassConstant(cclazz, (unsigned short) short_operand);
+    // fall through
 
-    frame->jstack_top = tos;
-    enterSafeRegion(thread);
-    mustBeInitialized(clazz);
-    enterUnsafeRegion(thread);
+  new_common: {
+    w_boolean enough = heap_request(thread, (w_int)clazz->bytes_needed);
+
+    if (!enough) {
+      throwException(thread, clazzOutOfMemoryError, NULL);
+    }
     if (thread->exception) {
       do_the_exception;
     }
@@ -3257,10 +3339,6 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
-    current[1] = (i >> 8) & 0xff;
-    current[2] = i  & 0xff;
-
     if (isSet(field->flags, FIELD_IS_LONG)) {
       current[0] = in_getstatic_double;
     
@@ -3303,10 +3381,6 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
-    current[1] = (i >> 8) & 0xff;
-    current[2] = i  & 0xff;
-
     if (isSet(field->flags, FIELD_IS_LONG)) {
       current[0] = in_putstatic_double;
     
@@ -3341,18 +3415,12 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    i = FIELD_OFFSET(field->size_and_slot);
     if (isSet(field->flags, FIELD_IS_REFERENCE)) {
-      i = -i;
       current[0] = in_getfield_ref;
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
 
       goto i_getfield_ref;
     }
     else {
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
       if (isSet(field->flags, FIELD_IS_LONG)) {
         current[0] = in_getfield_double;
 
@@ -3390,18 +3458,13 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    i = FIELD_OFFSET(field->size_and_slot);
     if (isSet(field->flags, FIELD_IS_REFERENCE)) {
       i = -i;
       current[0] = in_putfield_ref;
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
 
       goto i_putfield_ref;
     }
     else {
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
       if (isSet(field->flags, FIELD_IS_LONG)) {
         current[0] = in_putfield_double;
 
@@ -3725,14 +3788,16 @@ void interpret(w_frame caller, w_method method) {
     if (thread->exception) {
       do_the_exception;
     }
-    
+
     *current = in_new;
     
-    goto i_new;
+    goto new_common;
   }
 
 
   c_newarray: {
+    w_size bytes;
+    w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3744,6 +3809,11 @@ void interpret(w_frame caller, w_method method) {
     }
 
     clazz = atype2clazz[*(current + 1)];
+    bytes = (F_Array_data + roundBitsToWords(clazz->previousDimension->bits * s)) * sizeof(w_word);
+    enough = heap_request(thread, bytes);
+    if (!enough) {
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
@@ -3767,6 +3837,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_anewarray: {
+    w_size bytes;
+    w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3775,6 +3847,11 @@ void interpret(w_frame caller, w_method method) {
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
     }
+    bytes = (F_Array_data + s) * sizeof(w_word);
+    enough = heap_request(thread, bytes);
+    if (!enough) {
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
@@ -3782,7 +3859,9 @@ void interpret(w_frame caller, w_method method) {
 
     if (clazz) {
       clazz = getNextDimension(clazz, clazz2loader(frame->method->spec.declaring_clazz));
-      mustBeInitialized(clazz);
+      if (clazz) {
+        mustBeInitialized(clazz);
+      }
     }
 
     enterUnsafeRegion(thread);
@@ -3790,10 +3869,8 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    //enterSafeRegion(thread);
     woempa(1, "Allocating array of %d %k\n", s, clazz->previousDimension);
     a = allocArrayInstance_1d(thread, clazz, s);
-    //enterUnsafeRegion(thread);
     if (!a) {
       do_the_exception;
     }
@@ -3913,6 +3990,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_multianewarray: {
     w_int * dimensions;
+    w_boolean enough;
 
     frame->jstack_top = tos;
     s = (unsigned int) (unsigned char) *(current + 3);
@@ -3937,15 +4015,32 @@ void interpret(w_frame caller, w_method method) {
     }
     enterUnsafeRegion(thread);
     if (thread->exception) {
+      do_the_exception;
+    }
+
+    {
+      w_size bytes;
+      w_clazz element_clazz;
+
+      bytes = 1;
+      element_clazz = clazz->previousDimension;
+      for (i = 0; i < s - 1; ++i) {
+        bytes *= F_Array_data + dimensions[i];
+        element_clazz = element_clazz->previousDimension;
+      }
+      bytes *= (F_Array_data + roundBitsToWords(element_clazz->bits * dimensions[s - 1])) * sizeof(w_word);
+      enough = heap_request(thread, bytes);
+    }
+    if (!enough) {
+      throwException(thread, clazzOutOfMemoryError, NULL);
+    }
+    if (thread->exception) {
       releaseMem(dimensions);
       do_the_exception;
     }
 
-    //enterSafeRegion(thread);
     a = allocArrayInstance(thread, clazz, s, dimensions);
-    //enterUnsafeRegion(thread);
     releaseMem(dimensions);
-    
     if (!a) {
       do_the_exception;
     }
