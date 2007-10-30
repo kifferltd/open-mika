@@ -56,6 +56,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
   w_clazz  clazz = instance2clazz(thisObject);
   w_instance theClone = NULL;
 
+  threadMustBeSafe(thread);
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
 
     return NULL;
@@ -70,6 +71,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
     w_int instanceSize = clazz->instanceSize;
     w_int i;
 
+    enterUnsafeRegion(thread);
     theClone = allocInstance_initialized(thread, clazz);
 
     if (theClone) {
@@ -78,6 +80,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
       
         theClone[i] = thisObject[i];
     }
+    enterSafeRegion(thread);
 
   }
   else {
