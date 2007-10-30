@@ -91,6 +91,7 @@ w_instance Java_File_list (JNIEnv *env, w_instance thisFile) {
   vfs_DIR         *dir;
   vfs_dirent      *dirent;
   
+  threadMustBeSafe(thread);
   pathname = getFileName(thisFile);	  
 
   dir = vfs_opendir(pathname);
@@ -111,7 +112,9 @@ w_instance Java_File_list (JNIEnv *env, w_instance thisFile) {
       woempa(9, "!!! It's recommended do to a fsck -f on this partition as soon as possible to prevent further corruption\n");
     }
     
+    enterUnsafeRegion(thread);
     result = allocArrayInstance_1d(thread, clazzArrayOf_String, count);
+    enterSafeRegion(thread);
 
     /* Rewind the directory */
     vfs_rewinddir(dir);

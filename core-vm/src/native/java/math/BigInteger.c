@@ -74,8 +74,13 @@ static inline w_word BigInteger_bytesToSignedWord(w_ubyte* bytes, w_int nr, w_wo
 
 }
 
-static inline w_instance BigInterger_allocByteArray(w_thread thread, w_int size) {
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+static inline w_instance BigInteger_allocByteArray(w_thread thread, w_int size) {
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+  enterSafeRegion(thread);
   if(Bytes) {
     addLocalReference(thread, Bytes);
   }
@@ -131,7 +136,7 @@ w_instance BigInteger_cloneArray(w_thread thread, w_instance Array){
   w_int length = instance2Array_length(Array);
   w_int rlength = ((length - 1)/ 4 + 1);
   w_int offset = rlength * 4;
-  w_instance Bytes = BigInterger_allocByteArray(thread, offset);
+  w_instance Bytes = BigInteger_allocByteArray(thread, offset);
   w_int count = 0;
   w_int i;
   w_word* bytes;
@@ -165,7 +170,7 @@ w_instance BigInteger_cloneSignedArray(w_thread thread, w_instance Array, w_word
   w_int length = instance2Array_length(Array);
   w_int rlength = ((length - 1)/ 4 + 1);
   w_int offset = rlength * 4;
-  w_instance Bytes = BigInterger_allocByteArray(thread, offset);
+  w_instance Bytes = BigInteger_allocByteArray(thread, offset);
   w_int count = 0;
   w_int i;
   w_word* bytes;
@@ -197,7 +202,7 @@ w_instance BigInteger_cloneSignedArray(w_thread thread, w_instance Array, w_word
 w_instance BigInteger_cloneArrayToSize(w_thread thread, w_instance Array, w_word msw, w_int size){
   w_word* arrayWords = (w_word*)instance2Array_byte(Array);
   w_int length = instance2Array_length(Array) / 4;
-  w_instance Bytes = BigInterger_allocByteArray(thread, size);
+  w_instance Bytes = BigInteger_allocByteArray(thread, size);
   w_int k= (size / 4) - length;
   w_int count = 0;
   w_int i;
@@ -482,7 +487,7 @@ w_instance BigInteger_division(JNIEnv *env, w_instance Mod, w_instance Bytes, w_
     w_ulong mod=0;
     w_int idx = 0;
     w_int i=4;
-    w_instance Array = BigInterger_allocByteArray(thread, i);
+    w_instance Array = BigInteger_allocByteArray(thread, i);
 
     if(Array == NULL){
       return NULL;
@@ -689,7 +694,7 @@ w_instance BigInteger_divide(JNIEnv *env, w_instance ThisBigInt, w_instance Divi
     w_instance Bytes;
     w_instance Result;
 
-    Bytes = BigInterger_allocByteArray(thread, rlength);
+    Bytes = BigInteger_allocByteArray(thread, rlength);
     if (Bytes == NULL){
       return NULL;
     }
@@ -819,7 +824,7 @@ w_instance BigInteger_nativeMultiply(JNIEnv *env, w_instance ThisBigInt, w_insta
     //DONE checking ... lets calculate
     w_instance Result = BigInteger_allocInstance(thread);
     w_int pos = length + vlength;
-    w_instance Bytes = BigInterger_allocByteArray(thread, pos);
+    w_instance Bytes = BigInteger_allocByteArray(thread, pos);
     w_word * magWords = (w_word*) allocMem(length);
     w_word * valWords = (w_word*) (val);
     w_ubyte* bytes;
@@ -900,7 +905,7 @@ w_instance BigInteger_negateBytes(JNIEnv *env, w_instance ThisBigInt){
   }
 
   length = instance2Array_length(Magnitude);
-  Bytes = BigInterger_allocByteArray(thread, length);
+  Bytes = BigInteger_allocByteArray(thread, length);
 
   if(Bytes){
     w_int j=1;
@@ -949,7 +954,7 @@ w_instance BigInteger_Long2BigInt(JNIEnv *env, w_ulong value, w_int sign){
   w_thread thread = JNIEnv2w_thread(env);
   w_instance Result = BigInteger_allocInstance(thread);
   w_int length = 8;
-  w_instance Bytes = BigInterger_allocByteArray(thread,length);
+  w_instance Bytes = BigInteger_allocByteArray(thread,length);
   w_word * word = (w_word*)&value;
   w_word * arrayWords;
   w_ubyte * bytes;
@@ -1201,7 +1206,7 @@ w_instance BigInteger_remainder(JNIEnv *env, w_instance ThisBigInt, w_instance D
   }
   else {
     w_int rlength = length - vlength + 4;
-    w_instance Bytes = BigInterger_allocByteArray(thread, rlength);
+    w_instance Bytes = BigInteger_allocByteArray(thread, rlength);
     w_instance Result = BigInteger_allocInstance(thread);
 
     if(Bytes == NULL || Result == NULL){
@@ -1345,7 +1350,7 @@ w_instance BigInteger_nativeMod(JNIEnv *env, w_instance ThisBigInt, w_instance D
   }
   else {
     w_int rlength = length - vlength + 4;
-    w_instance Bytes = BigInterger_allocByteArray(thread, rlength);
+    w_instance Bytes = BigInteger_allocByteArray(thread, rlength);
     w_instance Result = BigInteger_allocInstance(thread);
 
     if(Bytes == NULL || Result == NULL){
@@ -1504,7 +1509,12 @@ w_instance BigInteger_subtractBytes(JNIEnv *env, w_instance ThisBigInt, w_instan
 ** represents the default constructor ..
 */
 w_instance BigInteger_allocInstance(w_thread thread){
-  w_instance newBig = allocInstance_initialized(thread, clazzBigInteger);
+  w_instance newBig;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  newBig = allocInstance_initialized(thread, clazzBigInteger);
+  enterSafeRegion(thread);
 
   if(newBig){
     setIntegerField(newBig, F_BigInteger_lowestSetBit, -2);

@@ -33,6 +33,7 @@
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
+#include "loading.h"
 #include "vfs.h"
 #include "wstrings.h"
 
@@ -52,6 +53,10 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
   w_instance  fd_obj;
   struct vfs_STAT statbuf;
   int rc;
+
+  if (mustBeInitialized(clazzFileDescriptor) == CLASS_LOADING_FAILED) {
+    return 0;
+  }
 
   pathname_string = String2string(path);
   pathname = (char*)string2UTF8(pathname_string, NULL) + 2;	  
@@ -101,7 +106,9 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
   if (file == NULL) {
     return 1;
   } else {
-    fd_obj = allocInstance(thread, clazzFileDescriptor);
+    enterUnsafeRegion(thread);
+    fd_obj = allocInstance_initialized(thread, clazzFileDescriptor);
+    enterSafeRegion(thread);
     if(fd_obj != NULL) {
       setReferenceField(thisRAF, fd_obj, F_RandomAccessFile_fd);
       setBooleanField(fd_obj, F_FileDescriptor_validFD, 1);
