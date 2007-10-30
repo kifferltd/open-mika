@@ -42,6 +42,7 @@ w_instance UTF8Decoder_bToC(JNIEnv *env, w_instance Decoder, w_instance byteArra
   w_byte * bytes;
   w_int length;
 
+  threadMustBeSafe(thread);
   if (!byteArray) {
     throwException(thread, clazzNullPointerException, NULL);
     return NULL;
@@ -58,7 +59,9 @@ w_instance UTF8Decoder_bToC(JNIEnv *env, w_instance Decoder, w_instance byteArra
   chars = utf2chars((bytes + offset), &count);
 
   if (chars) {
+    enterUnsafeRegion(thread);
     Chars = allocArrayInstance_1d(thread, atype2clazz[P_char], count);
+    enterSafeRegion(thread);
     if (Chars) {
       w_memcpy(instance2Array_byte(Chars), chars, (w_word)(count*2));
     }
@@ -111,6 +114,7 @@ w_instance UTF8Decoder_cToB(JNIEnv *env, w_instance Decoder, w_instance charArra
   w_instance Bytes;
   w_int utf8len;
 
+  threadMustBeSafe(thread);
   if (!charArray){
     throwException(thread, clazzNullPointerException, NULL);
     return NULL;
@@ -128,7 +132,9 @@ w_instance UTF8Decoder_cToB(JNIEnv *env, w_instance Decoder, w_instance charArra
   utf8len -= 2;
 
   if (bytes) {
+    enterUnsafeRegion(thread);
     Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], utf8len);
+    enterSafeRegion(thread);
     if (Bytes) {
       w_memcpy(instance2Array_byte(Bytes), bytes + 2, utf8len);
     }
@@ -147,6 +153,7 @@ w_instance UTF8Decoder_stringToB(JNIEnv *env, w_instance Decoder, w_instance Str
   w_int length;
   w_instance Bytes;
 
+  threadMustBeSafe(thread);
   if (!String){
     throwException(thread, clazzNullPointerException, NULL);
     return NULL;
@@ -156,7 +163,9 @@ w_instance UTF8Decoder_stringToB(JNIEnv *env, w_instance Decoder, w_instance Str
 
   if (bytes && length >= 2) {
     length -= 2;
+    enterUnsafeRegion(thread);
     Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+    enterSafeRegion(thread);
     if (Bytes) {
       w_memcpy(instance2Array_byte(Bytes),bytes+2,(w_word)length);
     }
@@ -240,6 +249,7 @@ w_instance Latin1Decoder_cToB(JNIEnv *env, w_instance This, w_instance Chars, w_
   w_int length;
   w_instance Bytes;
 
+  threadMustBeSafe(thread);
   if (!Chars) {
     throwException(thread, clazzNullPointerException, NULL);
     return NULL;
@@ -253,7 +263,9 @@ w_instance Latin1Decoder_cToB(JNIEnv *env, w_instance This, w_instance Chars, w_
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], count);
+  enterSafeRegion(thread);
 
   if (Bytes) {
     length = (count + 31) /32; // Use length as duffs count...

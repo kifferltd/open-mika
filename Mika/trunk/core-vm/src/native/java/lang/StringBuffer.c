@@ -103,12 +103,14 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
 
   if (minimum > oldsize) {
     woempa(1,"Current buffer has length %d, new buffer will have length %d\n", oldsize, (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
+    enterUnsafeRegion(thread);
     newbuffer = allocArrayInstance_1d(thread, atype2clazz[P_char], (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
     if (newbuffer) {
       copyChars(instance2Array_char(newbuffer), instance2Array_char(oldbuffer), getIntegerField(StringBuffer, F_StringBuffer_count));
-      setReferenceField(StringBuffer, newbuffer, F_StringBuffer_value);
+      setReferenceField_unsafe(StringBuffer, newbuffer, F_StringBuffer_value);
       removeLocalReference(thread, newbuffer);
     }
+    enterSafeRegion(thread);
   }
 }
 
@@ -117,7 +119,7 @@ void StringBuffer_ensureCapacity(JNIEnv *env, w_instance StringBuffer, w_int min
 }
 
 void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_instance String) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_string string;
   w_int length;
   w_instance buffer;
@@ -127,7 +129,9 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     string = String2string(String);
     length = string_length(string) + 16;
     woempa(1, "Allocating array of char[%d]\n", length);
+    enterUnsafeRegion(thread);
     buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    enterSafeRegion(thread);
     if (!buffer) {
 
       return;
@@ -151,7 +155,9 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     string = NULL;
     length = 16;
     woempa(1, "Allocating array of char[%d]\n", length);
+    enterUnsafeRegion(thread);
     buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    enterSafeRegion(thread);
     if (!buffer) {
 
       return;
