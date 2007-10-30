@@ -254,6 +254,7 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
   return allocInstance_common(thread, object, clazz);
 }
 
+/*
 w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
   if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
@@ -262,9 +263,9 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
   }
 
-  /*
-  ** The class must be initialized.
-  */
+  /.
+  .. The class must be initialized.
+  ./
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
@@ -272,6 +273,7 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
   return allocInstance_initialized(thread, clazz);
 }
+*/
 
 w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
@@ -286,6 +288,7 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
     return NULL;
   }
 #endif
+
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
