@@ -74,7 +74,7 @@
 ** found to be unreachable a second time. This of course raises the possibility
 ** that objects which were found to be unreachable on one pass will turn out
 ** to be reachable on the next, which ain't supposed to happen - it probably
-** means that someone has squirreled away a reference to the object, out of
+** means that someone has sauirreled away a reference to the object, out of
 ** sight of the garbage collector. If CATCH_FLYING_PIGS is defined, we detect
 ** this case and abort the VM if it happens.
 ** For production code you shouldn't need to define either PIGS_MIGHT_FLY or
@@ -575,7 +575,7 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
 
   }
 
-  woempa(1, "Pushing %j onto %s, setting flag %d\n", instance, fifo2name(fifo), flag);
+  woempa(1, "Pushing %j onto fifo @ %p, setting flag %d\n", instance, fifo, flag);
   setFlag(object->flags, flag);
   retcode = tryPutFifo(instance, fifo);
   if (retcode < 0) {
@@ -629,7 +629,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
-  woempa(1, "(GC) Marking clazz %p on %s with colour %d\n", clazz, fifo2name(fifo), flag);
   child_instance = clazz->loader;
   if (!child_instance) {
     child_instance = systemClassLoader;
@@ -645,7 +644,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     queued += retcode;
   }
 
-  woempa(1, "(GC) Marking Class instance of %k\n", clazz);
   child_instance = clazz2Class(clazz);
   if (child_instance) {
     retcode = markInstance(child_instance, fifo, flag);
@@ -674,7 +672,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     x_monitor_eternal(clazz->resolution_monitor);
     n = sizeOfWordset(&clazz->references);
 
-    woempa(1, "(GC) Marking Class instances of classes referenced from %k\n", clazz);
     for (i = 0; i < n; ++i) {
       woempa(1, "(GC) %K references %K\n", clazz, elementOfWordset(&clazz->references, i));
       child_instance = clazz2Class((w_clazz)elementOfWordset(&clazz->references, i));
@@ -728,7 +725,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   }
 
   if (clazz->previousDimension) {
-    woempa(1, "(GC) Marking previous dimension of %k\n", clazz);
     child_instance = clazz2Class(clazz->previousDimension);
     if (child_instance) {
       retcode = markInstance(child_instance, fifo, flag);
@@ -749,7 +745,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   if (state >= CLAZZ_STATE_SUPERS_LOADED) {
     w_clazz super = getSuper(clazz);
     if (super) {
-      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super, clazz);
+      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super[0], clazz);
       child_instance = clazz2Class(super);
       if (child_instance) {
         retcode = markInstance(child_instance, fifo, flag);
@@ -769,7 +765,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
 
     if (clazz->interfaces) {
       for (i = 0; i < clazz->numInterfaces; ++i) {
-        woempa(1, "(GC) Marking Class instance of superinterface[%d] (%K) of %K\n", i, clazz->interfaces[i], clazz);
         child_instance = clazz2Class(clazz->interfaces[i]);
         if (child_instance) {
           retcode = markInstance(child_instance, fifo, flag);
@@ -1021,7 +1016,7 @@ void markLoadedClass(w_word key, w_word value, void *pointer, void*dummy) {
   w_int  *counter = pointer;
   w_int retcode;
 
-  if (*counter >= 0 && getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
+  if (*counter >= 0) {
     woempa(1, "--> marking %K\n", clazz);
     retcode = markClazzReachable(clazz, strongly_reachable_fifo, O_BLACK);
     if (retcode < 0) {
