@@ -887,6 +887,8 @@ void startLoading(void) {
 
   mustBeInitialized(clazzClass);
   mustBeInitialized(clazzInvocationTargetException);
+  mustBeInitialized(clazzNullPointerException);
+  mustBeInitialized(clazzOutOfMemoryError);
   mustBeInitialized(clazzArrayOf_Object);
   mustBeInitialized(clazzArrayOf_String);
   mustBeInitialized(clazzArrayOf_Class);
