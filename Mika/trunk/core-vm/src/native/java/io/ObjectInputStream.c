@@ -43,20 +43,27 @@
 #include "wstrings.h"
 
 void throwInvalidClassException(w_thread thread, w_instance Class, char * message, int l){
-  w_instance ice = allocInstance(thread,clazzInvalidClassException);
+  w_instance ice;
 
+  threadMustBeSafe(thread);
+
+  mustBeInitialized(clazzInvalidClassException);
+
+  enterUnsafeRegion(thread);
+  ice = allocInstance_initialized(thread,clazzInvalidClassException);
 
   if(ice){
     w_clazz clazz = Class2clazz(Class);
     w_string string = cstring2String(message, l);
     
     if(string){
-      setReferenceField(ice, newStringInstance(string), F_Throwable_detailMessage);
-      setReferenceField(ice, newStringInstance(clazz->dotified), F_InvalidClassException_classname);
+      setReferenceField_unsafe(ice, newStringInstance(string), F_Throwable_detailMessage);
+      setReferenceField_unsafe(ice, newStringInstance(clazz->dotified), F_InvalidClassException_classname);
       deregisterString(string);
       throwExceptionInstance(thread,ice);
     }
   }
+  enterSafeRegion(thread);
 }
 
 w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_instance Clazz) {
@@ -79,7 +86,9 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
     return NULL;
   }
 
-  newInstance = allocInstance(thread, clazz);
+  enterUnsafeRegion(thread);
+  newInstance = allocInstance_initialized(thread, clazz);
+  enterUnsafeRegion(thread);
 
   if(!newInstance){
     return NULL;
@@ -157,7 +166,12 @@ w_instance ObjectInputStream_getCallingClassLoader(JNIEnv *env, w_instance this)
 
 w_instance ObjectInputStream_createAndFillByteArray(JNIEnv *env, w_instance this, w_int size){
   w_thread thread = JNIEnv2w_thread(env);
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+  enterSafeRegion(thread);
 
   if(Bytes){
     w_instance Class = clazz2Class(clazzObjectInputStream);
@@ -319,6 +333,7 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
   w_instance Bytes;
   w_instance Array;
 
+  threadMustBeSafe(thread);
   if(Clazz == NULL){
     woempa(9, "Class is NULL\n");
     throwNullPointerException(thread);
@@ -341,7 +356,9 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, aclazz, length);
+  enterSafeRegion(thread);
 
   if(!Array){
     return NULL;

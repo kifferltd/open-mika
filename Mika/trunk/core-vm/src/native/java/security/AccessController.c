@@ -115,6 +115,7 @@ w_instance AccessController_static_get_calling_domains(JNIEnv *env, w_instance A
 
   current = thread->top;
 
+  threadMustBeSafe(thread);
   while (current) {
     if (current->method) {
       domain = getReferenceField(clazz2Class(current->method->spec.declaring_clazz), F_Class_domain);
@@ -138,7 +139,9 @@ w_instance AccessController_static_get_calling_domains(JNIEnv *env, w_instance A
 
   item = count;
   mustBeInitialized(clazzArrayOf_ProtectionDomain);
+  enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(thread, clazzArrayOf_ProtectionDomain, item);
+  enterSafeRegion(thread);
 
   if (count == 0) {
 

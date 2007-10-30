@@ -42,8 +42,12 @@
 
 w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){
   w_int length = instance2Array_length(Array) * 4;
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  w_instance Bytes;
 
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  enterSafeRegion(thread);
 
   if(Bytes) {
 
@@ -98,7 +102,12 @@ w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){
 
 w_instance do_long_copy(w_thread thread, w_instance Array, w_instance This){
   w_int length = instance2Array_length(Array) * 8;
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  enterSafeRegion(thread);
 
   if(Bytes) {
     w_long* src = (w_long*) instance2Array_long(Array);
@@ -121,7 +130,12 @@ w_instance do_long_copy(w_thread thread, w_instance Array, w_instance This){
 
 w_instance do_short_copy(w_thread thread, w_instance Array, w_instance This){
   w_int length = instance2Array_length(Array) * 2;
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  enterSafeRegion(thread);
 
   if(Bytes) {
 
@@ -176,7 +190,12 @@ w_instance do_short_copy(w_thread thread, w_instance Array, w_instance This){
 
 w_instance do_boolean_copy(w_thread thread, w_instance Array, w_instance This){
   w_int length = instance2Array_length(Array);
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
+  enterSafeRegion(thread);
 
   if(Bytes) {
     w_ubyte* src = (w_ubyte*) instance2Array_byte(Array);

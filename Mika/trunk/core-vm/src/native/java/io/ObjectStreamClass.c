@@ -51,16 +51,21 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
   w_clazz clazz;
   w_instance newOSC = NULL;
 
+  if (mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED) {
+    return NULL;
+  }
+
   if(Class == NULL){
     throwNullPointerException(thread);
     return NULL;
   }
 
   clazz = Class2clazz(Class);
-
   if(isAssignmentCompatible(clazz, clazzSerializable)){
     w_int flags;
-    newOSC = allocInstance(thread, clazzObjectStreamClass);
+    enterUnsafeRegion(thread);
+    newOSC = allocInstance_initialized(thread, clazzObjectStreamClass);
+    enterSafeRegion(thread);
 
     if(newOSC == NULL){
       return NULL;
@@ -77,7 +82,11 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
 
       if(jmid != NULL){
         if(jmid->spec.declaring_clazz == clazz) {
-          w_instance Method = allocInstance(thread, clazzMethod);
+          w_instance Method;
+
+          enterUnsafeRegion(thread);
+          Method = allocInstance_initialized(thread, clazzMethod);
+          enterSafeRegion(thread);
 
           if(Method){
             w_method method =  (w_method) jmid;
@@ -143,7 +152,11 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
       //setup writeReplace
       jmethodID jmid = (*env)->GetMethodID(env, Class, "writeReplace", "()Ljava/lang/Object;");
       if(jmid != NULL) {
-        jobject method = allocInstance(thread, clazzMethod);
+        jobject method; 
+
+        enterUnsafeRegion(thread);
+        method = allocInstance_initialized(thread, clazzMethod);
+        enterSafeRegion(thread);
         if(method){
           setWotsitField(method, F_Method_wotsit, jmid);
           setReferenceField(newOSC, method, F_ObjectStreamClass_writeReplace);
@@ -175,6 +188,12 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
   w_thread thread = JNIEnv2w_thread(env);
   w_int flags = getIntegerField(thisOSC, F_ObjectStreamClass_flags);
   w_clazz clazz;
+
+  if (mustBeInitialized(clazzField) == CLASS_LOADING_FAILED
+   || mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED
+    ) {
+    return;
+  }
 
   if(Class == NULL){
     throwException(thread, clazzClassNotFoundException, NULL);
@@ -252,7 +271,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
     //setup readResolve
     jmethodID jmid = (*env)->GetMethodID(env, Class, "readResolve", "()Ljava/lang/Object;");
     if(jmid != NULL) {
-      jobject method = allocInstance(thread, clazzMethod);
+      jobject method; 
+
+      enterUnsafeRegion(thread);
+      method = allocInstance_initialized(thread, clazzMethod);
+      enterSafeRegion(thread);
       if(method){
         setWotsitField(method, F_Method_wotsit, jmid);
         setReferenceField(thisOSC, method, F_ObjectStreamClass_readResolve);
@@ -273,7 +296,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
 
     if(jmid != NULL){
       if(jmid->spec.declaring_clazz == clazz) {
-        w_instance Method = allocInstance(thread, clazzMethod);
+        w_instance Method; 
+
+        enterUnsafeRegion(thread);
+        Method = allocInstance_initialized(thread, clazzMethod);
+        enterSafeRegion(thread);
 
         if(Method){
           w_method method =  (w_method) jmid;
@@ -350,7 +377,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
         w_field osfield = flds+j;
 
         if(osfield->name == name && osfield->value_clazz->dotified == type){
-          w_instance newField = allocInstance(thread, clazzField);
+          w_instance newField;
+
+          enterUnsafeRegion(thread);
+          newField = allocInstance_initialized(thread, clazzField);
+          enterSafeRegion(thread);
 
           if(newField){
             setWotsitField(newField, F_Field_wotsit, osfield);
@@ -375,6 +406,13 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
   w_instance OSFIELDS = NULL;
   w_clazz clazz;
 
+  threadMustBeSafe(thread);
+  if (mustBeInitialized(clazzField) == CLASS_LOADING_FAILED
+   || mustBeInitialized(clazzObjectStreamField) == CLASS_LOADING_FAILED
+    ) {
+    return NULL;
+  }
+
   if(Class == NULL){
     throwNullPointerException(thread);
     woempa(IO_LEVEL, "Throwing NullPointerException Class is NULL\n");
@@ -389,7 +427,11 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
 
 
     if(jid != NULL){
-      w_instance Field = allocInstance(thread, clazzField);
+      w_instance Field;
+
+      enterUnsafeRegion(thread);
+      Field = allocInstance_initialized(thread, clazzField);
+      enterSafeRegion(thread);
 
       if(Field){
         w_field field = (w_field)jid;
@@ -445,7 +487,11 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
                 w_field osfield = flds+j;
 
                 if(osfield->name == name && osfield->value_clazz == type){
-                  w_instance newField = allocInstance(thread, clazzField);
+                  w_instance newField;
+
+                  enterUnsafeRegion(thread);
+                  newField = allocInstance_initialized(thread, clazzField);
+                  enterSafeRegion(thread);
 
                   if(newField){
                     setWotsitField(newField, F_Field_wotsit, osfield);
@@ -503,15 +549,23 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
         w_clazz array_fclazz = getNextDimension(clazzField, NULL);
 
         if(array_fclazz && array_osfclazz && mustBeInitialized(array_fclazz) != CLASS_LOADING_FAILED && mustBeInitialized(array_osfclazz) != CLASS_LOADING_FAILED) {
+          enterUnsafeRegion(thread);
           OSFIELDS = allocArrayInstance_1d(thread, array_osfclazz, count);
+          enterSafeRegion(thread);
 
           if(OSFIELDS){
             for(i = 0 ; i < count ; i++){
-              w_instance OSField = allocInstance(thread, clazzObjectStreamField);
-              w_instance newField = allocInstance(thread, clazzField);
+              w_instance OSField;
+              w_instance newField;
               w_field field = prf[i];
-              w_instance String = newStringInstance(field->name);
+              w_instance String;
               w_instance FldClass;
+
+              enterUnsafeRegion(thread);
+              OSField = allocInstance_initialized(thread, clazzObjectStreamField);
+              newField = allocInstance_initialized(thread, clazzField);
+              String = newStringInstance(field->name);
+              enterSafeRegion(thread);
 
               if (!OSField || !newField || !String) {
                 woempa(9, "Unable to allocate OSField and newField\n");

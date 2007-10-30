@@ -188,6 +188,7 @@ w_instance ZipFile_quickInflate(JNIEnv *env, w_instance theClass, w_instance cDa
   char * errmsg = NULL;
   w_thread thread = JNIEnv2w_thread(env);
 
+  threadMustBeSafe(thread);
   if(! cData){
     throwException(thread, clazzNullPointerException, NULL);
   }
@@ -195,7 +196,9 @@ w_instance ZipFile_quickInflate(JNIEnv *env, w_instance theClass, w_instance cDa
     c_data = (w_ubyte*)instance2Array_byte(cData);
     c_size = (w_size)instance2Array_length(cData);
 
+    enterUnsafeRegion(thread);
     uData = allocArrayInstance_1d(thread, atype2clazz[P_byte], u_size);
+    enterSafeRegion(thread);
 
     if(uData){
       u_data = (w_ubyte*)instance2Array_byte(uData);
