@@ -431,9 +431,6 @@ void w_dump_trace(void *xref) {
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     w_dump("     unsafe\n");
   }
-  if (isSet(thread->flags, WT_THREAD_BLOCKED_BY_GC)) {
-    w_dump("     blocked by GC\n");
-  }
   while (frame) {
     if (frame->method) {
       method = frame->method;
