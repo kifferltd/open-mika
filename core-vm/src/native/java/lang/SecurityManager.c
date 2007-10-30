@@ -44,6 +44,7 @@ w_instance SecurityManager_getClassContext(JNIEnv *env, w_instance thisSecurityM
   w_instance result;
   w_instance *result_array;
 
+  threadMustBeSafe(thread);
   count = 0;
   for (frame = thread->top; frame; frame = frame->previous) {
     if (frame->method) {
@@ -51,6 +52,7 @@ w_instance SecurityManager_getClassContext(JNIEnv *env, w_instance thisSecurityM
     }
   }
 
+  enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(thread, clazzArrayOf_Class, count);
 
   if (result) {
@@ -62,6 +64,7 @@ w_instance SecurityManager_getClassContext(JNIEnv *env, w_instance thisSecurityM
       }
     }
   }
+  enterSafeRegion(thread);
 
   return result;
 
@@ -75,6 +78,7 @@ w_instance SecurityManager_getNonPrivilegedClassContext(JNIEnv *env, w_instance 
   w_instance result;
   w_instance *result_array;
 
+  threadMustBeSafe(thread);
   count = 0;
   for (frame = thread->top; frame; frame = frame->previous) {
     if (frame->method) {
@@ -85,6 +89,7 @@ w_instance SecurityManager_getNonPrivilegedClassContext(JNIEnv *env, w_instance 
     }
   }
   
+  enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(thread, clazzArrayOf_Class, count);
 
   if (result) {
@@ -100,6 +105,7 @@ w_instance SecurityManager_getNonPrivilegedClassContext(JNIEnv *env, w_instance 
       }
     }
   }
+  enterSafeRegion(thread);
 
   return result;
 
