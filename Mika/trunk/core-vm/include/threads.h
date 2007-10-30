@@ -109,7 +109,6 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 #define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
 #define WT_THREAD_INTERRUPTED         0x00000004 /* the thread has been interrupted */
 #define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
-#define WT_THREAD_BLOCKED_BY_GC       0x00002000 /* the thread is forbidden any activity which conflicts with GC. */
 #define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
 #define WT_THREAD_SUSPEND_COUNT_SHIFT 16
 
@@ -399,14 +398,17 @@ extern x_monitor safe_points_monitor;
 extern volatile w_int number_unsafe_threads;
 
 /**
- Set to BLOCKED_BY_GC if no thread may enter an unsafe state, BLOCKED_BY_JDWP
- if JDWP is suspending all threads
+ Set to BLOCKED_BY_GC if no thread may enter an unsafe state, BLOCKED_BY_JITC
+ if the JIT compiler or other function is rewriting bytecode, JDWP if JDWP is
+ suspending all threads
 */
 extern volatile w_int blocking_all_threads;
 #define BLOCKED_BY_GC   1
 #define BLOCKED_BY_JDWP 2
+#define BLOCKED_BY_JITC 4
 
 extern volatile w_thread marking_thread;
+extern volatile w_thread jitting_thread;
 
 // Time to wait for ownership of HC state to change.
 #define GC_STATUS_WAIT_TICKS x_eternal
