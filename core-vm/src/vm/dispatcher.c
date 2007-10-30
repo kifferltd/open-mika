@@ -370,6 +370,7 @@ void interpret_getter(w_frame caller, w_method method) {
   w_field field = getResolvedFieldConstant(method->spec.declaring_clazz, const_index);
   w_instance objectref;
 #ifdef BACKPATCH_SPECIAL_CASES
+#error This code is dangerous - the calls to addResolvedFieldConstant() are not thread-safe
   w_boolean unsafe;
 
   woempa(1, "Dispatching %m - prelude\n", method);
@@ -396,7 +397,7 @@ void interpret_getter(w_frame caller, w_method method) {
       woempa(1, "Dispatching %m\n", method);
       objectref = (w_instance)caller->jstack_top[-1].c;
       if (!objectref) {
-        caller->thread->exception = allocInstance(caller->thread, clazzNullPointerException);
+        caller->thread->exception = allocInstance_initialized(caller->thread, clazzNullPointerException);
         removeLocalReference(caller->thread, caller->thread->exception);
       }
       else {
@@ -439,6 +440,7 @@ void interpret_setter(w_frame caller, w_method method) {
   w_field field = getResolvedFieldConstant(method->spec.declaring_clazz, const_index);
   w_instance objectref;
 #ifdef BACKPATCH_SPECIAL_CASES
+#error This code is dangerous - the calls to addResolvedFieldConstant() are not thread-safe
   w_boolean unsafe;
 
   woempa(1, "Dispatching %m - prelude\n", method);
@@ -465,7 +467,7 @@ void interpret_setter(w_frame caller, w_method method) {
       woempa(1, "Dispatching %m()\n", method);
       objectref = (w_instance)caller->jstack_top[-2].c;
       if (!objectref) {
-        caller->thread->exception = allocInstance(caller->thread, clazzNullPointerException);
+        caller->thread->exception = allocInstance_initialized(caller->thread, clazzNullPointerException);
         removeLocalReference(caller->thread, caller->thread->exception);
       }
       else {

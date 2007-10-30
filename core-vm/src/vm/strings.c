@@ -715,6 +715,7 @@ w_string registerString(w_string string) {
  
   w_string result;
 
+  threadMustBeSafe(currentWonkaThread);
   woempa(1, "Registering %w at %p\n", string, string);
   ht_lock(string_hashtable);
   result = (w_string)ht_read_no_lock(string_hashtable, (w_word)string);
@@ -753,6 +754,7 @@ void _deregisterString(w_string string, const char *file, int line) {
 #else
 void deregisterString(w_string string) {
 #endif
+  threadMustBeSafe(currentWonkaThread);
   woempa(1, "Deregistering %w\n", string);
   ht_lock(string_hashtable);
   if (--string->refcount == 0) {
@@ -1124,9 +1126,11 @@ w_instance newStringInstance(w_string s) {
 
   w_instance instance;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = enterUnsafeRegion(thread);
 
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
   instance = allocStringInstance(thread);
+  enterSafeRegion(thread);
   if (instance) {
     w_string r = registerString(s);
     setWotsitField(instance, F_String_wotsit, r);
@@ -1134,10 +1138,6 @@ w_instance newStringInstance(w_string s) {
   }
   else {
     woempa(9, "Unable to allocate instance of String for '%w'\n", s);
-  }
-
-  if (!unsafe) {
-    enterSafeRegion(thread);
   }
 
   return instance;
@@ -1150,13 +1150,13 @@ w_instance getStringInstance(w_string s) {
   w_instance new_instance;
   w_instance canonical;
   w_word *flagsptr;
-  w_boolean unsafe;
 
   /*
   ** The story so far:
   ** - we could be anywhere in a GC cycle, (mark, sweep, complete)
   ** - w_string r will not be reclaimed, because it is registered to us
   */
+  threadMustBeSafe(thread);
 
   /*
   ** We lock the string_hashtable while looking for a canonical instance;
@@ -1171,16 +1171,14 @@ w_instance getStringInstance(w_string s) {
   canonical = r->interned;
 #endif
   if (canonical) {
-    unsafe = enterUnsafeRegion(thread);
+    enterUnsafeRegion(thread);
     addLocalReference(thread, canonical);
     flagsptr = instance2flagsptr(canonical);
 #ifdef PIGS_MIGHT_FLY
     unsetFlag(*flagsptr, O_GARBAGE);
 #endif
     setFlag(*flagsptr, O_BLACK);
-    if (!unsafe) {
-      enterSafeRegion(thread);
-    }
+    enterSafeRegion(thread);
   }
   ht_unlock(string_hashtable);
 
@@ -1199,11 +1197,9 @@ w_instance getStringInstance(w_string s) {
   ** OK, no canonical instance up to now so we create a new one. It's safe 
   ** from being GC'd, because allocInstance() creates a local reference to it.
   */
-  unsafe = enterUnsafeRegion(thread);
+  enterUnsafeRegion(thread);
   new_instance = allocStringInstance(thread);
-  if (!unsafe) {
-    enterSafeRegion(thread);
-  }
+  enterSafeRegion(thread);
 
   if (!new_instance) {
     deregisterString(r);

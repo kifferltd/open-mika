@@ -373,20 +373,17 @@ void startInitialThreads(void* data) {
 */
 
   if (command_line_argument_count > 0) {
-    enterUnsafeRegion(W_Thread_sysInit);
     dims = command_line_argument_count;
     woempa(7,"Allocating array of %d String[s]\n",dims);
+    enterUnsafeRegion(W_Thread_sysInit);
     arglist = allocArrayInstance_1d(W_Thread_sysInit, clazzArrayOf_String, dims);
-    // CG 20040114 removeLocalReference(W_Thread_sysInit, arglist);
-
+    enterSafeRegion(W_Thread_sysInit);
     for (i = 0; i < command_line_argument_count; i++) {
       woempa(7, "Getting string instance of '%s', thread is '%t'\n", command_line_arguments[i], currentWonkaThread);
       String = newStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
       setArrayReferenceField(arglist, String, i);
-      // CG 20040114 removeLocalReference(W_Thread_sysInit, String);
       woempa(9,"args[%d] = \"%w\" bytecodecount = %d\n",i,String2string(instance2Array_instance(arglist)[i]), woempa_bytecodecount);
     }
-    enterSafeRegion(W_Thread_sysInit);
   }
   else {
     dims = 0;
@@ -456,16 +453,18 @@ void startInitialThreads(void* data) {
 void startKernel() {
   nondaemon_thread_count = 0;
 
+  mustBeInitialized(clazzThreadGroup);
+  mustBeInitialized(clazzThread);
   thread_hashtable = ht_create((char*)"hashtable:threads", THREAD_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "Created thread_hashtable at %p\n",thread_hashtable);
 #ifdef USE_OBJECT_HASHTABLE
   object_hashtable = ht_create((char*)"hashtable:objects", 32767, NULL, NULL, 0, 0);
   woempa(7, "Created object_hashtable at %p\n",object_hashtable);
 #endif
-  I_ThreadGroup_system = allocInstance(NULL, clazzThreadGroup);
+  I_ThreadGroup_system = allocInstance_initialized(NULL, clazzThreadGroup);
   woempa(1,"created I_ThreadGroup_system at %p\n",I_ThreadGroup_system);
   string_sysThreadGroup = cstring2String("SystemThreadGroup", 17);
-  I_Thread_sysInit = allocInstance(NULL, clazzThread);
+  I_Thread_sysInit = allocInstance_initialized(NULL, clazzThread);
   string_sysThread = cstring2String("SystemInitThread", 16);
 
   W_Thread_sysInit = allocClearedMem(sizeof(w_Thread));
@@ -741,8 +740,17 @@ void _gcSafePoint(w_thread thread
   status = x_monitor_notify_all(safe_points_monitor);
   checkOswaldStatus(status);
 
+  if (thread->to_be_reclaimed) {
+    x_monitor_exit(safe_points_monitor);
+    checkOswaldStatus(status);
+    gc_reclaim(thread->to_be_reclaimed, NULL);
+    thread->to_be_reclaimed = 0;
+    status = x_monitor_eternal(safe_points_monitor);
+    checkOswaldStatus(status);
+  }
+
   while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
+    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
       status = x_monitor_eternal(safe_points_monitor);

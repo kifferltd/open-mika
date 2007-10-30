@@ -130,11 +130,14 @@ w_instance Array_clone(JNIEnv *env, w_instance originalArrayInstance) {
   w_int   cloneSize;
   w_instance clonedArrayInstance;
 
+  threadMustBeSafe(thread);
   length = instance2Array_length(originalArrayInstance);
   sizeInBeets = (clazz->previousDimension->bits)*length;
   sizeInWoids = (sizeInBeets+bitsPerWord-1)/bitsPerWord;
   cloneSize   = (sizeInWoids+1)*sizeof(w_word);
+  enterUnsafeRegion(thread);
   clonedArrayInstance = allocArrayInstance_1d(thread, clazz, length);
+  enterSafeRegion(thread);
 
   if (clonedArrayInstance) {
     woempa(1, "length %d.\n", length);

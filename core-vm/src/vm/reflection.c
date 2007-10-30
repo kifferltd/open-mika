@@ -493,7 +493,13 @@ w_instance createWrapperInstance(w_thread thread, w_clazz clazz, w_int *slot) {
   }
   
   if (clazz) {
-    return allocInstance(thread, wrapper_clazz);
+    w_instance result;
+
+    enterUnsafeRegion(thread);
+    result = allocInstance_initialized(thread, wrapper_clazz);
+    enterSafeRegion(thread);
+
+    return result;
   }
 
   wabort(ABORT_WONKA, "Wrong primitive VM_TYPE %d\n", clazz->type);
@@ -522,7 +528,7 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
       return;
     }
     enterUnsafeRegion(thread);
-    wrapper = allocInstance(thread, wrapper_clazz);
+    wrapper = allocInstance_initialized(thread, wrapper_clazz);
     if (wrapper) {
       woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
       setReferenceField_unsafe(wrapper, wrappee, field_offset);
@@ -645,9 +651,10 @@ w_frame invoke(JNIEnv *env, w_method method, w_instance This, w_instance Argumen
  * instance could not be created.
  */
 w_instance wrapByteValue(w_thread thread, w_clazz clazz, w_word value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
 
+  wrapper = createWrapperInstance(thread, clazz, &slot);
   if (wrapper) {
 #ifdef PACK_BYTE_FIELDS
     *byteFieldPointer(wrapper, slot) = (char)value;
@@ -665,8 +672,10 @@ w_instance wrapByteValue(w_thread thread, w_clazz clazz, w_word value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapWordValue(w_thread thread, w_clazz clazz, w_word value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     *wordFieldPointer(wrapper, slot) = value;
@@ -680,8 +689,10 @@ w_instance wrapWordValue(w_thread thread, w_clazz clazz, w_word value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapLongValue(w_thread thread, w_clazz clazz, w_long value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     union { w_long l; w_word w[2]; } temp;
@@ -698,8 +709,10 @@ w_instance wrapLongValue(w_thread thread, w_clazz clazz, w_long value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapDoubleValue(w_thread thread, w_clazz clazz, w_double value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     union { w_double d; w_word w[2]; } temp;
@@ -720,6 +733,7 @@ w_instance wrapProxyArgs(w_thread thread, w_method current_method, va_list arg_l
   w_int    i;
   w_word   word_value;
 
+  threadMustBeSafe(thread);
   while (current_method->spec.arg_types[numArgs]) {
     woempa(7, "Method %w arg[%d] is %s %k\n", current_method->spec.name, numArgs, clazzIsPrimitive(current_method->spec.arg_types[numArgs]) ? "primitive" : "reference", current_method->spec.arg_types[numArgs]);
     if (mustBeLoaded(&current_method->spec.arg_types[numArgs]) == CLASS_LOADING_FAILED) {
@@ -780,7 +794,9 @@ w_instance wrapProxyArgs(w_thread thread, w_method current_method, va_list arg_l
     ++numArgs;
   }
 
+  enterUnsafeRegion(thread);
   arguments = allocArrayInstance_1d(thread, clazzArrayOf_Object, numArgs);
+  enterSafeRegion(thread);
   if (!arguments) {
     releaseFifo(arg_fifo);
 
@@ -878,7 +894,9 @@ void voidProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   }
 
-  currentMethod = allocInstance(thread, clazzMethod);
+  enterUnsafeRegion(thread);
+  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 
@@ -959,7 +977,9 @@ w_word singleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   return_type = current_method->spec.return_type;
 
-  currentMethod = allocInstance(thread, clazzMethod);
+  enterUnsafeRegion(thread);
+  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 
@@ -1062,7 +1082,9 @@ w_long doubleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   return_type = current_method->spec.return_type;
 
-  currentMethod = allocInstance(thread, clazzMethod);
+  enterUnsafeRegion(thread);
+  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 
