@@ -95,6 +95,7 @@ w_instance Method_getParameterTypes(JNIEnv *env, w_instance thisMethod) {
   w_int i;
   w_int length;
   
+  threadMustBeSafe(thread);
   if (method->spec.arg_types) {
     for (numParameters = 0; method->spec.arg_types[numParameters]; ++numParameters);
   }
@@ -102,7 +103,9 @@ w_instance Method_getParameterTypes(JNIEnv *env, w_instance thisMethod) {
     numParameters = 0;
   }
   length = numParameters;
+  enterUnsafeRegion(thread);
   Parameters = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
   
   if (Parameters) {
     for (i = 0; i < numParameters; i++) {
@@ -135,6 +138,7 @@ w_instance Method_getExceptionTypes(JNIEnv *env, w_instance thisMethod) {
   w_int    i;
   w_int    length;
 
+  threadMustBeSafe(thread);
   method = getWotsitField(thisMethod, F_Method_wotsit);
   // TODO exception =
   mustBeLinked(method->spec.declaring_clazz);
@@ -146,11 +150,18 @@ w_instance Method_getExceptionTypes(JNIEnv *env, w_instance thisMethod) {
   numthrows = method->numThrows;
   length = numthrows;
 
+  enterUnsafeRegion(thread);
   Exceptions = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
 
   if (Exceptions) {
     for (i = 0; i < numthrows; i++) {
       exception = getClassConstant(method->spec.declaring_clazz, method->throws[i], thread);
+      if (exceptionThrown(thread)) {
+
+        return NULL;
+
+      }
       if (mustBeReferenced(exception) == CLASS_LOADING_FAILED) {
         return NULL;
       }
