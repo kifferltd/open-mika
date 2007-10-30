@@ -639,21 +639,27 @@ jint ThrowNew(JNIEnv *env, jclass class, const char *message) {
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz  = Class2clazz(class);
   w_string string = cstring2String(message, strlen(message));
-  w_instance Throwable = allocInstance(thread, clazz);
+  w_instance Throwable;
   w_instance Message;
 
   if (!string) {
     wabort(ABORT_WONKA, "Unable to create string\n");
   }
+  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+    wabort(ABORT_WONKA, "Unable to initalize %k\n", clazz);
+  }
+  enterUnsafeRegion(thread);
+  Throwable = allocInstance_initialized(thread, clazz);
   if (!Throwable) {
     wabort(ABORT_WONKA, "Unable to create Throwable\n");
   }
   Message = newStringInstance(string);
+  enterSafeRegion(thread);
   if (Message) {
     setReferenceField(Throwable, Message, F_Throwable_detailMessage);
     throwExceptionInstance(thread, Throwable);
+    removeLocalReference(thread, Message);
   }
-  removeLocalReference(thread, Message);
 
   return 0;
 
@@ -712,7 +718,9 @@ jobject AllocObject(JNIEnv *env, jclass class) {
   w_instance new = NULL;
 
   if (mustBeInitialized(clazz) != CLASS_LOADING_FAILED) {
-    new = allocInstance(thread, clazz);
+    enterUnsafeRegion(thread);
+    new = allocInstance_initialized(thread, clazz);
+    enterSafeRegion(thread);
   }
 
   return new;
@@ -731,7 +739,9 @@ jobject NewObject(JNIEnv *env, jclass class, jmethodID methodID, ...) {
     return NULL;
   }
   
-  new = allocInstance(thread, clazz);
+  enterUnsafeRegion(thread);
+  new = allocInstance_initialized(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -765,7 +775,9 @@ jobject NewObjectV(JNIEnv *env, jclass class, jmethodID methodID, va_list args) 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
-  new = allocInstance(thread, clazz);
+  enterUnsafeRegion(thread);
+  new = allocInstance_initialized(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -798,7 +810,9 @@ jobject NewObjectA(JNIEnv *env, jclass class, jmethodID methodID, jvalue *args) 
     return NULL;
   }
 
-  new = allocInstance(thread, clazz);
+  enterUnsafeRegion(thread);
+  new = allocInstance_initialized(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -2658,6 +2672,7 @@ jarray NewObjectArray(JNIEnv *env, jsize length, jclass elementType, jobject ini
   w_method caller = thread->top->method;
   w_instance loader;
 
+  threadMustBeSafe(thread);
   if (caller) {
     woempa(1, "(JNI) Asked to construct an array of %d '%s', called from %M\n", length, elementType, caller);
     loader = clazz2loader(caller->spec.declaring_clazz);
@@ -2682,7 +2697,9 @@ jarray NewObjectArray(JNIEnv *env, jsize length, jclass elementType, jobject ini
 
   woempa(1, "New array will be of class %k\n", arrayClazz);
   alength = length;
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(JNIEnv2w_thread(env), arrayClazz, alength);
+  enterSafeRegion(thread);
   woempa(1, "New array is %j\n", Array);
 
   if (Array) {
@@ -2716,12 +2733,15 @@ void SetObjectArrayElement(JNIEnv *env, jobjectArray Array, jsize aindex, jobjec
 static w_instance newTypeArray(w_thread thread, w_clazz clazz, w_int length) {
   w_instance Array;
 
+  threadMustBeSafe(thread);
   mustBeInitialized(clazz);
   if (exceptionThrown(thread)) {
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazz, length);
+  enterSafeRegion(thread);
 
   woempa(1, "(JNI) Length %d, type %k, Array = %p.\n", length, clazz, Array);
  
@@ -3246,7 +3266,9 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 
   }
 
-  Thread = allocInstance(NULL, clazzNativeThread);
+  enterUnsafeRegion(thread);
+  Thread = allocInstance_initialized(NULL, clazzNativeThread);
+  enterSafeRegion(thread);
   setReferenceField(Thread, I_ThreadGroup_system, F_Thread_parent);
   setWotsitField(Thread, F_Thread_wotsit,  thread);
   thread->Thread = Thread;
