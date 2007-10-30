@@ -180,7 +180,7 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
   w_int   length;
 
   exception = NULL;
-
+  threadMustBeSafe(thread);
   if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
 
     return NULL;
@@ -190,7 +190,9 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
   woempa(7, "getInterfaces of instance of %k, %d interfaces.\n", clazz, clazz->numDirectInterfaces);
 
   length = clazz->numDirectInterfaces;
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
 
   if (Array) {
     for (i = 0; i < (w_int)clazz->numDirectInterfaces; i++) {
@@ -242,8 +244,10 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
     throwException(thread, clazzIllegalAccessException, "%K is not allowed to call %M", calling_clazz, clazz->defaultInit);
   }
 
-  if (! exceptionThrown(thread)) {
-    newInstance = allocInstance(thread, clazz);
+  if (! exceptionThrown(thread) && mustBeInitialized(clazzFileDescriptor) != CLASS_LOADING_FAILED) {
+    enterUnsafeRegion(thread);
+    newInstance = allocInstance_initialized(thread, clazz);
+    enterSafeRegion(thread);
   }
 
   if (newInstance) {
@@ -342,6 +346,8 @@ Class_get_constructors
   w_instance exception = NULL;
   w_clazz   clazzArrayOf_Constructor = getNextDimension(clazzConstructor, NULL);
 
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzConstructor);
   mustBeInitialized(clazzArrayOf_Constructor);
 
   if (clazz) {
@@ -361,6 +367,7 @@ Class_get_constructors
     }
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Constructor, numRelevantConstructors);
 
   if (Array) {
@@ -370,7 +377,7 @@ Class_get_constructors
       if (method->spec.name == string_angle_brackets_init
           && (mtype==DECLARED || isSet(method->flags, ACC_PUBLIC))
          ) {
-        Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
+        Constructor = allocInstance_initialized(JNIEnv2w_thread(env), clazzConstructor);
         if (!Constructor) {
           woempa(9, "Unable to allocate Constructor\n");
           break;
@@ -380,6 +387,7 @@ Class_get_constructors
       }
     }
   }
+  enterSafeRegion(thread);
 
   return Array;
 
@@ -421,6 +429,8 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_instance exception = NULL;
   w_clazz   clazzArrayOf_Field = getNextDimension(clazzField, NULL);
 
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzField);
   mustBeInitialized(clazzArrayOf_Field);
 
   /*
@@ -459,6 +469,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
   
   numRelevantFields = fields->numElements;
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
 
   if (Array) {
@@ -466,7 +477,9 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 
     for(i = 0; i < numRelevantFields ; i++) {
       w_field field = (w_field) getFifo(fields);
-      w_instance Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+      w_instance Field;
+
+      Field = allocInstance_initialized(JNIEnv2w_thread(env), clazzField);
 
       if (Field==NULL) {
         woempa(9, "Unable to allocate Field\n");
@@ -476,6 +489,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
       setArrayReferenceField(Array, Field, i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseFifo(fields);
 
@@ -509,6 +523,8 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_fifo relevantMethods;
   w_clazz   clazzArrayOf_Method = getNextDimension(clazzMethod, NULL);
 
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzMethod);
   mustBeInitialized(clazzArrayOf_Method);
 
   if (clazz) {
@@ -516,10 +532,6 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
     if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
       return NULL;
     }
-  }
-
-  if (mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED) {
-    return NULL;
   }
 
   /*
@@ -602,12 +614,13 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   }
 
   woempa(1,"Class %k has %d relevant methods\n", clazz,numRelevantMethods);
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Method, numRelevantMethods);
 
   if (Array) {
     for (i = 0; i < numRelevantMethods; i++) {
       method = getFifo(relevantMethods);
-      Method = allocInstance(thread, clazzMethod);
+      Method = allocInstance_initialized(thread, clazzMethod);
       if (Method == NULL) {
         woempa(9, "Unable to allocate Method\n");
         break;
@@ -617,6 +630,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
       setArrayReferenceField(Array, Method, i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseFifo(relevantMethods);
 
@@ -640,6 +654,7 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
   w_size       nargs;
   w_instance  *arg_Classes;
 
+  mustBeInitialized(clazzConstructor);
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -700,7 +715,9 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
   }
 
   if (constructor) {
-    Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
+    enterUnsafeRegion(thread);
+    Constructor = allocInstance_initialized(JNIEnv2w_thread(env), clazzConstructor);
+    enterSafeRegion(thread);
     if (Constructor == NULL) {
       woempa(9, "Unable to allocate Constructor\n");
       return NULL;
@@ -782,6 +799,8 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
   w_field    field;
   w_instance Field;
 
+  mustBeInitialized(clazzField);
+
   if (fieldNameString == NULL){
     throwException(thread, clazzNoSuchFieldException, NULL);
     return NULL;
@@ -796,7 +815,9 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
   field = seekField(clazz, fieldName, mtype);
 
   if (field) {
-    Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+    enterUnsafeRegion(thread);
+    Field = allocInstance_initialized(JNIEnv2w_thread(env), clazzField);
+    enterSafeRegion(thread);
     if (!Field) {
       woempa(9, "Unable to allocate Constructor\n");
     }
@@ -827,6 +848,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
   w_size     nargs;
   w_instance *arg_Classes;
 
+  mustBeInitialized(clazzMethod);
 
 #ifdef RUNTIME_CHECKS
   if (!AParameters) {
@@ -949,7 +971,9 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
   }
 
   if (method) {
-    Method = allocInstance(JNIEnv2w_thread(env), clazzMethod);
+    enterUnsafeRegion(thread);
+    Method = allocInstance_initialized(JNIEnv2w_thread(env), clazzMethod);
+    enterSafeRegion(thread);
     if (Method == NULL) {
       woempa(9, "Unable to allocate Method\n");
       return NULL;
@@ -1018,6 +1042,11 @@ w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
     if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
       int j = clazz->temp.inner_class_info[i].outer_class_info_index;
       w_clazz outer_clazz = getClassConstant(clazz, j, thread);
+      if (exceptionThrown(thread)) {
+
+        return NULL;
+
+      }
 
       return clazz2Class(outer_clazz);
     }
@@ -1033,6 +1062,7 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
   int i;
   int n = 0;
 
+  threadMustBeSafe(thread);
   if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -1049,12 +1079,14 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
     }
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, n);
   if (Array) {
     for (i = 0; i < n; ++i) {
       setArrayReferenceField(Array, clazz2Class(inner_clazz[i]), i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseMem(inner_clazz);
 
@@ -1071,6 +1103,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   int j = 0;
   int n = 0;
 
+  threadMustBeSafe(thread);
   if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -1111,12 +1144,14 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
     }
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, n);
   if (Array) {
     for (i = 0; i < n; ++i) {
       setArrayReferenceField(Array, clazz2Class(getFifo(inner_clazz_fifo)), i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseFifo(inner_clazz_fifo);
 

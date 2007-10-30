@@ -62,8 +62,12 @@ void String_create_empty(JNIEnv *env, w_instance String) {
 
 void fast_String_create_empty(w_frame frame) {
   w_instance objectref = (w_instance) frame->jstack_top[-1].c;
-  w_string s = registerString(string_empty);
+  w_string s;
+
+  enterSafeRegion(frame->thread);
+  s = registerString(string_empty);
   setWotsitField(objectref, F_String_wotsit, s);
+  enterUnsafeRegion(frame->thread);
   frame->jstack_top -= 1;
   woempa(1, "%p new string at %p, empty\n", objectref, String2string(objectref));
 }
@@ -214,14 +218,16 @@ void fast_String_toString(w_frame frame) {
 }
 
 w_instance String_toCharArray(JNIEnv *env, w_instance This) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_int length;
   w_string this = String2string(This);
   w_instance result;
   
   length = string_length(this);
   woempa(1, "Allocating array of char[%d]\n", length);
+  enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+  enterSafeRegion(thread);
   if (result) {
     if (string_is_latin1(this)) {
       w_size i;
@@ -293,6 +299,7 @@ w_instance String_getBytes(JNIEnv *env, w_instance This, w_boolean Enc) {
   w_byte *dst;
   w_int i;
 
+  enterUnsafeRegion(thread);
   if (Enc == WONKA_TRUE){
     w_byte * utfbytes = string2UTF8(this, &i);
 
@@ -321,6 +328,7 @@ w_instance String_getBytes(JNIEnv *env, w_instance This, w_boolean Enc) {
       }
     }
   }
+  enterSafeRegion(thread);
 
   return result;
 
@@ -1091,6 +1099,7 @@ w_instance String_intern(JNIEnv *env, w_instance thisString) {
   w_string this = String2string(thisString);
   w_instance resultString;
 
+  threadMustBeSafe(JNIEnv2w_thread(env));
   ht_lock(string_hashtable);
   resultString = internString(thisString);
   ht_unlock(string_hashtable);

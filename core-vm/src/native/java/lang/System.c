@@ -575,7 +575,7 @@ w_instance System_getCmdLineProperties(JNIEnv *env, w_instance this) {
 
     if (Array) {
       for (i = 0; i < length; i++) {
-        String = allocInstance(thread, clazzString);
+        String = allocInstance_initialized(thread, clazzString);
         if (String) {
           string = cstring2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
           setWotsitField(String, F_String_wotsit, string);
