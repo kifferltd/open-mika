@@ -60,13 +60,16 @@ w_instance SystemClassLoader_getBootstrapFile(JNIEnv *env, w_instance theSystemC
   char *filename_utf8;
   w_int len;
 
+  threadMustBeSafe(thread);
   filename_string = String2string(filename);
   woempa(7, "filename_string = %w\n", filename_string);
   filename_utf8 = (char *)string2UTF8(filename_string, &len);
   woempa(7, "filename_utf8 = %s\n", filename_utf8 + 2);
   if (getBootstrapFile(filename_utf8 + 2, &bar)) {
     releaseMem(filename_utf8);
+    enterUnsafeRegion(thread);
     arrayInstance = allocArrayInstance_1d(thread, atype2clazz[P_byte], bar.length);
+    enterSafeRegion(thread);
     memcpy(instance2Array_byte(arrayInstance), bar.buffer, bar.length);
 
     return arrayInstance;

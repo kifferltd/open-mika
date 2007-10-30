@@ -364,9 +364,9 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
 }
 
 /*
-** If ref_clazz is not already referenced by this_clazz (e.g. via
-** clazz->supers or clazz->interfaces, or of course via clazz->references),
-** add it to clazz->references. The calling thread must own
+** If ref_clazz is not already referenced by this_clazz (e.g. via 
+** clazz->supers or clazz->interfaces, or of course via clazz->references), 
+** add it to clazz->references. The calling thread must own 
 ** clazz->resolution_monitor.
 */
 static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
@@ -911,20 +911,28 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
     if (!thread || !exceptionThrown(thread)) {
       woempa(1, "found method %w%w in class %k.\n", name, desc_string, search_clazz);
 
-      x_monitor_eternal(clazz->resolution_monitor);
-      if (method->spec.arg_types) {
-        for (j = 0; method->spec.arg_types[j]; ++j) {
-          addClassReference(clazz, method->spec.arg_types[j]);
+      if (!thread || !exceptionThrown(thread)) {
+        x_monitor_eternal(clazz->resolution_monitor);
+
+        if (method->spec.arg_types) {
+          for (j = 0; method->spec.arg_types[j]; ++j) {
+            woempa(1, "%M argument[%d] type %K must be loaded\n", method, j, method->spec.arg_types[j]);
+            addClassReference(clazz, method->spec.arg_types[j]);
+          }
         }
-        addClassReference(clazz, method->spec.return_type);
+
+        if (!thread || !exceptionThrown(thread)) {
+          woempa(1, "%M return type %K must be loaded\n", method, method->spec.return_type);
+          addClassReference(clazz, method->spec.return_type);
+        }
+
+        *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
+        *v = (w_word)method;
+        x_monitor_notify_all(clazz->resolution_monitor);
+        return;
       }
-
-      *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
-      *v = (w_word)method;
-      x_monitor_notify_all(clazz->resolution_monitor);
-
-      return;
     }
+
   }
 
   x_monitor_eternal(clazz->resolution_monitor);
@@ -1077,19 +1085,25 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
 
     if (!thread || !exceptionThrown(thread)) {
       woempa(1, "found interface method %w%w in class %k.\n", name, desc_string, search_clazz);
-      x_monitor_eternal(clazz->resolution_monitor);
-      if (method->spec.arg_types) {
-        for (j = 0; method->spec.arg_types[j]; ++j) {
-          addClassReference(clazz, method->spec.arg_types[j]);
+
+      if (!thread || !exceptionThrown(thread)) {
+        x_monitor_eternal(clazz->resolution_monitor);
+
+        if (method->spec.arg_types) {
+          for (j = 0; method->spec.arg_types[j]; ++j) {
+            addClassReference(clazz, method->spec.arg_types[j]);
+          }
         }
-      }
-      addClassReference(clazz, method->spec.return_type);
 
-      *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
+        if (!thread || !exceptionThrown(thread)) {
+          addClassReference(clazz, method->spec.return_type);
+        }
+
+        *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
-      x_monitor_notify_all(clazz->resolution_monitor);
-
-      return;
+        x_monitor_notify_all(clazz->resolution_monitor);
+        return;
+      }
     }
 
   }

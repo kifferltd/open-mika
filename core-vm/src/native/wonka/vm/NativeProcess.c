@@ -195,10 +195,11 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   */
 
   mustBeInitialized(clazzProcessInfo);
-  process = allocInstance(thread, clazzProcessInfo);
+  enterUnsafeRegion(thread);
+  process = allocInstance_initialized(thread, clazzProcessInfo);
+  enterSafeRegion(thread);
 
   if (process) {
-    //pushLocalReference(thread->top, process);
     setIntegerField(process, F_ProcessInfo_wotsit, (w_int) wpid);
     setIntegerField(process, F_ProcessInfo_id, pid);
   } else {
