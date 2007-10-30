@@ -111,7 +111,10 @@ w_instance Array_static_get(JNIEnv *env, w_instance Class, w_instance Array, w_i
         wabort(ABORT_WONKA, "Illegal primitive type 0x%02x\n");
     }
 
-    wrapped = allocInstance(thread, wrapper_clazz);
+    mustBeInitialized(wrapper_clazz);
+    enterUnsafeRegion(thread);
+    wrapped = allocInstance_initialized(thread, wrapper_clazz);
+    enterSafeRegion(thread);
     if (wrapped) {
       switch (component_clazz->type & 0x0f) {
         case VM_TYPE_BOOLEAN:
@@ -221,7 +224,9 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
       mustBeLinked(array_clazz);
     }
     if (! exceptionThrown(thread)) {
+      enterUnsafeRegion(thread);
       Array = allocArrayInstance_1d(thread, array_clazz, dimensions);
+      enterSafeRegion(thread);
     }
   }
 
@@ -238,6 +243,7 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
   w_clazz array_clazz;
   w_instance initiating_loader = clazz2loader(getCallingClazz(thread));
   
+  threadMustBeSafe(thread);
 
   if (length < 0) {
     throwException(thread, clazzNegativeArraySizeException, NULL);
@@ -265,7 +271,9 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
       mustBeLinked(array_clazz);
     }
     if (! exceptionThrown(thread)) {
+      enterUnsafeRegion(thread);
       Array = allocArrayInstance_1d(thread, array_clazz, length);
+      enterSafeRegion(thread);
     }
   }
 
@@ -283,6 +291,7 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
 
+  threadMustBeSafe(thread);
   if (!Component || !Dimensions) {
     throwException(thread, clazzNullPointerException, NULL);
   }  
@@ -346,7 +355,9 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
 
         if (! exceptionThrown(thread)) {
           woempa(7, "Allocating %k\n", clazz);
+          enterUnsafeRegion(thread);
           Array = allocArrayInstance(thread, clazz, ndims, dimensions);
+          enterSafeRegion(thread);
         }
       }
       releaseMem(dimensions);
