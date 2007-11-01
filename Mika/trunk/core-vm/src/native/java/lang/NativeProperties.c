@@ -37,6 +37,7 @@ w_hashtable prop_hashtable;
 w_instance keyArray;
 
 w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
+  w_thread thread = JNIEnv2w_thread(env);
   char *utf8;
   w_string s;
   w_fifo fifo;
@@ -140,7 +141,9 @@ w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
   ht_write(prop_hashtable, (w_word)utf2String("java.runtime.name", 17), (w_word)s);
   woempa(1, "Set %s -> %w\n", "java.runtime.name", s);
 
+  enterUnsafeRegion(thread);
   keyArray = allocArrayInstance_1d(JNIEnv2w_thread(env), clazzArrayOf_String, prop_hashtable->occupancy);
+  enterSafeRegion(thread);
   fifo = ht_list_keys_no_lock(prop_hashtable);
   i = 0;
   while ((s = (w_string)getFifo(fifo))) {
