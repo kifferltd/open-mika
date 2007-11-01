@@ -1311,8 +1311,16 @@ void interpret(w_frame caller, w_method method) {
 #else
     o = (w_instance) tos[-1].c;
 #endif
-    if (o && ! isAssignmentCompatible(instance2object(o)->clazz, clazz)) {
-      do_throw_clazz(clazzClassCastException);
+    if (o) {
+      w_boolean compatible;
+
+      // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+      enterSafeRegion(thread);
+      compatible = isAssignmentCompatible(instance2object(o)->clazz, clazz);
+      enterUnsafeRegion(thread);
+      if (!compatible) {
+        do_throw_clazz(clazzClassCastException);
+      }
     }
     add_to_opcode(3);
   }
@@ -1688,8 +1696,16 @@ void interpret(w_frame caller, w_method method) {
 #else
     o = (w_instance) tos[-1].c;
 #endif
-    if (o && ! isAssignmentCompatible(instance2object(o)->clazz, instance2object(a)->clazz->previousDimension)) {
-      do_throw_clazz(clazzArrayStoreException);
+    if (o) {
+      w_boolean compatible;
+
+      // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+      enterSafeRegion(thread);
+      compatible = isAssignmentCompatible(instance2object(o)->clazz, instance2object(a)->clazz->previousDimension);
+      enterUnsafeRegion(thread);
+      if (!compatible) {
+        do_throw_clazz(clazzArrayStoreException);
+      }
     }
     setArrayReferenceField_unsafe(a, o, i);
     tos -= 3;
@@ -3908,6 +3924,8 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     tos[-1].s = stack_notrace;
+    // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+    enterSafeRegion(thread);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
     tos_cache = tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
@@ -3915,6 +3933,7 @@ void interpret(w_frame caller, w_method method) {
     o = (w_instance) tos[-1].c;
     tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
 #endif
+    enterUnsafeRegion(thread);
     add_to_opcode(3);
   }
 
