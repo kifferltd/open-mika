@@ -319,6 +319,8 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   if (state < CLAZZ_STATE_LOADED) {
     wabort(ABORT_WONKA, "%K must be loaded before it can be SupersLoaded\n", clazz);
   }
+
+  threadMustBeSafe(thread);
 #endif
 
   if (state == CLAZZ_STATE_BROKEN) {

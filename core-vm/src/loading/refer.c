@@ -288,6 +288,8 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
   volatile w_clazz original_clazz;
   int i;
 
+  threadMustBeSafe(currentWonkaThread);
+
   ++clazz->numDeclaredMethods;
   if (clazz->own_methods) {
     clazz->own_methods = reallocMem(clazz->own_methods, (clazz->numDeclaredMethods) * sizeof(w_Method));
@@ -828,6 +830,8 @@ w_int mustBeReferenced(w_clazz clazz) {
   if (exceptionThrown(thread)) {
     woempa(9, "Eh? Exception '%e' already pending in mustBeReferenced(%K)\n", exceptionThrown(thread), clazz);
   }
+
+  threadMustBeSafe(thread);
 #endif
 
   if (state == CLAZZ_STATE_BROKEN) {
