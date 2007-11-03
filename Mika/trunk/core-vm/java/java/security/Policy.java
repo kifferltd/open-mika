@@ -36,19 +36,6 @@ import com.acunia.wonka.security.DefaultPolicy;
 
 public abstract class Policy {
 
-  private static Policy thePolicy;
-
-  static {
-    try {
-      String policy = Security.securityProps.getProperty("policy.provider");
-      thePolicy = policy == null ? new DefaultPolicy() :
-        (Policy)Class.forName(policy).newInstance();
-    }
-    catch(Exception e){
-      thePolicy = new DefaultPolicy();
-    }
-  }
-
   public Policy() { }
 
   private static void permissionCheck(String permission) {
@@ -65,7 +52,7 @@ public abstract class Policy {
 
   public static Policy getPolicy() {
     permissionCheck("getPolicy");
-    return thePolicy;
+    return Singleton.policy;
   }
 
   public static void setPolicy (Policy policy) {
@@ -73,7 +60,7 @@ public abstract class Policy {
       throw new SecurityException("cannot intall a 'null' policy");
     }
     permissionCheck("setPolicy");
-    thePolicy = policy;
+    Singleton.policy = policy;
   }
 
   public boolean implies(ProtectionDomain domain, Permission permission) {
@@ -90,4 +77,19 @@ public abstract class Policy {
   public abstract PermissionCollection getPermissions(CodeSource codesource);
 
   public abstract void refresh();
+
+  private static class Singleton {
+    static Policy policy;
+
+    static {
+      try {
+        String policy_provider = Security.securityProps.getProperty("policy.provider");
+        policy = policy_provider == null ? new DefaultPolicy() :
+          (Policy)Class.forName(policy_provider).newInstance();
+      }
+      catch(Exception e){
+        policy = new DefaultPolicy();
+      }
+    }
+  }
 }

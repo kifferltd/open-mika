@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,23 +11,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
 
 package java.security;
 
@@ -42,30 +44,7 @@ public final class Security {
 
   private Security(){}
 
-  private final static Vector providers = new Vector(11);
   final static Properties securityProps = new Properties();
-
-  static {
-    try {
-      securityProps.load(ClassLoader.getSystemResourceAsStream("wonka.security"));
-    }
-    catch(Exception e){}
-    int size = securityProps.size() + 1;
-    for (int i=1 ; i < size ; i++){
-      String s = "security.provider."+i;
-      s = securityProps.getProperty(s);
-      if (s == null){
-        break;
-      } else {
-        try {          
-          Provider p = (Provider) Class.forName(s,true,ClassLoader.getSystemClassLoader()).newInstance();          
-          providers.add(p);
-        } catch(Exception e){
-          e.printStackTrace();
-        }
-      }
-    }
-  }
 
   static void permissionCheck(String permission) {
     if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
@@ -81,6 +60,7 @@ public final class Security {
 
   public static int addProvider(Provider provider) {
     permissionCheck("insertProvider."+provider.getName());
+    Vector providers = Providers.providers;
     synchronized (providers){
       if (providers.contains(provider)){
         return -1;
@@ -94,6 +74,7 @@ public final class Security {
 ** @deprecated
 */
   public static String  getAlgorithmProperty(String algName, String propName){
+    Vector providers = Providers.providers;
     synchronized(providers){
       int size = providers.size();
       String name = "Alg."+propName+"."+algName;
@@ -120,6 +101,7 @@ public final class Security {
 
 
   public static Provider getProvider(String name){
+    Vector providers = Providers.providers;
     synchronized (providers){
       for (int i=0 ; i < providers.size() ; i++){
         if (name.equals(((Provider)providers.get(i)).getName())){
@@ -131,12 +113,14 @@ public final class Security {
   }
 
   public static Provider[] getProviders(){
+    Vector providers = Providers.providers;
     return (Provider[]) providers.toArray(new Provider[providers.size()]);
   }
 
   public static Provider[] getProviders(Map map){
     Iterator it = map.entrySet().iterator();
-    Vector providers_clone = (Vector) Security.providers.clone();
+    Vector providers = Providers.providers;
+    Vector providers_clone = (Vector)providers.clone();
     try {
       do {
         Map.Entry me = (Map.Entry)it.next();
@@ -174,6 +158,7 @@ public final class Security {
 
   public static Set getAlgorithms(String serviceName) {
     HashSet set = new HashSet(7);
+    Vector providers = Providers.providers;
     serviceName = serviceName + '.';
     int idx = serviceName.length();
     int len = providers.size();
@@ -190,8 +175,9 @@ public final class Security {
   }
   
   public static Provider[] getProviders(String name){
+    Vector providers = Providers.providers;
     int index = name.indexOf(' ');
-    Vector providers_clone = (Vector) Security.providers.clone();
+    Vector providers_clone = (Vector)providers.clone();
     Iterator it = providers_clone.iterator();
     if(index != -1){
       //String attribute = name.substring(index).trim();
@@ -225,6 +211,7 @@ public final class Security {
   public static int insertProviderAt(Provider provider, int position){
     permissionCheck("insertProvider."+provider.getName());
 
+    Vector providers = Providers.providers;
     synchronized (providers){
       if (providers.contains(provider)){
         return -1;
@@ -236,9 +223,37 @@ public final class Security {
 
   public static void removeProvider(String name){
     permissionCheck("removeProvider."+name);
+    Vector providers = Providers.providers;
     Provider p = getProvider(name);
     if (p != null){
       providers.remove(p);
+    }
+  }
+
+  private static class Providers {
+    final static Vector providers;
+
+    static {
+      providers = new Vector(11);
+      try {
+        securityProps.load(ClassLoader.getSystemResourceAsStream("wonka.security"));
+      }
+      catch(Exception e){}
+      int size = securityProps.size() + 1;
+      for (int i=1 ; i < size ; i++){
+        String s = "security.provider."+i;
+        s = securityProps.getProperty(s);
+        if (s == null){
+          break;
+        } else {
+          try {          
+            Provider p = (Provider) Class.forName(s,true,ClassLoader.getSystemClassLoader()).newInstance();          
+            providers.add(p);
+          } catch(Exception e){
+            e.printStackTrace();
+          }
+        }
+      }
     }
   }
 
