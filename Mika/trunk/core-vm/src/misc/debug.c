@@ -323,7 +323,7 @@ void w_dump_info(void);
 void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   x_thread kthread;
   x_status status = xs_success;
-  w_thread thread;
+  w_thread thread = NULL;
   va_list ap;
   w_size bufsize = BUFSIZE;
 
@@ -348,10 +348,12 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
 ** Replace with thread_hashtable lookup for now
   thread = (w_thread)kthread->wx_user_data;
 */
-  thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
-  if ((*(w_word*)thread->label)!=(*(w_word*)"thread")){
-    woempa(9,"currentWonkaThread called at %s:%d from non-wonka thread (label = %s)\n", function, line, thread->label);
-    thread = NULL;
+  if (thread_hashtable) {
+    thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
+    if ((*(w_word*)thread->label)!=(*(w_word*)"thread")){
+      woempa(9,"currentWonkaThread called at %s:%d from non-wonka thread (label = %s)\n", function, line, thread->label);
+      thread = NULL;
+    }
   }
 
   w_dump_info();
@@ -426,6 +428,9 @@ void w_dump_trace(void *xref) {
   }
   else if (thread == sweeping_thread) {
     w_dump("     sweeping heap\n");
+  }
+  else if (thread == jitting_thread) {
+    w_dump("     JIT-compiling\n");
   }
 
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
@@ -507,7 +512,7 @@ void w_dump_locks(void) {
     w_dump("       GC sweeping thread : %t\n", sweeping_thread);
   }
   if (blocking_all_threads) {
-    w_dump("     %s blocking all threads : true\n", isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : "JDWP");
+    w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
   }
   w_dump("\n");
   w_dump("   Instance locks :\n");
@@ -515,16 +520,16 @@ void w_dump_locks(void) {
   w_dump("\n");
 }
 
-/* [CG 20040317] Suppressed, as can sometimes deadlock
-
 static int object_size;
 
+#ifdef DUMP_CLASSLOADERS
 static x_boolean classloaders_callback(void * mem, void * arg) {
 
   w_instance   instance;
   w_object     object;
   w_clazz      clazz;
-  w_hashtable  ht;
+  w_hashtable  loaded_classes;
+  w_hashtable  unloaded_classes;
   x_monitor    monitor;
 
   object_size += x_mem_size(mem);
@@ -533,11 +538,13 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
   clazz = object->clazz;
 
   if(isAssignmentCompatible(clazz, clazzClassLoader)) {
-    w_dump("     %j has %d loaded classes, %d unloaded\n", instance, loader2loaded_classes(instance)->occupancy, loader2unloaded_classes(instance)->occupancy);
+    loaded_classes = loader2loaded_classes(instance);
+    unloaded_classes = loader2unloaded_classes(instance);
+    w_dump("     %j has %d loaded classes, %d unloaded;\n", instance, loaded_classes->occupancy, unloaded_classes->occupancy);
+
+    monitor = &loaded_classes->monitor;
+    w_dump("       loaded class monitor is %p\n", monitor);
     
-    ht = loader2loaded_classes(instance);
-    monitor = &ht->monitor;
-  
     if(monitor->owner) {
       w_dump("       loaded_hashtable (0x%08x) locked", monitor);
       if(monitor->owner->xref) {
@@ -546,8 +553,8 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
       w_dump("\n");
     }
     
-    ht = loader2unloaded_classes(instance);
-    monitor = &ht->monitor;
+    monitor = &unloaded_classes->monitor;
+    w_dump("       unloaded class monitor is %p\n", monitor);
     
     if(monitor->owner) {
       w_dump("       unloaded_hashtable (0x%08x) locked", monitor);
@@ -570,18 +577,69 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
     }
   }
 
-  return true;
+  return TRUE;
 }
+#endif
 
+#ifdef DUMP_CLASSES
+static x_boolean classes_callback(void * mem, void * arg) {
+
+  w_instance   instance;
+  w_object     object;
+  w_clazz      clazz;
+  w_clazz      target_clazz;
+  x_monitor    monitor;
+
+  object = chunk2object(mem);
+  instance = object->fields;
+  clazz = object->clazz;
+
+  if (clazz == clazzClass) {
+    target_clazz = Class2clazz(instance);
+    monitor = target_clazz->resolution_monitor;
+    if(monitor->owner) {
+      w_dump("%K resolution_monitor (0x%08x) locked", target_clazz, monitor);
+      if(monitor->owner->xref) {
+        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+      }
+      w_dump("\n");
+    }
+
+    monitor = (x_monitor)ht_read(lock_hashtable, (w_word)instance);
+    
+    if(monitor && monitor->owner) {
+      w_dump("%K Class instance (0x%08x) locked", target_clazz, monitor);
+      if(monitor->owner->xref) {
+        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+      }
+      w_dump("\n");
+    }
+  }
+
+  return TRUE;
+}
+#endif
+
+#ifdef DUMP_CLASSLOADERS
 void w_dump_classloaders(void) {
-  w_dump(" Classloaders :\n");
+  w_dump("   Classloaders :\n");
   x_mem_lock(x_eternal);
   object_size = 0;
   x_mem_scan(x_eternal, OBJECT_TAG, classloaders_callback, NULL);
   x_mem_unlock();
   w_dump("\n");
 }
-*/
+#endif
+
+#ifdef DUMP_CLASSES
+void w_dump_classes(void) {
+  w_dump("   Class locks :\n");
+  x_mem_lock(x_eternal);
+  x_mem_scan(x_eternal, OBJECT_TAG, classes_callback, NULL);
+  x_mem_unlock();
+  w_dump("\n");
+}
+#endif
 
 void w_dump_meminfo(void) {
   w_dump(" Memory :\n");
@@ -598,7 +656,12 @@ void w_dump_info() {
   w_dump("\n");
   w_dump_threads();
   w_dump_locks();
-//  w_dump_classloaders();
+#ifdef DUMP_CLASSES
+  w_dump_classes();
+#endif
+#ifdef DUMP_CLASSLOADERS
+  w_dump_classloaders();
+#endif
   w_dump(" Global References: %d\n\n",globals_hashtable->occupancy);
   w_dump_meminfo();
 }
