@@ -669,7 +669,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   if (clazz->references) {
     w_int n;
 
-    x_monitor_eternal(clazz->resolution_monitor);
     n = sizeOfWordset(&clazz->references);
 
     for (i = 0; i < n; ++i) {
@@ -690,7 +689,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
       }
 #endif
     }
-    x_monitor_exit(clazz->resolution_monitor);
   }
 
   woempa(1, "(GC) Marking constant pool of class %k\n",clazz);
@@ -1944,9 +1942,17 @@ w_size sweep(w_int target) {
         if (isSet(object->clazz->flags, CLAZZ_IS_THREAD)) {
           w_thread thread = getWotsitField(object->fields, F_Thread_wotsit);
 
-          if (thread && thread->state != wt_dead && thread->state != wt_unstarted) {
-            woempa(9, "Hold on a moment - thread '%w' is still running...\n", NM(thread));
-            do_collect = 0;
+          if (thread) {
+            if (thread->state != wt_dead && thread->state != wt_unstarted) {
+              woempa(9, "Hold on a moment - thread '%t' is still running...\n", thread);
+              wprintf("Hold on a moment - thread '%t' is still running...\n", thread);
+              do_collect = 0;
+            }
+            else if (thread->kthread && thread->kthread->waiting_on) {
+              woempa(9, "Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
+              wprintf("Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
+              do_collect = 0;
+            }
           }
         }
         else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {

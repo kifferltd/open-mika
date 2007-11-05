@@ -411,11 +411,12 @@ static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
 
   thread = currentWonkaThread;
   threadMustBeSafe(thread);
-
+  enterUnsafeRegion(thread);
   woempa(7, "%K references %K\n", ref_clazz, this_clazz);
   if (!addToWordset(&this_clazz->references, (w_word)ref_clazz)) {
     wabort(ABORT_WONKA, "Could not add entry to clazz->references\n");
   }
+  enterSafeRegion(thread);
 }
 
 /*
@@ -437,11 +438,9 @@ void resolveStringConstant(w_clazz clazz, w_int i) {
       wabort(ABORT_WONKA, "Unable to get String instance for String constant\n");
     }
     woempa(1, "Resolved String constant[%d] of %k to `%w'\n", i, clazz, s);
-    enterUnsafeRegion(thread);
     *v = (w_word)theString;
     *c = RESOLVED_STRING;
     removeLocalReference(thread, theString);
-    enterSafeRegion(thread);
   }
   x_monitor_exit(clazz->resolution_monitor);
 }
@@ -503,6 +502,7 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
   }
 
   if (loader && loader != systemClassLoader && isInternalClass(dotified)) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwException(thread, clazzLinkageError, "%w may only be loaded by a system class", dotified);
     
     *v = (w_word)exceptionThrown(thread);
@@ -510,6 +510,7 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
 
     deregisterString(dotified);
     deregisterString(slashed);
+    x_monitor_eternal(clazz->resolution_monitor);
 
     return;
 
@@ -526,8 +527,8 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
   if (target_clazz) {
     mustBeSupersLoaded(target_clazz);
 
-    x_monitor_eternal(clazz->resolution_monitor);
     addClassReference(clazz, target_clazz);
+    x_monitor_eternal(clazz->resolution_monitor);
     *v = (w_word)target_clazz;
     *c = RESOLVED_CLASS;
     x_monitor_notify_all(clazz->resolution_monitor);
@@ -560,7 +561,9 @@ void waitForClassConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
@@ -586,7 +589,9 @@ void resolveClassConstant(w_clazz clazz, w_int i) {
     /* do nothing */
   }
   else if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
   else {
     woempa(9, "Wrong tag %d for a Class constant\n", *c);
@@ -674,6 +679,7 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   w_clazz    value_clazz;
   w_boolean  class_loading_result;
 
+  *c = RESOLVING_FIELD;
   x_monitor_exit(clazz->resolution_monitor);
   member = *v;
   woempa(1, "Resolving field constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
@@ -703,8 +709,6 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
     return;
 
   }
-
-  *c = RESOLVING_FIELD;
 
   if (search_clazz && !(thread && exceptionThrown(thread))) {
     mustBeReferenced(search_clazz);
@@ -742,8 +746,8 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
     deregisterString(desc_string);
 
     if (!thread || ! exceptionThrown(thread)) {
-      x_monitor_eternal(clazz->resolution_monitor);
       addClassReference(clazz, field->value_clazz);
+      x_monitor_eternal(clazz->resolution_monitor);
       *v = (w_word)field;
       *c = RESOLVED_FIELD;
       x_monitor_notify_all(clazz->resolution_monitor);
@@ -775,14 +779,14 @@ void waitForFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
 /**
  ** Resolve a Field constant.
- ** Can result in the thread being temporarily
- ** declared GC-safe, so the stack must be in order.
  */
 void resolveFieldConstant(w_clazz clazz, w_int i) {
   w_ConstantType *c;
@@ -805,7 +809,9 @@ void resolveFieldConstant(w_clazz clazz, w_int i) {
     /* do nothing */
   }
   else if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
   else {
     woempa(9, "Wrong tag %d for a Field constant\n", *c);
@@ -912,8 +918,6 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
       woempa(1, "found method %w%w in class %k.\n", name, desc_string, search_clazz);
 
       if (!thread || !exceptionThrown(thread)) {
-        x_monitor_eternal(clazz->resolution_monitor);
-
         if (method->spec.arg_types) {
           for (j = 0; method->spec.arg_types[j]; ++j) {
             woempa(1, "%M argument[%d] type %K must be loaded\n", method, j, method->spec.arg_types[j]);
@@ -925,6 +929,8 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
           woempa(1, "%M return type %K must be loaded\n", method, method->spec.return_type);
           addClassReference(clazz, method->spec.return_type);
         }
+
+        x_monitor_eternal(clazz->resolution_monitor);
 
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
@@ -957,7 +963,9 @@ void waitForMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v)
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
@@ -981,7 +989,9 @@ void resolveMethodConstant(w_clazz clazz, w_int i) {
       waitForMethodConstant(clazz, c, v);
     }
     else if (*c == COULD_NOT_RESOLVE) {
+      x_monitor_exit(clazz->resolution_monitor);
       throwExceptionInstance(thread, (w_instance)*v);
+      x_monitor_eternal(clazz->resolution_monitor);
     }
     else {
       woempa(9, "Wrong tag %d for a Method constant\n", *c);
@@ -1087,8 +1097,6 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
       woempa(1, "found interface method %w%w in class %k.\n", name, desc_string, search_clazz);
 
       if (!thread || !exceptionThrown(thread)) {
-        x_monitor_eternal(clazz->resolution_monitor);
-
         if (method->spec.arg_types) {
           for (j = 0; method->spec.arg_types[j]; ++j) {
             addClassReference(clazz, method->spec.arg_types[j]);
@@ -1098,6 +1106,8 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
         if (!thread || !exceptionThrown(thread)) {
           addClassReference(clazz, method->spec.return_type);
         }
+
+        x_monitor_eternal(clazz->resolution_monitor);
 
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
@@ -1130,7 +1140,9 @@ void waitForIMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
@@ -1154,7 +1166,9 @@ void resolveIMethodConstant(w_clazz clazz, w_int i) {
       waitForIMethodConstant(clazz, c, v);
     }
     else if (*c == COULD_NOT_RESOLVE) {
+      x_monitor_exit(clazz->resolution_monitor);
       throwExceptionInstance(thread, (w_instance)*v);
+      x_monitor_eternal(clazz->resolution_monitor);
     }
     else {
       woempa(9, "Wrong tag %d for an IMethod constant\n", *c);
@@ -1191,6 +1205,8 @@ static w_string getClassConstantName(w_clazz clazz, w_int idx) {
 
   }
   else {
+    threadMustBeSafe(currentWonkaThread);
+
     x_monitor_eternal(clazz->resolution_monitor);
     while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
       if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
@@ -1289,6 +1305,8 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
 
   }
   else {
+    threadMustBeSafe(currentWonkaThread);
+
     x_monitor_eternal(clazz->resolution_monitor);
     while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
       if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
