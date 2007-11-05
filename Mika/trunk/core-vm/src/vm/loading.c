@@ -886,9 +886,23 @@ void startLoading(void) {
   primitive2wrapperSlot[P_long] = F_Long_value;
 
   mustBeInitialized(clazzClass);
+  // All the classes which are used in do_throw_clazz(c) (interpreter.c)
+  // must be pre-initialized.
   mustBeInitialized(clazzInvocationTargetException);
   mustBeInitialized(clazzNullPointerException);
   mustBeInitialized(clazzOutOfMemoryError);
+  mustBeInitialized(clazzArithmeticException);
+  mustBeInitialized(clazzArrayIndexOutOfBoundsException);
+  mustBeInitialized(clazzArrayStoreException);
+  mustBeInitialized(clazzClassCastException);
+  mustBeInitialized(clazzIllegalAccessError);
+  mustBeInitialized(clazzIllegalMonitorStateException);
+  mustBeInitialized(clazzIncompatibleClassChangeError);
+  mustBeInitialized(clazzInternalError);
+  mustBeInitialized(clazzLinkageError);
+  mustBeInitialized(clazzNegativeArraySizeException);
+  mustBeInitialized(clazzNoSuchMethodException);
+  //
   mustBeInitialized(clazzArrayOf_Object);
   mustBeInitialized(clazzArrayOf_String);
   mustBeInitialized(clazzArrayOf_Class);
@@ -1070,8 +1084,6 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 ** If base_clazz is NULL then we return NULL.
 */
 w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
-
-//  w_instance defining_loader;
   w_clazz array_clazz;
 
   if (!base_clazz) {
@@ -1079,6 +1091,8 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
     return NULL;
 
   }
+
+  threadMustBeSafe(currentWonkaThread);
 
   // We take advantage of the fact that all array classes share a common 
   // resolution_monitor (although this may in fact be a bug).

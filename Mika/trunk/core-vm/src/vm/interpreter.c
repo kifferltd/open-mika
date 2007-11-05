@@ -1611,7 +1611,7 @@ void interpret(w_frame caller, w_method method) {
     w_boolean enough = heap_request(thread, (w_int)clazz->bytes_needed);
 
     if (!enough) {
-      throwException(thread, clazzOutOfMemoryError, NULL);
+      do_throw_clazz(clazzOutOfMemoryError);
     }
     if (thread->exception) {
       do_the_exception;
@@ -4051,7 +4051,8 @@ void interpret(w_frame caller, w_method method) {
       enough = heap_request(thread, bytes);
     }
     if (!enough) {
-      throwException(thread, clazzOutOfMemoryError, NULL);
+      releaseMem(dimensions);
+      do_throw_clazz(clazzOutOfMemoryError);
     }
     if (thread->exception) {
       releaseMem(dimensions);
@@ -4140,9 +4141,11 @@ void interpret(w_frame caller, w_method method) {
     threadMustBeUnsafe(thread);
     if (!thread->exception) {
       frame->jstack_top = tos;
-      enterSafeRegion(thread);
-      mustBeInitialized(clazz);
-      enterUnsafeRegion(thread);
+#ifdef RUNTIME_CHECKS
+      if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED) {
+        wabort(ABORT_WONKA, "'s Blood! Throwing uninitialized %k\n", clazz);
+      }
+#endif
       thread->exception = allocThrowableInstance(thread, clazz);
       if (thread->exception) {
         removeLocalReference(thread, thread->exception);
@@ -4317,6 +4320,7 @@ static w_code searchHandler(w_frame frame) {
   w_instance pending;
   w_code nohandler = frame->method->exec.code - 3;
 
+  threadMustBeUnsafe(thread);
   /*
   ** Store the pending exception locally and clear the thread exception, since
   ** resolving the class constant could result in loading/initializing etc. and
