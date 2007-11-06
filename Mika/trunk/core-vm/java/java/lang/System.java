@@ -51,6 +51,10 @@ public final class System {
   private static boolean initialized;
 
   static {
+    in = new wonka.io.StandardInputStream();
+    // We make 'out' non-autoflush and 'err' autoflush, by analogy with Posix.
+    out = new PrintStream(new wonka.io.StandardOutputStream(), false);
+    err = new PrintStream(new wonka.io.ErrorOutputStream(), true);
     theRuntime = Runtime.getRuntime();
     systemProperties = new Properties(new DefaultProperties());
 
@@ -74,29 +78,7 @@ public final class System {
     catch (IOException e) {}
 
     parseCmdLineProperties();
-    InputStream sin = null;
-    try {
-      sin = new wonka.io.StandardInputStream();
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    in = sin;
-    PrintStream sout = null;
-    try {
-      boolean  system_out_autoflush = Boolean.valueOf(getProperty("mika.out.autoflush", "true")).booleanValue();
-      sout = new PrintStream(new wonka.io.StandardOutputStream(), system_out_autoflush);
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    out = sout;
-    PrintStream serr = null;
-    try {
-      boolean  system_err_autoflush = Boolean.valueOf(getProperty("mika.err.autoflush", "true")).booleanValue();
-      serr = new PrintStream(new wonka.io.ErrorOutputStream(), system_err_autoflush);
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    err = serr;
+
     try {    
       //FORCE SOME CALLS things that are postponed until the system properties were set up correctly
       ClassLoader.get_defaultProtectionDomain();
