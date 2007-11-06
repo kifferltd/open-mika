@@ -1,5 +1,8 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2007 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,21 +12,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include <string.h>
@@ -328,7 +332,7 @@ w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
   
 }
 
-void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int action) {
+void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int action, w_instance localAddr) {
 
   if (!address) {
     throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
@@ -342,8 +346,10 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
     }  	  	  	
     else {
       struct ip_mreq groupaddr;
+      memset(&groupaddr, 0, sizeof(struct ip_mreq));
       groupaddr.imr_multiaddr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-      groupaddr.imr_interface.s_addr = htonl(INADDR_ANY);
+      groupaddr.imr_interface.s_addr = htonl(localAddr == NULL ? 
+           INADDR_ANY : getIntegerField(localAddr, F_InetAddress_address));
 
      if (w_setsockopt(sock, IPPROTO_IP, action, &groupaddr, sizeof(groupaddr)) == -1) {
        //woempa(9,"ERROR in join/leave = %s\n", w_strerror((int)w_errno(sock)));
@@ -354,12 +360,13 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
 
 }
 
-void PlainDatagramSocketImpl_join(JNIEnv* env, w_instance ThisImpl, w_instance address) {
-  groupRequest(env, ThisImpl, address, IP_ADD_MEMBERSHIP);
+void PlainDatagramSocketImpl_join(JNIEnv* env, w_instance ThisImpl, w_instance address, w_instance localAddr) {
+  groupRequest(env, ThisImpl, address, IP_ADD_MEMBERSHIP, localAddr);
 }
 
 void PlainDatagramSocketImpl_leave(JNIEnv* env, w_instance ThisImpl, w_instance address) {
-  groupRequest(env, ThisImpl, address, IP_DROP_MEMBERSHIP);
+  //TODO ...
+  groupRequest(env, ThisImpl, address, IP_DROP_MEMBERSHIP, NULL);
 }
 
 w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, w_int sock) {
@@ -443,7 +450,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
   socklen_t len = sizeof(sa);
  	
   if (get == WONKA_TRUE) { //get
-    if (w_getsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &sa, &len)) {
+    if (w_getsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, &len)) {
       //woempa(9,"ERROR in optMulticastIF = %s\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
@@ -455,7 +462,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
     sa.sin_family = (w_short)getIntegerField(address, F_InetAddress_family);
     sa.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
 
-    if  (w_setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &sa, len)) {
+    if  (w_setsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, len)) {
       //woempa(9,"ERROR in optMulticastIF = %s\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }

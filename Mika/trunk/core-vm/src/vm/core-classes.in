@@ -702,7 +702,7 @@ java/net/PlainDatagramSocketImpl
         _receive      (Ljava/net/DatagramPacket;)I  PlainDatagramSocketImpl_receive
         peek          (Ljava/net/InetAddress;)I     PlainDatagramSocketImpl_peek
         close         ()V                           PlainDatagramSocketImpl_close
-        join	      (Ljava/net/InetAddress;)V     PlainDatagramSocketImpl_join
+        join	      (Ljava/net/InetAddress;Ljava/net/InetAddress;)V     PlainDatagramSocketImpl_join
         leave	      (Ljava/net/InetAddress;)V     PlainDatagramSocketImpl_leave
         getTimeToLive ()I			    PlainDatagramSocketImpl_getTimeToLive
         setTimeToLive (I)V			    PlainDatagramSocketImpl_setTimeToLive

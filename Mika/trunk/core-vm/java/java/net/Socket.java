@@ -178,6 +178,13 @@ public class Socket {
      return socket.address;
   }
 
+  public SocketAddress getRemoteSocketAddress() {
+     if(socket == null || socket.address == null) {
+       return null;
+     }
+     return new InetSocketAddress(socket.address, socket.port);
+  }
+
   public InputStream getInputStream() throws IOException {
      if (socket == null) {
        throw new SocketException();
