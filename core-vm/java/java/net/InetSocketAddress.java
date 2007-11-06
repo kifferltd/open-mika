@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          *
+* Copyright (c) 2006, 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -51,8 +51,23 @@ public class InetSocketAddress extends SocketAddress {
 
   public InetSocketAddress(InetAddress address, int port) throws IllegalArgumentException {
     this.port = checkPort(port);
-    this.addr = checkAddress(address);
     this.hostname = address.getHostName();    
+    if (this.hostname != null) {
+      try {
+        this.addr = InetAddress.getByName(hostname);
+      } catch (Exception e) {
+      }
+    }
+    else if (address == null) {
+      try {
+        this.addr = InetAddress.getByAddress(null, new byte[4]);
+      }
+      catch (UnknownHostException uhe) {
+      }
+    }
+    else {
+      this.addr = address;
+    }
   }
 
   public InetSocketAddress(String hostname, int port) throws IllegalArgumentException {
@@ -111,13 +126,6 @@ public class InetSocketAddress extends SocketAddress {
   }
 
   private InetAddress checkAddress(InetAddress addr) {
-    try {
-      if (addr == null) {
-        return InetAddress.getByAddress(null, new byte[4]);
-      }
-    }
-    catch (UnknownHostException uhe) {
-    }
 
     return addr;
   }

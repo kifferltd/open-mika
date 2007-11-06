@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          *
+* Copyright (c) 2006, 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
