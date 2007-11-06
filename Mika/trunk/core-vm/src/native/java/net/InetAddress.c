@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2007 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -45,13 +45,33 @@
 */
 static char ownhostname[256];
 
-w_boolean InetAddress_lookupName(JNIEnv *env, w_instance InetAddress) {
+w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_instance InetAddress) {
 
   w_boolean result = FALSE;
-  w_string name = String2string(getReferenceField(InetAddress, F_InetAddress_addressCache));
+  w_instance addrCache;
+  w_string name;
   struct hostent * host = NULL;
-  char * hostname = allocMem(string_length(name) + 1);
+  char * hostname;
   int af = 0;
+
+  if (InetAddress == NULL) {
+    return FALSE;
+  }
+
+  addrCache = getReferenceField(InetAddress, F_InetAddress_addressCache);
+
+  if(addrCache == NULL) {
+    w_dump("InetAddress_lookupName: Avoiding Segfault\n");
+    return FALSE;
+  }
+
+  name = String2string(addrCache);
+
+  if(name == NULL) {
+    w_dump("w_string of String %p is NULL\n",addrCache);
+  }
+
+  hostname = allocMem(string_length(name) + 1);
 
   if (!hostname) {
     return FALSE;

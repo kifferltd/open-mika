@@ -1,7 +1,7 @@
 ###########################################################################
 # Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     #
-# reserved. Parts copyright 2004, 2005, 2006 by Chris Gray, /k/ Embedded  #
-# Java Solutions. All rights reserved.                                    #
+# reserved. Parts copyright 2004, 2005, 2006, 2007 by Chris Gray,         #
+# /k/ Embedded Solutions. All rights reserved.                            #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -679,7 +679,7 @@ java/net/InetAddress
 	addressCache		Ljava/lang/String;
 	createInetAddress	(Ljava/lang/String;)V		InetAddress_createInetAddress
 	getLocalName		()Ljava/lang/String;		InetAddress_getLocalName
-        lookupName		()Z				InetAddress_lookupName
+        lookupName		(Ljava/net/InetAddress;)Z	InetAddress_static_lookupName
 java/net/Inet4Address
 java/net/Inet6Address
 	ipaddress	[B
