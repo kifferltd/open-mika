@@ -31,6 +31,7 @@
 
 package java.security;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -38,7 +39,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.Vector;
 
 public final class Security {
 
@@ -60,7 +60,7 @@ public final class Security {
 
   public static int addProvider(Provider provider) {
     permissionCheck("insertProvider."+provider.getName());
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     synchronized (providers){
       if (providers.contains(provider)){
         return -1;
@@ -74,15 +74,17 @@ public final class Security {
 ** @deprecated
 */
   public static String  getAlgorithmProperty(String algName, String propName){
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     synchronized(providers){
       int size = providers.size();
       String name = "Alg."+propName+"."+algName;
       for(int i = 0 ; i < size ; i++){
         Provider p = (Provider)providers.get(i);
-        String prop = p.getProperty(name);
-        if(prop != null){
-          return prop;
+        if (p != null) {
+          String prop = p.getProperty(name);
+          if(prop != null){
+            return prop;
+          }
         }
       }
       return null;
@@ -101,11 +103,12 @@ public final class Security {
 
 
   public static Provider getProvider(String name){
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     synchronized (providers){
       for (int i=0 ; i < providers.size() ; i++){
-        if (name.equals(((Provider)providers.get(i)).getName())){
-          return (Provider)providers.get(i);
+        Provider p = (Provider)providers.get(i);
+        if ((p != null) && name.equals(p.getName())){
+          return p;
         }
       }
     }
@@ -113,14 +116,32 @@ public final class Security {
   }
 
   public static Provider[] getProviders(){
-    Vector providers = Providers.providers;
-    return (Provider[]) providers.toArray(new Provider[providers.size()]);
+    ArrayList providers = Providers.providers;
+    ArrayList copy;
+    synchronized (providers){
+      copy = new ArrayList(providers.size());
+      for (int i = 0 ; i < providers.size() ; i++){
+        Provider p = (Provider)providers.get(i);
+        if (p != null) {
+          copy.add(p);
+        }
+      }
+    }
+    return (Provider[]) copy.toArray(new Provider[copy.size()]);
   }
 
   public static Provider[] getProviders(Map map){
     Iterator it = map.entrySet().iterator();
-    Vector providers = Providers.providers;
-    Vector providers_clone = (Vector)providers.clone();
+    ArrayList providers = Providers.providers;
+    ArrayList providers_clone = new ArrayList(providers.size());
+    synchronized (providers){
+      for (int i = 0 ; i < providers.size() ; i++){
+        Provider p = (Provider)providers.get(i);
+        if (p != null) {
+          providers_clone.add(p);
+        }
+      }
+    }
     try {
       do {
         Map.Entry me = (Map.Entry)it.next();
@@ -158,16 +179,19 @@ public final class Security {
 
   public static Set getAlgorithms(String serviceName) {
     HashSet set = new HashSet(7);
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     serviceName = serviceName + '.';
     int idx = serviceName.length();
     int len = providers.size();
     for(int i=0 ; i < len ; i++) {
-      Enumeration enumeration = ((Provider) providers.get(i)).keys();
-      while (enumeration.hasMoreElements()) {
-        String key = (String) enumeration.nextElement();
-        if(key.startsWith(serviceName) && !key.endsWith(" ImplementedIn")) {
-          set.add(key.substring(idx));
+      Provider p = (Provider)providers.get(i);
+      if (p != null) {
+        Enumeration enumeration = ((Provider) providers.get(i)).keys();
+        while (enumeration.hasMoreElements()) {
+          String key = (String) enumeration.nextElement();
+          if(key.startsWith(serviceName) && !key.endsWith(" ImplementedIn")) {
+            set.add(key.substring(idx));
+          }
         }        
       }            
     }    
@@ -175,9 +199,17 @@ public final class Security {
   }
   
   public static Provider[] getProviders(String name){
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     int index = name.indexOf(' ');
-    Vector providers_clone = (Vector)providers.clone();
+    ArrayList providers_clone = new ArrayList(providers.size());
+    synchronized (providers){
+      for (int i = 0 ; i < providers.size() ; i++){
+        Provider p = (Provider)providers.get(i);
+        if (p != null) {
+          providers_clone.add(p);
+        }
+      }
+    }
     Iterator it = providers_clone.iterator();
     if(index != -1){
       //String attribute = name.substring(index).trim();
@@ -211,7 +243,7 @@ public final class Security {
   public static int insertProviderAt(Provider provider, int position){
     permissionCheck("insertProvider."+provider.getName());
 
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     synchronized (providers){
       if (providers.contains(provider)){
         return -1;
@@ -223,34 +255,49 @@ public final class Security {
 
   public static void removeProvider(String name){
     permissionCheck("removeProvider."+name);
-    Vector providers = Providers.providers;
+    ArrayList providers = Providers.providers;
     Provider p = getProvider(name);
     if (p != null){
       providers.remove(p);
     }
   }
 
+  static void reloadProviders() {
+    Providers.loadProviders();
+  }
+
   private static class Providers {
-    final static Vector providers;
+    static final ArrayList providers;
+    private static int size;
 
     static {
-      providers = new Vector(11);
       try {
         securityProps.load(ClassLoader.getSystemResourceAsStream("wonka.security"));
       }
       catch(Exception e){}
-      int size = securityProps.size() + 1;
-      for (int i=1 ; i < size ; i++){
-        String s = "security.provider."+i;
+      size = securityProps.size();
+      providers = new ArrayList(size);
+      loadProviders();
+    }
+
+    static void loadProviders() {
+      ClassLoader cl = ClassLoader.getSystemClassLoader();
+      for (int i = 0; i < size; ++i) {
+        String s = "security.provider." + (i + 1);
         s = securityProps.getProperty(s);
         if (s == null){
+          size = i;
           break;
         } else {
-          try {          
-            Provider p = (Provider) Class.forName(s,true,ClassLoader.getSystemClassLoader()).newInstance();          
-            providers.add(p);
-          } catch(Exception e){
-            e.printStackTrace();
+          if (providers.size() <= i) {
+            providers.add(null);
+          }
+          if (providers.get(i) == null) {
+            try {          
+              Provider p = (Provider) Class.forName(s, true, cl).newInstance();          
+              providers.set(i, p);
+            } catch(Exception e) {
+            }
           }
         }
       }
