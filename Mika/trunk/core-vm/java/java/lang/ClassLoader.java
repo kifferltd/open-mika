@@ -136,14 +136,18 @@ public abstract class ClassLoader {
 
   /**
    ** Identify the most useful classloader availble - the applicationClassLoader
-   ** if already defined, but failing that the systemClassLoader.  Used to load
-   ** resources (as opposed to classes) to avoid an infinite regress involving
-   ** system.properties (we use systemClassLoader to load system.properties, so
+   ** if already defined, but failing that the extensionClassLoader or
+   ** systemClassLoader.  Used to load resources (as opposed to classes)
+   ** to avoid an infinite regress involving system.properties
+   ** (we use systemClassLoader to load system.properties, so
    ** this needs to be in bootclasspath).
    ** Walks like a hack and quux like hack, so it probably is a hack.
    */
   private static ClassLoader getPertinentClassLoader() {
     ClassLoader loader = applicationClassLoader;
+    if (loader == null) {
+      loader = extensionClassLoader;
+    }
     if (loader == null) {
       systemClassLoader = SystemClassLoader.getInstance();
       loader = systemClassLoader;
@@ -298,7 +302,12 @@ public abstract class ClassLoader {
       Package    existing_package;
       CodeSource existing_source;
 
-      if (pd == null) {
+      if (applicationClassLoader == null) {
+        // Don't try to get defaultProtectionDomain yet, it won't work
+        actual_pd = null;
+        actual_source = null;
+      }
+      else if (pd == null) {
         actual_pd = get_defaultProtectionDomain();
         actual_source = null;
       }
@@ -509,15 +518,17 @@ ClassFormatError
    ** Don't tell this to everybody!
    */
   public static synchronized ClassLoader getSystemClassLoader() {
-    if (applicationClassLoader != null) {
+    ClassLoader result = applicationClassLoader == null ? extensionClassLoader : applicationClassLoader;
+
+    if (result != null) {
       ClassLoader caller = getCallingClassLoader();
 
-      if (caller != null && caller != SystemClassLoader.getInstance() && caller != applicationClassLoader) {
+      if (caller != null && caller != SystemClassLoader.getInstance() && caller != result) {
         permissionCheck("getClassLoader");
       }
     }
 
-    return applicationClassLoader;
+    return result;
   }
 
   /** Get the identity of the parent ClassLoader.
@@ -731,7 +742,7 @@ ClassFormatError
 
   private static native void installApplicationClassLoader(ClassLoader cl);
 
-  private static void getApplicationClasspath(String classpath) {
+  private static URL[] getApplicationClasspath(String classpath) {
     Vector v;
     int i;
     int j;
@@ -767,10 +778,7 @@ ClassFormatError
       }
     }
 
-    ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
-
-    applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
-    installApplicationClassLoader(applicationClassLoader);
+    return urls;
   }
 
   static void createApplicationClassLoader() {
@@ -784,7 +792,10 @@ ClassFormatError
       extensionClassLoader = null;
     }
 
-    getApplicationClasspath(classpath);
+    URL[] urls = getApplicationClasspath(classpath);
+    ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
+    applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
+    installApplicationClassLoader(applicationClassLoader);
 
     Properties props = System.getProperties();
     if (props != null) {
