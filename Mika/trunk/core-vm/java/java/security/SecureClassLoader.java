@@ -42,6 +42,9 @@ public class SecureClassLoader extends ClassLoader {
 
   protected SecureClassLoader(ClassLoader parent) throws SecurityException {
     super(parent);
+    if (this instanceof wonka.vm.ApplicationClassLoader) {
+      Security.reloadProviders();
+    }
   }
 
   protected final Class defineClass( String name, byte []b, int off, int len, CodeSource cs) {
