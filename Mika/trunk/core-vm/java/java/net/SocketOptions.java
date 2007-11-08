@@ -32,6 +32,7 @@ public interface SocketOptions {
 // Provisional values
   public static final int TCP_NODELAY = 0x0001;
   public static final int SO_BINDADDR = 0x000F;
+  public static final int SO_BROADCAST = 0x0020;
   public static final int SO_REUSEADDR = 0x04;
   public static final int IP_MULTICAST_IF = 0x10;
   public static final int SO_LINGER = 0x0080;

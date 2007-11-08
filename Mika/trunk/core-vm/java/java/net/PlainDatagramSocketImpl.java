@@ -133,7 +133,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
     if(opt == SO_TIMEOUT){
    	  return new Integer(timeout);
    	}
-   	return Options(opt, null, sock);
+   	return options(opt, null, sock);
   }
 
   public synchronized void setOption(int opt, Object value) throws SocketException {
@@ -148,7 +148,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
       }
     }
     else {
-      Options(opt, value, sock);
+      options(opt, value, sock);
     }
   }
 
@@ -164,7 +164,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   SO_SNDBUF =0x1001;       --> Integer
   SO_RCVBUF = 0x1002;      --> Integer
 */
-  static Object Options(int opt, Object value, int sock) throws SocketException {
+  static Object options(int opt, Object value, int sock) throws SocketException {
     try {
       int i=0;
       switch (opt) {
@@ -172,6 +172,12 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
           if(value == null){//get
             return InetAddress.createInetAddress(getBindAddress(sock));
           }
+          break;
+        case SO_BROADCAST:
+          if(value == null){//get
+            return new Boolean(optIntOptions(sock, -1, 7) != 0);
+          }
+          optIntOptions(sock, ((Boolean)value).booleanValue() ? 1 : 0, 7); //set
           break;
         case SO_LINGER:
           if(value == null){//get
