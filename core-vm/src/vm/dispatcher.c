@@ -204,18 +204,27 @@ void initialize_dispatcher(w_frame caller, w_method method) {
  * Invoke the interpreter with a lock on "this".
  */
 void interpret_instance_synchronized(w_frame caller, w_method method) {
-
   w_instance thiz;
   x_monitor m;
+  x_status status;
   
   thiz = (w_instance) caller->jstack_top[- method->exec.arg_i].c;
   woempa(1, "Dispatching %m, lock = %j\n", method, thiz);
 
   m = getMonitor(thiz);
 
-  x_monitor_eternal(m);
+  status = x_monitor_eternal(m);
+  if (status != xs_success) {
+    wabort(ABORT_WONKA, "unable to obtain instance monitor: status = %d\n", status);
+  }
   interpret(caller, method);
-  x_monitor_exit(m);
+  status = x_monitor_exit(m);
+  if (status == xs_not_owner) {
+    throwException(caller->thread, clazzIllegalMonitorStateException, "monitor not owned on synchronized method exit");
+  }
+  else if (status != xs_success) {
+    wabort(ABORT_WONKA, "unable to release instance monitor: status = %d\n", status);
+  }
 
 }
 
@@ -223,18 +232,27 @@ void interpret_instance_synchronized(w_frame caller, w_method method) {
  * Invoke the interpreter with a lock on the Class object corresponding to the method's declaring class.
  */
 void interpret_static_synchronized(w_frame caller, w_method method) {
-
   w_instance o;
   x_monitor m;
+  x_status status;
 
   woempa(1, "Dispatching %m\n", method);
   o = clazz2Class(method->spec.declaring_clazz);
 
   m = getMonitor(o);
 
-  x_monitor_eternal(m);
+  status = x_monitor_eternal(m);
+  if (status != xs_success) {
+    wabort(ABORT_WONKA, "unable to obtain class monitor: status = %d\n", status);
+  }
   interpret(caller, method);
-  x_monitor_exit(m);
+  status = x_monitor_exit(m);
+  if (status == xs_not_owner) {
+    throwException(caller->thread, clazzIllegalMonitorStateException, "monitor not owned on synchronized method exit");
+  }
+  else if (status != xs_success) {
+    wabort(ABORT_WONKA, "unable to release class monitor: status = %d\n", status);
+  }
 
 }
 
