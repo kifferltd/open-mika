@@ -17,7 +17,7 @@ extern char *command_line_path;
 extern char *fsroot;
 
 static struct utsname uname_buffer;
-static int uname_called = WONKA_FALSE;
+static int uname_called = FALSE;
 
 char *getInstallationDir(void) {
   w_int len = strlen(command_line_path);
@@ -97,6 +97,7 @@ char *getExtensionDir(void) {
 char *getOSName(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
   return uname_buffer.sysname;
@@ -105,6 +106,7 @@ char *getOSName(void) {
 char *getOSVersion(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
   return uname_buffer.release;
@@ -113,6 +115,7 @@ char *getOSVersion(void) {
 char *getOSArch(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
   return uname_buffer.machine;
