@@ -107,10 +107,51 @@ public class DatagramSocket {
   }
 
   public void setReuseAddress (boolean on) throws SocketException {
-    throw new SocketException("setReuseAddress() not implemented");
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    dsocket.setOption(SocketOptions.SO_REUSEADDR, new Boolean(on));
   }
 
-  public void bind(SocketAddress bindAddr){}
+  public void setTrafficClass (int tc) throws SocketException {
+    throw new SocketException("not yet implemented");
+  }
+
+  public void bind(SocketAddress bindAddr) throws SocketException {
+    if(dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    
+    if (remoteAddress != null) {
+      throw new SocketException("Datagram socket is already connected");
+    }
+
+    if (bindAddr == null) {
+      // TODO: we should bind to an ephemeral port and a valid local address
+      throw new SocketException("Bind datagram socket to null address not yet implemented");
+    }
+    else {
+      try {
+        InetSocketAddress isa = (InetSocketAddress)bindAddr;
+        InetAddress address = isa.getAddress();
+        int port = isa.getPort();
+        if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
+          java.security.AccessController.checkPermission(new SocketPermission("localhost:" + (port == 0 ? "1024-" : Integer.toString(port)), "listen"));
+        }
+        else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+          SecurityManager sm = System.getSecurityManager();
+          if (sm != null) {
+            sm.checkListen(port);
+          }
+        }
+        dsocket.bind(port, address);
+      }
+      catch (ClassCastException cce) {
+        throw new IllegalArgumentException();
+      }
+    }
+  }
+
 
   /**
    * * Connects the datagramsocket to a remote address. * Connecting a socket
@@ -135,6 +176,23 @@ public class DatagramSocket {
   }
 
   /**
+   * * Connects the datagramsocket to a remote address. * Connecting a socket
+   * will bypass security checks if you send packets to the connected socket. *
+   * All other destination are not allowed ...
+   */
+  public void connect(SocketAddress sa) throws SecurityException {
+    InetSocketAddress isa;
+    try {
+      isa = (InetSocketAddress)sa;
+    }
+    catch (ClassCastException cce) {
+      throw new IllegalArgumentException();
+    }
+
+    connect(isa.getAddress(), isa.getPort());
+  }
+
+  /**
   ** Disconnects the socket. This does nothing if the socket is not connected.
   **
   */
@@ -143,11 +201,49 @@ public class DatagramSocket {
   	remoteport = -1;
   }
 
+  public boolean getBroadcast() throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    return ((Boolean) dsocket.getOption(SocketOptions.SO_BROADCAST)).booleanValue();
+  }
+
+  public void setBroadcast(boolean on) throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    dsocket.setOption(SocketOptions.SO_BROADCAST, new Boolean(on));
+  }
+
   /**
   ** The address to which this socket is connected or  null if not connected.
   */
   public InetAddress getInetAddress() {
     return remoteAddress;
+  }
+
+  /**
+  ** The local address to which this socket is bound or  null if not bound.
+  */
+  public SocketAddress getLocalSocketAddress() {
+    InetAddress localAddress = getLocalAddress();
+    if (localAddress == null) {
+      return null;
+    }
+    int localport = getLocalPort();
+
+    return new InetSocketAddress(localAddress, localport);
+  }
+
+  /**
+  ** The remote address to which this socket is connected or  null if not connected.
+  */
+  public SocketAddress getRemoteSocketAddress() {
+    if (remoteAddress == null) {
+      return null;
+    }
+
+    return new InetSocketAddress(remoteAddress, remoteport);
   }
 
   /**
@@ -265,6 +361,11 @@ public class DatagramSocket {
     return ((Integer) dsocket.getOption(SocketOptions.SO_TIMEOUT)).intValue();
   }
 
+  public int getTrafficCless() {
+    // TODO ...
+    return 0;
+  }
+
   /**
   ** This method tries to set the 'send' buffersize.  There is no guarantee this call will have
   ** an effect on the native socket ...
@@ -313,16 +414,32 @@ public class DatagramSocket {
   	return ((Integer) dsocket.getOption(SocketOptions.SO_RCVBUF)).intValue();
   }
 
+  public boolean getReuseAddress() throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    return ((Boolean) dsocket.getOption(SocketOptions.SO_REUSEADDR)).booleanValue();
+  }
+
   /**
   ** closes this socket.
   */
   public void close() {
+    disconnect();
   	if (dsocket != null) {
       dsocket.close();
       dsocket = null;
     }
   }
   
+  public boolean isBound() {
+    return getLocalAddress() != null;
+  }
+
+  public boolean isConnected() {
+    return remoteAddress != null;
+  }
+
   public boolean isClosed() {
     return dsocket == null;
   }

@@ -474,6 +474,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
 
 w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_int sock, w_int value, w_int opt) {
 
+// TODO: on Windows and Solaris len may sometimes be 1! Move this whole function to a hal/hostos directory.
   socklen_t len = sizeof(w_int);
 
   switch(opt) {
@@ -485,6 +486,9 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
       break;
     case 2:
       opt = SO_SNDBUF;
+      break;
+    case 7:
+      opt = SO_BROADCAST;
       break;
     default:
       woempa(9, "ERROR in optIntOptions: unknown options %d\n", opt);
