@@ -58,6 +58,13 @@ public class stop extends Thread implements Testlet
 	harness.check(group != null, "Stop should not remove thread from ThreadGroup");
 	throw d;
       }
+      finally {
+	synchronized(lock)
+	  {
+	    running = false;
+	    lock.notifyAll();
+	  }
+      }
   }
 
   public void test (TestHarness h)
@@ -107,6 +114,13 @@ public class stop extends Thread implements Testlet
 
 	tgroup = t.getThreadGroup();
 	harness.check(tgroup == null, "Stopped thread has null thread group");
+	synchronized(lock)
+	  {
+	    while (running) 
+	      {
+		lock.wait();
+	      }
+          }
 
       }
     catch (InterruptedException e) 
