@@ -519,7 +519,16 @@ public class InetAddress implements Serializable {
    * InetAddress -> String conversion
    */
   public String toString () {
-    return getHostName() + "/" + getHostAddress();
+    String name = "";
+
+    if (hostName != null) {
+      name = hostName;
+    }
+    else if (addressCache != null && !addressCache.equals(intToIPString(address))) {
+      name = addressCache;
+    }
+
+    return name + "/" + getHostAddress();
   }
 /*
   public boolean isIPv6 () {
