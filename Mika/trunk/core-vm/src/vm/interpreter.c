@@ -1809,6 +1809,7 @@ void interpret(w_frame caller, w_method method) {
   c_monitorexit: {
     w_slot slot;
     w_slot base = frame->auxstack_base;
+    w_boolean found = FALSE;
 
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
@@ -1823,6 +1824,7 @@ void interpret(w_frame caller, w_method method) {
       if (isMonitoredSlot(slot)) {
         woempa(1, "  aux[%d] is a monitored slot : o = %j\n", last_slot(frame->thread) - slot, slot->c);
         if (slot->c == (w_word) o) {
+          found = TRUE;
           m = (x_monitor) slot->s;
           if (x_monitor_exit(m) == xs_not_owner) {
             do_throw_clazz(clazzIllegalMonitorStateException);
@@ -1839,6 +1841,9 @@ void interpret(w_frame caller, w_method method) {
       else {
         woempa(1, "  aux[%d] is not a monitored slot\n", last_slot(frame->thread) - slot);
       }
+    }
+    if (!found) {
+      do_throw_clazz(clazzIllegalMonitorStateException);
     }
     while (frame->auxstack_top < base && frame->auxstack_top[1].s == stack_notrace) {
       frame->auxstack_top += 1;
@@ -4183,6 +4188,15 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_common_return:
+    { // [CG 20071114] Check we don't have any monitors left - see JVMS 8.13
+      w_slot base = frame->auxstack_base;
+      w_slot slot = frame->auxstack_top;
+      for (slot = slot + 1; base - slot >= 0; ++slot) {
+        if (isMonitoredSlot(slot)) {
+          do_throw_clazz(clazzIllegalMonitorStateException);
+        }
+      }
+    }
     thread->top = caller;
     checkSingleStep2(frame);
     if (from_unsafe) {
