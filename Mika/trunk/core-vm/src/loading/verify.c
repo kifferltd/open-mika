@@ -823,7 +823,7 @@ char* bad_constant_index = (char*)"constant index out of bounds";
 char* bad_invoke_constructor = (char*)"<init> method not invoked with invokespecial";
 char* bad_local_var = (char*)"attempting to access a local variable beyond local array";
 char *bad_return_address = (char*)"return address corrupted";
-char* branch_dest_not_instr = (char*)"branch destibation is not on an exception boundary";
+char* branch_dest_not_instr = (char*)"branch destination is not on an instruction boundary";
 char* catch_not_throwable = (char*)"exception handler catches non-Throwable type";
 char* count_not_integer = (char*)"count is not integer";
 char* exception_pc_beyond_end  = (char*)"exception start/end/handler_pc is beyond end of method code";
@@ -858,6 +858,7 @@ char* not_methodref = (char*)"non-Methodref constant in invoke[static/virtual/sp
 char* objectref_wrong_type = (char*)"objectref has wrong type";
 char* parameter_type_mismatch = (char*)"actual parameter cannot be assigned to formal parameter";
 char* return_not_match_type = (char*)"return bytecode does not match return type of method";
+char *splitting_value = (char*)"attempt to split two-word value";
 char* stack_overflow = (char*)"stack overflow";
 char* stack_underflow = (char*)"stack underflow";
 char* tableswitch_bad_high_low = (char*)"tableswitch with high < low";
@@ -2563,10 +2564,10 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 #define LOCAL_IS_RETURN_ADDRESS(idx,addr) (block->locals[idx].tinfo == TINFO_ADDR && block->locals[idx].data.retaddr == addr)
 #define PEEK block->opstack[block->stacksz - 1]
 #define PEEK2 block->opstack[block->stacksz - 2]
-#define PEEK_IS_DOUBLE PEEK.tinfo == TINFO_SECOND_HALF && PEEK2.tinfo == TINFO_PRIMITIVE && PEEK2.data.clazz == clazz_double
-#define PEEK_IS_FLOAT PEEK.tinfo == TINFO_PRIMITIVE && PEEK.data.clazz == clazz_float
+#define PEEK_IS_DOUBLE (PEEK.tinfo == TINFO_SECOND_HALF && PEEK2.tinfo == TINFO_PRIMITIVE && PEEK2.data.clazz == clazz_double)
+#define PEEK_IS_FLOAT (PEEK.tinfo == TINFO_PRIMITIVE && PEEK.data.clazz == clazz_float)
 #define PEEK_IS_INTEGER TYPE_IS_INTEGER(PEEK)
-#define PEEK_IS_LONG PEEK.tinfo == TINFO_SECOND_HALF && PEEK2.tinfo == TINFO_PRIMITIVE && PEEK2.data.clazz == clazz_long
+#define PEEK_IS_LONG (PEEK.tinfo == TINFO_SECOND_HALF && PEEK2.tinfo == TINFO_PRIMITIVE && PEEK2.data.clazz == clazz_long)
 #define POP block->opstack[block->stacksz-- - 1]
 #define POP_IS_CLASS(c) (t = POP, t.tinfo == TINFO_CLASS && t.data.clazz == (c))
 #define POP_IS_DOUBLE ((void)POP, t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == clazz_double)
@@ -2793,6 +2794,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       V_ASSERT(IS_REFERENCE(t), array_not_correct);
       aType = getElementType(mv, t);
       V_ASSERT(aType.tinfo != TINFO_UNDEFINED, array_not_correct);
+      V_ASSERT(IS_REFERENCE(aType), array_not_correct);
       PUSH1(aType);
       break;
 
@@ -2961,22 +2963,28 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case pop:
       CHECK_STACK_SIZE(1);
-      block->stacksz -= 1;
+      t = POP;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       break;
 
     case pop2:
       CHECK_STACK_SIZE(2);
+      t = PEEK2;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       block->stacksz -= 2;
       break;
 
     case dup:
       CHECK_STACK_SIZE(1);
-      PUSH1(PEEK);
+      t = PEEK;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
+      PUSH1(t);
       break;
 
     case dup_x1:
       CHECK_STACK_SIZE(2);
       t = PEEK;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       PUSH1(t);
       block->opstack[block->stacksz - 2] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = t;
@@ -2984,7 +2992,10 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup_x2:
       CHECK_STACK_SIZE(3);
+      t = block->opstack[block->stacksz - 3];
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       t = PEEK;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       PUSH1(t);
       block->opstack[block->stacksz - 2] = block->opstack[block->stacksz - 3];
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 4];
@@ -2993,12 +3004,18 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup2:
       CHECK_STACK_SIZE(2);
+      t = PEEK2;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       PUSH1(block->opstack[block->stacksz - 2]);
       PUSH1(block->opstack[block->stacksz - 2]);
       break;
 
     case dup2_x1:
       CHECK_STACK_SIZE(3);
+      t = PEEK2;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
+      t = block->opstack[block->stacksz - 3];
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       PUSH1(block->opstack[block->stacksz - 2]);
       PUSH1(block->opstack[block->stacksz - 2]);
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 5];
@@ -3008,6 +3025,10 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case dup2_x2:
       CHECK_STACK_SIZE(4);
+      t = PEEK2;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
+      t = block->opstack[block->stacksz - 4];
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       PUSH1(block->opstack[block->stacksz - 2]);
       PUSH1(block->opstack[block->stacksz - 2]);
       block->opstack[block->stacksz - 3] = block->opstack[block->stacksz - 5];
@@ -3018,7 +3039,10 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case swap:
       CHECK_STACK_SIZE(2);
+      t = PEEK2;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       t = PEEK;
+      V_ASSERT(t.tinfo != TINFO_SECOND_HALF, splitting_value)
       block->opstack[block->stacksz - 1] = block->opstack[block->stacksz - 2];
       block->opstack[block->stacksz - 2] = t;
       break;
