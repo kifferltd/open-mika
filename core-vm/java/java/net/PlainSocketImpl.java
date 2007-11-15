@@ -58,7 +58,7 @@ class PlainSocketImpl extends SocketImpl {
     else if(opt == TCP_NODELAY) {
       return new Boolean(getNoDelay());
     }
-    return PlainDatagramSocketImpl.Options(opt, null, getSocket());
+    return PlainDatagramSocketImpl.options(opt, null, getSocket());
   }
 
   public synchronized void setOption(int opt, Object value) throws SocketException {
@@ -83,7 +83,7 @@ class PlainSocketImpl extends SocketImpl {
        }
     }
     else {
-      PlainDatagramSocketImpl.Options(opt, value, getSocket());
+      PlainDatagramSocketImpl.options(opt, value, getSocket());
     }
   }
 
