@@ -3512,6 +3512,10 @@ exit(255);
 
     case athrow:
       CHECK_STACK_SIZE(1);
+      V_ASSERT(IS_REFERENCE(PEEK),value_not_reference);
+      if (PEEK.data.clazz != clazz_void) {
+        V_ASSERT(isSet(PEEK.data.clazz->flags, CLAZZ_IS_THROWABLE),"not throwable");
+      }
       // don't worry about the rest, the merging logic will take care of it
       break;
 
