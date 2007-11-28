@@ -1451,22 +1451,21 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   deactivateFrame(frame, theClass);
   removeLocalReference(thread, Name);
 
-  if (exception) {
-    if (instance2clazz(exceptionThrown(thread)) == clazzClassNotFoundException) {
-      woempa(7, "Asked %j to load %w, and it threw %e. Clearing the exception and returning NULL\n", initiating_loader,name, exceptionThrown(thread));
-      clearException(thread);
-      exception = NULL;
-    }
-    else {
-      woempa(9, "Oh. I asked %j to load %w, and it threw %e!\n", initiating_loader,name, exceptionThrown(thread));
-    }
-
-    return NULL;
+  if (exception && theClass) {
+    woempa(9, "Odd. I asked %j to load %w, and it gave me back %j but also threw %e\n", initiating_loader, name, thClass, exception);
+    theClass = NULL;
   }
 
   if (theClass == NULL) {
-    woempa(9, "Ah. I asked %j to load %w, and it returned NULL!\n", initiating_loader,name);
-    throwException(thread, clazzClassNotFoundException, "loadNonBootstrapClass: %w", name);
+    woempa(7, "Ah. I asked %j to load %w, and it returned NULL.\n", initiating_loader,name);
+    if (exception) {
+      woempa(7, "Exception thrown = %e\n", exception);
+    }
+    else {
+      woempa(7, "No exception throw, throwing ClassNotFoundException\n");
+      throwException(thread, clazzClassNotFoundException, "loadNonBootstrapClass: %w", name);
+    }
+
     return NULL;
   }
 

@@ -273,6 +273,7 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   w_string classname;
   w_clazz  calling_clazz;
   w_instance loader;
+  w_instance exception;
 
   if (! Classname) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -285,8 +286,13 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   loader = clazz2loader(calling_clazz);
 
   clazz = namedClassMustBeLoaded(loader, classname);
+  exception = exceptionThrown(thread);
 
-  if (exceptionThrown(thread) || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (exception && instance2clazz(exception) == clazzNoClassDefFoundError) {
+    wrapException(thread, clazzClassNotFoundException, F_Throwable_cause);
+  }
+
+  if (exception || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -303,6 +309,7 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
   w_string classname;
+  w_instance exception;
 
   if (! Classname) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -317,10 +324,14 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
     return NULL;
   } 
 
-  if (initialize) {
-    if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-      return NULL;
-    }
+  exception = exceptionThrown(thread);
+
+  if (exception && instance2clazz(exception) == clazzNoClassDefFoundError) {
+    wrapException(thread, clazzClassNotFoundException, F_Throwable_cause);
+  }
+
+  if (exception || (initialize && mustBeInitialized(clazz) == CLASS_LOADING_FAILED) ){
+    return NULL;
   }
 
   return clazz2Class(clazz);
