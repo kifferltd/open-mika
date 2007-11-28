@@ -305,18 +305,18 @@ public class AcuniaClassLoaderTest implements Testlet
     try {
      	Class c = cl.findClass("Mis");
      	c.newInstance();
-     	th.fail("should throw a NoClassDefFoundError");	
+     	th.fail("should throw a ClassNotFoundException");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class, "Mis: "+t);
+     	th.check(t.getClass(), ClassNotFoundException.class, "Mis: "+t);
     }
     try {
      	Class c = cl.findClass("MisClass");
      	c.newInstance();
-     	th.fail("should throw a NoClassDefFoundError");	
+     	th.fail("should throw a ClassNotFoundException");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class, "MisClass: "+t);
+     	th.check(t.getClass(), ClassNotFoundException.class, "MisClass: "+t);
     }
     try {
      	cl.findClass("BadFormat1");
