@@ -1299,7 +1299,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
         // wprintf("releasing lock for %j\n", initiating_loader);
         exitMonitor(initiating_loader);
       }
-      throwException(thread, clazzNoClassDefFoundError, "%j could not load %w", initiating_loader, name);
+      throwException(thread, clazzClassNotFoundException, "%j could not load %w", initiating_loader, name);
       return NULL;
     }
 
