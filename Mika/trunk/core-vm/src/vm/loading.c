@@ -35,12 +35,14 @@
 #include "argument.h"
 #include "bar.h"
 #include "clazz.h"
+#include "checks.h"
 #include "descriptor.h"
 #include "exception.h"
 #include "interpreter.h"
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
+#include "reflection.h"
 #include "ts-mem.h"
 #include "wstrings.h"
 #include "wonka.h"
@@ -333,7 +335,8 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
 ** If class was not loaded and loading succeeds, updates *clazzptr
 ** and returns CLASS_LOADING_SUCCEEDED.
 ** If If class was not loaded and loading failed, returns
-** CLASS_LOADING_FAILED. An exception will be pending on the current thread.
+** CLASS_LOADING_FAILED. A NoClassDefFoundError or other Error will be pending 
+** on the current thread.
 */
 w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_thread  thread = currentWonkaThread;
@@ -354,6 +357,15 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     }
     loaded = namedClassMustBeLoaded(current->loader, current->dotified);
     if (!loaded) {
+      w_instance exception = exceptionThrown(thread);
+
+      if (!exception) {
+        throwException(thread, clazzNoClassDefFoundError, "%w", current->dotified);
+      }
+      else if (isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+        wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+      }
+
       result = CLASS_LOADING_FAILED;
     }
     else {
@@ -381,6 +393,7 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   }
 
   if (current && getClazzState(current) == CLAZZ_STATE_BROKEN) {
+    throwException(thread, clazzNoClassDefFoundError, "%w", current->failure_message);
     result = CLASS_LOADING_FAILED;
   }
 

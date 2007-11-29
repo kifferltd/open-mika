@@ -567,6 +567,7 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   w_instance loader;
   w_clazz clazz;
   jclass result;
+  w_instance exception;
 
   if (!name) {
     wabort(ABORT_WONKA, "Unable to create name\n");
@@ -596,14 +597,24 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   clazz = namedClassMustBeLoaded(loader, dotified);
   deregisterString(dotified);
 
-  if (exceptionThrown(thread)) {
+  exception = exceptionThrown(thread);
+  if (exception) {
     woempa(1, "(JNI) exception %j\n", exceptionThrown(thread));
+    if(isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
+
     return NULL;
   }
 
   mustBeLinked(clazz);
 
-  if (exceptionThrown(thread)) {
+  exception = exceptionThrown(thread);
+  if (exception) {
+    if(isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
+
     result = NULL;
   }
   else {
@@ -2853,28 +2864,6 @@ jlong *GetLongArrayElements(JNIEnv *env, jlongArray array, jboolean *isCopy) {
 }
 
 jfloat *GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) {
-  /* Old code:
-  w_instance array_instance = array;
-  w_size length = instance2Array_length(array_instance);
-  jfloat  *buffer = (jfloat*)allocMem(length*sizeof(jfloat));
-  jfloat  *dest = buffer;
-  w_float *srce = instance2Array_float(array_instance);
-  w_size i;
-  
-  if (!buffer) {
-    wabort(ABORT_WONKA, "Unable to alloc space for buffer\n");
-  }
-  woempa(1,"(JNI) copy %d float's (%d bytes) from %p to %p\n",length,(w_size)(length*sizeof(w_float)),array_instance+F_Array_data,buffer);
-  for (i=0;i<length;++i) {
-    *dest++ = *srce++;
-  }
-  
-  if (isCopy) {
-    *isCopy = WONKA_TRUE;
-  }
-  
-  return buffer;
-  */
   if (isCopy) {
     *isCopy = WONKA_FALSE;
   }
@@ -2883,28 +2872,6 @@ jfloat *GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) 
 }
 
 jdouble *GetDoubleArrayElements(JNIEnv *env, jdoubleArray array, jboolean *isCopy) {
-  /* Old code:
-  w_instance array_instance = array;
-  w_size length = instance2Array_length(array_instance);
-  jdouble *buffer = (jdouble*)allocMem(length*sizeof(jdouble));
-  jdouble  *dest = buffer;
-  w_double *srce = instance2Array_double(array_instance);
-  w_size i;
-
-  if (!buffer) {
-    wabort(ABORT_WONKA, "Unable to alloc space for buffer\n");
-  }
-  woempa(1,"(JNI) copy %d double's (%d bytes) from %p to %p\n",length,(w_size)(length*sizeof(w_double)),array_instance+F_Array_data,buffer);
-  for (i=0;i<length;++i) {
-    *dest++ = *srce++;
-  }
-  
-  if (isCopy) {
-    *isCopy = WONKA_TRUE;
-  }
-  
-  return buffer;
-  */
   if (isCopy) {
     *isCopy = WONKA_FALSE;
   }
