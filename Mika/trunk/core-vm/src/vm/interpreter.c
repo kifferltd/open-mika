@@ -3884,6 +3884,9 @@ void interpret(w_frame caller, w_method method) {
         mustBeInitialized(clazz);
       }
     }
+    else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
 
     enterUnsafeRegion(thread);
     if (thread->exception) {
@@ -4036,6 +4039,9 @@ void interpret(w_frame caller, w_method method) {
     clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
     if (clazz) {
       mustBeInitialized(clazz);
+    }
+    else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
     }
     enterUnsafeRegion(thread);
     if (thread->exception) {
