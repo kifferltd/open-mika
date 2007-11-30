@@ -125,7 +125,7 @@ public final class Class implements java.io.Serializable {
     try {
       theClass = forName_S(classname);
     } catch (NoClassDefFoundError e) {
-      throw new ClassNotFoundException("NoClassDefFoundError "+e.getMessage());
+      throw new ClassNotFoundException("class loader threw NoClassDefFoundError", e);
     }
 
     return theClass;
@@ -155,7 +155,7 @@ public final class Class implements java.io.Serializable {
     try {
       theClass = forName_SZCL(classname, initialize, loader);
     } catch (NoClassDefFoundError e) {
-      throw new ClassNotFoundException("NoClassDefFoundError");
+      throw new ClassNotFoundException(loader + " threw NoClassDefFoundError", e);
     }
 
     return theClass;
