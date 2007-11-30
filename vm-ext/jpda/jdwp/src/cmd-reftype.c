@@ -168,7 +168,7 @@ static void jdwp_ref_nested_types(jdwp_command_packet cmd) {
     jdwp_put_u4(&reply_grobag, count);
     for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
       if (clazz->temp.inner_class_info[i].outer_class_info_index == clazz->temp.this_index) {
-        inner = getClassConstant(clazz, i);
+        inner = getClassConstant(clazz, i, currentWonkaThread);
         jdwp_put_tagged_type(&reply_grobag, inner);
       }
     }

@@ -35,6 +35,7 @@
 
 #include "oswald.h"
 #include <string.h>
+#include "wonka.h"
 
 /* 
 ** Error Constants 

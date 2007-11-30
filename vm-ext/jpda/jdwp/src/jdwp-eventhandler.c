@@ -561,10 +561,10 @@ extern w_boolean matchClassname(w_clazz clazz, w_string match_pattern);
 w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int catch_pc) {
   jdwp_event events = jdwp_events_by_kind[jdwp_evt_exception];
   jdwp_event_modifier  modifier;
-  w_clazz clazz = instance2clazz(throwable);
-  w_Exr * records = getWotsitField(throwable, F_Throwable_records);
-  w_method throw_method = records->method;
-  w_int throw_pc = records->pc;
+  w_clazz clazz;
+  w_Exr * records;
+  w_method throw_method;
+  w_int throw_pc;
   // TODO: is it possible that records == NULL?
   w_int go_ahead;
   w_thread thread = currentWonkaThread;
@@ -576,6 +576,11 @@ w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int c
   */
 
   if(!jdwp_events_enabled) return;
+
+  clazz = instance2clazz(throwable);
+  records = getWotsitField(throwable, F_Throwable_records);
+  throw_pc = records->pc;
+  throw_method = records->method;
 
   while (isSet(throw_method->flags, ACC_NATIVE)) {
     ++records;
