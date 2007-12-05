@@ -364,10 +364,11 @@ static void addMouseMotionEvent(r_component source, r_event event) {
 }
 
 static void addFocusEvent(r_component source, r_event event) {
+  w_thread thread = currentWonkaThread;
 
   if(source && event->tag == R_EVENT_FOCUS_GAINED) {
-    setStaticReferenceField(clazzComponent, F_Component_focusComponentPrev, getStaticReferenceField(clazzComponent, F_Component_focusComponent));
-    setStaticReferenceField(clazzComponent, F_Component_focusComponent, source->instance);
+    setStaticReferenceField(clazzComponent, F_Component_focusComponentPrev, getStaticReferenceField(clazzComponent, F_Component_focusComponent), thread);
+    setStaticReferenceField(clazzComponent, F_Component_focusComponent, source->instance, thread);
   }
 
   if (source && (getReferenceField(source->instance, F_Component_focusListener) || isAssignmentCompatible(instance2clazz(source->instance), clazzWindow))) {
