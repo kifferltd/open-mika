@@ -448,14 +448,13 @@ static w_boolean pre_check_header(w_clazz clazz, w_bar bar) {
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
  */ 
-static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thread) {
   w_size n;
   u1 tag;
   u2 val;
   w_int length;
   w_size i;
   char *tags;
-  w_thread thread = currentWonkaThread;
   w_boolean ok = TRUE;
 
   n = get_u2(bar);
@@ -602,12 +601,11 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
  */
-static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type) {
+static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type, w_thread thread) {
   w_size n;
   w_size i;
   w_word val;
   w_int length;
-  w_thread thread = currentWonkaThread;
 
   if (bar_avail(bar) < 2) {
     throwException(thread, clazzClassFormatError, "Class file too short for %s attribute count", type);
@@ -651,13 +649,12 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type) {
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
  */ 
-static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar, w_thread thread) {
   w_int offset = bar->current;
   w_size n;
   w_word val;
   w_size i;
   w_int length;
-  w_thread thread = currentWonkaThread;
   w_boolean result;
 
   if (bar_avail(bar) < 8) {
@@ -707,7 +704,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar, "field")) {
+    if (!pre_check_attributes(clazz, bar, "field", thread)) {
 
       return FALSE;
     }
@@ -742,13 +739,13 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar, "method")) {
+    if (!pre_check_attributes(clazz, bar, "method", thread)) {
 
       return FALSE;
     }
   }
 
-  result =  pre_check_attributes(clazz, bar, "class");
+  result =  pre_check_attributes(clazz, bar, "class", thread);
 
   length = bar_avail(bar);
   if (length) {
@@ -768,12 +765,11 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
 */
-inline static w_boolean check_classname(w_clazz clazz, w_string name) {
+inline static w_boolean check_classname(w_clazz clazz, w_string name, w_thread thread) {
   w_int classConstantIndex;
   w_int classNameIndex;
   w_string slashed;
   w_string dotified;
-  w_thread thread = currentWonkaThread;
 
   classConstantIndex = clazz->temp.this_index;
   if (clazz->tags[classConstantIndex] != CONSTANT_CLASS) {
@@ -929,9 +925,8 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
 */
-static w_boolean post_checks(w_clazz clazz, w_string name) {
+static w_boolean post_checks(w_clazz clazz, w_string name, w_thread thread) {
   w_size i;
-  w_thread thread = currentWonkaThread;
   w_boolean result = TRUE;
 
   for (i = 0; result && i < clazz->numFields; ++i) {
@@ -951,7 +946,7 @@ static w_boolean post_checks(w_clazz clazz, w_string name) {
     return FALSE;
   }
 
-  return check_classname(clazz, name);
+  return check_classname(clazz, name, thread);
 }
 #endif
 
@@ -1592,7 +1587,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
     w_size n = get_u2(s);
     if (n * 8 + 2 != attribute_length) {
       if (thread) {
-        throwException(currentWonkaThread, clazzClassFormatError, "InnerClasses attribute has wrong length");
+        throwException(thread, clazzClassFormatError, "InnerClasses attribute has wrong length");
       }
 
       return;
@@ -1681,7 +1676,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_header(clazz, bar);
 
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !pre_check_constant_pool(clazz, bar)) {
+  if (!trusted && !pre_check_constant_pool(clazz, bar, thread)) {
     destroyClazz(clazz);
 
     return NULL;
@@ -1691,7 +1686,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_constantpool(clazz, bar);
 
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !pre_check_remainder(clazz, bar)) {
+  if (!trusted && !pre_check_remainder(clazz, bar, thread)) {
     destroyClazz(clazz);
 
     return NULL;
@@ -1715,7 +1710,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
   if (exceptionThrown(thread)
 #ifndef NO_FORMAT_CHECKS
-    || (!trusted && !post_checks(clazz, name))
+    || (!trusted && !post_checks(clazz, name, thread))
 #endif
   ) {
     destroyClazz(clazz);
@@ -1735,7 +1730,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   // At the end of this phase all loaded classes get a Class instance attached,
   // from that point on it's done here at creation time.
   if (clazzClass && clazzClass->Class) {
-    attachClassInstance(clazz);
+    attachClassInstance(clazz, thread);
   }
   registerClazz(thread, clazz, loader);  
 
@@ -1749,8 +1744,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 ** Attach an instance of java.lang.Class to this clazz.
 */
 
-w_instance attachClassInstance(w_clazz clazz) {
-  w_thread thread = currentWonkaThread;
+w_instance attachClassInstance(w_clazz clazz, w_thread thread) {
   w_instance Class;
   w_int      i;
   w_boolean unsafe;
@@ -2043,7 +2037,7 @@ w_instance clazz2Class(w_clazz clazz) {
 
   Class = clazz->Class;
   if (Class == NULL) {
-    Class = attachClassInstance(clazz);
+    Class = attachClassInstance(clazz, currentWonkaThread);
   }
 
   if (!Class) {
@@ -2065,8 +2059,7 @@ w_instance getStaticReferenceField(w_clazz clazz, w_int slot) {
 /*
 ** Set a reference field of a class.
 */
-void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
-  w_thread thread = currentWonkaThread;
+void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child, w_thread thread) {
   w_boolean unsafe;
 
   mustBeInitialized(clazz);
@@ -2086,8 +2079,8 @@ void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
 /*
 ** Set a reference field of a class, when the context is known to be 'unsafe'.
 */
-void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child) {
-  threadMustBeUnsafe(currentWonkaThread);
+void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child, w_thread thread) {
+  threadMustBeUnsafe(thread);
 
   mustBeInitialized(clazz);
 

@@ -2425,7 +2425,7 @@ w_void SetStatic64Field(JNIEnv *env, jclass class, jfieldID fieldID, jlong value
 }
 
 w_void SetStaticObjectField(JNIEnv *env, jclass class, jfieldID fieldID, jobject value) {
-  setStaticReferenceField(fieldID->declaring_clazz, fieldID->size_and_slot, value);
+  setStaticReferenceField(fieldID->declaring_clazz, fieldID->size_and_slot, value, JNIEnv2w_thread(env));
 }
 
 w_void SetStaticBooleanField(JNIEnv *env, jclass class, jfieldID fieldID, jboolean value) {
