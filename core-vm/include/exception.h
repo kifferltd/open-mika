@@ -33,6 +33,9 @@
 #ifndef _EXCEPTION_H
 #define _EXCEPTION_H
 
+#include <errno.h>
+#include <string.h>
+
 #include "threads.h"
 #include "wonka.h"
 
