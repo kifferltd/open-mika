@@ -187,9 +187,45 @@ w_int verifyClazz(w_clazz clazz) {
   w_field f;
   w_method m;
   w_int result = CLASS_LOADING_DID_NOTHING;
+  w_instance exception = NULL;
 
   if (verbose_flags & VERBOSE_FLAG_LOAD) {
     wprintf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
+  }
+
+  for (i = 1; !exception && i < clazz->numConstants; ++i) { 
+    switch (clazz->tags[i]) { 
+      case CONSTANT_CLASS: 
+      case RESOLVING_CLASS: 
+        getClassConstant(clazz, i, thread); 
+        woempa(1, "Resolved Class constant[%d] of %k to %k\n", i, clazz, getResolvedClassConstant(clazz, i)); 
+        break; 
+       
+      case CONSTANT_FIELD: 
+      case RESOLVING_FIELD: 
+        f = getFieldConstant(clazz, i); 
+        break; 
+       
+      case CONSTANT_METHOD: 
+      case RESOLVING_METHOD: 
+        m = getMethodConstant(clazz, i); 
+        break; 
+       
+      case CONSTANT_IMETHOD: 
+      case RESOLVING_IMETHOD: 
+        m = getIMethodConstant(clazz, i); 
+        break; 
+       
+      default: 
+        ; 
+    } 
+
+    // HACK HACK HACK - ignore linkage errors
+    exception = exceptionThrown(thread);
+    if (exception && isSuperClass(clazzLinkageError, instance2clazz(exceptionThrown(thread)))) {
+      clearException(thread);
+      exception = NULL;
+    }
   }
 
   for (i = 0; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numFields; ++i) {
@@ -858,19 +894,12 @@ char* value_not_reference = (char*)"value is not a reference type";
 #define BRANCH_IN_BOUNDS(_N) V_ASSERT((unsigned)(_N) < codelen, bad_branch_dest)
 
 /*
-** Get the dimensionality of a class constant. Returns -1 if the class constant
-** cannot be resolved, 0 if the class is scalar, or the number of dimensions if
-** it is an array class.
+** Get the dimensionality of a class constant. Returns 0 if the class is scalar,
+** or the number of dimensions if it is an array class.
 ** Note: #dims can be > 255, the caller should check this.
 */
 static inline w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx) {
-  w_clazz clazz = getClassConstant(declaring_clazz, idx, currentWonkaThread);
-
-  if (clazz) {
-    return clazz->dims;
-  }
-
-  return -1;
+  return getResolvedClassConstant(declaring_clazz, idx)->dims;
  }
 
 /*
@@ -1365,9 +1394,6 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
       V_ASSERT(isClassConstant(declaring_clazz, idx), not_class_constant);
 
       n = getClassConstantDims(declaring_clazz, idx);
-      if (n < 0) {
-        goto failure;
-      }
 
       V_ASSERT(!n, new_creates_array);
       // NOTE: Sun's spec imlies that we should check that the class is not
@@ -1382,10 +1408,6 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
       V_ASSERT(isClassConstant(declaring_clazz, idx), not_class_constant);
 
       n = getClassConstantDims(declaring_clazz, idx);
-      if (n < 0) {
-        goto failure;
-      }
-
       ndims = code[pc + 3];
       V_ASSERT(ndims, multianewarray_dims_zero);
       V_ASSERT(n >= ndims, multianewarray_dims_too_big);
@@ -1431,7 +1453,6 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
 
   if (method->exec.numExceptions) {
     w_exception ex = method->exec.exceptions;
-    w_thread thread = currentWonkaThread;
 
     woempa(1, "Parsing exception table\n");
     for (i = 0; i < method->exec.numExceptions; ++i, ++ex) {
@@ -1454,10 +1475,7 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
       status_array[pc] |= START_BLOCK;
 
       if (ex->type_index) {
-        w_clazz throwable_clazz = getClassConstant(declaring_clazz, ex->type_index, thread);
-        if (!throwable_clazz) {
-          goto failure;
-        }
+        w_clazz throwable_clazz = getResolvedClassConstant(declaring_clazz, ex->type_index);
         V_ASSERT(isSuperClass(clazzThrowable, throwable_clazz), catch_not_throwable);
       }
 
@@ -1473,7 +1491,6 @@ verify_error:
   throwException(currentWonkaThread, clazzVerifyError, "%k.%m pc %d (%s): %s", declaring_clazz, method, pc, opc2name(method->exec.code[pc]), error_cstring);
 #endif
 
-failure:
   return FALSE;
 }
 #undef CHECK_LOCAL_INDEX	
@@ -1674,7 +1691,6 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
   w_size block_index;
   w_size succ_index;
   w_int exception_index;
-  w_thread thread;
 
   block_count = 0;
   jsr_count = 0;
@@ -1784,7 +1800,6 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
   }
 #endif
 
-  thread = currentWonkaThread;
 
   /*
   ** Third pass: add the list of successor blocks to each block.
@@ -1922,7 +1937,6 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
 
     if (method->exec.numExceptions) {
       w_exception ex = method->exec.exceptions;
-      w_thread thread = currentWonkaThread;
       v_BasicBlock *exbb;
 
       woempa(1, "Parsing exception table\n");
@@ -1934,10 +1948,7 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
           exbb = getBasicBlock(mv, succ_index);
           setFlag(exbb->flags, EXCEPTION);
           if (ex->type_index) {
-            exbb->exception_type = getClassConstant(mv->method->spec.declaring_clazz, ex->type_index, thread);
-            if (!exbb->exception_type) {
-              return;
-            }
+            exbb->exception_type = getResolvedClassConstant(mv->method->spec.declaring_clazz, ex->type_index);
             woempa(7, "block[%d] exception_type = %k\n", succ_index, exbb->exception_type);
           }
           else {
@@ -2616,7 +2627,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
   w_method m;
   w_clazz *arglist;
   char *error_cstring;
-  w_thread thread = currentWonkaThread;
 #ifdef DEBUG
   int lineno;
 #endif
@@ -3339,10 +3349,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case getstatic:
       idx = GET_INDEX2;
       f = getResolvedFieldConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isSet(f->flags, ACC_STATIC), member_not_static);
       // TODO: check access?
       CLAZZ2TYPE(f->value_clazz, t);
@@ -3352,10 +3358,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case putstatic:
       idx = GET_INDEX2;
       f = getResolvedFieldConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isSet(f->flags, ACC_STATIC), member_not_static);
       // TODO: check access?
       if (f->value_clazz == clazz_long || f->value_clazz == clazz_double) {
@@ -3371,10 +3373,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(1);
       idx = GET_INDEX2;
       f = getResolvedFieldConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isNotSet(f->flags, ACC_STATIC), member_is_static);
       t = POP;
       V_ASSERT(IS_REFERENCE(t) && v_assignable2clazz(f->declaring_clazz, mv, &t), objectref_wrong_type);
@@ -3388,10 +3386,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(2);
       idx = GET_INDEX2;
       f = getResolvedFieldConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isNotSet(f->flags, ACC_STATIC), member_is_static);
       // TODO: check access?
       if (f->value_clazz == clazz_long || f->value_clazz == clazz_double) {
@@ -3411,10 +3405,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case invokeinterface:
       idx = GET_INDEX2;
       m = getResolvedMethodConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isNotSet(m->flags, ACC_STATIC), member_is_static);
       // TODO: check access?
       woempa(7, "Method %m expects %d elements on stack\n", m, m->exec.arg_i);
@@ -3489,10 +3479,6 @@ exit(255);
     case invokestatic:
       idx = GET_INDEX2;
       m = getResolvedMethodConstant(declaring_clazz, idx);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
       V_ASSERT(isSet(m->flags, ACC_STATIC), invokestatic_not_static);
       // TODO: check access?
       woempa(1, "Method %m expects %d elements on stack\n", m, m->exec.arg_i);
@@ -3524,11 +3510,7 @@ exit(255);
     case new:
       idx = GET_INDEX2;
       t.tinfo = TINFO_UNINIT;
-      clazz = getClassConstant(declaring_clazz, idx, thread);
-      if (!clazz) {
-        goto failure;
-      }
-
+      clazz = getResolvedClassConstant(declaring_clazz, idx);
       t.uninitpc = pushUninit(mv, pc);
       t.data.clazz = clazz;
       goto push_reference;
@@ -3543,11 +3525,7 @@ exit(255);
       idx = GET_INDEX2;
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, count_not_integer);
-      aclazz = getClassConstant(declaring_clazz, idx, thread);
-      if (!aclazz) {
-        goto failure;
-      }
-
+      aclazz = getResolvedClassConstant(declaring_clazz, idx);
       t.tinfo = TINFO_CLASS;
       t.uninitpc = 0;
       t.data.clazz = getNextDimension(aclazz, aclazz->loader);
@@ -3573,11 +3551,7 @@ exit(255);
       CHECK_STACK_SIZE(1);
       t = POP;
       V_ASSERT(IS_REFERENCE(t), value_not_reference);
-      CLAZZ2TYPE(getClassConstant(declaring_clazz, idx, thread), t);
-      if (exceptionThrown(thread)) {
-        goto failure;
-      }
-
+      CLAZZ2TYPE(getResolvedClassConstant(declaring_clazz, idx), t);
       woempa(1, "checkcast to %k\n", t.data.clazz);
       goto push_reference;
 
@@ -3598,11 +3572,7 @@ exit(255);
 
     case multianewarray:
       idx = GET_INDEX2;
-      aclazz = getClassConstant(declaring_clazz, idx, thread);
-      if (!aclazz) {
-        goto failure;
-      }
-
+      aclazz = getResolvedClassConstant(declaring_clazz, idx);
       n = method->exec.code[pc + 3];
       CHECK_STACK_SIZE(n);
       V_ASSERT(aclazz->dims >= n, array_too_few_dims);
@@ -3631,7 +3601,6 @@ verify_error:
   throwException(currentWonkaThread, clazzVerifyError, "%k.%m pc %d (%s): %s", method->spec.declaring_clazz, method, pc, opc2name(method->exec.code[pc]), error_cstring);
 #endif
 
-failure:
   return FALSE;
 }
 
