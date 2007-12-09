@@ -2946,9 +2946,11 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       V_ASSERT(IS_REFERENCE(t), array_not_correct);
       aType = getElementType(mv, t);
       V_ASSERT(aType.tinfo != TINFO_UNDEFINED, array_not_correct);
+/*
       if ((aType.tinfo == TINFO_CLASS && isSet(aType.data.clazz->flags, ACC_INTERFACE) || aType.tinfo == TINFO_UNION) && eType.tinfo == TINFO_CLASS && eType.data.clazz == clazzObject) {
           break;
       }
+*/
       V_ASSERT(v_assignable2type(&aType, mv, &eType), array_not_correct);
       break;
 
