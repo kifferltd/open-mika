@@ -3164,6 +3164,7 @@ extern pthread_key_t x_thread_key;
 */
 
 jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
+#ifdef O4P
   w_size     i;
   w_instance Thread;
   w_thread   thread;
@@ -3259,6 +3260,11 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 
   return 0;
 
+#else
+  woempa(9, "AttachCurrentThread currently only implemented for O4P");
+
+  return -255;
+#endif
 }
 
 /*
@@ -3270,6 +3276,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 */
 
 jint DetachCurrentThread(JavaVM *vm) {
+#ifdef O4P
   w_thread thread = currentWonkaThread;
 
   if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
@@ -3303,6 +3310,12 @@ jint DetachCurrentThread(JavaVM *vm) {
   releaseMem(thread);
 
   return 0;
+
+#else
+  woempa(9, "DettachCurrentThread currently only implemented for O4P");
+
+  return -255;
+#endif
 }
 
 
