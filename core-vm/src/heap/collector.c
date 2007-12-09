@@ -1948,11 +1948,14 @@ w_size sweep(w_int target) {
               wprintf("Hold on a moment - thread '%t' is still running...\n", thread);
               do_collect = 0;
             }
+#ifndef OSWALD
+// For OSWALD we need to do something else, TBD
             else if (thread->kthread && thread->kthread->waiting_on) {
               woempa(9, "Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
               wprintf("Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
               do_collect = 0;
             }
+#endif
           }
         }
         else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
