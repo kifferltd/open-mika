@@ -545,7 +545,7 @@ static w_boolean attach_class_iteration(void * name, void * cl) {
   w_clazz clazz = cl;
 
   if (!clazz->Class) {
-    attachClassInstance(clazz);
+    attachClassInstance(clazz, NULL);
   }
 }
 
@@ -1078,7 +1078,7 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 
   if (thread) enterUnsafeRegion(thread);
   if (clazzClass && clazzClass->Class) {
-    attachClassInstance(array_clazz);
+    attachClassInstance(array_clazz, thread);
   }
   setClazzState(array_clazz, CLAZZ_STATE_LINKED);
   registerClazz(currentWonkaThread, array_clazz, initiating_loader);
@@ -1193,7 +1193,7 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   result->loader = NULL;
   result->bits = 32;
   result->Class = NULL;
-//  attachClassInstance(result);
+//  attachClassInstance(result, thread);
   result->dotified = desc_string;
 
   result->previousDimension = primitive2clazz[pi];

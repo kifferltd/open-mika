@@ -298,7 +298,7 @@ typedef struct w_UnloadedClazz {
  ** (createSingleArrayClazzFromDesc has its own code to do
  ** the equivalent thing).
  */
-w_instance attachClassInstance(w_clazz);
+w_instance attachClassInstance(w_clazz, w_thread thread);
 
 /*
 ** clazz2Class returns the w_instance of Class associated with this w_clazz.
@@ -342,12 +342,12 @@ w_instance getStaticReferenceField(w_clazz clazz, w_int slot);
 /*
 ** Set a reference field of a class.
 */
-void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child);
+void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child, w_thread thread);
 
 /*
 ** Set a reference field of a class, when the context is known to be 'unsafe'.
 */
-void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child);
+void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child, w_thread thread);
 
 w_clazz createClazz(w_thread, w_string name, w_bar source, w_instance loader, w_boolean trusted);
 void startClasses(void);

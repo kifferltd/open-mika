@@ -652,7 +652,7 @@ void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Valu
     }
     else if (isSet(field->flags, ACC_STATIC)) {
       if (mustBeInitialized(field->declaring_clazz) == CLASS_LOADING_FAILED) {
-        setStaticReferenceField(field->declaring_clazz, (w_int)field->size_and_slot, Value);
+        setStaticReferenceField(field->declaring_clazz, (w_int)field->size_and_slot, Value, thread);
       }
     }
     else {
