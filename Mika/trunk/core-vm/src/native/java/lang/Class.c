@@ -316,13 +316,14 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
   woempa(1, "called with string %w initialize = %s, classloader %j.\n", classname,initialize?"true":"false", Classloader);
 
   clazz = namedClassMustBeLoaded(Classloader, classname);
-  if (! clazz) {
-    return NULL;
-  } 
-
   exception = exceptionThrown(thread);
 
-  if (exception || (initialize && mustBeInitialized(clazz) == CLASS_LOADING_FAILED) ){
+  if (! clazz && !exception) {
+    throwException(thread, clazzClassNotFoundException, "%w", classname);
+    exception = exceptionThrown(thread);
+  } 
+
+  if (exception || !clazz || (initialize && mustBeInitialized(clazz) == CLASS_LOADING_FAILED) ){
     return NULL;
   }
 
