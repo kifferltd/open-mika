@@ -1807,6 +1807,7 @@ static w_int *shiftLeft(w_int *mag, w_int mag_length, w_int n, w_int *result_len
     w_int j;
     w_int bitCount2 = 32 - bitCount;
     w_int highBits = (unsigned)mag[0] >> bitCount2;
+    w_word m;
 
     if (highBits) {
       *result_length = mag_length + nInts + 1;
@@ -1817,7 +1818,7 @@ static w_int *shiftLeft(w_int *mag, w_int mag_length, w_int n, w_int *result_len
       newMag = allocClearedMem((mag_length + nInts) * sizeof(w_int));
     }
 
-    w_word m = (unsigned)mag[0];
+    m = (unsigned)mag[0];
     for (j = 0; j < mag_length - 1; j++) {
       w_word next = (unsigned)mag[j + 1];
 
