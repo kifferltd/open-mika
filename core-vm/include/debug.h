@@ -143,8 +143,8 @@ extern w_flags verbose_flags;
  * recognised if it occurs in the string at all, not only if it is strictly
  * delimited by :'s. Thus for example "throw" also matched "throws", etc..
  */
-#define VERBOSE_FLAG_STARTUP  0x00000001 // "startup"
-#define VERBOSE_FLAG_SHUTDOWN 0x00000002 // "shutdown"
+#define VERBOSE_FLAG_STARTUP  0x00000001 // "start"
+#define VERBOSE_FLAG_SHUTDOWN 0x00000002 // "shut"
 #define VERBOSE_FLAG_THREAD   0x00000004 // "thread"
 #define VERBOSE_FLAG_GC       0x00000008 // "gc"
 #define VERBOSE_FLAG_LOAD     0x00000010 // "load"
@@ -152,6 +152,8 @@ extern w_flags verbose_flags;
 #define VERBOSE_FLAG_STACK    0x00000040 // "stack"
 #define VERBOSE_FLAG_TRAFFIC  0x00000080 // "traffic"
 #define VERBOSE_FLAG_THROW    0x00000100 // "throw"
+#define VERBOSE_FLAG_URL      0x00000200 // "url"
+#define VERBOSE_FLAG_HTTP     0x00000400 // "http"
 
 /*
 ** Function which behaves like printf, except that it recognizes wonka-specific

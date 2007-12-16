@@ -129,6 +129,20 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private static boolean defaultFollowRedirects = true;
 
   /**
+   ** Package access so other classes can also see it.
+   */
+  static boolean verbose = (System.getProperty("mika.verbose", "").indexOf("http") >= 0);
+
+  /**
+   ** Implement verbosity
+   */
+  static void debug(String s) {
+    if (verbose) {
+      System.err.println(s);
+    }
+  }
+
+  /**
    ** Set up the static variables <code>proxyHost</code>, <code>proxyUser</code>,
    ** and <code>proxyPassword</code>. We also set <code>proxyAddr</code> to null,
    ** so that if this value is needed the proxy address must be resolved again.
@@ -234,7 +248,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** <ul>
    ** <li><code>accept-encoding=gzip</code>
    ** <li><code>host=<own hostname>[:port]</code>
-   ** <li><code>user-agent=Wonka-HTTP</code>
+   ** <li><code>user-agent=Mika-HTTP</code>
    ** </ul>
    */
   public BasicHttpURLConnection(URL url) {
@@ -246,7 +260,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     requestHeaders = new Attributes();
     requestHeaders.put(new Attributes.Name("accept-encoding"),"gzip");
     requestHeaders.put(new Attributes.Name("host"),url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
-    requestHeaders.put(new Attributes.Name("user-agent"),"Wonka-HTTP");
+    requestHeaders.put(new Attributes.Name("user-agent"),"Mika-HTTP");
     requestContentLength = -1;
     instanceFollowRedirects = defaultFollowRedirects;
   }
@@ -296,10 +310,14 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       resolveHost();
       
       if (usingProxy()) {
-  	socket = new Socket(proxyHost, getProxyPort());
+        int proxyport = getProxyPort();
+        debug("HTTP: connecting to proxy " +  proxyHost + ":" + proxyport);
+  	socket = new Socket(proxyHost, proxyport);
       }
       else {
-        socket = new Socket(url.getHost(), port);
+        String host = url.getHost();
+        debug("HTTP: connecting to " +  host + ":" + port);
+        socket = new Socket(host, port);
       }
 	  
       socket.setSoTimeout(timeout);
@@ -338,6 +356,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public synchronized void disconnect(){
     if(socket != null){
+      debug("HTTP: disconnecting " +  socket);
       try {
         socket.close();
       }
@@ -423,19 +442,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** If necessary, <code>connect()</code> first.
    */
   public InputStream getInputStream() throws IOException {
-    /* [CG 20050926] Don't think we need this, parseResponse() does it for us.
-    if (!connected) {
-      connect();
-    }
-    if (out != null) {
-      try {
-        out.flush_internal();
-      }
-      catch (IOException ioe) {
-        // Ignore - probably stream was already closed
-      }
-    }
-    */
     parseResponse();
 
     return in;
@@ -591,8 +597,25 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 	
     requestLine.append(" HTTP/1.1\r\n");
+    debug("HTTP: request: " + requestLine.substring(0, requestLine.length() - 2));
 
     return requestLine.toString();
+  }
+
+  /**
+   ** Dump the request geaders to be sent as a series of debug messages.
+   */
+  private void dumpRequestHeaders(String headers) {
+    try {
+      BufferedReader r = new BufferedReader(new StringReader(headers));
+      String h = r.readLine();
+      while (h != null) {
+        debug("HTTP:          " + h);
+        h = r.readLine();
+      }
+    }
+    catch (IOException ioe) {
+    }
   }
 
   /**
@@ -626,14 +649,20 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         skip = false;
       }
       if (!skip) {
+        int here = request.length();
         request.append(key);
         request.append(": ");
         request.append(entry.getValue());
         request.append("\r\n");
+        request.setCharAt(here, Character.toUpperCase(request.charAt(here)));
       }
     }
 	
     request.append("\r\n");
+
+    if (verbose) {
+      dumpRequestHeaders(request.toString());
+    }
 
     return request.toString();
   }
@@ -689,16 +718,21 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     Iterator it = requestHeaders.entrySet().iterator();
     while(it.hasNext()){
       Map.Entry entry = (Map.Entry)it.next();
+      int here = request.length();
       request.append(normaliseName(entry.getKey().toString()));
       request.append(": ");
       request.append(entry.getValue());
       request.append("\r\n");
+      request.setCharAt(here, Character.toUpperCase(request.charAt(here)));
     }
 	
+    if (verbose) {
+      dumpRequestHeaders(request.toString());
+    }
+
     int length = request.length();
     char[] chars = new char[length];
     request.getChars(0,length,chars,0);
-
     out.write(decoder.cToB(chars,0,length));
   }
 
@@ -778,7 +812,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     out.write(getRequestLine().getBytes());
     out.write(getRequestHeaders().getBytes());
     doOutput = false;
-    //parseResponse();
   }
 
   /**
@@ -808,9 +841,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     try {
       if(probeStatusLine()){
         String line = readLine(false);
+        debug("HTTP: response: " + line);
         int space1 = line.indexOf(' ');
         if (space1 >= 0) {
-          //String version = line.substring(0,space1);
           String codeString;
           int space2 = line.indexOf(' ',space1 + 1);
           if (space2 >= 0) {
@@ -854,6 +887,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
             keys.add(key);
           }
           line = readLine(true);
+          debug("HTTP:           " + line);
         }
       }
 
@@ -865,24 +899,37 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     if(internal_checkResponseProperty("Transfer-encoding", "chunked")){
       in = new ChunkedInputStream(in);
+      debug("HTTP: switched to chunked input");
     }
-	
+
     if(responseCode>=100 && responseCode<200) {
         // Continue recognized. Parse next header
         parseResponse();
     }
     else if (((responseCode==HTTP_MOVED_PERM) || (responseCode==HTTP_MOVED_TEMP) || (responseCode==HTTP_SEE_OTHER)) && instanceFollowRedirects) {
-		
-		String location = internal_getResponseProperty("location").trim();
-		if(location==null) {
-			throw new IOException("HTTP redirect (" + responseCode + ") has no 'Location' header.");
-		}
-		
-		this.url = new URL(location);
+      if (!("GET".equals(method) || "HEAD".equals(method))) {
+        if (responseCode == HTTP_SEE_OTHER) {
+          method = "GET";
+        }
+        else {
+          responseParsed = true;
+          throw new IOException(responseCode + " redirection response not allowed for " + method);
+        }
+      }
 
-		disconnect();
-		//connect();
-                parseResponse();
+      String location = internal_getResponseProperty("location").trim();
+      debug("HTTP: redirecting to " + location);
+      if(location==null) {
+        throw new IOException("HTTP redirect (" + responseCode + ") has no 'Location' header.");
+      }
+
+      this.url = new URL(location);
+      // [CG 20071216] Fix problem reported by K. Pauls when visiting sf.net,
+      // I don't see where it says we have to this but it seems reasonable
+      requestHeaders.put(new Attributes.Name("host"),url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
+
+      disconnect();
+      parseResponse();
     }
     else if (responseCode==HTTP_UNAUTHORIZED) {
       if (sentBasicAuthentication) {
@@ -894,9 +941,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
       String challenge = internal_getResponseProperty("www-authenticate").trim();
       if (getAuthorisation(challenge, url.toString(), hostAddr, url.getPort())) {
+        debug("HTTP: retrying with authorization");
 
-	disconnect();
-	//connect();
+        disconnect();
         parseResponse();
       }
       else {
@@ -907,9 +954,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     else if(responseCode == HTTP_PROXY_AUTH && usingProxy()) {
       String challenge = internal_getResponseProperty("proxy-authenticate").trim();
       if (getAuthorisation(challenge, "Proxy", getProxyAddr(), getProxyPort())) {
+        debug("HTTP: retrying with proxy authorization");
 
-	disconnect();
-	//connect();
+        disconnect();
         parseResponse();
       }
       else {
@@ -920,7 +967,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     else if((responseCode<200) || (responseCode>=400)) {
       responseParsed = true;
       throw new IOException("Server returned HTTP response code " + responseCode + " for " + method + " to " + url);
-    }		
+    }
     else {
       responseParsed = true;
     }
