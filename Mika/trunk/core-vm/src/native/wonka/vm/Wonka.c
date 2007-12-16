@@ -734,8 +734,11 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     if (l) {
       wprintf("mika.verbose=%s\n", verbose_cstring);
     }
-    if (strstr(verbose_cstring, "startup")) {
+    if (strstr(verbose_cstring, "start")) {
       verbose_flags |= VERBOSE_FLAG_STARTUP;
+    }
+    if (strstr(verbose_cstring, "shut")) {
+      verbose_flags |= VERBOSE_FLAG_SHUTDOWN;
     }
     if (strstr(verbose_cstring, "thread")) {
       verbose_flags |= VERBOSE_FLAG_THREAD;
@@ -754,6 +757,15 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     }
     if (strstr(verbose_cstring, "traffic")) {
       verbose_flags |= VERBOSE_FLAG_TRAFFIC;
+    }
+    if (strstr(verbose_cstring, "throw")) {
+      verbose_flags |= VERBOSE_FLAG_THROW;
+    }
+    if (strstr(verbose_cstring, "url")) {
+      verbose_flags |= VERBOSE_FLAG_URL;
+    }
+    if (strstr(verbose_cstring, "http")) {
+      verbose_flags |= VERBOSE_FLAG_HTTP;
     }
   }
 }

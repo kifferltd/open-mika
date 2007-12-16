@@ -54,6 +54,11 @@ public final class URL implements java.io.Serializable {
   private static Hashtable handlers = new Hashtable(11);
 
   /**
+   ** Package access so other classes can also see it.
+   */
+  static boolean verbose = (System.getProperty("mika.verbose", "").indexOf("url") >= 0);
+
+  /**
    ** The protocol, i.e. the part before the first colon (:).
    */
   private String protocol;
@@ -90,6 +95,14 @@ public final class URL implements java.io.Serializable {
   private transient String userInfo;
   private transient URLStreamHandler streamHandler;
 
+  /**
+   ** Implement verbosity
+   */
+  static void debug(String s) {
+    if (verbose) {
+      System.err.println(s);
+    }
+  }
 
   /**
   ** static default access method to verify a NetPermission  ...
@@ -132,6 +145,7 @@ public final class URL implements java.io.Serializable {
       this.protocol = location.substring(0, colon);
       streamHandler = getHandler(this.protocol);
       streamHandler.parseURL(this, location, colon+1, hash);
+      debug("URL: new URL " + this);
   }
 
   public URL(String protocol, String host, String path) throws MalformedURLException {
@@ -165,6 +179,7 @@ public final class URL implements java.io.Serializable {
     this.port = port;
     this.host = host;
     this.path = File;
+    debug("URL: new URL " + this);
   }
 
   public URL(URL context, String spec) throws MalformedURLException {
@@ -286,7 +301,6 @@ public final class URL implements java.io.Serializable {
   }
 
   public String getQuery() {
-    //System.out.println("Returning Q: " + query);
     return this.query;
   }
 
@@ -304,6 +318,7 @@ public final class URL implements java.io.Serializable {
   public static void setURLStreamHandlerFactory(URLStreamHandlerFactory newfact) {
      synchronized(lock) {
        factory = newfact;
+       debug("URL: set URLStreamHandlerFactory to " + newfact);
      }
   }
 
@@ -340,16 +355,12 @@ public final class URL implements java.io.Serializable {
     if (port <-1 || port > 65535) {
        throw new IllegalArgumentException();
     }
-    /* setting the stream handler to null is not a good idea
-    if (!protocol.equals(this.protocol)) {
-          streamHandler = null;
-    }
-    */
     this.protocol = protocol;
     this.host = host;
     this.port = port;
     this.path = path;
     this.fragment = ref;
+    debug("URL: set " + this + " to protocol '" + protocol + "', host '" + host + "', port '" + port + "', path '" + path + "', fragment '" + ref + "'");
   }
 
   protected void set(String protocol, String host, int port, String authority, String userInfo, String path, String query, String ref){
@@ -362,11 +373,6 @@ public final class URL implements java.io.Serializable {
     if (port <-1 || port > 65535) {
        throw new IllegalArgumentException();
     }
-    /* setting the stream handler to null is not a good idea
-    if (!protocol.equals(this.protocol)) {
-          streamHandler = null;
-    }
-    */
     this.protocol = protocol;
     this.host = host;
     this.port = port;
@@ -375,7 +381,7 @@ public final class URL implements java.io.Serializable {
     this.authority = authority;
     this.query = query;
     this.userInfo = userInfo;
-    //System.out.println("" + protocol + " " + host + " " + port + " " + authority + " " + userInfo + " " + path + " " + query + " " + ref);
+    debug("URL: set " + this + " to protocol '" + protocol + "', host '" + host + "', port '" + port + "', authority '" + authority + "', user info '" + userInfo + "', path '" + path + "', query '" + query + "', fragment '" + ref + "'");
   }
 
 // package protected methods to update an URL.
@@ -453,6 +459,7 @@ public final class URL implements java.io.Serializable {
         handler = factory.createURLStreamHandler(protocol);
         if (handler != null) {
           handlers.put(protocol, handler);
+          debug("URL: created handler " + handler + " for protocol '" + protocol + "' using " + factory);
           return handler;
        }
       }
@@ -473,6 +480,7 @@ public final class URL implements java.io.Serializable {
         try {
           handler = (URLStreamHandler)Class.forName(name, true , ClassLoader.getSystemClassLoader()).newInstance();
           handlers.put(protocol, handler);
+          debug("URL: created handler " + handler + " for protocol '" + protocol + "'");
           return handler;
         }
         catch(Exception e){
