@@ -223,7 +223,6 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
       loempa(1, "%p (%t) is in ((x_monitor)%p)->interrupted, removing it and setting status to xs_interrupted\n", current, current->xref, monitor);
       while(removeFromWordset((w_wordset*)&monitor->interrupted, (w_word)current));
 
-      pthread_cond_broadcast(&monitor->mon_cond);
       pthread_mutex_unlock(&monitor->mon_mutex);
 
       loempa(2, "Thread %p has been interrupted", current);
@@ -326,17 +325,14 @@ x_status x_monitor_stop_waiting(x_monitor monitor, x_thread thread) {
     loempa(2, "Thread %p will stop thread %p from waiting on monitor %p\n", x_thread_current(), thread, monitor);
 
     // take control of the monitor by locking the mutex.
-    pthread_mutex_lock(&monitor->mon_mutex);
+    x_monitor_enter(monitor, x_eternal);
 
     loempa(1, "adding %p (%t) to ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
     addToWordset((w_wordset*)&monitor->interrupted, (w_word)thread);
 
-    while (isInWordset((w_wordset*)&monitor->interrupted, (w_word)thread)) {
-        loempa(1, "%p (%t) is still in ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
-        pthread_cond_broadcast(&monitor->mon_cond);
-        pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
-    }
-    pthread_mutex_unlock(&monitor->mon_mutex);
+    loempa(1, "%p (%t) is still in ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
+    pthread_cond_broadcast(&monitor->mon_cond);
+    x_monitor_exit(monitor);
     loempa(2, "Done calling pthread_cond_broadcast\n");
 
     return xs_success;
