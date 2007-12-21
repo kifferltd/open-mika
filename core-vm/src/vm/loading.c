@@ -1465,7 +1465,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   removeLocalReference(thread, Name);
 
   if (exception && theClass) {
-    woempa(9, "Odd. I asked %j to load %w, and it gave me back %j but also threw %e\n", initiating_loader, name, thClass, exception);
+    woempa(9, "Odd. I asked %j to load %w, and it gave me back %j but also threw %e\n", initiating_loader, name, theClass, exception);
     theClass = NULL;
   }
 
