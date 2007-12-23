@@ -47,13 +47,37 @@ public abstract class MessageDigestSpi {
 
 /**
 ** method was added in 1.2.  It should be abstract, but it cannot be for backworth compatibility.
-** The implementation does nothing. It simply returns 0.
-**
-** @remark should be overridden
+** Default implementation just calls engineDigest() and copies the result,
+** serious providers should override this.
+** @param buf buffer in which to write the digest
+** @param offset offset within <code>buf</code> where digest should start
+** @param len space available to write digest
+** @throws DigestException if an arror occurs, in particular if <code>len</code>
+** is less than the length of the digest or is out of range. 
+
+
 */
   protected int engineDigest(byte[] buf, int offset, int len) throws DigestException {
-        return 0;
+        if (len < engineGetDigestLength()) {
+            engineReset();
+            throw new DigestException("too short");
+        }
+        if (offset < 0) {
+            engineReset();
+            throw new DigestException("negative offset");
+        }
+        if (offset > buf.length - len) {
+            engineReset();
+            throw new DigestException("buffer overrun");
+        }
+        byte tmp[] = engineDigest();
+        if (len < tmp.length) {
+            throw new DigestException("too short");
+        }
+        System.arraycopy(tmp, 0, buf, offset, tmp.length);
+        return tmp.length;            
   }
+
 /**
 ** method was added in 1.2.  It should be abstract, but it cannot be for backworth compatibility.
 ** The implementation does nothing. It simply returns 0.
