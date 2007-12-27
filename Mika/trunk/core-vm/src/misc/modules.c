@@ -108,6 +108,10 @@ void *loadModule(char * name, char * path) {
   return (void *)module;
 }
 
+void unloadModule(void* handle) {
+  woempa(9, "Can't unload an OSwald module\n");
+}
+
 x_boolean searchForSymbol(x_module module, void * argument) {
   return 1;
 }
@@ -121,6 +125,7 @@ void *lookupModuleSymbol(char *name) {
 #else /* !OSWALD */
 
 void *loadModule(char *name, char *path) { return NULL; }
+void unloadModule(void *handle) {}
 void *lookupModuleSymbol(char *name) { return NULL; }
 
 #endif /* OSWALD */
@@ -284,6 +289,10 @@ void *loadModule(char *name, char *path) {
   }
 
   return handle;
+}
+
+void unloadModule(void *handle) {
+  dlclose(handle);
 }
 
 void *lookupModuleSymbol(char *name) {

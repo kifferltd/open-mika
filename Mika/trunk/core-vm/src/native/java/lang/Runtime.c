@@ -296,9 +296,9 @@ void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 #endif
 }
 
-typedef void (*w_loadlib)(w_thread,w_instance);
+//typedef void (*w_loadlib)(w_thread,w_instance);
 
-extern int woempa_stderr;
+//extern int woempa_stderr;
 
 /*
  * If libnameString is null:
@@ -307,13 +307,14 @@ extern int woempa_stderr;
  * If libnameString is non-null:
  *   libpathString = complete path to the library, e.g. /Mika/fsroot/fwdir/libfoo.so .
  */
-void Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
+w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
 
   w_thread   thread = JNIEnv2w_thread(env);
   w_string   libname = NULL;
   w_string   libpath = NULL;
   w_ubyte *  name = NULL;
   w_ubyte *  path = NULL;
+  void *     handle;
   w_int      i;
   
   if(libnameString) {
@@ -337,21 +338,18 @@ void Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libna
   }
 
   woempa(7, "Calling loadModule ...\n");
-  if (loadModule(name, path)) {
-    woempa(7, "Successfully loaded library %w from %w\n", libname, libpath);
+  handle = loadModule(name, path);
+  if (handle) {
+    woempa(7, "Successfully loaded library %w from %w: handle = %p\n", libname, libpath, handle);
   }
   else {
-    if (loading_problem) {
-      throwException(thread, clazzUnsatisfiedLinkError, "Error '%s' when loading library: name = '%w', path = '%w'", loading_problem, libname, libpath);
-      loading_problem = NULL;
-    }
-    else {
-      throwException(thread, clazzUnsatisfiedLinkError, "Error (no message) when loading library: name = '%w', path = '%w'", libname, libpath);
-    }
+    throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: name = '%w', path = '%w'", libname, libpath);
   }
 
   if(name) releaseMem(name);
   if(path) releaseMem(path);
+
+  return (w_int)handle;
 }
 
 w_long
