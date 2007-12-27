@@ -41,6 +41,7 @@ import java.util.Properties;
 import java.util.Vector;
 
 import wonka.vm.JDWP;
+import wonka.vm.NativeLibrary;
 import wonka.vm.SystemClassLoader;
 
 public abstract class ClassLoader {
@@ -109,6 +110,13 @@ public abstract class ClassLoader {
    ** in native code.
    */
   private final Object lock = new Object();
+
+  /**
+   ** List of libraries which were loaded by this ClassLoader.
+   ** Used so that the NativeLibrary objects will only be finalized and
+   ** reclaimed when this ClassLoader becomes unreachable.
+   */   
+  private Vector loadedLibraries;
 
   /**
    ** Every ClassLoader has a parent, except the system ClassLoader,
@@ -833,4 +841,12 @@ ClassFormatError
   public void setClassAssertionStatus(String className, boolean enabled) {
     classAssertionStatus.put(className, new Boolean(enabled));
   }
+
+  /**
+   ** Package-local method called by Runtime when a library is loaded.
+   */
+  void registerLibrary(NativeLibrary library) {
+    loadedLibraries.add(library);
+  }
+
 }

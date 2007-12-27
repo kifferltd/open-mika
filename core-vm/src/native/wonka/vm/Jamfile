@@ -37,5 +37,6 @@ if $(JDWP) = true {
 }
 
 Library $(WONKA_LIB) : Finalizer.c GarbageCollector.c Heartbeat.c JDWP.c ;
-Library $(WONKA_LIB) : SystemClassLoader.c NativeProcess.c ArrayUtil.c Wonka.c ;
+Library $(WONKA_LIB) : SystemClassLoader.c NativeLibrary.c NativeProcess.c ;
+Library $(WONKA_LIB) : ArrayUtil.c Wonka.c ;
 

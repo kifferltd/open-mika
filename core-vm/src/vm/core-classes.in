@@ -429,7 +429,7 @@ java/lang/Runtime
 	exit0		(I)V			Runtime_static_exit0
 	freeMemory	()J			Runtime_freeMemory
 	totalMemory	()J			Runtime_totalMemory
-	loadLibrary0	(Ljava/lang/String;Ljava/lang/String;)V	Runtime_loadLibrary0
+	loadLibrary0	(Ljava/lang/String;Ljava/lang/String;)I	Runtime_loadLibrary0
 	getCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingClassLoader
 	getCallingCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingCallingClassLoader
 java/lang/System
@@ -638,6 +638,9 @@ wonka/vm/Etc
         woempa		(ILjava/lang/String;)V	Etc_static_woempa
         heapCheck       ()V			Etc_static_heapCheck
 wonka/vm/NativeThread
+wonka/vm/NativeLibrary
+	handle		I
+	finalize	()V			NativeLibrary_finalize
 wonka/vm/SystemClassLoader
   getBootclasspath	()Ljava/lang/String;	SystemClassLoader_getBootclasspath
   setSystemClassLoader	(Lwonka/vm/SystemClassLoader;)V	 SystemClassLoader_setSystemClassLoader

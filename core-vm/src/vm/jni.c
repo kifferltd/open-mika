@@ -108,7 +108,7 @@ static jmethodID get_loadLibrary0_jmethodID(JNIEnv *env) {
   }
 
   if (!jmethodID_loadLibrary0) {
-    jmethodID_loadLibrary0 = (*env)->GetMethodID(env, class_Runtime, "loadLibrary0", "(Ljava/lang/String;Ljava/lang/String;)V");
+    jmethodID_loadLibrary0 = (*env)->GetMethodID(env, class_Runtime, "loadLibrary0", "(Ljava/lang/String;Ljava/lang/String;)I");
     if (!jmethodID_loadLibrary0) {
       wabort(ABORT_WONKA, "Unable to locate method Runtime._\n");
     }
