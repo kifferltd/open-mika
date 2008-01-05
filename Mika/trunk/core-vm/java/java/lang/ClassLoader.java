@@ -116,7 +116,7 @@ public abstract class ClassLoader {
    ** Used so that the NativeLibrary objects will only be finalized and
    ** reclaimed when this ClassLoader becomes unreachable.
    */   
-  private Vector loadedLibraries;
+  private Vector loadedLibraries = new Vector(); 
 
   /**
    ** Every ClassLoader has a parent, except the system ClassLoader,

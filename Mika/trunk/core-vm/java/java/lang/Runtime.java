@@ -79,7 +79,7 @@ public class Runtime {
    ** Mapping from names of libraries which have already been loaded to
    ** WeakReference's to the corresponding NativeLibrary object.
    */
-  private static HashMap loadedLibraries;
+  private static HashMap loadedLibraries = new HashMap();
 
   /**
   ** The number of instances of FinaDonna created and not yet finalized.
