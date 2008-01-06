@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -246,7 +246,7 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
 
   if (! exceptionThrown(thread) && mustBeInitialized(clazzFileDescriptor) != CLASS_LOADING_FAILED) {
     enterUnsafeRegion(thread);
-    newInstance = allocInstance_initialized(thread, clazz);
+    newInstance = allocInstance(thread, clazz);
     enterSafeRegion(thread);
   }
 
@@ -381,7 +381,7 @@ Class_get_constructors
       if (method->spec.name == string_angle_brackets_init
           && (mtype==DECLARED || isSet(method->flags, ACC_PUBLIC))
          ) {
-        Constructor = allocInstance_initialized(JNIEnv2w_thread(env), clazzConstructor);
+        Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
         if (!Constructor) {
           woempa(9, "Unable to allocate Constructor\n");
           break;
@@ -483,7 +483,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
       w_field field = (w_field) getFifo(fields);
       w_instance Field;
 
-      Field = allocInstance_initialized(JNIEnv2w_thread(env), clazzField);
+      Field = allocInstance(JNIEnv2w_thread(env), clazzField);
 
       if (Field==NULL) {
         woempa(9, "Unable to allocate Field\n");
@@ -624,7 +624,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   if (Array) {
     for (i = 0; i < numRelevantMethods; i++) {
       method = getFifo(relevantMethods);
-      Method = allocInstance_initialized(thread, clazzMethod);
+      Method = allocInstance(thread, clazzMethod);
       if (Method == NULL) {
         woempa(9, "Unable to allocate Method\n");
         break;
@@ -720,7 +720,7 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
 
   if (constructor) {
     enterUnsafeRegion(thread);
-    Constructor = allocInstance_initialized(JNIEnv2w_thread(env), clazzConstructor);
+    Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
     enterSafeRegion(thread);
     if (Constructor == NULL) {
       woempa(9, "Unable to allocate Constructor\n");
@@ -820,7 +820,7 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
 
   if (field) {
     enterUnsafeRegion(thread);
-    Field = allocInstance_initialized(JNIEnv2w_thread(env), clazzField);
+    Field = allocInstance(JNIEnv2w_thread(env), clazzField);
     enterSafeRegion(thread);
     if (!Field) {
       woempa(9, "Unable to allocate Constructor\n");
@@ -976,7 +976,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
 
   if (method) {
     enterUnsafeRegion(thread);
-    Method = allocInstance_initialized(JNIEnv2w_thread(env), clazzMethod);
+    Method = allocInstance(JNIEnv2w_thread(env), clazzMethod);
     enterSafeRegion(thread);
     if (Method == NULL) {
       woempa(9, "Unable to allocate Method\n");

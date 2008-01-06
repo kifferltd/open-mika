@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -461,10 +461,10 @@ void startKernel() {
   object_hashtable = ht_create((char*)"hashtable:objects", 32767, NULL, NULL, 0, 0);
   woempa(7, "Created object_hashtable at %p\n",object_hashtable);
 #endif
-  I_ThreadGroup_system = allocInstance_initialized(NULL, clazzThreadGroup);
+  I_ThreadGroup_system = allocInstance(NULL, clazzThreadGroup);
   woempa(1,"created I_ThreadGroup_system at %p\n",I_ThreadGroup_system);
   string_sysThreadGroup = cstring2String("SystemThreadGroup", 17);
-  I_Thread_sysInit = allocInstance_initialized(NULL, clazzThread);
+  I_Thread_sysInit = allocInstance(NULL, clazzThread);
   string_sysThread = cstring2String("SystemInitThread", 16);
 
   W_Thread_sysInit = allocClearedMem(sizeof(w_Thread));

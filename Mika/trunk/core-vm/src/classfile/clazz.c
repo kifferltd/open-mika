@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -1762,10 +1762,8 @@ w_instance attachClassInstance(w_clazz clazz, w_thread thread) {
   }
 #endif
 
-  if (thread) {
-    unsafe = enterUnsafeRegion(thread);
-  }
-  Class = allocInstance_initialized(thread, clazzClass);
+  unsafe = thread && enterUnsafeRegion(thread);
+  Class = allocInstance(thread, clazzClass);
 
   if (Class) {
     clazz->Class = Class;

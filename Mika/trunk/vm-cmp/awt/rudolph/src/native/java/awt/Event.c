@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -283,7 +283,7 @@ static void addMouseEvent(r_component source, r_event event) {
   w_int x, y, w, h, dx, dy;
 
   enterUnsafeRegion(thread);
-  mouseEvent = allocInstance_initialized(thread, clazzMouseEvent);
+  mouseEvent = allocInstance(thread, clazzMouseEvent);
   enterSafeRegion(thread);
 
   if(!mouseEvent || !source) {
@@ -327,7 +327,7 @@ static void addMouseMotionEvent(r_component source, r_event event) {
     w_int x, y, w, h, dx, dy;
   
     enterUnsafeRegion(thread);
-    mouseEvent = allocInstance_initialized(thread, clazzMouseEvent);
+    mouseEvent = allocInstance(thread, clazzMouseEvent);
     enterSafeRegion(thread);
 
     if(!mouseEvent) {
@@ -382,7 +382,7 @@ static void addFocusEvent(r_component source, r_event event) {
     woempa(9, "called addFocusEvent(%p, %p)\n", source, event);
  
     enterUnsafeRegion(thread);
-    focusEvent = allocInstance_initialized(thread, clazzFocusEvent);
+    focusEvent = allocInstance(thread, clazzFocusEvent);
     enterSafeRegion(thread);
  
     if (!focusEvent) {
@@ -417,7 +417,7 @@ void Event_addKeyEvent(w_int VK, w_int keychar, w_int mod, w_int pressed, w_inst
     w_instance keyEvent;
 
     enterUnsafeRegion(thread);
-    keyEvent = allocInstance_initialized(thread, clazzKeyEvent);
+    keyEvent = allocInstance(thread, clazzKeyEvent);
     enterSafeRegion(thread);
 
     if(!keyEvent) {

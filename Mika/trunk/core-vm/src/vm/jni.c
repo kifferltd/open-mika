@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -660,7 +660,7 @@ jint ThrowNew(JNIEnv *env, jclass class, const char *message) {
     wabort(ABORT_WONKA, "Unable to initalize %k\n", clazz);
   }
   enterUnsafeRegion(thread);
-  Throwable = allocInstance_initialized(thread, clazz);
+  Throwable = allocInstance(thread, clazz);
   if (!Throwable) {
     wabort(ABORT_WONKA, "Unable to create Throwable\n");
   }
@@ -730,7 +730,7 @@ jobject AllocObject(JNIEnv *env, jclass class) {
 
   if (mustBeInitialized(clazz) != CLASS_LOADING_FAILED) {
     enterUnsafeRegion(thread);
-    new = allocInstance_initialized(thread, clazz);
+    new = allocInstance(thread, clazz);
     enterSafeRegion(thread);
   }
 
@@ -751,7 +751,7 @@ jobject NewObject(JNIEnv *env, jclass class, jmethodID methodID, ...) {
   }
   
   enterUnsafeRegion(thread);
-  new = allocInstance_initialized(thread, clazz);
+  new = allocInstance(thread, clazz);
   enterSafeRegion(thread);
 
   if (new) {
@@ -787,7 +787,7 @@ jobject NewObjectV(JNIEnv *env, jclass class, jmethodID methodID, va_list args) 
     return NULL;
   }
   enterUnsafeRegion(thread);
-  new = allocInstance_initialized(thread, clazz);
+  new = allocInstance(thread, clazz);
   enterSafeRegion(thread);
 
   if (new) {
@@ -822,7 +822,7 @@ jobject NewObjectA(JNIEnv *env, jclass class, jmethodID methodID, jvalue *args) 
   }
 
   enterUnsafeRegion(thread);
-  new = allocInstance_initialized(thread, clazz);
+  new = allocInstance(thread, clazz);
   enterSafeRegion(thread);
 
   if (new) {
@@ -3235,7 +3235,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   }
 
   enterUnsafeRegion(thread);
-  Thread = allocInstance_initialized(NULL, clazzNativeThread);
+  Thread = allocInstance(NULL, clazzNativeThread);
   enterSafeRegion(thread);
   setReferenceField(Thread, I_ThreadGroup_system, F_Thread_parent);
   setWotsitField(Thread, F_Thread_wotsit,  thread);

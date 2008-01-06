@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2006, 2007 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2006, 2007, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -113,7 +113,7 @@ w_instance Array_static_get(JNIEnv *env, w_instance Class, w_instance Array, w_i
 
     mustBeInitialized(wrapper_clazz);
     enterUnsafeRegion(thread);
-    wrapped = allocInstance_initialized(thread, wrapper_clazz);
+    wrapped = allocInstance(thread, wrapper_clazz);
     enterSafeRegion(thread);
     if (wrapped) {
       switch (component_clazz->type & 0x0f) {

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -157,13 +157,7 @@ typedef struct w_Object {
 extern w_int gc_phase;
 
 /*
-** Use allocInstance_initialized when it is known that 'clazz' is already initialized.
-*/
-w_instance allocInstance_initialized(w_thread thread, w_clazz clazz);
-
-/*
-** Use allocInstance() when it is not known whether 'clazz' is already initia
-lized.
+** Allocate an instance of an arbitrary non-array class.
 */
 w_instance allocInstance(w_thread thread, w_clazz clazz);
 
@@ -173,7 +167,7 @@ w_instance allocInstance(w_thread thread, w_clazz clazz);
 w_instance allocStringInstance(w_thread thread);
 
 /*
-** Allocate an instance of Throwable or a subclass (class need not be initialized).
+** Allocate an instance of Throwable or a subclass.
 */
 w_instance allocThrowableInstance(w_thread thread, w_clazz clazz);
 

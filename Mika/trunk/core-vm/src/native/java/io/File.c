@@ -184,6 +184,19 @@ w_long Java_File_length (JNIEnv *env, jobject thisFile) {
   }
 }
 
+w_boolean Java_File_mkdir(JNIEnv *env, jobject thisFile) {
+  char *pathname;
+  w_boolean result;
+  
+  pathname = getFileName(thisFile);	  
+
+  result = (vfs_mkdir((w_ubyte *)pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO) != -1);
+
+  freeFileName(pathname);
+
+  return result;
+}
+
 /* Header for class File */
 
 #ifndef _Included_File
@@ -203,29 +216,6 @@ JNIEXPORT void JNICALL Java_File_init
   stringclazz = (*env)->FindClass(env, "java/lang/String");
   absname = (*env)->GetFieldID(env, thisClazz, "absname", "Ljava/lang/String;");
   
-}
-  
-/*
- * Class:     File
- * Method:    mkdir
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_File_mkdir
-  (JNIEnv *env, jobject thisObj) {
-
-  jboolean        isCopy;
-  const char      *pathname;
-  jstring         path;
-  jboolean        result = JNI_FALSE;
-
-  path = (jstring)(*env)->GetObjectField(env, thisObj, absname);
-  pathname = (*env)->GetStringUTFChars(env, path, &isCopy);	  
-
-  if((int)vfs_mkdir((w_ubyte *)pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO) != -1) result = JNI_TRUE;
-
-  if(isCopy == JNI_TRUE) (*env)->ReleaseStringUTFChars(env, path, pathname);
-
-  return result;
 }
 
 /*

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2002, 2003 by Punch Telematix.                      *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -322,7 +322,7 @@ w_void Font_initialize(JNIEnv *env, jclass thisClass, jstring name, jstring file
       w_instance String;
 
       enterUnsafeRegion(thread);
-      defaultFont = (w_instance)allocInstance_initialized(thread, clazzFont);
+      defaultFont = (w_instance)allocInstance(thread, clazzFont);
       enterSafeRegion(thread);
       setWotsitField(defaultFont, F_Font_wotsit, fonts[0]);
       String = newStringInstance(cstring2String(fonts[0]->name, strlen(fonts[0]->name)));

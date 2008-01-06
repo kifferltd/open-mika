@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -575,7 +575,7 @@ w_instance System_getCmdLineProperties(JNIEnv *env, w_instance this) {
 
     if (Array) {
       for (i = 0; i < length; i++) {
-        String = allocInstance_initialized(thread, clazzString);
+        String = allocInstance(thread, clazzString);
         if (String) {
           string = cstring2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
           setWotsitField(String, F_String_wotsit, string);

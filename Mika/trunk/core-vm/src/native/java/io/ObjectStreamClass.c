@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -64,7 +64,7 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
   if(isAssignmentCompatible(clazz, clazzSerializable)){
     w_int flags;
     enterUnsafeRegion(thread);
-    newOSC = allocInstance_initialized(thread, clazzObjectStreamClass);
+    newOSC = allocInstance(thread, clazzObjectStreamClass);
     enterSafeRegion(thread);
 
     if(newOSC == NULL){
@@ -85,7 +85,7 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
           w_instance Method;
 
           enterUnsafeRegion(thread);
-          Method = allocInstance_initialized(thread, clazzMethod);
+          Method = allocInstance(thread, clazzMethod);
           enterSafeRegion(thread);
 
           if(Method){
@@ -155,7 +155,7 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
         jobject method; 
 
         enterUnsafeRegion(thread);
-        method = allocInstance_initialized(thread, clazzMethod);
+        method = allocInstance(thread, clazzMethod);
         enterSafeRegion(thread);
         if(method){
           setWotsitField(method, F_Method_wotsit, jmid);
@@ -274,7 +274,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
       jobject method; 
 
       enterUnsafeRegion(thread);
-      method = allocInstance_initialized(thread, clazzMethod);
+      method = allocInstance(thread, clazzMethod);
       enterSafeRegion(thread);
       if(method){
         setWotsitField(method, F_Method_wotsit, jmid);
@@ -299,7 +299,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
         w_instance Method; 
 
         enterUnsafeRegion(thread);
-        Method = allocInstance_initialized(thread, clazzMethod);
+        Method = allocInstance(thread, clazzMethod);
         enterSafeRegion(thread);
 
         if(Method){
@@ -380,7 +380,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
           w_instance newField;
 
           enterUnsafeRegion(thread);
-          newField = allocInstance_initialized(thread, clazzField);
+          newField = allocInstance(thread, clazzField);
           enterSafeRegion(thread);
 
           if(newField){
@@ -430,7 +430,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
       w_instance Field;
 
       enterUnsafeRegion(thread);
-      Field = allocInstance_initialized(thread, clazzField);
+      Field = allocInstance(thread, clazzField);
       enterSafeRegion(thread);
 
       if(Field){
@@ -490,7 +490,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
                   w_instance newField;
 
                   enterUnsafeRegion(thread);
-                  newField = allocInstance_initialized(thread, clazzField);
+                  newField = allocInstance(thread, clazzField);
                   enterSafeRegion(thread);
 
                   if(newField){
@@ -562,8 +562,8 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               w_instance FldClass;
 
               enterUnsafeRegion(thread);
-              OSField = allocInstance_initialized(thread, clazzObjectStreamField);
-              newField = allocInstance_initialized(thread, clazzField);
+              OSField = allocInstance(thread, clazzObjectStreamField);
+              newField = allocInstance(thread, clazzField);
               String = newStringInstance(field->name);
               enterSafeRegion(thread);
 
