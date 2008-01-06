@@ -91,6 +91,8 @@ void trace(w_frame frame);
 extern w_int woempa_bytecodecount;
 long long bcc = 0;
 
+extern x_mutex mutex64;
+
 //#define TRIGGER 4800000 // 4782340
 #define TRIGGER 9920900
 
@@ -909,7 +911,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getfield_double: {
+    w_boolean isVolatile;
+
     field = getResolvedFieldConstant(cclazz, short_operand);
+    isVolatile = isSet(field->flags, ACC_VOLATILE);
+
     i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
@@ -921,11 +927,19 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
+
     tos[-1].s = stack_notrace;
     tos[-1].c = wordFieldPointer(o, i)[0];
     tos[ 0].s = stack_notrace;
     tos[ 0].c = wordFieldPointer(o, i)[1];
     woempa(1, "getfield %w of %j : got %08x %08x\n", field->name, o, tos[-1].c, tos[0].c);
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
+
     tos += 1;
     add_to_opcode(3);
   }
@@ -1047,13 +1061,20 @@ void interpret(w_frame caller, w_method method) {
 
   i_getstatic_double: {
     w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     tos[0].s = stack_notrace;
     tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
     tos[0].s = stack_notrace;
     tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot + 1];
     ++tos;
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
 
     add_to_opcode(3);
   }
@@ -1088,10 +1109,17 @@ void interpret(w_frame caller, w_method method) {
 
   i_putstatic_double: {
     w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     *ptr++ = tos[-2].c;
     *ptr = tos[-1].c;
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
     tos -= 2;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
@@ -1429,16 +1457,26 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putfield_double: {
+    w_boolean isVolatile;
+
     field = getResolvedFieldConstant(cclazz, short_operand);
+    isVolatile = isSet(field->flags, ACC_VOLATILE);
+
     i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-3].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     wordFieldPointer(o, i)[0] = tos[-2].c;
     wordFieldPointer(o, i)[1] = tos[-1].c;
     woempa(1, "putfield %w of %j : put %08x %08x\n", field->name, o, tos[-2].c, tos[-1].c);
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
     tos -= 3;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
