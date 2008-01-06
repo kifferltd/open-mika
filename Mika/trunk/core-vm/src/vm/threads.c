@@ -450,6 +450,9 @@ void startInitialThreads(void* data) {
 #endif
 }
 
+static x_Mutex Mutex64;
+x_mutex mutex64;
+
 void startKernel() {
   nondaemon_thread_count = 0;
 
@@ -482,7 +485,9 @@ void startKernel() {
   W_Thread_sysInit->jpriority = USER_PRIORITY;
   W_Thread_sysInit->Thread = I_Thread_sysInit;
 
-  setUpRootFrame(W_Thread_sysInit);
+  mutex64 = &Mutex64;
+
+  x_mutex_create(mutex64);
 
   mustBeInitialized(clazzClass);
   mustBeInitialized(clazzExceptionInInitializerError);
@@ -644,8 +649,6 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   status = x_monitor_eternal(safe_points_monitor);
   if (thread != marking_thread) {
     while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-      x_status status;
-
       woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
       status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
       if (status == xs_interrupted) {
