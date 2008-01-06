@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -496,7 +496,7 @@ w_instance createWrapperInstance(w_thread thread, w_clazz clazz, w_int *slot) {
     w_instance result;
 
     enterUnsafeRegion(thread);
-    result = allocInstance_initialized(thread, wrapper_clazz);
+    result = allocInstance(thread, wrapper_clazz);
     enterSafeRegion(thread);
 
     return result;
@@ -528,7 +528,7 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
       return;
     }
     enterUnsafeRegion(thread);
-    wrapper = allocInstance_initialized(thread, wrapper_clazz);
+    wrapper = allocInstance(thread, wrapper_clazz);
     if (wrapper) {
       woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
       setReferenceField_unsafe(wrapper, wrappee, field_offset);
@@ -895,7 +895,7 @@ void voidProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   }
 
   enterUnsafeRegion(thread);
-  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  currentMethod = allocInstance(thread, clazzMethod);
   enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
@@ -978,7 +978,7 @@ w_word singleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   return_type = current_method->spec.return_type;
 
   enterUnsafeRegion(thread);
-  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  currentMethod = allocInstance(thread, clazzMethod);
   enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
@@ -1083,7 +1083,7 @@ w_long doubleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
   return_type = current_method->spec.return_type;
 
   enterUnsafeRegion(thread);
-  currentMethod = allocInstance_initialized(thread, clazzMethod);
+  currentMethod = allocInstance(thread, clazzMethod);
   enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");

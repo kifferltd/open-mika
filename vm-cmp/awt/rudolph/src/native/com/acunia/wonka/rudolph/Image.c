@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2005, 2006, 2007 by Chris Gray,           *
+* reserved. Parts copyright (c) 2005, 2006, 2007, 2008 by Chris Gray,     *
 * /k/ Embedded Java Solutions. All rights reserved                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -184,7 +184,7 @@ w_instance Image_getGraphics (JNIEnv *env, jobject thisImage) {
   */
     
   enterUnsafeRegion(thread);
-  graphicalCntxt = allocInstance_initialized(thread, clazzGraphics);
+  graphicalCntxt = allocInstance(thread, clazzGraphics);
   enterSafeRegion(thread);
 
   if (graphicalCntxt) {

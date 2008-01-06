@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -50,7 +50,7 @@ void throwInvalidClassException(w_thread thread, w_instance Class, char * messag
   mustBeInitialized(clazzInvalidClassException);
 
   enterUnsafeRegion(thread);
-  ice = allocInstance_initialized(thread,clazzInvalidClassException);
+  ice = allocInstance(thread,clazzInvalidClassException);
 
   if(ice){
     w_clazz clazz = Class2clazz(Class);
@@ -87,7 +87,7 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
   }
 
   enterUnsafeRegion(thread);
-  newInstance = allocInstance_initialized(thread, clazz);
+  newInstance = allocInstance(thread, clazz);
   enterUnsafeRegion(thread);
 
   if(!newInstance){

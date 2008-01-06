@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -107,7 +107,7 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
     return 1;
   } else {
     enterUnsafeRegion(thread);
-    fd_obj = allocInstance_initialized(thread, clazzFileDescriptor);
+    fd_obj = allocInstance(thread, clazzFileDescriptor);
     enterSafeRegion(thread);
     if(fd_obj != NULL) {
       setReferenceField(thisRAF, fd_obj, F_RandomAccessFile_fd);

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002 by Punch Telematix.                      *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -72,7 +72,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
     w_int i;
 
     enterUnsafeRegion(thread);
-    theClone = allocInstance_initialized(thread, clazz);
+    theClone = allocInstance(thread, clazz);
 
     if (theClone) {
       woempa(1, "cloneable object is of class %k, size is %d words, new instance @ %p\n", clazz, instanceSize,theClone);

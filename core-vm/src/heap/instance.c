@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -226,7 +226,7 @@ static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz
   return object->fields;
 }
 
-w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
+w_instance allocInstance(w_thread thread, w_clazz clazz) {
   w_object object = NULL;
 
 #ifdef RUNTIME_CHECKS
@@ -238,6 +238,12 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
     return NULL;
   }
 #endif
+
+  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
+
+    return allocThrowableInstance(thread, clazz);
+
+  }
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
@@ -253,27 +259,6 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
 
   return allocInstance_common(thread, object, clazz);
 }
-
-/*
-w_instance allocInstance(w_thread thread, w_clazz clazz) {
-
-  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
-
-    return allocThrowableInstance(thread, clazz);
-
-  }
-
-  /.
-  .. The class must be initialized.
-  ./
-
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    return NULL;
-  }
-
-  return allocInstance_initialized(thread, clazz);
-}
-*/
 
 w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
@@ -324,7 +309,6 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
 
   w_object object = NULL;
   w_size   bytes;
-  w_boolean initialisation_result;
 
   checkClazz(clazz);  
 

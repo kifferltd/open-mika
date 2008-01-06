@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -583,7 +583,7 @@ jobject Component_createImage(JNIEnv *env, jobject thisPeer, jint width, jint he
   */
   
   enterUnsafeRegion(thread);
-  imageInstance = allocInstance_initialized(thread, clazzImage);
+  imageInstance = allocInstance(thread, clazzImage);
   enterSafeRegion(thread);
   if (imageInstance == NULL) {
     return NULL;
@@ -706,7 +706,7 @@ w_instance Component_getGraphics(JNIEnv *env, jobject thisPeer) {
     */
     
     enterUnsafeRegion(thread);
-    graphicalCntxt = allocInstance_initialized(thread, clazzGraphics);
+    graphicalCntxt = allocInstance(thread, clazzGraphics);
     enterSafeRegion(thread);
 
     if (graphicalCntxt) {

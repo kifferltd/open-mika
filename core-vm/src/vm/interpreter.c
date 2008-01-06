@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1616,7 +1616,7 @@ void interpret(w_frame caller, w_method method) {
     if (thread->exception) {
       do_the_exception;
     }
-    o = allocInstance_initialized(thread, clazz);
+    o = allocInstance(thread, clazz);
     tos[0].s = stack_trace;
 #ifdef CACHE_TOS
     tos_cache = 
@@ -3908,6 +3908,17 @@ void interpret(w_frame caller, w_method method) {
 
   c_athrow: {
     woempa(1, "athrow(%e)\n", tos[-1].c);
+/*
+    { // [CG 20071130] Check we don't have any monitors left - see JVMS 8.13
+      w_slot base = frame->auxstack_base;
+      w_slot slot = frame->auxstack_top;
+      for (slot = slot + 1; base - slot >= 0; ++slot) {
+        if (isMonitoredSlot(slot)) {
+          do_throw_clazz(clazzIllegalMonitorStateException);
+        }
+      }
+    }
+*/
 #ifdef CACHE_TOS
     if (tos_cache == 0) {
       do_throw_clazz(clazzNullPointerException);
