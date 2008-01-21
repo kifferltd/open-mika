@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2007 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2007, 2008 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -95,18 +95,26 @@ void PlainDatagramSocketImpl_finalize(JNIEnv* env , w_instance ThisImpl) {
 }
 
 void PlainDatagramSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_int sock;
 
   if(getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)){
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already created");
+    throwException(thread, clazzIOException, "socket is already created");
   }
   else {
     sock = w_socket (PF_INET, SOCK_DGRAM, 0);
 
+    int yes = 1;
+    if (setsockopt(sock,SOL_SOCKET, SO_BROADCAST, &yes, sizeof(int))) {
+      throwException(thread, clazzIOException, "failed to create a socket: %s",strerror(errno));
+      woempa(9,"Error occured while making datagramsocket able to send broadcast messages '%i'\n",errno);
+      close(sock);
+      sock = -1;
+    }
+
     setWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit, sock);	
     if (sock == -1) {
-      throwException(JNIEnv2w_thread(env), clazzIOException, "failed to create a socket: %s",strerror(errno));
+      throwException(thread, clazzIOException, "failed to create a socket: %s",strerror(errno));
       woempa(9, "Error Not able to create a socket for %p\n", ThisImpl);
     }
     else {
