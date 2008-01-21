@@ -1945,6 +1945,10 @@ w_int destroyClazz(w_clazz clazz) {
       releaseMem(clazz->temp.inner_class_info);
     }
   }
+  // [CG 20080120] Sirlan fix, TODO: why is Mika unstable without?
+  else {
+    return 0;
+  }
 
   woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
