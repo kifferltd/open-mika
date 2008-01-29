@@ -164,14 +164,14 @@ public final class Locale implements Cloneable, java.io.Serializable {
 
   public String getISO3Language() throws MissingResourceException {
   	if ( ISO3Languages == null) {
-  		ISO3Languages = ResourceBundle.getBundle("com.acunia.resource.ISO3166languageResourceBundle");
+  		ISO3Languages = ResourceBundle.getBundle("wonka.resource.ISO3166languageResourceBundle");
   	}
 	return ISO3Languages.getString(language);
   }
 
   public String getISO3Country() throws MissingResourceException {
   	if ( ISO3Countries == null) {
-  		ISO3Countries = ResourceBundle.getBundle("com.acunia.resource.ISO3166countryResourceBundle");
+  		ISO3Countries = ResourceBundle.getBundle("wonka.resource.ISO3166countryResourceBundle");
   	}
 	return ISO3Countries.getString(country);
   }
@@ -181,7 +181,7 @@ public final class Locale implements Cloneable, java.io.Serializable {
   }
 
   public String getDisplayCountry(Locale inLocale){
-        ResourceBundle displayProps = ResourceBundle.getBundle("com.acunia.resource.LocaleDisplayCountryResourceBundle",inLocale);
+        ResourceBundle displayProps = ResourceBundle.getBundle("wonka.resource.LocaleDisplayCountryResourceBundle",inLocale);
         String s=country;
         try {
         	s = displayProps.getString(country);
@@ -197,7 +197,7 @@ public final class Locale implements Cloneable, java.io.Serializable {
   }
 
   public String getDisplayLanguage(Locale inLocale){
-        ResourceBundle displayProps = ResourceBundle.getBundle("com.acunia.resource.LocaleDisplayLanguageResourceBundle",inLocale);
+        ResourceBundle displayProps = ResourceBundle.getBundle("wonka.resource.LocaleDisplayLanguageResourceBundle",inLocale);
         String s=language;
         try {
         	s = displayProps.getString(s);
@@ -212,7 +212,7 @@ public final class Locale implements Cloneable, java.io.Serializable {
         return getDisplayVariant(Locale.getDefault());
   }
   public String getDisplayVariant(Locale inLocale){
-        ResourceBundle displayProps = ResourceBundle.getBundle("com.acunia.resource.LocaleDisplayVariantResourceBundle",inLocale);
+        ResourceBundle displayProps = ResourceBundle.getBundle("wonka.resource.LocaleDisplayVariantResourceBundle",inLocale);
         String s=variant;
         try {
         	s = displayProps.getString(s);
