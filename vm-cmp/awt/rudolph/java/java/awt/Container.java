@@ -28,7 +28,7 @@ import java.util.*;
 import java.awt.peer.*;
 import java.awt.event.*;
 
-public abstract class Container extends Component {
+public class Container extends Component {
 
   private LayoutManager layoutManager;
   private Vector componentVector;
