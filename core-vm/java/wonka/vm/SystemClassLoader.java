@@ -399,7 +399,7 @@ public final class SystemClassLoader extends ClassLoader {
     definePackage("com.acunia.device","","","","","","",null);
     definePackage("com.acunia.device.uart","","","","","","",null);
     definePackage("com.acunia.device.serial","","","","","","",null);
-    definePackage("com.acunia.resource","","","","","","",null);
+    definePackage("wonka.resource","","","","","","",null);
     definePackage("com.acunia.wonka.security","","","","","","",null);
     definePackage("java.lang","","","","","","",null);
     definePackage("java.lang.ref","","","","","","",null);
