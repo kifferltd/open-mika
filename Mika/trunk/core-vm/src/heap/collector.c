@@ -994,16 +994,18 @@ w_int markThrowableReachable(w_object object, w_fifo fifo, w_word flag) {
   w_int retcode;
 
   while (record) {
-    woempa(7, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
-    retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
-    if (retcode < 0) {
+    if (record->method) {
+      woempa(7, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
+      retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
+      if (retcode < 0) {
 
-      return retcode;
+        return retcode;
 
+      }
+
+      queued += retcode;
+      record = record->position ? record + 1 : NULL;
     }
-
-    queued += retcode;
-    record = record->position ? record + 1 : NULL;
   }
 
   return queued;
