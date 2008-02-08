@@ -53,7 +53,7 @@ else {
 OPTIM on <core-vm!src!vm>unicode.o += -O0 ;
 
 Library $(WONKA_LIB) : chars.c checks.c $(OROOT)/mika/bin/core-classes.c ;
-Library $(WONKA_LIB) : exception.c fields.c ;
+Library $(WONKA_LIB) : dates.c exception.c fields.c ;
 Library $(WONKA_LIB) : dispatcher.c loading.c locks.c md5.c ;
 Library $(WONKA_LIB) : ts-mem.c methods.c opcodes.c reflection.c ;
 Library $(WONKA_LIB) : interpreter.c sha.c stack.c strings.c threads.c ;
