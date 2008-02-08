@@ -28,6 +28,8 @@
 
 package wonka.resource;
 
+import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.ListResourceBundle;
 
 public class DateFormatSymbolBundle extends ListResourceBundle {
@@ -40,37 +42,45 @@ public class DateFormatSymbolBundle extends ListResourceBundle {
                                                 "Aug", "Sep", "Oct", "Nov", "Dec", ""};
   private static final String[] SHORTWEEKDAYS = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
   private static final String[] WEEKDAYS = {"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-  private static final String[][] ZONESTRINGS = {
-    {"GMT", "Greenwich Mean Time", "GMT", "Greenwich Mean Time", "GMT"},
-    {"MIT", "Midway Islands Time", "MIT", "Midway Islands Time", "MIT"},
-    {"HST", "Hawaii Standard Time","HST","Hawaii Daylight Time", "HDT"},
-    {"AST", "Alaska Standard Time","AST","Alaska Daylight Time", "ADT"},
-    {"PST", "Pacific Standard Time","PST","Pacific Daylight Time", "PDT"},
-    {"PNT", "Central Standard Time","MST","Central Standard Time", "MST"},
-    {"MST", "Mountain Standard Time","MST","Mountain Daylight Time", "MDT"},
-    {"CST", "Central Standard Time","CST","Central Daylight Time", "CDT"},
-    {"EST", "Eastern Standard Time","EST","Eastern Daylight Time", "EDT"},
-    {"IET", "Eastern Standard Time","EST","Eastern Standard Time", "EST"},
-    {"PRT", "Atlantic Standard Time","AST","Atlantic Daylight Time", "ADT"},
-    {"CNT", "Newfoundland Standard Time","NST","Newfoundland Standard Time", "NST"},
-    {"NST", "Newfoundland Standard Time","NST"," Newfoundland Daylight Time", "NDT"},
-    {"ECT", "European Central Time","ECT","European Central Time", "ECT"},
-    {"WET", "Western European Time","WET","Western European Time", "WET"},
-    {"CTT", "China Standard Time","CTT","China Daylight Time", "CTT"},
-    {"JST", "Japan Standard Time","JST","Japan Daylight Time", "JDT"},
-  };
+  private static final String[][] ZONESTRINGS;
 
-  private static final Object[][] contents = {
-    {"ampms", AMPMS},{"eras", ERAS},{ "pattern", "GyMdkHmsSEDFwWahKz"},{"months",MONTHS},{"shortMonths",SHORTMONTHS},
-    {"shortDays",SHORTWEEKDAYS},{"days",WEEKDAYS},{"zones",ZONESTRINGS}
-  };
+  static {
+    // TODO: [CG 20080207] This makes me a little nervous. Is it not possible
+    // that this static initialiser might execute before the timeZoneNames
+    // have been filled in?
+    ArrayList zonestrings = new ArrayList();
+    Enumeration zonekeys = TimeZoneDisplayNameResourceBundle.timeZoneNames.keys();
+    while (zonekeys.hasMoreElements()) {
+      String key = (String)zonekeys.nextElement();
+      String[] from = (String[])TimeZoneDisplayNameResourceBundle.timeZoneNames.get(key);
+      String[] to = new String[5];
+      to[0] = key;
+      to[1] = from[1];
+      to[2] = from[0];
+      to[3] = from[3];
+      to[4] = from[2];
+
+      zonestrings.add(to);
+    }
+    ZONESTRINGS = new String[zonestrings.size()][];
+    zonestrings.toArray(ZONESTRINGS);
+  }
 
   public DateFormatSymbolBundle(){
     super();
   }
 
   public Object[][] getContents(){
-    return contents;
+    return new Object[][] {
+      {"ampms", AMPMS},
+      {"eras", ERAS},
+      { "pattern", "GyMdkHmsSEDFwWahKz"},
+      {"months",MONTHS},
+      {"shortMonths",SHORTMONTHS},
+      {"shortDays",SHORTWEEKDAYS},
+      {"days",WEEKDAYS},
+      {"zones",ZONESTRINGS}
+    };
   }
 }
 

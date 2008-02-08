@@ -176,10 +176,26 @@ public class Date implements java.io.Serializable, Cloneable, Comparable {
         c[1] = (char)('0' + i%10);
         c[2] = ' ';
         buffer.append(c);
-    	buffer.append(cal.getTimeZone().getID());
+        TimeZone tz = cal.getTimeZone();
+    	buffer.append(tz.getDisplayName(tz.inDaylightTime(this), TimeZone.SHORT));
+    	//buffer.append(tz.getDisplayName(false, TimeZone.SHORT));
     	buffer.append(" ");
-        buffer.append(cal.get(Calendar.YEAR));
-        return buffer.toString();
+        int y = cal.get(Calendar.YEAR);
+        if (y < 1000) {
+          buffer.append(Character.forDigit(y/1000, 10));
+          y = y % 1000;
+          buffer.append(Character.forDigit(y/100, 10));
+          y = y % 100;
+          buffer.append(Character.forDigit(y/10, 10));
+          y = y % 10;
+          buffer.append(Character.forDigit(y, 10));
+          return buffer.toString();
+       }
+       else {
+         buffer.append(y);
+       }
+
+       return buffer.toString();
   }
 
   public Object clone(){

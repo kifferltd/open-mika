@@ -39,8 +39,11 @@
 # it must be identical to the left-hand side of a previous non-comment line.
 # The new ID is then defined as an alias for the old.
 # Otherwise, the definition must consist of a valid integer or floating-point
-# number, optionally followed by eight further numbers enclosed in parentheses,
-# followed by a ninth after the closing parenthesis.
+# number, optionally followed by nine further numbers of which the first eight
+# are enclosed in parentheses, while the ninth follows the closing parenthesis;
+# optionally followed by up to four strings each enclosed in double quotes and
+# separated from eachother and from the preceding number(s) by whitespace.
+#
 # The first number indicates the basic offset from UCT, with positive values
 # indicating oriental offsets (e.g. Europe) and negative offsets occidental
 # offsets (e.g. Americas). The remaining nine, if present, indicate a daylight
@@ -53,26 +56,38 @@
 # - startMonth/endMonth: add 1 so that 1 indicates January and 12 December
 # - startDayOfWeek/endDayOfWeek: 1 represents Monday, 7 is Sunday
 # - startTime/endTime/savings: floating-point hours instead of seconds.
+#
+# If present, the four strings represent:
+#   1. the short name for the timezone outwith the daylight saving period.
+#   2. the long name for the timezone outwith the daylight saving period.
+#      If not present, the short form will be used.
+#   3. the short name for the timezone during the daylight saving period.
+#      If not present, string 1 will be used.
+#   4. the long name for the timezone during the daylight saving period.
+#      If not present, the short form will be used.
+#
 # Badly-formatted lines will be ignored, and an error message will be printed.
 
 # N.B. Disclaimer - the information provided below may contain errors!
 # Check the timezones you will be using, and report any errors you find.
 
-GMT=0
-UTC=0
-ART=2
+# Abbreviations accepted by Java 1.1. Many bear little relation to reality.
+
+GMT=0 "GMT" "Greenwich Mean Time"
+UTC=0 "UTC" "Coordinated Universal Time"
+ART=2 "EET" "Eastern European Time"
 EAT=3
 MET=3.5
 NET=4
 PLT=5
 IST=5.5
 BST=6
-VST=7
+VST=7 "CXT" "Christmas Island Time"
 CTT=8
-ACT=9.5
+ACT=9.5 "ACST" "Australian Central Standard Time"
 AET=10
 SST=11
-NST=12
+NST=11.5 "NFT" "Norfolk Island Time"
 PNT=-7
 IET=-5
 PRT=-4
@@ -80,19 +95,56 @@ CNT=-3.5
 AGT=-3
 BET=-2
 HST=-1
-WET=0(3,-1,7,1.0,10,-1,7,1.0)1.0
-ECT=1(3,-1,7,2.0,10,-1,7,2.0)1.0
-EET=2(3,-1,7,2.0,10,-1,7,2.0)1.0
-PST=-8(4,1,7,2.0,10,-1,7,2.0)1.0
+WET=0(3,-1,7,1.0,10,-1,7,1.0)1.0 "WET" "Western European Time" "WEST" "Western European Summer Time"
+ECT=1(3,-1,7,2.0,10,-1,7,2.0)1.0 "CET" "Central European Time" "CEST" "Central European Summer Time"
+EET=2(3,-1,7,2.0,10,-1,7,2.0)1.0 "EET" "Eastern European Time" "EEST" "Eastern European Summer Time"
+PST=-8(4,1,7,2.0,10,-1,7,2.0)1.0 "PST" "Pacific Standard Time" "PDT" "Pacific Daylight Time"
 MIT=-11(4,1,7,1.0,10,-1,7,2.0)1.0
-CAT=-10(4,1,7,2.0,10,-1,7,2.0)1.0
-AST=-9(4,1,7,2.0,10,-1,7,2.0)1.0
-MST=-7(4,1,7,2.0,10,-1,7,2.0)1.0
-CST=-6(4,1,7,2.0,10,-1,7,2.0)1.0
-EST=-5(4,1,7,2.0,10,-1,7,2.0)1.0
-NST=-3.5(4,1,7,2.0,10,-1,7,2.0)1.0
+CAT=-10(4,1,7,2.0,10,-1,7,2.0)1.0 "HAST" "Hawaii-Aleutian Standard Time" "HADT" "Hawaii-Aleutian Daylight Time"
+AST=-9(4,1,7,2.0,10,-1,7,2.0)1.0 "AKST" "Alaska Standard Time" "AKDT" "Alaska Daylight Time"
+MST=-7(4,1,7,2.0,10,-1,7,2.0)1.0 "MST" "Mountain Standard Time" "MDT" "Mountain Daylight Time"
+CST=-6(4,1,7,2.0,10,-1,7,2.0)1.0 "CST" "Central Standard Time" "CDT" "Central Daylight Time"
+EST=-5(4,1,7,2.0,10,-1,7,2.0)1.0 "EST" "Eastern Standard Time" "EDT" "Eastern Daylight Time"
+NST=-3.5(4,1,7,2.0,10,-1,7,2.0)1.0 "NST" "Newfoundland Standard Time" "NDT" "Newfoundland Daylight Time"
 CTT=8(4,1,7,2.0,10,-1,7,2.0)1.0
 JST=9(4,1,7,2.0,10,-1,7,2.0)1.0
+
+# Military timezones, from Alpha to Zulu
+A=1
+B=2
+C=3
+D=4
+E=5
+F=6
+G=7
+H=8
+I=9
+K=10
+L=11
+M=12
+N=-1
+O=-2
+P=-3
+Q=-4
+R=-5
+S=-6
+T=-7
+U=-8
+V=-9
+W=-10
+X=-11
+Y=-12
+Z=0
+
+# Our own additions, based on http://www.timeanddate.com/library/abbreviations/timezones/
+# Unfortunately this includes no information for Asian timezones ...
+# N.B. Australian timezones change with the wind, check
+# http://www.abc.net.au/backyard/timezone.htm for latest developments.
+
+AusCT=9.5(10,1,7,2.0,4,1,7,3.0)1.0 "ACST" "Australian Central Standard Time" "ACDT" "Australian Central Daylight Time"
+AusET=10(10,1,7,2.0,4,1,7,3.0)1.0 "AEST" "Australian Eastern Standard Time" "AEDT" "Australian Eastern Daylight Time"
+AusWT=8.0(10,-1,7,2.0,3,-1,7,3.0)1.0 "AWST" "Australian Western Standard Time" "AWDT" "Australian Western Daylight Time"
+
 # Time zone aliases - Europe
 Europe/Vilnius=2
 Europe/Simferopol=2

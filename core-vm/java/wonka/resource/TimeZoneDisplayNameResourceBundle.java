@@ -35,34 +35,15 @@ import java.util.MissingResourceException;
 
 public class TimeZoneDisplayNameResourceBundle extends ResourceBundle {
 
-  private static Hashtable timeZonesNames=null;	
+  // Package-visible so that TimeZoneResourceBundle can populate it
+  static Hashtable timeZoneNames = new Hashtable();
 
-  private synchronized static void createZoneNames(){
-  	if (timeZonesNames==null) {
-      ResourceBundle resource = new wonka.resource.DateFormatSymbolBundle();
-      String[][] zoneStrings = (String[][])resource.getObject("zones");
-  	  int length = zoneStrings.length;
-  	  timeZonesNames = new Hashtable(length*2);
-  	  for(int k = 0 ; k < length ; k++){
-  	    timeZonesNames.put(zoneStrings[k][0], zoneStrings[k]);
-  	  }
-    }
-  }
-
-  /**
-  ** the constructor build a hashtable with String keys and TimeZoneResource Objects as value <br>
-  ** the keys are the TimeZoneIDs and the TimeZoneResource can be used to create (Simple)TimeZone Objects
-  **
-  */
   public TimeZoneDisplayNameResourceBundle() {
-  	if(timeZonesNames==null) {
-	    createZoneNames();
-	  }
   }
 
   //required implementation of abstract methods of ResourceBundle
   protected Object handleGetObject(String key) throws MissingResourceException {
-   	Object o = timeZonesNames.get(key);
+   	Object o = timeZoneNames.get(key);
    	if (o != null) {
    		return o;
    	}
@@ -70,6 +51,6 @@ public class TimeZoneDisplayNameResourceBundle extends ResourceBundle {
   }
 
   public Enumeration getKeys() {
-  	return timeZonesNames.keys();
+  	return timeZoneNames.keys();
   }
 }

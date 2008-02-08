@@ -1,486 +1,851 @@
-/**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
-**************************************************************************/
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 /*
-** $Id: Calendar.java,v 1.8 2006/04/18 11:35:28 cvs Exp $
-*/
+ * Imported by CG 20080202 based on Apache Harmony ("enhanced") revision 612718.
+ */
 
 package java.util;
 
-import java.util.Date;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamField;
+import java.io.Serializable;
 
-public abstract class Calendar implements java.io.Serializable, Cloneable {
+/**
+ * Calendar is an abstract class which provides the conversion between Dates and
+ * integer calendar fields, such as the month, year or minute. Subclasses of
+ * this class implement a specific calendar type, such as the gregorian
+ * calendar.
+ * 
+ * @see Date
+ * @see GregorianCalendar
+ * @see TimeZone
+ */
+public abstract class Calendar implements Serializable, Cloneable {
 
-  private static final long serialVersionUID = -1807547505821590642L;
-  // Calendar fields
-  public final static int MILLISECOND          = 14;
-  public final static int SECOND               = 13;
-  public final static int MINUTE               = 12;
-  public final static int HOUR                 = 10;
-  public final static int HOUR_OF_DAY          = 11;
-  public final static int AM_PM                = 9;
-  public final static int DAY_OF_WEEK          = 7;
-  public final static int DAY_OF_MONTH         = 5;
-  public final static int DATE                 = 5;
-  public final static int DAY_OF_WEEK_IN_MONTH = 8;
-  public final static int DAY_OF_YEAR          = 6;
-  public final static int WEEK_OF_MONTH        = 4;
-  public final static int WEEK_OF_YEAR         = 3;
-  public final static int MONTH                = 2;
-  public final static int YEAR                 = 1;
-  public final static int ERA                  = 0;
-  public final static int ZONE_OFFSET          = 15;
-  public final static int DST_OFFSET           = 16;
-  public final static int FIELD_COUNT          = 17;
-  
-  // MONTH Constants
-  public final static int JANUARY   = 0;
-  public final static int FEBRUARY	= 1;
-  public final static int MARCH			= 2;
-  public final static int APRIL			= 3;
-  public final static int MAY 			= 4;
-  public final static int JUNE			= 5;
-  public final static int JULY			= 6;
-  public final static int AUGUST		= 7;
-  public final static int SEPTEMBER	= 8;
-  public final static int OCTOBER		= 9;
-  public final static int NOVEMBER	=10;
-  public final static int DECEMBER	=11;
-  public final static int UNDECIMBER=12;
+    private static final long serialVersionUID = -1807547505821590642L;
 
-  // Day-of-Week Constants
-  public final static int SUNDAY		= 1;
-  public final static int MONDAY		= 2;
-  public final static int TUESDAY		= 3;
-  public final static int WEDNESDAY		= 4;
-  public final static int THURSDAY		= 5;
-  public final static int FRIDAY		= 6;
-  public final static int SATURDAY		= 7;
+    /**
+     * Set to true when the calendar fields have been set from the time, set to
+     * false when a field is changed and the fields must be recomputed.
+     */
+    protected boolean areFieldsSet;
 
+    /**
+     * An integer array of calendar fields.
+     */
+    protected int[] fields;
 
-  public final static int AM = 0;
-  public final static int PM = 1;
+    /*
+     * A boolean array. Each element indicates if the corresponding field has
+     * been set.
+     */
+    protected boolean[] isSet;
 
+    /**
+     * Set to true when the time has been set, set to false when a field is
+     * changed and the time must be recomputed.
+     */
+    protected boolean isTimeSet;
 
-  protected long time;
-  protected int[] fields = new int[FIELD_COUNT];;
+    /**
+     * The time in milliseconds since January 1, 1970.
+     */
+    protected long time;
 
-  protected boolean isTimeSet;
-  protected boolean areFieldsSet;
-  protected boolean isSet[] = new boolean[FIELD_COUNT];
+    transient int lastTimeFieldSet;
 
-  private int minimalDaysInFirstWeek = 1;
-  private int firstDayOfWeek = 2;
+    transient int lastDateFieldSet;
 
-  private boolean lenient=true;
-  private TimeZone zone;
+    private boolean lenient;
 
-  abstract public void add(int fld, int amount);
+    /*
+    ** TODO [CG 20080206] These values (firstDayOfWeek, minimalDaysInFirstWeek)
+    ** should really be derived from the Locale. Apache Harmoby uses IBM's
+    ** ICU package to do this, but at 4.4 MB that's a bit over the top for us.
+    */
+    private int firstDayOfWeek = 2;
 
+    private int minimalDaysInFirstWeek = 1;
 
-/*
-* --> after was declared abstract but this changed in version 1.2
-* NOTE: every Class which extended Calender will overwrite this method
-* if the class was defined before these changes
-*/
-  public boolean after(Object cal){
-  	complete();
-  	if (!(cal instanceof Calendar)) return false;
-  	return  (time > ((Calendar)cal).getTime().getTime());
+    private TimeZone zone;
 
-  }
+    public static final int JANUARY = 0, FEBRUARY = 1, MARCH = 2, APRIL = 3,
+            MAY = 4, JUNE = 5, JULY = 6, AUGUST = 7, SEPTEMBER = 8,
+            OCTOBER = 9, NOVEMBER = 10, DECEMBER = 11, UNDECIMBER = 12,
 
-/*
-* --> before was declared abstract but this changed in version 1.2
-* NOTE: every Class which extended Calender will overwrite this method
-* if the class was defined before these changes
-*/
-  public boolean before(Object cal){
-  	complete();
-  	if (!(cal instanceof Calendar)) return false;
-  	return  (time < ((Calendar)cal).getTime().getTime());
-  }
+            SUNDAY = 1, MONDAY = 2, TUESDAY = 3, WEDNESDAY = 4, THURSDAY = 5,
+            FRIDAY = 6, SATURDAY = 7;
 
-  protected Calendar() {
-    this(TimeZone.getDefault(),Locale.getDefault());
-  }
+    public static final int ERA = 0, YEAR = 1, MONTH = 2, WEEK_OF_YEAR = 3,
+            WEEK_OF_MONTH = 4, DATE = 5, DAY_OF_MONTH = 5, DAY_OF_YEAR = 6,
+            DAY_OF_WEEK = 7, DAY_OF_WEEK_IN_MONTH = 8,
 
-  protected Calendar(TimeZone tz, Locale loc) {
-    if (tz == null || loc == null) {
-    	throw new NullPointerException();
+            AM_PM = 9, HOUR = 10, HOUR_OF_DAY = 11, MINUTE = 12, SECOND = 13,
+            MILLISECOND = 14, ZONE_OFFSET = 15, DST_OFFSET = 16,
+
+            FIELD_COUNT = 17,
+
+            AM = 0, PM = 1;
+
+    private static String[] fieldNames = { "ERA=", "YEAR=", "MONTH=", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "WEEK_OF_YEAR=", "WEEK_OF_MONTH=", "DAY_OF_MONTH=", "DAY_OF_YEAR=", //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "DAY_OF_WEEK=", "DAY_OF_WEEK_IN_MONTH=", "AM_PM=", "HOUR=", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$ //$NON-NLS-4$
+            "HOUR_OF_DAY", "MINUTE=", "SECOND=", "MILLISECOND=", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "ZONE_OFFSET=", "DST_OFFSET=" }; //$NON-NLS-1$ //$NON-NLS-2$
+
+    /**
+     * Initializes this Calendar instance using the default TimeZone and Locale.
+     * 
+     */
+    protected Calendar() {
+        this(TimeZone.getDefault(), Locale.getDefault());
     }
-    this.zone = tz;
-  }
 
-  public static synchronized Calendar getInstance() {
-    return new GregorianCalendar();
-  }
-  public static synchronized Calendar getInstance(TimeZone tz) {
-    return new GregorianCalendar(tz);
-  }
-  public static synchronized Calendar getInstance(Locale loc) {
-    return new GregorianCalendar(loc);
-  }
-  public static synchronized Calendar getInstance(TimeZone tz, Locale loc) {
-    return new GregorianCalendar(tz, loc);
-  }
-
-  // CG 20041112 - public in 1.4.2
-  public long getTimeInMillis() {
-    if (!isTimeSet) computeTime();
-    return time;
-  }
-
-  public final void setTime(Date d) {
-    time = d.getTime();
-    isTimeSet = true;
-    areFieldsSet = false;
-    computeFields();
-  }
-
-  // CG 20041112 - public in 1.4.2
-  public void setTimeInMillis(long Millis) {
-    time = Millis;
-    isTimeSet = true;
-    areFieldsSet=false;
-    computeFields();
-  }
-
-  /**
-  **  - invalidate fields that are incompatible with the one we are setting.
-  ** Package-protected so accessible to GregorianCalendar ...
-  */
-  void clearIncompatibleFields(int fld) {
-   areFieldsSet = false;
-    switch (fld) {
-      case MONTH:
-        isSet[DAY_OF_YEAR] = false;
-        isSet[DAY_OF_WEEK] = false;
-        isSet[WEEK_OF_YEAR] = false;
-        break;
-
-      case DAY_OF_MONTH:
-        isSet[WEEK_OF_MONTH] = false;
-        isSet[DAY_OF_WEEK] = false;
-        isSet[DAY_OF_WEEK_IN_MONTH] = false;
-        break;
-
-      case DAY_OF_WEEK:
-        isSet[DAY_OF_MONTH] = false;
-        isSet[DAY_OF_YEAR] = false;
-        isSet[DAY_OF_MONTH] = false;
-        break;
-
-      case WEEK_OF_MONTH:
-        isSet[DAY_OF_WEEK_IN_MONTH] = false;
-        break;
-
-      case DAY_OF_WEEK_IN_MONTH:
-        isSet[WEEK_OF_MONTH] = false;
-        break;
-
-      case DAY_OF_YEAR:
-        isSet[DAY_OF_WEEK] = false;
-        isSet[WEEK_OF_YEAR] = false;
-        isSet[MONTH] = false;
-        isSet[DAY_OF_MONTH] = false;
-        isSet[WEEK_OF_MONTH] = false;
-        isSet[DAY_OF_WEEK_IN_MONTH] = false;
-        break;
-
-      case WEEK_OF_YEAR:
-        isSet[DAY_OF_YEAR] = false;
-        isSet[MONTH] = false;
-        isSet[DAY_OF_MONTH] = false;
-        isSet[WEEK_OF_MONTH] = false;
-        isSet[DAY_OF_WEEK] = false;
-        isSet[DAY_OF_WEEK_IN_MONTH] = false;
-        break;
-
-      case HOUR_OF_DAY:
-        isSet[AM_PM] = false;
-        isSet[HOUR] = false;
-        break;
-
-      case HOUR:
-      case AM_PM:
-        isSet[HOUR_OF_DAY] = false;
-        break;
-
-      default:
-        updateAreFieldsSet();
+    Calendar(TimeZone timezone) {
+        fields = new int[FIELD_COUNT];
+        isSet = new boolean[FIELD_COUNT];
+        areFieldsSet = isTimeSet = false;
+        setLenient(true);
+        setTimeZone(timezone);
     }
-  }
 
-  /**
-  **	basic implementation --> no checks ...
-  */
-  // CG 20041112 - non-final in 1.4.2
-  public void set(int fld , int nv) {
-      fields[fld] = nv;
-      isSet[fld] = true;
-      clearIncompatibleFields(fld);
-      isTimeSet = false;
-      areFieldsSet = false;
-  }
-
-  public final void set(int year, int month, int date) {
-	fields[YEAR] = year;
-        isSet[YEAR] = true;
-	fields[MONTH] = month;
-        isSet[MONTH] = true;
-	fields[DATE] = date;
-        isSet[DATE] = true;
-        updateAreFieldsSet();
-        isTimeSet = false;
-  }
-
-  public final void set(int year, int month, int date, int hourOfDay, int minute) {
-	fields[YEAR] = year;
-        isSet[YEAR] = true;
-	fields[MONTH] = month;
-        isSet[MONTH] = true;
-	fields[DATE] = date;
-        isSet[DATE] = true;
-	fields[HOUR_OF_DAY] = hourOfDay;
-        isSet[HOUR_OF_DAY] = true;
-	fields[MINUTE] = minute;
-        isSet[MINUTE] = true;
-        updateAreFieldsSet();
-        isTimeSet = false;
-  }
-
-  public final void set(int year, int month, int date, int hourOfDay, int minute, int second) {
-	fields[YEAR] = year;
-        isSet[YEAR] = true;
-	fields[MONTH] = month;
-        isSet[MONTH] = true;
-	fields[DATE] = date;
-        isSet[DATE] = true;
-	fields[HOUR_OF_DAY] = hourOfDay;
-        isSet[HOUR_OF_DAY] = true;
-	fields[MINUTE] = minute;
-        isSet[MINUTE] = true;
-	fields[SECOND] = second;
-        isSet[SECOND] = true;
-        updateAreFieldsSet();
-     	isTimeSet = false;
-  }
-  // CG 20041112 - non-final in 1.4.2
-  public int get (int fld) {
-    complete();
-    return fields[fld];
-  }
-
-  protected void complete() {
-    if (!isTimeSet) {
-    	computeTime();
+	/**
+	 * Initializes this Calendar instance using the specified TimeZone and
+	 * Locale.
+	 * 
+	 * @param timezone
+	 *            the timezone
+	 * @param locale
+	 *            the locale
+	 */
+	protected Calendar(TimeZone timezone, Locale locale) {
+        this(timezone);
+        // TODO: get firstDayOfWeek, minimalDaysInFirstWeek from Locale
     }
-    if (!areFieldsSet) {
-    	computeFields();
+
+
+    /**
+     * Adds the specified amount to a Calendar field.
+     * 
+     * @param field
+     *            the Calendar field to modify
+     * @param value
+     *            the amount to add to the field
+     * 
+     * @exception IllegalArgumentException
+     *                when the specified field is DST_OFFSET or ZONE_OFFSET.
+     */
+    abstract public void add(int field, int value);
+
+    /**
+     * Answers if the Date specified by this Calendar instance is after the Date
+     * specified by the parameter. The comparison is not dependent on the time
+     * zones of the Calendars.
+     * 
+     * @param calendar
+     *            the Calendar instance to compare
+     * @return true when this Calendar is after calendar, false otherwise
+     * 
+     * @exception IllegalArgumentException
+     *                when the time is not set and the time cannot be computed
+     *                from the current field values
+     */
+    public boolean after(Object calendar) {
+        if (!(calendar instanceof Calendar)) {
+            return false;
+        }
+        return getTimeInMillis() > ((Calendar) calendar).getTimeInMillis();
     }
-  }
 
-  private void updateAreFieldsSet() {
-  	areFieldsSet = isSet[0];
-  	for (int i=1 ; i < FIELD_COUNT ; i++){
-  	 	areFieldsSet &= isSet[i];
-  	}
-
-  }
-
-  protected abstract void computeFields();
-  
-  protected abstract void computeTime();
-  
-  public final Date getTime() {
-     return new Date(getTimeInMillis());
-  }
-
-  public TimeZone getTimeZone() {
-   	return zone;
-  }
-
-  public void setTimeZone(TimeZone tz) {
-  	if (tz == null) {
-  		throw new NullPointerException();
-  	}
-  	this.zone = tz;
-  }
-  public final void clear() {
-    for (int i = 0; i < FIELD_COUNT; i++) {
-      fields[i] = 0;
-      areFieldsSet = false;
+    /**
+     * Answers if the Date specified by this Calendar instance is before the
+     * Date specified by the parameter. The comparison is not dependent on the
+     * time zones of the Calendars.
+     * 
+     * @param calendar
+     *            the Calendar instance to compare
+     * @return true when this Calendar is before calendar, false otherwise
+     * 
+     * @exception IllegalArgumentException
+     *                when the time is not set and the time cannot be computed
+     *                from the current field values
+     */
+    public boolean before(Object calendar) {
+        if (!(calendar instanceof Calendar)) {
+            return false;
+        }
+        return getTimeInMillis() < ((Calendar) calendar).getTimeInMillis();
     }
-    isTimeSet = false;
-  }
 
-  public final void clear(int fld) {
-    	fields[fld] = 0;
-    	areFieldsSet = false;
-    	isTimeSet = false;
-  }
-
-  protected final int internalGet(int fld) {
-   	return fields[fld];
-  }
-
-  public boolean isLenient() {
-   	return lenient;
-  }
-
-  public final boolean isSet(int fld) {
-   	return isSet[fld];
-  }
-
-  public void setLenient(boolean lenient) {
-   	this.lenient = lenient;
-  }
-
-
-  public Object clone() {
-    try {
-      Calendar cal = (Calendar) super.clone();
-      cal.fields = fields;
-      cal.isSet =  isSet;
-      cal.zone = (TimeZone) zone.clone();
-      return cal;
+    /**
+     * Clears all of the fields of this Calendar. All fields are initialized to
+     * zero.
+     * 
+     */
+    public final void clear() {
+        for (int i = 0; i < FIELD_COUNT; i++) {
+            fields[i] = 0;
+            isSet[i] = false;
+        }
+        areFieldsSet = isTimeSet = false;
     }
-    catch(CloneNotSupportedException cnse){
-      return null;
+
+    /**
+     * Clears the specified field to zero.
+     * 
+     * @param field
+     *            the field to clear
+     */
+    public final void clear(int field) {
+        fields[field] = 0;
+        isSet[field] = false;
+        areFieldsSet = isTimeSet = false;
     }
-  }
 
-  public int getFirstDayOfWeek(){
-  	return firstDayOfWeek;
-  }
-
-  public boolean equals(Object o) {
-    if(!(o instanceof Calendar)){
-      return false;
+    /**
+     * Answers a new Calendar with the same properties.
+     * 
+     * @return a shallow copy of this Calendar
+     * 
+     * @see java.lang.Cloneable
+     */
+    public Object clone() {
+        try {
+            Calendar clone = (Calendar) super.clone();
+            clone.fields = (int[])fields.clone();
+            clone.isSet = (boolean[])isSet.clone();
+            clone.zone = (TimeZone) zone.clone();
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
     }
-    Calendar cal = (Calendar)o;
-    complete();
-    cal.complete();
-    return this.time == cal.time
-        && this.zone.equals(cal.zone);
-  }
 
-  public int hashCode() {
-    return (int)time ^ ((int)(time>>32)) ^ zone.hashCode();
-  }
-
-  public String toString() {
-    StringBuffer buf = new StringBuffer(getClass().getName()).append('@')
-            .append(Integer.toHexString(System.identityHashCode(this)));
-    for(int i = 0 ; i < (FIELD_COUNT - 1) ; i++) {
-      buf.append(" Field[").append(i).append("] = ").append(get(i)).append(',');
+    /**
+     * Computes the time from the fields if the time has not already been set.
+     * Computes the fields from the time if the fields are not already set.
+     * 
+     * @exception IllegalArgumentException
+     *                when the time is not set and the time cannot be computed
+     *                from the current field values
+     */
+    protected void complete() {
+        if (!isTimeSet) {
+            computeTime();
+            isTimeSet = true;
+        }
+        if (!areFieldsSet) {
+            computeFields();
+            areFieldsSet = true;
+        }
     }
-    return buf.append(" Field[").append(FIELD_COUNT-1).append("] = ").append(get(FIELD_COUNT-1)).toString();
-  }
 
-  public void setFirstDayOfWeek(int value){
-    if(value < 1 || value > 7){
-      throw new IllegalArgumentException();
+    /**
+     * Computes the Calendar fields from the time.
+     * 
+     */
+    protected abstract void computeFields();
+
+    /**
+     * Computes the time from the Calendar fields.
+     * 
+     * @exception IllegalArgumentException
+     *                when the time cannot be computed from the current field
+     *                values
+     */
+    protected abstract void computeTime();
+
+    /**
+     * Compares the specified object to this Calendar and answer if they are
+     * equal. The object must be an instance of Calendar and have the same
+     * properties.
+     * 
+     * @param object
+     *            the object to compare with this object
+     * @return true if the specified object is equal to this Calendar, false
+     *         otherwise
+     */
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (!(object instanceof Calendar)) {
+            return false;
+        }
+        Calendar cal = (Calendar) object;
+        return getTimeInMillis() == cal.getTimeInMillis()
+                && isLenient() == cal.isLenient()
+                && getFirstDayOfWeek() == cal.getFirstDayOfWeek()
+                && getMinimalDaysInFirstWeek() == cal
+                        .getMinimalDaysInFirstWeek()
+                && getTimeZone().equals(cal.getTimeZone());
     }
-    firstDayOfWeek = value;
-  }
 
-  public int getMinimalDaysInFirstWeek(){
-    return minimalDaysInFirstWeek;
-  }
-
-  public void setMinimalDaysInFirstWeek(int value){
-    if(value < 1 || value > 7){
-      throw new IllegalArgumentException();
+    /**
+     * Gets the value of the specified field after computing the field values
+     * from the time if required.
+     * 
+     * @param field
+     *            the field
+     * @return the value of the specified field
+     * 
+     * @exception IllegalArgumentException
+     *                when the fields are not set, the time is not set, and the
+     *                time cannot be computed from the current field values
+     */
+    public int get(int field) {
+        complete();
+        return fields[field];
     }
-    minimalDaysInFirstWeek = value;
-  }
 
-  public abstract void roll(int fld, boolean up);
-
-  public void roll(int fld, int amt) {
-    boolean up = amt >= 0;
-    if(!up){
-      amt = -amt;
-    }
-    for(int i=0 ; i < amt ; i++){
-      roll(fld,up);
-    }
-  }
-
-  public int getActualMaximum(int fld) {
-    complete();
-    Calendar cal = (Calendar)clone();
-    cal.setLenient(false);
-    complete();
-    int value = cal.fields[fld];
-    do {
-      cal.roll(fld,true);
-      cal.complete();
-      if(value > cal.fields[fld]){
+    /**
+     * Gets the maximum value of the specified field for the current date.
+     * 
+     * @param field
+     *            the field
+     * @return the maximum value of the specified field
+     */
+    public int getActualMaximum(int field) {
+        int value, next;
+        if (getMaximum(field) == (next = getLeastMaximum(field))) {
+            return next;
+        }
+        complete();
+        long orgTime = time;
+        set(field, next);
+        do {
+            value = next;
+            roll(field, true);
+            next = get(field);
+        } while (next > value);
+        time = orgTime;
+        areFieldsSet = false;
         return value;
-      }
-      else {
-        value = cal.fields[fld];
-      }
+    }
 
-    } while(true);
-  }
-
-  public int getActualMinimum(int fld) {
-    complete();
-    Calendar cal = (Calendar)clone();
-    cal.setLenient(false);
-    complete();
-    int value = cal.fields[fld];
-    do {
-      cal.roll(fld,false);
-      cal.complete();
-      if(value < cal.fields[fld]){
+    /**
+     * Gets the minimum value of the specified field for the current date.
+     * 
+     * @param field
+     *            the field
+     * @return the minimum value of the specified field
+     */
+    public int getActualMinimum(int field) {
+        int value, next;
+        if (getMinimum(field) == (next = getGreatestMinimum(field))) {
+            return next;
+        }
+        complete();
+        long orgTime = time;
+        set(field, next);
+        do {
+            value = next;
+            roll(field, false);
+            next = get(field);
+        } while (next < value);
+        time = orgTime;
+        areFieldsSet = false;
         return value;
-      }
-      else {
-        value = cal.fields[fld];
-      }
+    }
 
-    } while(true);
-  }
+    /**
+     * Gets the list of installed Locales which support Calendar.
+     * 
+     * @return an array of Locale
+     */
+    public static synchronized Locale[] getAvailableLocales() {
+        return Locale.getAvailableLocales();
+    }
 
-  public abstract int getGreatestMinimum(int fld);
-  public abstract int getLeastMaximum(int fld);
-  public abstract int getMaximum(int fld);
-  public abstract int getMinimum(int fld);
+    /**
+     * Gets the first day of the week for this Calendar.
+     * 
+     * @return a Calendar day of the week
+     */
+    public int getFirstDayOfWeek() {
+        return firstDayOfWeek;
+    }
 
-   public static Locale[] getAvailableLocales(){
-     Locale[] l = new Locale[1];
-     l[0] = Locale.getDefault();
-     return l;
-   }
+    /**
+     * Gets the greatest minimum value of the specified field.
+     * 
+     * @param field
+     *            the field
+     * @return the greatest minimum value of the specified field
+     */
+    abstract public int getGreatestMinimum(int field);
 
+    /**
+     * Constructs a new instance of the Calendar subclass appropriate for the
+     * default Locale.
+     * 
+     * @return a Calendar subclass instance set to the current date and time in
+     *         the default timezone
+     */
+    public static synchronized Calendar getInstance() {
+        return new GregorianCalendar();
+    }
+
+    /**
+     * Constructs a new instance of the Calendar subclass appropriate for the
+     * specified Locale.
+     * 
+     * @param locale
+     *            the locale to use
+     * @return a Calendar subclass instance set to the current date and time
+     */
+    public static synchronized Calendar getInstance(Locale locale) {
+        return new GregorianCalendar(locale);
+    }
+
+    /**
+     * Constructs a new instance of the Calendar subclass appropriate for the
+     * default Locale, using the specified TimeZone.
+     * 
+     * @param timezone
+     *            the timezone to use
+     * @return a Calendar subclass instance set to the current date and time in
+     *         the specified timezone
+     */
+    public static synchronized Calendar getInstance(TimeZone timezone) {
+        return new GregorianCalendar(timezone);
+    }
+
+    /**
+     * Constructs a new instance of the Calendar subclass appropriate for the
+     * specified Locale.
+     * 
+     * @param timezone
+     *            the timezone to use
+     * @param locale
+     *            the locale to use
+     * @return a Calendar subclass instance set to the current date and time in
+     *         the specified timezone
+     */
+    public static synchronized Calendar getInstance(TimeZone timezone,
+            Locale locale) {
+        return new GregorianCalendar(timezone, locale);
+    }
+
+    /**
+     * Gets the smallest maximum value of the specified field.
+     * 
+     * @param field
+     *            the field
+     * @return the smallest maximum value of the specified field
+     */
+    abstract public int getLeastMaximum(int field);
+
+    /**
+     * Gets the greatest maximum value of the specified field.
+     * 
+     * @param field
+     *            the field
+     * @return the greatest maximum value of the specified field
+     */
+    abstract public int getMaximum(int field);
+
+    /**
+     * Gets the minimal days in the first week of the year.
+     * 
+     * @return the minimal days in the first week of the year
+     */
+    public int getMinimalDaysInFirstWeek() {
+        return minimalDaysInFirstWeek;
+    }
+
+    /**
+     * Gets the smallest minimum value of the specified field.
+     * 
+     * @param field
+     *            the field
+     * @return the smallest minimum value of the specified field
+     */
+    abstract public int getMinimum(int field);
+
+    /**
+     * Gets the time of this Calendar as a Date object.
+     * 
+     * @return a new Date initialized to the time of this Calendar
+     * 
+     * @exception IllegalArgumentException
+     *                when the time is not set and the time cannot be computed
+     *                from the current field values
+     */
+    public final Date getTime() {
+        return new Date(getTimeInMillis());
+    }
+
+    /**
+     * Computes the time from the fields if required and answers the time.
+     * 
+     * @return the time of this Calendar
+     * 
+     * @exception IllegalArgumentException
+     *                when the time is not set and the time cannot be computed
+     *                from the current field values
+     */
+    public long getTimeInMillis() {
+        if (!isTimeSet) {
+            computeTime();
+            isTimeSet = true;
+        }
+        return time;
+    }
+
+    /**
+     * Gets the timezone of this Calendar.
+     * 
+     * @return the timezone used by this Calendar
+     */
+    public TimeZone getTimeZone() {
+        return zone;
+    }
+
+    /**
+     * Answers an integer hash code for the receiver. Objects which are equal
+     * answer the same value for this method.
+     * 
+     * @return the receiver's hash
+     * 
+     * @see #equals
+     */
+    public int hashCode() {
+        return (isLenient() ? 1237 : 1231) + getFirstDayOfWeek()
+                + getMinimalDaysInFirstWeek() + getTimeZone().hashCode();
+    }
+
+    /**
+     * Gets the value of the specified field without recomputing.
+     * 
+     * @param field
+     *            the field
+     * @return the value of the specified field
+     */
+    protected final int internalGet(int field) {
+        return fields[field];
+    }
+
+    /**
+     * Answers if this Calendar accepts field values which are outside the valid
+     * range for the field.
+     * 
+     * @return true if this Calendar is lenient, false otherwise
+     */
+    public boolean isLenient() {
+        return lenient;
+    }
+
+    /**
+     * Answers if the specified field is set.
+     * 
+     * @param field
+     *            a calendar field
+     * @return true if the specified field is set, false otherwise
+     */
+    public final boolean isSet(int field) {
+        return isSet[field];
+    }
+
+    /**
+     * Adds the specified amount the specified field and wrap the value of the
+     * field when it goes beyond the maximum or minimum value for the current
+     * date. Other fields will be adjusted as required to maintain a consistent
+     * date.
+     * 
+     * @param field
+     *            the field to roll
+     * @param value
+     *            the amount to add
+     */
+    public void roll(int field, int value) {
+        boolean increment = value >= 0;
+        int count = increment ? value : -value;
+        for (int i = 0; i < count; i++) {
+            roll(field, increment);
+        }
+    }
+
+    /**
+     * Increment or decrement the specified field and wrap the value of the
+     * field when it goes beyond the maximum or minimum value for the current
+     * date. Other fields will be adjusted as required to maintain a consistent
+     * date.
+     * 
+     * @param field
+     *            the field to roll
+     * @param increment
+     *            true to increment the field, false to decrement
+     */
+    abstract public void roll(int field, boolean increment);
+
+    /**
+     * Sets a field to the specified value.
+     * 
+     * @param field
+     *            the Calendar field to modify
+     * @param value
+     *            the value
+     */
+    public void set(int field, int value) {
+        fields[field] = value;
+        isSet[field] = true;
+        areFieldsSet = isTimeSet = false;
+        if (field > MONTH && field < AM_PM) {
+            lastDateFieldSet = field;
+        }
+        if (field == HOUR || field == HOUR_OF_DAY) {
+            lastTimeFieldSet = field;
+        }
+        if (field == AM_PM) {
+            lastTimeFieldSet = HOUR;
+        }
+    }
+
+    /**
+     * Sets the year, month and day of the month fields.
+     * 
+     * @param year
+     *            the year
+     * @param month
+     *            the month
+     * @param day
+     *            the day of the month
+     */
+    public final void set(int year, int month, int day) {
+        set(YEAR, year);
+        set(MONTH, month);
+        set(DATE, day);
+    }
+
+    /**
+     * Sets the year, month, day of the month, hour of day and minute fields.
+     * 
+     * @param year
+     *            the year
+     * @param month
+     *            the month
+     * @param day
+     *            the day of the month
+     * @param hourOfDay
+     *            the hour of day
+     * @param minute
+     *            the minute
+     */
+    public final void set(int year, int month, int day, int hourOfDay,
+            int minute) {
+        set(year, month, day);
+        set(HOUR_OF_DAY, hourOfDay);
+        set(MINUTE, minute);
+    }
+
+    /**
+     * Sets the year, month, day of the month, hour of day, minute and second
+     * fields.
+     * 
+     * @param year
+     *            the year
+     * @param month
+     *            the month
+     * @param day
+     *            the day of the month
+     * @param hourOfDay
+     *            the hour of day
+     * @param minute
+     *            the minute
+     * @param second
+     *            the second
+     */
+    public final void set(int year, int month, int day, int hourOfDay,
+            int minute, int second) {
+        set(year, month, day, hourOfDay, minute);
+        set(SECOND, second);
+    }
+
+    /**
+     * Sets the first day of the week for this Calendar.
+     * 
+     * @param value
+     *            a Calendar day of the week
+     */
+    public void setFirstDayOfWeek(int value) {
+        firstDayOfWeek = value;
+    }
+
+    /**
+     * Sets this Calendar to accept field values which are outside the valid
+     * range for the field.
+     * 
+     * @param value
+     *            a boolean value
+     */
+    public void setLenient(boolean value) {
+        lenient = value;
+    }
+
+    /**
+     * Sets the minimal days in the first week of the year.
+     * 
+     * @param value
+     *            the minimal days in the first week of the year
+     */
+    public void setMinimalDaysInFirstWeek(int value) {
+        minimalDaysInFirstWeek = value;
+    }
+
+    /**
+     * Sets the time of this Calendar.
+     * 
+     * @param date
+     *            a Date object
+     */
+    public final void setTime(Date date) {
+        setTimeInMillis(date.getTime());
+    }
+
+    /**
+     * Sets the time of this Calendar.
+     * 
+     * @param milliseconds
+     *            the time as the number of milliseconds since Jan. 1, 1970
+     */
+    public void setTimeInMillis(long milliseconds) {
+        if (!isTimeSet || !areFieldsSet || time != milliseconds) {
+            time = milliseconds;
+            isTimeSet = true;
+            areFieldsSet = false;
+            complete();
+        }
+    }
+
+    /**
+     * Sets the timezone used by this Calendar.
+     * 
+     * @param timezone
+     *            a TimeZone
+     */
+    public void setTimeZone(TimeZone timezone) {
+        zone = timezone;
+        areFieldsSet = false;
+    }
+
+    /**
+     * Answers the string representation of this Calendar.
+     * 
+     * @return the string representation of this Calendar
+     */
+    public String toString() {
+        StringBuffer result = new StringBuffer(getClass().getName() + "[time="
+                + (isTimeSet ? String.valueOf(time) : "?")
+                + ",areFieldsSet="
+                + areFieldsSet
+                + // ",areAllFieldsSet=" + areAllFieldsSet +
+                ",lenient=" + lenient + ",zone=" + zone + ",firstDayOfWeek="
+                + firstDayOfWeek + ",minimalDaysInFirstWeek="
+                + minimalDaysInFirstWeek);
+        for (int i = 0; i < FIELD_COUNT; i++) {
+            result.append(',');
+            result.append(fieldNames[i]);
+            result.append('=');
+            if (isSet[i]) {
+                result.append(fields[i]);
+            } else {
+                result.append('?');
+            }
+        }
+        result.append(']');
+        return result.toString();
+    }
+
+    /**
+     * Compares the times of the two Calendars, which represent the milliseconds
+     * from the January 1, 1970 00:00:00.000 GMT (Gregorian).
+     * 
+     * @param anotherCalendar
+     *            another calendar that is compared with.
+     * @return 0 if the times of the two calendar are equal, -1 if the time of
+     *         this calendar is before the other one, 1 if the time of this
+     *         calendar is after the other one.
+     * @throws NullPointerException
+     *             if the argument of calendar is null.
+     * @throws IllegalArgumentException
+     *             if the argument of the calendar does not include a valid time
+     *             value.
+     */
+    public int compareTo(Calendar anotherCalendar) {
+        if (null == anotherCalendar) {
+            throw new NullPointerException();
+        }
+        long timeInMillis = getTimeInMillis();
+        long anotherTimeInMillis = anotherCalendar.getTimeInMillis();
+        if (timeInMillis > anotherTimeInMillis) {
+            return 1;
+        }
+        if (timeInMillis == anotherTimeInMillis) {
+            return 0;
+        }
+        return -1;
+    }
+
+    private static final ObjectStreamField[] serialPersistentFields = {
+            new ObjectStreamField("areFieldsSet", Boolean.TYPE),
+            new ObjectStreamField("fields", int[].class),
+            new ObjectStreamField("firstDayOfWeek", Integer.TYPE),
+            new ObjectStreamField("isSet", boolean[].class),
+            new ObjectStreamField("isTimeSet", Boolean.TYPE),
+            new ObjectStreamField("lenient", Boolean.TYPE),
+            new ObjectStreamField("minimalDaysInFirstWeek", Integer.TYPE),
+            new ObjectStreamField("nextStamp", Integer.TYPE),
+            new ObjectStreamField("serialVersionOnStream", Integer.TYPE),
+            new ObjectStreamField("time", Long.TYPE),
+            new ObjectStreamField("zone", TimeZone.class), };
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        complete();
+        ObjectOutputStream.PutField putFields = stream.putFields();
+        putFields.put("areFieldsSet", areFieldsSet);
+        putFields.put("fields", this.fields);
+        putFields.put("firstDayOfWeek", firstDayOfWeek);
+        putFields.put("isSet", isSet);
+        putFields.put("isTimeSet", isTimeSet);
+        putFields.put("lenient", lenient);
+        putFields.put("minimalDaysInFirstWeek", minimalDaysInFirstWeek);
+        putFields.put("nextStamp", 2 /* MINIMUM_USER_STAMP */);
+        putFields.put("serialVersionOnStream", 1);
+        putFields.put("time", time);
+        putFields.put("zone", zone);
+        stream.writeFields();
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException,
+            ClassNotFoundException {
+        ObjectInputStream.GetField readFields = stream.readFields();
+        areFieldsSet = readFields.get("areFieldsSet", false);
+        this.fields = (int[]) readFields.get("fields", null);
+        firstDayOfWeek = readFields.get("firstDayOfWeek", Calendar.SUNDAY);
+        isSet = (boolean[]) readFields.get("isSet", null);
+        isTimeSet = readFields.get("isTimeSet", false);
+        lenient = readFields.get("lenient", true);
+        minimalDaysInFirstWeek = readFields.get("minimalDaysInFirstWeek", 1);
+        time = readFields.get("time", 0L);
+        zone = (TimeZone) readFields.get("zone", null);
+    }
 }
+
