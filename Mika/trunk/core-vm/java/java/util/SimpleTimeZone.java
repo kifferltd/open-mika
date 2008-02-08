@@ -416,21 +416,11 @@ public class SimpleTimeZone extends TimeZone {
         help =  after ? (7 - help + DOWinM)% 7 : -((DOWinM - help - 7)% 7);
         return (help+day);
   }
-/**
-** this method expects an array of at least length 5
-** IT DOES NOT CHECK THE LENGTH ... !!!!!
-*/
-  private native void getfields( int [] array, long time);
 
   public boolean inDaylightTime(Date date) {
-   	int [] array = new int[5];
-   	getfields(array, (date.getTime()+rawOffset));
-   	int era = GregorianCalendar.AD;
-   	if ( array[0] < 1 ) {
-   	 	era = GregorianCalendar.BC;
-   	 	array[0] = -array[0] -1;
-   	}
-   	return inDaylightTime(era, array[0], array[1], array[2], array[4], array[3]);
+    GregorianCalendar gc = new GregorianCalendar(this);
+    gc.setTime(date);
+    return inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.HOUR), gc.get(Calendar.MINUTE));
 
   }
 

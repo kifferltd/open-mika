@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2005, 2008 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -47,14 +47,18 @@ import java.util.TimeZone;
 
 public class TimeZoneResourceBundle extends ResourceBundle {
 
-  private static Hashtable timeZones;	
+  public static final int SHORT_NAME_STANDARD = 0;
+  public static final int LONG_NAME_STANDARD = 1;
+  public static final int SHORT_NAME_DAYLIGHT = 2;
+  public static final int LONG_NAME_DAYLIGHT = 3;
+
+  private static Hashtable timeZones = new Hashtable();	
 
   static {
     InputStream tzis = ClassLoader.getSystemResourceAsStream(System.getProperty("mika.timezones", "mika.timezones"));
     if (tzis == null) {
       tzis = new ByteArrayInputStream("GMT=0\n".getBytes());
     }
-    timeZones = new Hashtable();
     BufferedReader tzbr = new BufferedReader(new InputStreamReader(tzis));
     try {
       String tzline = tzbr.readLine();
@@ -89,6 +93,37 @@ public class TimeZoneResourceBundle extends ResourceBundle {
     }
     char rhs1stchar = rhs.charAt(0);
     if (Character.isDigit(rhs1stchar) || rhs1stchar == '-' || rhs1stchar == '+') {
+      // Strip off quoted strings from end
+      String[] names = new String[4];
+      while (names[3] == null && rhs.charAt(rhs.length() - 1) == '"') {
+        rhs = rhs.substring(0, rhs.length() - 1);
+        int openquote = rhs.lastIndexOf('"');
+        if (openquote < 0) {
+          System.err.println("Mismatched quotes in mika.timezones line: " + tzline);
+          return;
+        }
+        names[3] = names[2];
+        names[2] = names[1];
+        names[1] = names[0];
+        names[0] = rhs.substring(openquote + 1);
+        rhs = rhs.substring(0, openquote).trim();
+      }
+      if (names[0] != null) {
+        if (names[1] == null) {
+          names[1] = names[0];
+        }
+        if (names[2] == null) {
+          names[2] = names[0];
+        }
+        if (names[3] == null) {
+          names[3] = names[2];
+        }
+        TimeZoneDisplayNameResourceBundle.timeZoneNames.put(lhs, names);
+        if (TimeZoneDisplayNameResourceBundle.timeZoneNames.get(names[0]) == null) {
+          TimeZoneDisplayNameResourceBundle.timeZoneNames.put(names[0], names);
+        }
+      }
+
       int leftparen = rhs.indexOf('(');
       int rightparen = rhs.indexOf(')');
       float basicoffset;
@@ -97,7 +132,6 @@ public class TimeZoneResourceBundle extends ResourceBundle {
           basicoffset = Float.parseFloat(rhs);
           SimpleTimeZone stz = new SimpleTimeZone((int)(basicoffset * 3600000F), lhs);
           timeZones.put(lhs, stz);
-	  // System.out.println(lhs + " => " + stz);
         }
         else if (leftparen < 0 || rightparen < 0 || rightparen < leftparen) {
           System.err.println("Mismatched parentheses in mika.timezones line: " + tzline);
@@ -106,8 +140,7 @@ public class TimeZoneResourceBundle extends ResourceBundle {
         else {
   	  basicoffset = Float.parseFloat(rhs.substring(0, leftparen));
 	  String dststring = rhs.substring(leftparen + 1, rightparen);
-	  //float savings = 
-    Float.parseFloat(rhs.substring(rightparen + 1));
+	  float savings = Float.parseFloat(rhs.substring(rightparen + 1));
 	  StringTokenizer st = new StringTokenizer(dststring, ",");
 	  try {
             int startmonth = Integer.parseInt(st.nextToken()) - 1;
@@ -118,9 +151,8 @@ public class TimeZoneResourceBundle extends ResourceBundle {
             int endday = Integer.parseInt(st.nextToken());
             int enddayofweek = (Integer.parseInt(st.nextToken()) % 7) + 1;
             int endtime = (int)(Float.parseFloat(st.nextToken()) * 3600000F);
-            SimpleTimeZone stz = new SimpleTimeZone((int)(basicoffset * 3600000F), lhs, startmonth, startday, startdayofweek, starttime, endmonth, endday, enddayofweek, endtime);
+            SimpleTimeZone stz = new SimpleTimeZone((int)(basicoffset * 3600000F), lhs, startmonth, startday, startdayofweek, starttime, endmonth, endday, enddayofweek, endtime/*, savings*/);
             timeZones.put(lhs, stz);
-	    // System.out.println(lhs + " => " + stz);
 	  }
 	  catch (NoSuchElementException nsee) {
             System.err.println("Too few DST elements in mika.timezone line: " + tzline);
@@ -140,7 +172,6 @@ public class TimeZoneResourceBundle extends ResourceBundle {
 	return;
       }
       timeZones.put(lhs, rhs);
-      //  System.out.println(lhs + " => " + rhs);
     }
   }
 
@@ -159,7 +190,6 @@ public class TimeZoneResourceBundle extends ResourceBundle {
   public Enumeration getKeys() {
     return timeZones.keys();
   }
-
 
 // methods for easy use ( TimeZone OBJECT )
   /**
@@ -258,14 +288,12 @@ public class TimeZoneResourceBundle extends ResourceBundle {
               z.setID(keyID);
               z.setRawOffset(z.getRawOffset() + 1000*60*mins);
               timeZones.put(keyID, z);
-	      // System.out.println(keyID + " => " + z);
             }
             else if (sign_char == '-') {
               z = (SimpleTimeZone)base.clone(); 
               z.setID(keyID);
               z.setRawOffset(z.getRawOffset() - 1000*60*mins);
               timeZones.put(keyID, z);
-	      // System.out.println(keyID + " => " + z);
             }
           }
         }

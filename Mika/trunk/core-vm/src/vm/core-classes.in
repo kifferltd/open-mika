@@ -645,29 +645,6 @@ wonka/vm/SystemClassLoader
   getBootclasspath	()Ljava/lang/String;	SystemClassLoader_getBootclasspath
   setSystemClassLoader	(Lwonka/vm/SystemClassLoader;)V	 SystemClassLoader_setSystemClassLoader
   getBootstrapFile	(Ljava/lang/String;)[B	SystemClassLoader_getBootstrapFile
-java/util/GregorianCalendar
-	setfields	(I)V			 GregorianCalendar_setfields
-	settime		(II)V			 GregorianCalendar_settime
-java/util/Calendar	
-	time		J
-#	isSet		[Z
-	fields		[I
-	MILLISECOND	I
-	SECOND		I
-	MINUTE		I
-	HOUR_OF_DAY	I
-	DATE		I
-	MONTH		I
-	YEAR		I
-	DAY_OF_WEEK	I
-	DAY_OF_YEAR	I
-	FIELD_COUNT	I
-	WEEK_OF_MONTH	I
-	DAY_OF_WEEK_IN_MONTH	I
-	WEEK_OF_YEAR	I
-java/util/SimpleTimeZone
-	getfields	([IJ)V			 SimpleTimeZone_getfields
-#
 # the resource bundle calls this method this way because it cannot reach this method from java
 #
 java/util/ResourceBundle
