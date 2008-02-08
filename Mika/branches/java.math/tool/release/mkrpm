@@ -1,0 +1,222 @@
+#!/bin/bash
+
+###########################################################################
+# Copyright (c) 2001 by Punch Telematix. All rights reserved.             #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of other           #
+#    contributors may be used to endorse or promote products derived      #
+#    from this software without specific prior written permission.        #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
+###########################################################################
+
+# -------------------------------------------------------------------
+# Main script for creating, installing and testing wonka rpm
+# you must be root to execute this script.
+# the startdirectory must contain an open-wonka dir with sources
+# -------------------------------------------------------------------
+
+# -------------------------------------------------------------------
+
+# global constants; can be overwritten
+
+rpmName=open-wonka
+wonkaRelease=
+rpmRelease=1
+specPath=open-wonka/tool/rpm
+
+# -------------------------------------------------------------------
+function checkRPMTools() {
+  if [ -z $RTTOOL ] ; then
+    # can't make use of j_seterror
+    echo "Environment variable RTTOOL not defined. Cannot proceed."
+    exit 1
+  else
+    source $RTTOOL/j_include
+    if [ $? -ne 0 ]; then
+      # can't make use of j_seterror
+      echo "Sourcing ${RTTOOL}/j_include failed. Aborting ..."
+      exit 1
+    fi
+    source $RTTOOL/rpm_include
+    j_seterror $? "Sourcing $RTTOOL/rpm_include failed. "
+    if [ $? -ne 0 ]; then
+      return $J_ERROR
+    fi
+  fi
+  return 0
+}
+
+# -------------------------------------------------------------------
+function showHelp() {
+cat <<EOF
+   This script creates a wonka rpm product file in directory
+   /usr/src/redhat/RPMS/i386/, and installs it in '/usr/local'.
+   You must be root to run this script.
+   It must execute in a directory containing the open-wonka sub-directory
+   usage : $0 [-x] -v wonkaRelease [-n rpmName][-r rpmRelease][-s specPath]
+   Possible commandline options are:
+
+     -x, if used, must be first parameter; sets verbose mode
+     -v, mandatory option identifies the wonka release as <a.b[.c]>
+     -n, specifies beginning of rpm file name, default=${rpmName}
+     -r, specifies rpm release as an integer value, default=${rpmRelease}
+     -s, specifies path for storing the input spec file for the rpm utility,
+         default=${specPath}
+     The spec file name will be composed as
+       'rpmName-wonkaRelease-rpmRelease.spec', e.g. 'open-wonka-0.9-1.spec'
+     The rpm file name will be composed as
+       'rpmName-wonkaRelease-rpmRelease.i386.rpm', e.g. 'open-wonka-0.9-1.i386.spec'
+EOF
+}
+
+# -------------------------------------------------------------------
+# function parses commandline and extracts parameters
+# -------------------------------------------------------------------
+
+
+function getArgs () {
+
+  unknownoption=
+
+  if [ $1 ] && [ $1 = -x ]; then
+    shift
+    set -x
+  fi
+
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --help | -h )
+        showHelp
+        exit 0
+        ;;
+      -n )
+          if [ ! $2 ] || [ ${2#-} != $2 ];  then
+            rpmName=error
+            echo "missing value for -n <rpmName> option"
+          else
+            rpmName=$2
+            shift
+          fi
+        ;;
+      -v )
+          if [ ! $2 ] || [ ${2#-} != $2 ];  then
+            wonkaRelease=error
+            echo "missing value for -v <wonkaRelease> option"
+          else
+            wonkaRelease=$2
+            shift
+          fi
+        ;;
+      -r )
+          if [ ! $2 ] || [ ${2#-} != $2 ];  then
+            rpmRelease=error
+            echo "missing value for -r <rpmRelease> option"
+          else
+            rpmRelease=$2
+            shift
+          fi
+        ;;
+      -s )
+          if [ ! $2 ] || [ ${2#-} != $2 ];  then
+            specPath=error
+            echo "missing value for -s <specPath> option"
+          else
+            specPath=$2
+            shift
+          fi
+        ;;
+      *)
+        echo "$1 : unknown option"
+        unknownoption=error
+        ;;
+    esac
+    shift
+  done
+
+  # abort if errors detected (prefix with 'x' to avoid emty strings)
+
+  if [ x$rpmName = x"error" ] || [ x"$wonkaRelease" = x"error" ] || [ x$rpmRelease = x"error" ] ||
+     [ x"$specPath" = x"error" ] || [ $unknownoption ]
+  then
+    j_seterror 1 "$0: parameter errors; try option --help. "
+    return $J_ERROR
+  fi
+
+  # test strings for zero length
+
+  if [ x$rpmName = x ] || [ x"$wonkaRelease" = x ] || [ x$rpmRelease = x ] ||
+     [ x"$specPath" = x ]
+  then
+    j_seterror 1 "$0: arguments missing; try option --help. "
+    return $J_ERROR
+  fi
+
+}
+
+# ------------------------------------------------------------------------------
+#  MAIN
+# ------------------------------------------------------------------------------
+
+#set -x
+checkRPMTools
+j_abort $? "$J_ERRORMSG"
+
+test $(whoami) = "root"
+j_abort $? "You must be root to execute this script."
+
+test -d open-wonka
+j_abort $? "Directory ./open-wonka not found."
+
+getArgs $*
+j_abort $J_ERROR "$J_ERRORMSG"
+
+# clear existing wonka executables; otherwise property files of
+# newly created rpm will not be correct.
+rpm_uninstall
+
+echo "Building rpm..."
+
+
+rpm_make $rpmName $wonkaRelease $rpmRelease $specPath
+
+# again clear existing wonka executables; otherwise installing new files may fail
+rpm_uninstall
+echo "Installing rpm..."
+rpm_install $rpmName $wonkaRelease $rpmRelease
+
+
+REPLY=
+j_continue "Would you like to check the debug binary?"
+if [ "$REPLY" = "y" ]; then
+  echo "  Visual Test Engine will be started.  "
+  echo "  If it runs fine, please leave using the 'quit' button. "
+  wonka-debug
+fi
+
+REPLY=
+j_continue "Would you like to check the non-debug binary?"
+if [ "$REPLY" = "y" ]; then
+  echo "  Visual Test Engine will be started.  "
+  echo "  If it runs fine, please leave using the 'quit' button. "
+  wonka
+fi
+

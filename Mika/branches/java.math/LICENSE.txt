@@ -1,0 +1,107 @@
+LICENSE.txt file for Mika
+=========================
+
+Parts of the Mika source code are derived from the Wonka project, and are
+copyright Punch Telematix. Other parts have been developed by Chris Gray
+trading as /k/ Embedded Java Solutions. Both the Punch Telematix portions
+(since 10 July 2007) and the /k/ Embedded Java Solutions portions (since 
+8 September 2006) are licensed under the Mika BSD License, see below.
+This license applies to all files marked as being copyright Punch Telematix,
+/k/ Embedded Java Solutions or ACUNIA NV, even if the copyright header does
+not explicitly state this (we are in the process of updating the copyright
+headers). 
+
+Parts of the class libraries are taken from the CLasspath project, and
+are covered by the Classpath license (GPL + exception). This applies to
+the following files:
+    core-vm/java/java/io/StreamTokenizer.java
+    core-vm/java/java/util/AbstractMap.java
+    core-vm/java/java/util/IdentityHashMap.java
+    core-vm/java/java/util/HashMap.java
+    core-vm/java/java/util/LinkedHashMap.java
+    core-vm/java/java/util/LinkedHashSet.java
+    core-vm/java/java/security/cert/CertPathBuilderSpi.java
+    core-vm/java/java/security/cert/CertPathValidator.java
+    core-vm/java/java/security/cert/PKIXCertPathValidatorResult.java
+    core-vm/java/java/security/cert/X509CertSelector.java
+    core-vm/java/java/security/cert/CertPathBuilderException.java
+    core-vm/java/java/security/cert/X509CRLSelector.java
+    core-vm/java/java/security/cert/CertPathValidatorResult.java
+    core-vm/java/java/security/cert/CertPathParameters.java
+    core-vm/java/java/security/cert/CertStoreSpi.java
+    core-vm/java/java/security/cert/CertPathValidatorSpi.java
+    core-vm/java/java/security/cert/CertPathBuilderResult.java
+    core-vm/java/java/security/cert/PKIXCertPathChecker.java
+    core-vm/java/java/security/cert/PKIXBuilderParameters.java
+    core-vm/java/java/security/cert/TrustAnchor.java
+    core-vm/java/java/security/cert/CollectionCertStoreParameters.java
+    core-vm/java/java/security/cert/PolicyNode.java
+    core-vm/java/java/security/cert/PKIXParameters.java
+Refer to the copyright header of those files for more information.
+
+The BDF font files contained in directory vm-cmp/awt/rudolph/resource/font/
+are copyright Adobe Systems Incorporated and Digital Equipment Corporation.
+See the "X Consortium License" below.
+
+The tests contained in directory tool/mauve/java are copyright various partiues,
+and are covered by GPL v2.
+
+<<<<<<<<<<<<< Begin Mika BSD License <<<<<<<<<<<<<<<<<<<<<<<<
+
+Parts copyright (c) 1999, 2000, 2001, 2002 by Punch Telematix. All rights reserved.
+Parts copyright (c) 2003, 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions
+   nor the names of other contributors may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL PUNCH
+TELEMATIX, /K/ EMBEDDED SOLUTIONS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+>>>>>>>>>>>>> End Mika BSD License >>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+<<<<<<<<<<<<< Begin X Consortium License <<<<<<<<<<<<<<<<<<<<
+
+COMMENT $XConsortium: timBI10.bdf,v 1.14 95/01/26 18:06:13 gildea Exp $
+COMMENT 
+COMMENT +
+COMMENT  Copyright 1984-1989, 1994 Adobe Systems Incorporated.
+COMMENT  Copyright 1988, 1994 Digital Equipment Corporation.
+COMMENT
+COMMENT  Adobe is a trademark of Adobe Systems Incorporated which may be
+COMMENT  registered in certain jurisdictions.
+COMMENT  Permission to use these trademarks is hereby granted only in
+COMMENT  association with the images described in this file.
+COMMENT
+COMMENT  Permission to use, copy, modify, distribute and sell this software
+COMMENT  and its documentation for any purpose and without fee is hereby
+COMMENT  granted, provided that the above copyright notices appear in all
+COMMENT  copies and that both those copyright notices and this permission
+COMMENT  notice appear in supporting documentation, and that the names of
+COMMENT  Adobe Systems and Digital Equipment Corporation not be used in
+COMMENT  advertising or publicity pertaining to distribution of the software
+COMMENT  without specific, written prior permission.  Adobe Systems and
+COMMENT  Digital Equipment Corporation make no representations about the
+COMMENT  suitability of this software for any purpose.  It is provided "as
+COMMENT  is" without express or implied warranty.
+
+<<<<<<<<<<<<< End X Consortium License <<<<<<<<<<<<<<<<<<<<
+
