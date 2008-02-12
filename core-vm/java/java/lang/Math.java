@@ -630,6 +630,7 @@ public final class Math {
     */ 
     return temp + 0.6931471805599453 * exponent;
   }
+
   /**
    ** For the exp() method we just use a schoolbook Taylor series.
    ** I'm sure there are faster ways to do this ...

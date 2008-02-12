@@ -30,4 +30,4 @@ SubDir WONKA_TOP core-vm src native java math ;
 
 LOCATE_TARGET = $(OROOT)/mika/bin ;
 
-Library $(WONKA_LIB) :  BigInteger.c ;
+Library $(WONKA_LIB) :  Utils.c ;

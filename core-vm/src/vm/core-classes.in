@@ -442,26 +442,13 @@ java/lang/SecurityManager
 	getNonPrivilegedClassContext	()[Ljava/lang/Class;	SecurityManager_getNonPrivilegedClassContext
 	currentClassLoader ()Ljava/lang/ClassLoader; SecurityManager_currentClassLoader
 	currentLoadedClass ()Ljava/lang/Class;	SecurityManager_currentLoadedClass
-java/math/BigInteger
-        lowestSetBit    I
-        firstNonzeroByteNum     I
-        bitCount        I
-        bitLength       I
-        valueCache      [B
-        negateCache     Ljava/math/BigInteger;
-        magnitude       [B
-        signum          I
-        nativeMultiply  (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_nativeMultiply
-        divide          (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_divide
-        nativeMod               (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_nativeMod
-        remainder       (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_remainder
-        nativeSubtract  (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_nativeSubtract
-        add             (Ljava/math/BigInteger;)Ljava/math/BigInteger;          BigInteger_add
-#       divideAndRemainder      (Ljava/math/BigInteger;)Ljava/math/BigInteger;  BigInteger_divideAndRemainder
-        nativeNegateBytes       ()[B    BigInteger_negateBytes
-	multiplyArrays	([I[I[I)[I	BigInteger_static_multiplyArrays
-	squareArray	([I[I)[I	BigInteger_static_squareArray
-	remainderArrays	([I[I)[I	BigInteger_static_remainderArrays
+java/math/Utils
+	numberOfLeadingZeros	(I)I	Utils_static_numberOfLeadingZeros_int
+	numberOfLeadingZeros	(J)I	Utils_static_numberOfLeadingZeros_long
+	numberOfTrailingZeros	(I)I	Utils_static_numberOfTrailingZeros_int
+	numberOfTrailingZeros	(J)I	Utils_static_numberOfTrailingZeros_long
+	signum			(I)I	Utils_static_signum_int
+	signum			(J)I	Utils_static_signum_long
 wonka/rmi/RMIConnection
         getStringHash   (Ljava/lang/String;)J  RMIConnection_getStringHash
 wonka/decoders/Latin1Decoder
