@@ -774,36 +774,6 @@ public abstract class Calendar implements Serializable, Cloneable {
         return result.toString();
     }
 
-    /**
-     * Compares the times of the two Calendars, which represent the milliseconds
-     * from the January 1, 1970 00:00:00.000 GMT (Gregorian).
-     * 
-     * @param anotherCalendar
-     *            another calendar that is compared with.
-     * @return 0 if the times of the two calendar are equal, -1 if the time of
-     *         this calendar is before the other one, 1 if the time of this
-     *         calendar is after the other one.
-     * @throws NullPointerException
-     *             if the argument of calendar is null.
-     * @throws IllegalArgumentException
-     *             if the argument of the calendar does not include a valid time
-     *             value.
-     */
-    public int compareTo(Calendar anotherCalendar) {
-        if (null == anotherCalendar) {
-            throw new NullPointerException();
-        }
-        long timeInMillis = getTimeInMillis();
-        long anotherTimeInMillis = anotherCalendar.getTimeInMillis();
-        if (timeInMillis > anotherTimeInMillis) {
-            return 1;
-        }
-        if (timeInMillis == anotherTimeInMillis) {
-            return 0;
-        }
-        return -1;
-    }
-
     private static final ObjectStreamField[] serialPersistentFields = {
             new ObjectStreamField("areFieldsSet", Boolean.TYPE),
             new ObjectStreamField("fields", int[].class),
