@@ -570,19 +570,22 @@ w_instance System_getCmdLineProperties(JNIEnv *env, w_instance this) {
   }
 
   if (length > 0) {
-
+    enterUnsafeRegion(thread);
     Array = allocArrayInstance_1d(thread, clazzArrayOf_String, length);
 
     if (Array) {
       for (i = 0; i < length; i++) {
         String = allocInstance(thread, clazzString);
         if (String) {
+          enterSafeRegion(thread);
           string = cstring2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
+          enterUnsafeRegion(thread);
           setWotsitField(String, F_String_wotsit, string);
         } 
-        setArrayReferenceField(Array, String, i);
+        setArrayReferenceField_unsafe(Array, String, i);
       }
     }
+    enterSafeRegion(thread);
   }
 
   return Array;
