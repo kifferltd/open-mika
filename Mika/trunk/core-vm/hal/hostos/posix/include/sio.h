@@ -66,11 +66,6 @@ typedef struct termios *w_termios;
 
 #define SIO_WAIT_FOR_IOEVT 256
 
-#define SIO0_DEFAULT_BITRATE B115200
-#define SIO1_DEFAULT_BITRATE B115200
-#define SIO2_DEFAULT_BITRATE B115200
-#define SIO3_DEFAULT_BITRATE B115200
-
 void sio_set_path(int n, char *s);
 
 #endif /* SIO_H */
