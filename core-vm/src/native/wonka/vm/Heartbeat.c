@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2002, 2003 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -28,6 +28,12 @@
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
+ 
+#ifdef USE_NANOSLEEP
+#include <time.h>
+#else
+#include <sys/time.h>
+#endif
 
 #include "clazz.h"
 #include "core-classes.h"
@@ -117,5 +123,46 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
 
 w_void Heartbeat_setThread(JNIEnv *env, w_instance thisObject, w_instance thread) {
   heartbeat_thread = ((w_thread)getWotsitField(thread, F_Thread_wotsit))->kthread;
+}
+
+#ifdef USE_NANOSLEEP
+static struct timespec ts;
+#endif
+static struct timeval before;
+static struct timeval now;
+static w_boolean inited;
+
+w_long system_time_offset;
+
+void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+  long micros = millis * 1000;
+  w_long diff;
+
+#ifdef USE_NANOSLEEP
+  if (!inited) {
+    ts.tv_sec = 0;
+    ts.tv_nsec = micros * 1000;
+  }
+  nanosleep(&ts, NULL);
+#else
+  usleep(micros);
+#endif
+
+  if (!inited) {
+    gettimeofday(&now, NULL);
+    inited = TRUE;
+  }
+  else {
+    before = now;
+    gettimeofday(&now, NULL);
+    diff = (now.tv_usec - before.tv_usec) / 1000 + (now.tv_sec - before.tv_sec) * 1000;
+    if (diff < 0 || diff > 2 * millis) {
+      x_adjust_timers(millis);
+    }
+  }
+}
+
+w_long Heartbeat_static_getTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
+   return system_time_offset;
 }
 

@@ -213,18 +213,15 @@ typedef struct x_Thread {
   void *                o4p_thread_argument;    /* The argument to be passed to that function */
   x_thread              o4p_thread_next;        /* Next thread in our linked list */
 
-  x_queue               queueing_on;
-  x_monitor             waiting_on;
-  w_int                 waiting_with;
+  volatile x_queue      queueing_on;
+  volatile x_monitor    waiting_on;
+  volatile w_int        waiting_with;
 #ifndef HAVE_TIMEDWAIT
   w_int                 sleep_ticks;           /* Number of ticks for which to sleep */
-#endif
   pthread_cond_t       *sleeping_on_cond;  /* Condition variable on which to broadcast when timer expires */
   pthread_mutex_t      *sleeping_on_mutex; /* Mutex which should be owned when doing so */
+#endif
   volatile int          flags;
-
-  x_thread              next;
-  x_thread              previous;
 
   void *                xref;                   /* May be used to point to user thread control block */
   x_report              report;
@@ -270,6 +267,8 @@ void setScheduler(int scheduler);
 #define currentTicks                 (o4pe->timer_ticks)
 
 extern void x_setup_timers(x_size);
+
+extern void x_adjust_timers(x_long);
 
 /// Number of command line arguments (copy of argc)
 extern int command_line_argument_count;

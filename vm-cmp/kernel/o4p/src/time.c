@@ -188,9 +188,64 @@ void x_setup_timers(x_size millis) {
   x_thread_create(timer_thread, timer_entry_function, NULL, NULL, TIMER_THREAD_STACK_SIZE, NUM_PRIORITIES - 1, 0);
 }
 
+// No-op because we don't care about system time, only our own ticks
+void x_adjust_timers(x_long millis) {
+}
+
 #else
 void x_setup_timers(x_size millis) {
   usecs_per_tick = millis * 1000;
+}
+
+/*
+ * Adjust for timer jump (e.g. when another process calls settimeofday()).
+ * If the jump is positive, no action is taken. Otherwise we iterate over
+ * threads: if a thread is waiting or sleeping, we wake it up. This may
+ * result in threads returning from a wait() unexpectedly (spurious
+ * notification): tant pis, recent versions of the Java specs allow this
+ * behaviour. If the thread was sleeping we rely on the
+ * x_thread_sleep() logic to recalculate the wakeup time.
+ */
+void x_adjust_timers(x_long millis) {
+  int res;
+  x_thread t;
+
+  if (millis > 0) {
+
+    return;
+
+  }
+
+  res = pthread_mutex_lock(&o4pe->threadsLock);
+  if (res != 0) {
+    w_dump("Attempt to lock o4pe->threadsLock failed... %d\n", res);
+    abort();
+  }
+  for (t = o4pe->threads; t != NULL; t = t->o4p_thread_next) {
+    if (!t->xref) {
+      continue;
+    }
+
+    if (t->state == xt_sleeping) {
+      pthread_mutex_lock(&t->sleep_timer);
+      pthread_cond_broadcast(&t->sleep_cond);
+      pthread_mutex_unlock(&t->sleep_timer);
+    }
+    else {
+      x_monitor monitor = t->waiting_on;
+
+      if (monitor) {
+        pthread_mutex_lock(&monitor->mon_mutex);
+        pthread_cond_broadcast(&monitor->mon_cond);
+        pthread_mutex_unlock(&monitor->mon_mutex);
+      }
+    }
+  }
+  res = pthread_mutex_unlock(&o4pe->threadsLock);
+  if (res != 0) {
+    w_dump("Attempt to unlock o4pe->threadsLock failed... %d\n", res);
+    abort();
+  }
 }
 
 #endif

@@ -149,8 +149,10 @@ unsigned int x_queue_receive(x_queue queue, void **msg, x_sleep owait) {
     
     setFlag(current->flags, TF_RECEIVING);
     current->queueing_on = queue;
+#ifndef HAVE_TIMEDWAIT
     current->sleeping_on_cond = &queue->queue_not_empty;
     current->sleeping_on_mutex = &queue->queue_mutex;
+#endif
     if (owait == x_eternal) {
       while (queue->available == 0) {
         pthread_cond_wait(&queue->queue_not_empty, &queue->queue_mutex);
@@ -187,8 +189,10 @@ unsigned int x_queue_receive(x_queue queue, void **msg, x_sleep owait) {
     }
     current->queueing_on = NULL;
     unsetFlag(current->flags, TF_RECEIVING | TF_TIMEOUT);
+#ifndef HAVE_TIMEDWAIT
     current->sleeping_on_cond = NULL;
     current->sleeping_on_mutex = NULL;
+#endif
   }
 
   if (status == xs_success) {
@@ -258,8 +262,10 @@ unsigned int x_queue_send(x_queue queue, void *msg, x_sleep wait) {
 
     setFlag(current->flags, TF_SENDING);
     current->queueing_on = queue;
+#ifndef HAVE_TIMEDWAIT
     current->sleeping_on_cond = &queue->queue_not_full;
     current->sleeping_on_mutex = &queue->queue_mutex;
+#endif
 
     if (wait == x_eternal) {
       while (queue->available == queue->capacity) {
@@ -300,8 +306,10 @@ unsigned int x_queue_send(x_queue queue, void *msg, x_sleep wait) {
 
     current->queueing_on = NULL;
     unsetFlag(current->flags, TF_SENDING | TF_TIMEOUT);
+#ifndef HAVE_TIMEDWAIT
     current->sleeping_on_cond = NULL;
     current->sleeping_on_mutex = NULL;
+#endif
   }
 
   if (status == xs_success) {

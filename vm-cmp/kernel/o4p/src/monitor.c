@@ -180,23 +180,21 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 
   monitor->n_waiting++;
 
+#ifndef HAVE_TIMEDWAIT
+  current->sleeping_on_cond = &monitor->mon_cond;
+  current->sleeping_on_mutex = &monitor->mon_mutex;
+#endif
   if (timeout == x_eternal) {
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     retcode = pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
   }
   else {
 #ifdef HAVE_TIMEDWAIT
     struct timespec ts;
     x_now_plus_ticks(timeout, &ts);
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     retcode = pthread_cond_timedwait(&monitor->mon_cond, &monitor->mon_mutex, &ts);
 #else // pthreads lib has no pthread_cond_timed_wait(), fake it
     loempa(2, "Setting thread %p sleep_ticks to %d\n", current, timeout);
     current->sleep_ticks = timeout;
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     join_sleeping_threads(current);
     retcode = pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
     leave_sleeping_threads(current);
@@ -204,8 +202,10 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 #endif
   }
 
+#ifndef HAVE_TIMEDWAIT
   current->sleeping_on_cond = NULL;
   current->sleeping_on_mutex = NULL;
+#endif
   loempa(2, "Thread %p has returned from pthread_cond_*wait, ret=%d\n", current, retcode);
   if (retcode == 0 || retcode == EAGAIN || retcode == ETIMEDOUT) {
 
