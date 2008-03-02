@@ -44,6 +44,8 @@ public final class Heartbeat implements Runnable {
 
   private Method  shutdownMethod;
 
+  public static native long getTimeOffset();
+
   /**
    ** Our very private constructor.  Start our thread running.
    */
@@ -92,38 +94,37 @@ public final class Heartbeat implements Runnable {
    ** The run() method
    */
   public void run() {
-    while(true) {
-      try {
-        Thread.sleep(PERIOD);
-      }
-      catch (InterruptedException ie) {
-      }
+    boolean shutdown = false;
+    int rc = 0;
+
+    while(!shutdown) {
+      nativesleep(PERIOD);
 
       if(isKilled()) {
-        try {
-          shutdownMethod.invoke(theRuntime, new Object[0]);
-          theRuntime.exit(-1);
+        if (DEBUG) {
+          System.out.println("Heartbeat: fatal signal received, invoking shutdown");
         }
-        catch (Throwable t) {
-          t.printStackTrace();
-        }
+        rc = 2;
+        shutdown = true;
       }
+      else if (numberNonDaemonThreads() == 0) {
+        if (DEBUG) {
+          System.out.println("Heartbeat: no non-daemon threads are running, invoking shutdown");
+        }
+        shutdown = true;
+      }
+    }
 
-      if (numberNonDaemonThreads() == 0) {
-        try {
-          if (DEBUG) {
-            System.out.println("Heartbeat: no non-daemon threads are running, invoking shutdown");
-          }
-          shutdownMethod.invoke(theRuntime, new Object[0]);
-          theRuntime.exit(0);
-        }
-        catch (Throwable t) {
-          t.printStackTrace();
-        }
-        finally {
-          theRuntime.exit(1);
-        }
-      }
+    try {
+      theRuntime.runFinalization();
+      shutdownMethod.invoke(theRuntime, new Object[0]);
+      theRuntime.exit(rc);
+    }
+    catch (Throwable t) {
+      t.printStackTrace();
+    }
+    finally {
+      theRuntime.exit(1);
     }
   }
 
@@ -132,5 +133,7 @@ public final class Heartbeat implements Runnable {
   private static native int numberNonDaemonThreads();
   
   private static native boolean isKilled();
+
+  private static native void nativesleep(long period);
 }
 

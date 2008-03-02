@@ -34,6 +34,7 @@
 package java.util;
 
 import java.lang.ref.WeakReference;
+import wonka.vm.Heartbeat;
 
 class TimerThread extends Thread implements Comparator {
 
@@ -102,14 +103,15 @@ class TimerThread extends Thread implements Comparator {
               continue;
             }
 
-            time = System.currentTimeMillis();
+            time = System.currentTimeMillis() - Heartbeat.getTimeOffset();
+            // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + " => time = " + time);
             if(time < task.startTime){
               //it is not yet time todo the task
               //System.out.println("TIMERTHREAD " + this +": task is not ready to run waiting "+(task.startTime - time));
               waiting = true;
               this.wait(task.startTime - time);
               waiting = false;
-              //System.out.println("TIMERTHREAD " + this +":  waited "+(System.currentTimeMillis() - time));
+              //System.out.println("TIMERTHREAD " + this +":  waited "+(System.currentTimeMillis() - Heartbeat.getTimeOffset() - time));
               continue;
             }
             //System.out.println("TIMERTHREAD " + this +": task is ready to run "+(task.startTime - time));
@@ -148,7 +150,8 @@ class TimerThread extends Thread implements Comparator {
     if(delay < 0){
       throw new IllegalArgumentException("negative delay is not allowed");
     }
-    scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate);
+    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis() - Heartbeat.getTimeOffset()));
+    scheduleAtTime(task, delay + System.currentTimeMillis() - Heartbeat.getTimeOffset(), period, fixedRate);
   }
 
   synchronized void scheduleAtTime(TimerTask task, long time, long period, boolean fixedRate){
@@ -162,6 +165,7 @@ class TimerThread extends Thread implements Comparator {
       throw new IllegalStateException("timer cannot schedule task "+task);
     }
     //System.out.println("Adding task to timer "+task);
+    //System.out.println("Setting " + task + ".startTime to " + time);
     task.startTime = time;
     task.period = period;
     task.fixed = fixedRate;

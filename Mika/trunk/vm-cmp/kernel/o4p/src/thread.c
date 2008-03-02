@@ -266,9 +266,11 @@ void *start_routine(void *thread_ptr) {
     loempa(7,"Native thread %p returned normally\n", thread);
   }
 
+#ifndef HAVE_TIMEDWAIT
   if (thread->sleeping_on_cond) {
     pthread_cond_broadcast(thread->sleeping_on_cond);
   }
+#endif
   thread->state = xt_ended;
 #ifndef HAVE_TIMEDWAIT
   leave_sleeping_threads(thread);
@@ -333,7 +335,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->waiting_on = NULL;
    thread->waiting_with = 0;
    thread->flags = 0;
-   x_list_init(thread);
 
    /*
    ** Set scheduling and priority
@@ -459,7 +460,6 @@ x_status x_thread_attach_current(x_thread thread) {
    thread->waiting_with = 0;
    thread->flags = 0;
    thread->state = xt_ready;
-   x_list_init(thread);
    thread->o4p_thread_argument = NULL;
    threadRegister(thread);
 
@@ -597,8 +597,10 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
     return xs_success;
   }
 
+#ifndef HAVE_TIMEDWAIT
   thread->sleeping_on_cond = &thread->sleep_cond;
   thread->sleeping_on_mutex = &thread->sleep_timer;
+#endif
   thread->state = xt_sleeping;
 
   pthread_mutex_lock(&thread->sleep_timer);
@@ -617,8 +619,10 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
 #endif
   pthread_mutex_unlock(&thread->sleep_timer);
 
+#ifndef HAVE_TIMEDWAIT
   thread->sleeping_on_cond = NULL;
   thread->sleeping_on_mutex = NULL;
+#endif
   unsetFlag(thread->flags, TF_TIMEOUT);
 
   thread->state = xt_ready;
@@ -649,13 +653,18 @@ x_status x_thread_suspend(x_thread thread) {
 x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
   x_status status = xs_unknown;
   x_thread joiner = x_thread_current();
-  struct timeval end;
   struct timespec one_tick_ts;
+#ifdef HAVE_TIMEDWAIT
+  struct timeval end;
+#endif
 
-  
-  joiner->state = xt_joining;
   one_tick_ts.tv_sec = 0;
   one_tick_ts.tv_nsec = 1000 * x_ticks2usecs(1);
+#ifndef HAVE_TIMEDWAIT
+  joiner->sleep_ticks = timeout;
+#endif
+  
+  joiner->state = xt_joining;
 
   if (timeout == x_eternal) {
      while (1) {
@@ -667,7 +676,9 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
      }
   }
   else {
+#ifdef HAVE_TIMEDWAIT
      x_now_plus_ticks(timeout, &end);
+#endif
 
      do {
        if (joinee->state >= xt_ended) {
@@ -675,7 +686,11 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
        }
 
        nanosleep(&one_tick_ts, NULL);
+#ifdef HAVE_TIMEDWAIT
      } while (!x_deadline_passed(&end));
+#else
+     } while (--joiner->sleep_ticks >= 0);
+#endif
   }
 
   joiner->state = xt_ready;

@@ -93,10 +93,12 @@ wonka/vm/ArrayUtil
 	fInBArray	(F[BI)V		ArrayUtil_fInBArray
 	dInBArray	(D[BI)V		ArrayUtil_dInBArray
 wonka/vm/Heartbeat
+	nativesleep		(J)V	Heartbeat_static_nativesleep
 	create			()V	Heartbeat_create
 	numberNonDaemonThreads  ()I	Heartbeat_numberNonDaemonThreads
 	isKilled                ()Z	Heartbeat_isKilled
 	setThread               (Ljava/lang/Thread;)V   Heartbeat_setThread
+	getTimeOffset		()J	Heartbeat_static_getTimeOffset
 wonka/vm/Init
 wonka/vm/JDWP
 	refsToClassLoaders	Ljava/util/Vector;
