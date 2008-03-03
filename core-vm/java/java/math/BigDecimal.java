@@ -759,7 +759,10 @@ public class BigDecimal extends Number implements Comparable, Serializable {
     }
 
     public int compareTo(Object o) throws ClassCastException {
-        BigDecimal val = (BigDecimal)o;
+        return compareTo((BigDecimal)o);
+    }
+
+    public int compareTo(BigDecimal val) {
         int thisSign = signum();
         int valueSign = val.signum();
 
