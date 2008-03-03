@@ -528,6 +528,10 @@ public class BigInteger extends Number implements Comparable, Serializable {
     public int compareTo(Object o) throws ClassCastException {
         BigInteger val = (BigInteger)o;
 
+        return compareTo(val);
+    }
+
+    public int compareTo(BigInteger val) {
         if (sign > val.sign) {
             return GREATER;
         }
