@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -101,8 +101,8 @@ static void threadEntry(void * athread) {
   if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
     wprintf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
   }
+
   removeThreadCount(thread);
-  deleteGlobalReference(thread->Thread);
   thread->state = wt_dying;
 #ifdef JDWP
   jdwp_event_thread_end(thread);
@@ -128,6 +128,7 @@ static void threadEntry(void * athread) {
   if (gc_is_running) {
     x_monitor_exit(gc_monitor);
   }
+  deleteGlobalReference(thread->Thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
    wprintf("Finish %t: pid was %d\n", thread, getpid());
@@ -465,12 +466,14 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
       if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
         wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
       }
+      thread->state = wt_ready;
 
       return;
     }
   }
 
   x_thread_sleep(x_usecs2ticks(micros));
+  thread->state = wt_ready;
   if (checkForInterrupt(thread)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
       wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
