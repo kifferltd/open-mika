@@ -1076,16 +1076,22 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
     base_clazz->nextDimension = array_clazz;
   }
 
-  if (thread) enterUnsafeRegion(thread);
+  if (thread) {
+     enterUnsafeRegion(thread);
+  }
+
   if (clazzClass && clazzClass->Class) {
     attachClassInstance(array_clazz, thread);
   }
   setClazzState(array_clazz, CLAZZ_STATE_LINKED);
-  registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 
-  woempa(1, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
+  woempa(7, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
   setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);
-  if (thread) enterSafeRegion(thread);
+
+  if (thread) {
+    enterSafeRegion(thread);
+  }
+  registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 
   return array_clazz;
 
