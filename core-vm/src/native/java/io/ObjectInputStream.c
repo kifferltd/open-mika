@@ -73,22 +73,19 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
 
   if(!Clazz){
     throwNullPointerException(thread);
+    return NULL;
   }
 
   clazz = Class2clazz(Clazz);
 
-  if (!clazz) {
-    woempa(9, "%k is a primitive class, returning null\n", clazz);
-    return NULL;
-  }
-
+  threadMustBeSafe(thread);
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
   enterUnsafeRegion(thread);
   newInstance = allocInstance(thread, clazz);
-  enterUnsafeRegion(thread);
+  enterSafeRegion(thread);
 
   if(!newInstance){
     return NULL;

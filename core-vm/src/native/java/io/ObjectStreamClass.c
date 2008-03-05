@@ -564,8 +564,8 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               enterUnsafeRegion(thread);
               OSField = allocInstance(thread, clazzObjectStreamField);
               newField = allocInstance(thread, clazzField);
-              String = newStringInstance(field->name);
               enterSafeRegion(thread);
+              String = newStringInstance(field->name);
 
               if (!OSField || !newField || !String) {
                 woempa(9, "Unable to allocate OSField and newField\n");
