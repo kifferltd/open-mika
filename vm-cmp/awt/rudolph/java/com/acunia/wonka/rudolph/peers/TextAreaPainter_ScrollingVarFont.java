@@ -140,8 +140,20 @@ public class TextAreaPainter_ScrollingVarFont extends TextAreaPainter {
 
     int start=0;
     int currentwidth;
+    int viewoffset;
     for(int i=0;i<textlineEnd.length;i++){
-      viewTextOffset[i]=(textOffset>0)?RudolphPeer.getChars(textOffset,start,textBuffer,painterMetrics)+1:start;
+      if (textOffset > 0) {
+        viewoffset = RudolphPeer.getChars(textOffset,start,textBuffer,painterMetrics)+1;
+      }
+      else {
+        viewoffset = textOffset; // so we use 'start' in next conditional
+      }
+      if (viewoffset > 0) {
+        viewTextOffset[i] = viewoffset;
+      }
+      else {
+        viewTextOffset[i] = start;
+      }
       if(viewTextOffset[i]>=textlineEnd[i]) {
         viewTextOffset[i] = textlineEnd[i];
         viewTextLength[i] = 0;
