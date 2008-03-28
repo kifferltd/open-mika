@@ -644,21 +644,23 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     queued += retcode;
   }
 
-  child_instance = clazz2Class(clazz);
-  if (child_instance) {
-    retcode = markInstance(child_instance, fifo, flag);
-    if (retcode < 0) {
+  if (getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
+    child_instance = clazz2Class(clazz);
+    if (child_instance) {
+      retcode = markInstance(child_instance, fifo, flag);
+      if (retcode < 0) {
 
-      return retcode;
+        return retcode;
 
+      }
+      queued += retcode;
     }
-    queued += retcode;
-  }
 #ifdef RUNTIME_CHECKS
-  else {
-    wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
-  }
+    else {
+      wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
+    }
 #endif
+  }
 
   if (state == CLAZZ_STATE_BROKEN) {
 

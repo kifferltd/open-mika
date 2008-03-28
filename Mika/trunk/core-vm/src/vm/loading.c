@@ -992,9 +992,19 @@ w_string undescriptifyClassName(w_string string) {
 
 w_clazz seekClazzByName(w_string classname, w_instance initiating_loader) {
   w_hashtable hashtable = loader2loaded_classes(initiating_loader);
+  w_clazz result;
 
   woempa(1, "Seeking class '%w' in %s.\n", classname, hashtable->label);
-  return (w_clazz)ht_read_no_lock(hashtable, (w_word)classname);
+  result = (w_clazz)ht_read_no_lock(hashtable, (w_word)classname);
+
+  if (result && initiating_loader) {
+    while (getClazzState(result) == CLAZZ_STATE_LOADING && result->resolution_thread != currentWonkaThread) {
+      woempa(7, "%K is being loaded by %t, waiting in %t\n", result, result->resolution_thread, currentWonkaThread);
+      waitMonitor(initiating_loader, 2);
+    }
+  }
+
+  return result;
 }
 
 /*
@@ -1091,10 +1101,8 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   if (thread) {
     enterSafeRegion(thread);
   }
-  registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 
-  return array_clazz;
-
+  return registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 }
 
 /*
@@ -1113,9 +1121,9 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 
   threadMustBeSafe(currentWonkaThread);
 
-  // We take advantage of the fact that all array classes share a common 
-  // resolution_monitor (although this may in fact be a bug).
-  x_monitor_enter(clazz_Array->resolution_monitor, x_eternal);
+  if (initiating_loader) {
+    enterMonitor(initiating_loader);
+  }
   array_clazz = base_clazz->nextDimension;
   if (!array_clazz) {
     woempa(1, "Clazz %k doesn't yet have a nextDimension, creating it\n", base_clazz);
@@ -1124,7 +1132,9 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   else {
     woempa(1, "Clazz %k already has nextDimension %k\n", base_clazz, array_clazz);
   }
-  x_monitor_exit(clazz_Array->resolution_monitor);
+  if (initiating_loader) {
+    exitMonitor(initiating_loader);
+  }
 
   return array_clazz;
 
@@ -1206,7 +1216,6 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   result->dims = 1;
 
   setClazzState(result, CLAZZ_STATE_LINKED);
-  registerClazz(NULL, result, NULL);
 
   woempa(1, "Created array clazz %k, dimensions %d.\n", result, result->dims);
 
@@ -1215,8 +1224,8 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
     result->dims = 1;
     element_clazz->nextDimension = result;
   }
-  return result;
 
+  return registerClazz(NULL, result, NULL);
 }
 
 
@@ -1380,29 +1389,27 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
 
   w_thread    thread = currentWonkaThread;
   w_instance  effectiveLoader = classLoader;
-  w_clazz     effectiveLoader_clazz;
   w_clazz     current;
 
-  woempa(1, "Class %w must be loaded.\n", name);
+  woempa(7, "Class %w must be loaded.\n", name);
   if (string_char(name, 0) == (w_char)'[') {
     return namedArrayClassMustBeLoaded(classLoader, name);
   }
 
   if (!systemClassLoader) {
-    woempa(1, "System class loader not defined, so use bootstrap class loader\n");
+    woempa(7, "System class loader not defined, so use bootstrap class loader\n");
   }
   else if (!classLoader) {
-    woempa(1, "System class loader exists (%w), so use it instead of bootstrap class loader to load %w\n", loader2name(systemClassLoader), name);
+    woempa(7, "System class loader exists, so use it instead of bootstrap class loader to load %w\n", name);
     effectiveLoader = systemClassLoader;
   }
   else if (!classLoader || namedClassIsSystemClass(name)) {
-    woempa(1, "Class %w is a system class, so use system class loader (%w) instead of %j (%w)\n", name, loader2name(systemClassLoader), classLoader, loader2name(classLoader));
+    woempa(7, "Class %w is a system class, so use system class loader instead of %j\n", name, classLoader);
     effectiveLoader = systemClassLoader;
   }
   else {
-    woempa(1, "Class %w is not a system class, so use %j (%w)\n", name, classLoader, loader2name(classLoader));
+    woempa(7, "Class %w is not a system class, so use %j\n", name, classLoader);
   }
-  effectiveLoader_clazz = instance2clazz(effectiveLoader);
 
   if (effectiveLoader) {
     // wprintf("requesting lock for %j\n", effectiveLoader);
@@ -1412,6 +1419,7 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
 
   current = seekClazzByName(name, effectiveLoader);
 
+  woempa(7, "seekClazzByName result = %p\n", current);
   if (current == NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       wprintf("Load %w: initiating class loader is %j in thread %t\n", name, classLoader, thread);
@@ -1421,7 +1429,21 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
       current = loadBootstrapClass(name);
     }
     else {
+      w_clazz placeholder = allocClazz();
+
+      placeholder->resolution_thread = thread;
+      setClazzState(placeholder, CLAZZ_STATE_LOADING);
+      registerClazz(thread, placeholder, effectiveLoader);
+      exitMonitor(effectiveLoader);
+
       current = loadNonBootstrapClass(effectiveLoader, name);
+
+      enterMonitor(effectiveLoader);
+      if (current && getClazzState(current) == CLAZZ_STATE_LOADING) {
+        // Loading did not succeed, so delete the placeholder.
+        releaseMem(placeholder);
+        current = NULL;
+      }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       if (!current) {
@@ -1461,7 +1483,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   w_instance exception;
 
   method = virtualLookup(loadClass_method, initiating_loader_clazz);
-  woempa(1, "Trying to load class %w using %m of %j (%w)\n", name, method, initiating_loader, loader2name(initiating_loader));
+  woempa(7, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
 
   Name = newStringInstance(name);
   if (!Name) {
@@ -1497,6 +1519,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   }
 
   clazz = Class2clazz(theClass);
+  woempa(7, "clazz = %K (%p)\n", clazz, clazz);
 
   if (clazz->dotified != name) {
     woempa(9,"Scandal! I asked %j to load %w, and the bounder loaded %k!\n", initiating_loader, name, clazz);
@@ -1504,7 +1527,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
     return NULL;
   }
 
-  woempa(1, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
+  woempa(7, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
 
   return clazz;
 
