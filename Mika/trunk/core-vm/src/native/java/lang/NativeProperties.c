@@ -143,13 +143,14 @@ w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
 
   enterUnsafeRegion(thread);
   keyArray = allocArrayInstance_1d(JNIEnv2w_thread(env), clazzArrayOf_String, prop_hashtable->occupancy);
-  enterSafeRegion(thread);
   fifo = ht_list_keys_no_lock(prop_hashtable);
   i = 0;
   while ((s = (w_string)getFifo(fifo))) {
     woempa(7, "keyArray[%d] = %w\n", i, s);
-    instance2Array_instance(keyArray)[i++] = getStringInstance(s);
+    setArrayReferenceField_unsafe(keyArray, getStringInstance(s), i);
+    ++i;
   }
+  enterSafeRegion(thread);
 
   return keyArray;
 }
