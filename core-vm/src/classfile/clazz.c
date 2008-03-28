@@ -1382,33 +1382,68 @@ w_boolean isReservedName(w_string name) {
 
 /*
 ** Register a w_Clazz structure in a class hashtable.  
+** See remarks in clazz.n.
 */
 
-void registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
+w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   w_clazz  existing;
+  w_clazz result = clazz;
   w_hashtable hashtable = loader2loaded_classes(loader);
 
-  if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
-    wabort(ABORT_WONKA, "%K\n", clazz);
-  }
-  woempa(7, "Registering clazz %k in %s.\n", clazz, hashtable->label);
+  woempa(7, "Registering %K in %s.\n", clazz, hashtable->label);
+
+  threadMustBeSafe(thread);
 
   ht_lock(hashtable);
   existing = (w_clazz)ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)clazz);
 
+woempa(7, "existing = %p\n", existing);
   if (existing) {
     if (existing == clazz) {
-      woempa(1, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
+      woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
     }
     else {
-      if (thread) {
-        throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
+#ifdef RUNTIME_CHECKS
+      if (getClazzState(existing) == CLAZZ_STATE_UNLOADED) {
+        wabort(ABORT_WONKA, "Woah now, what is an unloaded class doing in the loaded_classes hashtable?");
+      }
+      else
+#endif
+      if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(existing) == CLAZZ_STATE_LOADING) {
+        w_instance Class = clazz2Class(clazz);
+        w_int i;
+
+        woempa(7, "Placeholder %K (%p) found for class %K (%p) in %s, copying %d bytes from %p to %p.\n", existing, existing, clazz, clazz, hashtable->label, sizeof(w_Clazz), clazz, existing);
+        w_memcpy(existing, clazz, sizeof(w_Clazz));
+
+        for (i = 0; i < clazz->numFields; ++i) {
+          existing->own_fields[i].declaring_clazz = existing;
+        }
+        for (i = 0; i < clazz->numDeclaredMethods; ++i) {
+          existing->own_methods[i].spec.declaring_clazz = existing;
+        }
+        if (!clazz->dims) {
+          setReferenceField_unsafe(Class, existing->loader, F_Class_loader);
+        }
+        setWotsitField(Class, F_Class_wotsit, existing);
+      }
+      else {
+        if (thread) {
+          throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
+        }
       }
       ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)existing);
+      deallocClazz(clazz);
+      result = existing;
     }
   }
   ht_unlock(hashtable);
+  woempa(7, "Returning %K (%p)\n", result);
+  if (loader) {
+    notifyMonitor(loader, TRUE);
+  }
 
+  return result;
 }
 
 /*
@@ -1632,7 +1667,23 @@ static void get_attributes(w_thread thread, w_clazz clazz, w_bar s) {
 
 }
 
-w_clazz allocClazz(void);
+w_clazz allocClazz() {
+
+  w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
+  if (!clazz) {
+    wabort(ABORT_WONKA, "Unable to allocate clazz\n");
+  }
+  clazz->label = (char *) "clazz";
+  
+  return clazz; 
+
+}
+
+void deallocClazz(w_clazz clazz) {
+  woempa(7,"Releasing w_clazz at %p\n", clazz);
+  releaseMem(clazz);
+}
+
 
 /*
 ** Create the w_Clazz structure corresponding to a class, reading the class
@@ -1657,6 +1708,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   clazz->loader = loader;
   clazz->type = VM_TYPE_REF + VM_TYPE_OBJECT;
   clazz->bits = 32;
+  clazz->resolution_thread = thread;
   setClazzState(clazz, CLAZZ_STATE_LOADING);
   clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
   if (!clazz->resolution_monitor) {
@@ -1732,12 +1784,8 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   if (clazzClass && clazzClass->Class) {
     attachClassInstance(clazz, thread);
   }
-  registerClazz(thread, clazz, loader);  
 
-  woempa(1, "%j is the defining class loader of %k\n", loader, clazz);
-
-  return clazz;
-
+  return registerClazz(thread, clazz, loader);  
 }
 
 /*
@@ -1788,18 +1836,6 @@ w_instance attachClassInstance(w_clazz clazz, w_thread thread) {
   }
 
   return Class;
-}
-
-w_clazz allocClazz() {
-
-  w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
-  if (!clazz) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz\n");
-  }
-  clazz->label = (char *) "clazz";
-  
-  return clazz; 
-
 }
 
 /*
@@ -1895,6 +1931,12 @@ w_int destroyClazz(w_clazz clazz) {
   }
 
   if (!clazz->dims) {
+    woempa(7, "Removing implementations from interface_hashtable \n");
+    if (clazz->interfaces) {
+      destroyImplementations(clazz);
+      releaseMem(clazz->interfaces);
+    }
+
     woempa(7, "Releasing class members\n");
     if (clazz->own_methods) {
       for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
@@ -1922,11 +1964,6 @@ w_int destroyClazz(w_clazz clazz) {
     if (clazz->supers) {
       releaseMem(clazz->supers);
     }
-    if (clazz->interfaces) {
-      destroyImplementations(clazz);
-      releaseMem(clazz->interfaces);
-    }
-
     if (clazz->staticFields) {
       releaseMem(clazz->staticFields);
     }
@@ -1953,9 +1990,6 @@ w_int destroyClazz(w_clazz clazz) {
   woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
 
-  woempa(7, "Releasing resolution_monitor\n");
-  x_monitor_delete(clazz->resolution_monitor);
-  releaseMem(clazz->resolution_monitor);
   if (clazz->failure_message) {
     woempa(7,"Deregistering failure message '%w'\n", clazz->failure_message);
     deregisterString(clazz->failure_message);
@@ -1979,8 +2013,11 @@ w_int destroyClazz(w_clazz clazz) {
     deregisterString(clazz->dotified);
   }
 
-  woempa(7,"Releasing w_clazz at %p\n", clazz);
-  releaseMem(clazz);
+  woempa(7, "Releasing resolution_monitor\n");
+  x_monitor_delete(clazz->resolution_monitor);
+  releaseMem(clazz->resolution_monitor);
+
+  deallocClazz(clazz);
 
   return freed;
 }

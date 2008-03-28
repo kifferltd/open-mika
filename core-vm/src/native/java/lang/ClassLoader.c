@@ -160,7 +160,9 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
     name = NULL;
   }
 
+  enterMonitor(thisClassLoader);
   clazz = createClazz(thread, name, &bar, thisClassLoader, trusted);
+  exitMonitor(thisClassLoader);
  
   if (!clazz && !exceptionThrown(thread)) {
     throwException(thread, clazzClassFormatError, "%w", name);
@@ -206,11 +208,17 @@ w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance This, w_instance 
 
   if (nameString) {
     name = String2string(nameString);
-    woempa(1, "called with string %w.\n", name);
 
     clazz = seekClazzByName(name, This);
 
     if (clazz) {
+      w_int state = getClazzState(clazz);
+      if (state <= CLAZZ_STATE_LOADING || state > CLAZZ_STATE_INITIALIZED) {
+
+        return NULL;
+
+      }
+
       return clazz2Class(clazz);
     } 
   }
