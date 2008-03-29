@@ -1,0 +1,85 @@
+#!/bin/bash
+
+###########################################################################
+# Copyright (c) 2001 by Punch Telematix. All rights reserved.             #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of other           #
+#    contributors may be used to endorse or promote products derived      #
+#    from this software without specific prior written permission.        #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
+###########################################################################
+
+# -------------------------------------------------------------------
+#set -x
+if [ -d build1 ] || [ -d build2 ] || [ -d build3 ] || [ -d build4 ] || [ -d build5 ] ||
+   [ -d build6 ] || [ -d build7 ] || [ -d build8 ] || [ -d build9 ] || [ -d build10 ] ||
+   [ -d open-wonka ] || [ -d test-log ]; then
+   echo "nothing copied, clean up first"
+   exit
+fi
+
+if [ ! -f report/QAreport ] ; then
+  echo "./report/QAreport not found. Nothing copied"
+else
+if [ ! -f javadoc.tar.gz ] ; then
+  echo "./javadoc.tar.gz not found. Nothing copied"
+else
+if [ ! -f refmauve.fail ] ; then
+  echo "./refmauve.fail not found. Nothing copied"
+else
+  LIBRARIAN=librarian.leuven.intern.acunia.com
+  RELEASEDIR=/home/fs/OTF-read/intranet/OTF-teams/VMS/open-wonka-release/
+  RELEASE=$(basename $PWD)
+  RELEASENAME=$(echo $RELEASE | sed s/-/./g)
+if [ ! -f product/wonka-bin-arm-linux-$RELEASENAME-release.tar.gz ] ; then
+  echo "./product/wonka-bin-arm-linux-$RELEASENAME-release.tar.gz not found. Nothing copied"
+else
+if [ ! -f ./product/wonka-bin-x86-linux-$RELEASENAME-release.tar.gz ] ; then
+  echo "product/wonka-bin-x86-linux-$RELEASENAME-release.tar.gz not found. Nothing copied"
+else
+if [ ! -f product/wonka-src-$RELEASENAME-release.tar.gz ] ; then
+  echo "./product/wonka-src-$RELEASENAME-release.tar.gz not found. Nothing copied"
+else
+if [ ! -f product/open-wonka-$RELEASENAME-1.i386.rpm ] ; then
+  echo "./product/open-wonka-$RELEASENAME-1.i386.rpm not found. Nothing copied"
+else
+if [ ! -f test-log.tar.gz ] ; then
+  echo "./test-log.tar.gz not found. Nothing copied"
+
+
+
+  echo "copying release WONKA-${RELEASE}-RELEASE ..."
+
+  # core of the backup:
+  # copy this directory, recursively with preservation of file attributes
+
+
+  rcp -rp $PWD $(whoami)@LIBRARIAN:${RELEASEDIR}
+
+fi
+fi
+fi
+fi
+fi
+fi
+fi
+fi
