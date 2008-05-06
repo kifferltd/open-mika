@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
+* Embedded Java Solutions. All rights reserved.                           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1146,7 +1146,7 @@ w_instance newStringInstance(w_string s) {
 
 w_instance getStringInstance(w_string s) {
   w_thread thread = currentWonkaThread;
-  w_string r = registerString(s);
+  w_string r;
   w_instance new_instance;
   w_instance canonical;
   w_word *flagsptr;
@@ -1157,6 +1157,7 @@ w_instance getStringInstance(w_string s) {
   ** - w_string r will not be reclaimed, because it is registered to us
   */
   threadMustBeSafe(thread);
+  r = registerString(s);
 
   /*
   ** We lock the string_hashtable while looking for a canonical instance;
