@@ -56,13 +56,13 @@ public class DrawCyrillic14 extends VisualTestImpl {
     try {
       for (int i = 0; i < 5; ++i) {
         String s = new String(DrawCyrillicText.nepoj[i], "UTF8");
-        FontMetrics fm = writeString(g, s, f, x , y, Color.blue);
+        FontMetrics fm = writeString(g, s, f, x , y, Color.black);
         y += fm.getHeight();
       }
       f = new Font("helvB14", 0, 14);
       for (int i = 5; i < 10; ++i) {
         String s = new String(DrawCyrillicText.nepoj[i], "UTF8");
-        FontMetrics fm = writeString(g, s, f, x , y, Color.blue);
+        FontMetrics fm = writeString(g, s, f, x , y, Color.black);
         y += fm.getHeight();
       }
     } catch (UnsupportedEncodingException uee) {
@@ -77,7 +77,7 @@ public class DrawCyrillic14 extends VisualTestImpl {
   public String getHelpText(){
     return ("Drawing of Cyrillic characters is visually tested. " +
             "On a grey background, the user should see a poem by Pushkin " +
-            "in fourteen-point blue cyrillic type; the first stanza should be " +
+            "in fourteen-point black cyrillic type; the first stanza should be " +
             "in regular type, the second in bold.\n" +
             "\n" +
             "Do not sing, my beauty, to me\n" +
