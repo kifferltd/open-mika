@@ -107,6 +107,8 @@ w_clazz clazzArrayOf_String;
 
 static void parseMethodCodeAttributes(w_method, w_bar);
 
+void deallocClazz(w_clazz clazz);
+
 /*
 ** Function used by x_snprintf to print out the name of a clazz (format %k).
 */
