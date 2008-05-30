@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2007 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2007, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -474,7 +474,17 @@ public class Runtime {
         loadedLibraries.put(libname, "loading");
       }
       else {
-        throw new UnsatisfiedLinkError("Library '" + libname + "' already loaded");
+        // HACK HACK HACK
+        // Maybe the existing library is unreachable but we didn't notice,
+        // do GC and try once more before throwing an error.
+        gc();
+        doLoadedLibrariesHousekeeping();
+        if (loadedLibraries.get(libname) == null) {
+          loadedLibraries.put(libname, "loading");
+        }
+        else {
+          throw new UnsatisfiedLinkError("Library '" + libname + "' already loaded");
+        }
       }
     }
 
@@ -517,7 +527,7 @@ public class Runtime {
     }
 
     if (handle != 0) {
-      NativeLibrary nl = new NativeLibrary(handle, cl);
+      NativeLibrary nl = new NativeLibrary(handle);
       cl.registerLibrary(nl);
     
       synchronized (loadedLibraries) {

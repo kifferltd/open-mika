@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.          *
+* Copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -39,11 +39,8 @@ public final class NativeLibrary {
 
   private int handle;
 
-  private ClassLoader loader;
-
-  public NativeLibrary(int handle, ClassLoader loader) {
+  public NativeLibrary(int handle) {
     this.handle = handle;
-    this.loader = loader;
   }
 
   public native void finalize();
