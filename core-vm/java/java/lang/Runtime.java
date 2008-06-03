@@ -468,26 +468,6 @@ public class Runtime {
 //      sm.checkLink(new RuntimePermission(libname));
     }
 
-    synchronized (loadedLibraries) {
-      doLoadedLibrariesHousekeeping();
-      if (loadedLibraries.get(libname) == null) {
-        loadedLibraries.put(libname, "loading");
-      }
-      else {
-        // HACK HACK HACK
-        // Maybe the existing library is unreachable but we didn't notice,
-        // do GC and try once more before throwing an error.
-        gc();
-        doLoadedLibrariesHousekeeping();
-        if (loadedLibraries.get(libname) == null) {
-          loadedLibraries.put(libname, "loading");
-        }
-        else {
-          throw new UnsatisfiedLinkError("Library '" + libname + "' already loaded");
-        }
-      }
-    }
-
     String path = null;
    
     /*
@@ -502,6 +482,29 @@ public class Runtime {
     if(cl != null) {
       path = cl.findLibrary(libname);
     }
+
+    String key = path != null ? path : libname;
+
+    synchronized (loadedLibraries) {
+      doLoadedLibrariesHousekeeping();
+      if (loadedLibraries.get(key) == null) {
+        loadedLibraries.put(key, "loading");
+      }
+      else {
+        // HACK HACK HACK
+        // Maybe the existing library is unreachable but we didn't notice,
+        // do GC and try once more before throwing an error.
+        gc();
+        doLoadedLibrariesHousekeeping();
+        if (loadedLibraries.get(key) == null) {
+          loadedLibraries.put(key, "loading");
+        }
+        else {
+          throw new UnsatisfiedLinkError("Library '" + key + "' already loaded");
+        }
+      }
+    }
+
     if(cl != null && path == null) {
       path = cl.findLibrary("lib" + libname + ".so");
     }
@@ -531,7 +534,12 @@ public class Runtime {
       cl.registerLibrary(nl);
     
       synchronized (loadedLibraries) {
-        loadedLibraries.put(libname, new WeakReference(nl));
+        loadedLibraries.put(key, new WeakReference(nl));
+      }
+    }
+    else {
+      synchronized (loadedLibraries) {
+        loadedLibraries.remove(key);
       }
     }
   }
