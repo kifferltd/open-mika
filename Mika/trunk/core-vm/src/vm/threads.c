@@ -210,7 +210,9 @@ void terminateThread(w_thread thread) {
   }
 
   woempa(1,"Cleaning up %t\n", thread);
-  status = x_thread_delete(thread->kthread);
+  if (thread->state != wt_unstarted) {
+    status = x_thread_delete(thread->kthread);
+  }
   if (status == xs_success) {
     woempa(1,"Cleaned up %t\n", thread);
 
