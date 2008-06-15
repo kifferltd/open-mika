@@ -198,7 +198,7 @@ void Thread_destructor(w_instance thisThread) {
   if (thread) {
     thread->Thread = NULL;
     woempa(7, "Destroying %t\n", thread);
-    if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE) && (wt_unstarted != thread->state)) {
+    if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
       terminateThread(thread);
       clearWotsitField(thisThread, F_Thread_wotsit);
     }
