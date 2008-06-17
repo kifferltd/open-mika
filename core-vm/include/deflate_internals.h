@@ -1,7 +1,9 @@
 #ifndef _DEFLATE_INTERNALS_H
 #define _DEFLATE_INTERNALS_H
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -77,19 +79,31 @@ typedef struct w_Deflate_Control {
   w_int zip_hash_first;                         // index to first available hash entry in block
 
   w_int compression_level;
-  w_int no_auto;
-  w_int need_more_input;
   w_int processed_size;
 
   x_monitor ready;				// needed for proper reset and stop
-  w_int reset;
-  w_int stop;
+  volatile w_ubyte no_auto;
+  volatile w_ubyte need_more_input;
+  volatile w_ubyte reset;
+  volatile w_ubyte stop;
 
-  w_int state;
+  volatile w_int state;
 
   w_int dictionary;
 } w_Deflate_Control;
 typedef w_Deflate_Control *w_deflate_control;
+
+/*
+** Possible values for the 'state' field of w_DeflateControl.
+*/
+#define COMPRESSION_THREAD_UNSTARTED 0
+#define COMPRESSION_THREAD_RUNNING   1
+#define COMPRESSION_THREAD_STOPPED   2
+
+/*
+** Time to wait for the inflate/deflate thread to complete.
+*/
+#define COMPRESSION_WAIT_TICKS x_millis2ticks(1000)
 
 #define END_BLOCK                                256     /* The end of a block code                                                 */
 #define LENGTH_CODES                              29     /* The number of length codes, not taking into account the END_BLOCK code. */
