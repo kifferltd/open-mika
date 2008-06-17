@@ -189,59 +189,13 @@ w_int Array_static_getLength(JNIEnv *env, w_instance Class, w_instance Array) {
   
 }
 
-/* WAS :
-w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_instance Component, w_int length) {
-
-  w_thread thread = JNIEnv2w_thread(env);
-  w_int dimensions;
-  w_instance Array = NULL;
-  w_clazz component_clazz = Class2clazz(Component);
-  w_clazz array_clazz;
-
-  if (length < 0) {
-    throwException(thread, clazzNegativeArraySizeException, NULL);
-
-    return NULL;
-
-  }
-  else if (!Component) {
-    throwException(thread, clazzNullPointerException, NULL);
-
-    return NULL;
-
-  } else if(component_clazz == clazz_void) {
-    throwException(thread, clazzIllegalArgumentException, NULL);
-    return NULL;
-  }
-
-  woempa(9, "Creating instance of 1 dimension and component '%k'.\n", component_clazz);
-
-  dimensions = length;
-  array_clazz = getNextDimension(component_clazz);
-  if (array_clazz) {
-    mustBeInitialized(array_clazz);
-    if (!exceptionThrown(thread)) {
-      mustBeLinked(array_clazz);
-    }
-    if (! exceptionThrown(thread)) {
-      enterUnsafeRegion(thread);
-      Array = allocArrayInstance_1d(thread, array_clazz, dimensions);
-      enterSafeRegion(thread);
-    }
-  }
-
-  return Array;
-  
-}
-*/
-
 w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_instance Component, w_int length) {
 
   w_thread thread = JNIEnv2w_thread(env);
   w_instance Array = NULL;
   w_clazz component_clazz = Class2clazz(Component);
   w_clazz array_clazz;
-  w_instance initiating_loader = clazz2loader(getCallingClazz(thread));
+  w_instance initiating_loader = clazz2loader(getCallingClazz(thread)); 
   
   threadMustBeSafe(thread);
 
