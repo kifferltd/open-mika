@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2005, 2008 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -194,7 +194,7 @@ static w_void unzip_initDevice(w_device device) {
 
     unzip->reset = 0;
     unzip->stop = 0;
-    unzip->state = 0;
+    unzip->state = COMPRESSION_THREAD_UNSTARTED;
 
     x_monitor_create(unzip->ready);
 
@@ -240,56 +240,54 @@ static w_void unzip_termDevice(w_device device) {
     // trying to enter monitor
     woempa(INF_WOEMP_LEV_1, "Entering\n");
     s = x_monitor_eternal(unzip->ready);
-    if (s == xs_success) {
-      // messaging to reset and stop
-      unzip->reset = 1;
-      unzip->stop = 1;
+    if (s != xs_success) {
+      wabort(ABORT_WONKA, "entering unzip->ready, error %d in monitor\n", s);
+    }
 
-      // set end of input
-      unzip->nomoreinput = 1;
+    unzip->reset = 1;
+    unzip->stop = 1;
+    unzip->nomoreinput = 1;
 
-      woempa(INF_WOEMP_LEV_1, "Sending on q_in %p\n", unzip->q_in);
-      // send a bogus message to make shure blocking thread gets revived, but don't try to hard, it could be possible that the queue is full
-      s = x_queue_send(unzip->q_in, NULL, x_millis2ticks(500));
-      switch (s) {
-        case xs_success:
-          break;
-        default:
-          wabort(ABORT_WONKA, "Couldn't send bogus message, error in monitor\n");
+    woempa(INF_WOEMP_LEV_1, "Sending on q_in %p\n", unzip->q_in);
+    // send a bogus message to make sure blocking thread gets revived, but 
+    // don't try to hard, it could be possible that the queue is full
+    s = x_queue_send(unzip->q_in, NULL, x_millis2ticks(500));
+    switch (s) {
+      case xs_success:
+        break;
+      default:
+        wabort(ABORT_WONKA, "Couldn't send bogus message, error %d in monitor\n", s);
+    }
+
+    woempa(INF_WOEMP_LEV_1, "Notifying\n");
+    // notify the thread we changed something
+    x_monitor_notify_all(unzip->ready);
+
+    woempa(INF_WOEMP_LEV_1, "Waiting\n");
+    // wait till thread notifies us
+    while (unzip->state == COMPRESSION_THREAD_RUNNING) {
+      s = x_monitor_wait(unzip->ready, COMPRESSION_WAIT_TICKS);
+      if (s == xs_interrupted) {
+        s = x_monitor_eternal(unzip->ready);
+        if (s != xs_success) {
+           wabort(ABORT_WONKA, "re-entering unzip->ready, error %d in monitor\n", s);
+        }
       }
-
-      woempa(INF_WOEMP_LEV_1, "Notifying\n");
-      // notify the thread we changed something
-      x_monitor_notify_all(unzip->ready);
-
-      woempa(INF_WOEMP_LEV_1, "Waiting\n");
-      // wait till thread notifies us
-      if(unzip->state == 1) {
-        s = x_monitor_wait(unzip->ready, x_eternal);
-        if (s == xs_success || s == xs_no_instance) {
-          x_monitor_exit(unzip->ready);
-        }
-        else if (s != xs_interrupted) {
-          x_monitor_exit(unzip->ready);
-
-          wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
-        }
-        x_monitor_exit(unzip->ready);
+      else if (s != xs_success && s != xs_no_instance) {
+        wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
       }
     }
-    else {
-      wabort(ABORT_WONKA, "entering unzip->ready, error in monitor\n");
-    }
+    x_monitor_exit(unzip->ready);
     woempa(INF_WOEMP_LEV_1, "Exit\n");
 
     status = x_thread_join(unzip->thread, &join_result, 100);
-    if (status != xs_success && status != xs_no_instance) {
+    if (status != xs_success /* && status != xs_no_instance */) {
       wabort(ABORT_WONKA, "Hooooola, unable to join deflating thread: status = '%s'\n", x_status2char(status));
     }
 
     status = x_thread_delete(unzip->thread);
     if (status != xs_success) {
-      wabort(ABORT_WONKA, "Hooooola, unable to stop deflating thread: status = '%s'\n", x_status2char(status));
+      wabort(ABORT_WONKA, "Hooooola, unable to delete deflating thread: status = '%s'\n", x_status2char(status));
     }
     if (unzip->stack) {
       releaseMem(unzip->stack);
@@ -722,27 +720,30 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
 
         woempa(INF_WOEMP_LEV_1, "Waiting\n");
 
-        if(zip->state == 1) {
-          s = x_monitor_wait(zip->ready, x_eternal);
-          if (s == xs_success || s == xs_no_instance) {
-            woempa(INF_WOEMP_LEV_1, "Exit OK\n");
-            x_monitor_exit(zip->ready);
-            return wds_success;
-          }
-          else if (s == xs_interrupted) {
+        /*
+        ** If the the deflater thread is running, we give it a chance
+        ** to process the reset and notify us that it has done so.
+        ** TODO: hox can we know for sure that the reset has completed?
+        */
+        if (zip->state == COMPRESSION_THREAD_RUNNING) {
+          s = x_monitor_wait(zip->ready, COMPRESSION_WAIT_TICKS);
+          if (s == xs_interrupted) {
             wprintf("x_monitor_wait returned xs_interrupted\n");
             return wds_internal_error;
           }
-          else {
+          else if (s != xs_success && s != xs_no_instance) {
             woempa(INF_WOEMP_LEV_1, "Exit ERROR\n");
             x_monitor_exit(zip->ready);
             wprintf("x_monitor_wait returned error code %d\n", s);
             return wds_internal_error;
           }
         }
+        woempa(INF_WOEMP_LEV_1, "Exit OK\n");
+        x_monitor_exit(zip->ready);
+        return wds_success;
       }
       else {
-        wprintf("Unable to send queue element\n");
+        wprintf("Unable to enter zip->ready\n");
         return wds_internal_error;
       }
 
