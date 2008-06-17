@@ -1210,7 +1210,6 @@ w_instance getStringInstance(w_string s) {
   }
 
   ht_lock(string_hashtable);
-  setWotsitField(new_instance, F_String_wotsit, r);
 #ifdef USE_INTERNED_STRING_HASHTABLE
   canonical = (w_instance)ht_write_no_lock(interned_string_hashtable, r, new_instance);
   /*
@@ -1228,7 +1227,7 @@ w_instance getStringInstance(w_string s) {
   }
 #else
   if (r->interned) {
-    new_instance = r->interned;
+    canonical = r->interned;
     deregisterString(r);
     ht_unlock(string_hashtable);
     removeLocalReference(thread, new_instance);
@@ -1244,6 +1243,7 @@ w_instance getStringInstance(w_string s) {
   /*
   ** Otherwise, everything's just fine.
   */
+  setWotsitField(new_instance, F_String_wotsit, r);
   ht_unlock(string_hashtable);
 
   return new_instance;
