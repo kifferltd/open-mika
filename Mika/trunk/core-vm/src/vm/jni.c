@@ -664,8 +664,8 @@ jint ThrowNew(JNIEnv *env, jclass class, const char *message) {
   if (!Throwable) {
     wabort(ABORT_WONKA, "Unable to create Throwable\n");
   }
-  Message = newStringInstance(string);
   enterSafeRegion(thread);
+  Message = newStringInstance(string);
   if (Message) {
     setReferenceField(Throwable, Message, F_Throwable_detailMessage);
     throwExceptionInstance(thread, Throwable);
@@ -2677,26 +2677,15 @@ jarray NewObjectArray(JNIEnv *env, jsize length, jclass elementType, jobject ini
   w_instance Array;
   w_int i;
   w_clazz elementClazz = Class2clazz(elementType);
+  w_instance loader = clazz2loader(elementClazz);
   w_clazz arrayClazz;
   w_int alength;
-  // [CG 20040315] We should probably default to the application class loader
-  w_method caller = thread->top->method;
-  w_instance loader;
+
+  woempa(1, "(JNI) Asked to construct an array of %d %k's, all set to 0x%08x\n", length, elementClazz, initval);
+  woempa(1, "(JNI) Using class loader %j\n", loader);
+
 
   threadMustBeSafe(thread);
-  if (caller) {
-    woempa(1, "(JNI) Asked to construct an array of %d '%s', called from %M\n", length, elementType, caller);
-    loader = clazz2loader(caller->spec.declaring_clazz);
-    woempa(1, "(JNI) Using class loader %p of %k.\n", loader, instance2clazz(loader));
-  }
-  else {
-    loader = systemClassLoader;
-    woempa(1, "(JNI) Asked to construct an array of %d '%s', thread %t has no stack frame so using bootstrap class loader\n", length, elementType, thread);
-  }
-
-
-  woempa(1, "Asked to construct an array of %d %k's, all set to 0x%08x\n", length, elementClazz, initval);
-
   arrayClazz = getNextDimension(elementClazz, loader);
   if (exceptionThrown(thread)) {
     return NULL;
@@ -3273,6 +3262,8 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 **
 ** TODO: figure out how to release all monitors held by a thread which
 ** is dumb enough to call this function from inside a monitor. 8-0
+** TODO: merge as much code as possible with Thread_destructor, i.e.
+** let GC do the cleaning up.
 */
 
 jint DetachCurrentThread(JavaVM *vm) {
