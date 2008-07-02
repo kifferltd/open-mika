@@ -184,6 +184,10 @@ if $(JAVA_PROFILE) = true {
   CCFLAGS += -DJAVA_PROFILE ;
 }
 
+if $(TRACE_MEM_ALLOC) = true {
+  CCFLAGS += -DTRACE_MEM_ALLOC ;
+}
+
 if $(METHOD_DEBUG) = true {
   CCFLAGS += -DMETHOD_DEBUG ;
 }
