@@ -3465,7 +3465,6 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
           }
           else {
             VERIFY_ERROR(objectref_wrong_type);
-exit(255);
           }
         }
       }
