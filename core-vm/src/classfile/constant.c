@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -48,25 +48,32 @@
 #include "heap.h"
 #include "wordset.h"
 
+#ifdef RUNTIME_CHECKS
+static void check_constant_index(w_clazz clazz, w_int i) {
+  if (i <=0 || i > clazz->numConstants) {
+    wabort(ABORT_WONKA, "Nom d'un chien! Trying to resolve constant[%d] of %k, which has %d constants\n", i, clazz, clazz->numConstants);
+  }
+}
+#else
+#define check_constant_index(clazz,i)
+#endif
+
 /*
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must be GC safe!
  */
 w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
-  int tag = clazz->tags[i];
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  if (thread) {
-    threadMustBeSafe(thread);
-  }
-
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(thread, (w_instance)clazz->values[i]);
       return NULL;
     }
     
     resolveClassConstant(clazz, i);
-    tag = clazz->tags[i];
   }
 
   return (w_clazz)clazz->values[i];
@@ -78,13 +85,11 @@ w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
  */
 w_field getFieldConstant(w_clazz clazz, w_int i) {
   w_thread thread = currentWonkaThread;
-  int tag = clazz->tags[i];
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  if (thread) {
-    threadMustBeSafe(thread);
-  }
-
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -92,7 +97,6 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
     }
     
     resolveFieldConstant(clazz, i);
-    tag = clazz->tags[i];
   }
 
   return (w_field)clazz->values[i];
@@ -104,13 +108,11 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
  */
 w_method getMethodConstant(w_clazz clazz, w_int i) {
   w_thread thread = currentWonkaThread;
-  int tag = clazz->tags[i];
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  if (thread) {
-    threadMustBeSafe(thread);
-  }
-
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -118,7 +120,6 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
     }
     
     resolveMethodConstant(clazz, i);
-    tag = clazz->tags[i];
   }
 
   return (w_method)clazz->values[i];
@@ -130,13 +131,11 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
  */
 w_method getIMethodConstant(w_clazz clazz, w_int i) {
   w_thread thread = currentWonkaThread;
-  int tag = clazz->tags[i];
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  if (thread) {
-    threadMustBeSafe(thread);
-  }
-
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -155,6 +154,7 @@ w_method getIMethodConstant(w_clazz clazz, w_int i) {
 */
 
 w_string resolveUtf8Constant(w_clazz clazz, w_int i) {
+  check_constant_index(clazz, i);
   return registerString((w_string)clazz->values[i]);
 }
 
@@ -684,6 +684,7 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   member = *v;
   woempa(1, "Resolving field constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
   search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
+  x_monitor_eternal(clazz->resolution_monitor);
   if (!search_clazz) {
     woempa(9, "  failed to load the class referenced by field constant[%d] of %K!\n", v - clazz->values, clazz);
     *v = (w_word)exceptionThrown(thread);
@@ -696,6 +697,7 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   woempa(1, "Name & Type = '0x%08x'\n", nat);
   name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));
   desc_string = resolveUtf8Constant(clazz, Name_and_Type_get_type_index(nat));
+  x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Searching for %w %w\n", desc_string, name);
   start = 0;
   end = string_length(desc_string);
@@ -704,6 +706,7 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   class_loading_result = mustBeLoaded(&value_clazz);
   if (class_loading_result == CLASS_LOADING_FAILED) {
     woempa(9, "  failed to load %K, the type of field %w of %K!\n", value_clazz, name, search_clazz);
+    x_monitor_eternal(clazz->resolution_monitor);
     *v = (w_word)exceptionThrown(thread);
     *c = COULD_NOT_RESOLVE;
     return;
@@ -1195,51 +1198,34 @@ void dissolveConstant(w_clazz clazz, int idx) {
 ** The resulting w_string is registered, so remember to deregister it afterwards.
 */
 static w_string getClassConstantName(w_clazz clazz, w_int idx) {
+  w_string result = NULL;
+  threadMustBeSafe(currentWonkaThread);
 
-  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+  x_monitor_eternal(clazz->resolution_monitor);
+  while (clazz->tags[idx] == RESOLVING_CLASS) {
+    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+      x_monitor_eternal(clazz->resolution_monitor);
+    }
+  }
+
+  if (clazz->tags[idx] == CONSTANT_CLASS) {
+    w_int name_index = clazz->values[idx];
+    w_string name = resolveUtf8Constant(clazz, name_index);
+
+    result = name;
+
+  }
+  else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
     w_clazz c = (w_clazz)clazz->values[idx];
 
-    woempa(1, "Already resolved constant\n");
-
-    return dots2slashes(c->dotified);
+    result = dots2slashes(c->dotified);
 
   }
-  else {
-    threadMustBeSafe(currentWonkaThread);
+  // else we return NULL (e.g. COULD_NOT_RESOLVE)
 
-    x_monitor_eternal(clazz->resolution_monitor);
-    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
-      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-        x_monitor_eternal(clazz->resolution_monitor);
-      }
-    }
+  x_monitor_exit(clazz->resolution_monitor);
 
-    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
-      w_int name_index = clazz->values[idx];
-
-      woempa(1, "Unresolved constant\n");
-
-      x_monitor_exit(clazz->resolution_monitor);
-
-      return resolveUtf8Constant(clazz, name_index);
-
-    }
-    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
-      w_clazz c = (w_clazz)clazz->values[idx];
-
-      x_monitor_exit(clazz->resolution_monitor);
-
-      woempa(1, "Newly resolved constant\n");
-
-      return dots2slashes(c->dotified);
-
-
-    }
-    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
-    x_monitor_exit(clazz->resolution_monitor);
-
-    return NULL;
-  }
+  return result;
 }
 
 /*
@@ -1298,71 +1284,62 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
 ** them afterwards.
 */
 w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring_clazz_ptr, w_string *member_name_ptr, w_string *member_type_ptr) {
+  w_boolean result = FALSE;
 
-  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+  threadMustBeSafe(currentWonkaThread);
 
-    return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+  x_monitor_eternal(clazz->resolution_monitor);
 
-  }
-  else {
-    threadMustBeSafe(currentWonkaThread);
-
-    x_monitor_eternal(clazz->resolution_monitor);
-    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
-      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-        x_monitor_eternal(clazz->resolution_monitor);
-      }
+  while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
+    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+      x_monitor_eternal(clazz->resolution_monitor);
     }
+  }
 
-    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
-      w_word member = clazz->values[idx];
+  if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT && clazz->tags[idx] != COULD_NOT_RESOLVE) {
+    w_word member = clazz->values[idx];
 
-      woempa(1, "Unresolved constant\n");
-      if (declaring_clazz_ptr) {
-        w_int cls_idx = Member_get_class_index(member);
-        w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
+    woempa(1, "Unresolved constant\n");
+    if (declaring_clazz_ptr) {
+      w_int cls_idx = Member_get_class_index(member);
+      w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
 
-        if (declaring_clazz_name) {
-          *declaring_clazz_ptr = declaring_clazz_name;
-        }
-        else {
-          x_monitor_exit(clazz->resolution_monitor);
-
-          return FALSE;
-        }
+      if (declaring_clazz_name) {
         woempa(1, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
+        *declaring_clazz_ptr = declaring_clazz_name;
       }
-      if (member_name_ptr || member_type_ptr) {
-        w_int nat_idx = Member_get_nat_index(member);
-        w_word nat = clazz->values[nat_idx];
-        w_int name_idx = Name_and_Type_get_name_index(nat);
-        w_int type_idx = Name_and_Type_get_type_index(nat);
+      else {
+        x_monitor_exit(clazz->resolution_monitor);
 
-        woempa(1, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
-        if (member_name_ptr) {
-          *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
-          woempa(1, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
-        }
-        if (member_type_ptr) {
-          *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
-          woempa(1, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
-        }
+        return FALSE;
       }
-      x_monitor_exit(clazz->resolution_monitor);
-
-      return TRUE;
     }
-    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
-      x_monitor_exit(clazz->resolution_monitor);
+    if (member_name_ptr || member_type_ptr) {
+      w_int nat_idx = Member_get_nat_index(member);
+      w_word nat = clazz->values[nat_idx];
+      w_int name_idx = Name_and_Type_get_name_index(nat);
+      w_int type_idx = Name_and_Type_get_type_index(nat);
 
-      return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
-
+      woempa(1, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
+      if (member_name_ptr) {
+        *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
+        woempa(1, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
+      }
+      if (member_type_ptr) {
+        *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
+        woempa(1, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
+      }
     }
-    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
-    x_monitor_exit(clazz->resolution_monitor);
-
-    return FALSE;
+    result = TRUE;
   }
+  else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+
+    result == internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+
+  }
+  // else we return FALSE (e.g. COULD_NOT_RESOLVE)
+
+  x_monitor_exit(clazz->resolution_monitor);
 }
 
 #ifdef DEBUG
