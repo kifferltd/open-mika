@@ -406,6 +406,7 @@ extern volatile w_int blocking_all_threads;
 #define BLOCKED_BY_GC   1
 #define BLOCKED_BY_JDWP 2
 #define BLOCKED_BY_JITC 4
+#define BLOCKED_BY_WABORT 0x80
 
 extern volatile w_thread marking_thread;
 extern volatile w_thread jitting_thread;

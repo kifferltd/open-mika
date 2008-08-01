@@ -291,12 +291,6 @@ void _woempa(const char *file, const char *function, int line, int level, const 
     (void)x_vsnprintf(woempa_buffer + strlen(woempa_buffer), bufsize - strlen(woempa_buffer), fmt , ap);
     va_end (ap);
    
-#ifdef OS_NONE
-    if(woempa_stderr) {
-      PutString(woempa_buffer);
-      PutString((char *)"\15");
-    }
-#else
 #ifndef ECOS
     if(od) { 
       (void)write(od, woempa_buffer, strlen(woempa_buffer));
@@ -310,7 +304,6 @@ void _woempa(const char *file, const char *function, int line, int level, const 
         fflush(NULL);
       }
     }
-#endif
 
     (void)x_mutex_unlock(&woempaMutex);
 
@@ -327,12 +320,10 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   va_list ap;
   w_size bufsize = BUFSIZE;
 
+  blocking_all_threads |= BLOCKED_BY_WABORT;
   if (haveWonkaThreads) {
     status = x_mutex_lock(&woempaMutex, 5);
   }
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
   x_snprintf(woempa_buffer, bufsize, "\n%s: %s %4d: ", abortMessages[scope], function, line);
 
   va_start (ap, fmt);
@@ -340,9 +331,6 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   va_end (ap);
 
   (void)write(1, woempa_buffer, strlen(woempa_buffer));
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
   kthread = x_thread_current();
 /*
 ** Replace with thread_hashtable lookup for now
@@ -367,9 +355,6 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   else {
     PutString((char*)"Unable to identify failing thread, sorry mate...\n");
   }
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
 #endif
 
   if (haveWonkaThreads && status == xs_success) {
@@ -377,12 +362,8 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   }
 
   if (scope > ABORT_INFO) {
-#ifdef OS_NONE
-    (void)x_thread_sleep(x_millis2ticks(5000));
-    x_thread_deletei(x_thread_current());
-#else
     abort();
-#endif
+  blocking_all_threads &= ~BLOCKED_BY_WABORT;
   }
   
 }
@@ -511,7 +492,7 @@ void w_dump_locks(void) {
   if (sweeping_thread) {
     w_dump("       GC sweeping thread : %t\n", sweeping_thread);
   }
-  if (blocking_all_threads) {
+  if (blocking_all_threads & ~BLOCKED_BY_WABORT) {
     w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
   }
   w_dump("\n");
