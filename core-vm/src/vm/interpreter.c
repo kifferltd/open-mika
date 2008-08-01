@@ -3624,11 +3624,11 @@ void interpret(w_frame caller, w_method method) {
     if ((x->spec.declaring_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER || isSet(x->flags, ACC_PRIVATE) || isSet(x->flags, METHOD_IS_CONSTRUCTOR) || !isSuperClass(x->spec.declaring_clazz, getSuper(frame->method->spec.declaring_clazz))) {
       if (x->exec.arg_i < 4) {
         if (x->exec.code && x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokevirtual %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = nop;
+          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          *current = x->exec.arg_i > 0 ? pop : nop;
           *(++current) = x->exec.arg_i > 1 ? pop : nop;
           *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokevirtual %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
           tos -= x->exec.arg_i - 1;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
