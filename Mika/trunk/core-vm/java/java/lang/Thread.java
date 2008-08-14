@@ -627,8 +627,6 @@ public class Thread implements Runnable {
       }
       synchronized (state_lock) {
         while ((started && !stopped) && (then > now)) {
-          System.out.println("Thread.join() "+state_lock+
-              ".wait("+(then-now)+", "+nanos+")");
           state_lock.wait(then - now, nanos);
           now = System.currentTimeMillis();
         }
