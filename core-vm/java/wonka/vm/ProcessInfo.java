@@ -1,5 +1,5 @@
 /**
- * Copyright  (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.
+ * Copyright  (c) 2006, 2008 by Chris Gray, /k/ Embedded Java Solutions.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -84,7 +84,8 @@ public class ProcessInfo {
       process.setReturnValue(retval);
       return;
     } 
-    cleanUp();
+    // [CG 20080814] Safer to leave this until the finalizer?
+    // cleanUp();
   }
 
   synchronized native void destroy();
