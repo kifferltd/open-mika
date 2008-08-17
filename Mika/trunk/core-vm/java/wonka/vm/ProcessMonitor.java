@@ -1,5 +1,5 @@
 /**
- * Copyright  (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.
+ * Copyright  (c) 2006, 2008 by Chris Gray, /k/ Embedded Java Solutions.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@ package wonka.vm;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 
 /**
  * ProcessMonitor:
@@ -53,10 +54,18 @@ public class ProcessMonitor implements Runnable {
   public void run() {
     try {
       do {
-        synchronized(this) {
-          while (!queue.isEmpty()) {
-            //System.out.println("ProcessMonitor.run() Starting new process "+System.currentTimeMillis());
-            startProcess((NativeProcess) queue.removeFirst());
+        while (!queue.isEmpty()) {
+          synchronized(this) {
+            NativeProcess np = null;
+            try {
+              np = (NativeProcess)queue.removeFirst();
+            }
+            catch (NoSuchElementException nsee) {
+            }
+            if (np != null) {
+              //System.out.println("ProcessMonitor.run() Starting new process " + np);
+              startProcess(np);
+            }
           }
         }
 
@@ -77,8 +86,11 @@ public class ProcessMonitor implements Runnable {
               info.finish(returnvalue);              
             }
           } else if (queue.isEmpty()){
-            thread = null;
-            break;                     
+            wait(10000);
+            if (queue.isEmpty()){
+              thread = null;
+              break;                     
+            }
           }
         }        
       } while(true);
@@ -107,23 +119,27 @@ public class ProcessMonitor implements Runnable {
     try {
       ProcessInfo info = nativeExec(process.cmdarray, process.envp, process.path);
       if (info == null) {
-        process.returnvalue = NativeProcess.ERROR;
+        setProcessReturnValue(process, NativeProcess.ERROR);
       } else {
         info.setNativeProcess(process);
         Integer pid = new Integer(info.id);
         //System.out.println("ProcessMonitor.monitorProcess("+pid+") add to processes");
         processes.put(pid,info);  
-        process.returnvalue = NativeProcess.STILL_RUNNING;
+        setProcessReturnValue(process, NativeProcess.STILL_RUNNING);
       }
     } catch (Throwable e) {
-      process.returnvalue = NativeProcess.ERROR;
       process.excecption = e;
-    }
-    synchronized(process) {
-      process.notifyAll();
+      setProcessReturnValue(process, NativeProcess.ERROR);
     }
   }
   
+  private void setProcessReturnValue(NativeProcess process, int retval) {
+    synchronized(process) {
+      process.returnvalue = retval;
+      process.notifyAll();
+    }
+  }
+
   private  native ProcessInfo nativeExec(String[] cmdarray,
            String[] envp, String string) throws IOException;
 
