@@ -71,7 +71,7 @@ static void quit_handler(int signum) {
 #ifdef O4P
 static void segv_handler(int signum, siginfo_t * sis, void * arg) {
   printf("\n\r\n*** SEGMENTATION FAULT ***\n\r\n");
-  printf("signo = %d code = %d addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_addr);
+  printf("signo = %d code = %d%s addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_code == SEGV_MAPERR ? " (SEGV_MAPERR)" : sis->si_code == SEGV_ACCERR ? " (SEGV_ACCERR)" : "", sis->si_addr);
   w_dump_info();
   abort();
 }
