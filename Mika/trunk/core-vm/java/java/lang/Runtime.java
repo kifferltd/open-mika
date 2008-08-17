@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -82,11 +83,10 @@ public class Runtime {
   private static HashMap loadedLibraries = new HashMap();
 
   /**
-  ** The number of instances of FinaDonna created and not yet finalized.
-  ** Sycnchronize on FinaDonna.class when modifying this.
+  ** Set of Threads which have called runFinalization and are still waiting.
   */
   
-  static int finalizatora;
+  static HashSet runners;
 
   /**
   ** The Threads which should be started on shutdown.
@@ -105,17 +105,19 @@ public class Runtime {
   */
   
   private class FinaDonna {
+    Thread waitingThread;
 
-    public FinaDonna() {
-      synchronized (FinaDonna.class) {
-        ++finalizatora ;
+    public FinaDonna(Thread thread) {
+      waitingThread = thread;
+      synchronized (runners) {
+        runners.add(thread);
       }
     }
 
     protected void finalize() {
-      synchronized (FinaDonna.class) {
-        --finalizatora ;
-        FinaDonna.class.notifyAll();
+      synchronized (runners) {
+        runners.remove(waitingThread);
+        runners.notifyAll();
       }
     }
   }
@@ -369,8 +371,8 @@ public class Runtime {
   /**
   ** Create an instance of FinaDonna and then throw it away.
   */
-  private void generateFinaDonna() {
-    new FinaDonna();
+  private void generateFinaDonna(Thread t) {
+    new FinaDonna(t);
   }
 
   /**
@@ -383,15 +385,16 @@ public class Runtime {
 
     debug("Runtime: runFinalization() invoked");
     GarbageCollector theGC = GarbageCollector.getInstance();
-    synchronized(FinaDonna.class) {
-      generateFinaDonna();
+    Thread currentThread = Thread.currentThread();
+    synchronized(runners) {
+      generateFinaDonna(currentThread);
       try {
         theGC.kick();
-        FinaDonna.class.wait(FINA_DONNA_PATIENZA);
-        while (finalizatora  > 0) {
+        runners.wait(FINA_DONNA_PATIENZA);
+        while (runners.contains(currentThread)) {
           debug("Runtime: runFinalization() still waiting");
           theGC.kick();
-          FinaDonna.class.wait(FINA_DONNA_PATIENZA);
+          runners.wait(FINA_DONNA_PATIENZA);
         }
       }
       catch (InterruptedException ie) {
