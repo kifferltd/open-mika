@@ -1985,9 +1985,9 @@ w_int destroyClazz(w_clazz clazz) {
     }
   }
   // [CG 20080120] Sirlan fix, TODO: why is Mika unstable without?
-  else {
-    return 0;
-  }
+  //else {
+  //  return 0;
+  //}
 
   woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
@@ -2069,6 +2069,7 @@ w_field getField(w_clazz clazz, w_string name) {
 ** as after the bootstrap phase every clazz gets a Class instance attached
 ** as soon as it is created.
 */
+#ifdef RUNTIME_CHECKS
 w_instance clazz2Class(w_clazz clazz) {
   w_instance Class;
 
@@ -2078,16 +2079,12 @@ w_instance clazz2Class(w_clazz clazz) {
 
   Class = clazz->Class;
   if (Class == NULL) {
-    Class = attachClassInstance(clazz, currentWonkaThread);
-  }
-
-  if (!Class) {
-    wabort(ABORT_WONKA, "clazz %k has no Class", clazz);
+    wabort(ABORT_WONKA, "Gadzooks! %k->Class = NULL", clazz);
   }
 
   return Class;
-
 }
+#endif
 
 /*
 ** Get a copy of a reference field of a class
