@@ -86,7 +86,7 @@ public class Runtime {
   ** Set of Threads which have called runFinalization and are still waiting.
   */
   
-  static HashSet runners;
+  static HashSet runners = new HashSet();
 
   /**
   ** The Threads which should be started on shutdown.
