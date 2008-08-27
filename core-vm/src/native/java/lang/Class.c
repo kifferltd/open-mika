@@ -1152,7 +1152,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, n);
   if (Array) {
     for (i = 0; i < n; ++i) {
-      setArrayReferenceField(Array, clazz2Class(getFifo(inner_clazz_fifo)), i);
+      setArrayReferenceField(Array, clazz2Class((w_clazz)getFifo(inner_clazz_fifo)), i);
     }
   }
   enterSafeRegion(thread);

@@ -541,16 +541,38 @@ static void identify_special_methods(void) {
   }
 }
 
+/**
+ ** Code to attach Class instances to all classes after class Class has been
+ ** loaded. Function attachClassInstance() assumes that the component class
+ ** of an array class already has its Class object attached, so we make
+ ** multiple passes over system_loaded_class_hashtable; the first one deals
+ ** with all non-array classes, the next with one-dimensional array classes,
+ ** etc.. (In practice we don't have any array classes with more than one
+ ** dimension when attach_class_instances is called).
+ */
+static w_int maxdims;
+
+static w_int skipped;
+
 static w_boolean attach_class_iteration(void * name, void * cl) {
   w_clazz clazz = cl;
 
-  if (!clazz->Class) {
+  if (clazz->dims > maxdims) {
+    ++skipped;
+  }
+  else if (!clazz->Class) {
     attachClassInstance(clazz, NULL);
   }
 }
 
 static void attach_class_instances(void) {
-  ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+  maxdims = 0;
+  skipped = system_loaded_class_hashtable->occupancy;
+  while (skipped) {
+    skipped = 0;
+    ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+    ++maxdims;
+  }
 }
 
 /*
@@ -1095,7 +1117,7 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   }
   setClazzState(array_clazz, CLAZZ_STATE_LINKED);
 
-  woempa(7, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
+  woempa(1, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
   setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);
 
   if (thread) {
@@ -1391,24 +1413,24 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
   w_instance  effectiveLoader = classLoader;
   w_clazz     current;
 
-  woempa(7, "Class %w must be loaded.\n", name);
+  woempa(1, "Class %w must be loaded.\n", name);
   if (string_char(name, 0) == (w_char)'[') {
     return namedArrayClassMustBeLoaded(classLoader, name);
   }
 
   if (!systemClassLoader) {
-    woempa(7, "System class loader not defined, so use bootstrap class loader\n");
+    woempa(1, "System class loader not defined, so use bootstrap class loader\n");
   }
   else if (!classLoader) {
-    woempa(7, "System class loader exists, so use it instead of bootstrap class loader to load %w\n", name);
+    woempa(1, "System class loader exists, so use it instead of bootstrap class loader to load %w\n", name);
     effectiveLoader = systemClassLoader;
   }
-  else if (!classLoader || namedClassIsSystemClass(name)) {
-    woempa(7, "Class %w is a system class, so use system class loader instead of %j\n", name, classLoader);
+  else if (namedClassIsSystemClass(name)) {
+    woempa(1, "Class %w is a system class, so use system class loader instead of %j\n", name, classLoader);
     effectiveLoader = systemClassLoader;
   }
   else {
-    woempa(7, "Class %w is not a system class, so use %j\n", name, classLoader);
+    woempa(1, "Class %w is not a system class, so use %j\n", name, classLoader);
   }
 
   if (effectiveLoader) {
@@ -1419,7 +1441,7 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
 
   current = seekClazzByName(name, effectiveLoader);
 
-  woempa(7, "seekClazzByName result = %p\n", current);
+  woempa(1, "seekClazzByName result = %p\n", current);
   if (current == NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       wprintf("Load %w: initiating class loader is %j in thread %t\n", name, classLoader, thread);
@@ -1583,14 +1605,14 @@ w_boolean getBootstrapFile(char *filename, w_BAR *barptr) {
 
   }
 
-  woempa(7, "Zip file entry '%s' at %p\n", filename, ze);
+  woempa(1, "Zip file entry '%s' at %p\n", filename, ze);
   if (!uncompressZipEntry(ze)) {
 
     return FALSE;
 
   }
 
-  woempa(7, "Uncompressed data at %p, length is %d bytes\n", ze->u_data, ze->u_size);
+  woempa(1, "Uncompressed data at %p, length is %d bytes\n", ze->u_data, ze->u_size);
   barptr->buffer = ze->u_data;
   barptr->length = ze->u_size;
   barptr->current = 0;
@@ -1647,7 +1669,7 @@ w_clazz loadBootstrapClass(w_string name) {
     *dollar = 36;
     memcpy(dollar + 1, dollar + 8, (filename + length) - dollar - 7);
   }
-  woempa(7, "Need a file called '%s'\n", filename);
+  woempa(1, "Need a file called '%s'\n", filename);
   if (!getBootstrapFile(filename, &bar)) {
     wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap jar file '%s'\n", filename, bootzipname);
   }

@@ -302,9 +302,12 @@ w_instance attachClassInstance(w_clazz, w_thread thread);
 
 /*
 ** clazz2Class returns the w_instance of Class associated with this w_clazz.
-** If the Class instance does not already exist it will be created.
 */
+#ifdef RUNTIME_CHECKS
 w_instance clazz2Class(w_clazz);
+#else
+#define clazz2Class(c) ((c)->Class)
+#endif
 
 /*
 ** Get the class loader of this class: the initiating class loader if class
