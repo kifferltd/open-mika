@@ -143,7 +143,17 @@ static w_int i_digit(w_char ch, w_int radix) {
     // Or maybe:
     // w_int dv = charToDigitValue(ch);
 
-    return dv < radix ? dv : -1 ;
+    if (dv < radix) {
+      return dv;
+    }
+
+    /* [CG 20080828] Moved up from down below */
+    deco = charToDecomposition(ch);
+    if (deco && *deco == 1) {
+      return i_digit(deco[1], radix);
+    }
+
+    return -1 ;
 
   }
 
@@ -158,10 +168,12 @@ static w_int i_digit(w_char ch, w_int radix) {
     return ch - 'a'+ 10;
   } 
 
+  /* [CG 20080828] Only applicable if isDigit(ch) is true
   deco = charToDecomposition(ch);
   if (deco && *deco == 1) {
     return i_digit(deco[1], radix);
   }
+  */
 
   return -1;
 
