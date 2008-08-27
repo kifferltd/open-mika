@@ -749,7 +749,8 @@ java/io/File
         length                  ()J                                             Java_File_length
         mkdir                   ()Z                                             Java_File_mkdir
         rename                  (Ljava/lang/String;Ljava/lang/String;)Z         Java_File_rename
-        delete                  ()Z                                             Java_File_delete
+	setReadOnly		()Z	File_setReadOnly
+        delete                  ()Z     File_delete
         get_CWD                 ()Ljava/lang/String;                            Java_File_get_CWD
         get_fsroot              ()Ljava/lang/String;                            Java_File_get_fsroot
         init                    ()V                                             Java_File_init
@@ -768,7 +769,7 @@ java/io/RandomAccessFile
         setLength               (J)V                                            Java_RandomAccessFile_setLength
         close                   ()V                                             Java_RandomAccessFile_close
 wonka/vm/ProcessInfo
-  wotsit	I
+  wotsit	+
   id		I
   destroyed	Z
   cleanUp	()V		ProcessInfo_cleanUp

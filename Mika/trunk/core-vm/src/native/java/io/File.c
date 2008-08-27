@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -138,6 +138,21 @@ w_instance Java_File_list (JNIEnv *env, w_instance thisFile) {
 
 }
 
+w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
+  char *pathname;
+  struct vfs_STAT statbuf;
+  jboolean result;
+  const int WRITABLE = VFS_S_IWUSR | VFS_S_IWGRP | VFS_S_IWOTH;
+  
+  pathname = getFileName(thisFile);	  
+  result = vfs_stat(pathname, &statbuf) == 0
+    && vfs_chmod(pathname, statbuf.st_mode & ~WRITABLE) == 0;
+
+  freeFileName(pathname);
+  
+  return result;
+}
+
 w_boolean Java_File_canRead (JNIEnv *env, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
@@ -182,6 +197,32 @@ w_long Java_File_length (JNIEnv *env, jobject thisFile) {
   else {
     return 0;
   }
+}
+
+w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
+  char      *pathname;
+  struct vfs_STAT statbuf;
+  w_boolean result;
+  
+  pathname = getFileName(thisFile);	  
+
+  result == (vfs_stat(pathname, &statbuf) == 0);
+  if (result) {
+    if(VFS_S_ISDIR(statbuf.st_mode)) {
+      result = (vfs_rmdir(pathname) == 0);
+      woempa(9, "%s is a directory, result = %d\n", pathname, result);
+      wprintf("%s is a directory, result = %d\n", pathname, result);
+    } else {
+      result = (vfs_unlink(pathname) == 0);
+      woempa(9, "%s is a file, result = %d\n", pathname, result);
+      wprintf("%s is a file, result = %d\n", pathname, result);
+    }
+  }
+  
+  freeFileName(pathname);
+
+  return result;
+
 }
 
 w_boolean Java_File_mkdir(JNIEnv *env, jobject thisFile) {
@@ -287,39 +328,6 @@ JNIEXPORT jboolean JNICALL Java_File_rename(JNIEnv *env, jobject thisObj, jstrin
 
   releaseMem(pathname1);
   releaseMem(pathname2);
-
-  return result;
-
-}
-
-/*
- * Class:     File
- * Method:    delete
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_File_delete
-  (JNIEnv *env, jobject thisObj) {
-
-  jboolean        isCopy;
-  const char      *pathname;
-  jstring         path;
-  struct vfs_STAT statbuf;
-  jboolean        result = JNI_FALSE;
-  
-  path = (jstring)(*env)->GetObjectField(env, thisObj, absname);
-  pathname = (*env)->GetStringUTFChars(env, path, &isCopy);	  
-
-  if(vfs_stat((w_ubyte *)pathname, &statbuf) != -1) {
-    if(VFS_S_ISDIR(statbuf.st_mode)) {
-      if(vfs_rmdir(pathname) == 0) result = JNI_TRUE;
-      woempa(9, "%s is a directory, result = %d\n", pathname, result);
-    } else {
-      if(vfs_unlink(pathname) == 0) result = JNI_TRUE;
-      woempa(9, "%s is a file, result = %d\n", pathname, result);
-    }
-  }
-  
-  if(isCopy == JNI_TRUE) (*env)->ReleaseStringUTFChars(env, path, pathname);
 
   return result;
 

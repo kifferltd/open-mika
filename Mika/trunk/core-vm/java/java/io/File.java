@@ -432,9 +432,7 @@ public class File implements Comparable, Serializable {
     }
   }
 
-  public boolean setReadOnly() throws SecurityException {
-    return false;
-  }
+  public native boolean setReadOnly() throws SecurityException;
 
   public native long length() throws SecurityException;
 
