@@ -65,21 +65,21 @@ w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
   return result;
 }
 
-w_boolean Java_File_exists (JNIEnv *env, w_instance thisFile) {
+w_boolean File_exists (JNIEnv *env, w_instance thisFile) {
   struct vfs_STAT statbuf;
 
   return statFile(thisFile, &statbuf);
 }
 
-w_instance Java_File_get_CWD (JNIEnv *env, w_instance thisFile) {
+w_instance File_get_CWD (JNIEnv *env, w_instance thisFile) {
   return newStringInstance(utf2String(current_working_dir, strlen(current_working_dir)));
 }
 
-w_instance Java_File_get_fsroot (JNIEnv *env, w_instance thisFile) {
+w_instance File_get_fsroot (JNIEnv *env, w_instance thisFile) {
   return newStringInstance(utf2String(fsroot, strlen(fsroot)));
 }
 
-w_instance Java_File_list (JNIEnv *env, w_instance thisFile) {
+w_instance File_list (JNIEnv *env, w_instance thisFile) {
   w_thread thread = JNIEnv2w_thread(env);
   char *pathname;
   int count=0;
@@ -153,31 +153,31 @@ w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
   return result;
 }
 
-w_boolean Java_File_canRead (JNIEnv *env, w_instance thisFile) {
+w_boolean File_canRead (JNIEnv *env, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IRUSR) == VFS_S_IRUSR);
 }
 
-w_boolean Java_File_canWrite (JNIEnv *env, w_instance thisFile) {
+w_boolean File_canWrite (JNIEnv *env, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IWUSR) == VFS_S_IWUSR);
 }
 
-w_boolean Java_File_isFile (JNIEnv *env, w_instance thisFile) {
+w_boolean File_isFile (JNIEnv *env, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISREG(statbuf.st_mode);
 }
 
-w_boolean Java_File_isDirectory (JNIEnv *env, jobject thisFile) {
+w_boolean File_isDirectory (JNIEnv *env, jobject thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISDIR(statbuf.st_mode);
 }
 
-w_long Java_File_lastModified (JNIEnv *env, jobject thisFile) {
+w_long File_lastModified (JNIEnv *env, jobject thisFile) {
   struct vfs_STAT statbuf;
 
   if (statFile(thisFile, &statbuf)) {
@@ -188,7 +188,7 @@ w_long Java_File_lastModified (JNIEnv *env, jobject thisFile) {
   }
 }
 
-w_long Java_File_length (JNIEnv *env, jobject thisFile) {
+w_long File_length (JNIEnv *env, jobject thisFile) {
   struct vfs_STAT statbuf;
   
   if (statFile(thisFile, &statbuf)) {
@@ -211,11 +211,9 @@ w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
     if(VFS_S_ISDIR(statbuf.st_mode)) {
       result = (vfs_rmdir(pathname) == 0);
       woempa(9, "%s is a directory, result = %d\n", pathname, result);
-      wprintf("%s is a directory, result = %d\n", pathname, result);
     } else {
       result = (vfs_unlink(pathname) == 0);
       woempa(9, "%s is a file, result = %d\n", pathname, result);
-      wprintf("%s is a file, result = %d\n", pathname, result);
     }
   }
   
@@ -225,7 +223,7 @@ w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
 
 }
 
-w_boolean Java_File_mkdir(JNIEnv *env, jobject thisFile) {
+w_boolean File_mkdir(JNIEnv *env, jobject thisFile) {
   char *pathname;
   w_boolean result;
   
@@ -238,7 +236,7 @@ w_boolean Java_File_mkdir(JNIEnv *env, jobject thisFile) {
   return result;
 }
 
-/* Header for class File */
+// TODO: get rid of remaining JNI cruft
 
 #ifndef _Included_File
 #define _Included_File
@@ -250,7 +248,7 @@ static w_instance   fileclazz;
 static w_instance   stringclazz;
 static w_field absname;
 
-JNIEXPORT void JNICALL Java_File_init
+JNIEXPORT void JNICALL File_init
   (JNIEnv *env, w_instance thisClazz) {
   
   fileclazz = thisClazz;
@@ -265,7 +263,7 @@ JNIEXPORT void JNICALL Java_File_init
  * Signature: (J)Z
  */
 
-JNIEXPORT jboolean JNICALL Java_File_setModTime(JNIEnv *env, jobject thisObj, jlong modtime) {
+JNIEXPORT jboolean JNICALL File_setModTime(JNIEnv *env, jobject thisObj, jlong modtime) {
   jboolean        isCopy;
   const char      *pathname;
   jstring         path;
@@ -291,7 +289,7 @@ JNIEXPORT jboolean JNICALL Java_File_setModTime(JNIEnv *env, jobject thisObj, jl
  * Signature: (Ljava/io/File;)Z
  */
 
-JNIEXPORT jboolean JNICALL Java_File_rename(JNIEnv *env, jobject thisObj, jstring file1, jstring file2) {
+JNIEXPORT jboolean JNICALL File_rename(JNIEnv *env, jobject thisObj, jstring file1, jstring file2) {
     
   char      *pathname1;
   char      *pathname2;

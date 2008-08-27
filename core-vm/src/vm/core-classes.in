@@ -739,35 +739,35 @@ java/io/FileOutputStream
         flush                   ()V                                             Java_FileOutputStream_flush
 java/io/File
 	absname			Ljava/lang/String;
-        exists                  ()Z                                             Java_File_exists
-        list                    ()[Ljava/lang/String;                           Java_File_list
-        canRead                 ()Z                                             Java_File_canRead
-        canWrite                ()Z                                             Java_File_canWrite
-        isFile                  ()Z                                             Java_File_isFile
-        isDirectory             ()Z                                             Java_File_isDirectory
-        lastModified            ()J                                             Java_File_lastModified
-        length                  ()J                                             Java_File_length
-        mkdir                   ()Z                                             Java_File_mkdir
-        rename                  (Ljava/lang/String;Ljava/lang/String;)Z         Java_File_rename
-	setReadOnly		()Z	File_setReadOnly
-        delete                  ()Z     File_delete
-        get_CWD                 ()Ljava/lang/String;                            Java_File_get_CWD
-        get_fsroot              ()Ljava/lang/String;                            Java_File_get_fsroot
-        init                    ()V                                             Java_File_init
-	setLastModified		(J)Z						Java_File_setModTime
+        exists                  ()Z                     File_exists
+        list                    ()[Ljava/lang/String;   File_list
+        canRead                 ()Z                     File_canRead
+        canWrite                ()Z                     File_canWrite
+        isFile                  ()Z                     File_isFile
+        isDirectory             ()Z                     File_isDirectory
+        lastModified            ()J                     File_lastModified
+        length                  ()J                     File_length
+        mkdir                   ()Z                     File_mkdir
+        rename                  (Ljava/lang/String;Ljava/lang/String;)Z File_rename
+	setReadOnly		()Z			File_setReadOnly
+        delete                  ()Z    	 		File_delete
+        get_CWD                 ()Ljava/lang/String;	File_get_CWD
+        get_fsroot              ()Ljava/lang/String;    File_get_fsroot
+        init                    ()V                     File_init
+	setLastModified		(J)Z			File_setModTime
 java/io/RandomAccessFile
 	fd			Ljava/io/FIleDescriptor;
-        createFromString        (Ljava/lang/String;I)I         Java_RandomAccessFile_createFromString
-        read                    ()I                                             Java_RandomAccessFile_read
-        readIntoBuffer          ([BII)I                                         Java_RandomAccessFile_readIntoBuffer
-        write                   (I)V                                            Java_RandomAccessFile_write
-        writeFromBuffer         ([BII)V                                         Java_RandomAccessFile_writeFromBuffer
-        skipBytes               (I)I                                            Java_RandomAccessFile_skipBytes
-        getFilePointer          ()J                                             Java_RandomAccessFile_getFilePointer
-        seek                    (J)V                                            Java_RandomAccessFile_seek
-        length                  ()J                                             Java_RandomAccessFile_length
-        setLength               (J)V                                            Java_RandomAccessFile_setLength
-        close                   ()V                                             Java_RandomAccessFile_close
+        createFromString        (Ljava/lang/String;I)I  RandomAccessFile_createFromString
+        read                    ()I                     RandomAccessFile_read
+        readIntoBuffer          ([BII)I                 RandomAccessFile_readIntoBuffer
+        write                   (I)V                    RandomAccessFile_write
+        writeFromBuffer         ([BII)V                 RandomAccessFile_writeFromBuffer
+        skipBytes               (I)I                    RandomAccessFile_skipBytes
+        getFilePointer          ()J                     RandomAccessFile_getFilePointer
+        seek                    (J)V                    RandomAccessFile_seek
+        length                  ()J                     RandomAccessFile_length
+        setLength               (J)V                    RandomAccessFile_setLength
+        close                   ()V                     RandomAccessFile_close
 wonka/vm/ProcessInfo
   wotsit	+
   id		I

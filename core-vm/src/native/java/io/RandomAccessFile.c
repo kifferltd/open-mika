@@ -37,12 +37,41 @@
 #include "vfs.h"
 #include "wstrings.h"
 
+static vfs_FILE *RAF2FILE(w_instance thisRAF) {
+  w_instance fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
+  return getWotsitField(fd_obj, F_FileDescriptor_fd);
+}
+
 /*
- * Class:     RandomAccessFile
- * Method:    createFromString
- * Signature: (Ljava/lang/String;Ljava/lang/String;)V
- */
-w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w_instance path, int mode) {
+** Get the file's name as a C-style UTF8 string. After you've finished with the
+** name, call freeFDName() on the result to free up the memory.
+*/
+char *getFDName(w_instance thisFileDescriptor) {
+  w_instance pathString;
+  w_string path;
+
+  pathString = getReferenceField(thisFileDescriptor, F_FileDescriptor_fileName);
+  path = String2string(pathString);
+
+  return (char*)string2UTF8(path, NULL) + 2;	  
+}
+
+#define freeFDName(n) releaseMem((n)-2)
+
+w_boolean statFD(w_instance thisFileDescriptor, struct vfs_STAT *statbufptr) {
+  char *pathname;
+  jboolean result;
+  
+  pathname = getFDName(thisFileDescriptor);	  
+
+  result = (vfs_stat(pathname, statbufptr) != -1);
+
+  freeFDName(pathname);
+
+  return result;
+}
+
+w_int RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w_instance path, int mode) {
   w_thread thread = JNIEnv2w_thread(env);
   w_string pathname_string;
   char *pathname;
@@ -119,39 +148,26 @@ w_int Java_RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w
   return 0;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    read
- * Signature: ()I
- */
-w_int Java_RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
-
-  w_instance  fd_obj;
+w_int RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
   vfs_FILE    *file;
   w_int       result = -1;
+  w_sbyte     minibuf;
 
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
-    result = 0;
   } else {
-    result = vfs_fgetc(file);
-    //if(!vfs_feof(file)) result = vfs_fgetc(file);
+    if (vfs_fread(&minibuf, 1, 1, file) > 0) {
+      result = minibuf;
+    }
   }
 
   return result;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    readIntoBuffer
- * Signature: ([BII)I
- */
-w_int Java_RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
+w_int RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
 
-  w_instance  fd_obj;
   vfs_FILE    *file;
   w_int       result;
   w_sbyte     *bytes;
@@ -164,8 +180,7 @@ w_int Java_RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_i
   }
 
   bytes = instance2Array_byte(buffer);
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
@@ -179,13 +194,7 @@ w_int Java_RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_i
   return result;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    skipBytes
- * Signature: (I)I
- */
-w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n) {
-
+w_int RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n) {
   w_instance  fd_obj;
   vfs_FILE    *file;
   w_long       result = 0;
@@ -197,23 +206,12 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
   } else {
-    w_string pathname_string;
-    const char *pathname;
-    w_instance path;
-    w_int pathlen;
     struct vfs_STAT statbuf;
     w_long size = 0;
 
-    path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
-    pathname_string = String2string(path);
-    pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;
-
-    if(vfs_stat(pathname, &statbuf) != -1) {
+    if(statFD(fd_obj, &statbuf)) {
       size = statbuf.st_size;
     }
-
-    releaseMem(pathname - 2);
-
 
     prev_pos = vfs_ftell(file);
 
@@ -233,34 +231,22 @@ w_int Java_RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n)
   return result;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    write
- * Signature: (I)V
- */
-void Java_RandomAccessFile_write (JNIEnv *env, w_instance thisRAF, w_int oneByte) {
-
-  w_instance  fd_obj;
+void RandomAccessFile_write (JNIEnv *env, w_instance thisRAF, w_int oneByte) {
   vfs_FILE    *file;
+  w_sbyte     minibuf = oneByte;
 
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
   } else {
-    vfs_fputc(oneByte, file);
+    vfs_fseek(file, vfs_ftell(file), SEEK_SET);
+    vfs_fwrite(&minibuf, 1, 1, file);
+    vfs_fflush(file);
   }
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    writeFromBuffer
- * Signature: ([BII)V
- */
-void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
-
-  w_instance  fd_obj;
+void RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
   vfs_FILE    *file;
   w_sbyte     *bytes;
   w_sbyte     *data;
@@ -272,8 +258,7 @@ void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_i
   }
 
   bytes = instance2Array_byte(buffer);
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
@@ -284,19 +269,11 @@ void Java_RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_i
   }
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    getFilePointer
- * Signature: ()J
- */
-w_long Java_RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
-
-  w_instance  fd_obj;
+w_long RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
   vfs_FILE    *file;
   w_long       result = -1;
 
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
@@ -308,18 +285,10 @@ w_long Java_RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
   return result;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    seek
- * Signature: (J)V
- */
-void Java_RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, w_long pos) {
-
-  w_instance  fd_obj;
+void RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, w_long pos) {
   vfs_FILE    *file;
 
-  fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  file = getWotsitField(fd_obj, F_FileDescriptor_fd);
+  file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
@@ -330,42 +299,23 @@ void Java_RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, w_long pos) {
   }
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    length
- * Signature: ()J
- */
-w_long Java_RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
-
+w_long RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
   w_instance fd_obj;
-  w_string pathname_string;
-  const char *pathname;
-  w_instance path;
-  w_int pathlen;
   struct vfs_STAT statbuf;
   w_long result = 0;
   
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
-  path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
-  pathname_string = String2string(path);
-  pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;	  
 
-  if (vfs_stat(pathname, &statbuf) == -1) {
+  if (!statFD(fd_obj, &statbuf)) {
     throwIOException(JNIEnv2w_thread(env));
   }
   result = statbuf.st_size;
   woempa(7, "vfs_stat(%s, %p) returned length %d\n", pathname, &statbuf, result);
-  releaseMem(pathname - 2);
 
   return result;
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    setLength
- * Signature: (J)V
- */
-void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen) {
+void RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen) {
 
   w_instance  fd_obj;
   vfs_FILE    *file;
@@ -379,12 +329,9 @@ void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long ne
     w_string pathname_string;
     const char *pathname;
     w_instance path;
-    w_int pathlen;
     w_long oldptr;
 
-    path = getReferenceField(fd_obj, F_FileDescriptor_fileName);
-    pathname_string = String2string(path);
-    pathname = (char*)string2UTF8(pathname_string, &pathlen) + 2;
+    pathname = getFDName(fd_obj);
 
     oldptr = vfs_ftell(file);
 
@@ -392,7 +339,7 @@ void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long ne
       throwIOException(JNIEnv2w_thread(env));
     }
 
-    releaseMem(pathname - 2);
+    freeFDName(pathname);
 
     if(newlen < oldptr && vfs_fseek(file, newlen, SEEK_SET) == -1) {
       throwIOException(JNIEnv2w_thread(env));
@@ -400,12 +347,7 @@ void Java_RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long ne
   }
 }
 
-/*
- * Class:     RandomAccessFile
- * Method:    close
- * Signature: ()V
- */
-void Java_RandomAccessFile_close (JNIEnv *env, w_instance thisRAF) { 
+void RandomAccessFile_close (JNIEnv *env, w_instance thisRAF) { 
   w_instance  fd_obj;
   vfs_FILE    *file;
 
