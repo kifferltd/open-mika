@@ -93,6 +93,13 @@ w_char*  utf2chars(const char *utf8string, w_int* utf8length);
 w_int compareStrings(w_string string1, w_string string2);
 
 /*
+** Extract a substring of a w_string, as a registered w_string.
+** Note that no bounds checking is performed by this function!
+** Can return NULL if insufficient memory is available.
+*/
+w_string w_substring(w_string s, w_int offset, w_int length);
+
+/*
 ** w_string2chars converts a w_string to an array of unicode characters.
 ** The caller is responsible for providing a sufficient amount of memory
 ** for the unpacked characters.  The result returned is the number of
