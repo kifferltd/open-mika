@@ -263,6 +263,39 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
 }
 
 /*
+** For compatibility reasons we refuse to load primitive classes or arrays
+** thereof or void.
+*/
+w_boolean isPrimitiveClassName(w_string name) {
+  if (name == string_boolean || name == string_byte || name == string_short
+   || name == string_c_h_a_r || name == string_int || name == string_long
+   || name == string_float || name == string_double || name == string_void) {
+    return TRUE;
+  }
+  else if (string_length(name) > 0 && string_char(name, 0) == '[') {
+    w_int i;
+    w_int l = string_length(name);
+    for (i = 1; i < l; ++i) {
+      if (string_char(name, i) != '[') {
+        w_char *namebuff = allocMem(l * sizeof(w_char));
+        w_string element_name;
+        w_boolean result;
+
+        w_string2chars(name, namebuff);
+        element_name = unicode2String(namebuff + i, l -i);
+        result = isPrimitiveClassName(element_name);
+        deregisterString(element_name);
+        releaseMem(namebuff);
+
+        return result;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+/*
 ** forName_S() finds a class with the given name, using the classloader which
 ** defined the calling class. The class found will be initialized.
 */
@@ -281,6 +314,10 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   }
 
   classname = String2string(Classname);
+  if (isPrimitiveClassName(classname)) {
+    throwException(thread, clazzClassNotFoundException, "Not allowed to find class %w using Class.forName()", classname);
+  }
+
   calling_clazz = getCallingClazz(thread);
   
   loader = clazz2loader(calling_clazz);
@@ -314,6 +351,10 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
 
   classname = String2string(Classname);
   woempa(1, "called with string %w initialize = %s, classloader %j.\n", classname,initialize?"true":"false", Classloader);
+  if (isPrimitiveClassName(classname)) {
+    throwException(thread, clazzClassNotFoundException, "Not allowed to find class %w using Class.forName()", classname);
+  }
+
 
   clazz = namedClassMustBeLoaded(Classloader, classname);
   exception = exceptionThrown(thread);
@@ -420,7 +461,7 @@ static w_int addFieldsToFifo(w_clazz current_clazz, w_fifo fields_fifo, w_int mt
 }
 
 /*
-** get_fields gets the fields (PUBLIC or DECLARED, depending ** on mtype)
+** get_fields gets the fields (PUBLIC or DECLARED, depending on mtype)
 ** of this class, and of its superclasses if mtype is PUBLIC.
 */
 w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
@@ -437,13 +478,19 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
   mustBeInitialized(clazzField);
   mustBeInitialized(clazzArrayOf_Field);
 
+  if (clazz) {
+    if (mustBeSupersLoaded(clazz) == CLASS_LOADING_FAILED) {
+      return NULL;
+    }
+  }
+
   /*
   ** Find the number of appropriate fields first.  
   */
 
   woempa(1, "looking for %s fields of %K\n", mtype==PUBLIC ? "public" : "declared", clazz);
 
-  fields = allocFifo((w_size)clazz->numFields);
+  fields = allocFifo(63);
   if(fields == NULL) {
     return NULL;
   }
