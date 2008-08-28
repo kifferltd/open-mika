@@ -277,15 +277,16 @@ w_boolean isPrimitiveClassName(w_string name) {
     w_int l = string_length(name);
     for (i = 1; i < l; ++i) {
       if (string_char(name, i) != '[') {
-        w_char *namebuff = allocMem(l * sizeof(w_char));
+        //w_char *namebuff = allocMem(l * sizeof(w_char));
         w_string element_name;
         w_boolean result;
 
-        w_string2chars(name, namebuff);
-        element_name = unicode2String(namebuff + i, l -i);
+        //w_string2chars(name, namebuff);
+        //element_name = unicode2String(namebuff + i, l -i);
+        element_name = w_substring(name, i, l - i);
         result = isPrimitiveClassName(element_name);
         deregisterString(element_name);
-        releaseMem(namebuff);
+        //releaseMem(namebuff);
 
         return result;
       }
