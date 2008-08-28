@@ -124,6 +124,28 @@ w_size w_string2chars(w_string source, w_char *destination) {
 }
 
 /*
+** Extract a substring of a w_string, as a registered w_string.
+** Note that no bounds checking is performed by this function!
+** Can return NULL if insufficient memory is available.
+*/
+w_string w_substring(w_string s, w_int offset, w_int length) {
+  w_size l = string_length(s);
+  w_char *buf = allocMem(l * sizeof(w_char));
+  w_string result = NULL;
+
+  if (!buf) {
+    return NULL;
+  }
+
+  w_string2chars(s, buf);
+  result = unicode2String(buf + offset, length);
+
+  releaseMem(buf);
+
+  return result;
+}
+
+/*
 ** Encode a unicode character into UTF-8; the resulting 1 to three bytes
 ** are written to **destination, and *destination is updated accordingly.
 **
