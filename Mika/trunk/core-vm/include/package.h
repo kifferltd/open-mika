@@ -37,7 +37,7 @@
 typedef struct w_Package {
   w_string name;         /* Package name, e.g. java.lang                */
   char   *label;         /* null-terminated C string beginning "pack"   */
-  w_flags flags;         /* reserved                                    */
+  w_flags flags;         /* not yet used                                */
   w_instance loader;     /* the ClassLoader that defined this package   */
 } w_Package;
 
@@ -52,6 +52,18 @@ w_package createPackage(w_string name, w_instance loader);
  ** Destroy a w_Package structure.
  */
 void destroyPackage(w_package);
+
+/**
+ ** Get the runtime package corresponding to the named class, creating it
+ ** if it does not already exist.
+ */
+w_package getPackageForClazz(w_clazz clazz, w_instance loader);
+
+/*
+** Function called as soon as the system class loader has been created,
+** to back-patch all existing packages to have loader = systemClassLoader.
+*/
+void patchPackages();
 
 #endif /* _PACKAGE_H */
 

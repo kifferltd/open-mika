@@ -310,7 +310,8 @@ void deregisterUnloadedClazz(w_clazz clazz) {
 w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   w_clazz result = NULL;
 
-  result = (w_clazz)ht_read_no_lock(loader2loaded_classes(initiating_loader), (w_word)name);
+  result = (w_clazz)ht_read(loader2loaded_classes(initiating_loader), (w_word)name);
+  woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
   if (!result) {
     result = allocMem(sizeof(w_UnloadedClazz));
@@ -324,6 +325,7 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
     result->loader   = initiating_loader;
 
     result = registerUnloadedClazz(result);
+    woempa(1, "returning unloaded class %p\n", result);
   }
 
   return result;
@@ -345,6 +347,8 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_int     state = getClazzState(current);
   x_monitor monitor;
   x_status  status;
+
+  threadMustBeSafe(thread);
 
   if (state == CLAZZ_STATE_UNLOADED) {
     w_clazz loaded;
@@ -376,8 +380,6 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     }
   }
   else if (state < CLAZZ_STATE_LOADED) {
-    threadMustBeSafe(thread);
-
     monitor = current->resolution_monitor;
 
     x_monitor_eternal(monitor);
@@ -400,25 +402,28 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   return result;
 }
 
-/*
-static void printBootstrapClass(w_word key, w_word value) {
+static void loaded_class_iterator(w_word key, w_word value) {
   w_string name = (w_string) key;
-  wprintf("  %w\n", name);
+  w_clazz clazz = (w_clazz)value;
+  if (!clazz->loader) {
+    clazz->loader = systemClassLoader;
+  }
 }
-*/
 
+/*
+** Fix system_loaded_class_hashtable so that every class which currently
+** has its loader set to null points to systemClassLoader instead.
+*/
+static void patchLoadedClasses() {
+  ht_every(system_loaded_class_hashtable, loaded_class_iterator);
+}
+  
 /*
 ** Set the systemClassLoader global variable. From now on the System
 ** Class Loader must be used for all system classes.
 */
 void setSystemClassLoader(w_instance scl) {
-//  w_int n;
   x_monitor_eternal(&system_loaded_class_hashtable->monitor);
-/*
-  wprintf("Bootstrap classes:\n");
-  n = ht_every(system_loaded_class_hashtable, printBootstrapClass);
-  wprintf("Total of %d bootstrap classes\n\n", n);
-*/
   if (systemClassLoader) {
     woempa(9, "Ahoy there! Someone tried to install SystemClassLoader twice ...\n");
   }
@@ -426,7 +431,8 @@ void setSystemClassLoader(w_instance scl) {
     woempa(7, "*** SystemClassLoader created, instance is %p ***\n", scl);
     systemClassLoader = scl;
     newGlobalReference(scl);
-    //releaseZipFile(bootzipfile);
+    patchLoadedClasses();
+    patchPackages();
   }
   x_monitor_exit(&system_loaded_class_hashtable->monitor);
 }
@@ -720,6 +726,9 @@ void startLoading(void) {
 
   system_unloaded_class_hashtable = ht_create((char*)"hashtable:system-unloaded-classes", 97, clazz_hashcode, clazz_comparator, 0, 0);
   woempa(7,"created system_unloaded_class_hashtable at %p\n",system_unloaded_class_hashtable);
+
+  system_package_hashtable = ht_create((char*)"hashtable:system-packages", 17, NULL, NULL, 0, 0);
+  woempa(7,"created system_package_hashtable at %p\n",system_package_hashtable);
 
   collectCoreFixups();
 
@@ -1082,6 +1091,7 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   array_clazz->type = (array_clazz->dims > 1 ? VM_TYPE_MULTI : VM_TYPE_MONO) + VM_TYPE_REF + (base_clazz->type & 0x0f);
   array_clazz->loader = base_clazz->loader;
   array_clazz->bits = 32;
+  array_clazz->package = base_clazz->package;
 
   name_buffer[0] = '[';
   w_string2chars(temp_name, name_buffer + 1);

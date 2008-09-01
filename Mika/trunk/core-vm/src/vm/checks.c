@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
+* Embedded Java Solutions. All rights reserved.                           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -158,7 +160,6 @@ w_boolean isAssignmentCompatible(w_clazz S_clazz, w_clazz T_clazz) {
 */
 
 w_boolean isAllowedToCall(w_clazz caller, w_method method, w_clazz objClazz) {
-
   if (method->spec.declaring_clazz == caller) {
     woempa(1,"This Class (%K) is same as calling Class, so any method can be called.\n",method->spec.declaring_clazz);
 
@@ -225,6 +226,8 @@ w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_clazz objClazz) {
  ** which happen to have part of their name in common.
  */
 w_boolean sameRuntimePackage(w_clazz clazz1, w_clazz clazz2) {
+  return clazz1->package == clazz2->package;
+/*
   w_string name1;
   w_string name2;
   w_size length1;
@@ -283,5 +286,6 @@ w_boolean sameRuntimePackage(w_clazz clazz1, w_clazz clazz2) {
   woempa(1,"  - same runtime package\n");
 
   return WONKA_TRUE;
+*/
 }
   

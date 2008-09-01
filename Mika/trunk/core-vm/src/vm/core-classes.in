@@ -320,6 +320,7 @@ java/lang/ClassLoader
 	ownname			Ljava/lang/String;
 	loaded_classes          +
 	unloaded_classes        +
+	packages		+
         create                  ()V                                             ClassLoader_create
         _defineClass		(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;       ClassLoader_defineClass
         resolveClass            (Ljava/lang/Class;)V            ClassLoader_resolveClass

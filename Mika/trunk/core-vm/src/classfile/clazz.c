@@ -73,12 +73,13 @@ w_boolean use_method_debug_info = FALSE;
 
 /*
 ** Each classloader has associated with it a hashtable of loaded classes
-** and one of unloaded classes. For the "primordial" class loader these are
-** static items.
+** and one of unloaded classes, plus a hashtable of packages it has loaded.
+** For the "primordial" class loader these are static items.
 */
 
 w_hashtable system_loaded_class_hashtable;
 w_hashtable system_unloaded_class_hashtable;
+w_hashtable system_package_hashtable;
 
 /*
 ** The clazz we clone arrays from. See also comments in wonka.h
@@ -1777,6 +1778,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   }
 
   set_classname(clazz);
+  getPackageForClazz(clazz, loader);
 
   clazz->resolution_thread = NULL;
   setClazzState(clazz, CLAZZ_STATE_LOADED);
@@ -1982,6 +1984,12 @@ w_int destroyClazz(w_clazz clazz) {
     if (clazz->temp.inner_class_info) {
       woempa(7, "Releasing temp.inner_class_info\n");
       releaseMem(clazz->temp.inner_class_info);
+    }
+
+    if (clazz->resolution_monitor) {
+      woempa(7, "Releasing resolution_monitor\n");
+      x_monitor_delete(clazz->resolution_monitor);
+      releaseMem(clazz->resolution_monitor);
     }
   }
   // [CG 20080120] Sirlan fix, TODO: why is Mika unstable without?

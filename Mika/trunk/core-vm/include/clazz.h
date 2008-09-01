@@ -33,6 +33,7 @@
 #ifndef _CLAZZ_H
 #define _CLAZZ_H
 
+#include "package.h"
 #include "wonka.h"
 #include "hashtable.h"
 #include "oswald.h"
@@ -71,6 +72,7 @@ typedef struct w_Clazz {
   x_monitor  resolution_monitor; /* used to protect resolution of constants */
   w_thread   resolution_thread;  /* thread which is busy with this class    */
                                  /* (unstable class states only)            */
+  w_package  package;    /* runtime package of which this class is a member */
 
 /* Information available in states CLAZZ_STATE_SUPERS_LOADED and higher */
 /* (see also the 'temp' annex below)                                    */
@@ -336,6 +338,8 @@ static inline w_clazz Class2clazz(w_instance Class) {
 extern w_hashtable system_loaded_class_hashtable;
 
 extern w_hashtable system_unloaded_class_hashtable;
+
+extern w_hashtable system_package_hashtable;
 
 /*
 ** Get a copy of a reference field of a class
