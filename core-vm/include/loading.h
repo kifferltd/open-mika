@@ -123,11 +123,19 @@ extern w_hashtable fixup2_hashtable;
 /*
 ** Given an instance 'l' of java.lang.ClassLoader, return a pointer to the 
 ** w_Hashtable which holds a pointer to a w_UnloadedClazz structure for each
-** class which has been marked as loadable by theis loader but has not yet
+** class which has been marked as loadable by this loader but has not yet
 ** been loaded.
 ** If 'l' is null, system_unloaded_class_hashtable is returned.
 */
 #define loader2unloaded_classes(l) ((l) ? getWotsitField((l), F_ClassLoader_unloaded_classes) :system_unloaded_class_hashtable)
+
+/*
+** Given an instance 'l' of java.lang.ClassLoader, return a pointer to the 
+** w_Hashtable which holds a pointer to a w_Package structure for each
+** package for which at least one class which has been loaded by this loader.
+** If 'l' is null, system_package_hashtable is returned.
+*/
+#define loader2packages(l) ((l) ? getWotsitField((l), F_ClassLoader_packages) :system_package_hashtable)
 
 /*
 ** Possible outcomes for mustBeXxxx calls: no action was needed, action was

@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray,               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -336,15 +336,26 @@ static void Class_destructor(w_instance theClass) {
 }
 
 /*
-** Release the memory held by a w_UnloadedClazz in a class loader's unload
-** class hashtable. We shouldn't really need to do this - by the time the
-** class loader is collected the table should be empty. Strange ...
+** Release the memory held by a w_UnloadedClazz in a class loader's unloaded
+** class hashtable.
 */
 static void trashUnloadedClasses(w_word key, w_word value, void *dummy1, void*dummy2) {
   w_clazz clazz = (w_clazz)key;
 
   woempa(7, "trashing %K (%d references)\n", clazz, value);
   releaseMem(clazz);
+}
+
+/*
+** Release the memory held by a w_Package structs in a class loader's package
+** hashtable.
+*/
+static void trashPackages(w_word key, w_word value, void *dummy1, void*dummy2) {
+  w_package package = (w_package)value;
+
+  woempa(7, "trashing %w in %j\n", package->name, package->loader);
+  wprintf("trashing %w in %j\n", package->name, package->loader);
+  destroyPackage(package);
 }
 
 static void ClassLoader_destructor(w_instance theClassLoader) {
@@ -367,6 +378,17 @@ static void ClassLoader_destructor(w_instance theClassLoader) {
     woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, theClassLoader);
     if (class_hashtable->occupancy) {
       ht_iterate(class_hashtable, trashUnloadedClasses, NULL, NULL);
+    }
+    releaseMem(class_hashtable->label);
+    ht_destroy(class_hashtable);
+  }
+
+  class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_packages);
+  if (class_hashtable) {
+    clearWotsitField(theClassLoader, F_ClassLoader_packages);
+    woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, theClassLoader);
+    if (class_hashtable->occupancy) {
+      ht_iterate(class_hashtable, trashPackages, NULL, NULL);
     }
     releaseMem(class_hashtable->label);
     ht_destroy(class_hashtable);
@@ -1590,7 +1612,7 @@ static void thread_iteration(w_word key, w_word value, void * arg1, void *arg2) 
  * In the Mark phase, we first mark all the (transient) `roots':
  *  - system thread group (and hence all threads)
  *  - system class hashtable (static fields of system classes)
- *  - global references hashtable (includes current local references)
+ *  - global references hashtable
  * For every item we mark, we append all references it contains to
  * the appropriate fifo (strong, weak, or phantom).  Therefore
  * by the end of this phase we have marked all items in the window
@@ -1611,8 +1633,7 @@ w_int markPhase(void) {
   w_int      retcode;
   w_int      marked = 0;
 
-  //printf("Entering mark phase, ticks = %d\n", x_time_get() - gc_start_ticks);
-  woempa(7, "(GC) Marking globals/locals hashtable.\n");
+  woempa(7, "(GC) Marking globals hashtable.\n");
   temp_fifo = ht_list_keys(globals_hashtable);
   if (!temp_fifo) {
     woempa(7, "ht_list_keys(globals_hashtable) returned NULL, quitting markPhase\n");

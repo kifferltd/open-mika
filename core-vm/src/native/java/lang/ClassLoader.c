@@ -55,6 +55,7 @@ extern Wonka_InitArgs *system_vm_args;
 w_instance extensionClassLoader;
 w_instance applicationClassLoader;
 
+#define PACKAGE_HASHTABLE_SIZE           19
 #define CLASSLOADER_HASHTABLE_SIZE       89
 
 static w_boolean checkClassName(w_string slashed) {
@@ -95,7 +96,8 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
   if (clazz == clazzSystemClassLoader) {
     setWotsitField(ClassLoader, F_ClassLoader_loaded_classes, system_loaded_class_hashtable);
     setWotsitField(ClassLoader, F_ClassLoader_unloaded_classes, system_unloaded_class_hashtable);
-    woempa(7, "Created %j by recycling %s and %s)\n", ClassLoader, system_loaded_class_hashtable->label, system_unloaded_class_hashtable->label);
+    setWotsitField(ClassLoader, F_ClassLoader_packages, system_package_hashtable);
+    woempa(7, "Created %j by recycling %s, %s and %s)\n", ClassLoader, system_loaded_class_hashtable->label, system_unloaded_class_hashtable->label, system_package_hashtable->label);
   }
   else {
     woempa(7, "Created new %j\n", ClassLoader);
@@ -121,6 +123,17 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
     }
     setWotsitField(ClassLoader, F_ClassLoader_unloaded_classes, class_hashtable);
     woempa(7, "%j: unloaded_classes in %s\n", ClassLoader, class_hashtable->label);
+    label_buf = allocMem((w_size)(string_length(clazz->dotified) + 38));
+    if (!label_buf) {
+      wabort(ABORT_WONKA, "Unable to allocate label_buf\n");
+    }
+    x_snprintf(label_buf, string_length(clazz->dotified) + 37, "hashtable:%j-packages", ClassLoader);
+    class_hashtable = ht_create(label_buf, PACKAGE_HASHTABLE_SIZE, NULL, NULL, 0, 0);
+    if (!class_hashtable) {
+      wabort(ABORT_WONKA, "Unable to allocate package hashtable\n");
+    }
+    setWotsitField(ClassLoader, F_ClassLoader_packages, class_hashtable);
+    woempa(7, "%j: packages in %s\n", ClassLoader, class_hashtable->label);
   }
 }
 
