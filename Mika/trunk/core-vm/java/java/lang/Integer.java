@@ -211,24 +211,7 @@ public final class Integer extends Number implements Comparable {
     }
 
     try {
-      if (property.startsWith("0x") && !property.startsWith("0x-")) {
-
-        return valueOf(property.substring(2), 16);
-
-      }
-      if (property.startsWith("#") && !property.startsWith("#-")) {
-
-        return valueOf(property.substring(1), 16);
-
-      }
-      if (property.startsWith("0")) {
-
-        return valueOf(property.substring(1), 8);
-
-      }
-
-      return valueOf(property, 10);
-
+      return decode(property);
     }
     catch (NumberFormatException e){
 
