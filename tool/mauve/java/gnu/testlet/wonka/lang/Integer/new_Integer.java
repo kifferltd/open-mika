@@ -22,6 +22,7 @@
 package gnu.testlet.wonka.lang.Integer;
 import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;
+import gnu.testlet.UnicodeSubsets;
 
 public class new_Integer implements Testlet
 {
@@ -186,7 +187,10 @@ public class new_Integer implements Testlet
       harness.check (Integer.decode("-0x1"), new Integer(-1));
       harness.check (Integer.decode("-#1"), new Integer(-1));
       // \\u0660 is a Unicode digit, value 0, but does not trigger octal or hex
-      harness.check (Integer.decode("\u06609"), new Integer(9));
+      // [CG 20080901] Nice try, but only works if "arabic extended" is supported
+      if (UnicodeSubsets.isSupported("15")) {
+        harness.check (Integer.decode("\u06609"), new Integer(9));
+      }
 
       harness.checkPoint ("decode exceptions");
       boolean ok = false;
