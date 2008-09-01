@@ -570,14 +570,11 @@ public class Thread implements Runnable {
 
   /**
    ** join() blocks the calling thread until this Thread has terminated
-   ** (see the implementation of _run()). Returns immediately if a thread 
-   ** tries to join() itself.
+   ** (see the implementation of _run()). 
+   ** [CG 20080901] Used to Return immediately if a thread tried to join
+   ** itself, but this is not mandated by JSR210.
    */
   public final void join() throws InterruptedException {
-    if (this.equals(Thread.currentThread())) {
-      return;
-    }
-
     synchronized(this) {
       if (state_lock == null) {
         state_lock = new Object();
@@ -602,14 +599,12 @@ public class Thread implements Runnable {
   }
 
   /**
-   * * join(millis,nanos) blocks the calling thread until either this Thread *
-   * has terminated or the stated time elapses.
+   ** join(millis,nanos) blocks the calling thread until either this Thread *
+   ** has terminated or the stated time elapses.
+   ** [CG 20080901] Used to Return immediately if a thread tried to join
+   ** itself, but this is not mandated by JSR210.
    */
   public final void join(long millis, int nanos) throws InterruptedException {
-    if (this.equals(Thread.currentThread())) {
-      return;
-    }
-
     if (millis == 0 && nanos == 0) {
       join();
     } else if (millis < 0 || nanos < 0 || nanos >= 1000000) {
