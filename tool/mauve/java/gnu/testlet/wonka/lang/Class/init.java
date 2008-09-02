@@ -29,6 +29,7 @@ import java.lang.reflect.*;
 // As discussed at http://gcc.gnu.org/ml/java-patches/2004-q2/msg00443.html 
 public class init implements Testlet
 {
+  static boolean alreadyran = false;
   static boolean initI = false;
   static boolean initC1 = false;
   static boolean initC2 = false;
@@ -100,6 +101,12 @@ public class init implements Testlet
 
   public void test(TestHarness h)
   {
+    // These tests only make sense the first time they are run
+    if (alreadyran) {
+      return;
+    }
+
+    alreadyran = true;
     try
       {
 	// None of this should initialize anything
