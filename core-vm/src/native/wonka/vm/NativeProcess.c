@@ -201,7 +201,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   enterSafeRegion(thread);
 
   if (process) {
-    setIntegerField(process, F_ProcessInfo_wotsit, (w_int) wpid);
+    setWotsitField(process, F_ProcessInfo_wotsit, wpid);
     setIntegerField(process, F_ProcessInfo_id, pid);
   } else {
     host_destroy(wpid);
@@ -233,7 +233,7 @@ w_int ProcessInputStream_read(JNIEnv *env, w_instance thisInstance) {
     return -1;
   }
 
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
 
   result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
       host_read_in(pid,&buffer,1) : host_read_err(pid,&buffer,1);
@@ -263,7 +263,7 @@ w_int ProcessInputStream_read_Array(JNIEnv *env, w_instance thisInstance, w_inst
   }
   else if(length > 0) {
     char* buffer = (char*) instance2Array_byte(Array) + offset;
-    pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    pid = getWotsitField(info, F_ProcessInfo_wotsit);
 
     result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
       host_read_in(pid, buffer, length) : host_read_err(pid, buffer, length);
@@ -284,7 +284,7 @@ w_int ProcessInputStream_available(JNIEnv *env, w_instance thisInstance) {
     throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
     return -1;
   }
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
   result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
      host_available_in(pid) : host_available_err(pid);
   if(result == EXECUTION_ERROR) {
@@ -302,7 +302,7 @@ w_void ProcessOutputStream_write(JNIEnv *env, w_instance thisInstance, w_int byt
     throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
     return;
   }
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
   if(host_write(pid, &buffer, 1) == EXECUTION_ERROR) {
     throwException(JNIEnv2w_thread(env),clazzIOException,"I/O error !");
   }
@@ -311,7 +311,7 @@ w_void ProcessOutputStream_write(JNIEnv *env, w_instance thisInstance, w_int byt
 w_void ProcessOutputStream_close(JNIEnv *env, w_instance thisInstance) {
   w_instance info = getReferenceField(thisInstance, F_ProcessOutputStream_info);
   if(info) {
-    w_void* pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    w_void* pid = getWotsitField(info, F_ProcessInfo_wotsit);
     host_close_out(pid); 
   }
 }
@@ -334,7 +334,7 @@ w_void ProcessOutputStream_write_Array(JNIEnv *env, w_instance thisInstance,
   }
   else if(length > 0) {
     w_ubyte* buffer = (w_ubyte*) instance2Array_byte(Array) + offset;
-    w_void* pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    w_void* pid = getWotsitField(info, F_ProcessInfo_wotsit);
     if(host_write(pid, buffer, length) == EXECUTION_ERROR) {
       throwException(thread,clazzIOException,"I/O error !");
     }
@@ -350,17 +350,17 @@ w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
 }
 
 w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
-  w_void* pid = (w_void*)getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+  w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid) {
-    host_close(pid);
     //w_dump("cleaning up %p\n",thisInstance);
-    setIntegerField(thisInstance, F_ProcessInfo_wotsit, 0);
+    clearWotsitField(thisInstance, F_ProcessInfo_wotsit);
+    host_close(pid);
   }
 }
 
 w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
-   w_void* pid = (w_void*) getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL && (getBooleanField(thisInstance, F_ProcessInfo_destroyed)== WONKA_FALSE)) {
     host_destroy(pid);
@@ -369,7 +369,7 @@ w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
 }
 
 w_void ProcessInfo_setReturnValue (JNIEnv *env, w_instance thisInstance, w_int retval) {
-   w_void* pid = (w_void*) getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL) {
     host_setreturnvalue(pid, retval);
