@@ -50,18 +50,18 @@ public abstract class ClassLoader {
    ** The application class loader, used to load the starting class and
    ** (confusingly) the one returned by getSystemClassLoader().
    */
-  private static ClassLoader applicationClassLoader;
+  static ClassLoader applicationClassLoader;
 
   /**
    ** The extension class loader, used to load installed extensions.
    */
-  private static ClassLoader extensionClassLoader;
+  static ClassLoader extensionClassLoader;
 
   /**
    ** The real system class loader, i.e. the one which loads from bootclasspath
    ** those classes (and resources) not loaded by the bootstrap class loader.
    */
-  private static ClassLoader systemClassLoader;
+  static ClassLoader systemClassLoader;
 
   /**
    ** The default protection domain.  Has a CodeSource of (null,null)
@@ -104,12 +104,6 @@ public abstract class ClassLoader {
    ** relevant CodeSource.
    */
   private HashMap package_sources;
-
-  /**
-   ** This lock controls access to the class hashtable, which lurks 
-   ** in native code.
-   */
-  private final Object lock = new Object();
 
   /**
    ** List of libraries which were loaded by this ClassLoader.

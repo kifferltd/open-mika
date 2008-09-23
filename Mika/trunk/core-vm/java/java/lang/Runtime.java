@@ -478,7 +478,7 @@ public class Runtime {
     */
     
     ClassLoader cl = getCallingClassLoader();
-    if(cl == null) {
+    if (cl == null || cl == ClassLoader.systemClassLoader) {
       cl = getCallingCallingClassLoader();
     }
     
