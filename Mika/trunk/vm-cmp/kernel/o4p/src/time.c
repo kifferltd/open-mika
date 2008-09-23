@@ -216,28 +216,25 @@ void x_adjust_timers(x_long millis) {
 
   }
 
-  res = pthread_mutex_lock(&o4pe->threadsLock);
+  res = pthread_mutex_trylock(&o4pe->threadsLock);
   if (res != 0) {
     w_dump("Attempt to lock o4pe->threadsLock failed... %d\n", res);
-    abort();
+    return;
   }
+
   for (t = o4pe->threads; t != NULL; t = t->o4p_thread_next) {
     if (!t->xref) {
       continue;
     }
 
     if (t->state == xt_sleeping) {
-      pthread_mutex_lock(&t->sleep_timer);
       pthread_cond_broadcast(&t->sleep_cond);
-      pthread_mutex_unlock(&t->sleep_timer);
     }
     else {
       x_monitor monitor = t->waiting_on;
 
       if (monitor) {
-        pthread_mutex_lock(&monitor->mon_mutex);
         pthread_cond_broadcast(&monitor->mon_cond);
-        pthread_mutex_unlock(&monitor->mon_mutex);
       }
     }
   }

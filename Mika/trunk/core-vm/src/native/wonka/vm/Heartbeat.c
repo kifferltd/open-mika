@@ -135,8 +135,10 @@ static w_boolean inited;
 w_long system_time_offset;
 
 void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+  w_thread thread = JNIEnv2w_thread(env);
   long micros = millis * 1000;
   w_long diff;
+  w_fifo fifo;
 
 #ifdef USE_NANOSLEEP
   if (!inited) {
@@ -157,7 +159,8 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
     gettimeofday(&now, NULL);
     diff = (now.tv_usec - before.tv_usec) / 1000 + (now.tv_sec - before.tv_sec) * 1000;
     if (diff < 0 || diff > 2 * millis) {
-      x_adjust_timers(millis);
+      system_time_offset += diff - millis;
+      x_adjust_timers(diff);
     }
   }
 }
