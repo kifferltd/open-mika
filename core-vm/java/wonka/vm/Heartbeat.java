@@ -116,7 +116,11 @@ public final class Heartbeat implements Runnable {
     }
 
     try {
-      theRuntime.runFinalization();
+      // For an orderly shutdown we give finalizers a chance to run.
+      // (Not mandated by spec, but not forbidden either).
+      if (rc == 0) {
+        theRuntime.runFinalization();
+      }
       shutdownMethod.invoke(theRuntime, new Object[0]);
       theRuntime.exit(rc);
     }
