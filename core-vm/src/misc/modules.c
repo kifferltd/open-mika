@@ -47,6 +47,8 @@ char *loading_problem;
 #include "modules.h"
 #include "vfs.h"
 
+void initModules() {}
+
 void *loadModule(char * name, char * path) {
   
   x_status         status;
@@ -124,6 +126,8 @@ void *lookupModuleSymbol(char *name) {
 
 #else /* !OSWALD */
 
+void initModules() {}
+
 void *loadModule(char *name, char *path) { return NULL; }
 void unloadModule(void *handle) {}
 void *lookupModuleSymbol(char *name) { return NULL; }
@@ -135,6 +139,8 @@ void *lookupModuleSymbol(char *name) { return NULL; }
 #include "vfs.h"
 #include <dlfcn.h>
 
+static x_Mutex handles_Mutex;
+static x_mutex handles_mutex = &handles_Mutex;
 static void **handles = NULL;
 static void **current = NULL;
 extern char *fsroot;
@@ -198,10 +204,39 @@ void callOnLoad(void *handle) {
   }
 }
 
+/*
+ * Call the JNI_OnUnload function if it exists.
+ */
+void callOnUnload(void *handle) {
+  void *sym;
+  void  (*function_OnUnload)(JavaVM*,void*);
+  JNIEnv *env;
+  JavaVM *vm;
+
+  sym = dlsym(handle, "JNI_OnUnload");
+  function_OnUnload = sym;
+  if (!function_OnUnload) {
+
+    return;
+
+  }
+  env = w_thread2JNIEnv(currentWonkaThread);
+  if ((*env)->GetJavaVM(env, &vm) != 0) {
+
+    return;
+
+  }
+  function_OnUnload(vm, NULL);
+}
+
+void initModules() {
+  x_mutex_create(handles_mutex);
+}
+
 void *loadModule(char *name, char *path) {
   char *filename = NULL;
   void *handle = NULL;
-  int  offset = current - handles;
+  int  offset;
   char *orig_ld = NULL;
   char *ld_start = NULL;
   char *ld_end;
@@ -209,16 +244,21 @@ void *loadModule(char *name, char *path) {
   char *chptr;
   char *libPath = NULL;
 
+  x_mutex_lock(handles_mutex, x_eternal);
   if (!handles) {
     woempa(7, "No handles array allocated yet, allocating array of 10\n");
     handles = x_mem_alloc(10 * sizeof(void *));
     current = handles;
+    offset = 0;
   }
   else if((offset % 10) == 0) {
+    offset = current - handles;
     woempa(7, "Size of handles array is now %d, expanding to %d\n", offset, offset + 10);
     handles = x_mem_realloc(handles, (offset + 10) * sizeof(void *));
     current = handles + offset;
   }
+  *current++ = (void*)-1; // placeholder, overwritten later
+  x_mutex_unlock(handles_mutex);
 
   if(name) {
   // 'name' is non-null, must search path
@@ -279,7 +319,10 @@ void *loadModule(char *name, char *path) {
   }
   
   if(handle) {
-    *current++ = handle;
+    x_mutex_lock(handles_mutex, x_eternal);
+    // Careful! 'handles' could have been realloc'd by another thread
+    handles[offset] = handle;
+    x_mutex_unlock(handles_mutex);
     woempa(7, "Added handle %p to list, now have %d entries\n", handle, current - handles);
     callOnLoad(handle);
   }
@@ -292,7 +335,20 @@ void *loadModule(char *name, char *path) {
 }
 
 void unloadModule(void *handle) {
+  int offset;
+
+  callOnUnload(handle);
   dlclose(handle);
+
+  // Remove from list
+  x_mutex_lock(handles_mutex, x_eternal);
+  for (offset = 0; offset < (current - handles); ++offset) {
+    if (handles[offset] == handle) {
+      handles[offset] == *current--;
+      break;
+    }
+  }
+  x_mutex_unlock(handles_mutex);
 }
 
 void *lookupModuleSymbol(char *name) {

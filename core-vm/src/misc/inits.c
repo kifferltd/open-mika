@@ -81,7 +81,7 @@ void initWonka(void) {
 #endif
 
   initLocks();
-
+  initModules();
 #ifdef MODULES
   x_symtab_kernel();
 #endif

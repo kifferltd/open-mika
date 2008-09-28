@@ -38,6 +38,7 @@
 #include "wonka.h"
 
 void initWonka(void);
+void initModules(void);
 void *loadModule(char *, char *);
 void unloadModule(void*);
 void *lookupModuleSymbol(char *);
