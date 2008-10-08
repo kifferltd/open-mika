@@ -83,7 +83,7 @@ public abstract class Policy {
 
     static {
       try {
-        String policy_provider = Security.securityProps.getProperty("policy.provider");
+        String policy_provider = Security.getProperty("policy.provider");
         policy = policy_provider == null ? new DefaultPolicy() :
           (Policy)Class.forName(policy_provider).newInstance();
       }

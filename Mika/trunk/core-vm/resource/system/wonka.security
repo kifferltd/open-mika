@@ -35,7 +35,7 @@ security.provider.2=gnu.java.security.provider.Gnu
 policy.provider=com.acunia.wonka.security.DefaultPolicy
 
 # list of url to look for policy files
-policy.url.1=file:/system/wonka.policy
+policy.url.1=file:${java.home}/lib/mika/wonka.policy
 
 # (dis)allow property expanding while parsing policy files
 policy.expandProperties=true

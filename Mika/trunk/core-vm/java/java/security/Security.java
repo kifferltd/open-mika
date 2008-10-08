@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -43,8 +43,6 @@ import java.util.Set;
 public final class Security {
 
   private Security(){}
-
-  final static Properties securityProps = new Properties();
 
   static void permissionCheck(String permission) {
     if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
@@ -93,12 +91,12 @@ public final class Security {
 
   public static String getProperty(String key){
     permissionCheck("getProperty."+key);
-    return securityProps.getProperty(key);
+    return SecurityProperties.getProperty(key);
   }
 
   public static void setProperty(String key, String datum){
     permissionCheck("setProperty."+key);
-    securityProps.setProperty(key,datum);
+    SecurityProperties.setProperty(key,datum);
  }
 
 
@@ -266,16 +264,36 @@ public final class Security {
     Providers.loadProviders();
   }
 
+  private static class SecurityProperties {
+    private final static Properties securityProps;
+
+    static {
+      securityProps = new Properties();
+      try {
+        securityProps.load(ClassLoader.getSystemResourceAsStream("wonka.security"));
+      }
+      catch(Exception e){}
+    }
+
+    static int getSize() {
+      return securityProps.size();
+    }
+
+    static String getProperty(String k) {
+      return securityProps.getProperty(k);
+    }
+
+    static String setProperty(String k, String v) {
+      return (String)securityProps.setProperty(k, v);
+    }
+  }
+
   private static class Providers {
     static final ArrayList providers;
     private static int size;
 
     static {
-      try {
-        securityProps.load(ClassLoader.getSystemResourceAsStream("wonka.security"));
-      }
-      catch(Exception e){}
-      size = securityProps.size();
+      size = SecurityProperties.getSize();
       providers = new ArrayList(size);
       loadProviders();
     }
@@ -284,7 +302,7 @@ public final class Security {
       ClassLoader cl = ClassLoader.getSystemClassLoader();
       for (int i = 0; i < size; ++i) {
         String s = "security.provider." + (i + 1);
-        s = securityProps.getProperty(s);
+        s = SecurityProperties.getProperty(s);
         if (s == null){
           size = i;
           break;

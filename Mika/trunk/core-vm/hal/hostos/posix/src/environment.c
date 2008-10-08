@@ -56,10 +56,16 @@ char *getInstallationDir(void) {
   }
 
   bytes[len] = 0;
-  // We report one level up from command_line_path
+  // We report two levels up from command_line_path
   woempa(1, "command_line_path is '%s' (%d chars)\n", bytes, len);
   while (len && bytes[--len] != '/') {
     woempa(1, "byte[%d] is not '/', decrementing length\n", len);
+  }
+  if (len) {
+    --len;
+    while (len && bytes[--len] != '/') {
+      woempa(1, "byte[%d] is not '/', decrementing length\n", len);
+    }
   }
   bytes[len] = 0;
   woempa(1, "returning %s\n", bytes);
