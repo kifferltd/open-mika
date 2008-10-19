@@ -598,7 +598,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   }
 #endif
 
-  woempa(7, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
+  woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
   if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
 #ifdef JAVA_PROFILE
     if(method->exec.dispatcher) {
@@ -619,7 +619,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
 #else
     method->exec.dispatcher(caller, method);
 #endif
-    woempa(7, "RETURNED from %M\n", method);
+    woempa(1, "RETURNED from %M\n", method);
   }
   else {
     w_boolean unsafe = enterSafeRegion(caller->thread);
@@ -1679,6 +1679,7 @@ void interpret(w_frame caller, w_method method) {
   check_async_exception: {
     if (thread->exception) {
       frame->jstack_top = tos;
+      frame->current = current;
       current = searchHandler(frame);
       tos = (w_Slot*)frame->jstack_top;
     }
@@ -4400,7 +4401,7 @@ static w_code searchHandler(w_frame frame) {
   */
   
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+    wprintf("Thrown: Seeking handler for %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
   }
   woempa(7, "Seeking handler for %k in %t, current frame is running %M\n", instance2clazz(thread->exception), thread, frame->method);
   threadMustBeUnsafe(thread);
@@ -4415,11 +4416,13 @@ static w_code searchHandler(w_frame frame) {
         enterSafeRegion(thread);
         cc = getClassConstant(frame->method->spec.declaring_clazz, ex->type_index, thread);
         enterUnsafeRegion(thread);
+/* [CG 20080206] This can never be executed surely?
         if (thread->exception) {
           pending = thread->exception;
           pushLocalReference(frame, pending);
           break;
         }
+*/
       }
       else {
         cc = NULL;
@@ -4427,7 +4430,7 @@ static w_code searchHandler(w_frame frame) {
       if (pc >= ex->start_pc && pc < ex->end_pc) {
         if (cc == NULL || isSuperClass(cc, instance2object(pending)->clazz)) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-            wprintf("Thrown: Catching %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+            wprintf("Thrown: Catching %k '%w' in %M, thread %t\n", instance2clazz(pending), String2string((w_instance)pending[F_Throwable_detailMessage]), frame->method, thread);
           }
           woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
           woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
