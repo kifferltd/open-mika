@@ -11,10 +11,9 @@ This license applies to all files marked as being copyright Punch Telematix,
 not explicitly state this (we are in the process of updating the copyright
 headers). 
 
-Parts of the class libraries are taken from the CLasspath project, and
+Parts of the class libraries are taken from the Classpath project, and
 are covered by the Classpath license (GPL + exception). This applies to
 the following files:
-    core-vm/java/java/io/StreamTokenizer.java
     core-vm/java/java/util/AbstractMap.java
     core-vm/java/java/util/IdentityHashMap.java
     core-vm/java/java/util/HashMap.java
@@ -39,6 +38,22 @@ the following files:
     core-vm/java/java/security/cert/PKIXParameters.java
 Refer to the copyright header of those files for more information.
 
+Parts of the class libraries are taken from the Apache Harmony project, and
+are covered by the Apache license Version 2.0. This applies to the following
+files:
+    core-vm/java/java/io/StreamTokenizer.java
+    core-vm/java/java/math/BigDecimal.java
+    core-vm/java/java/math/Logical.java
+    core-vm/java/java/math/Elementary.java
+    core-vm/java/java/math/BigInteger.java
+    core-vm/java/java/math/Primality.java
+    core-vm/java/java/math/Conversion.java
+    core-vm/java/java/math/BitLevel.java
+    core-vm/java/java/math/Division.java
+    core-vm/java/java/math/Multiplication.java
+    core-vm/java/java/util/Calendar.java
+    core-vm/java/java/util/GregorianCalendar.java
+Refer to the copyright header of those files for more information.
 The BDF font files contained in directory vm-cmp/awt/rudolph/resource/font/
 are copyright Adobe Systems Incorporated and Digital Equipment Corporation.
 See the "X Consortium License" below.
