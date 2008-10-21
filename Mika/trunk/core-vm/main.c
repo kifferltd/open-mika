@@ -79,9 +79,10 @@ int   woempa_bytecodetrigger = 0;
 char *help_option_names[] = {"-help", "--help", "-?", "-X", "-W", "-Winfo", "-version", NULL};
 
 const char *general_help_text =
-  "Usage: mika [-options] [class [args...]]\n"
-  "                                If Mika is started without a class, a default class is used.\n"
-  "                                The default class can be changed in mika.properties.\n"
+  "Usage: mika [-options] class [args...]\n"
+  "           (to execute a class)\n"
+  "   or  mika [-options] -jar jarfile [args...]\n"
+  "           (to execute a jar file)\n"
   " options:\n"
   "   -cp -classpath <classpath>   set search path for classes and resources\n"
   "   -D<name>=<value>             set a system property\n"
