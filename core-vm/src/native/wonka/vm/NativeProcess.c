@@ -118,6 +118,10 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
     return NULL;
   }
 
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    wprintf("Execute command:");
+  }
+
   for(i = 0; i < cmdlength; i++) {
     w_instance instance = instance2Array_instance(cmdArray)[i];
     if(instance == NULL) {
@@ -131,8 +135,14 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
       cmdlength = i;
       goto clean_up;
     }
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf(" %s", cmd[i]);
+    }
   }
   cmd[cmdlength] = 0;
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    wprintf("\n");
+  }
 
   if(strlen(cmd[0]) == 0) {
     throwException(thread,clazzIllegalArgumentException,"empty command");
@@ -145,6 +155,10 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   */
 
   if(envArray != NULL) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: environment\n");
+    }
+
     envlength = instance2Array_length(envArray);
     env = allocMem((envlength + 1) * sizeof(char*));
 
@@ -165,6 +179,9 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
         envlength = i;
         goto clean_up;
       }
+      if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+        wprintf("  %s\n", env[i]);
+      }
     }
     env[envlength] = 0;
   }
@@ -178,6 +195,9 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
     path = convertPath(string);
     if(path == NULL) {
       goto clean_up;
+    }
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: working directory = %s\n", path);
     }
   }
 
@@ -203,6 +223,9 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   if (process) {
     setWotsitField(process, F_ProcessInfo_wotsit, wpid);
     setIntegerField(process, F_ProcessInfo_id, pid);
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: created %j with wotsit %p, pid %d\n", process, wpid, pid);
+    }
   } else {
     host_destroy(wpid);
     host_close(wpid);
@@ -345,6 +368,14 @@ w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
   w_int retval;
   w_int pid = host_wait_for_all(&retval);
 
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    if (pid > 0) {
+      wprintf("Execute command: %j host_wait_for_all returned pid %d, retval %d\n", thisInstance, pid, retval);
+    }
+    else {
+      wprintf("Execute command: %j host_wait_for_all returned pid %d\n", thisInstance, pid);
+    }
+  }
   setIntegerField(thisInstance, F_ProcessMonitor_returnvalue, retval);
   return pid;
 }
@@ -353,7 +384,9 @@ w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid) {
-    //w_dump("cleaning up %p\n",thisInstance);
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: cleaning up %j (wotsit %p)\n", thisInstance, pid);
+    }
     clearWotsitField(thisInstance, F_ProcessInfo_wotsit);
     host_close(pid);
   }
@@ -363,6 +396,9 @@ w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
    w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL && (getBooleanField(thisInstance, F_ProcessInfo_destroyed)== WONKA_FALSE)) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: destroying %j (wotsit %p)\n", thisInstance, pid);
+    }
     host_destroy(pid);
     setBooleanField(thisInstance, F_ProcessInfo_destroyed, WONKA_TRUE);
   }
@@ -372,6 +408,9 @@ w_void ProcessInfo_setReturnValue (JNIEnv *env, w_instance thisInstance, w_int r
    w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: %j returned %d\n", thisInstance, retval);
+    }
     host_setreturnvalue(pid, retval);
   }
 }

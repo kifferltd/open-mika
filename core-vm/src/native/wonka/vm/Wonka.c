@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -766,6 +766,9 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     }
     if (strstr(verbose_cstring, "http")) {
       verbose_flags |= VERBOSE_FLAG_HTTP;
+    }
+    if (strstr(verbose_cstring, "exec")) {
+      verbose_flags |= VERBOSE_FLAG_EXEC;
     }
   }
 }
