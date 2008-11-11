@@ -755,6 +755,10 @@ public class ThreadGroup {
     } else {
       if (!(e instanceof ThreadDeath)) {
         e.printStackTrace(System.err);
+        if (e instanceof Error && "true".equalsIgnoreCase(System.getProperty("mika.terminate.on.error"))) {
+          System.err.println("VM terminated due to " + e);
+          System.exit(1);
+        }
       }
     }
     // If t isn't a direct member of this TG then following does nothing
