@@ -569,10 +569,9 @@ x_status x_thread_resume(x_thread thread) {
       return xs_no_instance;
     }
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
-    status = pthread_setschedparam(thread->o4p_pthread, thread->o4p_thread_schedPolicy, &thread->o4p_thread_sched);
-    if (status != 0) {
-      return xs_no_instance;
-    }
+    // Don't check return code for this one, if it fails it's not a big deal.
+    // (For example it can fail because the thread already terminated).
+    pthread_setschedparam(thread->o4p_pthread, thread->o4p_thread_schedPolicy, &thread->o4p_thread_sched);
 #endif
   }
   else {
