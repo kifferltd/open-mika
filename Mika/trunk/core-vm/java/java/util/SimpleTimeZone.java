@@ -368,6 +368,7 @@ public class SimpleTimeZone extends TimeZone {
     	}
     }
     if (month == endMonth  && b) { 	
+System.out.println("millis = " + millis + " endTime = " + endTime);
     	switch (endMode) {
         case DOM_MODE:	
            b = day < endDay || ( day == endDay && millis < endTime);
@@ -420,7 +421,13 @@ public class SimpleTimeZone extends TimeZone {
   public boolean inDaylightTime(Date date) {
     GregorianCalendar gc = new GregorianCalendar(this);
     gc.setTime(date);
-    return inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.HOUR), gc.get(Calendar.MINUTE));
+    int hour = gc.get(Calendar.HOUR);
+    int minute = gc.get(Calendar.MINUTE);
+    int second = gc.get(Calendar.SECOND);
+    int millisecond = gc.get(Calendar.MILLISECOND);
+    System.out.println("hour = " + hour + " minute = " + minute + " second = " + second + " millisecond = " + millisecond);
+    return (hour == 0 && minute == 0 && second == 0 && millisecond == 0) ?  inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), 0) : inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), (int) (date.getTime() - new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE)).getTimeInMillis()));
+    // return inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), ((hour * 60 + minute) * 60 + second) * 1000 + millisecond);
 
   }
 
