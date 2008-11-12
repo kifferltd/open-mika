@@ -135,6 +135,9 @@ abstract public class TimeZone implements Serializable, Cloneable {
        if (s == null) {
            StringBuffer buf = new StringBuffer("GMT");
            int offset = getRawOffset();
+           if (daylight) {
+            offset += 3600000;
+           }
            if ( offset >= 0 ) {
              buf.append('+');
            }
