@@ -128,6 +128,7 @@ static void threadEntry(void * athread) {
   if (gc_is_running) {
     x_monitor_exit(gc_monitor);
   }
+  enterSafeRegion(thread);
   deleteGlobalReference(thread->Thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
@@ -249,7 +250,15 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   }
 #endif
 
+#ifdef RUNTIME_CHECKS
+  if (!this_thread) {
+    wabort(ABORT_WONKA, "Whoa. Trying to start a Thread whose wotsit is NULL");
+  }
+  if (!this_thread->kthread) {
+    wabort(ABORT_WONKA, "Steady on old boy. Trying to start a thread whose kthread is NULL");
+  }
   threadMustBeSafe(current_thread);
+#endif
 
   this_thread->state = wt_starting;
   enterUnsafeRegion(current_thread);
@@ -297,10 +306,6 @@ void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable) {
     jdwp_event_thread_end(thread);
   }
   
-  /*
-  ** [CG 20040102] This too ...
-  */
-
   x_thread_wakeup(thread->kthread);
   if (threadState(thread) == wt_waiting) {
     x_thread_stop_waiting(thread->kthread);
