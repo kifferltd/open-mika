@@ -52,6 +52,7 @@ public class ProcessMonitor implements Runnable {
    * @see java.lang.Runnable#run()
    */
   public void run() {
+    Runtime theRuntime = Runtime.getRuntime();
     try {
       do {
         while (!queue.isEmpty()) {
@@ -85,6 +86,9 @@ public class ProcessMonitor implements Runnable {
             } else {
               info.finish(returnvalue);              
             }
+            if (theRuntime.freeMemory() < theRuntime.totalMemory() / 3) {
+              theRuntime.runFinalization();
+            }
           } else if (queue.isEmpty()){
             wait(10000);
             if (queue.isEmpty()){
@@ -99,7 +103,7 @@ public class ProcessMonitor implements Runnable {
       t.printStackTrace();      
       thread = null;
     }
-    Runtime.getRuntime().runFinalization();
+    theRuntime.runFinalization();
     //System.out.println("ProcessMonitor.run() processes = "+processes);
   }
 
