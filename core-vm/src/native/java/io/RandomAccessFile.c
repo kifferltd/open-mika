@@ -310,7 +310,6 @@ w_long RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
     throwIOException(JNIEnv2w_thread(env));
   }
   result = statbuf.st_size;
-  woempa(7, "vfs_stat(%s, %p) returned length %d\n", pathname, &statbuf, result);
 
   return result;
 }
@@ -326,9 +325,7 @@ void RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen)
   if(file == NULL) {
     throwNullPointerException(JNIEnv2w_thread(env));
   } else {
-    w_string pathname_string;
-    const char *pathname;
-    w_instance path;
+    char *pathname;
     w_long oldptr;
 
     pathname = getFDName(fd_obj);
