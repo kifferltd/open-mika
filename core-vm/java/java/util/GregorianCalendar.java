@@ -1283,5 +1283,16 @@ public class GregorianCalendar extends Calendar {
         super.setMinimalDaysInFirstWeek(value);
         isCached = false;
     }
+
+    /*
+     * [CG 20081120] Added based on what ICU4J is doing.
+     */
+    boolean inDaylightTime() {
+        if (!getTimeZone().useDaylightTime()) {
+          return false;
+        }
+        complete(); // Force update of DST_OFFSET field
+        return internalGet(DST_OFFSET) != 0;
+    }
 }
 
