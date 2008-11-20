@@ -53,6 +53,8 @@ public class JarFile extends ZipFile {
 
   public static final String MANIFEST_NAME = "META-INF/MANIFEST.MF";
 
+  static final String META_DIR = "META-INF/";
+
   private static final Manifest theEmptyManifest = new Manifest();
 
   private Manifest manifest;
