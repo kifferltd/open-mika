@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2007 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2007, 2008 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -310,7 +310,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
     printf("Traffic: read on id %d: length %d\n", sock, res);
     for (i = 0; i < res; ++i) {
       c = instance2Array_byte(byteArray)[off + i];
-      printf("%c", c > 32 && c < 255 ? c : '.');
+      printf("%c", c >= 32 && c < 255 && (c < 127 || c >= 160) ? c : '.');
     }
     printf("\n");
   }
@@ -358,10 +358,10 @@ void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArr
   res = w_send(sock, instance2Array_byte(byteArray) + off, (w_word)length, MSG_NOSIGNAL);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_TRAFFIC)) {
-    printf("Traffic: read on id %d: length %d\n", sock, res);
+    printf("Traffic: write on id %d: length %d\n", sock, res);
     for (i = 0; i < res; ++i) {
       c = instance2Array_byte(byteArray)[off + i];
-      printf("%c", c > 32 && c < 255 ? c : '.');
+      printf("%c", c >= 32 && c < 255 && (c < 127 || c >= 160) ? c : '.');
     }
     printf("\n");
   }
