@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,26 +11,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: DateFormatSymbols.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
 
 package java.text;
 
@@ -203,29 +202,47 @@ public class DateFormatSymbols implements Cloneable,Serializable {
     return zone.getDisplayName(zone.inDaylightTime(cal.getTime()),(longString ? TimeZone.LONG : TimeZone.SHORT));
   }
 
-  int parseTimeZoneString(Calendar cal, boolean longString, String dest, ParsePosition pos){
-    int val = 1;
-    val += longString ? 0 : 1;
+  int parseTimeZoneString(Calendar cal, boolean longString, String dest, ParsePosition pos) {
+    int val = longString ? 1 : 2;
     int val2 = val + 2;
     int start = pos.getIndex();
-    for(int i = 0 ; i < zoneStrings.length ; i++){
-      if(dest.regionMatches(start,zoneStrings[i][val],0,zoneStrings[i][val].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][val].length());
-        return 1;
+    int matchlen = 0;
+    String candidate;
+    int candlen;
+    TimeZone tz;
+    int result = -1;
+
+    for (int i = 0 ; i < zoneStrings.length ; i++) {
+      candidate = zoneStrings[i][val];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        cal.setTimeZone(tz);
+        result = 1;
       }
-      if(dest.regionMatches(start,zoneStrings[i][val2],0,zoneStrings[i][val2].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][val2].length());
-        return 0;
+
+      candidate = zoneStrings[i][val2];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        cal.setTimeZone(tz);
+        result = 0;
       }
-      if(dest.regionMatches(start,zoneStrings[i][0],0,zoneStrings[i][0].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][0].length());
-        return 0;
+
+      candidate = zoneStrings[i][0];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(candidate);
+        cal.setTimeZone(tz);
+        result = 0;
       }
     }
-    return -1;
+    pos.setIndex(start + matchlen);
+
+    return result;
   }
 }
 
