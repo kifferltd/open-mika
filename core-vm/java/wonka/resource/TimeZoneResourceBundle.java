@@ -108,20 +108,22 @@ public class TimeZoneResourceBundle extends ResourceBundle {
         names[0] = rhs.substring(openquote + 1);
         rhs = rhs.substring(0, openquote).trim();
       }
-      if (names[0] != null) {
-        if (names[1] == null) {
-          names[1] = names[0];
-        }
-        if (names[2] == null) {
-          names[2] = names[0];
-        }
-        if (names[3] == null) {
-          names[3] = names[2];
-        }
-        TimeZoneDisplayNameResourceBundle.timeZoneNames.put(lhs, names);
-        if (TimeZoneDisplayNameResourceBundle.timeZoneNames.get(names[0]) == null) {
-          TimeZoneDisplayNameResourceBundle.timeZoneNames.put(names[0], names);
-        }
+
+      if (names[0] == null) {
+        names[0] = lhs;
+      }
+      if (names[1] == null) {
+        names[1] = names[0];
+      }
+      if (names[2] == null) {
+        names[2] = names[0];
+      }
+      if (names[3] == null) {
+        names[3] = names[2];
+      }
+      TimeZoneDisplayNameResourceBundle.timeZoneNames.put(lhs, names);
+      if (TimeZoneDisplayNameResourceBundle.timeZoneNames.get(names[0]) == null) {
+        TimeZoneDisplayNameResourceBundle.timeZoneNames.put(names[0], names);
       }
 
       int leftparen = rhs.indexOf('(');
@@ -191,10 +193,7 @@ public class TimeZoneResourceBundle extends ResourceBundle {
     return timeZones.keys();
   }
 
-// methods for easy use ( TimeZone OBJECT )
   /**
-  ** this method is called by the static method getAvailableIDs() of TimeZone <br>
-  ** MAKE SURE THIS METHOD STAYS AVAILABLE !!!
   */
   public String[] getKeysArray() {
     int length = timeZones.size();
@@ -208,8 +207,6 @@ public class TimeZoneResourceBundle extends ResourceBundle {
   }	
 
   /**
-  ** this method is called by the static method getAvailableIDs(int rawOffset) of TimeZone <br>
-  ** MAKE SURE THIS METHOD STAYS AVAILABLE !!!
   */
   public String[] getKeysArray(int rOffset) {
     int length = timeZones.size();
@@ -232,9 +229,6 @@ public class TimeZoneResourceBundle extends ResourceBundle {
   }	
 
   /**
-  ** this method is called by the static method getTimeZone(String ID) of TimeZone <br>
-  ** MAKE SURE THIS METHOD STAYS AVAILABLE !!!
-  **
   ** This implementation will create time zones of the form "GMT+hh:mm" or
   ** "GMT-hh:mm" on demand, adding them to its hashtable. Note that the
   ** result returned by getAvailableIDs() will only include these zones
@@ -244,6 +238,7 @@ public class TimeZoneResourceBundle extends ResourceBundle {
   public TimeZone getTimeZone(String keyID) {
     Object o = null;
     String alias = null;
+    String canonical = keyID;
     SimpleTimeZone z; 
 
     synchronized(timeZones) {
@@ -251,6 +246,7 @@ public class TimeZoneResourceBundle extends ResourceBundle {
       if ((o != null) && (o instanceof String)) {
         alias = keyID;
         while ((o != null) && (o instanceof String)) {
+          canonical = (String)o;
           o = timeZones.get(o);
         }
       }
@@ -258,15 +254,17 @@ public class TimeZoneResourceBundle extends ResourceBundle {
       if (alias != null) {
         z = (SimpleTimeZone)z.clone();
         z.setID(alias);
+        TimeZoneDisplayNameResourceBundle.timeZoneNames.put(alias, canonical);
       }
 
-      if (z == null && keyID.length() == 9 && keyID.charAt(6) == ':' && (keyID.charAt(3) == '+' || keyID.charAt(3) == '-') && keyID.charAt(4) >= '0' && keyID.charAt(4) <= '2' && keyID.charAt(5) >= '0' && keyID.charAt(5) <= '9' && keyID.charAt(7) >= '0' && keyID.charAt(7) <= '5' && keyID.charAt(8) >= '0' && keyID.charAt(8) <= '9') {
+      int l = canonical.length();
+      if (z == null && l >= 7 && canonical.charAt(l - 3) == ':' && (canonical.charAt(l - 6) == '+' || canonical.charAt(l - 6) == '-')) {
         String prefix = null;
         TimeZone base = null;
 	Enumeration e = timeZones.keys();
 	while (e.hasMoreElements()) {
           String candidate = (String)e.nextElement();
-	  if (keyID.startsWith(candidate)) {
+	  if (candidate.length() == l - 6 && canonical.startsWith(candidate)) {
             try {
               base = (SimpleTimeZone)timeZones.get(candidate);
 	      prefix = candidate;
@@ -276,25 +274,25 @@ public class TimeZoneResourceBundle extends ResourceBundle {
 	  }
 	}
         if (prefix != null) {
-          char sign_char = keyID.charAt(3);
-          int h10 = Character.digit(keyID.charAt(4), 3);
-          int h1  = Character.digit(keyID.charAt(5), 10);
-          int m10 = Character.digit(keyID.charAt(7), 7);
-          int m1  = Character.digit(keyID.charAt(8), 10);
-          if (h10 >= 0 && h1 >= 0 && m10 >= 0 && m1 >= 0) {
-            int mins = m1 + 10 * (m10 + 6 * (h1 + 10 * h10)); 
+          char sign_char = canonical.charAt(l - 6);
+          try {
+            int hours = Integer.parseInt(canonical.substring(l - 5, l - 3));
+            int mins = Integer.parseInt(canonical.substring(l - 2));
+            if (hours < 0 || hours > 23 || mins < 0 || mins > 59) {
+              throw new NumberFormatException();
+            }
+            int raw = base.getRawOffset();
+            z = (SimpleTimeZone)base.clone(); 
+            z.setID(canonical);
             if (sign_char == '+') {
-              z = (SimpleTimeZone)base.clone(); 
-              z.setID(keyID);
-              z.setRawOffset(z.getRawOffset() + 1000*60*mins);
-              timeZones.put(keyID, z);
+              z.setRawOffset(base.getRawOffset() + 1000*60*(60 * hours + mins));
             }
-            else if (sign_char == '-') {
-              z = (SimpleTimeZone)base.clone(); 
-              z.setID(keyID);
-              z.setRawOffset(z.getRawOffset() - 1000*60*mins);
-              timeZones.put(keyID, z);
+            else {
+              z.setRawOffset(base.getRawOffset() - 1000*60*(60 * hours + mins));
             }
+          }
+          catch (NumberFormatException nfe) {
+            System.err.println("Malformed relative timezone: " + canonical);
           }
         }
       }
