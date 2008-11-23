@@ -251,11 +251,16 @@ void *loadModule(char *name, char *path) {
     current = handles;
     offset = 0;
   }
-  else if((offset % 10) == 0) {
+  else {
     offset = current - handles;
-    woempa(7, "Size of handles array is now %d, expanding to %d\n", offset, offset + 10);
-    handles = x_mem_realloc(handles, (offset + 10) * sizeof(void *));
-    current = handles + offset;
+    if((offset % 10) == 0) {
+      woempa(7, "Size of handles array is now %d, expanding to %d\n", offset, offset + 10);
+      handles = x_mem_realloc(handles, (offset + 10) * sizeof(void *));
+      if (!handles) {
+        wabort(ABORT_WONKA, "Unable to allocate memory for native library handles!");
+      }
+      current = handles + offset;
+    }
   }
   *current++ = (void*)-1; // placeholder, overwritten later
   x_mutex_unlock(handles_mutex);
