@@ -41,7 +41,7 @@ public class ZipEntry implements ZipConstants, Cloneable {
 
   String comment;
   String  name;
-  int method=-1;
+  int compressionMethod=-1;
   long time=-1;
   long crc=-1;
   long size=-1; //uncompressed size
@@ -65,7 +65,7 @@ public class ZipEntry implements ZipConstants, Cloneable {
   public ZipEntry(ZipEntry ze) {
     this.name = ze.name;
     this.comment = ze.comment;
-    this.method = ze.method;
+    this.compressionMethod = ze.compressionMethod;
     this.time = ze.time;
     this.crc = ze.crc;
     this.size = ze.size;
@@ -112,7 +112,7 @@ public class ZipEntry implements ZipConstants, Cloneable {
     if (initPointer != 0) {
       init();
     }
-   	return method;
+   	return compressionMethod;
   }
 
    public String getName() {
@@ -163,7 +163,7 @@ public class ZipEntry implements ZipConstants, Cloneable {
    	if (m != STORED && m != DEFLATED) {
    	 	throw new IllegalArgumentException();
    	}
-   	method = m;   	
+   	compressionMethod = m;   	
   }
 
   public void setSize(long sz) {
