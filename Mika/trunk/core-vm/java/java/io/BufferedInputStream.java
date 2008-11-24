@@ -40,8 +40,11 @@ public class BufferedInputStream extends FilterInputStream {
   protected int marklimit = 0;
   protected int markpos = -1;
 
+  private int bufsize;
+
   public BufferedInputStream(InputStream in){
     super(in);
+    bufsize = 2048;
     buf = new byte[2048];
   }
 
@@ -50,6 +53,7 @@ public class BufferedInputStream extends FilterInputStream {
     if(size <= 0){
       throw new IllegalArgumentException("size should be > 0");
     }
+    bufsize = size;
     buf = new byte[size];
   }
 
@@ -194,12 +198,17 @@ public class BufferedInputStream extends FilterInputStream {
 
   private void checkSize(long need) throws IOException {
     if(markpos == 0 && marklimit > buf.length && pos+need > buf.length){
-      byte[] bytes = new byte[marklimit];
-      System.arraycopy(buf,0, bytes, 0, count);
-      int cp = in.read(bytes,count, marklimit - count);
-      buf = bytes;
+      byte[] newbuf = new byte[marklimit];
+      System.arraycopy(buf,0, newbuf, 0, count);
+      int cp = in.read(newbuf,count, marklimit - count);
+      buf = newbuf;
       if(cp > 0){
         count += cp;
+      }
+      else if (cp < 0) {
+        newbuf = new byte[count];
+        System.arraycopy(buf,0, newbuf, 0, count);
+        buf = newbuf;
       }
     }
   }
@@ -218,6 +227,7 @@ public class BufferedInputStream extends FilterInputStream {
       markpos = -1;
       if(count == -1){
         count = 0;
+        buf = new byte[bufsize];
         return false;
       }
       return true;
@@ -239,6 +249,9 @@ public class BufferedInputStream extends FilterInputStream {
       buf = bytes;
       if(count == -1){
         count = cp;
+        byte[] newbuf = new byte[count];
+        System.arraycopy(buf,0, newbuf, 0, count);
+        buf = newbuf;
         return false;
       }
       count += cp;
