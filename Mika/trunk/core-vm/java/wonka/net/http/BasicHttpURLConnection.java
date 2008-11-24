@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -42,6 +42,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.jar.Attributes;
+import java.util.zip.GZIPInputStream;
 import wonka.decoders.Latin1Decoder;
 import wonka.encoder.Base64Encoder;
 
@@ -231,12 +232,13 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private boolean sentBasicAuthentication;
 
   /**
-   ** The value of the <code>Content-Length</code> request header,
+   ** The value of the <code>Content-length</code> request header,
    ** or -1 if none has been set. Package-protected, so HttpInputStream
    ** can see it.
    */
   int requestContentLength;
 
+  /**
   /**
    ** True iff parseResponse() has been called.
    */
@@ -619,14 +621,19 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   }
 
   /**
-   ** Marshal the request headers into a String.
-   ** If a <code>connection</code> request header is present, it is ignored.
-   ** We always add two headers:
-   ** <li>
+   ** <p>Marshal the request headers into a String.
+   ** <p>If the followibng headers are provided by the client they are ignored:
+   ** <ul>
+   ** <li><code>Connection</code>
+   ** <li><code>Accept-encoding</code>
+   ** </ul>
+   ** <p>We always add three headers:
+   ** <ul>
    ** <li><code>Connection: close</code>
+   ** <li><code>Accept-encoding: gzip</code>
    ** <li><code>Date: </code><i>current date and time</i>
    ** </ul>
-   ** If a proxy is being used and proxyUser is non-empty, we also add 
+   ** <p>If a proxy is being used and proxyUser is non-empty, we also add 
    ** a proxy authentication header.
    */
   private String getRequestHeaders() throws UnknownHostException {
@@ -634,6 +641,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     addBasicAuthenticationHeader();	
     StringBuffer request = new StringBuffer(1024);
     request.append("Connection: close\r\n");
+    request.append("Accept-encoding: gzip\r\n");
     request.append("Date: ");
     dateFormatter.format(new Date(), request, new java.text.FieldPosition(0));
     request.append("\r\n");
@@ -643,7 +651,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       Map.Entry entry = (Map.Entry)it.next();
       Object key = entry.getKey();
       try {
-        skip = ((String)key).equalsIgnoreCase("connection");
+        skip = ((String)key).equalsIgnoreCase("connection")
+            || ((String)key).equalsIgnoreCase("accept-encoding");
       }
       catch (ClassCastException cce) {
         skip = false;
@@ -900,6 +909,11 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     if(internal_checkResponseProperty("Transfer-encoding", "chunked")){
       in = new ChunkedInputStream(in);
       debug("HTTP: switched to chunked input");
+    }
+
+    if(internal_checkResponseProperty("Content-encoding", "gzip")){
+      in = new GZIPInputStream(in);
+      debug("HTTP: gunzipping input");
     }
 
     if(responseCode>=100 && responseCode<200) {

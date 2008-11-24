@@ -93,10 +93,14 @@ public class ChunkedInputStream extends InputStream {
       int size = Integer.parseInt(line.trim(),16);
 
       if(size == 0){
+        BasicHttpURLConnection.debug("HTTP: end of chunked stream");
         eof = true;
         //read Trailer ...
         while(!"".equals(readLine())){}
         return true;
+      }
+      else {
+        BasicHttpURLConnection.debug("HTTP: Chunk size = " + size);
       }
       count = size;
       return false;
@@ -121,7 +125,6 @@ public class ChunkedInputStream extends InputStream {
       buf.append((char)ch);
       ch = in.read();
     }
-    //System.out.println("ChunkedInputStream: readLine returns '"+buf+"'");
     return buf.toString();
   }
 }
