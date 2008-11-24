@@ -375,9 +375,9 @@ public class ZipFile implements ZipConstants {
   		if (hlp != 0 && hlp != 8) {
   		 	throw new ZipException("unknown store/zip method "+hlp);
   		}
-  		ze.method = hlp;
+  		ze.compressionMethod = hlp;
   		pos+=2;
-  		ze.time = getDate(b,pos);
+  		ze.time = getDate(b,pos);;
   		pos+=4;
   		ze.crc = bytesToLong(b,pos);
   		pos+=4;
