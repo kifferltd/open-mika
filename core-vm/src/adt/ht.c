@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -35,15 +35,6 @@
 #include "hashtable.h"  
 #include "list.h"
 #include "ts-mem.h"
-
-/*
-** If the AUTO_SHRINK_HASHTABLES is defined then hashtables will shrink
-** when the occupancy is too low, as well as growing when it is too high.
-** Only enable this if it will solve a memory problem: most of the system
-** hashtables are better left to grow to their maximum size.
-** TODO: consider making this definable per hashtable.
-*/
-// #define AUTO_SHRINK_HASHTABLES
 
 /* 
 ** We implement "open addressing with linear probing", as described in
@@ -751,9 +742,6 @@ ht_erase_no_lock(w_hashtable hashtable, w_word key) {
   w_word result = hashtable->nullvalue;
   w_word hashcode = (*hashtable->hash)(key);
   w_int  idx;
-#ifdef AUTO_SHRINK_HASHTABLES
-  w_size newsize;
-#endif
 
   for(seq=0;seq<maxseq;++seq) {
 
@@ -762,12 +750,6 @@ ht_erase_no_lock(w_hashtable hashtable, w_word key) {
       if(ht_match(hashtable, idx, hashcode, key)) {
         result = hashtable->values ? hashtable->values[idx] : key;
         ht_delete(hashtable,idx);
-#ifdef AUTO_SHRINK_HASHTABLES
-        newsize = ht_check_size(hashtable,-1);
-        if (newsize) {
-          ht_resize(hashtable, newsize);
-        }
-#endif
         break;
       }
     }
@@ -979,9 +961,6 @@ ht_deregister(w_hashtable hashtable, w_word key)
   w_word hashcode = (*hashtable->hash)(key);
   w_int  idx;
   w_int  counter;
-#ifdef AUTO_SHRINK_HASHTABLES
-  w_size newsize;
-#endif
 
   ht_lock(hashtable);
   for(seq=0;seq<maxseq;++seq) {
@@ -994,12 +973,6 @@ ht_deregister(w_hashtable hashtable, w_word key)
           if(counter==0) {
             result = hashtable->keys[idx];
             ht_delete(hashtable,idx);
-#ifdef AUTO_SHRINK_HASHTABLES
-            newsize = ht_check_size(hashtable,-1);
-            if (newsize) {
-              ht_resize(hashtable, newsize);
-            }
-#endif
           }
           else {
             hashtable->values[idx] = (w_word)counter; 
@@ -1590,9 +1563,6 @@ ht2k_erase_no_lock(w_hashtable2k hashtable, w_word key1, w_word key2) {
   w_boolean result = WONKA_FALSE;
   w_word hashcode = hash2k(key1, key2);
   w_int  idx;
-#ifdef AUTO_SHRINK_HASHTABLES
-  w_size newsize;
-#endif
 
   for(seq=0;seq<maxseq;++seq) {
 
@@ -1601,12 +1571,6 @@ ht2k_erase_no_lock(w_hashtable2k hashtable, w_word key1, w_word key2) {
       if(ht2k_match(hashtable, idx, hashcode, key1, key2)) {
         result = WONKA_TRUE;
         ht2k_delete(hashtable,idx);
-#ifdef AUTO_SHRINK_HASHTABLES
-        newsize = ht2k_check_size(hashtable,-1);
-        if (newsize) {
-          ht2k_resize(hashtable, newsize);
-        }
-#endif
         break;
       }
     }
