@@ -52,7 +52,11 @@ public class DateFormatSymbolBundle extends ListResourceBundle {
     Enumeration zonekeys = TimeZoneDisplayNameResourceBundle.timeZoneNames.keys();
     while (zonekeys.hasMoreElements()) {
       String key = (String)zonekeys.nextElement();
-      String[] from = (String[])TimeZoneDisplayNameResourceBundle.timeZoneNames.get(key);
+      Object value = TimeZoneDisplayNameResourceBundle.timeZoneNames.get(key);
+      while (value instanceof String) {
+        value = TimeZoneDisplayNameResourceBundle.timeZoneNames.get(value);
+      }
+      String[] from = (String[])value;
       String[] to = new String[5];
       to[0] = key;
       to[1] = from[1];
