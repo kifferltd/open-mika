@@ -56,8 +56,7 @@
 **
 **  occupancy      the number of slots currently occupied (key!=nullkey)
 **
-**  lowthreshold   occupancy level at which a call to ht_check_size will
-**                 cause the table to be shrunk
+**  lowthreshold   not used
 **
 **  highthreshold  occupancy level at which a call to ht_check_size will
 **                 cause the table to be expanded
@@ -125,7 +124,7 @@
 
 
 typedef struct w_Hashtable {
-  void    *dummy;
+  w_flags  flags;
   char    *label; 
   w_hashtable next;
   w_hashtable previous;
@@ -145,6 +144,8 @@ typedef struct w_Hashtable {
 #endif
 } w_Hashtable;
 
+#define HT_RESIZING 0x00000001
+
 /*
 ** -------------------------------------------------------------------------
 ** A w_hashtable2k is basically the same, but the single key[] array is
@@ -155,7 +156,7 @@ typedef struct w_Hashtable {
 */
 
 typedef struct w_Hashtable2k {
-  void    *dummy;
+  w_flags  flags;
   char    *label; 
   w_hashtable next;
   w_hashtable previous;
@@ -250,24 +251,18 @@ ht_destroy(w_hashtable hashtable);
 /* ht_resize   re-allocates new arrays of keys, values, and hashcodes,      */
 /*             and re-hashes the dfata accordingly.                         */
 /*                                                                          */
-/* ht_check_size  if the current occupancy deviates sufficiently from the   */
-/*             a suggested new size for the hashtable is returned: the      */
-/*             caller should then use ht_resize to resize the table.        */
-/*             This routine must be called regularly when adding to a       */
-/*             table, as horrible things will happen if the table becomes   */
-/*             full.  The parameter 'direction' specifies which kind of     */
-/*             adjustments are acceptable:                                  */
-/*               direction<0 : may contract but not expand                  */
-/*               direction==0 : both are acceptable                         */
-/*               direction>0 : may expand but not contract                  */
+/* ht_check_size  if the current occupancy exceeds the threshold then the   */
+/*             arrays of keys, values, and hashcodes are re-allocated,      */
+/*             and the data is re-hashed. This function takes an x_monitor  */
+/*             as its second parameter; if this non-NULL then the monitor   */
+/*             in question will be released while the new memory is         */
+/*             being allocated, to prevent deadlock situations. The flag    */
+/*             HT_RESIZING is set during the operation to prevent two       */
+/*             threads from resizing the table in parallel.                 */
 /*                                                                          */
-/*             The result returned is either zero (meaning no resizing is   */
-/*             required) or the new recommended size.                       */
-/*                                                                          */
-/*             Note: the thresholds for expanding or contracting the table  */
-/*             three-quarters and one-quarter of the capacity respectively. */
-/*             The new hashtable will be sized to have an  occupancy close  */
-/*             to 50%.                                                      */
+/*             Note: the threshold for expanding the table is 75% of the    */
+/*             capacity.  The new hashtable will be sized to have an        */
+/*             occupancy close to 50%.                                      */
 /*                                                                          */
 /* Sample code:                                                             */
 /*                                                                          */
@@ -383,11 +378,7 @@ ht_insert(w_hashtable, w_int, w_word key, w_word value);
 void
 ht_delete(w_hashtable, w_int);
 
-void
-ht_resize(w_hashtable, w_size newsize);
-
-w_size
-ht_check_size(w_hashtable, w_int direction);
+void ht_check_size(w_hashtable, x_monitor);
 
 /****************************************************************************/
 /*                                                                          */
@@ -478,17 +469,10 @@ ht_check_size(w_hashtable, w_int direction);
 extern w_hashtable first_hashtable;
 
 w_word /* previous key or NULL */
+ht_write(w_hashtable, w_word key, w_word newvalue);
+
+w_word /* previous key or NULL */
 ht_write_no_lock(w_hashtable, w_word key, w_word newvalue);
-
-inline static w_word /* previous key or NULL */
-ht_write(w_hashtable hashtable, w_word key, w_word newvalue) {
-  w_word previous;
-  ht_lock(hashtable);
-  previous = ht_write_no_lock(hashtable, key, newvalue);
-  ht_unlock(hashtable);
-
-  return previous;
-}
 
 w_word /* value found or NULL */
 ht_read_no_lock(w_hashtable, w_word key);
@@ -616,11 +600,8 @@ ht2k_insert(w_hashtable2k, w_int, w_word key1, w_word key2, w_word value);
 void
 ht2k_delete(w_hashtable2k, w_int);
 
-void
-ht2k_resize(w_hashtable2k, w_size newsize);
-
 w_size
-ht2k_check_size(w_hashtable2k, w_int direction);
+ht2k_check_size(w_hashtable2k, w_int);
 
 w_boolean
 ht2k_write_no_lock(w_hashtable2k, w_word key1, w_word key2, w_word newvalue);
