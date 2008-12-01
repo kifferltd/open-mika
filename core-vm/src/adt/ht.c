@@ -101,11 +101,13 @@ static inline w_int ht_reprobe(w_hashtable hashtable, w_int current) {
 ** one slot to another in the probing sequence: ht_distance gives the
 ** number of times we would have to call 'from = ht_reprobe(hashtable,from)'
 ** to make 'from' into 'to' ...
-*/
-
+** [CG 20081127] Made into a macro because gcc refuses to inline function.
 static inline w_int ht_distance(w_hashtable hashtable, w_int from, w_int to) {
   return from>=to ? from-to : hashtable->currentsize + from-to;
 }
+*/
+
+#define ht_distance(ht,from,to) (((from) - (to)) + ((from) >= (to) ? 0 : (ht)->currentsize))
 
 /*
 ** Then the question "does r lie cyclically between i and j" becomes
@@ -124,147 +126,172 @@ static inline w_int ht_distance(w_hashtable hashtable, w_int from, w_int to) {
 
 void
 recalculateThresholds(w_hashtable h) {
-  w_int maxhighthreshold = h->currentsize - h->currentsize/16;
-  if(maxhighthreshold>=h->currentsize) maxhighthreshold = h->currentsize-1;
+	w_int maxhighthreshold = h->currentsize - h->currentsize/16;
+	if(maxhighthreshold>=h->currentsize) maxhighthreshold = h->currentsize-1;
 
-  h->lowthreshold = h->currentsize/4;
+	h->lowthreshold = h->currentsize/4;
 
-  if(h->lowthreshold==0) h->lowthreshold = 1;
+	if(h->lowthreshold==0) h->lowthreshold = 1;
 
-  h->highthreshold = h->currentsize - h->currentsize/4;
+	h->highthreshold = h->currentsize - h->currentsize/4;
 
-  if(h->highthreshold>maxhighthreshold) h->highthreshold = maxhighthreshold;
+	if(h->highthreshold>maxhighthreshold) h->highthreshold = maxhighthreshold;
 }
 
 
 /*
-************************************************************************
-*/
+ ************************************************************************
+ */
 
 w_word
 dummy_hash (w_word a) {
 
-  return a;
+	return a;
 
 }
 
 w_boolean
 dummy_equal (w_word a, w_word b) {
 
-  return a==b;
+	return a==b;
 
 }
 
-static inline w_boolean
-ht_match(w_hashtable hashtable, int idx, w_word h, w_word k) {
+/*
+ * [CG 20081127] Made into a macro as gcc refuses to inline
+ static inline w_boolean
+ ht_match(w_hashtable hashtable, int idx, w_word h, w_word k) {
 
-  return 
+ return 
 #ifdef CACHE_HASHCODES
-         (!hashtable->hashcodes || hashtable->hashcodes[idx]==h) &&
+(!hashtable->hashcodes || hashtable->hashcodes[idx]==h) &&
 #endif 
-         (*hashtable->equal)(hashtable->keys[idx],k);
+(*hashtable->equal)(hashtable->keys[idx],k);
 
 }
+ */
+#ifdef CACHE_HASHCODES
+#define ht_match(ht,i,h,k) ((!(ht)->hashcodes || (ht)->hashcodes[i]==h) && (*(ht)->equal)((ht)->keys[i],k))
+#else
+#define ht_match(ht,i,h,k) (*(ht)->equal)((ht)->keys[i],k)
+#endif
 
 static inline w_boolean
 ht_nullkey(w_hashtable hashtable, w_word key) {
 
-  return key==hashtable->nullkey;
+	return key==hashtable->nullkey;
 
 }
 
 w_boolean
 ht_occupied(w_hashtable hashtable, w_int idx) {
 
-  return !ht_nullkey(hashtable, hashtable->keys[idx]);
+	return !ht_nullkey(hashtable, hashtable->keys[idx]);
 
 }
 
 /*
-************************************************************************
-*/
+ ************************************************************************
+ */
 
 w_hashtable 
 _ht_create (const char *f, int l,
-  char *   label,
-  w_size  initialsize,
-  w_word (*hash)(w_word),             
-  w_boolean(*equal)(w_word,w_word), 
-  w_word nullkey, w_word nullvalue
-) {
-  w_hashtable hashtable;
-  w_size newindex;
+		char *   label,
+		w_size  initialsize,
+		w_word (*hash)(w_word),             
+		w_boolean(*equal)(w_word,w_word), 
+		w_word nullkey, w_word nullvalue
+	   ) {
+	w_hashtable hashtable;
+	w_size newindex;
 
-  hashtable = allocClearedMem(sizeof(w_Hashtable));
-  if (!hashtable) {
+	hashtable = allocClearedMem(sizeof(w_Hashtable));
+	if (!hashtable) {
 
-    return NULL;
+		return NULL;
 
-  }
+	}
 
-  woempa(1,"creating %s at %p, size = %d\n",label,hashtable,initialsize);
+	woempa(1,"creating %s at %p, size = %d\n",label,hashtable,initialsize);
 
-  hashtable->label  = label;
-  hashtable->currentsize = initialsize;
-  hashtable->occupancy = 0;
-  x_monitor_create(&hashtable->monitor);
+	hashtable->label  = label;
+	hashtable->currentsize = initialsize;
+	hashtable->occupancy = 0;
+	x_monitor_create(&hashtable->monitor);
 
-  if (equal) {
-    woempa(1,"user-defined equality function at %p\n",equal);
-    hashtable->equal = equal;
-  }
-  else {
-    hashtable->equal = dummy_equal;
-  }
+	if (equal) {
+		woempa(1,"user-defined equality function at %p\n",equal);
+		hashtable->equal = equal;
+	}
+	else {
+		hashtable->equal = dummy_equal;
+	}
 
-  hashtable->hash = hash ? hash : dummy_hash;
+	hashtable->hash = hash ? hash : dummy_hash;
 #ifdef CACHE_HASHCODES
-  if (hash) {
-    hashtable->hashcodes = allocClearedMem(initialsize * sizeof(w_word));
-    if (!hashtable->hashcodes) {
-      releaseMem(hashtable);
+	if (hash) {
+		hashtable->hashcodes = allocClearedMem(initialsize * sizeof(w_word));
+		if (!hashtable->hashcodes) {
+			releaseMem(hashtable);
 
-      return NULL;
+			return NULL;
 
-    }
-  }
-  else {
-    hashtable->hashcodes = NULL;
-  }
+		}
+	}
+	else {
+		hashtable->hashcodes = NULL;
+	}
 #endif
 
-  hashtable->nullkey   = nullkey;
-  hashtable->nullvalue = nullvalue;
+	hashtable->nullkey   = nullkey;
+	hashtable->nullvalue = nullvalue;
 
-  hashtable->keys = allocClearedMem(initialsize * sizeof(w_word));
-  if (!hashtable->keys) {
+	hashtable->keys = allocClearedMem(initialsize * sizeof(w_word));
+	if (!hashtable->keys) {
 #ifdef CACHE_HASHCODES
-    if (hashtable->hashcodes) {
-      releaseMem(hashtable->hashcodes);
-    }
+		if (hashtable->hashcodes) {
+			releaseMem(hashtable->hashcodes);
+		}
 #endif
-    releaseMem(hashtable);
+		releaseMem(hashtable);
 
-    return NULL;
+		return NULL;
 
-  }
-  woempa(1, "keys @ %p\n", hashtable->keys);
+	}
+	woempa(1, "keys @ %p\n", hashtable->keys);
 
-  for(newindex=0;newindex<initialsize;++newindex) {
-    hashtable->keys[newindex] = hashtable->nullkey;
-  }
+	for(newindex=0;newindex<initialsize;++newindex) {
+		hashtable->keys[newindex] = hashtable->nullkey;
+	}
 
-  recalculateThresholds(hashtable);
+	recalculateThresholds(hashtable);
 
-  return hashtable;
+	return hashtable;
 }
 
 void
-ht_resize(w_hashtable hashtable, w_size newsize) 
-{
-  w_size  oldsize = hashtable->currentsize;
-  w_word *oldkeys = hashtable->keys;
-  w_word *newkeys;
+ht_destroy(w_hashtable theHashtable) {
+
+	x_monitor_delete(&theHashtable->monitor);
+	if (theHashtable->keys) {
+		releaseMem(theHashtable->keys);
+	}
+	if (theHashtable->values) {
+		releaseMem(theHashtable->values);
+	}
+#ifdef CACHE_HASHCODES
+	if (theHashtable->hashcodes) {
+		releaseMem(theHashtable->hashcodes);
+	}
+#endif
+	releaseMem(theHashtable);
+}
+
+void ht_check_size(w_hashtable hashtable, x_monitor monitor) {
+  w_int  oldsize;
+  w_int  newsize;
+  w_word *oldkeys;
+  w_word *newkeys = NULL;
   w_word *oldvalues = hashtable->values;
   w_word *newvalues = NULL;
 #ifdef CACHE_HASHCODES
@@ -275,6 +302,45 @@ ht_resize(w_hashtable hashtable, w_size newsize)
   w_size  oldindex;
   w_size  newindex;
   w_word  key;
+
+  woempa(1,"hashtable %p size now is %d, occupancy %d, thresholds %d %d\n",hashtable,hashtable->currentsize,hashtable->occupancy,hashtable->lowthreshold,hashtable->highthreshold);
+
+restart:
+  oldsize = hashtable->currentsize;
+  newsize = oldsize;
+
+  if ((hashtable->occupancy < hashtable->highthreshold)) {
+    return;
+  }
+
+  newsize = hashtable->occupancy * 2;
+
+  if (newsize < 7) {
+    newsize = 7;
+  }
+  if ((newsize % 1) == 0) {
+    ++newsize;
+  }
+  if ((newsize % 3) == 0) {
+    newsize += 2;
+  }
+  if ((newsize % 5) == 0) {
+    newsize += 4;
+  }
+
+  if(newsize == oldsize) {
+    return;
+  }
+
+  if (monitor) {
+    if (isSet(hashtable->flags, HT_RESIZING)) {
+      x_monitor_wait(monitor, 2);
+      goto restart;
+    }
+    setFlag(hashtable->flags, HT_RESIZING);
+    x_monitor_exit(monitor);
+  }
+  oldkeys = hashtable->keys;
 
   woempa(1,"(re)allocating hashtable %s @ %p, new size %d\n",hashtable->label,hashtable,newsize);
 
@@ -311,6 +377,11 @@ ht_resize(w_hashtable hashtable, w_size newsize)
   }
 #endif
 
+  if (monitor) {
+    x_monitor_eternal(monitor);
+    unsetFlag(hashtable->flags, HT_RESIZING);
+    x_monitor_notify_all(monitor);
+  }
   hashtable->currentsize = newsize;
   hashtable->keys = newkeys;
   hashtable->values = newvalues;
@@ -426,56 +497,6 @@ ht_resize(w_hashtable hashtable, w_size newsize)
 #endif
 
 }
-
-void
-ht_destroy(w_hashtable theHashtable) {
-
-  x_monitor_delete(&theHashtable->monitor);
-  if (theHashtable->keys) {
-    releaseMem(theHashtable->keys);
-  }
-  if (theHashtable->values) {
-    releaseMem(theHashtable->values);
-  }
-#ifdef CACHE_HASHCODES
-  if (theHashtable->hashcodes) {
-    releaseMem(theHashtable->hashcodes);
-  }
-#endif
-  releaseMem(theHashtable);
-}
-
-w_size
-ht_check_size(w_hashtable hashtable, w_int direction) {
-  w_int       oldsize;
-  w_int       newsize;
-
-  woempa(1,"hashtable %p size now is %d, occupancy %d, thresholds %d %d\n",hashtable,hashtable->currentsize,hashtable->occupancy,hashtable->lowthreshold,hashtable->highthreshold);
-  oldsize = hashtable->currentsize;
-  newsize = oldsize;
-
-  if( (hashtable->occupancy>=hashtable->highthreshold && direction>=0)
-   || (hashtable->occupancy<=hashtable->lowthreshold  && direction<=0)
-    ) {
-    newsize = hashtable->occupancy * 2;
-
-    if(newsize<hashtable->occupancy+2) newsize=hashtable->occupancy+2;
-    if((newsize&1)==0) ++newsize;
-    if((newsize%3)==0) newsize += 2;
-    if((newsize%5)==0) newsize += 4;
-
-    if(newsize==oldsize) newsize = 0;
-    else {
-      woempa(1,"recommend resizing to %d\n",newsize);
-    }
-
-    return newsize;
-
-  }
-  else return 0;
-
-}
-
 
 /*
 ** ht_rehash is a no-op: see Theorem P on p. 530 of Knuth, op. cit..
@@ -618,6 +639,57 @@ ht_delete(w_hashtable hashtable, w_int idx) {
 */
 
 w_word /* previous value or hashtable->nullvalue */
+ht_write(w_hashtable hashtable, w_word key, 
+w_word newvalue
+) {
+  w_int  seq;
+  w_int  maxseq = hashtable->currentsize;
+  w_word result = hashtable->nullvalue;
+  w_word hashcode = (*hashtable->hash)(key);
+  w_int idx;
+
+  ht_lock(hashtable);
+  for(seq=0;seq<maxseq;++seq) {                                                    
+    idx=ht_probe(hashtable,hashcode,seq);                            
+    if(ht_occupied(hashtable,idx)) {                                        
+      if(ht_match(hashtable, idx, hashcode, key)) {                            
+#ifdef HASHTEST
+      woempa(1,"%p: MATCH with %d collisions\n",hashtable,seq);
+#endif
+        if (hashtable->values) {
+          result = hashtable->values[idx];
+        }
+        else {
+          result = key;
+        }
+        set_value(hashtable, idx, key, newvalue);
+        break;                                              
+      }                                                   
+    }                                                    
+    else {                                              
+#ifdef HASHTEST
+      woempa(1,"INSERT with %d collisions\n",seq);
+#endif
+      hashtable->keys[idx] = key;
+      set_value(hashtable, idx, key, newvalue);
+#ifdef CACHE_HASHCODES
+      if (hashtable->hashcodes) {
+        hashtable->hashcodes[idx] = hashcode;
+      }
+#endif
+      hashtable->occupancy += 1;
+      ht_check_size(hashtable, &hashtable->monitor);
+      break;                                                            
+    }                                                                  
+  }                                                                   
+  ht_unlock(hashtable);
+
+  return result;
+
+}
+
+
+w_word /* previous value or hashtable->nullvalue */
 ht_write_no_lock(w_hashtable hashtable, w_word key, 
 w_word newvalue
 ) {
@@ -625,7 +697,6 @@ w_word newvalue
   w_int  maxseq = hashtable->currentsize;
   w_word result = hashtable->nullvalue;
   w_word hashcode = (*hashtable->hash)(key);
-  w_size newsize;
   w_int idx;
 
   for(seq=0;seq<maxseq;++seq) {                                                    
@@ -657,10 +728,7 @@ w_word newvalue
       }
 #endif
       hashtable->occupancy += 1;
-      newsize = ht_check_size(hashtable,1);
-      if (newsize) {
-        ht_resize(hashtable, newsize);
-      }
+      ht_check_size(hashtable, NULL);
       break;                                                            
     }                                                                  
   }                                                                   
@@ -902,7 +970,6 @@ ht_register(w_hashtable hashtable, w_word key)
   w_word result = hashtable->nullkey;
   w_word hashcode = (*hashtable->hash)(key);
   w_int  idx;
-  w_size newsize;
   w_int  counter;
 
   ht_lock(hashtable);
@@ -939,10 +1006,7 @@ ht_register(w_hashtable hashtable, w_word key)
       }
 #endif
       hashtable->occupancy += 1;
-      newsize = ht_check_size(hashtable,1);
-      if (newsize) {
-        ht_resize(hashtable, newsize);
-      }
+      ht_check_size(hashtable, &hashtable->monitor);
       break;                                                            
     }                                                                  
   }                                                                   
@@ -1126,8 +1190,6 @@ static inline w_int ht2k_distance(w_hashtable2k hashtable, w_int from, w_int to)
 ** recalculateThresholds(w_hashtable2k) calculates a new lowthreshold
 ** and highthreshold from the current table size;  these thresholds 
 ** are used by ht2k_check_size to decide whether a resizing is required. 
-** It is here that the 93% occupancy limit is enforced (provided of 
-** course that ht2k_check_size() is called at the appropriate moments).
 */
 
 void
