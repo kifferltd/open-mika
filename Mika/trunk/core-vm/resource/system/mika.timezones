@@ -145,6 +145,9 @@ AusCT=9.5(10,1,7,2.0,4,1,7,3.0)1.0 "ACST" "Australian Central Standard Time" "AC
 AusET=10(10,1,7,2.0,4,1,7,3.0)1.0 "AEST" "Australian Eastern Standard Time" "AEDT" "Australian Eastern Daylight Time"
 AusWT=8.0(10,-1,7,2.0,3,-1,7,3.0)1.0 "AWST" "Australian Western Standard Time" "AWDT" "Australian Western Daylight Time"
 
+# Cure for Sun's dyslexia
+CET=ECT
+
 # Time zone aliases - Europe
 Europe/Vilnius=2
 Europe/Simferopol=2
