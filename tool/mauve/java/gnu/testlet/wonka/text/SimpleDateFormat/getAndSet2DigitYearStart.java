@@ -15,6 +15,8 @@ public class getAndSet2DigitYearStart implements Testlet
 {
   public void test (TestHarness harness)
     {
+      harness.setclass("java.text.SimpleDateFormat");
+      harness.checkPoint("getAndSet2DigitYearStart");
       String pattern = "EEEE, MMMM d, yyyy h:mm:ss 'o''clock' a";
       
       DateFormatSymbols dfs = new DateFormatSymbols(Locale.US);
