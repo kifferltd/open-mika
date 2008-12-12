@@ -137,6 +137,9 @@ public abstract class TestHarness
   public abstract InputStream getResourceStream (String name) 
     throws ResourceNotFoundException;
 
+  public abstract File getResourceFile (String name) 
+    throws ResourceNotFoundException;
+
   // Provide a directory name for writing temporary files.
   public abstract String getTempDirectory ();
 
