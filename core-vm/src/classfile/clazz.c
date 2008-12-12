@@ -1921,20 +1921,13 @@ w_int destroyClazz(w_clazz clazz) {
   
   woempa(7,"Destroying class %k\n",clazz);
 
-  if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
-    // TODO: [CG 20061201] can we really get here? I don't think so ...
-
-    return 0;
-  }
-
-  if (!clazz->loader || clazz->loader == systemClassLoader) {
-    // TODO: [CG 20070718] can we really get here? I don't think so ...
-
-    return 0;
-
-  }
-
   if (!clazz->dims) {
+#ifdef RUNTIME_CHECKS
+    if (!clazz->loader || clazz->loader == systemClassLoader) {
+      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy primitive class %k", clazz);
+    }
+#endif
+
     woempa(7, "Removing implementations from interface_hashtable \n");
     if (clazz->interfaces) {
       destroyImplementations(clazz);
@@ -1992,10 +1985,6 @@ w_int destroyClazz(w_clazz clazz) {
       releaseMem(clazz->resolution_monitor);
     }
   }
-  // [CG 20080120] Sirlan fix, TODO: why is Mika unstable without?
-  //else {
-  //  return 0;
-  //}
 
   woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
@@ -2022,10 +2011,6 @@ w_int destroyClazz(w_clazz clazz) {
   if (clazz->dotified) {
     deregisterString(clazz->dotified);
   }
-
-  woempa(7, "Releasing resolution_monitor\n");
-  x_monitor_delete(clazz->resolution_monitor);
-  releaseMem(clazz->resolution_monitor);
 
   deallocClazz(clazz);
 
