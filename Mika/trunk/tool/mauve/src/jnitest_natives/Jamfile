@@ -32,6 +32,8 @@ LOCATE_TARGET = $(OROOT)/wonka/bin ;
 
 SUBDIRHDRS += $(WONKA_TOP)/core-vm/include ;
 
+CCFLAGS += -fPIC ;
+
 SUFSHR = .so ;
 if $(HW_DOUBLES) = true {
   JNITESTS_LIB = ;
@@ -40,8 +42,6 @@ else {
   JNITESTS_LIB = libjnitests ;
   Library $(JNITESTS_LIB) : ieee754.c ;
 }
-
-CCFLAGS += -fPIC ;
 
 LinkLibraries libJNIArrayTest$(SUFSHR) : $(JNITESTS_LIB) ;
 LinkLibraries libJNIPrimitiveTest$(SUFSHR) : $(JNITESTS_LIB) ;
