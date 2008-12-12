@@ -311,19 +311,24 @@ public int getTestsFailed() {
         if (s == null) throw new ResourceNotFoundException();
 
        return s;
-/* Was:
-     try
-    {
-       return
-         new FileInputStream (realName );
-//         new FileInputStream (getSourceDirectory () + File.separator  + realName );
-    }
-     catch (FileNotFoundException ex)
-    {
-       throw new ResourceNotFoundException (ex.getLocalizedMessage ());
-    }
-*/
    }
+
+  public File getResourceFile(String name) throws ResourceNotFoundException
+  {
+    // The following code assumes File.separator is a single character.
+    if (File.separator.length() > 1)
+      throw new Error("File.separator length is greater than 1");
+    String realName = name.replace('#', File.separator.charAt(0));
+    File f = new File(getSourceDirectory() + File.separator + realName);
+    if (!f.exists())
+      {
+        throw new ResourceNotFoundException("cannot find mauve resource file"
+                                            + ": " + getSourceDirectory()
+                                            + File.separator + realName);
+      }
+    return f;
+  }
+
 
   public Reader getResourceReader (InputStream istream)
     throws ResourceNotFoundException
