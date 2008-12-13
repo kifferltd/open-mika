@@ -218,6 +218,7 @@ public class DateFormatSymbols implements Cloneable,Serializable {
       if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
         matchlen = candlen;
         tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        //System.out.println("Case 1: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
         cal.setTimeZone(tz);
         result = 1;
       }
@@ -227,6 +228,7 @@ public class DateFormatSymbols implements Cloneable,Serializable {
       if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
         matchlen = candlen;
         tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        //System.out.println("Case 2: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
         cal.setTimeZone(tz);
         result = 0;
       }
@@ -236,11 +238,24 @@ public class DateFormatSymbols implements Cloneable,Serializable {
       if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
         matchlen = candlen;
         tz = TimeZone.getTimeZone(candidate);
+        //System.out.println("Case 3: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
+        cal.setTimeZone(tz);
+        result = 0;
+      }
+    }
+
+    //System.out.println("recognised " + dest.substring(start, start + matchlen) + " in " + dest);
+    if (dest.substring(start, start + matchlen).equals("GMT") && dest.length() >= start + 9) {
+      char sign = dest.charAt(start + 3);
+      if (sign == '+' || sign == '-') {
+        matchlen = 9;
+        tz = TimeZone.getTimeZone(dest.substring(start, start + 9));
         cal.setTimeZone(tz);
         result = 0;
       }
     }
     pos.setIndex(start + matchlen);
+    //System.out.println(" => timezone = " + cal.getTimeZone());
 
     return result;
   }
