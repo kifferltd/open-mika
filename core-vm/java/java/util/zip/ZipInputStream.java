@@ -484,7 +484,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
   }
   
   private void setupZipMarkableStream() throws IOException {
-    in.mark(1000000);
+    in.mark(Integer.MAX_VALUE);
     LinkedList buffers = new LinkedList();
     int bufsiz = 100000;
     int totlen = 0;
