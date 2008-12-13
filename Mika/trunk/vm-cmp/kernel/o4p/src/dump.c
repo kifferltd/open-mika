@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -56,7 +56,7 @@ void x_dump_thread(x_thread t) {
   w_dump(")\n");
   
   if(t->waiting_on) {
-    x_dump_monitor("waiting on monitor", t->waiting_on);
+    x_dump_monitor(isSet(t->flags, TF_COMPETING) ? "competing for monitor" : "waiting on monitor", t->waiting_on);
   }
   if (isSet(t->flags, TF_RECEIVING)) {
     w_dump("    blocked receiving from queue\n");
