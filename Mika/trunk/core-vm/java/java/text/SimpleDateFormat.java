@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,26 +11,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: SimpleDateFormat.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
 
 package java.text;
 
@@ -42,8 +41,8 @@ public class SimpleDateFormat extends DateFormat {
 
   private static final long serialVersionUID = 4774881970558875024L;
   private static final DateFormatSymbols DEFAULTSYMBOLS = new DateFormatSymbols();
-  private static final String PATTERNCHARS = "GyMdkHmsSEDFwWahKz";
-  private static final int[] FIELDMAP = { 0, 1, 2, 5, 11, 11, 12, 13, 14, 7, 6, 8, 3, 4, 9, 10, 10 };
+  private static final String PATTERNCHARS = "GyMdkHmsSEDFwWahKzZ";
+  private static final int[] FIELDMAP = { 0, 1, 2, 5, 11, 11, 12, 13, 14, 7, 6, 8, 3, 4, 9, 10, 10, 10 };
 
   //dictated by the serialized form ...
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
@@ -159,6 +158,7 @@ public class SimpleDateFormat extends DateFormat {
 
   public Date parse(String str, ParsePosition pos){
     //System.out.println("parsing '"+str+"' ("+pos.getIndex()+") using "+pattern);
+    calendar.clear();
     TimeZone current = calendar.getTimeZone();
     int size = pattern.length();
     boolean formatting = true;
@@ -185,14 +185,27 @@ public class SimpleDateFormat extends DateFormat {
           int field = PATTERNCHARS.indexOf(ch);
           if(field != -1){
             pos.setIndex(p);
-            if(field == 17){
+            if (field == 17 || field == 18) {
+              // special case: z/Z
               int nr = 1;
               for (++i; i < size ; i++){
                 if(pattern.charAt(i) == ch){ nr++; }
                 else{ break; }
               }
               i--;
-              int res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+
+              int res = -1;
+              if (str.charAt(p) == '+' || str.charAt(p) == '-') {
+                String syntheticTZ  = "GMT" + str.substring(p, p + 3) + ":" + str.substring(p + 3);
+                //System.out.println("using synthetic timezone " + syntheticTZ);
+                calendar.setTimeZone(TimeZone.getTimeZone(syntheticTZ));
+                p += 5;
+                res = 0;
+              }
+              else {
+                res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+              }
+
               if(res == -1){
                 //System.out.println("time zone not found");
                 return null;
@@ -283,6 +296,8 @@ public class SimpleDateFormat extends DateFormat {
     int nr = 1;
     int i = idx+1;
     int pattern_length = pattern.length();
+    int res;
+
     for (; i < pattern_length ; i++){
       if(pattern.charAt(i) == ch){
         nr++;
@@ -306,8 +321,11 @@ public class SimpleDateFormat extends DateFormat {
           }
         }
         else {
-          String[] ms1 = (nr == 3 ? formatData.getShortMonths() : formatData.getMonths());
-          return arrayLookup(ms1, dest, pos,field, idx, true);
+          res = arrayLookup(formatData.getMonths(), dest, pos,field, idx, true);
+          if (res >= 0) {
+            return res;
+          }
+          return arrayLookup(formatData.getShortMonths(), dest, pos,field, idx, true);
         }
         break;
       case 'y':
@@ -385,11 +403,9 @@ public class SimpleDateFormat extends DateFormat {
       case 'a':
         return arrayLookup(formatData.getAmPmStrings(), dest, pos, field, idx, true);
       case 'E':
-          if(nr > 3){
-            int res = arrayLookup(formatData.getWeekdays(), dest, pos, field, idx, false);
-            if(res != -1){
-              return res;
-            }
+          res = arrayLookup(formatData.getWeekdays(), dest, pos, field, idx, false);
+          if(res != -1){
+            return res;
           }
           return arrayLookup(formatData.getShortWeekdays(), dest, pos, field, idx, true);
       case 'h':
@@ -427,7 +443,9 @@ public class SimpleDateFormat extends DateFormat {
       int len = strings[i].length();
       //System.out.println("checking '"+source+"'("+start+") for '"+strings[i]);
 
-      if(len > 0 && source.regionMatches(start, strings[i], 0, len)){
+      // [CG 20081204] apparently we need to be case-insensitive here
+      // WAS: if(len > 0 && source.regionMatches(start, strings[i], 0, len)){
+      if(len > 0 && source.length() >= start + len && strings[i].length() >= len && source.substring(start, start + len).equalsIgnoreCase(strings[i].substring(0, len))) {
         calendar.set(FIELDMAP[field], i);
         pos.setIndex(start+len);
         return idx;
