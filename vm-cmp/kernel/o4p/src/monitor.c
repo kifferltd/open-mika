@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,21 +11,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #ifdef LINUX
@@ -73,6 +76,11 @@ x_status x_monitor_delete(x_monitor monitor) {
   loempa(2, "Deleting the monitor at %p\n", monitor);
   monitor->magic = 0;
   if (monitor->owner)  {
+    // [CG 20081214] Let's try this - ideally a monitor should never be 
+    // released while it has an owner.
+    wabort(ABORT_WONKA, "monitor %p owned by thread %p is being released", monitor, monitor->owner);
+    // Then we don't need this loop (which might never terminate)
+    /*
     // Let all the other waiters finish.
     while (monitor->n_waiting != 0) {
       pthread_cond_broadcast(&monitor->mon_cond);
@@ -81,6 +89,7 @@ x_status x_monitor_delete(x_monitor monitor) {
 
     monitor->owner = NULL;
     pthread_mutex_unlock(&monitor->mon_mutex);
+    */
   }
   pthread_mutex_destroy(&monitor->mon_mutex);
   pthread_cond_destroy(&monitor->mon_cond);
@@ -97,43 +106,17 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
   x_thread current = x_thread_current();
   int retcode; 
 
-  retcode = pthread_mutex_trylock(&monitor->mon_mutex);
-  if (retcode == 0) {
-    // The monitor was free and we just acquired it.
-    monitor->owner = current;
-    monitor->count = 1;
-    loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
+  if (monitor->owner == current) {
+    monitor->count += 1;
+    loempa(2, "Thread %p already owns monitor %p, count now %d\n", current, monitor, monitor->count);
 
     return xs_success;
   }
 
-  if (retcode == EBUSY) {
-    // There are two ways for the monitor to be busy - either we are the
-    // owner, or someone else is.
-    if (monitor->owner == current) {
-      monitor->count += 1;
-      loempa(2, "Thread %p already owns monitor %p, count now %d\n", current, monitor, monitor->count);
-
-      return xs_success;
-    }
-
-    // OK, it's someone else.
-    if (timeout == x_no_wait) {
-
-      loempa(2, "Thread %p tried to obtain monitor %p, mutex was busy\n", current, monitor);
-      return xs_no_instance;
-    }
-
-    current->waiting_on = monitor;
-    setFlag(current->flags, TF_COMPETING);
-    if (timeout == x_eternal) {
-      retcode = pthread_mutex_lock(&monitor->mon_mutex);
-      if (retcode !=0 ) {
-        o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_lock()", retcode);
-      }
-
-      current->waiting_on = NULL;
-      unsetFlag(current->flags, TF_COMPETING);
+  if (timeout == x_no_wait) {
+    retcode = pthread_mutex_trylock(&monitor->mon_mutex);
+    if (retcode == 0) {
+      // The monitor was free and we just acquired it.
       monitor->owner = current;
       monitor->count = 1;
       loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
@@ -141,11 +124,33 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       return xs_success;
     }
 
-    wabort(ABORT_WONKA, "x_monitor_enter: finite timeout not supported.\n", retcode);
+    if (retcode == EBUSY) {
+      return xs_no_instance;
+    }
 
+    o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_trylock()", retcode);
+
+    return -1; // (unreachable)
   }
 
-  o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_trylock()", retcode);
+  if (timeout == x_eternal) {
+    current->waiting_on = monitor;
+    setFlag(current->flags, TF_COMPETING);
+    retcode = pthread_mutex_lock(&monitor->mon_mutex);
+    if (retcode !=0 ) {
+      o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_lock()", retcode);
+    }
+
+    monitor->owner = current;
+    monitor->count = 1;
+    current->waiting_on = NULL;
+    unsetFlag(current->flags, TF_COMPETING);
+    loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
+
+    return xs_success;
+  }
+
+  wabort(ABORT_WONKA, "x_monitor_enter: finite timeout not supported.\n", retcode);
 
   return -1; // (unreachable)
 }
