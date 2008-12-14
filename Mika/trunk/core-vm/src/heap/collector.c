@@ -285,6 +285,36 @@ w_instance gc_instance;
 x_monitor gc_monitor;
 
 /*
+** (Almost) all accesses to gc_monitor are wrapped to check the status.
+*/
+#define PRINT_MONITOR_STATUS(f,s) printf("collect.c line %d: %s returned %d\n", __LINE__, (f), (s))
+
+#define GC_MONITOR_ETERNAL gc_monitor_eternal();
+static void gc_monitor_eternal(void) { 
+  x_status s = x_monitor_eternal(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS("x_monitor_eternal", s);
+}
+
+#define GC_MONITOR_WAIT(t) gc_monitor_wait(t);
+static void gc_monitor_wait(x_sleep t) {
+  x_status s = x_monitor_wait(gc_monitor, t);
+  if (s == xs_interrupted) GC_MONITOR_ETERNAL
+  else if (s) PRINT_MONITOR_STATUS("x_monitor_wait", s);
+}
+
+#define GC_MONITOR_NOTIFY gc_monitor_notify();
+static void gc_monitor_notify(void) {
+  x_status s = x_monitor_notify_all(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS("x_monitor_notify_all", s);
+}
+
+#define GC_MONITOR_EXIT gc_monitor_exit();
+static void gc_monitor_exit(void) {
+  x_status s = x_monitor_exit(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS("x_monitor_exit", s);
+}
+
+/*
 ** Pointer to an instance variable of gc_instance which is bumped up when
 ** GC is administered a 'kick' (e.g. when Runtime.gc() is called) and then
 ** decremented down to zero during subsequest GC passes.
@@ -2264,7 +2294,7 @@ w_size internal_reclaim_callback(w_int requested, w_instance instance) {
   else {
     reclaimed += gc_request(requested);
     woempa(1, "Called with requested = %d, instance = %p : reclaimed %d\n", requested, instance, reclaimed);
-    x_monitor_exit(gc_monitor);
+    GC_MONITOR_EXIT
   }
 
   return reclaimed;
@@ -2360,7 +2390,7 @@ void gc_collect(w_instance theGarbageCollector) {
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           postmark(this_thread);
 
           break;
@@ -2380,12 +2410,9 @@ void gc_collect(w_instance theGarbageCollector) {
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
 	  }
 
           break;
@@ -2398,7 +2425,7 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         done += 1;
         /* fall through */
 
@@ -2409,12 +2436,9 @@ void gc_collect(w_instance theGarbageCollector) {
           }
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
 	  }
 
           break;
@@ -2439,7 +2463,7 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         gc_phase = GC_PHASE_COMPLETE;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         done *= 2;
         if (done) {
           woempa(7, "Thread %t: Have performed a complete cycle\n", this_thread);
@@ -2447,10 +2471,7 @@ void gc_collect(w_instance theGarbageCollector) {
         else {
           woempa(7, "Thread %t: Have not performed a complete cycle\n", this_thread);
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
           }
 	}
         break;
@@ -2458,10 +2479,7 @@ void gc_collect(w_instance theGarbageCollector) {
       default: // GC_PHASE_PREPARE/MARK
         woempa(7, "Thread %w: Phase = PREPARE/MARK, waiting\n", this_thread->name);
 	if (GC_OTHER_MARK_WAIT) {
-          status = x_monitor_wait(gc_monitor, GC_OTHER_MARK_WAIT);
-          if (status == xs_interrupted) {
-            x_monitor_eternal(gc_monitor);
-          }
+          GC_MONITOR_WAIT(GC_OTHER_MARK_WAIT)
 	}
     }
   }
@@ -2502,10 +2520,7 @@ w_int gc_request(w_int requested) {
             wprintf("GC: thread %t found heap was being marked by %t, waiting for %d ticks\n", this_thread, marking_thread, GC_OTHER_MARK_WAIT);
           }
 	  if (GC_OTHER_MARK_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_OTHER_MARK_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_OTHER_MARK_WAIT)
           }
 	}
         break;
@@ -2542,7 +2557,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
         }
         tries -= 1;
 
@@ -2565,7 +2580,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           postmark(this_thread);
           tries = 0;
 
@@ -2585,7 +2600,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           tries = 0;
 
           break;
@@ -2597,7 +2612,7 @@ w_int gc_request(w_int requested) {
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         break;
 
       default: 
