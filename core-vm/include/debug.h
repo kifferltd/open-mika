@@ -162,4 +162,7 @@ extern w_flags verbose_flags;
 */
 void wprintf(const char *format, ...);
 
+#define DUMP_CLASSES
+#define DUMP_CLASSLOADERS
+
 #endif /* _DEBUG_H */

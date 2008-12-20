@@ -496,7 +496,7 @@ void w_dump_locks(void) {
     w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
   }
   w_dump("\n");
-  w_dump("   Instance locks :\n");
+  w_dump("   Instance locks (only if owned):\n");
   ht_iterate(lock_hashtable, lock_iterator, NULL, NULL);
   w_dump("\n");
 }
