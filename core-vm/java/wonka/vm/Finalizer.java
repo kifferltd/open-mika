@@ -57,10 +57,6 @@ public final class Finalizer implements Runnable {
       e.printStackTrace();
     }
     empty = new Object[0];
-    Thread thread = new Thread(this, "Confessor");
-    thread.setPriority(10);
-    thread.setDaemon(true);
-    thread.start();
 
   }
 

@@ -172,10 +172,13 @@ public final class GarbageCollector implements Runnable {
    ** from run(), and getInstance() will not return until this method has
    ** completed (so we don't proceed with a half-initialied GC system).
    */
-  private synchronized void init() {
+  private void init() {
     create();
     theFinalizer = Finalizer.getInstance();
-    notifyAll();
+    Thread thread = new Thread(theFinalizer, "Confessor");
+    thread.setPriority(10);
+    thread.setDaemon(true);
+    thread.start();
   }
 
   /**
