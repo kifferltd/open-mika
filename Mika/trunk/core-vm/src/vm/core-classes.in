@@ -94,7 +94,7 @@ wonka/vm/ArrayUtil
 	dInBArray	(D[BI)V		ArrayUtil_dInBArray
 wonka/vm/Heartbeat
 	nativesleep		(J)V	Heartbeat_static_nativesleep
-	create			()V	Heartbeat_create
+	create			(Z)V	Heartbeat_create
 	numberNonDaemonThreads  ()I	Heartbeat_numberNonDaemonThreads
 	isKilled                ()Z	Heartbeat_isKilled
 	setThread               (Ljava/lang/Thread;)V   Heartbeat_setThread
