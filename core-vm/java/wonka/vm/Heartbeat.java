@@ -50,7 +50,7 @@ public final class Heartbeat implements Runnable {
    ** Our very private constructor.  Start our thread running.
    */
   private Heartbeat() {
-    create();
+    create(Boolean.getBoolean("mika.detect.deadlocks"));
     try {
       theRuntime = Runtime.getRuntime();
       shutdownMethod = Runtime.class.getDeclaredMethod("runShutdownHooks", new Class[0]);
@@ -67,7 +67,7 @@ public final class Heartbeat implements Runnable {
     thread.start();
   }
 
-  private native void create();
+  private native void create(boolean detectDeadlocks);
 
   /**
    ** Return the solitary instance of Heartbeat.

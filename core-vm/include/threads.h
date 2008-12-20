@@ -108,6 +108,7 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 
 #define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
 #define WT_THREAD_INTERRUPTED         0x00000004 /* the thread has been interrupted */
+#define WT_THREAD_CHECKED             0x00000008 /* the thread has been checked in this round of deadlock detection */
 #define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
 #define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
 #define WT_THREAD_SUSPEND_COUNT_SHIFT 16

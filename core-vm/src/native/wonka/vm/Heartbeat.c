@@ -47,6 +47,8 @@ static w_int  time_remaining;
 static x_time next_warning;
 #endif
 
+static w_boolean detect_deadlocks;
+
 #ifdef ACADEMIC_LICENCE
 #include <stdio.h>
 #endif
@@ -54,7 +56,7 @@ static x_time next_warning;
 extern int wonka_killed;
 extern x_thread heartbeat_thread;
 
-void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat) {
+void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat, w_boolean detectDeadlocks) {
 #ifdef UPTIME_LIMIT
   stop_time = x_millis2ticks(UPTIME_LIMIT * 1000);
   time_remaining = UPTIME_LIMIT;
@@ -71,12 +73,83 @@ void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat) {
   printf ("\\------------------------------------------------------------/\n");
   printf ("\n");
 #endif
+
+  detect_deadlocks = detectDeadlocks;
 }
 
 w_int Heartbeat_numberNonDaemonThreads(JNIEnv *env, w_instance theClass) {
   
   return nondaemon_thread_count;
 }
+
+void clearCheckedFlag(w_word key, w_word value) {
+  w_thread t = (w_thread) value;
+  unsetFlag(t->flags, WT_THREAD_CHECKED);
+}
+
+void printDeadlock(w_thread t0, w_thread t2) {
+  w_thread t1 = t0;
+
+  wprintf("- - - DEADLOCK DETECTED - - -\n");
+  while (t1 != t2) {
+    wprintf("  %t is competing for monitor %p\n", t1, t1->kthread->waiting_on);
+    t1 = t1->kthread->waiting_on->owner->xref;
+    wprintf("    which is owned by %t\n", t2);
+  }
+  wprintf("- - - - - - - - - - - - - - -\n");
+}
+
+void checkForDeadlocks(w_word key, w_word value) {
+  w_thread t0 = (w_thread) value;
+  w_thread t1 = t0;
+  w_int i;
+
+  if (isNotSet(t0->flags, WT_THREAD_CHECKED)) {
+    woempa(7, "checking %t for deadlocks\n", value);
+    setFlag(t0->flags, WT_THREAD_CHECKED);
+    // upper bound is there just to prevent infinite looping
+    for (i = 0; i < thread_hashtable->occupancy; ++i) {
+      x_thread xt = t1->kthread;
+      if (isSet(xt->flags, TF_COMPETING)) {
+        if (xt->waiting_on) {
+            woempa(7, "  %t is competing for monitor %p\n", t1, xt->waiting_on);
+          if (xt->waiting_on->owner) {
+            w_thread t2 = xt->waiting_on->owner->xref;
+            woempa(7, "    which is owned by %t\n", t2);
+            if (t2 == t0) {
+              printDeadlock(t0, t2);
+              wabort(ABORT_WONKA, "Deadlock detected involving threads %t, %t", t1, t2);
+            }
+            else if (isSet(t2->flags, WT_THREAD_CHECKED)) {
+              woempa(7, "    which was already checked, so that's all right then\n");
+              break;
+            }
+            else {
+              t1 = t2;
+            }
+          }
+          else {
+            woempa(7, "    which has no owner\n");
+            break;
+          }
+        }
+        else {
+          woempa(7, "  funny, %t is flagged TF_COMPETING but waiting_on == NULL\n", t1);
+          break;
+        }
+      }
+      else {
+        woempa(7, "  %t is not competing for any monitor\n", t1);
+        setFlag(t1->flags, WT_THREAD_CHECKED);
+        break;
+      }
+    }
+  }
+  else {
+    woempa(7, "not checking %t for deadlocks, is already checked\n", value);
+  }
+}
+
 
 extern int dumping_info;
 
@@ -108,6 +181,11 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
     return WONKA_TRUE;
   }
 #endif
+
+  if (detect_deadlocks) {
+    ht_every(thread_hashtable, clearCheckedFlag);
+    ht_every(thread_hashtable, checkForDeadlocks);
+  }
 
   // Reset the dumping_info flag with a one-cycle delay (is hack).
   switch(dumping_info) {
