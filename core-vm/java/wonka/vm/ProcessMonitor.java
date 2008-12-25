@@ -25,7 +25,6 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $Id: ProcessMonitor.java,v 1.2 2006/10/04 14:24:15 cvsroot Exp $
  */
 package wonka.vm;
 
@@ -132,7 +131,7 @@ public class ProcessMonitor implements Runnable {
         setProcessReturnValue(process, NativeProcess.STILL_RUNNING);
       }
     } catch (Throwable e) {
-      process.excecption = e;
+      process.exception = e;
       setProcessReturnValue(process, NativeProcess.ERROR);
     }
   }

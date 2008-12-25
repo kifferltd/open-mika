@@ -52,7 +52,7 @@ public class NativeProcess extends Process {
   String[] envp;
   String path;
   int returnvalue;
-  Throwable excecption; 
+  Throwable exception; 
 
   public NativeProcess(String[] cmdarray, String[] envp, String string) throws IOException {
     this.cmdarray = cmdarray;
@@ -69,11 +69,11 @@ public class NativeProcess extends Process {
       }while(returnvalue == LAUNCHING);
     }
     if(returnvalue == ERROR) {
-      if(excecption instanceof RuntimeException) {
-        excecption.fillInStackTrace();
-        throw (RuntimeException) excecption;
+      if(exception instanceof RuntimeException) {
+        exception.fillInStackTrace();
+        throw (RuntimeException) exception;
       }
-      throw new IOException(excecption == null ? null : excecption.toString());
+      throw new IOException(exception);
     }
   }
   
