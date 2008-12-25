@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -108,7 +108,6 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 
 #define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
 #define WT_THREAD_INTERRUPTED         0x00000004 /* the thread has been interrupted */
-#define WT_THREAD_CHECKED             0x00000008 /* the thread has been checked in this round of deadlock detection */
 #define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
 #define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
 #define WT_THREAD_SUSPEND_COUNT_SHIFT 16
@@ -427,7 +426,7 @@ void _gcSafePoint(w_thread thread, char *file, int line);
 
 inline static void gcSafePoint(w_thread thread) {
   if (blocking_all_threads) {
-    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by %s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? "GC" : "JDWP");
+    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by%s%s%s%s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? " GC" : "", blocking_all_threads & BLOCKED_BY_JDWP ? " JDWP" : "", blocking_all_threads & BLOCKED_BY_JITC ? " JITC" : "" , blocking_all_threads & BLOCKED_BY_WABORT ? " WABORT" : "");
     if (thread == marking_thread) {
       woempa(7, "gcSafePoint(): %s:%d (%s): %t is marking thread, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
     }

@@ -38,6 +38,7 @@
 #include "clazz.h"
 #include "core-classes.h"
 #include "threads.h"
+#include "wstrings.h"
 
 #ifdef UPTIME_LIMIT
 #include <stdio.h>
@@ -49,6 +50,13 @@ static x_time next_warning;
 
 static w_boolean detect_deadlocks;
 
+static w_fifo deadlock_fifo;
+static w_int fifo_length;
+static w_thread *chain;
+static w_int chain_length;
+static w_thread *checked;
+static w_int checked_length;
+
 #ifdef ACADEMIC_LICENCE
 #include <stdio.h>
 #endif
@@ -57,6 +65,7 @@ extern int wonka_killed;
 extern x_thread heartbeat_thread;
 
 void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat, w_boolean detectDeadlocks) {
+
 #ifdef UPTIME_LIMIT
   stop_time = x_millis2ticks(UPTIME_LIMIT * 1000);
   time_remaining = UPTIME_LIMIT;
@@ -82,51 +91,85 @@ w_int Heartbeat_numberNonDaemonThreads(JNIEnv *env, w_instance theClass) {
   return nondaemon_thread_count;
 }
 
-void clearCheckedFlag(w_word key, w_word value) {
-  w_thread t = (w_thread) value;
-  unsetFlag(t->flags, WT_THREAD_CHECKED);
-}
-
-void printDeadlock(w_thread t0, w_thread t2) {
-  w_thread t1 = t0;
+static void printDeadlock(w_thread t0, w_thread t2) {
+  w_thread t;
+  w_int i;
 
   wprintf("- - - DEADLOCK DETECTED - - -\n");
-  while (t1 != t2) {
-    wprintf("  %t is competing for monitor %p\n", t1, t1->kthread->waiting_on);
-    t1 = t1->kthread->waiting_on->owner->xref;
-    wprintf("    which is owned by %t\n", t2);
+  for (i = 0; i < chain_length; ++i) {
+    t = chain[i];
+    wprintf("  %t is competing for monitor %p\n", t, t->kthread->waiting_on);
+    t = t->kthread->waiting_on->owner->xref;
+    wprintf("    which is owned by %t\n", t);
   }
   wprintf("- - - - - - - - - - - - - - -\n");
 }
 
-void checkForDeadlocks(w_word key, w_word value) {
-  w_thread t0 = (w_thread) value;
-  w_thread t1 = t0;
+static void addToList(w_thread t, w_thread *list, w_int *length) {
   w_int i;
 
-  if (isNotSet(t0->flags, WT_THREAD_CHECKED)) {
-    woempa(7, "checking %t for deadlocks\n", value);
-    setFlag(t0->flags, WT_THREAD_CHECKED);
+  for (i = 0; i < *length; ++i) {
+    if (list[i] == t) {
+      return;
+    }
+  }
+
+  woempa(7, "Adding %t to chain at position[%d]\n", t, *length);
+  list[*length] = t;
+  ++*length;
+}
+
+static w_boolean isPresent(w_thread t, w_thread *list, w_int length) {
+  w_int i;
+
+  for (i = 0; i < length; ++i) {
+    if (list[i] == t) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+static void checkForDeadlock(w_thread t0) {
+  w_thread t1 = t0;
+  w_int i;
+  w_int count = 0;
+
+  chain_length = 0;
+  if (!isPresent(t0, checked, checked_length)) {
+    woempa(7, "checking %t for deadlocks\n", t0);
+    addToList(t0, checked, &checked_length);
     // upper bound is there just to prevent infinite looping
-    for (i = 0; i < thread_hashtable->occupancy; ++i) {
+    for (i = 0; i < fifo_length * 2; ++i) {
       x_thread xt = t1->kthread;
+      addToList(t1, chain, &chain_length);
       if (isSet(xt->flags, TF_COMPETING)) {
-        if (xt->waiting_on) {
-            woempa(7, "  %t is competing for monitor %p\n", t1, xt->waiting_on);
-          if (xt->waiting_on->owner) {
-            w_thread t2 = xt->waiting_on->owner->xref;
+        x_monitor waiting_on = xt->waiting_on;
+        if (waiting_on) {
+          woempa(7, "  %t is competing for monitor %p\n", t1, waiting_on);
+           x_thread owner = waiting_on->owner;
+          if (owner) {
+            w_thread t2 = owner->xref;
             woempa(7, "    which is owned by %t\n", t2);
-            if (t2 == t0) {
-              printDeadlock(t0, t2);
-              wabort(ABORT_WONKA, "Deadlock detected involving threads %t, %t", t1, t2);
-            }
-            else if (isSet(t2->flags, WT_THREAD_CHECKED)) {
-              woempa(7, "    which was already checked, so that's all right then\n");
-              break;
+            if (t2 && t2 != t1 && isPresent(t2, chain, chain_length)) {
+              // Only trigger if we get around the loop twice - this is to
+              // prevent false positives due to the graph changing during
+              // the scan
+              ++count;
+              woempa(7, "%t already in chain - count = %d\n", t2, count);
+              if (count >= chain_length) {
+                printDeadlock(t0, t2);
+                if (detect_deadlocks) {
+                  wabort(ABORT_WONKA, "Deadlock detected involving threads %t, %t", t1, t2);
+                }
+                break;
+              }
             }
             else {
-              t1 = t2;
+              count = 0;
             }
+              t1 = t2;
           }
           else {
             woempa(7, "    which has no owner\n");
@@ -140,13 +183,14 @@ void checkForDeadlocks(w_word key, w_word value) {
       }
       else {
         woempa(7, "  %t is not competing for any monitor\n", t1);
-        setFlag(t1->flags, WT_THREAD_CHECKED);
+        addToList(t1, checked, &checked_length);
         break;
       }
     }
   }
   else {
-    woempa(7, "not checking %t for deadlocks, is already checked\n", value);
+    woempa(7, "not checking %t for deadlocks, is already checked\n", t0);
+woempa(7, "blocking_all_threads = %d\n", blocking_all_threads);
   }
 }
 
@@ -183,8 +227,23 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
 #endif
 
   if (detect_deadlocks) {
-    ht_every(thread_hashtable, clearCheckedFlag);
-    ht_every(thread_hashtable, checkForDeadlocks);
+    w_thread t;
+
+    deadlock_fifo = ht_list_values(thread_hashtable);
+    fifo_length = deadlock_fifo->numElements;
+    woempa(7, "Allocating %d words each for chain, checked\n", fifo_length);
+    chain = allocMem(fifo_length * sizeof(w_thread));
+    checked = allocMem(fifo_length * sizeof(w_thread));
+    checked_length = 0;
+    while ((t = getFifo(deadlock_fifo))) {
+      checkForDeadlock(t);
+    }
+    releaseMem(chain);
+    releaseMem(checked);
+    releaseFifo(deadlock_fifo);
+    woempa(7, "Released chain, checked\n");
+    chain = NULL;
+    checked = NULL;
   }
 
   // Reset the dumping_info flag with a one-cycle delay (is hack).
@@ -213,10 +272,8 @@ static w_boolean inited;
 w_long system_time_offset;
 
 void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
-  w_thread thread = JNIEnv2w_thread(env);
   long micros = millis * 1000;
   w_long diff;
-  w_fifo fifo;
 
 #ifdef USE_NANOSLEEP
   if (!inited) {
