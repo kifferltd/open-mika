@@ -42,11 +42,8 @@
 x_status x_monitor_create(x_monitor monitor) {
   loempa(2, "Creating a monitor at %p\n", monitor);
 
-  monitor->owner = NULL;
-  monitor->count = 0;
+  memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
-  monitor->interrupted = NULL;
-
   pthread_mutex_init(&monitor->mon_mutex, NULL);
   pthread_cond_init(&monitor->mon_cond, NULL);
 
