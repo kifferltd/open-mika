@@ -287,7 +287,7 @@ ht_destroy(w_hashtable theHashtable) {
 	releaseMem(theHashtable);
 }
 
-void ht_check_size(w_hashtable hashtable, x_monitor monitor) {
+void ht_check_size(w_hashtable hashtable) {
   w_int  oldsize;
   w_int  newsize;
   w_word *oldkeys;
@@ -305,7 +305,6 @@ void ht_check_size(w_hashtable hashtable, x_monitor monitor) {
 
   woempa(1,"hashtable %p size now is %d, occupancy %d, thresholds %d %d\n",hashtable,hashtable->currentsize,hashtable->occupancy,hashtable->lowthreshold,hashtable->highthreshold);
 
-restart:
   oldsize = hashtable->currentsize;
   newsize = oldsize;
 
@@ -332,14 +331,6 @@ restart:
     return;
   }
 
-  if (monitor) {
-    if (isSet(hashtable->flags, HT_RESIZING)) {
-      x_monitor_wait(monitor, 2);
-      goto restart;
-    }
-    setFlag(hashtable->flags, HT_RESIZING);
-    x_monitor_exit(monitor);
-  }
   oldkeys = hashtable->keys;
 
   woempa(1,"(re)allocating hashtable %s @ %p, new size %d\n",hashtable->label,hashtable,newsize);
@@ -377,11 +368,6 @@ restart:
   }
 #endif
 
-  if (monitor) {
-    x_monitor_eternal(monitor);
-    unsetFlag(hashtable->flags, HT_RESIZING);
-    x_monitor_notify_all(monitor);
-  }
   hashtable->currentsize = newsize;
   hashtable->keys = newkeys;
   hashtable->values = newvalues;
@@ -678,7 +664,7 @@ w_word newvalue
       }
 #endif
       hashtable->occupancy += 1;
-      ht_check_size(hashtable, &hashtable->monitor);
+      ht_check_size(hashtable);
       break;                                                            
     }                                                                  
   }                                                                   
@@ -728,7 +714,7 @@ w_word newvalue
       }
 #endif
       hashtable->occupancy += 1;
-      ht_check_size(hashtable, NULL);
+      ht_check_size(hashtable);
       break;                                                            
     }                                                                  
   }                                                                   
@@ -1006,7 +992,7 @@ ht_register(w_hashtable hashtable, w_word key)
       }
 #endif
       hashtable->occupancy += 1;
-      ht_check_size(hashtable, &hashtable->monitor);
+      ht_check_size(hashtable);
       break;                                                            
     }                                                                  
   }                                                                   

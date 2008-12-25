@@ -144,8 +144,6 @@ typedef struct w_Hashtable {
 #endif
 } w_Hashtable;
 
-#define HT_RESIZING 0x00000001
-
 /*
 ** -------------------------------------------------------------------------
 ** A w_hashtable2k is basically the same, but the single key[] array is
@@ -378,7 +376,7 @@ ht_insert(w_hashtable, w_int, w_word key, w_word value);
 void
 ht_delete(w_hashtable, w_int);
 
-void ht_check_size(w_hashtable, x_monitor);
+void ht_check_size(w_hashtable);
 
 /****************************************************************************/
 /*                                                                          */
