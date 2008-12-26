@@ -638,6 +638,12 @@ if $(SCHEDULER) = o4p {
   else {
     O4P_INFO = "using usleep(3) for internal timing loop;" ;
   }
+  if $(HAVE_TIMEDWAIT) = true {
+    O4P_INFO += "using pthread_cond_timedwait;" ;
+  }
+  else {
+    O4P_INFO += "not using pthread_cond_timedwait;" ;
+  }
   if $(HOST_TIMER_GRANULARITY) {
     O4P_INFO += "host timer granularity = $(HOST_TIMER_GRANULARITY) usec;" ;
   }
