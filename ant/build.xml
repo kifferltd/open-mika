@@ -35,8 +35,8 @@
 
      <mkdir dir="${tool.class.dir}" />
 
-     <javac compiler="jikes" destdir="${tool.class.dir}" 
-            target="1.3" debug="true" nowarn="true" failonerror="true"
+     <javac compiler="javac" destdir="${tool.class.dir}" 
+            target="1.4" debug="true" nowarn="true" failonerror="true"
             srcdir="${basedir}/java/"/>
 
      <jar destfile="${tool.jar.dir}/ant-mika.jar" 
