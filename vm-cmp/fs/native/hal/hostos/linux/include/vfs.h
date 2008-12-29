@@ -218,6 +218,27 @@ typedef struct vfs_FILE {
   w_word          error;                /* Error flags */
 } vfs_FILE;
 
+static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
+  vfs_FILE   *stream = allocMem(sizeof(vfs_FILE)); 
+
+  if (stream) {
+    stream->file_desc = fildes;
+    stream->error = 0;
+    stream->mode = allocMem((w_size)strlen(mode)+1);
+    if (stream->mode) {
+      strcpy(stream->mode, mode);
+    }
+    else {
+      wabort(ABORT_WONKA, "No memory to create vfs_FILE->mode\n");
+    }
+  }
+  else {
+    wabort(ABORT_WONKA, "No memory to create vfs_FILE structure\n");
+  }
+
+  return stream;
+}
+
 static inline vfs_FILE *vfs_fopen(const char *path, const char *mode) {
   w_int      flags = 0;
   w_int      file_desc;
@@ -234,33 +255,12 @@ static inline vfs_FILE *vfs_fopen(const char *path, const char *mode) {
 
   file_desc = open(path, flags|O_NONBLOCK, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
-  if(file_desc != -1) {                                 /* Valid filedes ? */
-    stream = allocMem(sizeof(vfs_FILE));         /* Allocate memory */
-    if (stream) {
-      stream->file_desc = file_desc;                    /* Store the file descriptor */
-      stream->error = 0;
-      stream->mode = allocMem((w_size)strlen(mode)+1); /* Allocate memory to store the mode */
-      if (stream->mode) {
-        strcpy(stream->mode, mode);                     /* Copy the mode to the stream */
-      }
-      else {
-        wabort(ABORT_WONKA, "No memory to create vfs_FILE->mode\n");
-      }
-
-    }
-    else {
-      wabort(ABORT_WONKA, "No memory to create vfs_FILE structure\n");
-    }
+  if(file_desc != -1) {
+    stream = vfs_fdopen(file_desc, mode);
   }
 
   return stream;
 }
-
-/*
-** static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
-** }
-** -> This function is not supported !!!
-*/
 
 static inline w_word vfs_fclose(vfs_FILE *stream) {
   vfs_close(stream->file_desc);
