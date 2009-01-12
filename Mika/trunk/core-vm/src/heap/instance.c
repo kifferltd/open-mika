@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -172,40 +172,33 @@ w_boolean heap_request(w_thread thread, w_int bytes) {
 
   }
 
-  if (threadIsSafe(thread)) {
-    if ((window_fifo->numLeaves * window_fifo->leafElements <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
-      while (!expandFifo(instance_allocated - instance_returned + 1024, window_fifo)) {
-        printf("No space to expand window_fifo ...\n");
-        gc_reclaim(8192, NULL);
-      }
-      x_monitor_exit(gc_monitor);
+  if ((window_fifo->numLeaves * window_fifo->leafElements <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
+    while (!expandFifo(instance_allocated - instance_returned + 1024, window_fifo)) {
+      printf("No space to expand window_fifo ...\n");
+      gc_reclaim(8192, NULL);
     }
+    x_monitor_exit(gc_monitor);
+  }
 
+  gc_reclaim(bytes, NULL);
+
+  if (x_mem_avail() - bytes > min_heap_free) {
+
+    return WONKA_TRUE;
+
+  }
+
+  do {
+    count += retry_incr;
+    if (count > 100) {
+      wprintf("TOO MANY RETRIES\n");
+
+      return WONKA_FALSE;
+
+    }
+    //wprintf("RETRY #%d for %d bytes, %d bytes available (min = %d)\n", count, bytes, x_mem_avail(), min_heap_free);
     gc_reclaim(bytes, NULL);
-
-    if (x_mem_avail() - bytes > min_heap_free) {
-
-      return WONKA_TRUE;
-
-    }
-
-    do {
-      count += retry_incr;
-      if (count > 100) {
-        wprintf("TOO MANY RETRIES\n");
-
-        return WONKA_FALSE;
-
-      }
-      //wprintf("RETRY #%d for %d bytes, %d bytes available (min = %d)\n", count, bytes, x_mem_avail(), min_heap_free);
-      gc_reclaim(bytes, NULL);
-    } while ((x_mem_avail() - bytes) < min_heap_free);
-  }
-  else {
-    thread->to_be_reclaimed += bytes;
-
-    return x_mem_avail() - bytes > min_heap_free;
-  }
+  } while ((x_mem_avail() - bytes) < min_heap_free);
 
   return WONKA_TRUE;
 }
@@ -238,6 +231,12 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
     return NULL;
   }
 #endif
+
+  if (clazz == clazzString) {
+
+    return allocStringInstance(thread);
+
+  }
 
   if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
 

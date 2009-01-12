@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -81,9 +81,12 @@
 ** CATCH_FLYING_PIGS. Defining PIGS_MIGHT_FLY can be a temporary work-around
 ** when objects are apparently getting reclaimed prematurely, but you should
 ** perform tests using CATCH_FLYING_PIGS to get to the root of the problem.
+**
+** Note: don't define PIGS_MIGHT_FLY here, define it in wonka.h (because other
+** files such as strings.h also need to know about it).
 */
-//#define PIGS_MIGHT_FLY
-//#define CATCH_FLYING_PIGS
+
+#define CATCH_FLYING_PIGS
 
 #ifndef PIGS_MIGHT_FLY
 #ifdef CATCH_FLYING_PIGS
@@ -99,6 +102,9 @@ static void _flying_pig_check(char *func, char *file, int line, w_object object)
   if (isSet(object->flags, O_GARBAGE)) {
     w_instance instance = object->fields;
 
+#ifdef DEBUG
+    wprintf("Object allocated at %s line %d\n", block2chunk(object)->file, block2chunk(object)->line);
+#endif
     if (object->clazz == clazzString) {
       wabort(ABORT_WONKA, "Flying pig %j (`%w')! in %s at %s:%d\n", instance, instance[F_String_wotsit], func, file, line);
     }
@@ -287,31 +293,31 @@ x_monitor gc_monitor;
 /*
 ** (Almost) all accesses to gc_monitor are wrapped to check the status.
 */
-#define PRINT_MONITOR_STATUS(f,s) printf("collect.c line %d: %s returned %d\n", __LINE__, (f), (s))
+#define PRINT_MONITOR_STATUS(l,f,s) printf("collect.c line %d: %s returned %d\n", (l), (f), (s))
 
-#define GC_MONITOR_ETERNAL gc_monitor_eternal();
-static void gc_monitor_eternal(void) { 
+#define GC_MONITOR_ETERNAL gc_monitor_eternal(__LINE__);
+static void gc_monitor_eternal(int line) { 
   x_status s = x_monitor_eternal(gc_monitor);
-  if (s) PRINT_MONITOR_STATUS("x_monitor_eternal", s);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_eternal", s);
 }
 
-#define GC_MONITOR_WAIT(t) gc_monitor_wait(t);
-static void gc_monitor_wait(x_sleep t) {
+#define GC_MONITOR_WAIT(t) gc_monitor_wait(t,__LINE__);
+static void gc_monitor_wait(x_sleep t, int line) {
   x_status s = x_monitor_wait(gc_monitor, t);
   if (s == xs_interrupted) GC_MONITOR_ETERNAL
-  else if (s) PRINT_MONITOR_STATUS("x_monitor_wait", s);
+  else if (s) PRINT_MONITOR_STATUS(line, "x_monitor_wait", s);
 }
 
-#define GC_MONITOR_NOTIFY gc_monitor_notify();
-static void gc_monitor_notify(void) {
+#define GC_MONITOR_NOTIFY gc_monitor_notify(__LINE__);
+static void gc_monitor_notify(int line) {
   x_status s = x_monitor_notify_all(gc_monitor);
-  if (s) PRINT_MONITOR_STATUS("x_monitor_notify_all", s);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_notify_all", s);
 }
 
-#define GC_MONITOR_EXIT gc_monitor_exit();
-static void gc_monitor_exit(void) {
+#define GC_MONITOR_EXIT gc_monitor_exit(__LINE__);
+static void gc_monitor_exit(int line) {
   x_status s = x_monitor_exit(gc_monitor);
-  if (s) PRINT_MONITOR_STATUS("x_monitor_exit", s);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_exit", s);
 }
 
 /*
@@ -458,7 +464,7 @@ static w_int releaseInstance(w_object object) {
   clazz = object->clazz;
 //  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)object->fields, object, clazz, printFlags(object->flags));
 
-  if (object->clazz == clazzString) {
+  if (clazz == clazzString) {
     w_string string = getWotsitField(object->fields, F_String_wotsit);
     if (string) {
       ht_lock(string_hashtable);
@@ -475,7 +481,7 @@ static w_int releaseInstance(w_object object) {
       ht_unlock(string_hashtable);
     }
   }
-  else if (object->clazz == clazzClass) {
+  else if (clazz == clazzClass) {
 #ifdef COLLECT_CLASSES_AND_LOADERS
     Class_destructor(object->fields);
 #else
@@ -485,7 +491,7 @@ static w_int releaseInstance(w_object object) {
     return 0;
 #endif
   }
-  else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
+  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER)) {
 #ifdef COLLECT_CLASSES_AND_LOADERS
     ClassLoader_destructor(object->fields);
 #else
@@ -495,7 +501,7 @@ static w_int releaseInstance(w_object object) {
   else if (isSet(clazz->flags, CLAZZ_IS_THREAD)) {
     Thread_destructor(object->fields);
   }
-  else if (isSet(object->clazz->flags, CLAZZ_IS_THROWABLE)) {
+  else if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
     Throwable_destructor(object->fields);
   } else if(clazz == clazzReferenceQueue) {
     ReferenceQueue_destructor(object->fields);
@@ -1227,7 +1233,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
     }
 
     /*
-    ** If this is an instance of java.lang.Class, we have extra work to do.
+    ** If this is an instance of java.lang.Class, we have a lot of work to do.
     */
     if (parent_object->clazz == clazzClass && (clazz = getWotsitField(parent_instance, F_Class_wotsit))) {
       woempa(1,"(GC) Object %p is instance of %k\n",parent_object,parent_object->clazz);
@@ -2224,8 +2230,6 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
 #endif
   
-  threadMustBeSafe(thread);
-
   reclaim_accumulator += requested * (memory_load_factor + 1);
   remaining = initial = reclaim_accumulator;
 
@@ -2234,7 +2238,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
       wprintf("GC: thread %t trying to reclaim %d bytes\n", thread, remaining);
     }
 
-    if (enter_reclaim_listener_monitor()) {
+    if (threadIsSafe(thread) && enter_reclaim_listener_monitor()) {
       reclaimed_this_cycle = 0;
       for (i= 0; remaining > 0 && i < sizeOfWordset(&reclaim_listener_list); ++i) {
         w_reclaim_callback callback = (w_reclaim_callback)elementOfWordset(&reclaim_listener_list, i);
@@ -2253,7 +2257,10 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
     }
     else {
       if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-        wprintf("GC: thread %t found the reclaim_accumulator busy, backing off\n", thread);
+        wprintf("GC: thread %t postponing heap_request for %d bytes\n", thread, requested);
+        setFlag(thread->flags, WT_THREAD_GC_PENDING);
+        thread->to_be_reclaimed += requested;
+        reclaim_accumulator -= requested * (memory_load_factor + 1);
       }
     }
   }

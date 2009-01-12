@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2006, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1096,12 +1096,16 @@ void fast_String_substring(w_frame frame) {
 */
 
 w_instance String_intern(JNIEnv *env, w_instance thisString) {
+  w_thread thread = JNIEnv2w_thread(env);
   w_string this = String2string(thisString);
   w_instance resultString;
 
-  threadMustBeSafe(JNIEnv2w_thread(env));
+  threadMustBeSafe(thread);
   ht_lock(string_hashtable);
+  enterUnsafeRegion(thread);
   resultString = internString(thisString);
+  addLocalReference(thread, resultString);
+  enterSafeRegion(thread);
   ht_unlock(string_hashtable);
 
   return resultString;

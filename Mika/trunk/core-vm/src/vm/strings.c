@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
-* Embedded Java Solutions. All rights reserved.                           *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -54,16 +54,6 @@
  */ 
 w_hashtable string_hashtable;
 
-#ifdef USE_INTERNED_STRING_HASHTABLE
-/*
- * Hashtable which maps interned w_strings onto their canonical instances,
- * i.e. key = w_string, value = w_instance.
- */
-w_hashtable interned_string_hashtable;
-#endif
-
-//x_mutex string_mutex;
-
 /// The empty string
 w_string string_empty;
 
@@ -88,9 +78,7 @@ static inline w_string allocString(w_size length, w_boolean is_latin1) {
     return NULL;
   }
   string->refcount = 0;
-#ifndef USE_INTERNED_STRING_HASHTABLE
   string->interned = NULL;
-#endif
   string->length_and_flags = length + (is_latin1 ? STRING_IS_LATIN1 : 0);
 
   return string;
@@ -791,53 +779,40 @@ void deregisterString(w_string string) {
 }
 
 /*
-** If the w_string referenced by theString is not in internal_string_hashtable,
-** add it and return theString. If it is already present, return the existing
-** canonical String. The caller of this function must own the lock on string_hashtable(!).
+** If the w_string referenced by theString has no canonical instance, record
+** 'theString' as the cononical instance and return it as the result. If the
+** w_string already has a canonical instance, return the canonical instance.
+** The caller of this function must own the lock on string_hashtable(!).
 */
 w_instance internString(w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = 
-#ifdef USE_INTERNED_STRING_HASHTABLE
-    (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
-#else
-    s->interned;
-#endif
+  w_instance existing = getCanonicalStringInstance(s);
   if (existing) {
+    setFlag(instance2flags(existing), O_BLACK);
+#ifdef PIGS_MIGHT_FLY
+    unsetFlag(instance2flags(existing), O_GARBAGE);
+#endif
 
     return existing;
 
   }
 
-#ifdef USE_INTERNED_STRING_HASHTABLE
-  ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)theString);
-#else
-    s->interned = theString;
-#endif
+  s->interned = theString;
 
   return theString;
 }
 
 /*
 ** If theString is the canonical entry for the w_string it references, remove
-** its entry from interned_string_hashtable. The caller of this function must
+** the reference to it as canonical instance. The caller of this function must
 ** own the lock on string_hashtable(!).
 */
 void uninternString(w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = 
-#ifdef USE_INTERNED_STRING_HASHTABLE
-    (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
-#else
-    s->interned;
-#endif
+  w_instance existing = getCanonicalStringInstance(s);
   
   if (existing == theString) {
-#ifdef USE_INTERNED_STRING_HASHTABLE
-    ht_erase_no_lock(interned_string_hashtable, (w_word)s);
-#else
     s->interned = NULL;
-#endif
   }
 }
 
@@ -971,21 +946,6 @@ void startStrings() {
 
   string_hashtable = ht_create((char *)"hashtable:strings", STRING_HASHTABLE_SIZE, ht_stringHash, ht_stringCompare, 0, 0);
   woempa(7, "created string_hashtable at %p\n", string_hashtable);
-
-#ifdef USE_INTERNED_STRING_HASHTABLE
-  /*
-  ** Allocate the hashtable in which interned strings will be stored.
-  */
-
-  interned_string_hashtable = ht_create((char *)"hashtable:internees", INTERNED_STRING_HASHTABLE_SIZE, NULL, NULL, 0, 0);
-  woempa(7, "created interned_string_hashtable at %p\n", interned_string_hashtable);
-#endif
-
-  /*
-  ** Create the mutex used to prevent race problems
-  string_mutex = (x_mutex)allocMem(sizeof(x_Mutex));
-  x_mutex_create(string_mutex);
-  */
 
   /*
   ** Set up the special strings
@@ -1156,7 +1116,7 @@ w_instance newStringInstance(w_string s) {
   if (instance) {
     w_string r = registerString(s);
     setWotsitField(instance, F_String_wotsit, r);
-    woempa(1, "allocated instance %p of String for '%w'\n", instance, s);
+    woempa(1, "allocated instance %p of String for '%w'\n", instance, r);
   }
   else {
     woempa(9, "Unable to allocate instance of String for '%w'\n", s);
@@ -1188,11 +1148,7 @@ w_instance getStringInstance(w_string s) {
   ** it will see our O_BLACK flag and not reclaim the instance).
   */
   ht_lock(string_hashtable);
-#ifdef USE_INTERNED_STRING_HASHTABLE
-  canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)r);
-#else
   canonical = r->interned;
-#endif
   if (canonical) {
     enterUnsafeRegion(thread);
     addLocalReference(thread, canonical);
@@ -1232,22 +1188,6 @@ w_instance getStringInstance(w_string s) {
   }
 
   ht_lock(string_hashtable);
-#ifdef USE_INTERNED_STRING_HASHTABLE
-  canonical = (w_instance)ht_write_no_lock(interned_string_hashtable, r, new_instance);
-  /*
-  ** If we just overwrote a canonical instance, back everything out (and
-  ** allow new_instance to be reclaimed by GC).
-  */
-  if (canonical) {
-    ht_write_no_lock(interned_string_hashtable, r, canonical);
-    deregisterString(r);
-    ht_unlock(string_hashtable);
-    removeLocalReference(thread, new_instance);
-
-    return canonical;
-
-  }
-#else
   if (r->interned) {
     canonical = r->interned;
     deregisterString(r);
@@ -1260,7 +1200,6 @@ w_instance getStringInstance(w_string s) {
   else {
     r->interned = new_instance;
   }
-#endif
 
   /*
   ** Otherwise, everything's just fine.

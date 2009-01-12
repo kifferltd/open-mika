@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -701,8 +701,10 @@ w_boolean enterSafeRegion(const w_thread thread) {
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 #endif
-  if (thread->to_be_reclaimed) {
-    gc_reclaim(thread->to_be_reclaimed, NULL);
+
+  if (isSet(thread->flags, WT_THREAD_GC_PENDING)) {
+    unsetFlag(thread->flags, WT_THREAD_GC_PENDING);
+    gc_reclaim(thread, thread->to_be_reclaimed);
     thread->to_be_reclaimed = 0;
   }
 
