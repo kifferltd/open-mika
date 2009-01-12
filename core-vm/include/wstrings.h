@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -61,11 +61,7 @@ extern w_int F_String_wotsit;
 typedef struct w_String {
   w_word      refcount;
   w_word      wonka_hash;
-#ifdef USE_INTERNED_STRING_HASHTABLE
-  w_word      dummy;
-#else
   w_instance  interned;
-#endif
   w_size      length_and_flags;
   union {
   w_ubyte     bytes[8];
@@ -222,6 +218,28 @@ void _deregisterString(w_string string, const char *file, int line);
 #else
 void deregisterString(w_string string);
 #endif
+
+/*
+** Get the canonical String instance (if any) associated with this w_string.
+*/
+static inline w_instance getCanonicalStringInstance(w_string s) {
+  return s->interned;
+}
+
+/*
+** If the w_string referenced by theString has no canonical instance, record
+** 'theString' as the cononical instance and return it as the result. If the
+** w_string already has a canonical instance, return the canonical instance.
+** The caller of this function must own the lock on string_hashtable(!).
+*/
+w_instance internString(w_instance theString);
+
+/*
+** If theString is the canonical entry for the w_string it references, remove
+** the reference to it as canonical instance. The caller of this function must
+** own the lock on string_hashtable(!).
+*/
+void uninternString(w_instance theString);
 
 /*
 ** Get an instance of java.lang.String which points to s.

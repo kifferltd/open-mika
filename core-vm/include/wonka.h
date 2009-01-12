@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -419,6 +419,10 @@ void w_memcpy(void * adst, const void * asrc, w_size length);
 #define w_memcpy(d,s,l) memcpy(d,s,l)
 #endif
 
+/*
+** See core-vm/src/heap/collector.c for the use of PIGS_MIGHT_FLY.
+*/
+//#define PIGS_MIGHT_FLY
 
 /*
 ** If 'pedantic' is TRUE, Wonka will detect errors such as AbstractMethodError
