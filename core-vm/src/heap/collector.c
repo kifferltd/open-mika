@@ -458,6 +458,11 @@ static w_int releaseInstance(w_object object) {
   }
   
   if (isSet(object->flags, O_HAS_LOCK)) {
+    w_thread owner_thread = monitorOwner(object->fields);
+    if (owner_thread) {
+      woempa(9, "Hold on a moment - monitor of %j still owned by %t\n", object->fields, owner_thread);
+      return 0;
+    }
     releaseMonitor(object->fields);
   }
 
