@@ -250,6 +250,24 @@ w_fifo reference_fifo;
 #define REFERENCE_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
 
 /*
+** List of String instances which need to be released.
+** We accumulate this during the sweep phase and only at the end do we actually
+** release the instance and deregister the w_string;
+** this way we only need to grab the string hashtable monitor once.
+*/
+w_fifo dead_string_fifo;
+#define DEAD_STRING_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
+
+/*
+** List of objects which have been released and which had a monitor allocated.
+** We accumulate this during the sweep phase and only at the end do we actually
+** remove the entry in lock_hashtable, delete the monitor and free the memory;
+** this way we only need to grab the lock hashtable monitor once.
+*/
+w_fifo dead_lock_fifo;
+#define DEAD_LOCK_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
+
+/*
 ** List of w_clazz structures which need to be released. We accumulate this
 ** during the sweep phase and only actually release the memory at the very
 ** end, because during sweep we need to check the clazz of every unreachable
@@ -269,6 +287,8 @@ w_fifo dead_clazz_fifo;
   : ((f) == enqueue_fifo) ? "enqueue_fifo" \
   : ((f) == finalizer_fifo) ? "finalizer_fifo" \
   : ((f) == reference_fifo) ? "reference_fifo" \
+  : ((f) == dead_string_fifo) ? "dead_string_fifo" \
+  : ((f) == dead_lock_fifo) ? "dead_lock_fifo" \
   : ((f) == dead_clazz_fifo) ? "dead_clazz_fifo" \
   : "unknown fifo" )
 
@@ -449,67 +469,14 @@ static w_boolean checkStrongRefs(w_object);
 ** The value returned is the size of the instance in bytes (the amount of 
 ** memory freed is generally more than this).
 */
-static w_int releaseInstance(w_object object) {
-  w_clazz clazz;
+static w_int reallyReleaseInstance(w_object object) {
   w_size  bytes = 0;
+  w_clazz clazz = object->clazz;
 
-  if (object == NULL) {
-    wabort(ABORT_WONKA, "Releasing NULL object !!\n");
-  }
-  
   if (isSet(object->flags, O_HAS_LOCK)) {
-    w_thread owner_thread = monitorOwner(object->fields);
-    if (owner_thread) {
-      woempa(9, "Hold on a moment - monitor of %j still owned by %t\n", object->fields, owner_thread);
-      return 0;
-    }
-    releaseMonitor(object->fields);
-  }
-
-  clazz = object->clazz;
-//  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)object->fields, object, clazz, printFlags(object->flags));
-
-  if (clazz == clazzString) {
-    w_string string = getWotsitField(object->fields, F_String_wotsit);
-    if (string) {
-      ht_lock(string_hashtable);
-      if (checkStrongRefs(object)) {
-        uninternString(object->fields);
-        clearWotsitField(object->fields, F_String_wotsit);
-        deregisterString(string);
-      }
-      else {
-        ht_unlock(string_hashtable);
-        woempa(9, "Not collecting %j %w because it is strongly reachable\n", object->fields,string); 
-        return 0;
-      }
-      ht_unlock(string_hashtable);
-    }
-  }
-  else if (clazz == clazzClass) {
-#ifdef COLLECT_CLASSES_AND_LOADERS
-    Class_destructor(object->fields);
-#else
-// [CG 20040330] This could help get rid of "dead" class's static vars?
-//    wprintf("%K is now garbage\n", Class2clazz(object->fields));
-//    setClazzState(Class2clazz(object->fields), CLAZZ_STATE_GARBAGE);
-    return 0;
-#endif
-  }
-  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-#ifdef COLLECT_CLASSES_AND_LOADERS
-    ClassLoader_destructor(object->fields);
-#else
-    return 0;
-#endif
-  }
-  else if (isSet(clazz->flags, CLAZZ_IS_THREAD)) {
-    Thread_destructor(object->fields);
-  }
-  else if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
-    Throwable_destructor(object->fields);
-  } else if(clazz == clazzReferenceQueue) {
-    ReferenceQueue_destructor(object->fields);
+    if (putFifo(object->fields, dead_lock_fifo) < 0) {
+      wprintf("Failed to put %K on dead_lock_fifo\n", clazz);
+    };
   }
 
   if (clazz->previousDimension) {
@@ -547,6 +514,64 @@ static w_int releaseInstance(w_object object) {
 #endif 
 
   return bytes;
+}
+
+static w_int releaseInstance(w_object object) {
+  w_clazz clazz;
+  w_instance instance;
+
+  if (object == NULL) {
+    wabort(ABORT_WONKA, "Releasing NULL object !!\n");
+  }
+  
+  clazz = object->clazz;
+  instance = object->fields;
+
+  if (isSet(object->flags, O_HAS_LOCK)) {
+    w_thread owner_thread = monitorOwner(instance);
+    if (owner_thread) {
+      woempa(9, "Hold on a moment - monitor of %j still owned by %t\n", instance, owner_thread);
+      return 0;
+    }
+  }
+
+//  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)instance, object, clazz, printFlags(object->flags));
+
+  if (clazz == clazzString && getWotsitField(instance, F_String_wotsit)) {
+    woempa(7, "Deferring sweeping of %j (%w)\n", instance, string);
+    if (putFifo(instance, dead_string_fifo) < 0) {
+      wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
+    };
+
+    return 0;
+  }
+  else if (clazz == clazzClass) {
+#ifdef COLLECT_CLASSES_AND_LOADERS
+    Class_destructor(instance);
+#else
+// [CG 20040330] This could help get rid of "dead" class's static vars?
+//    wprintf("%K is now garbage\n", Class2clazz(instance));
+//    setClazzState(Class2clazz(instance), CLAZZ_STATE_GARBAGE);
+    return 0;
+#endif
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER)) {
+#ifdef COLLECT_CLASSES_AND_LOADERS
+    ClassLoader_destructor(instance);
+#else
+    return 0;
+#endif
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_THREAD)) {
+    Thread_destructor(instance);
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
+    Throwable_destructor(instance);
+  } else if(clazz == clazzReferenceQueue) {
+    ReferenceQueue_destructor(instance);
+  }
+
+  return reallyReleaseInstance(object);
 }
 
 /*
@@ -1839,6 +1864,51 @@ static w_boolean checkPhantomRefs(w_object object) {
 }
 
 /*
+** Release all the String instances in the dead_string_fifo.
+*/
+static w_int collect_dead_strings(void) {
+  w_instance instance;
+  w_int bytes = 0;
+
+  ht_lock(string_hashtable);
+  while ((instance = getFifo(dead_string_fifo))) {
+    w_string string = getWotsitField(instance, F_String_wotsit);
+    if (string) {
+      if (checkStrongRefs(instance2object(instance))) {
+        uninternString(sweeping_thread, instance);
+        clearWotsitField(instance, F_String_wotsit);
+        deregisterString(string);
+        bytes += reallyReleaseInstance(instance2object(instance));
+      }
+    }
+  }
+  ht_unlock(string_hashtable);
+
+  return bytes;
+}
+
+extern w_hashtable lock_hashtable;
+
+/*
+** Release all the locks in the dead_lock_fifo.
+*/
+static w_int collect_dead_locks(void) {
+  w_instance locked_instance;
+  w_int count = 0;
+
+  ht_lock(lock_hashtable);
+  while ((locked_instance = getFifo(dead_lock_fifo))) {
+    x_monitor mon = (x_monitor) ht_erase_no_lock(lock_hashtable, (w_word)locked_instance);
+    x_monitor_delete(mon);
+    releaseMem(mon);
+    ++count;
+  }
+  ht_unlock(lock_hashtable);
+
+  return count * sizeof(x_Monitor);
+}
+
+/*
 ** Array used to sort the dead classes which must be collected.
 */
 static w_clazz *dead_clazz_array;
@@ -1968,9 +2038,17 @@ w_size sweep(w_int target) {
 
       woempa(7, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
 
+/*
+      if (dead_string_fifo->numElements) {
+        bytes_freed += collect_dead_strings();
+      }
+      if (dead_lock_fifo->numElements) {
+        bytes_freed += collect_dead_locks();
+      }
       if (dead_clazz_fifo->numElements) {
         bytes_freed += collect_dead_clazzes();
       }
+*/
       break;
 
     }
@@ -2056,6 +2134,15 @@ w_size sweep(w_int target) {
     }
 #endif
   }
+      if (dead_string_fifo->numElements) {
+        bytes_freed += collect_dead_strings();
+      }
+      if (dead_lock_fifo->numElements) {
+        bytes_freed += collect_dead_locks();
+      }
+      if (dead_clazz_fifo->numElements) {
+        bytes_freed += collect_dead_clazzes();
+      }
 
   woempa(7, "(GC) Collected %i bytes from %d objects out of %d.\n", bytes_freed, objects_freed, objects_examined);
 
@@ -2339,12 +2426,15 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   enqueue_fifo = allocFifo(ENQUEUE_FIFO_LEAF_SIZE);
   finalizer_fifo = allocFifo(FINALIZER_FIFO_LEAF_SIZE);
   reference_fifo = allocFifo(REFERENCE_FIFO_LEAF_SIZE);
+  dead_string_fifo = allocFifo(DEAD_STRING_FIFO_LEAF_SIZE);
+  dead_lock_fifo = allocFifo(DEAD_LOCK_FIFO_LEAF_SIZE);
   dead_clazz_fifo = allocFifo(DEAD_CLAZZ_FIFO_LEAF_SIZE);
   gc_instance = theGarbageCollector;
   woempa(7,"         window_fifo at %p\n", window_fifo);
   woempa(7,"      finalizer_fifo at %p\n", finalizer_fifo);
   woempa(7,"        enqueue_fifo at %p\n", enqueue_fifo);
   woempa(7,"      reference_fifo at %p\n", reference_fifo);
+  woempa(7,"      dead_lock_fifo at %p\n", dead_lock_fifo);
   woempa(7,"     dead_clazz_fifo at %p\n", dead_clazz_fifo);
   woempa(7, "I_ThreadGroup_system = %j.\n", I_ThreadGroup_system);
   woempa(7, "     W_Thread_system = %p.\n", W_Thread_system);

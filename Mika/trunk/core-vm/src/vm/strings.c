@@ -784,14 +784,10 @@ void deregisterString(w_string string) {
 ** w_string already has a canonical instance, return the canonical instance.
 ** The caller of this function must own the lock on string_hashtable(!).
 */
-w_instance internString(w_instance theString) {
+w_instance internString(w_thread thread, w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = getCanonicalStringInstance(s);
+  w_instance existing = getCanonicalStringInstance(thread, s);
   if (existing) {
-    setFlag(instance2flags(existing), O_BLACK);
-#ifdef PIGS_MIGHT_FLY
-    unsetFlag(instance2flags(existing), O_GARBAGE);
-#endif
 
     return existing;
 
@@ -807,11 +803,10 @@ w_instance internString(w_instance theString) {
 ** the reference to it as canonical instance. The caller of this function must
 ** own the lock on string_hashtable(!).
 */
-void uninternString(w_instance theString) {
+void uninternString(w_thread thread, w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = getCanonicalStringInstance(s);
   
-  if (existing == theString) {
+  if (s && s->interned == theString) {
     s->interned = NULL;
   }
 }
@@ -1140,25 +1135,8 @@ w_instance getStringInstance(w_string s) {
   */
   threadMustBeSafe(thread);
   r = registerString(s);
-
-  /*
-  ** We lock the string_hashtable while looking for a canonical instance;
-  ** this ensures that the logic in collector.c to reclaim canonical instances
-  ** either runs before this (so we will not find one) or runs after it (and
-  ** it will see our O_BLACK flag and not reclaim the instance).
-  */
   ht_lock(string_hashtable);
-  canonical = r->interned;
-  if (canonical) {
-    enterUnsafeRegion(thread);
-    addLocalReference(thread, canonical);
-    flagsptr = instance2flagsptr(canonical);
-#ifdef PIGS_MIGHT_FLY
-    unsetFlag(*flagsptr, O_GARBAGE);
-#endif
-    setFlag(*flagsptr, O_BLACK);
-    enterSafeRegion(thread);
-  }
+  canonical = getCanonicalStringInstance(thread, s);
   ht_unlock(string_hashtable);
 
   /*
