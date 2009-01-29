@@ -195,6 +195,8 @@ w_string unicode2String(w_char *chars, w_size length);
 */
 w_string utf2String(const char *utf8string, w_size length);
 
+extern w_hashtable string_hashtable;
+
 /*
 ** Register a Wonka string. The result returned may be the same as the argument
 ** passed (if the string is "new"), or it may be different (an already existing
@@ -221,9 +223,29 @@ void deregisterString(w_string string);
 
 /*
 ** Get the canonical String instance (if any) associated with this w_string.
+** The caller of this function must own the lock on string_hashtable(!):
+** this ensures that the logic in collector.c to reclaim canonical instances
+** either runs before this (so we will not find  a canonical instance) or runs
+** after it (and it will see our O_BLACK flag and not reclaim the instance).
 */
-static inline w_instance getCanonicalStringInstance(w_string s) {
-  return s->interned;
+static inline w_instance getCanonicalStringInstance(w_thread thread, w_string s) {
+  w_string canonical;
+  w_flags *flagsptr;
+
+  threadMustBeSafe(thread);
+  canonical = s->interned;
+  if (canonical) {
+    enterUnsafeRegion(thread);
+    addLocalReference(thread, canonical);
+    flagsptr = instance2flagsptr(canonical);
+#ifdef PIGS_MIGHT_FLY
+    unsetFlag(*flagsptr, O_GARBAGE);
+#endif
+    setFlag(*flagsptr, O_BLACK);
+    enterSafeRegion(thread);
+  }
+
+  return canonical;
 }
 
 /*
@@ -232,14 +254,14 @@ static inline w_instance getCanonicalStringInstance(w_string s) {
 ** w_string already has a canonical instance, return the canonical instance.
 ** The caller of this function must own the lock on string_hashtable(!).
 */
-w_instance internString(w_instance theString);
+w_instance internString(w_thread, w_instance theString);
 
 /*
 ** If theString is the canonical entry for the w_string it references, remove
 ** the reference to it as canonical instance. The caller of this function must
 ** own the lock on string_hashtable(!).
 */
-void uninternString(w_instance theString);
+void uninternString(w_thread, w_instance theString);
 
 /*
 ** Get an instance of java.lang.String which points to s.
@@ -360,8 +382,6 @@ extern w_string category_name[];
 #define w_string_equals(a, b)                  ((a) == (b))
 
 void dumpStrings(void);
-
-extern w_hashtable string_hashtable;
 
 static inline w_string String2string(w_instance String) {
   return getWotsitField(String, F_String_wotsit);
