@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -181,11 +181,13 @@ void * _reallocMem(void * block, w_size newsize) {
 }
 
 void _releaseMem(void * block) {
+  w_chunk chunk;
+  if (!block) {
+    wabort(ABORT_WONKA, "Bah. releaseMem(NULL)?");
+  }
 
-  w_chunk chunk = block2chunk(block);
-
+  chunk = block2chunk(block);
   x_mem_free(chunk);
-
 }
 
 void _discardMem(void * block) {
@@ -332,6 +334,7 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
   checks += 1;
   
   if (checks % check_limit == 0) {
+    x_mem_lock(x_eternal);
     woempa(7, "Performing heap check for alloc/releaseMem at %s:%d, count = %d\n", file, line, checks);
     wa->count = 0;
     wa->bytes = 0;
@@ -342,6 +345,7 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
     x_mem_walk(x_eternal, checkWalk, wa);
     walks += 1;
     errors += wa->errors;
+    x_mem_unlock();
     woempa(9, "%s.%d (alloc/release %p): Walked %d anon %d tagged chunks, %d MB anon %d Mb tagged, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->all_count - wa->count, wa->count, (wa->all_bytes - wa->bytes) / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
     if (wa->errors) {
       wabort(ABORT_WONKA, "Found bad chunk. Stopping...\n");
