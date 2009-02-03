@@ -44,6 +44,12 @@
 #define ALLOCMEM_RETRIES 10
 #define ALLOCMEM_SLEEP    5
 
+static void alloc_barrier(w_thread thread) {
+  while (gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
+    x_thread_sleep(ALLOCMEM_SLEEP);
+  }
+}
+
 /*
 ** Allocate cleared (zeroed) memory.
 */
@@ -52,10 +58,9 @@ void * _allocClearedMem(w_size rsize) {
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
 
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
 
 #ifdef ALLOCMEM_RETRIES
@@ -96,10 +101,9 @@ void * _allocMem(w_size rsize) {
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
 
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
 
 #ifdef ALLOCMEM_RETRIES
@@ -140,10 +144,9 @@ void * _reallocMem(void * block, w_size newsize) {
 
   oldchunk = block2chunk(block);
   oldsize = x_mem_size(oldchunk);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(newsize - oldsize, NULL);
-  }
+  gc_reclaim(newsize - oldsize, NULL);
 
+  alloc_barrier(thread);
   newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
   
 
@@ -419,6 +422,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   w_thread thread = currentWonkaThread;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
 
@@ -474,10 +478,9 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   if (rsize > 163840) printf("Request for %d bytes at %s.%d\n", rsize, file, line);
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
 
@@ -546,10 +549,9 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   oldsize = x_mem_size(oldchunk);
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, newsize, sizeof(w_Chunk) + newsize);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(newsize - oldsize, NULL);
-  }
+  gc_reclaim(newsize - oldsize, NULL);
 
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
 
