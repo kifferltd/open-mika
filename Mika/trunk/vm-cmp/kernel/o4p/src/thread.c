@@ -565,7 +565,10 @@ x_status x_thread_resume(x_thread thread) {
     loempa(2, "Starting new born thread.\n");
     thread->state = xt_ready;
     status = pthread_create(&thread->o4p_pthread, &thread->attributes, start_routine, (void *)thread);
-    if (status != 0) {
+    if (status == ENOMEM) {
+       return xs_no_mem;
+    }
+    else if (status != 0) {
       return xs_no_instance;
     }
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
