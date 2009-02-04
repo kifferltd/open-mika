@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -1400,7 +1400,6 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   ht_lock(hashtable);
   existing = (w_clazz)ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)clazz);
 
-woempa(7, "existing = %p\n", existing);
   if (existing) {
     if (existing == clazz) {
       woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
@@ -1412,29 +1411,43 @@ woempa(7, "existing = %p\n", existing);
       }
       else
 #endif
-      if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(existing) == CLAZZ_STATE_LOADING) {
-        w_instance Class = clazz2Class(clazz);
-        w_int i;
+      if (getClazzState(existing) == CLAZZ_STATE_LOADING) {
+        // Existing entry is a placeholder, if 'clazz' is a loaded class then
+        // we copy the contents into 'existing' and adjust a few pointers.
+        if (getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
+          x_monitor save_monitor;
+          w_instance Class = clazz2Class(clazz);
+          w_int i;
 
-        woempa(7, "Placeholder %K (%p) found for class %K (%p) in %s, copying %d bytes from %p to %p.\n", existing, existing, clazz, clazz, hashtable->label, sizeof(w_Clazz), clazz, existing);
-        w_memcpy(existing, clazz, sizeof(w_Clazz));
+          woempa(7, "Placeholder %K (%p) found for class %K (%p) in %s, copying %d bytes from %p to %p.\n", existing, existing, clazz, clazz, hashtable->label, sizeof(w_Clazz), clazz, existing);
+          
+          // Avoid overwriting resolution_monitor of 'existing'. 
+          // This is very ugly, sorry about that.
+          save_monitor = clazz->resolution_monitor;
+          clazz->resolution_monitor = existing->resolution_monitor;
+          w_memcpy(existing, clazz, sizeof(w_Clazz));
+          clazz->resolution_monitor = save_monitor;
 
-        for (i = 0; i < clazz->numFields; ++i) {
-          existing->own_fields[i].declaring_clazz = existing;
+          for (i = 0; i < clazz->numFields; ++i) {
+            existing->own_fields[i].declaring_clazz = existing;
+          }
+          for (i = 0; i < clazz->numDeclaredMethods; ++i) {
+            existing->own_methods[i].spec.declaring_clazz = existing;
+          }
+          if (!clazz->dims) {
+            setReferenceField_unsafe(Class, existing->loader, F_Class_loader);
+          }
+          setWotsitField(Class, F_Class_wotsit, existing);
         }
-        for (i = 0; i < clazz->numDeclaredMethods; ++i) {
-          existing->own_methods[i].spec.declaring_clazz = existing;
-        }
-        if (!clazz->dims) {
-          setReferenceField_unsafe(Class, existing->loader, F_Class_loader);
-        }
-        setWotsitField(Class, F_Class_wotsit, existing);
+        // otherwise 'clazz' is also a placeholder, we just throw it away.
       }
       else {
+        // Existing entry is for real, Houston we have a problem.
         if (thread) {
           throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
         }
       }
+      // Put 'existing' back into the hashtable and trash 'clazz'.
       ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)existing);
       deallocClazz(clazz);
       result = existing;
@@ -1677,6 +1690,11 @@ w_clazz allocClazz() {
     wabort(ABORT_WONKA, "Unable to allocate clazz\n");
   }
   clazz->label = (char *) "clazz";
+  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
+  if (!clazz->resolution_monitor) {
+    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
+  }
+  x_monitor_create(clazz->resolution_monitor);
   
   return clazz; 
 
@@ -1713,11 +1731,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   clazz->bits = 32;
   clazz->resolution_thread = thread;
   setClazzState(clazz, CLAZZ_STATE_LOADING);
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
-  }
-  x_monitor_create(clazz->resolution_monitor);
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_header(clazz, bar)) {
@@ -1923,8 +1936,8 @@ w_int destroyClazz(w_clazz clazz) {
 
   if (!clazz->dims) {
 #ifdef RUNTIME_CHECKS
-    if (!clazz->loader || clazz->loader == systemClassLoader) {
-      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy primitive class %k", clazz);
+    if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && (!clazz->loader || clazz->loader == systemClassLoader)) {
+      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy system class %k", clazz);
     }
 #endif
 
