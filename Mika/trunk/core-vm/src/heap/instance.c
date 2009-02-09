@@ -203,6 +203,21 @@ w_boolean heap_request(w_thread thread, w_int bytes) {
   return WONKA_TRUE;
 }
 
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+w_instance allocInstanceFromCache(w_clazz clazz) {
+  x_mutex_lock(clazz->cache_mutex, x_eternal);
+  object = getFifo(clazz->cache_fifo);
+  if(object) {
+    woempa(7, "fetched %j from cache_fifo of %k\n", object->fields, clazz);
+    memset(object, 0, clazz->bytes_needed);
+  }
+  else {
+    woempa(7, "cache miss: %k\n", clazz);
+  }
+  x_mutex_unlock(clazz->cache_mutex);
+}
+#endif
+
 static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
   object->clazz = clazz;
 
@@ -246,7 +261,12 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  object = allocClearedMem(clazz->bytes_needed);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazz);
+  if (!object) 
+#endif
+    object = allocClearedMem(clazz->bytes_needed);
+
   if (! object) {
     return NULL;
   }
@@ -276,7 +296,11 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  object = allocClearedMem(clazz->bytes_needed);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazz);
+  if (!object)
+#endif
+    object = allocClearedMem(clazz->bytes_needed);
 
   if (! object) {
     return NULL;
@@ -294,9 +318,14 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
 w_instance allocStringInstance(w_thread thread) {
 
-  w_object object;
+  w_object object = NULL;
 
-  object = allocClearedMem(clazzString->bytes_needed);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazzString);
+  if (!object)
+#endif
+    object = allocClearedMem(clazzString->bytes_needed);
+
   if (! object) {
     return NULL;
   }

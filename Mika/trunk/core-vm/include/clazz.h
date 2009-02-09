@@ -40,6 +40,13 @@
 #include "threads.h"
 #include "wordset.h"
 
+/*
+** If CLASSES_HAVE_INSTANCE_CACHE is defined each class will have a cache
+** of instances which have become unreachable and can be recycled.
+** Not currently usable: it justs wastes memory and runs slower, not faster. :-(
+*/
+//#define CLASSES_HAVE_INSTANCE_CACHE
+
 typedef struct w_InnerClassInfo {
   w_ushort inner_class_info_index;
   w_ushort outer_class_info_index;
@@ -149,6 +156,10 @@ typedef struct w_Clazz {
     w_ushort *interface_index;
     w_InnerClassInfo *inner_class_info;
   } temp;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  x_mutex cache_mutex;
+  w_fifo cache_fifo;
+#endif
 } w_Clazz;
 
 /*
