@@ -104,7 +104,7 @@ w_instance ReferenceQueue_remove(JNIEnv *env, w_instance this) {
     ref = ReferenceQueue_poll(env,this);
     if(ref == NULL) {
      x_monitor_eternal(lock);
-      if(fifo->numElements == 0) {
+      if(isEmptyFifo(fifo)) {
         x_status status = x_monitor_wait(lock, x_eternal);
         if(status == xs_interrupted) {
           throwException(thread, clazzInterruptedException, NULL);
@@ -142,7 +142,7 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
     } else {
       w_long now = getNativeSystemTime();
       x_monitor_eternal(lock);
-      if(fifo->numElements == 0) {
+      if(isEmptyFifo(fifo)) {
        x_status status; 
        if(waittime <= 0) {
           x_monitor_exit(lock);

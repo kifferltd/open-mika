@@ -1586,7 +1586,7 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
           woempa(7, "Successor %d of kind %d, already mapped to %d\n", succ_index, succ_kind, mapping[succ_index]);
         }
         else {
-          mapping[succ_index] = clone_index + clone_fifo->numElements;
+          mapping[succ_index] = clone_index + occupancyOfFifo(clone_fifo);
           woempa(7, "Successor %d of kind %d, new index is %d\n", succ_index, succ_kind, mapping[succ_index]);
           succBlock = getBasicBlock(mv, succ_index);
           putFifo(succBlock, clone_fifo);
