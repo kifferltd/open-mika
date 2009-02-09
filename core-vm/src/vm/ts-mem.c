@@ -45,8 +45,9 @@
 #define ALLOCMEM_SLEEP    5
 
 static void alloc_barrier(w_thread thread) {
-  while (gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
-    x_thread_sleep(ALLOCMEM_SLEEP);
+  int p = thread ? thread->jpriority : 5;
+  while (p++ < 10 && gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
+    x_thread_sleep(1);
   }
 }
 
@@ -740,6 +741,7 @@ static x_boolean cr_walk(void * block, void * arg) {
   }
 
   chunk = block;
+  woempa(7, "Scanning block %08p\n", block);
   
   wa->count += 1;
   wa->bytes += chunk->size;
@@ -754,12 +756,12 @@ static x_boolean cr_walk(void * block, void * arg) {
 
   ex = cr_find(cr);
   if (ex) {
-    woempa(1, "found match at %p\n", ex);
+    woempa(7, "found match at %p (%s:%d)\n", ex, cr->file, cr->line);
     ex->hits += 1;
     ex->total += chunk->size;
   }
   else {
-    woempa(1, "found no match, adding new entry\n");
+    woempa(7, "found no match, adding new entry for %s:%d\n", cr->file, cr->line);
     cr_add(cr);
     num_cr += 1;
 
