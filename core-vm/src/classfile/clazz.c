@@ -1416,6 +1416,10 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
         // we copy the contents into 'existing' and adjust a few pointers.
         if (getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
           x_monitor save_monitor;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+          x_mutex save_mutex;
+          w_fifo save_fifo;
+#endif
           w_instance Class = clazz2Class(clazz);
           w_int i;
 
@@ -1425,8 +1429,18 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
           // This is very ugly, sorry about that.
           save_monitor = clazz->resolution_monitor;
           clazz->resolution_monitor = existing->resolution_monitor;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+          save_mutex = clazz->cache_mutex;
+          clazz->cache_mutex = existing->cache_mutex;
+          save_fifo = clazz->cache_fifo;
+          clazz->cache_fifo = existing->cache_fifo;
+#endif
           w_memcpy(existing, clazz, sizeof(w_Clazz));
           clazz->resolution_monitor = save_monitor;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+          clazz->cache_mutex = save_mutex;
+          clazz->cache_fifo = save_fifo;
+#endif
 
           for (i = 0; i < clazz->numFields; ++i) {
             existing->own_fields[i].declaring_clazz = existing;
@@ -1695,6 +1709,14 @@ w_clazz allocClazz() {
     wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
   }
   x_monitor_create(clazz->resolution_monitor);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  clazz->cache_mutex = allocMem(sizeof(x_Mutex));
+  if (!clazz->cache_mutex) {
+    wabort(ABORT_WONKA, "No space for clazz cache mutex\n");
+  }
+  x_mutex_create(clazz->cache_mutex);
+  clazz->cache_fifo = allocFifo(511);
+#endif
   
   return clazz; 
 
@@ -1997,6 +2019,17 @@ w_int destroyClazz(w_clazz clazz) {
       x_monitor_delete(clazz->resolution_monitor);
       releaseMem(clazz->resolution_monitor);
     }
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+    if (clazz->cache_mutex) {
+      x_mutex_delete(clazz->cache_mutex);
+      releaseMem(clazz->cache_mutex);
+    }
+
+    if (clazz->cache_fifo) {
+      releaseFifo(clazz->cache_fifo);
+    }
+#endif
   }
 
   woempa(7,"Deregistering %k\n", clazz);

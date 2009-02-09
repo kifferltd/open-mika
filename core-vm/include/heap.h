@@ -37,12 +37,26 @@
 #include "jni.h"
 #include "oswald.h"
 
-extern volatile w_thread marking_thread;
-extern volatile w_thread sweeping_thread;
-
 /*
 ** This file defines the API for dealing with the heap.
 */
+
+/*
+** Thread (if any) which is currently marking the heap.
+*/
+extern volatile w_thread marking_thread;
+
+/*
+** Thread (if any) which is currently sweeping the heap.
+*/
+extern volatile w_thread sweeping_thread;
+
+/*
+** Indication of the current heap occupancy: integer part of (rho / (1-rho)),
+** where  rho = (memory_total - x_mem_avail()) / memory_total .
+** It is calculated at the start of each GC cycle.
+*/
+extern w_int memory_load_factor;
 
 /*
 ** Object flags word
@@ -89,6 +103,10 @@ extern volatile w_thread sweeping_thread;
 #define O_WINDOW             0x00000100
 // A GARBAGE object has become garbage and can be freed. 
 #define O_GARBAGE            0x00000200
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+// A CACHED object has been cached for re-use and therefore should not be freed
+#define O_CACHED             0x00000400
+#endif
 
 /*
 ** 3. Object locking
@@ -98,7 +116,7 @@ extern volatile w_thread sweeping_thread;
 #define O_HAS_LOCK           0x01000000
 
 /*
-** Collective names for related roups of flags
+** Collective names for related groups of flags
 */
 
 /*

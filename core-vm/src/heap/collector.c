@@ -361,7 +361,7 @@ static w_int memory_total;
 ** It is calculated at the start of each GC cycle.
 */
 
-static w_int memory_load_factor;
+w_int memory_load_factor;
 
 /*
 ** 'killing_soft_references' is set true if either memory is tight or
@@ -469,38 +469,7 @@ static w_boolean checkStrongRefs(w_object);
 ** The value returned is the size of the instance in bytes (the amount of 
 ** memory freed is generally more than this).
 */
-static w_int reallyReleaseInstance(w_object object) {
-  w_size  bytes = 0;
-  w_clazz clazz = object->clazz;
-
-  if (isSet(object->flags, O_HAS_LOCK)) {
-    if (putFifo(object->fields, dead_lock_fifo) < 0) {
-      wprintf("Failed to put %K on dead_lock_fifo\n", clazz);
-    };
-  }
-
-  if (clazz->previousDimension) {
-    bytes = (clazz->previousDimension->bits * instance2Array_length(object->fields) + 7) / 8;
-    bytes = (bytes + 7) & ~7;
-    bytes = bytes + sizeof(w_int) + sizeof(w_Object);
-    woempa(1, "%j has %d elements of %d bits each = %d bytes\n", object->fields, instance2Array_length(object->fields), clazz->previousDimension->bits, bytes);
-  }
-  else {
-    bytes = clazz->bytes_needed;
-    woempa(1, "%j = %d bytes\n", object->fields, bytes);
-  }
-
-#ifdef USE_OBJECT_HASHTABLE
-  if (!ht_erase(object_hashtable, (w_word)object)) {
-    wabort(ABORT_WONKA, "Sky! Could not erase object %p from object hashtable!\n", object);
-  }
-  woempa(1, "Removed object %j from object_hashtable, now contains %d objects\n", object->fields, object_hashtable->occupancy);
-#endif
-
-#ifdef JDWP
-  jdwp_set_garbage(object->fields);
-#endif
-
+static void reallyReallyReleaseInstance(w_object object) {
 #ifdef USE_DISCARD_COLLECT
   discardMem(object);
 #else
@@ -512,6 +481,61 @@ static w_int reallyReleaseInstance(w_object object) {
 #ifdef JAVA_PROFILE
   clazz->instances--;
 #endif 
+}
+
+static w_int reallyReleaseInstance(w_object object) {
+  w_size  bytes = 0;
+  w_clazz clazz = object->clazz;
+  w_instance instance = object->fields;
+  w_boolean done = FALSE;
+  static int fudge;
+
+  if (isSet(object->flags, O_HAS_LOCK)) {
+    if (putFifo(instance, dead_lock_fifo) < 0) {
+      wabort(ABORT_WONKA, "Failed to put %j on dead_lock_fifo\n", instance);
+    };
+    unsetFlag(object->flags, O_HAS_LOCK);
+  }
+
+  if (clazz->previousDimension) {
+    bytes = (clazz->previousDimension->bits * instance2Array_length(instance) + 7) / 8;
+    bytes = (bytes + 7) & ~7;
+    bytes = bytes + sizeof(w_int) + sizeof(w_Object);
+    woempa(1, "%j has %d elements of %d bits each = %d bytes\n", instance, instance2Array_length(instance), clazz->previousDimension->bits, bytes);
+  }
+  else {
+    bytes = clazz->bytes_needed;
+    woempa(1, "%j = %d bytes\n", instance, bytes);
+  }
+
+#ifdef USE_OBJECT_HASHTABLE
+  if (!ht_erase(object_hashtable, (w_word)object)) {
+    wabort(ABORT_WONKA, "Sky! Could not erase object %p from object hashtable!\n", object);
+  }
+  woempa(1, "Removed %j from object_hashtable, now contains %d objects\n", instance, object_hashtable->occupancy);
+#endif
+
+#ifdef JDWP
+  jdwp_set_garbage(object->fields);
+#endif
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (!clazz->previousDimension && (!memory_load_factor || (++fudge % memory_load_factor) == 0)) {
+    x_mutex_lock(clazz->cache_mutex, x_eternal);
+    woempa(7, "putting %j to cache_fifo of %k\n", object->fields, clazz);
+    done = putFifo(object, clazz->cache_fifo) >= 0;
+    x_mutex_unlock(clazz->cache_mutex);
+  }
+
+  if (done) {
+    setFlag(object->flags, O_CACHED);
+  }
+  else {
+#endif
+    reallyReallyReleaseInstance(object);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  }
+#endif
 
   return bytes;
 }
@@ -538,7 +562,7 @@ static w_int releaseInstance(w_object object) {
 //  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)instance, object, clazz, printFlags(object->flags));
 
   if (clazz == clazzString && getWotsitField(instance, F_String_wotsit)) {
-    woempa(7, "Deferring sweeping of %j (%w)\n", instance, string);
+    woempa(7, "Deferring sweeping of %j (%w)\n", instance, instance[F_String_wotsit]);
     if (putFifo(instance, dead_string_fifo) < 0) {
       wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
     };
@@ -1464,6 +1488,12 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
   w_int retcode = 0;
   w_object object = (w_object)key;
 
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (isSet(object->flags, O_CACHED)) {
+    return TRUE;
+  }
+#endif
+
   unsetFlag(object->flags, O_BLACK | O_NEAR_BLACK);
 
   if (!object->clazz) {
@@ -1499,6 +1529,12 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
 w_boolean preparation_iteration(void * mem, void * arg) {
   w_int retcode = 0;
   w_object object = chunk2object(mem);
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (isSet(object->flags, O_CACHED)) {
+    return TRUE;
+  }
+#endif
 
   unsetFlag(object->flags, O_BLACK | O_NEAR_BLACK);
 
@@ -1789,12 +1825,21 @@ w_int markPhase(void) {
  */
 static w_boolean checkStrongRefs(w_object object) {
 
-  if (isSet(object->flags, O_BLACK)) {
+  if (isSet(object->flags, O_BLACK )) {
     woempa(1, "Not collecting %j because it is strongly reachable\n", object->fields);
 
     return WONKA_FALSE;
 
   }
+
+#ifdef JDWP
+  if (isSet(object->flags, O_CACHED)) {
+    woempa(1, "Not collecting %j because it is in a cache\n", object->fields);
+
+    return WONKA_FALSE;
+
+  }
+#endif
 
 #ifdef JDWP
   if (isSet(object->flags, O_JDWP_BLACK)) {
@@ -1899,8 +1944,15 @@ static w_int collect_dead_locks(void) {
   ht_lock(lock_hashtable);
   while ((locked_instance = getFifo(dead_lock_fifo))) {
     x_monitor mon = (x_monitor) ht_erase_no_lock(lock_hashtable, (w_word)locked_instance);
-    x_monitor_delete(mon);
-    releaseMem(mon);
+    if (mon) {
+      x_monitor_delete(mon);
+      releaseMem(mon);
+    }
+#ifdef RUNTIME_CHECKS
+    else {
+      wabort(ABORT_WONKA, "No monitor corresponding to %p\n", locked_instance);
+    }
+#endif
     ++count;
   }
   ht_unlock(lock_hashtable);
@@ -1957,6 +2009,20 @@ static w_int collect_dead_clazzes(void) {
     if (getClazzState(this_clazz) == CLAZZ_STATE_BROKEN) {
       continue;
     }
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+    if (this_clazz->cache_fifo) {
+      w_object cached;
+      x_mutex_lock(this_clazz->cache_mutex, x_eternal);
+      while((cached = getFifo(this_clazz->cache_fifo))) {
+        reallyReallyReleaseInstance(cached);
+      }
+      releaseFifo(this_clazz->cache_fifo);
+      x_mutex_unlock(this_clazz->cache_mutex);
+      x_mutex_delete(this_clazz->cache_mutex);
+      releaseMem(this_clazz->cache_mutex);
+    }
+#endif
 
     for (k = 0; k < this_clazz->numSuperClasses; ++k) {
       other_clazz = this_clazz->supers[k];
