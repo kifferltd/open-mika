@@ -519,7 +519,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
     }
   }
   
-  numRelevantFields = fields->numElements;
+  numRelevantFields = occupancyOfFifo(fields);
 
   enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);

@@ -230,7 +230,7 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
     w_thread t;
 
     deadlock_fifo = ht_list_values(thread_hashtable);
-    fifo_length = deadlock_fifo->numElements;
+    fifo_length = occupancyOfFifo(deadlock_fifo);
     woempa(7, "Allocating %d words each for chain, checked\n", fifo_length);
     chain = allocMem(fifo_length * sizeof(w_thread));
     checked = allocMem(fifo_length * sizeof(w_thread));

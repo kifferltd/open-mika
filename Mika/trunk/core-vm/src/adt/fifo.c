@@ -91,8 +91,8 @@ w_boolean expandFifo(w_size newsize, w_fifo f) {
 
   }
 
-  woempa(1, "current size is %d: expanding capacity from %d to %d\n", f->numElements, f->numLeaves * f->leafElements, newsize);
-  for (i = f->numElements; i < newsize; ++i) {
+  woempa(1, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), f->numLeaves * f->leafElements, newsize);
+  for (i = occupancyOfFifo(f); i < newsize; ++i) {
     ++j;
     if (j == f->leafElements) {
       if (leaf->next != f->getFifoLeaf) {
@@ -194,15 +194,15 @@ void *getFifo(w_fifo f) {
 
   void *e;
 
-  if (f->numElements == 0) {
+  if (isEmptyFifo(f)) {
     return NULL;
   }
 
   woempa(1, "Defifoing element %p in leaf %p at position %d\n", f->getFifoLeaf->data[f->getFifoIndex], f->getFifoLeaf, f->getFifoIndex);
 
   e = f->getFifoLeaf->data[f->getFifoIndex++];
-  f->numElements--;
-  if (f == window_fifo) woempa(1, "window_fifo now contains %d elements\n", f->numElements);
+  f->numGot++;
+  if (f == window_fifo) woempa(1, "window_fifo now contains %d elements\n", coccupancyOfFifo(f));
 
   if (f->getFifoIndex == f->leafElements) {
     f->getFifoLeaf = f->getFifoLeaf->next;
@@ -218,8 +218,8 @@ w_int putFifo(void *e, w_fifo f) {
   woempa(1,"Enfifoing element %p in leaf %p at index %d\n", e, f->putFifoLeaf, f->putFifoIndex);
 
   f->putFifoLeaf->data[f->putFifoIndex++] = e;
-  f->numElements++;
-  if (f == window_fifo) woempa(1, "window_fifo now contains %d elements\n", f->numElements);
+  f->numPut++;
+  if (f == window_fifo) woempa(1, "window_fifo now contains %d elements\n", occupancyOfFifo(f));
 
   if (f->putFifoIndex == f->leafElements) {
     if (f->getFifoLeaf != f->putFifoLeaf->next) {
@@ -240,7 +240,7 @@ w_int putFifo(void *e, w_fifo f) {
 
       }
       
-      woempa(1, "current size is %d: expanding capacity from %d to %d\n", f->numElements, f->numLeaves * f->leafElements, (f->numLeaves + 1) * f->leafElements);
+      woempa(1, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), f->numLeaves * f->leafElements, (f->numLeaves + 1) * f->leafElements);
       woempa(1, "inserting new leaf %p after %p\n", newLeaf, f->putFifoLeaf);
       f->numLeaves += 1;
       newLeaf->next = f->putFifoLeaf->next;
@@ -256,11 +256,10 @@ w_int putFifo(void *e, w_fifo f) {
 
 w_int forEachInFifo(w_fifo f, void (*fun)(void *e)) {
   w_size i;
-  w_size n = f->numElements;
   FifoLeaf *currentLeaf = f->getFifoLeaf;
   w_size currentIndex = f->getFifoIndex;
 
-  for (i = 0; i < n; ++i) {
+  for (i = f->numGot; i < f->numPut; ++i) {
     void *next = currentLeaf->data[currentIndex++];
     if (currentIndex == f->leafElements) {
       currentLeaf = currentLeaf->next;
@@ -269,6 +268,6 @@ w_int forEachInFifo(w_fifo f, void (*fun)(void *e)) {
     fun(next);
   }
 
-  return n;
+  return occupancyOfFifo(f);
 }
 

@@ -1213,7 +1213,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      queued = 0;
 
-  woempa(1, "Marking FIFO %p, flag is 0x%02x, contains %d elements\n", fifo, flag, fifo->numElements);
+  woempa(1, "Marking FIFO %p, flag is 0x%02x, contains %d elements\n", fifo, flag, occupancyOfFifo(fifo));
 
   while ((parent_instance = getFifo(fifo))) {
     parent_object = instance2object(parent_instance);
@@ -1334,7 +1334,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       if(isSet(parent_object->flags, O_ENQUEUEABLE)) {
         retcode = tryPutFifo(parent_instance, reference_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", reference_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", occupancyOfFifo(reference_fifo));
         }
       }
 
@@ -1483,7 +1483,7 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
         setFlag(child_object->flags, O_FINALIZE_BLACK);
         retcode = tryPutFifo(child_instance, finalize_reachable_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", finalize_reachable_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", occupancyOfFifo(finalize_reachable_fifo));
         }
       }
     }
@@ -1492,7 +1492,7 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
   setFlag(object->flags, O_WINDOW);
   retcode = tryPutFifo(object->fields, window_fifo);
   if (retcode < 0) {
-    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", window_fifo->numElements);
+    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", occupancyOfFifo(window_fifo));
   }
 }
 #else
@@ -1519,7 +1519,7 @@ w_boolean preparation_iteration(void * mem, void * arg) {
         setFlag(child_object->flags, O_FINALIZE_BLACK);
         retcode = tryPutFifo(child_instance, finalize_reachable_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", finalize_reachable_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", occupancyOfFifo(finalize_reachable_fifo));
         }
       }
     }
@@ -1528,7 +1528,7 @@ w_boolean preparation_iteration(void * mem, void * arg) {
   setFlag(object->flags, O_WINDOW);
   retcode = tryPutFifo(object->fields, window_fifo);
   if (retcode < 0) {
-    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", window_fifo->numElements);
+    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", occupancyOfFifo(window_fifo));
   }
   
   return TRUE;
@@ -1766,9 +1766,9 @@ w_int markPhase(void) {
     marked += retcode;
 
   } while (
-           strongly_reachable_fifo->numElements || 
-           finalize_reachable_fifo->numElements || 
-           phantom_reachable_fifo->numElements);
+           !isEmptyFifo(strongly_reachable_fifo) || 
+           !isEmptyFifo(finalize_reachable_fifo) || 
+           !isEmptyFifo(phantom_reachable_fifo));
 
   miniSweepReferences();
 
@@ -1941,7 +1941,7 @@ static w_int collect_dead_clazzes(void) {
   int i = 0;
   int j;
   int k;
-  int n = dead_clazz_fifo->numElements;
+  int n = occupancyOfFifo(dead_clazz_fifo);
   w_clazz this_clazz;
   w_clazz other_clazz;
 
@@ -2031,24 +2031,13 @@ w_size sweep(w_int target) {
     instance = getFifo(window_fifo);
     woempa(1, "instance %p\n", instance);
     if (!instance) {
-      if (window_fifo->numElements) {
+      if (!isEmptyFifo(window_fifo)) {
         woempa(9, "Hole in window fifo!\n");
         continue;
       }
 
       woempa(7, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
 
-/*
-      if (dead_string_fifo->numElements) {
-        bytes_freed += collect_dead_strings();
-      }
-      if (dead_lock_fifo->numElements) {
-        bytes_freed += collect_dead_locks();
-      }
-      if (dead_clazz_fifo->numElements) {
-        bytes_freed += collect_dead_clazzes();
-      }
-*/
       break;
 
     }
@@ -2134,13 +2123,13 @@ w_size sweep(w_int target) {
     }
 #endif
   }
-      if (dead_string_fifo->numElements) {
+      if (!isEmptyFifo(dead_string_fifo)) {
         bytes_freed += collect_dead_strings();
       }
-      if (dead_lock_fifo->numElements) {
+      if (!isEmptyFifo(dead_lock_fifo)) {
         bytes_freed += collect_dead_locks();
       }
-      if (dead_clazz_fifo->numElements) {
+      if (!isEmptyFifo(dead_clazz_fifo)) {
         bytes_freed += collect_dead_clazzes();
       }
 

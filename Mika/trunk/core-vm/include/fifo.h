@@ -70,14 +70,14 @@ typedef struct w_Fifo {
   w_size numLeaves;
 // capacity of each leaf (in words)
   w_size leafElements;
-// number of elements currently in use (put and not yet got)
-  w_size numElements;
 // the current leaf for getting
   FifoLeaf *getFifoLeaf;
 // the current leaf for putting
   FifoLeaf *putFifoLeaf;
-// spare, just to round up total size to 8 words  
-  void *dummy;
+// Total number of elements put since the fifo was created
+  w_size numPut;
+// Total number of elements got since the fifo was created
+  w_size numGot;
 } w_Fifo;
 
 #define FIFO_SUCCESS   0
@@ -122,5 +122,12 @@ void *getFifo(w_fifo f);
  ** For every element e of fifo f, execute fun(e).
  */
 w_int forEachInFifo(w_fifo f, void (*fun)(void *e));
+
+/**
+ ** Get the number of elements currently in the fifo (put and not yet got).
+ */
+#define occupancyOfFifo(f) ((f)->numPut - (f)->numGot)
+
+#define isEmptyFifo(f) ((f)->numPut == (f)->numGot)
 
 #endif /* _FIFO_H */
