@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -313,7 +313,7 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   result = (w_clazz)ht_read(loader2loaded_classes(initiating_loader), (w_word)name);
   woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
-  if (!result || getClazzState(result) < CLAZZ_STATE_LOADED) {
+  if (!result) {
     result = allocMem(sizeof(w_UnloadedClazz));
     if (!result) {
       wabort(ABORT_WONKA, "Unable to allocate new UnloadedClazz\n");
@@ -489,6 +489,11 @@ static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
   clazz->loader = NULL;
   clazz->type = type;
   clazz->bits = bits;
+  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
+  if (!clazz->resolution_monitor) {
+    wabort(ABORT_WONKA, "Unable to allocate clazz->resolution_monitor\n");
+  }
+  x_monitor_create(clazz->resolution_monitor);
   woempa(1, "Created clazz_%w @ %p\n", name, clazz);
 
   return clazz;
@@ -1021,13 +1026,12 @@ w_clazz seekClazzByName(w_string classname, w_instance initiating_loader) {
   w_clazz result;
 
   woempa(1, "Seeking class '%w' in %s.\n", classname, hashtable->label);
-  result = (w_clazz)ht_read(hashtable, (w_word)classname);
+  result = (w_clazz)ht_read_no_lock(hashtable, (w_word)classname);
 
-  if (initiating_loader) {
-    while (result && getClazzState(result) == CLAZZ_STATE_LOADING && result->resolution_thread != currentWonkaThread) {
+  if (result && initiating_loader) {
+    while (getClazzState(result) == CLAZZ_STATE_LOADING && result->resolution_thread != currentWonkaThread) {
       woempa(7, "%K is being loaded by %t, waiting in %t\n", result, result->resolution_thread, currentWonkaThread);
       waitMonitor(initiating_loader, 2);
-      result = (w_clazz)ht_read(hashtable, (w_word)classname);
     }
   }
 
@@ -1458,20 +1462,19 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
     }
     else {
       w_clazz placeholder = allocClazz();
-      w_boolean wewerefirst;
 
       placeholder->resolution_thread = thread;
-      placeholder->dotified = registerString(name);
       setClazzState(placeholder, CLAZZ_STATE_LOADING);
-      wewerefirst = registerClazz(thread, placeholder, effectiveLoader) == placeholder;
+      registerClazz(thread, placeholder, effectiveLoader);
       exitMonitor(effectiveLoader);
 
       current = loadNonBootstrapClass(effectiveLoader, name);
 
       enterMonitor(effectiveLoader);
-      if (!current && wewerefirst) {
-        deregisterClazz(placeholder, effectiveLoader);
-        destroyClazz(placeholder);
+      if (current && getClazzState(current) == CLAZZ_STATE_LOADING) {
+        // Loading did not succeed, so delete the placeholder.
+        releaseMem(placeholder);
+        current = NULL;
       }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
