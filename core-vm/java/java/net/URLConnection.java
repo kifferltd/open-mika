@@ -65,7 +65,22 @@ public abstract class URLConnection {
 //static methods ...
 
   public static String guessContentTypeFromName(String fname){
-   	return fileNameMap.getContentTypeFor(fname);
+    String extension = "html";
+    if (!fname.endsWith("/")) {
+      int lastCharInExtension = fname.lastIndexOf('#');
+      if (lastCharInExtension < 0) {
+        lastCharInExtension = fname.length();
+      }
+      int firstCharInExtension = fname.lastIndexOf('.') + 1;
+      if (firstCharInExtension > fname.lastIndexOf('/')) {
+         extension = fname.substring(firstCharInExtension, lastCharInExtension);
+      }
+      else {
+        extension = "";
+      }
+    }
+
+    return fileNameMap.getContentTypeFor(extension);
   }
 
   public static boolean getDefaultAllowUserInteraction() {
@@ -362,10 +377,13 @@ public abstract class URLConnection {
   	
   	
   	public String getContentTypeFor(String fileName){
-  		if (filenameMap != null) {
+  	  if (filenameMap != null) {
+		try {
   		 	return filenameMap.getString(fileName);
-  		}      	
-  		return null;  	
+		}	
+		catch(MissingResourceException mre){}	  	
+  	  }      	
+  	  return null;  	
         }
   }
 
