@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -64,7 +64,7 @@ public abstract class ResourceBundle {
       }
       check = check.parent;
     }
-    throw new MissingResourceException("key not found",this.getClass().getName(),key);
+    throw new MissingResourceException(this + ": key '" + key + "' not found",this.getClass().getName(),key);
   }
 
   public final String getString(String key) throws MissingResourceException {
@@ -165,7 +165,7 @@ public abstract class ResourceBundle {
             local = baseName+"_"+Locale.getDefault().toString();
           }
           else {
-            throw new MissingResourceException("couldn't find resourceBundle", baseName,locale.toString());
+            throw new MissingResourceException("couldn't find resourceBundle '" + baseName + "' using locale '" + locale + (defaultLoc ? "' or default" : "'"), baseName,locale.toString());
           }
         }
         continue;
