@@ -727,7 +727,7 @@ w_instance wrapDoubleValue(w_thread thread, w_clazz clazz, w_double value) {
 w_instance wrapProxyArgs(w_thread thread, w_method current_method, va_list arg_list) {
   w_instance arguments;
   w_int numArgs = 0;
-  w_fifo arg_fifo = allocFifo(255);
+  w_fifo arg_fifo = allocFifo(254);
   w_clazz arg_clazz;
   w_instance param;
   w_int    i;

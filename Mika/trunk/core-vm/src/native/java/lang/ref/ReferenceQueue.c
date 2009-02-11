@@ -164,7 +164,7 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
 }
 
 void ReferenceQueue_create(JNIEnv *env, w_instance this) {
-  w_fifo fifo = allocFifo(63);
+  w_fifo fifo = allocFifo(62);
   x_monitor lock =  allocMem(sizeof(x_Monitor));
 
   if(fifo && lock) {

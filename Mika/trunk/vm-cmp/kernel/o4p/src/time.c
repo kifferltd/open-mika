@@ -73,7 +73,7 @@ void timer_entry_function(void* ptr) {
   int i;
   int number_sleeping_threads;
   int missed_ticks = 0;
-  w_fifo fire_fifo = allocFifo(31);
+  w_fifo fire_fifo = allocFifo(30);
   x_thread thread;
 #ifdef USE_NANOSLEEP
   struct timespec ts;

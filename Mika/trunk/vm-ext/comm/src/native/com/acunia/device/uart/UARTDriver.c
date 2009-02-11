@@ -70,7 +70,7 @@ UARTDriver_static_firstUARTname (JNIEnv *env, w_instance classUARTDriver
 ) {
   w_string name;
 
-  namelist = allocFifo(15);
+  namelist = allocFifo(14);
   everyDeviceByDriverFamily(scanport, "sio");
   
   name = getFifo(namelist);

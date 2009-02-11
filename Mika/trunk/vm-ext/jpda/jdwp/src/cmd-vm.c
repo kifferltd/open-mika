@@ -154,7 +154,7 @@ w_boolean matchClassname(w_clazz clazz, w_string match_pattern) {
 static void *getMatchingClasses(w_instance loader) {
   w_hashtable ht = getWotsitField(loader, F_ClassLoader_loaded_classes);
   w_fifo fifo1 = ht_list_values(ht);
-  w_fifo fifo2 = allocFifo(255);
+  w_fifo fifo2 = allocFifo(254);
   w_clazz clazz;
 
   while ((clazz = getFifo(fifo1))) {
@@ -209,7 +209,7 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
   if (fifo_of_fifos) {
     woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
     deregisterString(classname);
-    clazz_fifo = allocFifo(255);
+    clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
       woempa(7, "Reading fifo %p\n", one_fifo);
       while ((clazz = getFifo(one_fifo))) {
@@ -255,7 +255,7 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
   fifo_of_fifos = forEachClassLoader(getAllLoadedClasses);
   if (fifo_of_fifos) {
     woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
-    clazz_fifo = allocFifo(255);
+    clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
       woempa(7, "Reading fifo %p\n", one_fifo);
       while ((clazz = getFifo(one_fifo))) {
