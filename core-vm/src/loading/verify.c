@@ -1556,7 +1556,7 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
   v_BasicBlock *origBlock;
   v_BasicBlock *succBlock;
   v_BasicBlock *cloneBlock;
-  w_fifo clone_fifo = allocFifo(31);
+  w_fifo clone_fifo = allocFifo(30);
   w_ubyte *mapping = allocClearedMem(mv->numBlocks);
 
   woempa(7, "Subroutine begins with block[%d], enqueueing that block\n", subr_index);
@@ -1632,7 +1632,7 @@ static void propagateReturnAddress(v_MethodVerifier *mv, w_size subr_index, w_si
   w_size succ_index;
   v_BasicBlock *origBlock;
   v_BasicBlock *succBlock;
-  w_fifo clone_fifo = allocFifo(31);
+  w_fifo clone_fifo = allocFifo(30);
 
   woempa(7, "Subroutine begins with block[%d], enqueueing that block\n", subr_index);
   origBlock = getBasicBlock(mv, subr_index);

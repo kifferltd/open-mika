@@ -491,7 +491,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 
   woempa(1, "looking for %s fields of %K\n", mtype==PUBLIC ? "public" : "declared", clazz);
 
-  fields = allocFifo(63);
+  fields = allocFifo(62);
   if(fields == NULL) {
     return NULL;
   }
@@ -592,7 +592,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   */
 
   woempa(1, "Class %k type %s\n", clazz, mtype == PUBLIC ? "public" : "declared");
-  relevantMethods = allocFifo((w_size)numMethods);
+  relevantMethods = allocFifo(62);
   if (! relevantMethods) {
     return NULL;
   }
@@ -1149,7 +1149,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz = Class2clazz(Class);
   w_clazz super = clazz;
-  w_fifo inner_clazz_fifo = allocFifo(511);
+  w_fifo inner_clazz_fifo = allocFifo(510);
   w_instance Array;
   int i;
   int j = 0;
