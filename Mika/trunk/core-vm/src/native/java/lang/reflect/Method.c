@@ -250,7 +250,22 @@ w_instance Method_invoke0(JNIEnv *env, w_instance thisMethod, w_instance theObje
 
       if (isNotSet(method->flags, ACC_PRIVATE)) {
         clazz = instance2clazz(This);
-        method = isSet(method->spec.declaring_clazz->flags, ACC_INTERFACE) ? interfaceLookup(method, clazz) : virtualLookup(method, clazz);
+        if (isSet(method->spec.declaring_clazz->flags, ACC_INTERFACE)) {
+          if (!implementsInterface(clazz, method->spec.declaring_clazz)) {
+            throwException(thread, clazzIllegalArgumentException, NULL);
+
+            return NULL;
+          }
+          method = interfaceLookup(method, clazz);
+        }
+        else {
+          if (!isSuperClass(method->spec.declaring_clazz, clazz)) {
+            throwException(thread, clazzIllegalArgumentException, NULL);
+
+            return NULL;
+          }
+          method = virtualLookup(method, clazz);
+        }
       }
       woempa(7, "After overriding analysis, invoking %M on instance %j.\n", method, This);
 

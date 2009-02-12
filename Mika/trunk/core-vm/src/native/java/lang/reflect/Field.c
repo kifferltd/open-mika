@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -328,7 +328,7 @@ w_double Field_getDouble(JNIEnv *env, w_instance Field, w_instance Object) {
 w_instance Field_get(JNIEnv *env, w_instance Field, w_instance Object) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_field field = Field2field(Field);
+  w_field  field = Field2field(Field);
   w_instance result = NULL;
   void *to;
 
@@ -412,6 +412,23 @@ static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance
     to = field->declaring_clazz->staticFields + field->size_and_slot;
   }
   else {
+    if (!theObject) {
+      woempa(7, "Object == null for non-static field %w of %k\n",NM(field), field->declaring_clazz);
+      throwException(thread, clazzNullPointerException, NULL);
+      return;
+    }
+
+    if (mustBeReferenced(field->declaring_clazz) == CLASS_LOADING_FAILED) {
+
+      return;
+
+    }
+    if (!isSuperClass(field->declaring_clazz,instance2clazz(theObject))) {
+      woempa(7, "%j is not a subclass of %k, does not have field %w\n", theObject, field->declaring_clazz,NM(field));
+      throwException(thread, clazzIllegalArgumentException, "not field of this class");
+      return;
+    }
+
     if (field->size_and_slot < 0) {
       woempa(7, "Field %w is a reference field\n", field->name);
       to = theObject + instance2clazz(theObject)->instanceSize + field->size_and_slot;
@@ -579,7 +596,7 @@ void Field_setDouble(JNIEnv *env, w_instance Field, w_instance Object, w_double 
 void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Value) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_field field = Field2field(Field);
+  w_field  field = Field2field(Field);
   w_word *data = NULL;
   w_clazz clazz;
 
