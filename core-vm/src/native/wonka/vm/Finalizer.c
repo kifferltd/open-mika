@@ -41,12 +41,16 @@ w_instance Finalizer_nextFinalizee(JNIEnv *env, w_instance theFinalizer) {
 
   }
 
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_lock(finalizer_fifo_mutex, x_eternal);
+#endif
   nextFinalizee = getFifo(finalizer_fifo);
   if (nextFinalizee) {
-    woempa(7, "Took %j from finalizer_fifo, now has %d elements\n", nextFinalizee, finalizer_fifo->numElements);
+    woempa(7, "Took %j from finalizer_fifo, now has %d elements\n", nextFinalizee, occupancyOfFifo(finalizer_fifo));
   }
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_unlock(finalizer_fifo_mutex);
+#endif
 
   return nextFinalizee;
 }

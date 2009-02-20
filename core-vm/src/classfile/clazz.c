@@ -1680,12 +1680,14 @@ w_clazz allocClazz() {
   }
   clazz->label = (char *) "clazz";
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
-  clazz->cache_mutex = allocMem(sizeof(x_Mutex));
+#ifndef THREAD_SAFE_FIFOS
+  clazz->cache_mutex = allocClearedMem(sizeof(x_Mutex));
   if (!clazz->cache_mutex) {
     wabort(ABORT_WONKA, "No space for clazz cache mutex\n");
   }
   x_mutex_create(clazz->cache_mutex);
-  clazz->cache_fifo = allocFifo(511);
+#endif
+  clazz->cache_fifo = allocThreadSafeFifo(510);
 #endif
   
   return clazz; 
@@ -1911,7 +1913,7 @@ static void interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_wo
 */
 static void destroyImplementations(w_clazz clazz) {
   w_method imethod;
-  w_fifo fifo = allocFifo(255);
+  w_fifo fifo = allocFifo(254);
 
   ht2k_iterate(interface_hashtable, interface_fifo_iterator, clazz, fifo);
   while ((imethod = getFifo(fifo))) {
@@ -1996,10 +1998,12 @@ w_int destroyClazz(w_clazz clazz) {
     }
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
+#ifndef THREAD_SAFE_FIFOS
     if (clazz->cache_mutex) {
       x_mutex_delete(clazz->cache_mutex);
       releaseMem(clazz->cache_mutex);
     }
+#endif
 
     if (clazz->cache_fifo) {
       releaseFifo(clazz->cache_fifo);

@@ -202,7 +202,7 @@ extern void jdwp_set_garbage(w_instance);
 */
 
 w_fifo window_fifo;
-#define WINDOW_FIFO_LEAF_SIZE   1023
+#define WINDOW_FIFO_LEAF_SIZE   1022
 
 /*
 ** FIFO used to mark all strongly reachable instances.  We give this one
@@ -210,7 +210,7 @@ w_fifo window_fifo;
 */
 
 static w_fifo strongly_reachable_fifo;
-#define STRONG_FIFO_LEAF_SIZE 1023
+#define STRONG_FIFO_LEAF_SIZE 1022
 
 /*
 ** FIFOs used to mark instances which are reachable only via reference types. 
@@ -219,7 +219,7 @@ static w_fifo strongly_reachable_fifo;
 
 static w_fifo phantom_reachable_fifo;
 static w_fifo finalize_reachable_fifo;
-#define OTHER_FIFO_LEAF_SIZE 63
+#define OTHER_FIFO_LEAF_SIZE 62
 
 /*
 ** FIFO used to hold instances of Reference on which enqueue() should be called.. 
@@ -239,8 +239,10 @@ w_fifo finalizer_fifo;
 ** Mutex used to protect the finalizer fifo from conflicting accesses.
 */
 
+#ifndef THREAD_SAFE_FIFOS
 static x_Mutex finalizer_fifo_Mutex;
 x_mutex finalizer_fifo_mutex;
+#endif
 
 /*
 ** List of all existing reference objects (instances of java.lang.ref.Reference).
@@ -521,10 +523,14 @@ static w_int reallyReleaseInstance(w_object object) {
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
   if (!clazz->previousDimension && (!memory_load_factor || (++fudge % memory_load_factor) == 0)) {
+#ifndef THREAD_SAFE_FIFOS
     x_mutex_lock(clazz->cache_mutex, x_eternal);
+#endif
     woempa(7, "putting %j to cache_fifo of %k\n", object->fields, clazz);
     done = putFifo(object, clazz->cache_fifo) >= 0;
+#ifndef THREAD_SAFE_FIFOS
     x_mutex_unlock(clazz->cache_mutex);
+#endif
   }
 
   if (done) {
@@ -1200,13 +1206,16 @@ w_int markChildren(w_object o, w_fifo fifo, w_word flag);
 
 static void finalizeReference(w_instance instance) {
 
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_lock(finalizer_fifo_mutex, x_eternal);
+#endif
   if (tryPutFifo(instance, finalizer_fifo) >= 0) {
     setFlag(instance2flags(instance), O_FINALIZING);
     unsetFlag(instance2flags(instance), O_FINALIZABLE);
   }
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_unlock(finalizer_fifo_mutex);
-  
+#endif
 }
 
 /*
@@ -1818,8 +1827,6 @@ w_int markPhase(void) {
  * collected, WONKA_FALSE otherwise. An object is eligible for GC if _all_
  * these tests return WONKA_TRUE.
  *
- * When these tests are called, the window_mutex_fifo is always locked.
- *
  * "Strong" references are the conventional kind (e.g. a field or an array 
  * member).
  */
@@ -1832,7 +1839,7 @@ static w_boolean checkStrongRefs(w_object object) {
 
   }
 
-#ifdef JDWP
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
   if (isSet(object->flags, O_CACHED)) {
     woempa(1, "Not collecting %j because it is in a cache\n", object->fields);
 
@@ -2013,14 +2020,18 @@ static w_int collect_dead_clazzes(void) {
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
     if (this_clazz->cache_fifo) {
       w_object cached;
+#ifndef THREAD_SAFE_FIFOS
       x_mutex_lock(this_clazz->cache_mutex, x_eternal);
+#endif
       while((cached = getFifo(this_clazz->cache_fifo))) {
         reallyReallyReleaseInstance(cached);
       }
       releaseFifo(this_clazz->cache_fifo);
+#ifndef THREAD_SAFE_FIFOS
       x_mutex_unlock(this_clazz->cache_mutex);
       x_mutex_delete(this_clazz->cache_mutex);
       releaseMem(this_clazz->cache_mutex);
+#endif
     }
 #endif
 
@@ -2470,16 +2481,18 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   memory_total = x_mem_total() - min_heap_free;
   memory_load_factor = 1;
   reclaim_threshold = memory_total / 3;
+#ifndef THREAD_SAFE_FIFOS
   finalizer_fifo_mutex = &finalizer_fifo_Mutex;
   x_mutex_create(finalizer_fifo_mutex);
-  window_fifo = allocFifo(WINDOW_FIFO_LEAF_SIZE);
+#endif
+  window_fifo = allocThreadSafeFifo(WINDOW_FIFO_LEAF_SIZE);
   expandFifo(16384, window_fifo);
   strongly_reachable_fifo = allocFifo(STRONG_FIFO_LEAF_SIZE);
   expandFifo(16384, strongly_reachable_fifo);
   phantom_reachable_fifo = allocFifo(OTHER_FIFO_LEAF_SIZE);
   finalize_reachable_fifo = allocFifo(OTHER_FIFO_LEAF_SIZE);
   enqueue_fifo = allocFifo(ENQUEUE_FIFO_LEAF_SIZE);
-  finalizer_fifo = allocFifo(FINALIZER_FIFO_LEAF_SIZE);
+  finalizer_fifo = allocThreadSafeFifo(FINALIZER_FIFO_LEAF_SIZE);
   reference_fifo = allocFifo(REFERENCE_FIFO_LEAF_SIZE);
   dead_string_fifo = allocFifo(DEAD_STRING_FIFO_LEAF_SIZE);
   dead_lock_fifo = allocFifo(DEAD_LOCK_FIFO_LEAF_SIZE);
@@ -2520,7 +2533,7 @@ void gc_collect(w_instance theGarbageCollector) {
     wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
   }
 #ifdef TRACE_MEM_ALLOC
-  if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
+  //if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
 #endif
 
   while (done < 2) {

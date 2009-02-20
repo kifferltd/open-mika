@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.    *
-*  All rights reserved.                                                   *
+* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -412,11 +412,13 @@ void ht_check_size(w_hashtable);
 /*             builds a fifo containing all the keys which occur in the     */
 /*             hashtable. (The caller is reponsible for releasing the fifo  */
 /*             after use)                                                   */
+/*             The fifo returned is not thread-safe.                        */
 /*                                                                          */
 /* ht_list_values                                                           */
 /*             builds a fifo containing all the values which occur in the   */
 /*             hashtable (including repeated values). (The caller is        */
 /*             reponsible for releasing the fifo after use)                 */
+/*             The fifo returned is not thread-safe.                        */
 /*                                                                          */
 /* As far as ht_write/read/erase are concerned, the key and value are just  */
 /* a w_word.  Very often they will be pointers to structures: in this case  */

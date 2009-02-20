@@ -456,7 +456,7 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
   if (refsToClassLoaders && (elementData = getReferenceField(refsToClassLoaders, F_Vector_elementData))) {
     weakrefs = instance2Array_instance(elementData);
     elementCount = getIntegerField(refsToClassLoaders, F_Vector_elementCount);
-    outer_fifo = allocFifo(63);
+    outer_fifo = allocFifo(62);
 
     for (i = 0; i < elementCount; ++i) {
       w_instance ref = *weakrefs++;

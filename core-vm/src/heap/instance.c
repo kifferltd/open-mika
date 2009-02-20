@@ -172,7 +172,7 @@ w_boolean heap_request(w_thread thread, w_int bytes) {
 
   }
 
-  if ((window_fifo->numLeaves * window_fifo->leafElements <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
+  if ((capacityOfFifo(window_fifo) <= instance_allocated - instance_returned) && x_monitor_enter(gc_monitor, 0) == xs_success) {
     while (!expandFifo(instance_allocated - instance_returned + 1024, window_fifo)) {
       printf("No space to expand window_fifo ...\n");
       gc_reclaim(8192, NULL);
@@ -205,7 +205,11 @@ w_boolean heap_request(w_thread thread, w_int bytes) {
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 w_instance allocInstanceFromCache(w_clazz clazz) {
+  w_object object;
+
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_lock(clazz->cache_mutex, x_eternal);
+#endif
   object = getFifo(clazz->cache_fifo);
   if(object) {
     woempa(7, "fetched %j from cache_fifo of %k\n", object->fields, clazz);
@@ -214,7 +218,11 @@ w_instance allocInstanceFromCache(w_clazz clazz) {
   else {
     woempa(7, "cache miss: %k\n", clazz);
   }
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_unlock(clazz->cache_mutex);
+#endif
+
+  return object;
 }
 #endif
 
