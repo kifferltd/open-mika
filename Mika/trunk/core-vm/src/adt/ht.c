@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -853,9 +853,9 @@ ht_list_keys_no_lock(w_hashtable hashtable) {
   w_size leafsize;
   w_int i;
 
-  leafsize = 63;
+  leafsize = 62;
   while (leafsize < (w_size)hashtable->occupancy) {
-    leafsize = leafsize * 2 - 1;
+    leafsize = leafsize * 2 + 2;
   }
   result = allocFifo(leafsize);
 
@@ -893,9 +893,9 @@ ht_list_values_no_lock(w_hashtable hashtable) {
 
   }
 
-  leafsize = 63;
+  leafsize = 62;
   while (leafsize < (w_size)hashtable->occupancy) {
-    leafsize = leafsize * 2 - 1;
+    leafsize = leafsize * 2 + 2;
   }
   result = allocFifo(leafsize);
   if (result == NULL) {
@@ -1659,9 +1659,9 @@ ht2k_list_values(w_hashtable2k hashtable) {
   w_size leafsize;
   w_int i;
 
-  leafsize = 63;
+  leafsize = 62;
   while (leafsize < (w_size)hashtable->occupancy) {
-    leafsize = leafsize * 2 - 1;
+    leafsize = leafsize * 2 + 2;
   }
   result = allocFifo(leafsize);
   if (result == NULL) {

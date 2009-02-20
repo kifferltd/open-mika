@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -157,8 +157,10 @@ typedef struct w_Clazz {
     w_InnerClassInfo *inner_class_info;
   } temp;
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
-  x_mutex cache_mutex;
   w_fifo cache_fifo;
+#ifndef THREAD_SAFE_FIFOS
+  x_mutex cache_mutex;
+#endif
 #endif
 } w_Clazz;
 

@@ -441,8 +441,10 @@ void w_dump_trace(void *xref) {
   }
 }
 
+#ifndef THREAD_SAFE_FIFOS
 extern x_mutex   finalizer_fifo_mutex;
 extern x_mutex   enqueue_fifo_mutex;
+#endif
 extern x_mutex   string_mutex;
 extern x_monitor reclaim_listener_monitor;
 extern x_monitor gc_monitor;
@@ -462,7 +464,7 @@ void lock_iterator(w_word key, w_word value, void *v1, void *v2) {
   w_instance i = (w_instance)key;
   x_monitor  m = (x_monitor)value;
   if (instance2clazz(i) == clazzClass) {
-    x_snprintf(lock_buffer, 254, "%k", Class2clazz(i));
+    x_snprintf(lock_buffer, 254, "%K", Class2clazz(i));
   }
   else {
     x_snprintf(lock_buffer, 254, "%j", i);
@@ -472,7 +474,10 @@ void lock_iterator(w_word key, w_word value, void *v1, void *v2) {
 
 void w_dump_locks(void) {
   w_dump(" Locks :\n");
+#ifndef THREAD_SAFE_FIFOS
   x_dump_mutex("    Finalizer fifo mutex : ", finalizer_fifo_mutex);
+  x_dump_mutex("      Enqueue fifo mutex : ", enqueue_fifo_mutex);
+#endif
   x_dump_monitor("  Lock hashtable monitor : ", &lock_hashtable->monitor);
   x_dump_monitor("String hashtable monitor : ", &string_hashtable->monitor);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);
@@ -496,9 +501,11 @@ void w_dump_locks(void) {
     w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
   }
   w_dump("\n");
-  w_dump("   Instance locks (only if owned):\n");
-  ht_iterate(lock_hashtable, lock_iterator, NULL, NULL);
-  w_dump("\n");
+  // [CG 20090130] Can't do this during sweep phase 'coz lock_hashtable will
+  // contain locks for instances which have already been released.
+  //w_dump("   Instance locks (only if owned):\n");
+  //ht_iterate(lock_hashtable, lock_iterator, NULL, NULL);
+  //w_dump("\n");
 }
 
 static int object_size;
