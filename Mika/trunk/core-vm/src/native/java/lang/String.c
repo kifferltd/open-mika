@@ -1102,10 +1102,7 @@ w_instance String_intern(JNIEnv *env, w_instance thisString) {
 
   threadMustBeSafe(thread);
   ht_lock(string_hashtable);
-  enterUnsafeRegion(thread);
   resultString = internString(thread, thisString);
-  addLocalReference(thread, resultString);
-  enterSafeRegion(thread);
   ht_unlock(string_hashtable);
 
   return resultString;
