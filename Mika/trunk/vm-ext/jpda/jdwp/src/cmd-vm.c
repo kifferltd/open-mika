@@ -163,10 +163,10 @@ static void *getMatchingClasses(w_instance loader) {
       putFifo(clazz, fifo2);
     }
   }
-  woempa(7, "%j has loaded %d classes matching %w\n", loader, fifo2->numElements, classname);
+  woempa(7, "%j has loaded %d classes matching %w\n", loader, occupancyOfFifo(fifo2), classname);
   releaseFifo(fifo1);
 
-  if (fifo2->numElements == 0) {
+  if (occupancyOfFifo(fifo2) == 0) {
     releaseFifo(fifo2);
     fifo2 = NULL;
   }
@@ -207,7 +207,7 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
   woempa(7, "Searching all class loaders for classes with signature %w\n", classname);
   fifo_of_fifos = forEachClassLoader(getMatchingClasses);
   if (fifo_of_fifos) {
-    woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
+    woempa(7, "Found %d class loaders\n", occupancyOfFifo(fifo_of_fifos));
     deregisterString(classname);
     clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
@@ -219,8 +219,8 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
       woempa(7, "Releasing fifo %p\n", one_fifo);
       releaseFifo(one_fifo);
     }
-    woempa(7, "Found %d classes\n", clazz_fifo->numElements);
-    jdwp_put_u4(&reply_grobag, clazz_fifo->numElements);
+    woempa(7, "Found %d classes\n", occupancyOfFifo(clazz_fifo));
+    jdwp_put_u4(&reply_grobag, occupancyOfFifo(clazz_fifo));
 
     while ((clazz = getFifo(clazz_fifo))) {
       woempa(1, "  %K\n", clazz);
@@ -254,7 +254,7 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
   woempa(7, "Searching all class loaders for all loaded classes\n");
   fifo_of_fifos = forEachClassLoader(getAllLoadedClasses);
   if (fifo_of_fifos) {
-    woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
+    woempa(7, "Found %d class loaders\n", occupancyOfFifo(fifo_of_fifos));
     clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
       woempa(7, "Reading fifo %p\n", one_fifo);
@@ -270,9 +270,9 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
       woempa(7, "Releasing fifo %p\n", one_fifo);
       releaseFifo(one_fifo);
     }
-    woempa(7, "Found %d classes\n", clazz_fifo->numElements);
+    woempa(7, "Found %d classes\n", occupancyOfFifo(clazz_fifo));
 
-    jdwp_put_u4(&reply_grobag, clazz_fifo->numElements);
+    jdwp_put_u4(&reply_grobag, occupancyOfFifo(clazz_fifo));
     woempa(7, "Reading clazz_fifo\n");
     while ((clazz = getFifo(clazz_fifo))) {
       jdwp_put_u1(&reply_grobag, isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class);
@@ -314,7 +314,7 @@ static void jdwp_vm_threads(jdwp_command_packet cmd) {
   */
 
   fifo = ht_list_values(thread_hashtable);
-  length = fifo->numElements - 1;
+  length = occupancyOfFifo(fifo) - 1;
   woempa(7, "We have %d threads (not counting the JDWP thread)\n", length);
 
   /*
