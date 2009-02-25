@@ -32,6 +32,5 @@ HDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/pixels/$(AWT_PIXELFORMAT) ;
 CCFLAGS += -DFONTDIR=\'\"{}/$(FONTDIR)\"\' ;
 
 SubInclude WONKA_TOP vm-cmp awt rudolph src ;
-SubInclude WONKA_TOP vm-cmp awt rudolph hal cpu $(CPU) ;
 SubInclude WONKA_TOP vm-cmp awt rudolph hal hostos $(HOSTOS) ;
 
