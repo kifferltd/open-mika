@@ -58,6 +58,11 @@ public class BufferedInputStream extends FilterInputStream {
     protected int pos;
 
     /**
+     * The size of the last-allocated 'buf'.
+     */
+    private int prevBufLength = 8192;
+
+    /**
      * Constructs a new <code>BufferedInputStream</code> on the InputStream
      * <code>in</code>. The default buffer size (8Kb) is allocated and all reads
      * can now be filtered through this stream.
@@ -136,15 +141,22 @@ public class BufferedInputStream extends FilterInputStream {
         }
         if (markpos == 0 && marklimit > localBuf.length) {
             /* Increase buffer size to accommodate the readlimit */
-            int newLength = localBuf.length * 2;
-            if (newLength > marklimit) {
+            /* [CG 20090226] This calculation is intended to reduce heap  */
+            /* fragmentation by favouring multiples of 8192 bytes.        */
+            int newLength = (count + 8192) & -8192;
+            if (newLength > localBuf.length) {
+              newLength += prevBufLength - 8192;
+              //System.out.println("old length = " + localBuf.length + ", previous = " + prevBufLength + ", new = " + newLength);
+              prevBufLength = localBuf.length < 8192 ? 8192 : localBuf.length;
+              if (newLength > marklimit) {
                 newLength = marklimit;
+              }
+              byte[] newbuf = new byte[newLength];
+              System.arraycopy(localBuf, 0, newbuf, 0, localBuf.length);
+              // Reassign buf, which will invalidate any local references
+              // FIXME: what if buf was null?
+              localBuf = buf = newbuf;
             }
-            byte[] newbuf = new byte[newLength];
-            System.arraycopy(localBuf, 0, newbuf, 0, localBuf.length);
-            // Reassign buf, which will invalidate any local references
-            // FIXME: what if buf was null?
-            localBuf = buf = newbuf;
         } else if (markpos > 0) {
             System.arraycopy(localBuf, markpos, localBuf, 0, localBuf.length
                     - markpos);
@@ -153,7 +165,18 @@ public class BufferedInputStream extends FilterInputStream {
         pos -= markpos;
         count = markpos = 0;
         int bytesread = localIn.read(localBuf, pos, localBuf.length - pos);
-        count = bytesread <= 0 ? pos : pos + bytesread;
+        /* [CG 20090226] */
+        /* WAS: count = bytesread <= 0 ? pos : pos + bytesread; */
+        if (bytesread <= 0) { // probably end of strem, so trim buffer
+          count = pos;
+          byte[] newbuf = new byte[pos];
+          System.arraycopy(localBuf, 0, newbuf, 0, pos);
+          //System.out.println("trimmed from " + localBuf.length + " to " + pos);
+          localBuf = buf = newbuf;
+        }
+        else {
+          count = pos + bytesread;
+        }
         return bytesread;
     }
 
