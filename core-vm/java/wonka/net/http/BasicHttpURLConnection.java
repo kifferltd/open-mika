@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -357,6 +357,17 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Disconnect from the host, by closing the socket.
    */
   public synchronized void disconnect(){
+    // [CG 20090226] Close input stream
+    InputStream local_in = in;
+    in = null;
+    if (local_in != null) {
+      debug("HTTP: closing " +  local_in);
+      try {
+        local_in.close();
+      }
+      catch(IOException ioe){}
+    }
+
     if(socket != null){
       debug("HTTP: disconnecting " +  socket);
       try {
@@ -994,9 +1005,11 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   */
   private boolean probeStatusLine() throws IOException {
     byte[] bytes = new byte[8];
-    in.mark(8);
-    int len = in.read(bytes);
-    in.reset();
+    // [CG 20090226] Guard against close() in another thread
+    InputStream local_in = in;
+    local_in.mark(8);
+    int len = local_in.read(bytes);
+    local_in.reset();
     if(len < 8){
       return false;
     }
@@ -1016,33 +1029,35 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   private String readLine(boolean continued) throws IOException {
     StringBuffer buf = new StringBuffer(64);
-    int ch = in.read();
+    // [CG 20090226] Guard against close() in another thread
+    InputStream local_in = in;
+    int ch = local_in.read();
     while(ch != -1){
       boolean stop = false;
       if(ch == '\r'){
         stop = true;
-        in.mark(1);
-        ch = in.read();
+        local_in.mark(1);
+        ch = local_in.read();
       }
       if(ch == '\n'){
         if(buf.length() == 0){
           break;
         }
         stop = true;
-        in.mark(1);
-        ch = in.read();
+        local_in.mark(1);
+        ch = local_in.read();
       }
       if(stop){
         if(continued && (ch == ' ' || ch  == '\t')){
           continue;
         }
         else {
-          in.reset();
+          local_in.reset();
           break;
         }
       }
       buf.append((char)ch);
-      ch = in.read();
+      ch = local_in.read();
     }
 
     return buf.toString();
