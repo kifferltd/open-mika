@@ -90,7 +90,7 @@ public final class Finalizer implements Runnable {
     catch (InterruptedException ie) {
     }
 
-    verbose = (System.getProperty("mika.verbose", "").indexOf("gc") >= 0);
+    verbose = (GetSystemProperty.MIKA_VERBOSE.indexOf("gc") >= 0);
 
     while(true) {
       idle = true;

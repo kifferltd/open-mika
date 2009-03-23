@@ -147,7 +147,7 @@ public final class GarbageCollector implements Runnable {
    */
   public static synchronized GarbageCollector getInstance() {
     if (theGarbageCollector == null) {
-      String debugProperty = System.getProperty("mika.verbose","");
+      String debugProperty = GetSystemProperty.MIKA_VERBOSE;
       if (debugProperty.indexOf("gc") >= 0) {
         verbose = true;
       }
