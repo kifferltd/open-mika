@@ -55,8 +55,7 @@ public class JarInputStream extends ZipInputStream {
 
     private boolean isMeta;
 
-    // [CG 20081119] We'll come back to this later
-    // private JarVerifier verifier;
+    private JarVerifier verifier;
 
     private OutputStream verStream;
 
@@ -66,10 +65,9 @@ public class JarInputStream extends ZipInputStream {
     public JarInputStream(InputStream stream, boolean verify)
             throws IOException {
         super(stream);
-    // [CG 20081119] We'll come back to this later
-    //    if (verify) {
-    //        verifier = new JarVerifier("JarInputStream"); //$NON-NLS-1$
-    //    }
+        if (verify) {
+            verifier = new JarVerifier("JarInputStream");
+        }
         if ((mEntry = getNextJarEntry()) == null) {
             return;
         }
@@ -82,19 +80,17 @@ public class JarInputStream extends ZipInputStream {
         }
         if (name.equals(JarFile.MANIFEST_NAME)) {
             mEntry = null;
-    // [CG 20081119] We'll worry about verifying later
-    //        manifest = new Manifest(this, verify);
+            manifest = new Manifest(this, verify);
             manifest = new Manifest(this);
 
             closeEntry();
-    // [CG 20081119] We'll come back to this later
-    //        if (verify) {
-    //            verifier.setManifest(manifest);
-    //            if (manifest != null) {
-    //                verifier.mainAttributesEnd = manifest
-    //                        .getMainAttributesEnd();
-    //            }
-    //        }
+            if (verify) {
+                verifier.setManifest(manifest);
+                if (manifest != null) {
+                    verifier.mainAttributesEnd = manifest
+                            .getMainAttributesEnd();
+                }
+            }
 
         } else {
             Attributes temp = new Attributes(3);
@@ -104,8 +100,7 @@ public class JarInputStream extends ZipInputStream {
              * if not from the first entry, we will not get enough
              * information,so no verify will be taken out.
              */
-    // [CG 20081119] We'll come back to this later
-            // verifier = null;
+             verifier = null;
         }
     }
 
@@ -143,22 +138,21 @@ public class JarInputStream extends ZipInputStream {
         if (verStream != null && !eos) {
             if (r == -1) {
                 eos = true;
-    // [CG 20081119] We'll come back to this later
-    //            if (verifier != null) {
-    //                if (isMeta) {
-    //                    verifier.addMetaEntry(jarEntry.getName(),
-    //                            ((ByteArrayOutputStream) verStream)
-    //                                    .toByteArray());
-    //                    try {
-    //                        verifier.readCertificates();
-    //                    } catch (SecurityException e) {
-    //                        verifier = null;
-    //                        throw e;
-    //                    }
-    //                } else {
-    //                    ((JarVerifier.VerifierEntry) verStream).verify();
-    //                }
-    //            }
+                if (verifier != null) {
+                    if (isMeta) {
+                        verifier.addMetaEntry(jarEntry.getName(),
+                                ((ByteArrayOutputStream) verStream)
+                                        .toByteArray());
+                        try {
+                            verifier.readCertificates();
+                        } catch (SecurityException e) {
+                            verifier = null;
+                            throw e;
+                        }
+                    } else {
+                        ((JarVerifier.VerifierEntry) verStream).verify();
+                    }
+                }
             } else {
                 verStream.write(buffer, offset, r);
             }
@@ -184,16 +178,15 @@ public class JarInputStream extends ZipInputStream {
             if (jarEntry == null) {
                 return null;
             }
-    // [CG 20081119] We'll come back to this later
-    //        if (verifier != null) {
-    //            isMeta = toASCIIUpperCase(jarEntry.getName()).startsWith(
-    //                    JarFile.META_DIR);
-    //            if (isMeta) {
-    //                verStream = new ByteArrayOutputStream();
-    //            } else {
-    //                verStream = verifier.initEntry(jarEntry.getName());
-    //            }
-    //        }
+            if (verifier != null) {
+                isMeta = toASCIIUpperCase(jarEntry.getName()).startsWith(
+                        JarFile.META_DIR);
+                if (isMeta) {
+                    verStream = new ByteArrayOutputStream();
+                } else {
+                    verStream = verifier.initEntry(jarEntry.getName());
+                }
+            }
         }
         eos = false;
         return jarEntry;
