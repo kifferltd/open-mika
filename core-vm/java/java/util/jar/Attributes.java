@@ -1,209 +1,385 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+/*
+ * Imported by CG 20090321 based on Apache Harmony ("enhanced") revision 718318.
+ */
 
 package java.util.jar;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class Attributes implements Map, Cloneable {
+import org.apache.harmony.archive.util.Util;
 
 /**
-** Field map is the map containing all entries
-*/
-  protected Map map;
+ * The Attributes class is used to store values for Manifest entries. Attributes
+ * keys are generally instances of Attributes.Name. Values associated with
+ * Attributes keys are of type String.
+ */
+public class Attributes implements Cloneable, Map {
 
-/*
-** Constructors
-*/
-  public Attributes() {
-    this.map = new HashMap();
-  }
+    protected Map map;
 
-  public Attributes(int cap) {
-    this.map = new HashMap(cap);
-  }
+    public static class Name {
+        private final byte[] name;
 
-  public Attributes(Attributes attr) {
-  	this.map = new HashMap(attr.map);
-  }
+        private int hashCode;
 
-/*
-** public methods
-*/
-  public void clear() {
-    map.clear();
-  }
+        public static final Name CLASS_PATH = new Name("Class-Path"); //$NON-NLS-1$
 
-  public Object clone() {
-   	Attributes cloned=null;
-   	try {
-   	  cloned = (Attributes)super.clone();
-   	  cloned.map = (Map) ((HashMap)map).clone();
-   	}
-   	catch(CloneNotSupportedException cnse){}
-   	return cloned;
-  }
+        public static final Name MANIFEST_VERSION = new Name("Manifest-Version"); //$NON-NLS-1$
 
-  public boolean containsKey (Object name) {
-    return map.containsKey(name);
-  }
+        public static final Name MAIN_CLASS = new Name("Main-Class"); //$NON-NLS-1$
 
-  public boolean containsValue (Object value) {
-    return map.containsValue(value);
-  }
+        public static final Name SIGNATURE_VERSION = new Name(
+                "Signature-Version"); //$NON-NLS-1$
 
-  public Set entrySet() {
-    return map.entrySet();
-  }
+        public static final Name CONTENT_TYPE = new Name("Content-Type"); //$NON-NLS-1$
 
-  public boolean equals(Object o) {
-   	if (!(o instanceof Attributes)){
-   	 	return false;
-   	}
-   	return map.equals(((Attributes)o).map);
-  }
+        public static final Name SEALED = new Name("Sealed"); //$NON-NLS-1$
 
-  public Object get(Object name) {
-    return map.get(name);
-  }
+        public static final Name IMPLEMENTATION_TITLE = new Name(
+                "Implementation-Title"); //$NON-NLS-1$
 
-  public String getValue(String name) {
-    Name attName = new Name(name);
-    return (String)get(attName);
-  }
+        public static final Name IMPLEMENTATION_VERSION = new Name(
+                "Implementation-Version"); //$NON-NLS-1$
 
-  public String getValue (Name name) {
-    return (String)get(name);
-  }
+        public static final Name IMPLEMENTATION_VENDOR = new Name(
+                "Implementation-Vendor"); //$NON-NLS-1$
 
-  public int hashCode() {
-   	return map.hashCode();
-  }
+        public static final Name SPECIFICATION_TITLE = new Name(
+                "Specification-Title"); //$NON-NLS-1$
 
-  public boolean isEmpty() {
-    return map.isEmpty();
-  }
+        public static final Name SPECIFICATION_VERSION = new Name(
+                "Specification-Version"); //$NON-NLS-1$
 
-  public Set keySet() {
-    return map.keySet();
-  }
+        public static final Name SPECIFICATION_VENDOR = new Name(
+                "Specification-Vendor"); //$NON-NLS-1$
 
-  public Object put (Object name, Object value) {
-    //cast are ,needed to make sure correct objects are placed in.
-    return map.put((Attributes.Name) name, (String) value);
-  }
+        public static final Name EXTENSION_LIST = new Name("Extension-List"); //$NON-NLS-1$
 
-  public String putValue(String aname , String val) {
-    return (String)map.put(new Attributes.Name(aname),val);	
-  }
+        public static final Name EXTENSION_NAME = new Name("Extension-Name"); //$NON-NLS-1$
 
-  public void putAll(Map attr) {
-    map.putAll(attr);
-  }
+        public static final Name EXTENSION_INSTALLATION = new Name(
+                "Extension-Installation"); //$NON-NLS-1$
 
-  public Object remove(Object name) {
-    return map.remove(name);
-  }
+        public static final Name IMPLEMENTATION_VENDOR_ID = new Name(
+                "Implementation-Vendor-Id"); //$NON-NLS-1$
 
-  public int size() {
-    return map.size();
-  }
+        public static final Name IMPLEMENTATION_URL = new Name(
+                "Implementation-URL"); //$NON-NLS-1$
 
-  public Collection values() {
-    return map.values();
-  }
+        static final Name NAME = new Name("Name");
 
+        public Name(String s) {
+            int i = s.length();
+            if (i == 0 || i > Manifest.LINE_LENGTH_LIMIT - 2) {
+                throw new IllegalArgumentException();
+            }
 
-/**
-** public static innerclass  Name ...
-** this class can be called by everybody ...
-**
-*/
-  public static class Name {
-    public static final Name CLASS_PATH = new Name("Class-Path");
-    public static final Name CONTENT_TYPE = new Name("Content-Type");
-    public static final Name IMPLEMENTATION_TITLE = new Name("Implementation-Title");
-    public static final Name IMPLEMENTATION_VERSION = new Name("Implementation-Version");
-    public static final Name IMPLEMENTATION_VENDOR = new Name("Implementation-Vendor");
-    public static final Name MAIN_CLASS = new Name("Main-Class");
-    public static final Name MANIFEST_VERSION = new Name("Manifest-Version");
-    public static final Name SEALED = new Name("Sealed");
-    public static final Name SIGNATURE_VERSION = new Name("Signature-Version");
-    public static final Name SPECIFICATION_TITLE = new Name("Specification-Title");
-    public static final Name SPECIFICATION_VERSION = new Name("Specification-Version");
-    public static final Name SPECIFICATION_VENDOR = new Name("Specification-Vendor");
+            name = new byte[i];
 
-    public static final Name EXTENSION_INSTALLATION = new Name("Extension-Installation");
-    public static final Name IMPLEMENTATION_URL = new Name("Implementation-Vendor-URL");
-    public static final Name EXTENSION_LIST = new Name("Extension-List");
-    public static final Name EXTENSION_NAME = new Name("Extension-Name");
-    public static final Name IMPLEMENTATION_VENDOR_ID = new Name("Implementation-Vendor-Id");
-
-    private String name;
-
-    public Name (String name) throws IllegalArgumentException, NullPointerException {
-      int length = name.length();
-      if(length == 0){
-        throw new IllegalArgumentException("A name cannot have a length of '0'");
-      }
-      char str[] = name.toCharArray();
-      for(int i = 0 ; i < length ; i++){
-        char ch = str[i];
-        if(Character.digit(ch,36) == -1 && ch != '-' && ch != '_'){
-          throw new IllegalArgumentException("bad digit '"+ch+"'");
+            for (; --i >= 0;) {
+                char ch = s.charAt(i);
+                if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+                        || ch == '_' || ch == '-' || (ch >= '0' && ch <= '9'))) {
+                    throw new IllegalArgumentException(s);
+                }
+                name[i] = (byte) ch;
+            }
         }
-      }
-      this.name = name;
+
+        /**
+         * A private constructor for a trusted attribute name.
+         */
+        Name(byte[] buf) {
+            name = buf;
+        }
+
+        byte[] getBytes() {
+            return name;
+        }
+
+        public String toString() {
+            try {
+                return new String(name, "ISO-8859-1");
+            } catch (UnsupportedEncodingException iee) {
+                throw new InternalError(iee.getLocalizedMessage());
+            }
+        }
+
+        public boolean equals(Object object) {
+            if (object == null || object.getClass() != getClass()
+                    || object.hashCode() != hashCode()) {
+                return false;
+            }
+
+            return Util.equalsIgnoreCase(name, ((Name) object).name);
+        }
+
+        public int hashCode() {
+            if (hashCode == 0) {
+                int hash = 0, multiplier = 1;
+                for (int i = name.length - 1; i >= 0; i--) {
+                    // 'A' & 0xDF == 'a' & 0xDF, ..., 'Z' & 0xDF == 'z' & 0xDF
+                    hash += (name[i] & 0xDF) * multiplier;
+                    int shifted = multiplier << 5;
+                    multiplier = shifted - multiplier;
+                }
+                hashCode = hash;
+            }
+            return hashCode;
+        }
+
     }
 
-    // overwritten Object methods ...
-
-    public String toString() {
-      return name;
+    /**
+     * Constructs an Attributes instance
+     */
+    public Attributes() {
+        map = new HashMap();
     }
 
+    /**
+     * Constructs an Attributes instance obtaining keys and values from the
+     * parameter Attributes, attrib
+     * 
+     * @param attrib
+     *            The Attributes to obtain entries from.
+     */
+    public Attributes(Attributes attrib) {
+        map = (Map) ((HashMap) attrib.map).clone();
+    }
+
+    /**
+     * Constructs an Attributes instance with initial capacity of size size
+     * 
+     * @param size
+     *            Initial size of this Attributes instance.
+     */
+    public Attributes(int size) {
+        map = new HashMap(size);
+    }
+
+    /**
+     * Removes all key/value pairs from this Attributes.
+     * 
+     */
+    public void clear() {
+        map.clear();
+    }
+
+    /**
+     * Determines whether this Attributes contains the specified key
+     * 
+     * 
+     * @param key
+     *            The key to search for.
+     * @return true if the key is found, false otherwise
+     */
+    public boolean containsKey(Object key) {
+        return map.containsKey(key);
+    }
+
+    /**
+     * Determines whether this Attributes contains the specified value
+     * 
+     * @param value
+     *            The value to search for.
+     * @return true if the value is found, false otherwise
+     */
+    public boolean containsValue(Object value) {
+        return map.containsValue(value);
+    }
+
+    /**
+     * Returns a set containing MapEntry's for each of the key/value pairs
+     * contained in this Attributes.
+     * 
+     * @return a set of MapEntry's
+     */
+    public Set entrySet() {
+        return map.entrySet();
+    }
+
+    /**
+     * Returns the value associated with the parameter key
+     * 
+     * @param key
+     *            The key to search for.
+     * @return Object associated with key, or null if key does not exist.
+     */
+    public Object get(Object key) {
+        return map.get(key);
+    }
+
+    /**
+     * Determines whether this Attributes contains any keys
+     * 
+     * @return true if one or more keys exist, false otherwise
+     */
+    public boolean isEmpty() {
+        return map.isEmpty();
+    }
+
+    /**
+     * Returns a Set containing all the keys found in this Attributes.
+     * 
+     * @return a Set of all keys
+     */
+    public Set keySet() {
+        return map.keySet();
+    }
+
+    /**
+     * Store value in this Attributes and associate it with key.
+     * 
+     * @param key
+     *            The key to associate with value.
+     * @param value
+     *            The value to store in this Attributes
+     * @return The value being stored
+     * 
+     * @exception ClassCastException
+     *                when key is not an Attributes.Name or value is not a
+     *                String
+     */
+    // Require cast to force ClassCastException
+    public Object put(Object key, Object value) {
+        return map.put((Name) key, (String) value);
+    }
+
+    /**
+     * Store all the key.value pairs in the argument in this Attributes.
+     * 
+     * @param attrib
+     *            the associations to store (must be of type Attributes).
+     */
+    public void putAll(Map attrib) {
+        if (attrib == null || !(attrib instanceof Attributes)) {
+            throw new ClassCastException();
+        }
+        this.map.putAll(attrib);
+    }
+
+    /**
+     * Deletes the key/value pair with key key from this Attributes.
+     * 
+     * @param key
+     *            The key to remove
+     * @return the values associated with the removed key, null if not present.
+     */
+    public Object remove(Object key) {
+        return map.remove(key);
+    }
+
+    /**
+     * Returns the number of key.value pairs associated with this Attributes.
+     * 
+     * @return the size of this Attributes
+     */
+    public int size() {
+        return map.size();
+    }
+
+    /**
+     * Returns a Collection of all the values present in this Attributes.
+     * 
+     * @return a Collection of all values present
+     */
+    public Collection values() {
+        return map.values();
+    }
+
+    public Object clone() {
+        Attributes clone;
+        try {
+            clone = (Attributes) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+        clone.map = (Map) ((HashMap) map).clone();
+        return clone;
+    }
+
+    /**
+     * Returns the hashCode of this Attributes
+     * 
+     * @return the hashCode of this Object.
+     */
     public int hashCode() {
-      return name.toLowerCase().hashCode();
+        return map.hashCode();
     }
 
-    public boolean equals (Object o) {
-      boolean answer = false;
-      if (o instanceof Name) {
-        Name n2 = (Name)o;
-        if (n2.name.equalsIgnoreCase(name)) {
-          answer = true;
+    /**
+     * Determines if this Attributes and the parameter Attributes are equal. Two
+     * Attributes instances are equal if they contain the same keys and values.
+     * 
+     * @return true if the Attributes are equals, false otherwise
+     */
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
         }
-      }
-      return answer;
+        if (obj instanceof Attributes) {
+            return map.equals(((Attributes) obj).map);
+        }
+        return false;
     }
-  }
+
+    /**
+     * Returns the value associated with the parameter Attributes.Name key.
+     * 
+     * @param name
+     *            The key to obtain the value for.
+     * @return the String associated with name, or null if name is not a valid
+     *         key
+     */
+    public String getValue(Attributes.Name name) {
+        return (String) map.get(name);
+    }
+
+    /**
+     * Returns the String associated with the parameter name.
+     * 
+     * @param name
+     *            The key to obtain the value for.
+     * @return the String associated with name, or null if name is not a valid
+     *         key
+     */
+    public String getValue(String name) {
+        return (String) map.get(new Attributes.Name(name));
+    }
+
+    /**
+     * Stores value val against key name in this Attributes
+     * 
+     * @param name
+     *            The key to store against.
+     * @param val
+     *            The value to store in this Attributes
+     * @return the Value being stored
+     */
+    public String putValue(String name, String val) {
+        return (String) map.put(new Attributes.Name(name), val);
+    }
 }
+

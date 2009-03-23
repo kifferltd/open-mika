@@ -1,280 +1,390 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
-
-
-/**
- * $Id: JarFile.java,v 1.5 2006/04/05 09:20:06 cvs Exp $
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
+/*
+ * Imported by CG 20090322 based on Apache Harmony ("enhanced") revision 724313.
+ */
+
 package java.util.jar;
 
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.NoSuchAlgorithmException;
+import java.util.Enumeration;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
+import org.apache.harmony.archive.util.Util;
+
 /**
- * Important notes on JarSigning: 
- * - If no Manifest is available no data verification can be done
- *   The jarfile should be considered to be untrusted
- * - How can you tell your data was signed and valiate well or unsigned
- *   especially important for classloaders !  
+ * JarFile is used to read jar entries and their associated data from jar files.
  * 
- * @author ruelens
+ * @see JarInputStream
+ * @see JarEntry
  */
 public class JarFile extends ZipFile {
 
-  public static final String MANIFEST_NAME = "META-INF/MANIFEST.MF";
+    public static final String MANIFEST_NAME = "META-INF/MANIFEST.MF"; //$NON-NLS-1$
 
-  static final String META_DIR = "META-INF/";
+    static final String META_DIR = "META-INF/"; //$NON-NLS-1$
 
-  private static final Manifest theEmptyManifest = new Manifest();
+    private Manifest manifest;
 
-  private Manifest manifest;
+    private ZipEntry manifestEntry;
 
-  private boolean verify;
-  boolean verificationFailed;
+    JarVerifier verifier;
 
-  public JarFile(File file) throws IOException {
-   	this(file,true, ZipFile.OPEN_READ);
-  }
-  public JarFile(String fname) throws IOException {
-  	this(new File(fname),true, ZipFile.OPEN_READ);
-  }
-  public JarFile(String fname, boolean verify) throws IOException {
-  	this(new File(fname),verify, ZipFile.OPEN_READ);
-  }
+    static final class JarFileInputStream extends FilterInputStream {
+        private long count;
 
-  public JarFile(File file, boolean verify) throws IOException {
-    this(file, verify, ZipFile.OPEN_READ);
-  }
+        private ZipEntry zipEntry;
 
-  public JarFile(File file, boolean verify, int mode) throws IOException {
-    super(file, mode);
-    manifest = theEmptyManifest;
-    ZipEntry ze = super.getEntry(MANIFEST_NAME);
-    if (ze != null){
-      manifest = new Manifest(super.getInputStream(ze));
-      if (verify) {
-        /* We have a manifest ==> verification makes sense */
-        //TODO ...
-        this.verify = JarVerifier.verifyManifest(this);           
-      }
-    }
-  }
+        private JarVerifier.VerifierEntry entry;
 
-// this method should be implemented by JarFile itself but are inherited now from ZipFile ...
-	//  public Enumeration entries() { super.entries(); }
-
-  public ZipEntry getEntry(String name) {
-    ZipEntry ze =  super.getEntry(name);
-    if(ze != null) {
-      JarEntry je = new JarEntry(ze);
-      je.setAttributes(manifest.getAttributes(je.getName()));
-      return je;
-    }
-    return null;
-  }
-
-/**
-** @remark should add security features ... !
-*/
-  public InputStream getInputStream (ZipEntry ze) throws IOException {
-    InputStream in = super.getInputStream(ze);
-    if (in != null && verify) {      
-      if (verificationFailed) {
-        throw new SecurityException("Verification of file "+this+" Failed !!!");
-      }
-      try {
-        verifyEntryData(ze);
-      } catch (NoSuchAlgorithmException e) {
-        throw new SecurityException(e.getMessage());
-      }
-    }
-    return in;
-  }
-
-  public JarEntry getJarEntry(String name) {
-    ZipEntry ze =  super.getEntry(name);
-    if(ze != null) {
-      JarEntry je = new JarEntry(ze);
-      je.setAttributes(manifest.getAttributes(je.getName()));
-      return je;
-    }
-    return null;
-  }
-
-  public Manifest getManifest() throws IOException {
-    return this.manifest;
-  }
-
-  /**
-   * additions for verifying signed jarfiles ...
-   */
-  private void verifyEntryData(ZipEntry je) throws IOException,
-      NoSuchAlgorithmException {
-    Manifest manifest = getManifest();
-    Attributes attributes = manifest.getAttributes(je.getName());
-    if (attributes != null) {
-      String[] algorithm = JarVerifier.getDigestKeyAlgortihm(attributes);
-      if (algorithm != null) {
-        JarVerifier.verifyBytes(getEntryBytes(je), algorithm[0], algorithm[1]);
-      } else {
-        // System.out.println("Verifyer.verifyEntryData() unsigned entry"
-        // +je.getName());
-      }
-    }
-  }
-  
-  private byte[] getEntryBytes(ZipEntry je) throws IOException {
-    byte[] bytes = new byte[(int)je.getSize()];
-    InputStream in = super.getInputStream(je);
-    int off = 0;
-    int len = bytes.length;
-    do {
-      int rd = in.read(bytes, off, len);
-      if (rd == -1) {
-        break;
-      }
-      off += rd;
-    } while (off < len);
-    return bytes;
-  }  
-  
-  void verifyManifest(JarEntry je) throws IOException {
-    Manifest mf = new Manifest(super.getInputStream(je));
-    String[] result = JarVerifier.getDigestKeyAlgortihm(mf.getMainAttributes(),
-        "-Digest-Manifest");
-    byte[] manifestBytes = getEntryBytes(getJarEntry(JarFile.MANIFEST_NAME));
-    if (result != null) {
-      try {
-        JarVerifier.verifyBytes(manifestBytes, result[0], result[1]);
-        return;
-      } catch (NoSuchAlgorithmException e) {
-        throw new ZipException(e.getMessage());
-      } catch (SecurityException se) {
-        // continue parsing each individual header ...
-      }
-    }
-    //System.out.println("Verifyer.verifyManifest() parsing each individual header ...");
-    // parse each individual header ...
-    int idx = 0;
-    int len = manifestBytes.length;
-    int prev = 0;
-    int linelength = 2;
-    while (idx < len) {
-      int ch = manifestBytes[idx++];
-      if (ch == '\n') {
-        // linelength == 0 or linelength == 1 and prev == '\r'
-        if (linelength == 0 || (linelength == 1 && prev == '\r')) {
-          //System.out.println("Verifyer.verifyManifest() Empty Line !");
-          break;
+        JarFileInputStream(InputStream is, ZipEntry ze,
+                JarVerifier.VerifierEntry e) {
+            super(is);
+            zipEntry = ze;
+            count = zipEntry.getSize();
+            entry = e;
         }
-      } else if (prev == '\r') {
-        if (linelength == 1) {
-          idx--;
-          break;
-        }
-      } else {
-        linelength++;
-        prev = ch;
-        continue;
-      }
-      prev = 0;
-      linelength = 0;
-    }
 
-    //System.out.println("Verifyer.verifyManifest() looking for entry data "+idx+", len "+len);
-    int start = idx;
-    while (idx < (len - 5)) {
-      if ("Name:".equals(new String(manifestBytes, idx, 5))) {
-        idx += 5;
-        int startOfName = idx;
-        while(idx < len) {
-          int ch = manifestBytes[idx++];
-          if (ch == '\n' || ch == '\r') {
-            idx--;
-            break;
-          }
-        }
-        String name = new String(manifestBytes, startOfName, idx - startOfName).trim();
-        // each entry found here, should have an entry in the manifest.
-        //System.out.println("Verifyer.verifyManifest()found name '"+name+"'");
-        Attributes attr = mf.getAttributes(name);
-        if (attr != null) {
-          result = JarVerifier.getDigestKeyAlgortihm(attr);
-          if (result == null) {
-            throw new SecurityException("invalid Signature File " + name);
-         }
-        }
-        //System.out.println("Verifyer.verifyManifest()key = " + name);
-        linelength = 5;
-        prev = 0;
-        while (idx < len) {
-          int ch = manifestBytes[idx++];
-          if (ch == '\n') {
-            // linelength == 0 or linelength == 1 and prev == '\r'
-            if (linelength == 0 || (linelength == 1 && prev == '\r')) {              
-              break;
+        public int read() throws IOException {
+            if (count > 0) {
+                int r = super.read();
+                if (r != -1) {
+                    entry.write(r);
+                    count--;
+                } else {
+                    count = 0;
+                }
+                if (count == 0) {
+                    entry.verify();
+                }
+                return r;
+            } else {
+                return -1;
             }
-          } else if (prev == '\r') {
-            if (linelength == 1) {
-              idx--;
-              break;
-            }
-          } else {
-            linelength++;
-            prev = ch;
-            continue;
-          }
-          prev = 0;
-          linelength = 0;
-        }        
-        if (result != null) {
-          //TODO check where we need to stop collecting bytes.
-          int l = idx - start;
-          byte[] entryBytes = new byte[l];
-          //System.out.println("Verifyer.verifyManifest()"+l+", "+start+", "+manifestBytes.length);
-          System.arraycopy(manifestBytes, start, entryBytes, 0, l);
-          //System.out.println("Verifyer.verifyManifest() entra data '"+new String(entryBytes)+"'");
-          try {
-            JarVerifier.verifyBytes(entryBytes, result[0], result[1]);
-          } catch (NoSuchAlgorithmException e) {
-            throw new ZipException(e.getMessage());
-          }
         }
-        start = idx;
-      } else {
-        //System.out.println("Verifyer.verifyManifest() 'Name:' != '"+new String(manifestBytes, idx, 5)+"'");
-        new ZipException("failed to reparse manifest 'Name:' != '"+new String(manifestBytes, idx, 5)+"'");
-      }
-    } 
-  }
+
+        public int read(byte[] buf, int off, int nbytes) throws IOException {
+            if (count > 0) {
+                int r = super.read(buf, off, nbytes);
+                if (r != -1) {
+                    int size = r;
+                    if (count < size) {
+                        size = (int) count;
+                    }
+                    entry.write(buf, off, size);
+                    count -= size;
+                } else {
+                    count = 0;
+                }
+                if (count == 0) {
+                    entry.verify();
+                }
+                return r;
+            } else {
+                return -1;
+            }
+        }
+
+        public long skip(long nbytes) throws IOException {
+            long cnt = 0, rem = 0;
+            byte[] buf = new byte[4096];
+            while (cnt < nbytes) {
+                int x = read(buf, 0,
+                        (rem = nbytes - cnt) > buf.length ? buf.length
+                                : (int) rem);
+                if (x == -1) {
+                    return cnt;
+                }
+                cnt += x;
+            }
+            return cnt;
+        }
+    }
+
+    /**
+     * Create a new JarFile using the contents of file.
+     * 
+     * @param file
+     *            java.io.File
+     * @exception java.io.IOException
+     *                If the file cannot be read.
+     */
+    public JarFile(File file) throws IOException {
+        this(file, true);
+    }
+
+    /**
+     * Create a new JarFile using the contents of file.
+     * 
+     * @param file
+     *            java.io.File
+     * @param verify
+     *            verify a signed jar file
+     * @exception java.io.IOException
+     *                If the file cannot be read.
+     */
+    public JarFile(File file, boolean verify) throws IOException {
+        super(file);
+        if (verify) {
+            verifier = new JarVerifier(file.getPath());
+        }
+        readMetaEntries();
+    }
+
+    /**
+     * Create a new JarFile using the contents of file.
+     * 
+     * @param file
+     *            java.io.File
+     * @param verify
+     *            verify a signed jar file
+     * @param mode
+     *            the mode to use, either OPEN_READ or OPEN_READ | OPEN_DELETE
+     * @exception java.io.IOException
+     *                If the file cannot be read.
+     */
+    public JarFile(File file, boolean verify, int mode) throws IOException {
+        super(file, mode);
+        if (verify) {
+            verifier = new JarVerifier(file.getPath());
+        }
+        readMetaEntries();
+    }
+
+    /**
+     * Create a new JarFile from the contents of the file specified by filename.
+     * 
+     * @param filename
+     *            java.lang.String
+     * @exception java.io.IOException
+     *                If fileName cannot be opened for reading.
+     */
+    public JarFile(String filename) throws IOException {
+        this(filename, true);
+
+    }
+
+    /**
+     * Create a new JarFile from the contents of the file specified by filename.
+     * 
+     * @param filename
+     *            java.lang.String
+     * @param verify
+     *            verify a signed jar file
+     * @exception java.io.IOException
+     *                If fileName cannot be opened for reading.
+     */
+    public JarFile(String filename, boolean verify) throws IOException {
+        super(filename);
+        if (verify) {
+            verifier = new JarVerifier(filename);
+        }
+        readMetaEntries();
+    }
+
+    /**
+     * Return an enumeration containing the JarEntrys contained in this JarFile.
+     * 
+     * @return java.util.Enumeration
+     * @exception java.lang.IllegalStateException
+     *                If this JarFile has been closed.
+     */
+    public Enumeration entries() {
+        class JarFileEnumerator implements Enumeration {
+            Enumeration ze;
+
+            JarFile jf;
+
+            JarFileEnumerator(Enumeration zenum, JarFile jf) {
+                ze = zenum;
+                this.jf = jf;
+            }
+
+            public boolean hasMoreElements() {
+                return ze.hasMoreElements();
+            }
+
+            public Object nextElement() {
+                JarEntry je = new JarEntry((ZipEntry)ze.nextElement());
+                je.parentJar = jf;
+                return je;
+            }
+        }
+        return new JarFileEnumerator(super.entries(), this);
+    }
+
+    /**
+     * Return the JarEntry specified by name or null if no such entry exists.
+     * 
+     * @param name
+     *            the name of the entry in the jar file
+     * @return java.util.jar.JarEntry
+     */
+    public JarEntry getJarEntry(String name) {
+        return (JarEntry) getEntry(name);
+    }
+
+    /**
+     * Returns the Manifest object associated with this JarFile or null if no
+     * manifest entry exists.
+     * 
+     * @return java.util.jar.Manifest
+     */
+    public Manifest getManifest() throws IOException {
+        if (manifest != null) {
+            return manifest;
+        }
+        try {
+            InputStream is = super.getInputStream(manifestEntry);
+            if (verifier != null) {
+                byte[] buf = new byte[is.available()];
+                is.mark(buf.length);
+                is.read(buf, 0, buf.length);
+                is.reset();
+                verifier.addMetaEntry(manifestEntry.getName(), buf);
+            }
+            try {
+                manifest = new Manifest(is, verifier != null);
+            } finally {
+                is.close();
+            }
+            manifestEntry = null;
+        } catch (NullPointerException e) {
+            manifestEntry = null;
+        }
+        return manifest;
+    }
+
+    private void readMetaEntries() throws IOException {
+    /*[CG 20090322]
+      The Harmony code used a native method to get a list of entries in the META-INF/ directory.
+      This code relies on the HY_ZIP_API or the Harmony porting library, which in our case we
+      have not got; so for now we simply iterate over the entries and take only those which
+      start with "META_INF/".
+    */
+        // WAS: ZipEntry[] metaEntries = getMetaEntriesImpl(null);
+        int dirLength = META_DIR.length();
+
+        boolean signed = false;
+
+        // WAS: if (null != metaEntries) {
+            // WAS: for (ZipEntry entry : metaEntries) {
+        Enumeration e = entries();
+        while (e.hasMoreElements()) {
+            ZipEntry entry = (ZipEntry) e.nextElement();
+            String entryName = entry.getName();
+            if (entryName.startsWith(META_DIR)) {
+                if (manifestEntry == null
+                        && manifest == null
+                        && Util.ASCIIIgnoreCaseRegionMatches(entryName,
+                                dirLength, MANIFEST_NAME, dirLength,
+                                MANIFEST_NAME.length() - dirLength)) {
+                    manifestEntry = entry;
+                    if (verifier == null) {
+                        break;
+                    }
+                } else if (verifier != null
+                        && entryName.length() > dirLength
+                        && (Util.ASCIIIgnoreCaseRegionMatches(entryName,
+                                entryName.length() - 3, ".SF", 0, 3) 
+                                || Util.ASCIIIgnoreCaseRegionMatches(entryName,
+                                        entryName.length() - 4, ".DSA", 0, 4)
+                        || Util.ASCIIIgnoreCaseRegionMatches(entryName,
+                                entryName.length() - 4, ".RSA", 0, 4))) {
+                    signed = true;
+                    InputStream is = super.getInputStream(entry);
+                    byte[] buf = new byte[is.available()];
+                    try {
+                        is.read(buf, 0, buf.length);
+                    } finally {
+                        is.close();
+                    }
+                    verifier.addMetaEntry(entryName, buf);
+                }
+            }
+        }
+        if (!signed) {
+            verifier = null;
+        }
+    }
+
+    /**
+     * Return an InputStream for reading the decompressed contents of ze.
+     * 
+     * @param ze
+     *            the ZipEntry to read from
+     * @return java.io.InputStream
+     * @exception java.io.IOException
+     *                If an error occurred while creating the InputStream.
+     */
+    public InputStream getInputStream(ZipEntry ze) throws IOException {
+        if (manifestEntry != null) {
+            getManifest();
+        }
+        if (verifier != null) {
+            verifier.setManifest(getManifest());
+            if (manifest != null) {
+                verifier.mainAttributesEnd = manifest.getMainAttributesEnd();
+            }
+            if (verifier.readCertificates()) {
+                verifier.removeMetaEntries();
+                if (manifest != null) {
+                    manifest.removeChunks();
+                }
+                if (!verifier.isSignedJar()) {
+                    verifier = null;
+                }
+            }
+        }
+        InputStream in = super.getInputStream(ze);
+        if (in == null) {
+            return null;
+        }
+        if (verifier == null || ze.getSize() == -1) {
+            return in;
+        }
+        JarVerifier.VerifierEntry entry = verifier.initEntry(ze.getName());
+        if (entry == null) {
+            return in;
+        }
+        return new JarFileInputStream(in, ze, entry);
+    }
+
+    /**
+     * Return the JarEntry specified by name or null if no such entry exists
+     * 
+     * @param name
+     *            the name of the entry in the jar file
+     * @return java.util.jar.JarEntry
+     */
+    public ZipEntry getEntry(String name) {
+        ZipEntry ze = super.getEntry(name);
+        if (ze == null) {
+            return ze;
+        }
+        JarEntry je = new JarEntry(ze);
+        je.parentJar = this;
+        return je;
+    }
+
 }
+
