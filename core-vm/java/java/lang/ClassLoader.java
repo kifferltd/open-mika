@@ -174,7 +174,7 @@ public abstract class ClassLoader {
    ** have as its parent the system ClassLoader.
    */
   protected ClassLoader() throws SecurityException {
-    this(getSystemClassLoader());
+    this(applicationClassLoader);
   }
 
   /**
@@ -196,9 +196,9 @@ public abstract class ClassLoader {
       }
     }
     /**
-    ** if parent is null we should replace it with the SystemClassLoader
+    ** if parent is null we should replace it with the applicationClassLoader
     */
-    this.parent = parent == null ? getSystemClassLoader() : parent;
+    this.parent = parent == null ? applicationClassLoader : parent;
     this.create();
   }
 
@@ -525,7 +525,7 @@ ClassFormatError
     if (result != null) {
       ClassLoader caller = getCallingClassLoader();
 
-      if (caller != null && caller != SystemClassLoader.getInstance() && caller != result) {
+      if (!isSystemClassLoader(caller)) {
         permissionCheck("getClassLoader");
       }
     }
@@ -841,6 +841,14 @@ ClassFormatError
    */
   void registerLibrary(NativeLibrary library) {
     loadedLibraries.add(library);
+  }
+
+  /**
+   ** Package-private method by which java.lang.SecurityManager can detect whether
+   ** a class loader is a system class loader without triggering a security check.
+   */
+  static boolean isSystemClassLoader(ClassLoader cl) {
+    return cl == null || cl == systemClassLoader || cl == extensionClassLoader || cl == applicationClassLoader;
   }
 
 }

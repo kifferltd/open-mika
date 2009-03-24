@@ -196,6 +196,12 @@ public final class System {
         java.security.AccessController.checkPermission(new RuntimePermission("setSecurityManager"));
       }
     }
+    try {
+      // Preload and initialize Policy implementation classes
+      // otherwise we could go recursive
+      java.security.Policy.getPolicy();
+    } catch (Exception e) {
+    }
     theSecurityManager = sm;
   }
 

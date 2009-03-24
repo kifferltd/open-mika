@@ -50,9 +50,9 @@ public final class Class implements java.io.Serializable {
 
   private static final long serialVersionUID = 3206093459760846163L;
   
-  /** The ClassLoader which defined this Class.
+  /** The ClassLoader which defined this Class. Package-private so SecurityManager can peek.
    */
-  private final ClassLoader loader;
+  ClassLoader loader;
 
   /** The protection domain to which this class belongs.
    */
@@ -90,7 +90,6 @@ public final class Class implements java.io.Serializable {
    ** (in reality they are set up by native code).
    */
   private Class(){
-    loader = null;
     domain = null;
     signers = null;
   }

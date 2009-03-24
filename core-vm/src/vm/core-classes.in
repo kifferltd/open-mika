@@ -547,6 +547,7 @@ java/util/zip/Inflater
 	getRemaining		()I		Inflater_getRemaining
 java/util/zip/ZipByteArrayInputStream
 java/util/jar/Attributes
+java/util/jar/Attributes$Name
 java/util/jar/JarFile
 # The quickInflate method of JarFile uses the same native code as ZipFile.
 #	quickInflate	([BII)[B		ZipFile_quickInflate
