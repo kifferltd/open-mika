@@ -42,7 +42,7 @@ import java.security.Permission;
 import java.security.SecurityPermission;
 import java.util.PropertyPermission;
 
-/** The default SecurityManager for Wonka.
+/** The default SecurityManager for Mika.
  ** If USE_SECURITY_MANAGER is set in wonka.vm.SecurityConfiguration
  ** then this is a real security manager which uses the AccessController
  ** to implement all checks: otherwise it is a null security manager which
@@ -56,7 +56,15 @@ public class SecurityManager {
    ** Note that use of this variable is deprecated.
    */
   protected boolean inCheck = false;
-  
+
+  /**
+   ** Tnis boolean is set when permission to create a class loader is granted.
+   ** Until then we can be sure that no classes created by such a class loader
+   ** can be on the stack, and therefore we can skip some checks (and avoid
+   ** some nasty recursion).
+   */  
+  private boolean haveUserDefinedClassLoaders;
+
   /** This is what one might call ``a workaround''.
   ** The problem is that we may not have an AWT, and in that case
   ** there will be no class java.awt.AWTPermission.  So in our
@@ -100,7 +108,12 @@ public class SecurityManager {
    */
   public void checkPermission(Permission perm) {
     if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      java.security.AccessController.getContext().checkPermission(perm);
+      try {
+        inCheck = true;
+        java.security.AccessController.getContext().checkPermission(perm);
+      } finally {
+        inCheck = false;
+      }
     }
   }
 
@@ -109,10 +122,13 @@ public class SecurityManager {
   public void checkPermission(Permission perm, Object context) {
     if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
       try {
+        inCheck = true;
         java.security.AccessControlContext acc = (AccessControlContext)context;
         acc.checkPermission(perm);
       } catch (ClassCastException cce) {
         throw new SecurityException("Not an AccessControlContext: "+context);
+      } finally {
+        inCheck = false;
       }
     }
   }
@@ -176,10 +192,9 @@ public class SecurityManager {
    ** Deprecated.
    */
   protected ClassLoader currentClassLoader() {
-    System.err.println("SecurityManager method currentClassLoader() is deprecated!");
     Class clc = currentLoadedClass();
 
-    return clc == null ? null : clc.getClassLoader();
+    return clc == null ? null : clc.loader;
   }
   
   /** Get the topmost class on the stack that was not loaded by the system class loader or bootstrap class loader.
@@ -188,26 +203,27 @@ public class SecurityManager {
    ** Deprecated.
    */
   protected Class currentLoadedClass() {
-    System.err.println("SecurityManager method currentLoadedClass() is deprecated!");
-    Class [] classes = getNonPrivilegedClassContext();
-    ClassLoader scl = ClassLoader.getSystemClassLoader();
+    if (!haveUserDefinedClassLoaders) {
+
+      return null;
+
+    }
 
     try {
-      inCheck = true;
       checkPermission(new java.security.AllPermission());
-      inCheck = false;
 
       return null;
     }
     catch (SecurityException se) {
-      inCheck = false;
-      for (int i = 0; i < classes.length; ++i) {
-        ClassLoader cl = classes[i].getClassLoader();
-        if (cl != null && cl != scl) {
-  
-          return classes[i];
-  
-        }
+    }
+
+    Class [] classes = getNonPrivilegedClassContext();
+    for (int i = 0; i < classes.length; ++i) {
+      ClassLoader cl = classes[i].loader;
+      if (!ClassLoader.isSystemClassLoader(cl)) {
+
+        return classes[i];
+
       }
     }
 
@@ -220,32 +236,27 @@ public class SecurityManager {
    ** Deprecated.
    */
   protected int classLoaderDepth() {
-    System.err.println("SecurityManager method classLoaderDepth() is deprecated!");
     if (currentLoadedClass() == null) {
 
       return -1;
 
     }
 
-    Class [] classes = getNonPrivilegedClassContext();
-    ClassLoader scl = ClassLoader.getSystemClassLoader();
-
     try {
-      inCheck = true;
       checkPermission(new java.security.AllPermission());
-      inCheck = false;
 
       return -1;
     }
     catch (SecurityException se) {
-      inCheck = false;
-      for (int i = 0; i < classes.length; ++i) {
-        ClassLoader cl = classes[i].getClassLoader();
-        if (cl != null && cl != scl) {
-  
-          return i;
-  
-        }
+    }
+
+    Class [] classes = getNonPrivilegedClassContext();
+    for (int i = 0; i < classes.length; ++i) {
+      ClassLoader cl = classes[i].loader;
+      if (!ClassLoader.isSystemClassLoader(cl)) {
+
+        return i;
+
       }
     }
 
@@ -256,7 +267,6 @@ public class SecurityManager {
    ** Deprecated.
    */
   protected boolean inClass(String name) {
-    System.err.println("SecurityManager method inClass() is deprecated!");
     return classDepth(name) >= 0;
   }
 
@@ -265,7 +275,6 @@ public class SecurityManager {
    ** Deprecated.
    */
   protected boolean inClassLoader() {
-    System.err.println("SecurityManager method inClassLoader() is deprecated!");
     return currentClassLoader() != null;
   }
   
@@ -273,7 +282,6 @@ public class SecurityManager {
    */
   public synchronized boolean getInCheck()
   {
-    System.err.println("SecurityManager method getInCheck() is deprecated!");
     return inCheck;
   }
   
@@ -283,9 +291,11 @@ public class SecurityManager {
   public  void checkCreateClassLoader()
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("createClassLoader"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("createClassLoader"));
+    }
+    // If we passed the check then user-defined class loaders may be created
+    haveUserDefinedClassLoaders = true;
   }
     
   /** Checks whether the caller has permission to modify Thread t.
@@ -303,9 +313,9 @@ public class SecurityManager {
 
     }
 
-    inCheck = true;
-    checkPermission(new RuntimePermission("modifyThread"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("modifyThread"));
+    }
   }
 
   /** Checks whether the caller has permission to modify ThreadGroup g.
@@ -323,9 +333,9 @@ public class SecurityManager {
 
     }
 
-    inCheck = true;
-    checkPermission(new RuntimePermission("modifyThreadGroup"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("modifyThreadGroup"));
+    }
   }
 
   /** Checks whether the caller has access to the declared members of ``cl''.
@@ -334,10 +344,8 @@ public class SecurityManager {
   public void checkMemberAccess(Class cl, int mtype)
     throws SecurityException
   {
-    if (mtype != java.lang.reflect.Member.PUBLIC && cl.getClassLoader() != currentClassLoader()) {
-      inCheck = true;
+    if (haveUserDefinedClassLoaders && mtype != java.lang.reflect.Member.PUBLIC && cl.loader != currentClassLoader()) {
       checkPermission(new RuntimePermission("accessDeclaredMembers."+cl.getName()));
-      inCheck = false;
     }
   }
 
@@ -348,9 +356,9 @@ public class SecurityManager {
   public void checkExit(int status)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("exitVM"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("exitVM"));
+    }
   }
 
   /** Checks whether the caller is allowed to execute the specified command.
@@ -360,9 +368,9 @@ public class SecurityManager {
   public void checkExec(String cmd)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new FilePermission(cmd, "execute"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new FilePermission(cmd, "execute"));
+    }
   }
 
   /** Checks whether the caller has permission to use IP Multicast.
@@ -371,9 +379,9 @@ public class SecurityManager {
   public void checkMulticast(InetAddress addr)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new SocketPermission(addr.getHostAddress(), "accept,connect"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new SocketPermission(addr.getHostAddress(), "accept,connect"));
+    }
   }
 
   /** Checks whether the caller has permission to use IP Multicast.
@@ -383,9 +391,9 @@ public class SecurityManager {
   public void checkMulticast(InetAddress addr, byte ttl)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new SocketPermission(addr.getHostAddress(), "accept,connect"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new SocketPermission(addr.getHostAddress(), "accept,connect"));
+    }
   }
 
   /** Checks whether the caller has permission to read the given system property.
@@ -394,9 +402,9 @@ public class SecurityManager {
   public void checkPropertyAccess(String propname)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new PropertyPermission(propname, "read"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new PropertyPermission(propname, "read"));
+    }
   }
 
   /** Checks whether the caller has permission to read or modify the system properties as a whole.
@@ -405,9 +413,9 @@ public class SecurityManager {
   public void checkPropertiesAccess()
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new PropertyPermission("*", "read,write"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new PropertyPermission("*", "read,write"));
+    }
   }
 
   /** Checks whether the caller has the SecurityPermission called ``target''.
@@ -416,9 +424,9 @@ public class SecurityManager {
   public void checkSecurityAccess(String target)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new SecurityPermission(target));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new SecurityPermission(target));
+    }
   }
 
   /** Checks whether the caller has permission to load library ``libname''.
@@ -427,9 +435,9 @@ public class SecurityManager {
   public void checkLink(String libname)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("loadLibrary."+libname));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("loadLibrary."+libname));
+    }
   }
 
   /** Checks whether the caller has permission to read the file descriptor `fd'.
@@ -439,9 +447,9 @@ public class SecurityManager {
   public void checkRead(FileDescriptor fd)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("readFileDescriptor"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("readFileDescriptor"));
+    }
   }
 
   /** Checks whether the caller has permission to read the file ``file''.
@@ -450,9 +458,9 @@ public class SecurityManager {
   public void checkRead(String file)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new FilePermission(file,"read"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new FilePermission(file,"read"));
+    }
   }
 
   /** Checks whether the given context has permission to read the file ``file''.
@@ -460,9 +468,9 @@ public class SecurityManager {
   public void checkRead(String file, Object context)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new FilePermission(file,"read"), context);
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new FilePermission(file,"read"), context);
+    }
   }
 
   /** Checks whether the caller has permission to write to the file `fd'.
@@ -472,9 +480,9 @@ public class SecurityManager {
   public void checkWrite(FileDescriptor fd)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("writeFileDescriptor"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("writeFileDescriptor"));
+    }
   }
 
   /** Checks whether the caller has permission to write to the file ``file''.
@@ -483,17 +491,18 @@ public class SecurityManager {
   public void checkWrite(String file)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new FilePermission(file,"write"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new FilePermission(file,"write"));
+    }
   }
+
 
   public void checkDelete(String file)  
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new FilePermission(file,"delete"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new FilePermission(file,"delete"));
+    }
   }
 
   /** Checks whether the caller has permission to connect to the given port.
@@ -502,14 +511,14 @@ public class SecurityManager {
   public void checkConnect(String host, int port)
     throws SecurityException
   {
-    inCheck = true;
-    if (port == -1) {
-      checkPermission(new SocketPermission(host,"resolve"));
+    if (haveUserDefinedClassLoaders) {
+      if (port == -1) {
+        checkPermission(new SocketPermission(host,"resolve"));
+      }
+      else {
+        checkPermission(new SocketPermission(host+":"+port,"connect"));
+      }
     }
-    else {
-      checkPermission(new SocketPermission(host+":"+port,"connect"));
-    }
-    inCheck = false;
   }
 
   /** Checks whether the given context has permission to connect to the given port.
@@ -518,14 +527,14 @@ public class SecurityManager {
   public void checkConnect(String host, int port, Object context)
     throws SecurityException
   {
-    inCheck = true;
-    if (port == -1) {
-      checkPermission(new SocketPermission(host,"resolve"), context);
+    if (haveUserDefinedClassLoaders) {
+      if (port == -1) {
+        checkPermission(new SocketPermission(host,"resolve"), context);
+      }
+      else {
+        checkPermission(new SocketPermission(host+":"+port,"connect"), context);
+      }
     }
-    else {
-      checkPermission(new SocketPermission(host+":"+port,"connect"), context);
-    }
-    inCheck = false;
   }
 
   /** Checks whether the caller has permission to listen to the given port.
@@ -534,14 +543,14 @@ public class SecurityManager {
   public void checkListen(int port)
     throws SecurityException
   {
-    inCheck = true;
-    if (port == 0) {
-      checkPermission(new SocketPermission("localhost:1024-","listen"));
+    if (haveUserDefinedClassLoaders) {
+      if (port == 0) {
+        checkPermission(new SocketPermission("localhost:1024-","listen"));
+      }
+      else {
+        checkPermission(new SocketPermission("localhost:"+port,"listen"));
+      }
     }
-    else {
-      checkPermission(new SocketPermission("localhost:"+port,"listen"));
-    }
-    inCheck = false;
   }
 
   /** Checks whether the caller has permission to accept incoming connections.
@@ -550,9 +559,9 @@ public class SecurityManager {
   public void checkAccept(String host, int port)
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new SocketPermission(host+":"+port,"accept"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new SocketPermission(host+":"+port,"accept"));
+    }
   }
 
   /** Checks whether the caller has permission to initiate a print job.
@@ -572,9 +581,7 @@ public class SecurityManager {
         e.printStackTrace();
         throw new SecurityException("Failed to create an AWTPermission? "+e);
       }
-      inCheck = true;
       checkPermission(perm);
-      inCheck = false;
     }
     else {
       throw new SecurityException("No AWT present?");
@@ -598,9 +605,7 @@ public class SecurityManager {
         e.printStackTrace();
         throw new SecurityException("Failed to create an AWTPermission? "+e);
       }
-      inCheck = true;
       checkPermission(perm);
-      inCheck = false;
     }
     else {
       throw new SecurityException("No AWT present?");
@@ -624,9 +629,7 @@ public class SecurityManager {
         e.printStackTrace();
         throw new SecurityException("Failed to create an AWTPermission? "+e);
       }
-      inCheck = true;
       checkPermission(perm);
-      inCheck = false;
     }
     else {
       throw new SecurityException("No AWT present?");
@@ -639,9 +642,9 @@ public class SecurityManager {
   public void checkSetFactory()
     throws SecurityException
   {
-    inCheck = true;
-    checkPermission(new RuntimePermission("setFactory"));
-    inCheck = false;
+    if (haveUserDefinedClassLoaders) {
+      checkPermission(new RuntimePermission("setFactory"));
+    }
   }
 
   /** Checks whether the caller is trusted to bring up the specified window.
@@ -666,15 +669,12 @@ public class SecurityManager {
 
       }
 
-      inCheck = true;
       try {
         checkPermission(perm);
-        inCheck = false;
 
         return true;
 
       } catch (SecurityException se) {
-        inCheck = false;
 
         return false;
 
@@ -693,28 +693,25 @@ public class SecurityManager {
   public void checkPackageAccess(String packageName)
     throws SecurityException
   {
-    String restricteds = java.security.Security.getProperty("package.definition");
+    String restricteds = java.security.Security.getProperty("package.access");
     if (restricteds == null) {
-      System.err.println("Hm, we don't seem to have a security property `package.definition'.  This is broken, someone please fix it.");
-      restricteds = "java,wonka,com.acunia.wonka";
+      restricteds = "wonka,com.acunia.wonka";
     }
 
     int comma = restricteds.indexOf(',');
     String arestricted;
-    inCheck = true;
     while (comma >= 0) {
       arestricted = restricteds.substring(0,comma);
-      if (packageName == arestricted || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
+      if (packageName.equals(arestricted) || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
         checkPermission(new RuntimePermission("accessClassInPackage."+packageName));
       }
       restricteds = restricteds.substring(comma+1);
       comma = restricteds.indexOf(',');
     }
     arestricted = restricteds;
-    if (packageName == arestricted || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
+    if (packageName.equals(arestricted) || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
       checkPermission(new RuntimePermission("accessClassInPackage."+packageName));
     }
-      inCheck = false;
   }
 
   /** Checks whether the caller has permission to define classes in the given package.
@@ -725,25 +722,22 @@ public class SecurityManager {
   {
     String restricteds = java.security.Security.getProperty("package.definition");
     if (restricteds == null) {
-      System.err.println("Hm, we don't seem to have a security property `package.definition'.  This is broken, someone please fix it.");
+      restricteds = "java,wonka,com.acunia.wonka";
     }
 
     int comma = restricteds.indexOf(',');
     String arestricted;
-    inCheck = true;
     while (comma >= 0) {
       arestricted = restricteds.substring(0,comma);
-      if (packageName == arestricted || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
+      if (packageName.equals(arestricted) || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
         checkPermission(new RuntimePermission("defineClassInPackage."+packageName));
-    inCheck = true;
       }
       restricteds = restricteds.substring(comma+1);
       comma = restricteds.indexOf(',');
     }
     arestricted = restricteds;
-    if (packageName == arestricted || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
+    if (packageName.equals(arestricted) || packageName.startsWith(arestricted) && packageName.charAt(arestricted.length()) == '.') {
       checkPermission(new RuntimePermission("defineClassInPackage."+packageName));
     }
-      inCheck = false;
   }
 }
