@@ -90,22 +90,7 @@ public final class Inet6Address extends InetAddress implements Serializable {
     family = InetAddress.TYPE_IPV6;
     hostName = name;
     
-    /*
-    if(char0 >= '0' && char0 <= '9'){
-      synchronized(positive_cache){
-        positive_cache.put(getHostAddress(), new IAddrCacheEntry(this));
-        positive_cache.put(name, new IAddrCacheEntry(this));
-      }
-    }
-    else {
-      createInetAddress(name);
-      synchronized(positive_cache){
-        positive_cache.put(this.getHostName(), new IAddrCacheEntry(this));
-        positive_cache.put(this.getHostAddress(), new IAddrCacheEntry(this));
-      }
-    }
-    */
-    addressCache = tmp;
+    ipAddressString = tmp;
     createInetAddress(name);
   }
 
@@ -169,10 +154,10 @@ public final class Inet6Address extends InetAddress implements Serializable {
   }
 
   public String getHostAddress() {
-    if(addressCache == null){
-      addressCache = IPtoIPString(ipaddress);
+    if(ipAddressString == null){
+      ipAddressString = IPtoIPString(ipaddress);
     }
-    return addressCache;
+    return ipAddressString;
   }
 
   public String toString () {

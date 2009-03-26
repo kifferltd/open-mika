@@ -652,7 +652,7 @@ java/net/InetAddress
 	address			I
 	family			I
 	hostName		Ljava/lang/String;
-	addressCache		Ljava/lang/String;
+	ipAddressString		Ljava/lang/String;
 	createInetAddress	(Ljava/lang/String;)V		InetAddress_createInetAddress
 	getLocalName		()Ljava/lang/String;		InetAddress_getLocalName
         lookupName		(Ljava/net/InetAddress;)Z	InetAddress_static_lookupName

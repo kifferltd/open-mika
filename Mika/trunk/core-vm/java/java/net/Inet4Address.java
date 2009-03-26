@@ -41,21 +41,35 @@ public final class Inet4Address extends InetAddress implements Serializable {
   */
   Inet4Address(){}
 
-  Inet4Address(int ip, String name, String ipname){
+  /**
+   ** Create an InetAddress object with the given fields.
+   ** If ttl > 0 an entry will also be created in the address cache.
+   ** @param ip The IP address in integer form
+   ** @param name The hostname
+   ** @param ipname The IP address in dotted-string form
+   ** @param ttl The time-to-live, in seconds
+   */
+  Inet4Address(int ip, String name, String ipname, int ttl){
     address = ip;
     family = InetAddress.TYPE_IPV4;
     hostName = name;
-    addressCache = ipname.toLowerCase();
-    synchronized(positive_cache){
-      positive_cache.put(name, new IAddrCacheEntry(this));
-      positive_cache.put(addressCache, new IAddrCacheEntry(this));
+    ipAddressString = ipname.toLowerCase();
+    if (ttl > 0) {
+      long expiry = System.currentTimeMillis() + (1000L * ttl);
+      synchronized(positive_cache){
+        positive_cache.put(name, new IAddrCacheEntry(this, expiry));
+        positive_cache.put(ipAddressString, new IAddrCacheEntry(this, expiry));
+      }
     }
   }
 
   /**
-  ** calling this constructor will add the address to the addressCache !
-  */
-  Inet4Address(String name) throws UnknownHostException {
+   ** Create an InetAddress object with the given fields.
+   ** If ttl > 0 an entry will also be created in the address cache.
+   ** @param name The hostname
+   ** @param ttl The time-to-live, in seconds
+   */
+  Inet4Address(String name, int ttl) throws UnknownHostException {
     int char0 = name.charAt(0);
     if(char0 >= '0' && char0 <= '9'){
       StringTokenizer s = new StringTokenizer(name,".");
@@ -74,33 +88,27 @@ public final class Inet4Address extends InetAddress implements Serializable {
         }
       }
       family = InetAddress.TYPE_IPV4;
-      synchronized(positive_cache){
-        positive_cache.put(getHostAddress(), new IAddrCacheEntry(this));
-        positive_cache.put(name, new IAddrCacheEntry(this));
+      if (ttl > 0) {
+        long expiry = System.currentTimeMillis() + (1000L * ttl);
+        synchronized(positive_cache){
+          positive_cache.put(getHostAddress(), new IAddrCacheEntry(this, expiry));
+          positive_cache.put(name, new IAddrCacheEntry(this, expiry));
+        }
       }
     }
     else {
       createInetAddress(name);
-      synchronized(positive_cache){
-        positive_cache.put(this.getHostName(), new IAddrCacheEntry(this));
-        positive_cache.put(this.getHostAddress(), new IAddrCacheEntry(this));
+      if (ttl > 0) {
+        long expiry = System.currentTimeMillis() + (1000L * ttl);
+        synchronized(positive_cache){
+          // We cache this under both the requested name and the canonical name
+          positive_cache.put(name, new IAddrCacheEntry(this, expiry));
+          positive_cache.put(this.getHostName(), new IAddrCacheEntry(this, expiry));
+          positive_cache.put(this.getHostAddress(), new IAddrCacheEntry(this, expiry));
+        }
       }
     }
   }
-  
-/*
-  private static String intToIPString(int address) {
-      StringBuffer result = new StringBuffer(16);
-      result.append((address>>>24 & 0x0ff));
-      result.append('.');
-      result.append((address>>>16 & 0x0ff));
-      result.append('.');
-      result.append((address>>>8 & 0x0ff));
-      result.append('.');
-      result.append((address & 0x0ff));
-      return result.toString();
-  }
-*/
   
   public byte[] getAddress() {
    	byte[] octets = new byte[4];

@@ -58,7 +58,7 @@ w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_ins
     return FALSE;
   }
 
-  addrCache = getReferenceField(InetAddress, F_InetAddress_addressCache);
+  addrCache = getReferenceField(InetAddress, F_InetAddress_ipAddressString);
 
   if(addrCache == NULL) {
     w_dump("InetAddress_lookupName: Avoiding Segfault\n");
