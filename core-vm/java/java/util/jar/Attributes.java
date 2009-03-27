@@ -27,8 +27,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.harmony.archive.util.Util;
-
 /**
  * The Attributes class is used to store values for Manifest entries. Attributes
  * keys are generally instances of Attributes.Name. Values associated with
@@ -132,7 +130,7 @@ public class Attributes implements Cloneable, Map {
                 return false;
             }
 
-            return Util.equalsIgnoreCase(name, ((Name) object).name);
+            return equalsIgnoreCase(name, ((Name) object).name);
         }
 
         public int hashCode() {
@@ -149,6 +147,52 @@ public class Attributes implements Cloneable, Map {
             return hashCode;
         }
 
+    }
+
+    /**
+     ** [CG 20090327] Borrowed from org.apache.harmony.archive.util.Util,
+     ** which is in vm-cmp/jar/java but not in core-vm. FIXME
+     */
+    static final char toASCIIUpperCase(char c) {
+        if ('a' <= c && c <= 'z') {
+            return (char) (c - ('a' - 'A'));
+        }
+        return c;
+    }
+
+    /**
+     ** [CG 20090327] Borrowed from org.apache.harmony.archive.util.Util,
+     ** which is in vm-cmp/jar/java but not in core-vm. FIXME
+     */
+    static final byte toASCIIUpperCase(byte b) {
+        if ('a' <= b && b <= 'z') {
+            return (byte) (b - ('a' - 'A'));
+        }
+        return b;
+    }
+
+    /**
+     ** [CG 20090327] Borrowed from org.apache.harmony.archive.util.Util,
+     ** which is in vm-cmp/jar/java but not in core-vm. FIXME
+     */
+    static final boolean equalsIgnoreCase(byte[] buf1, byte[] buf2) {
+        if (buf1 == buf2) {
+            return true;
+        }
+
+        if (buf1 == null || buf2 == null || buf1.length != buf2.length) {
+            return false;
+        }
+
+        byte b1, b2;
+
+        for (int i = 0; i < buf1.length; i++) {
+            if ((b1 = buf1[i]) != (b2 = buf2[i])
+                    && toASCIIUpperCase(b1) != toASCIIUpperCase(b2)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
