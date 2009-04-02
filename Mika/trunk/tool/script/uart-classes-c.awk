@@ -245,9 +245,11 @@ END {
   print "void loadUartClasses() {"
 
   for(c = 1; c in clazz; ++c) {
-    string = sprintf("%s%s", path[c], clazz[c]);
-    thisclazz = clazz[c]
-    printf "  clazz%s = loadOneUartClass(cstring2String(\"%s\", %d));\n", thisclazz, string, length(string);
+    basename = clazz[c];
+    thisclazz = basename;
+    gsub("_dollar_", "$", basename);
+    fullname = sprintf("%s%s", path[c], basename);
+    printf "  clazz%s = loadOneUartClass(cstring2String(\"%s\", %d));\n", thisclazz, fullname, length(fullname);
   }
   printf  "\n}\n\n"
 
