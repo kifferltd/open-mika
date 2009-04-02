@@ -30,11 +30,21 @@
 package java.util.jar;
 
 
+import java.security.cert.Certificate;
 import java.security.NoSuchAlgorithmException;
 import java.io.IOException;
+import java.io.OutputStream;
 
 class JarVerifier {
 
+  class VerifierEntry extends OutputStream {
+        public void write(int value) {
+        }
+
+        void verify() {
+        }
+  }
+  
   static void verifyBytes(byte[] bytes, String algorithm, String value) throws NoSuchAlgorithmException {
   }
 
@@ -52,4 +62,35 @@ class JarVerifier {
   static boolean verifyManifest(JarFile file) throws IOException {
     return false;
   }
+
+  int mainAttributesEnd;
+  
+  JarVerifier(String name) {
+  }
+
+  Certificate[] getCertificates(String name) {
+    return null;
+  }
+  
+  void setManifest(Manifest mf) {
+  }
+  
+  void addMetaEntry(String name, byte[] buf) {
+  }
+  
+  VerifierEntry initEntry(String name) {
+    return null;
+  }
+  
+  synchronized boolean readCertificates() {
+    return false;
+  }
+
+  void removeMetaEntries() {
+  }
+
+  boolean isSignedJar() {
+    return false;
+  }
+
 }
