@@ -217,7 +217,7 @@ typedef struct x_Thread {
   volatile x_monitor    waiting_on;
   volatile w_int        waiting_with;
 #ifndef HAVE_TIMEDWAIT
-  w_int                 sleep_ticks;           /* Number of ticks for which to sleep */
+  volatile w_int        sleep_ticks;           /* Number of ticks for which to sleep */
   pthread_cond_t       *sleeping_on_cond;  /* Condition variable on which to broadcast when timer expires */
   pthread_mutex_t      *sleeping_on_mutex; /* Mutex which should be owned when doing so */
 #endif
