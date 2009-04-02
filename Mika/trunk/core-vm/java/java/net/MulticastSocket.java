@@ -48,7 +48,7 @@ public class MulticastSocket extends DatagramSocket {
   public MulticastSocket(SocketAddress addr) throws IOException {
     super(true);
     InetSocketAddress saddr = (InetSocketAddress) addr;
-    int port = saddr.getPort();
+    int port = (saddr == null) ? 0 : saddr.getPort();
 
     if(port < 0 || port > 65535) {
       throw new IllegalArgumentException();
@@ -68,7 +68,9 @@ public class MulticastSocket extends DatagramSocket {
     }
     dsocket.create();
     dsocket.setOption(SocketOptions.SO_REUSEADDR, new Integer(1));
-    dsocket.bind(port, saddr.getAddress());  	
+    if (saddr != null) {
+      dsocket.bind(port, saddr.getAddress());  	
+    }
   }
 
   /**
