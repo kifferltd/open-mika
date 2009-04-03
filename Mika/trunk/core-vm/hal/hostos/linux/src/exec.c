@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -76,7 +76,7 @@ char* cloneCommandLinePath(void) {
 
 char *host_getCommandPath() {
   pid_t pid = getpid();
-  char buffer[64];
+  char buffer[128];
   int result;
   char* path;
   int size = 256;
