@@ -549,14 +549,14 @@ java/util/zip/ZipByteArrayInputStream
 java/util/jar/Attributes
 java/util/jar/Attributes$Name
 java/util/jar/JarFile
-# The quickInflate method of JarFile uses the same native code as ZipFile.
-#	quickInflate	([BII)[B		ZipFile_quickInflate
 java/util/jar/JarEntry
 java/util/jar/JarException
+java/util/jar/InitManifest
 java/io/Serializable
 java/io/Externalizable
 java/io/Reader
 java/io/InputStreamReader
+java/io/ByteArrayOutputStream
 java/io/BufferedReader
         locateEnd       ([CII)I                 BufferedReader_locateEnd
 java/io/ObjectStreamClass
