@@ -464,6 +464,10 @@ public class SingleTestRunner
     runner.runtest(testfile);
     runner.done();
   }
+
+  public java.io.File getResourceFile(String name) throws gnu.testlet.ResourceNotFoundException {
+   throw new gnu.testlet.ResourceNotFoundException();
+  }
 }
 
 
