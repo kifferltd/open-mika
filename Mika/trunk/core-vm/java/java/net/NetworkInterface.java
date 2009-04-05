@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2006, 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* Copyright (c) 2006, 2007, 2009 by /k/ Embedded Java Solutions.          *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -110,12 +110,16 @@ public final class NetworkInterface {
   }
 
   public Enumeration getInetAddresses() {
+     if (addresses == null) {
+       return new Vector(0).elements();
+     }
+
      return new AddrEnum(addresses); 
   }
 
 
   public String getDisplayName() {
-    return displayName;
+    return displayName != null && !"".equals(displayName) ? displayName : name;
   }
 
   public boolean equals(Object obj) {
