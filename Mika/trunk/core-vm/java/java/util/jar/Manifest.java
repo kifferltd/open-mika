@@ -18,7 +18,7 @@
 /*
  * Imported by CG 20090322 based on Apache Harmony ("enhanced") revision 757150.
  * Modified to not use java.nio (because not in OSGi RFC 26). For this I've used
- * the Mika code, hence the read/write methods are still copyright Punch-/k/.
+ * the Mika code, hence the write method is still copyright Punch-/k/.
  */
 
 package java.util.jar;
@@ -62,6 +62,11 @@ public class Manifest implements Cloneable {
     }
 
     private HashMap chunks;
+
+    /**
+     ** Manifest bytes are used for delayed entry parsing.
+    **/
+    private InitManifest im;
 
     /**
      * The end of the main attributes section in the manifest is needed in
@@ -137,10 +142,22 @@ public class Manifest implements Cloneable {
      */
     public Map getEntries() {
         initEntries();
+System.out.println("entries = " + entries);
         return entries;
     }
 
     private void initEntries() {
+        if (im == null) {
+            return;
+        }
+/*
+        try {
+          im.initEntries(entries, chunks);
+        } catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        }
+        im = null;
+*/
     }
 
     /**
@@ -161,6 +178,78 @@ public class Manifest implements Cloneable {
     public Object clone() {
         return new Manifest(this);
     }
+
+    /**
+   ** Constructs a new Manifest instance obtaining Attribute information from
+   ** the parameter InputStream.
+   ** 
+   ** @param is
+   **            The InputStream to read from
+   ** @throws IOException
+   **             If an error occurs reading the Manifest.
+   **/
+    public void read(InputStream is) throws IOException {
+      byte[] buf = readFully(is);
+
+      if (buf.length == 0) {
+        return;
+      }
+
+      // a workaround for HARMONY-5662
+      // replace EOF and NUL with another new line
+      // which does not trigger an error
+      byte b = buf[buf.length - 1];
+      if (0 == b || 26 == b) {
+        buf[buf.length - 1] = '\n';
+      }
+
+      // Attributes.Name.MANIFEST_VERSION is not used for
+      // the second parameter for RI compatibility
+      im = new InitManifest(buf, mainAttributes, null);
+      mainEnd = im.getPos();
+      // FIXME
+      im.initEntries(entries, chunks);
+      im = null;
+    }
+
+    /*
+     * Helper to read the entire contents of the manifest from the
+     * given input stream.  Usually we can do this in a single read
+     * but we need to account for 'infinite' streams, by ensuring we
+     * have a line feed within a reasonable number of characters. 
+     */
+    private byte[] readFully(InputStream is) throws IOException {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      byte[] buffer = new byte[8192];
+
+      while (true) {
+        int count = is.read(buffer);
+          if (count == -1) {
+          // TODO: Do we need to copy this, or can we live with junk at the end?
+            return baos.toByteArray();
+          }
+          baos.write(buffer, 0, count);
+
+          if (!containsLine(buffer, count)) {
+            throw new IOException("no newline in first 8192 bytes");
+          }
+        }
+      }
+
+      /*
+       * Check to see if the buffer contains a newline or carriage
+       * return character within the first 'length' bytes.  Used to
+       * check the validity of the manifest input stream.
+       */
+      private boolean containsLine(byte[] buffer, int length) {
+        for (int i = 0; i < length; i++) {
+          if (buffer[i] == 0x0A || buffer[i] == 0x0D) {
+            return true;
+        }
+                                                                                    }
+    return false;
+  }
+
 
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
@@ -252,58 +341,6 @@ public class Manifest implements Cloneable {
         }
     }
 
-    /**
-     * Constructs a new Manifest instance obtaining Attribute information from
-     * the parameter InputStream.
-     * 
-     * @param is
-     *            The InputStream to read from
-     * @throws IOException
-     *             If an error occurs reading the Manifest.
-     */
-    public void read(InputStream in) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF8"));
-    	Attributes attributes = mainAttributes;
-    	String at = br.readLine();
-    	boolean validEntry = true;
-    	
-        while (at != null) {
-            String att = at;
-             at = br.readLine();
-             while (at != null && at.startsWith(" ")) {
-                att = att+at.substring(1);
-                at = br.readLine();
-            }
-            if (att.trim().length() > 0) { //Skip empty line
-                int sep = att.indexOf(": ");
-                if (validEntry) {
-                    String name = att.substring(0,sep);
-                    String value = att.substring(sep+2);
-
-                    if (attributes == null) {
-                        if(name.equals("Name")){
-                            attributes = (Attributes) entries.get(value);
-                            if (attributes == null) {
-                                attributes = new Attributes(13);
-                                entries.put(value.trim(), attributes);
-                            }
-                        }
-                        else {
-                            validEntry = false;
-                        }
-                    }
-                    else {
-                        attributes.putValue(name,value);
-                    }
-                }
-            }
-            else {
-                attributes = null;
-                validEntry = true;
-            }
-        }
-    }
-    
     /**
      * Returns the hashCode for this instance.
      * 
