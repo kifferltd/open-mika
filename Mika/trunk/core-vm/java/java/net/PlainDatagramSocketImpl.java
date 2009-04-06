@@ -208,12 +208,23 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
           i++;
         case SO_RCVBUF:
           i++;
-        case SO_REUSEADDR:
+       case SO_REUSEADDR:
           if(value == null){//get
             return new Integer(optIntOptions(sock, -1, i));
           }
-          optIntOptions(sock, ((Integer)value).intValue(), i); //set
+
+          /*
+           * According to http://java.sun.com/javame/reference/apis/jsr219/java/net/SocketOptions.html
+           * this code should handle being passed a Boolean or a Integer
+           * also should review other SocketOptions and refactor as required.
+           */
+         try {
+           optIntOptions(sock, ((Boolean)value).booleanValue() ? 1 : 0, i); //set
+          } catch (ClassCastException cce) {
+           optIntOptions(sock, 1, i); //set
+          }
           break;
+
         case IP_MULTICAST_IF:
           if(value == null){//get
             return InetAddress.createInetAddress(optMulticastIF(sock, null, true));
