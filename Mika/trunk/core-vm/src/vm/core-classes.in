@@ -545,18 +545,12 @@ java/util/zip/Inflater
  	setDictionary		([BII)V         Inflater_setDictionary
 	end			()V             Inflater_end
 	getRemaining		()I		Inflater_getRemaining
-java/util/zip/ZipByteArrayInputStream
 java/util/jar/Attributes
-java/util/jar/Attributes$Name
 java/util/jar/JarFile
 java/util/jar/JarEntry
 java/util/jar/JarException
-java/util/jar/InitManifest
 java/io/Serializable
 java/io/Externalizable
-java/io/Reader
-java/io/InputStreamReader
-java/io/ByteArrayOutputStream
 java/io/BufferedReader
         locateEnd       ([CII)I                 BufferedReader_locateEnd
 java/io/ObjectStreamClass
@@ -595,10 +589,6 @@ java/io/FileNotFoundException
 java/io/InterruptedIOException
 java/io/StreamCorruptedException
 java/io/UTFDataFormatException
-java/io/FilePermission
-#javax/comm/SerialPortEvent
-#javax/comm/NoSuchPortException
-#javax/comm/PortInUseException
 java/text/RuleBasedCollator
 	createHashtables ()V			RuleBasedCollator_createHashtables
 	getCombiningClass (C)I			RuleBasedCollator_getCombiningClass
@@ -799,4 +789,22 @@ wonka/vm/ProcessOutputStream
   write        ([BII)V	ProcessOutputStream_write_Array
   nativeClose  ()V	ProcessOutputStream_close
 java/lang/Package
+# only needed if JAR=java (i.e. Jarfile verification is enabled)
+# TODO: find a way not to load these if JAR=none
+java/io/FilePermission
+java/io/InputStreamReader
+java/io/Reader
+java/util/jar/Attributes
+java/util/zip/ZipByteArrayInputStream
+# only needed if SECURITY=coarse or SECURITY=fine
+# TODO: find a way not to load these if SECURITY=none
+java/util/jar/InitManifest
+java/io/ByteArrayOutputStream
+# # only needed if SECURITY=fine
+# TODO: find a way not to load these if SECURITY=none or SECURITY=coarse
+java/lang/RuntimePermission
+java/security/Security
+java/security/Security$SecurityProperties
+java/security/SecurityPermission
+java/util/jar/Attributes$Name
 
