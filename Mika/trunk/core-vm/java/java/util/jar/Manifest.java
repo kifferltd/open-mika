@@ -142,7 +142,6 @@ public class Manifest implements Cloneable {
      */
     public Map getEntries() {
         initEntries();
-System.out.println("entries = " + entries);
         return entries;
     }
 
