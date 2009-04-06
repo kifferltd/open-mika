@@ -47,7 +47,7 @@ public final class System {
 
   private static SecurityManager theSecurityManager;
   private static Runtime theRuntime;
-  private static Properties systemProperties;
+  static Properties systemProperties;
   private static boolean initialized;
 
   static {
@@ -85,14 +85,14 @@ public final class System {
       ClassLoader.createApplicationClassLoader();
 
       //SETUP DEFAULT LOCALE
-      java.util.Locale.setDefault(new java.util.Locale(getProperty("user.language", "en"), getProperty("user.country", "")));
+      java.util.Locale.setDefault(new java.util.Locale(systemProperties.getProperty("user.language", "en"), systemProperties.getProperty("user.country", "")));
       
-      String theManager = getProperty("java.security.manager");
+      String theManager = systemProperties.getProperty("java.security.manager");
       if("".equals(theManager) || "default".equals(theManager)) {
         theSecurityManager = new SecurityManager();
       }
-      else {
-        // TODO: Use the given class..
+      else if (theManager != null) {
+        theSecurityManager = (SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance0();
       }
       
       initialized = true;
@@ -255,7 +255,6 @@ public final class System {
     }
     return systemProperties.getProperty(key);
   }
-
     
   public static String getProperty(String key, String defaults)
     throws SecurityException
