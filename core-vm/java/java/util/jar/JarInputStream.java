@@ -81,8 +81,6 @@ public class JarInputStream extends ZipInputStream {
         if (name.equals(JarFile.MANIFEST_NAME)) {
             mEntry = null;
             manifest = new Manifest(this, verify);
-            manifest = new Manifest(this);
-
             closeEntry();
             if (verify) {
                 verifier.setManifest(manifest);
