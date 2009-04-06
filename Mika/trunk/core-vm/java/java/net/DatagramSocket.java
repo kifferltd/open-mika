@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* Parts copyright (c) 2007, 2009 by /k/ Embedded Java Solutions.          *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -67,7 +67,8 @@ public class DatagramSocket {
   /**
   ** Special Constructor to create MulticastSockets ...
   */
-  DatagramSocket(boolean Multicast){}
+  DatagramSocket(boolean Multicast){
+  }
 
   public DatagramSocket(SocketAddress saddr) throws SocketException {
     this(saddr == null ? 0 : ((InetSocketAddress)saddr).port, saddr == null ? null : ((InetSocketAddress)saddr).addr);
@@ -78,13 +79,6 @@ public class DatagramSocket {
   }
 
   public DatagramSocket(int port) throws SocketException, SecurityException {
-  	this(port, null);
-  }
-
-  public DatagramSocket(int port, InetAddress laddr) throws SocketException, SecurityException {
-    if (laddr == null) {
-      laddr = InetAddress.allZeroAddress;
-    }
     if(port < 0 || port > 65535) {
       throw new IllegalArgumentException();
     }
@@ -103,7 +97,30 @@ public class DatagramSocket {
     }
   	
     dsocket.create();
-    dsocket.bind(port,laddr);  	
+  }
+
+  public DatagramSocket(int port, InetAddress laddr) throws SocketException, SecurityException {
+    if(port < 0 || port > 65535) {
+      throw new IllegalArgumentException();
+    }
+    InetAddress.listenCheck(port);
+    if(theFactory != null){
+      dsocket = theFactory.createDatagramSocketImpl();
+    }
+    else {
+      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      try {	
+        dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
+      }
+      catch(Exception e) {
+        dsocket = new PlainDatagramSocketImpl();
+      }
+    }
+  	
+    dsocket.create();
+    if (laddr != null) {
+      dsocket.bind(port,laddr);  	
+    }
   }
 
   public void setReuseAddress (boolean on) throws SocketException {
