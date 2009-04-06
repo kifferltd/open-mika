@@ -192,9 +192,10 @@ public final class Class implements java.io.Serializable {
     return newInstance0();
   }
 
-  /** Native portion of newInstance().
+  /** Native portion of newInstance(). Package-visible for the benefit of 
+   * java.jang.System.
    */
-  private native Object newInstance0() throws InstantiationException, IllegalAccessException;
+  native Object newInstance0() throws InstantiationException, IllegalAccessException;
 
   /** Do the same checks as for the `instanceof' operator.
    ** obj is null: return false.
