@@ -87,14 +87,6 @@ public final class System {
       //SETUP DEFAULT LOCALE
       java.util.Locale.setDefault(new java.util.Locale(systemProperties.getProperty("user.language", "en"), systemProperties.getProperty("user.country", "")));
       
-      String theManager = systemProperties.getProperty("java.security.manager");
-      if("".equals(theManager) || "default".equals(theManager)) {
-        theSecurityManager = new SecurityManager();
-      }
-      else if (theManager != null) {
-        theSecurityManager = (SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance0();
-      }
-      
       initialized = true;
     }
     catch(Throwable t){
