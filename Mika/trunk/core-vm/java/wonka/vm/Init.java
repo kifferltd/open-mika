@@ -346,6 +346,20 @@ final class Init {
       }
       System.setSecurityManager(new SecurityManager());
     }
+    else {
+      String theManager = System.getProperty("java.security.manager");
+      if("".equals(theManager) || "default".equals(theManager)) {
+        System.setSecurityManager(new SecurityManager());
+      }
+      else if (theManager != null) {
+        try {
+          System.setSecurityManager((SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance());
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
   // Start up the Garbage Collector
     debug("Init: starting Garbage Collector");
     GarbageCollector gc = GarbageCollector.getInstance();
