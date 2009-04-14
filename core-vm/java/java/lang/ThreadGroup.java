@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -151,13 +151,8 @@ public class ThreadGroup {
   public final void checkAccess() 
     throws SecurityException
   {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (parent == null) {
-        java.security.AccessController.checkPermission(new RuntimePermission("modifyThreadGroup"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkAccess(this);
       }
@@ -755,7 +750,7 @@ public class ThreadGroup {
     } else {
       if (!(e instanceof ThreadDeath)) {
         e.printStackTrace(System.err);
-        if (e instanceof Error && "true".equalsIgnoreCase(System.getProperty("mika.terminate.on.error"))) {
+        if (e instanceof Error && "true".equalsIgnoreCase(System.systemProperties.getProperty("mika.terminate.on.error"))) {
           System.err.println("VM terminated due to " + e);
           System.exit(1);
         }

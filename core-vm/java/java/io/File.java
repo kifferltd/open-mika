@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2003 by Chris Gray, /k/ Embedded Java Solutions.    *
+* Parts copyright (c) 2003, 2009 by /k/ Embedded Java Solutions.          *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -103,6 +103,7 @@ public class File implements Comparable, Serializable {
     current_working_dir = get_CWD();
     fsroot_dir = get_fsroot() + separator;
     current_working_dir = current_working_dir + separator;
+    // TODO: shouldn't we have a GetSystemProperty-like mechanism here?
     System.getProperties().setProperty("user.dir", current_working_dir);
   }
 
@@ -116,7 +117,7 @@ public class File implements Comparable, Serializable {
 
   public static File createTempFile(String pre, String suf, File dir) throws IOException {
     if(dir == null) {
-      dir = new File(System.getProperties().getProperty("java.io.tmpdir", "/tmp"));
+      dir = new File(GetSystemProperty.TMPDIR);
     }
     
     if(suf == null) {

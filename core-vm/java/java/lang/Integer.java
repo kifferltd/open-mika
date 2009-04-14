@@ -201,7 +201,7 @@ public final class Integer extends Number implements Comparable {
     String property = null;
 
     if (nm != null && nm.length() != 0) {
-      property = System.getProperty(nm);
+      property = System.systemProperties.getProperty(nm);
     }
 
     if (property == null) {

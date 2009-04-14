@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2007, 2008 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -45,10 +45,10 @@ public final class System {
   public final static PrintStream out;
   public final static PrintStream err;
 
-  private static SecurityManager theSecurityManager;
-  private static Runtime theRuntime;
+  static SecurityManager theSecurityManager;
+  static Runtime theRuntime;
   static Properties systemProperties;
-  private static boolean initialized;
+  static boolean initialized;
 
   static {
     in = new wonka.io.StandardInputStream();
@@ -86,6 +86,16 @@ public final class System {
 
       //SETUP DEFAULT LOCALE
       java.util.Locale.setDefault(new java.util.Locale(systemProperties.getProperty("user.language", "en"), systemProperties.getProperty("user.country", "")));
+      
+/*
+      String theManager = systemProperties.getProperty("java.security.manager");
+      if("".equals(theManager) || "default".equals(theManager)) {
+        theSecurityManager = new SecurityManager();
+      }
+      else if (theManager != null) {
+        theSecurityManager = (SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance0();
+      }
+*/
       
       initialized = true;
     }
@@ -183,8 +193,7 @@ public final class System {
     throws SecurityException
   { 
     if (theSecurityManager!=null) {
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER
-       || wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
         java.security.AccessController.checkPermission(new RuntimePermission("setSecurityManager"));
       }
     }
@@ -200,10 +209,7 @@ public final class System {
   public static native long currentTimeMillis();
 
   private static void propertyCheck(String propname) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission(propname, "read"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPropertyAccess(propname);
       }
@@ -211,10 +217,7 @@ public final class System {
   }
 
   private static void propertiesCheck() {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission("*", "read,write"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPropertiesAccess();
       }
@@ -268,10 +271,7 @@ public final class System {
   public static String setProperty(String key, String defaults)
     throws SecurityException
   {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission(key, "write"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPermission(new PropertyPermission(key, "write"));
       }

@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris     *
-* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
+* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by     *
+* Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -108,11 +108,8 @@ public class Thread implements Runnable {
   private boolean isDaemon; 
 
   private static void permissionCheck(String permission) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission(permission));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkPermission(new RuntimePermission(permission));
       }
@@ -129,7 +126,7 @@ public class Thread implements Runnable {
   public Thread(ThreadGroup group, Runnable runObject, String myname) 
     throws SecurityException  {
     ThreadGroup myparent;
-    SecurityManager sm = System.getSecurityManager();
+    SecurityManager sm = System.theSecurityManager;
 
     if(myname == null) {
       throw new NullPointerException();
@@ -263,13 +260,8 @@ public class Thread implements Runnable {
   public final void checkAccess() 
     throws SecurityException
   {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (parent.getParent() == null) {
-        java.security.AccessController.checkPermission(new RuntimePermission("modifyThread"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkAccess(this);
       }

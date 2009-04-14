@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by /k/ Embedded Java Solutions.                *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -88,7 +90,7 @@ public final class NewSystemClassLoader extends ClassLoader {
     if (theSystemClassLoader == null) {
       PermissionCollection theAllPermission;
 
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
         theAllPermission = new com.acunia.wonka.security.DefaultPermissionCollection();
         theAllPermission.add(new AllPermission());
         systemProtectionDomain = new ProtectionDomain(null, theAllPermission);
@@ -97,10 +99,7 @@ public final class NewSystemClassLoader extends ClassLoader {
       setSystemClassLoader(theSystemClassLoader);
     }
     else {
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-        java.security.AccessController.checkPermission(new RuntimePermission("getClassLoader"));
-      }
-      else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
         SecurityManager sm = System.getSecurityManager();
         if(sm!=null) {
           sm.checkPermission(new RuntimePermission("getClassLoader"));

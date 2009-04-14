@@ -52,7 +52,7 @@ class GetSecurityProperty implements java.security.PrivilegedAction {
   static {
     int l;
 
-    if (SecurityConfiguration.USE_ACCESS_CONTROLLER) {
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       GetSecurityProperty gsp = new GetSecurityProperty("inetaddress.cache.ttl");
       AccessController.doPrivileged(gsp);
       Integer l0 = (Integer)gsp.get();
@@ -94,7 +94,7 @@ class GetSecurityProperty implements java.security.PrivilegedAction {
       value = new Integer(Integer.parseInt(Security.getProperty(key)));
     }
     catch (Throwable t) {
-      t.printStackTrace();
+      // t.printStackTrace();
     }
 
     return null;

@@ -210,10 +210,7 @@ public class InetAddress implements Serializable {
 ** Since all Socket classes use InetAddress this does NOT unneeded class loading ...
 */
   static void permissionCheck(String host) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(host, "resolve"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkConnect(host, -1);
@@ -222,10 +219,7 @@ public class InetAddress implements Serializable {
   }
 
   static void factoryCheck() {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission("setFactory"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkSetFactory();
@@ -234,15 +228,7 @@ public class InetAddress implements Serializable {
   }
 
   static void listenCheck(int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (port == 0) {
-        java.security.AccessController.checkPermission(new SocketPermission("localhost:1024-","listen"));
-      }
-      else {
-        java.security.AccessController.checkPermission(new SocketPermission("localhost:"+port,"listen"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkListen(port);
@@ -251,10 +237,7 @@ public class InetAddress implements Serializable {
   }
 
   static void acceptCheck(String host, int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(host+":"+port,"accept"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkAccept(host, port);
@@ -263,15 +246,7 @@ public class InetAddress implements Serializable {
   }
 
   static void connectCheck(String host, int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (port == -1) {
-        java.security.AccessController.checkPermission(new SocketPermission(host,"resolve"));
-      }
-      else {
-        java.security.AccessController.checkPermission(new SocketPermission(host+":"+port,"connect"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkConnect(host, port);
