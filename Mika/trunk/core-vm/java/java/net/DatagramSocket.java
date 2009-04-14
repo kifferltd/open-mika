@@ -53,10 +53,7 @@ public class DatagramSocket {
   }
 
   static void multicastCheck(InetAddress addr) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(addr.getHostAddress(),"accept,connect"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkMulticast(addr);
@@ -87,7 +84,7 @@ public class DatagramSocket {
       dsocket = theFactory.createDatagramSocketImpl();
     }
     else {
-      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
       try {	
         dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
       }
@@ -97,6 +94,7 @@ public class DatagramSocket {
     }
   	
     dsocket.create();
+    dsocket.bind(port, InetAddress.allZeroAddress);  	
   }
 
   public DatagramSocket(int port, InetAddress laddr) throws SocketException, SecurityException {
@@ -108,7 +106,7 @@ public class DatagramSocket {
       dsocket = theFactory.createDatagramSocketImpl();
     }
     else {
-      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
       try {	
         dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
       }
@@ -118,9 +116,7 @@ public class DatagramSocket {
     }
   	
     dsocket.create();
-    if (laddr != null) {
-      dsocket.bind(port,laddr);  	
-    }
+    dsocket.bind(port, laddr == null ? InetAddress.allZeroAddress : laddr);  	
   }
 
   public void setReuseAddress (boolean on) throws SocketException {
@@ -152,10 +148,7 @@ public class DatagramSocket {
         InetSocketAddress isa = (InetSocketAddress)bindAddr;
         InetAddress address = isa.getAddress();
         int port = isa.getPort();
-        if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-          java.security.AccessController.checkPermission(new SocketPermission("localhost:" + (port == 0 ? "1024-" : Integer.toString(port)), "listen"));
-        }
-        else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+        if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
           SecurityManager sm = System.getSecurityManager();
           if (sm != null) {
             sm.checkListen(port);

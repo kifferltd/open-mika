@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
+* Parts copyright (c) 2004, 2005, 2006, 2008, 2009 by /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -335,31 +335,24 @@ final class Init {
       System.exit(1);
     }
 
-  // Install the default SecurityManager if required
-    if (SecurityConfiguration.SET_SECURITY_MANAGER) {
-      debug("Init: installing SecurityManager");
-      if (SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-        debug("Init: note that Wonka libraries will not use this SecurityManager, but will call AccessController directly."); 
-      }
-      else if (!SecurityConfiguration.USE_SECURITY_MANAGER) {
-        debug("Init: note that Wonka libraries will not use this SecurityManager (security checks are disabled)."); 
-      }
+    String theManager = System.getProperty("java.security.manager");
+    if("".equals(theManager) || "default".equals(theManager)) {
+      debug("Init: installing default SecurityManager."); 
       System.setSecurityManager(new SecurityManager());
     }
-    else {
-      String theManager = System.getProperty("java.security.manager");
-      if("".equals(theManager) || "default".equals(theManager)) {
-        System.setSecurityManager(new SecurityManager());
+    else if (theManager != null) {
+      try {
+        debug("Init: installing custom SecurityManager: " + theManager); 
+        System.setSecurityManager((SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance());
       }
-      else if (theManager != null) {
-        try {
-          System.setSecurityManager((SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance());
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
+    else {
+        debug("Init: not installing a SecurityManager"); 
+    }
+
   // Start up the Garbage Collector
     debug("Init: starting Garbage Collector");
     GarbageCollector gc = GarbageCollector.getInstance();

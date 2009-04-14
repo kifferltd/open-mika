@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2007, 2008 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by /k/ Embedded Java   *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -132,7 +132,7 @@ public class Runtime {
 
   private void debug(String s) {
      if (!verboseSet)  {
-        String verboseProperty = System.getProperty("mika.verbose", "");
+        String verboseProperty = System.systemProperties.getProperty("mika.verbose", "");
         verboseVal = (verboseProperty.indexOf("shutdown") >= 0);
         verboseSet = true;
      }
@@ -150,11 +150,8 @@ public class Runtime {
   }
 
   private void permissionCheck(String permission) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission(permission));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkPermission(new RuntimePermission(permission));
       }
@@ -465,7 +462,7 @@ public class Runtime {
 
   public void loadLibrary(String libname) throws SecurityException, UnsatisfiedLinkError {
 
-    SecurityManager sm = System.getSecurityManager();
+    SecurityManager sm = System.theSecurityManager;
 
     if (sm != null) {
 //      sm.checkLink(new RuntimePermission(libname));
@@ -528,7 +525,7 @@ public class Runtime {
       ** No luck -> get the path from java.library.path and look it up.
       */
       
-      path = System.getProperty("java.library.path", null);
+      path = System.systemProperties.getProperty("java.library.path", null);
       handle = loadLibrary0(libname, path);
     }
 

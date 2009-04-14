@@ -80,7 +80,7 @@ public final class Boolean implements java.io.Serializable {
     String property = null;
 
     if (nm != null && nm.length() != 0) {
-      property = System.getProperty(nm);
+      property = System.systemProperties.getProperty(nm);
     }
 
     if (property == null) {

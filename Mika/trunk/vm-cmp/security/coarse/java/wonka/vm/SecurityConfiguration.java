@@ -1,69 +1,51 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.          *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written            *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS     *
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,     *
+* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT    *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR      *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,       *
+* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
 **************************************************************************/
-
-
-/*
-** $Id: SecurityConfiguration.java,v 1.1.1.1 2004/07/12 14:07:48 cvs Exp $
-*/
 
 package wonka.vm;
 
 /**
- ** This interface gathers together a number of constants which affect the
- ** behaviour of Wonka's security framework.
+ ** This interface is used ti determine whether security checks are enabled.
+ ** N.B.: the setting 'coarse' is deprecated, please use 'fine' which now
+ ** has the same effect.
  */
 public interface SecurityConfiguration {
 
   /**
-   ** The two flags USE_SECURITY_MANAGER and USE_ACCESS_CONTROLLER
-   ** determine how access control checks are performed by the Wonka
-   ** class libaries.  If both are false then no checks are performed.
-   **
-   ** If USE_ACCESS_CONTROLLER is true, the Wonka classes will call the 
-   ** AccessController directly to perform security checks.
-   ** This flag overrides USE_SECURITY_MANAGER.
-   */
-  public final boolean USE_ACCESS_CONTROLLER = false;
-
-  /**
-   ** If USE_SECURITY_MANAGER is true, the Wonka classes will use the idiom
+   ** If ENABLE_SECURITY_CHECKS is true, the Mika class libraries will invoke 
+   ** the security manager to perform security checks, using the idiom
    **    SecurityManager s = System.getSecurityManager();
    **    if (s != null) {
    **      s.checkFoo(bar);
    **     }
-   ** to perform security checks.
    */
-  public final boolean USE_SECURITY_MANAGER = true;
-
-  /**
-   ** If SET_SECURITY_MANAGER is true, com.acunia.wonka.Init will instantiate 
-   ** the default SecurityManager before invoking the starting class.  The
-   ** default SecurityManager uses the AccessController.
-   **
-   ** If SET_SECURITY_MANAGER is false, it is up to the user to install a
-   ** SecurityManager if one is required. 
-   */
-  public final boolean SET_SECURITY_MANAGER = false;
+  public final boolean ENABLE_SECURITY_CHECKS = true;
 
 }
 

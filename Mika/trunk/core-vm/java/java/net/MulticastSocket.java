@@ -58,7 +58,7 @@ public class MulticastSocket extends DatagramSocket {
       dsocket = DatagramSocket.theFactory.createDatagramSocketImpl();
     }
     else {
-      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
       try {	
         dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
       }
@@ -68,7 +68,7 @@ public class MulticastSocket extends DatagramSocket {
     }
     dsocket.create();
     dsocket.setOption(SocketOptions.SO_REUSEADDR, new Integer(1));
-    if (saddr != null) {
+    if (saddr != null && port != 0) {
       dsocket.bind(port, saddr.getAddress());  	
     }
   }
@@ -86,7 +86,7 @@ public class MulticastSocket extends DatagramSocket {
       dsocket = DatagramSocket.theFactory.createDatagramSocketImpl();
     }
     else {
-      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
       try {	
         dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
       }
@@ -104,10 +104,7 @@ public class MulticastSocket extends DatagramSocket {
   }
 
   private static void multicastCheck(InetAddress addr, byte ttl) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(addr.getHostAddress(), "accept,connect"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkMulticast(addr,ttl);

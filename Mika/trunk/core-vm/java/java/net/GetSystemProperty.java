@@ -38,6 +38,7 @@ import java.security.AccessController;
 class GetSystemProperty implements java.security.PrivilegedAction {
 
   static final String IMPL_PREFIX;
+  static final String DATAGRAM_SOCKET_IMPL;
   static final String PROTOCOL_HANDLER_PKGS;
 
   private String key;
@@ -51,7 +52,7 @@ class GetSystemProperty implements java.security.PrivilegedAction {
   static {
     GetSystemProperty gsp;
 
-    if (SecurityConfiguration.USE_ACCESS_CONTROLLER) {
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       gsp = new GetSystemProperty("impl.prefix","Plain");
       AccessController.doPrivileged(gsp);
       IMPL_PREFIX = gsp.get();
@@ -64,6 +65,7 @@ class GetSystemProperty implements java.security.PrivilegedAction {
       IMPL_PREFIX = System.getProperty("impl.prefix", "Plain");
       PROTOCOL_HANDLER_PKGS = System.getProperty("java.protocol.handler.pkgs", "wonka.net");
     }
+    DATAGRAM_SOCKET_IMPL = "java.net."+ IMPL_PREFIX + "DatagramSocketImpl";
   }
 
   /**
