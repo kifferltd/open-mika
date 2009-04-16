@@ -32,6 +32,8 @@
 package java.io;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -40,6 +42,8 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
+
+import wonka.vm.SecurityConfiguration;
 
 public class File implements Comparable, Serializable {
 
@@ -76,6 +80,7 @@ public class File implements Comparable, Serializable {
    ** The absolute path used to open the file, after path mungeing.
    */
   private transient  String     absolutePath;
+
   /**
    ** Same as absolutePath, but after eliminating './' and '../' sequences.
    ** Generated on demand by toURL().
@@ -89,11 +94,41 @@ public class File implements Comparable, Serializable {
 
   private static native String get_CWD();
   private static native String get_fsroot();
-  private static native void init();
   
+  private static String extractPathFromURI(URI uri) throws IllegalArgumentException {
+    if (!uri.isAbsolute()) {
+      throw new IllegalArgumentException("URI is not absolute: " + uri);
+    }
+
+    if (!uri.getRawSchemeSpecificPart().startsWith("/")) {
+      throw new IllegalArgumentException("URI is not hierarchical: " + uri);
+    }
+
+    if (!"file".equalsIgnoreCase(uri.getScheme())) {
+      throw new IllegalArgumentException("URI has wrong scheme: " + uri);
+    }
+
+    if (uri.getRawPath() == null || uri.getRawPath().length() == 0) {
+      throw new IllegalArgumentException("URI has no path: " + uri);
+    }
+
+    if (uri.getRawAuthority() != null) {
+      throw new IllegalArgumentException("URI contains an authority: " + uri);
+    }
+
+    if (uri.getRawQuery() != null) {
+      throw new IllegalArgumentException("URI contains a query: " + uri);
+    }
+
+    if (uri.getRawFragment() != null) {
+      throw new IllegalArgumentException("URI contains a fragment: " + uri);
+    }
+
+
+    return uri.getPath();
+  }
+
   static {
-    init();
-    
     separator = GetSystemProperty.FILE_SEPARATOR;
     pathSeparator = GetSystemProperty.PATH_SEPARATOR;
     separatorChar = separator.charAt(0);
@@ -115,7 +150,7 @@ public class File implements Comparable, Serializable {
     return createTempFile(pre, suf, null);
   }
 
-  public static File createTempFile(String pre, String suf, File dir) throws IOException {
+  public static File createTempFile(String pre, String suf, File dir) throws IOException, SecurityException {
     if(dir == null) {
       dir = new File(GetSystemProperty.TMPDIR);
     }
@@ -233,6 +268,10 @@ public class File implements Comparable, Serializable {
     this((dir == null ? "" : dir.getPath()), name);
   }
 
+  public File(URI uri) throws NullPointerException, IllegalArgumentException {
+    this(extractPathFromURI(uri));
+  }
+
   public String toString() {
     return fullname;
   }
@@ -321,12 +360,15 @@ public class File implements Comparable, Serializable {
     return absolute;
   }
 
-  public boolean isHidden() {
+  public boolean isHidden() throws SecurityException {
+    readCheck(); 
     return (filename.charAt(0) == '.');
   }
   
-  public boolean createNewFile() throws IOException {
+  // TODO: this is supposed to be atomic wrt any other file ops!
+  public boolean createNewFile() throws IOException, SecurityException {
     if(!this.exists()) {
+      writeCheck();
       try {
         FileOutputStream fo = new FileOutputStream(this);
         fo.close();
@@ -338,9 +380,19 @@ public class File implements Comparable, Serializable {
     return false;
   }
 
-  public native boolean exists() throws SecurityException;
+  public boolean exists() throws SecurityException {
+    readCheck();
+    return _exists();
+  }
 
-  public native String[] list() throws SecurityException;
+  public native boolean _exists();
+
+  public String[] list() throws SecurityException {
+    readCheck();
+    return _list();
+  }
+
+  public native String[] _list();
 
   public String[] list(FilenameFilter filter) throws SecurityException {
     String[] files = this.list();
@@ -395,19 +447,50 @@ public class File implements Comparable, Serializable {
     return (File[])alist.toArray(result);
   }
 
-  public native boolean canRead() throws SecurityException;
+  public boolean canRead() throws SecurityException {
+    readCheck();
+    return _canRead();
+  }
 
-  public native boolean canWrite() throws SecurityException;
+  public native boolean _canRead();
 
-  public native boolean isFile() throws SecurityException;
+  public boolean canWrite() throws SecurityException {
+    writeCheck();
+    return _canWrite();
+  }
 
-  public native boolean isDirectory() throws SecurityException;
+  public native boolean _canWrite();
 
-  public native long lastModified() throws SecurityException;
+  public boolean isFile() throws SecurityException {
+    readCheck();
+    return _isFile();
+  }
 
-  public native boolean setLastModified(long time) throws SecurityException;
+  public native boolean _isFile();
+
+  public boolean isDirectory() throws SecurityException {
+    readCheck();
+    return _isDirectory();
+  }
+
+  public native boolean _isDirectory();
+
+  public long lastModified() throws SecurityException {
+    readCheck();
+    return _lastModified();
+  }
+
+  public native long _lastModified();
+
+  public boolean setLastModified(long time) throws SecurityException {
+    writeCheck();
+    return _setLastModified(time);
+  }
+
+  public native boolean _setLastModified(long time);
 
   public void deleteOnExit() throws SecurityException {
+    deleteCheck();
     if(toBeDeleted == null) {
       createShutdownHook();
     }
@@ -433,11 +516,26 @@ public class File implements Comparable, Serializable {
     }
   }
 
-  public native boolean setReadOnly() throws SecurityException;
+  public boolean setReadOnly() throws SecurityException {
+    writeCheck();
+    return _setReadOnly();
+  }
 
-  public native long length() throws SecurityException;
+  public native boolean _setReadOnly();
 
-  public native boolean mkdir() throws SecurityException;
+  public long length() throws SecurityException {
+    readCheck();
+    return _length();
+  }
+
+  public native long _length();
+
+  public boolean mkdir() throws SecurityException {
+    writeCheck();
+    return _mkdir();
+  }
+
+  public native boolean _mkdir();
 
   public boolean mkdirs() throws SecurityException {
     boolean result = false;
@@ -451,13 +549,20 @@ public class File implements Comparable, Serializable {
     return result;
   }
 
-  private native boolean rename(String src, String dest);
+  private native boolean _rename(String src, String dest);
   
   public boolean renameTo(File dest) throws SecurityException {
-    return rename(absolutePath, dest.getAbsolutePath());
+    writeCheck();
+    dest.writeCheck();
+    return _rename(absolutePath, dest.getAbsolutePath());
   }
 
-  public native boolean delete() throws SecurityException;
+  public boolean delete() throws SecurityException {
+    deleteCheck();
+    return _delete();
+  }
+
+  public native boolean _delete();
 
   public URL toURL() throws MalformedURLException {
     if(canonicalPath == null) {
@@ -466,4 +571,42 @@ public class File implements Comparable, Serializable {
     return new URL("file", "", canonicalPath);
   }
 
+  public URI toURI() {
+    if(canonicalPath == null) {
+      canonicalPath = pack(absolutePath);
+    }
+
+    try {
+      return new URI("file", null, canonicalPath, null, null);
+    } catch (URISyntaxException e) {
+      return null;
+    }
+  }
+
+  private void readCheck() {
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.getSecurityManager();
+      if (sm != null) {
+        sm.checkRead(fullname);
+      }
+    }
+  }
+
+  private void writeCheck() {
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.getSecurityManager();
+      if (sm != null) {
+        sm.checkWrite(fullname);
+      }
+    }
+  }
+
+  private void deleteCheck() {
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.getSecurityManager();
+      if (sm != null) {
+        sm.checkDelete(fullname);
+      }
+    }
+  }
 }
