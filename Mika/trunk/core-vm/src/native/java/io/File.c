@@ -236,102 +236,49 @@ w_boolean File_mkdir(JNIEnv *env, jobject thisFile) {
   return result;
 }
 
-// TODO: get rid of remaining JNI cruft
-
-#ifndef _Included_File
-#define _Included_File
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-static w_instance   fileclazz;
-static w_instance   stringclazz;
-static w_field absname;
-
-JNIEXPORT void JNICALL File_init
-  (JNIEnv *env, w_instance thisClazz) {
-  
-  fileclazz = thisClazz;
-  stringclazz = (*env)->FindClass(env, "java/lang/String");
-  absname = (*env)->GetFieldID(env, thisClazz, "absname", "Ljava/lang/String;");
-  
-}
-
-/*
- * Class:     File
- * Method:    setLastModified
- * Signature: (J)Z
- */
-
-JNIEXPORT jboolean JNICALL File_setModTime(JNIEnv *env, jobject thisObj, jlong modtime) {
-  jboolean        isCopy;
-  const char      *pathname;
-  jstring         path;
-  jboolean        result;
+w_boolean File_setModTime(JNIEnv *env, w_instance thisFile, w_long modtime) {
+  char *pathname;
+  w_boolean        result;
   struct utimbuf  buf;
 
-  path = (jstring)(*env)->GetObjectField(env, thisObj, absname);
-  pathname = (*env)->GetStringUTFChars(env, path, &isCopy);
+  pathname = getFileName(thisFile);
   modtime = modtime / 1000;
 
   buf.actime  = (time_t) modtime; 
   buf.modtime = (time_t) modtime; 
 
+  result = (0 == vfs_utime(pathname, &buf));
 
-  result = (0 == vfs_utime(pathname, &buf)) ? JNI_TRUE : JNI_FALSE;
-  if(isCopy == JNI_TRUE) (*env)->ReleaseStringUTFChars(env, path, pathname);
+  freeFileName(pathname);
+
   return result;
 }
 
-/*
- * Class:     File
- * Method:    renameTo
- * Signature: (Ljava/io/File;)Z
- */
-
-JNIEXPORT jboolean JNICALL File_rename(JNIEnv *env, jobject thisObj, jstring file1, jstring file2) {
+w_boolean File_rename(JNIEnv *env, w_instance thisObj, w_instance file1String, w_instance file2String) {
     
-  char      *pathname1;
-  char      *pathname2;
-  jsize           ulen1 = (*env)->GetStringUTFLength(env, file1);
-  jsize           ulen2 = (*env)->GetStringUTFLength(env, file2);
-  jsize           slen1 = (*env)->GetStringLength(env, file1);
-  jsize           slen2 = (*env)->GetStringLength(env, file2);
-  jboolean        result = FALSE;
+  w_string file1_string;
+  w_string file2_string;
+  char *pathname1;
+  char *pathname2;
+  w_int pathlength1;
+  w_int pathlength2;
+  w_boolean        result = FALSE;
 
-  pathname1 = allocClearedMem(ulen1 + 1);
-
-  if(!pathname1) {
-    return JNI_FALSE;
+  if (!file1String || !file2String) {
+    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
   }
 
-  pathname2 = allocClearedMem(ulen2 + 1);
+  file1_string = String2string(file1String);
+  file2_string = String2string(file2String);
+  pathname1 = string2UTF8(file1_string, &pathlength1) + 2;
+  pathname2 = string2UTF8(file1_string, &pathlength2) + 2;
 
-  if(!pathname2){
-    releaseMem(pathname1);
-    return JNI_FALSE;
-  }
+  result = (vfs_rename(pathname1, pathname2) == 0);
 
-  (*env)->GetStringUTFRegion(env, file1, 0, slen1, pathname1);	
-  (*env)->GetStringUTFRegion(env, file2, 0, slen2, pathname2);	
-
-  if(!(*env)-> ExceptionCheck(env)){
-    if (vfs_rename(pathname1, pathname2) == 0) {
-      result = JNI_TRUE;
-    }
-    else {
-      result = JNI_FALSE;
-    }
-  }
-
-  releaseMem(pathname1);
-  releaseMem(pathname2);
+  releaseMem(pathname1 - 2);
+  releaseMem(pathname2 - 2);
 
   return result;
 
 }
 
-#ifdef __cplusplus
-}
-#endif
-#endif

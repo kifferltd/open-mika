@@ -736,22 +736,21 @@ java/io/FileOutputStream
         flush                   ()V                                             Java_FileOutputStream_flush
 java/io/File
 	absname			Ljava/lang/String;
-        exists                  ()Z                     File_exists
-        list                    ()[Ljava/lang/String;   File_list
-        canRead                 ()Z                     File_canRead
-        canWrite                ()Z                     File_canWrite
-        isFile                  ()Z                     File_isFile
-        isDirectory             ()Z                     File_isDirectory
-        lastModified            ()J                     File_lastModified
-        length                  ()J                     File_length
-        mkdir                   ()Z                     File_mkdir
-        rename                  (Ljava/lang/String;Ljava/lang/String;)Z File_rename
-	setReadOnly		()Z			File_setReadOnly
-        delete                  ()Z    	 		File_delete
+        _exists			()Z                     File_exists
+        _list			()[Ljava/lang/String;   File_list
+        _canRead		()Z                     File_canRead
+        _canWrite		()Z                     File_canWrite
+        _isFile			()Z                     File_isFile
+        _isDirectory		()Z                     File_isDirectory
+        _lastModified		()J                     File_lastModified
+        _length			()J                     File_length
+        _mkdir			()Z                     File_mkdir
+        _rename			(Ljava/lang/String;Ljava/lang/String;)Z File_rename
+	_setReadOnly		()Z			File_setReadOnly
+        _delete			()Z    	 		File_delete
         get_CWD                 ()Ljava/lang/String;	File_get_CWD
         get_fsroot              ()Ljava/lang/String;    File_get_fsroot
-        init                    ()V                     File_init
-	setLastModified		(J)Z			File_setModTime
+	_setLastModified	(J)Z			File_setModTime
 java/io/RandomAccessFile
 	fd			Ljava/io/FIleDescriptor;
         createFromString        (Ljava/lang/String;I)I  RandomAccessFile_createFromString
