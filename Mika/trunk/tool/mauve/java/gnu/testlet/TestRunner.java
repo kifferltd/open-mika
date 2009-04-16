@@ -25,6 +25,7 @@
 
 package gnu.testlet;
 import java.io.*;
+import java.security.*;
 
 public class TestRunner
     extends TestHarness 
@@ -460,7 +461,13 @@ public int getTestsFailed() {
 
   public String getTempDirectory ()
   {
-    new File("/tmp/mauve");
+    final File tempdir = new File("/tmp/mauve");
+    AccessController.doPrivileged(new PrivilegedAction() {
+      public Object run() {
+        tempdir.mkdir();
+        return null; // nothing to return
+      }
+    });
     return "/tmp/mauve/";
   }
 

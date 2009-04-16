@@ -40,6 +40,7 @@ public class canWrite implements Testlet
     try
       {
 	// Setup
+        harness.setclass("java.io.File");
 	String tmp = harness.getTempDirectory();
 	tmpdir = new File(tmp + File.separator + "mauve-testdir");
 	harness.check(tmpdir.mkdir() || tmpdir.exists(), "temp directory");
