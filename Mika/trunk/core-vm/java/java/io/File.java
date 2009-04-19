@@ -56,9 +56,10 @@ public class File implements Comparable, Serializable {
   public static final String pathSeparator;
   public static final char   pathSeparatorChar;
 
-  private static String current_working_dir = null;
-  private static String fsroot_dir = null;
+  private static String current_working_dir;
+  private static String fsroot_dir;
   private static String fsrootedPrefix;
+  private static Random prng;
 
   /**
    ** Name by which the File object was created ('path' parameter of the constructor).
@@ -71,10 +72,12 @@ public class File implements Comparable, Serializable {
   **  - everything up to the last '/' (exclusive) goes in 'dirpath'.
   **  - everything after the last '/' (exclusive) goes in 'filename'.
   */
+  private transient  boolean    empty;
   private transient  boolean    absolute;
   private transient  boolean    fsrooted;
   private transient  String     dirpath;
   private transient  String     filename;
+  private transient  int        hashcode;
 
   /**
    ** The absolute path used to open the file, after path mungeing.
@@ -132,7 +135,7 @@ public class File implements Comparable, Serializable {
     separator = GetSystemProperty.FILE_SEPARATOR;
     pathSeparator = GetSystemProperty.PATH_SEPARATOR;
     separatorChar = separator.charAt(0);
-    pathSeparatorChar = separator.charAt(0);
+    pathSeparatorChar = pathSeparator.charAt(0);
     fsrootedPrefix = "{}" + separator;
 
     current_working_dir = get_CWD();
@@ -146,11 +149,11 @@ public class File implements Comparable, Serializable {
     return new File[] { new File("/") };
   }
 
-  public static File createTempFile(String pre, String suf) throws IOException {
+  public static File createTempFile(String pre, String suf) throws IllegalArgumentException, IOException {
     return createTempFile(pre, suf, null);
   }
 
-  public static File createTempFile(String pre, String suf, File dir) throws IOException, SecurityException {
+  public static synchronized File createTempFile(String pre, String suf, File dir) throws IllegalArgumentException, IOException, SecurityException {
     if(dir == null) {
       dir = new File(GetSystemProperty.TMPDIR);
     }
@@ -159,11 +162,15 @@ public class File implements Comparable, Serializable {
       suf = ".tmp";
     }
 
-    if(pre == null) {
-      pre = "";
+    if(pre == null || pre.length() < 3) {
+      throw new IllegalArgumentException("prefix must be at least three chars: " + pre);
     }
 
-    File result = new File(dir, pre + (new Random()).nextLong() + suf);
+    if (prng == null) {
+      prng = new Random();
+    }
+
+    File result = new File(dir, pre + prng.nextLong() + suf);
     result.createNewFile();
 
     return result;
@@ -195,7 +202,6 @@ public class File implements Comparable, Serializable {
       result += "/" + (String)iter.next();
       
     if(!path.startsWith("/") && (result.length() > 0)) result = result.substring(1);
-    //if(path.endsWith("/")) result += "/";
 
     return result; 
   }
@@ -208,16 +214,24 @@ public class File implements Comparable, Serializable {
       result  = result.substring(0, i) + result.substring(i + 1);
       i = result.indexOf("//");
     }
+
+    i = result.lastIndexOf('/');
+    if (i > 0 && i == result.length() - 1) {
+      result = result.substring(0, i);
+    }
+ 
     return result;
   }
 
   public File(String path) throws NullPointerException {
     String relpath;
-    filename = "";
+    hashcode = path.hashCode() ^ 1234321;
 
-    if(path.length() == 0) path = current_working_dir;
-
-    if(path.charAt(0) == separatorChar) {  // Absolute path
+    if(path.length() == 0) {
+      path = current_working_dir;
+      relpath = ".";
+      empty = true;
+    } else if(path.charAt(0) == separatorChar) {  // Absolute path
       relpath = path.substring(1);
       absolute = true;
     } else if(path.startsWith(fsrootedPrefix)) {  // fsrooted path
@@ -227,21 +241,28 @@ public class File implements Comparable, Serializable {
       relpath = path;
     }
 
+    relpath = stripSlashes(relpath);
+
     try {
 
       int dirpathlen = relpath.lastIndexOf(separatorChar);
+
       if (dirpathlen < 0) {
-        dirpath = "";
+        dirpath = null;
         filename = relpath;
       } else {
         dirpath = relpath.substring(0, dirpathlen);
         filename = relpath.substring(dirpathlen + 1);
       }
+      //int l = filename.length();
+      //while (l > 1 && filename.charAt(l - 1) == '/') {
+      //  filename = filename.substring(0, --l);
+      //}
     } catch (IndexOutOfBoundsException e) {
       e.printStackTrace();
     }
 
-    fullname = stripSlashes(path);
+    fullname = empty ? "" : stripSlashes(path);
     if (absolute) {
       absolutePath = fullname;
     }
@@ -252,7 +273,7 @@ public class File implements Comparable, Serializable {
       absolutePath = current_working_dir + fullname;
     }
     int len = absolutePath.length() - 1;
-    if(len >= 0 && absolutePath.charAt(len) == '/') {
+    if(len > 0 && absolutePath.charAt(len) == '/') {
       absolutePath = absolutePath.substring(0, len);
     }
 
@@ -261,7 +282,7 @@ public class File implements Comparable, Serializable {
   }
 
   public File(String dirname, String name) throws NullPointerException {
-    this(name == null ? null : (dirname == null ? "" : (dirname.equals("") ? "" : dirname + separatorChar)) + name);
+    this(name == null ? null : (dirname == null ? "" : (dirname.equals("") ? "" : dirname.endsWith("/") ? dirname : dirname + separatorChar)) + name);
   }
 
   public File(File dir, String name) throws NullPointerException {
@@ -294,22 +315,32 @@ public class File implements Comparable, Serializable {
   }
 
   public int hashCode() {
-    return getPath().hashCode() ^ 1234321;
+    return hashcode;
   }
 
   public String getName() {
+    if (empty) {
+      return "";
+    }
+
     String result = new String(filename);
     int snip = filename.lastIndexOf(separatorChar);
-    if (snip >= 0) result = result.substring(snip+1);
+    if (snip >= 0) {
+      result = result.substring(snip+1);
+    }
 
     return result;
   }
 
   public String getPath() {
-    return fullname;
+    return empty ? "" : fullname;
   }
 
   public String getAbsolutePath() {
+    // bizarre but it seems to be what Sun is doing
+    if (empty) {
+      return "./";
+    }
     return absolutePath;
   }
 
@@ -329,7 +360,7 @@ public class File implements Comparable, Serializable {
   }
 
   public String getParent() {
-    if (dirpath.length() + filename.length() == 0) {
+    if (dirpath == null || dirpath.length() + filename.length() == 0) {
 
       return null;
 
@@ -366,7 +397,8 @@ public class File implements Comparable, Serializable {
   }
   
   // TODO: this is supposed to be atomic wrt any other file ops!
-  public boolean createNewFile() throws IOException, SecurityException {
+  // Well at least we can make the method synchronized ...
+  public synchronized boolean createNewFile() throws IOException, SecurityException {
     if(!this.exists()) {
       writeCheck();
       try {
@@ -396,8 +428,13 @@ public class File implements Comparable, Serializable {
 
   public String[] list(FilenameFilter filter) throws SecurityException {
     String[] files = this.list();
-    if(files == null){
+
+    if (files == null){
       return null;
+    }
+
+    if (filter == null){
+      return files;
     }
 
     ArrayList alist = new ArrayList(files.length);
@@ -434,9 +471,15 @@ public class File implements Comparable, Serializable {
 
   public File[] listFiles(FileFilter filter) throws SecurityException {
     File[] files = this.listFiles();
-    if(files == null){
+
+    if (files == null){
       return null;
     }
+
+    if (filter == null){
+      return files;
+    }
+
     ArrayList alist = new ArrayList(files.length);
     for(int i=0; i < files.length; i++){
       if(filter.accept(files[i])){
@@ -518,6 +561,11 @@ public class File implements Comparable, Serializable {
 
   public boolean setReadOnly() throws SecurityException {
     writeCheck();
+    if (empty) {
+      // imitate Sun
+      return false;
+    }
+
     return _setReadOnly();
   }
 
@@ -565,19 +613,26 @@ public class File implements Comparable, Serializable {
   public native boolean _delete();
 
   public URL toURL() throws MalformedURLException {
+    if (empty) {
+      return new URL("file:./");
+    }
+
     if(canonicalPath == null) {
       canonicalPath = pack(absolutePath);
     }
-    return new URL("file", "", canonicalPath);
+    return new URL("file", "", isDirectory() ? canonicalPath + "/" : canonicalPath);
   }
 
   public URI toURI() {
-    if(canonicalPath == null) {
+    String uriPath = empty ? "./" : canonicalPath;
+
+    if(uriPath == null) {
       canonicalPath = pack(absolutePath);
+      uriPath = canonicalPath;
     }
 
     try {
-      return new URI("file", null, canonicalPath, null, null);
+      return new URI("file", null, uriPath, null, null);
     } catch (URISyntaxException e) {
       return null;
     }

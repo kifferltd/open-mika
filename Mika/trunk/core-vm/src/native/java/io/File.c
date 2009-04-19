@@ -225,11 +225,13 @@ w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
 
 w_boolean File_mkdir(JNIEnv *env, jobject thisFile) {
   char *pathname;
+  int rc;
   w_boolean result;
   
   pathname = getFileName(thisFile);	  
 
-  result = (vfs_mkdir((w_ubyte *)pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO) != -1);
+  rc = vfs_mkdir((w_ubyte *)pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO);
+  result = (rc != -1);
 
   freeFileName(pathname);
 
@@ -271,7 +273,7 @@ w_boolean File_rename(JNIEnv *env, w_instance thisObj, w_instance file1String, w
   file1_string = String2string(file1String);
   file2_string = String2string(file2String);
   pathname1 = string2UTF8(file1_string, &pathlength1) + 2;
-  pathname2 = string2UTF8(file1_string, &pathlength2) + 2;
+  pathname2 = string2UTF8(file2_string, &pathlength2) + 2;
 
   result = (vfs_rename(pathname1, pathname2) == 0);
 
