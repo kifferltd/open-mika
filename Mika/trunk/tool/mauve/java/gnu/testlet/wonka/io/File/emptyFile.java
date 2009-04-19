@@ -66,13 +66,12 @@ public class emptyFile implements Testlet
                       new URL("file", "", srcdirstr)), true);
         harness.check(testfile.toURL().getPath(),
                       new URL("file", "", srcdirstr).getPath());
-/*      TODO ...  
         harness.checkPoint("toURI");
         harness.check(testfile.toURI().toString(), 
                       "file:" + srcdirstr + pathseperator);
         harness.check(new File(testfile.toURI()).equals(
                       testfile.getAbsoluteFile()));
-        */
+        harness.checkPoint("standard operations");
         harness.check(testfile.canRead(), false, "canRead()");
         harness.check(testfile.canWrite(), false, "canWrite()");
         harness.check(testfile.exists(), false, "exists()");
