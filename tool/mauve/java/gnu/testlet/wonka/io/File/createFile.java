@@ -49,6 +49,7 @@ public class createFile implements Testlet
     try
       {
         harness = a_harness;
+        harness.setclass("java.io.File");
         tempDir = new File(harness.getTempDirectory());
         returned = new String[N_THREADS][];
         completed = 0;

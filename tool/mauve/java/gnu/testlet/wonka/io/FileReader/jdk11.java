@@ -36,17 +36,8 @@ public class jdk11 implements Testlet
   
   public void test (TestHarness testharness)
   {
-    TestHarness harness = null;
-    try 
-      {
-		harness = testharness;
-      } 
-    catch (ClassCastException cce)
-      {
-		harness.fail ("Harness not an instance of SimpleTestHarness");
-		return;
-      }
-
+    TestHarness harness = testharness;
+    harness.setclass("java.io.FileReader");
     String tmpfile = harness.getTempDirectory()
       + File.separator + "mauve-jdk11.tst";
     File f = new File(tmpfile);

@@ -39,6 +39,7 @@ public class fileoutputstream implements Testlet
   {
     String tmpfile = ".";
 
+    harness.setclass("java.io.FileOutputStream");
     try
       {
 	new FileOutputStream(tmpfile);
