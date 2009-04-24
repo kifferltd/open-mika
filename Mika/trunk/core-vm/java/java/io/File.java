@@ -254,10 +254,6 @@ public class File implements Comparable, Serializable {
         dirpath = relpath.substring(0, dirpathlen);
         filename = relpath.substring(dirpathlen + 1);
       }
-      //int l = filename.length();
-      //while (l > 1 && filename.charAt(l - 1) == '/') {
-      //  filename = filename.substring(0, --l);
-      //}
     } catch (IndexOutOfBoundsException e) {
       e.printStackTrace();
     }
@@ -399,18 +395,11 @@ public class File implements Comparable, Serializable {
   // TODO: this is supposed to be atomic wrt any other file ops!
   // Well at least we can make the method synchronized ...
   public synchronized boolean createNewFile() throws IOException, SecurityException {
-    if(!this.exists()) {
-      writeCheck();
-      try {
-        FileOutputStream fo = new FileOutputStream(this);
-        fo.close();
-        return true;
-      } catch(FileNotFoundException e) {
-        throw new IOException("Unable to create " + this);
-      }
-    }
-    return false;
+    writeCheck();
+    return _createNew();
   }
+
+  public native boolean _createNew() throws IOException;
 
   public boolean exists() throws SecurityException {
     readCheck();

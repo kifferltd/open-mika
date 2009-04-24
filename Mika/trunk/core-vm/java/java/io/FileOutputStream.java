@@ -35,11 +35,6 @@ public class FileOutputStream extends OutputStream {
 
   private FileDescriptor fd;
 
-  private native int createFromString(String path, boolean append);
-
-  private native void createFromFileDescriptor(FileDescriptor fdObj)
-    throws SecurityException;
-
   private static void permissionCheck(String path) {
     if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
@@ -49,41 +44,50 @@ public class FileOutputStream extends OutputStream {
     }
   }
 
+  private static void permissionCheck(FileDescriptor fdObj) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.getSecurityManager();
+      if (sm!=null) {
+        sm.checkWrite(fdObj);
+      }
+    }
+  }
+
   public FileOutputStream(String path) throws SecurityException, FileNotFoundException {
     permissionCheck(path);
-    if(createFromString((new File(path)).getAbsolutePath(), false) != 0) {  
-      throw new FileNotFoundException(path);
-    }
+    File file = new File(path);
+    checkForDirectory(file);
+    fd = new FileDescriptor(file.getAbsolutePath(), FileDescriptor.MODE_WRITE);
   }
 
   public FileOutputStream(String path, boolean append) 
     throws SecurityException, FileNotFoundException
   {
     permissionCheck(path);
-    if(createFromString((new File(path)).getAbsolutePath(), append) != 0) {
-      throw new FileNotFoundException(path + " (" + append + ")");
-    }
+    File file = new File(path);
+    checkForDirectory(file);
+    fd = new FileDescriptor(file.getAbsolutePath(), append ? FileDescriptor.MODE_APPEND : FileDescriptor.MODE_WRITE);
   }
 
   public FileOutputStream(File file, boolean append) throws SecurityException, FileNotFoundException {
     permissionCheck(file.getAbsolutePath());
-    if(createFromString(file.getAbsolutePath(), append) != 0) {
-      throw new FileNotFoundException("" + file);
-    }
+    checkForDirectory(file);
+    fd = new FileDescriptor(file.getAbsolutePath(), append ? FileDescriptor.MODE_APPEND : FileDescriptor.MODE_WRITE);
   }
+
   public FileOutputStream(File file) throws SecurityException, FileNotFoundException {
     this(file, false);
   }
 
   public FileOutputStream(FileDescriptor fdObj) throws SecurityException {
-    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
-      SecurityManager sm = System.getSecurityManager();
-      if(sm!=null) {
-        sm.checkWrite(fdObj);
-      }
-    }
+    permissionCheck(fdObj);
     fd = fdObj;
-    createFromFileDescriptor(fdObj);
+  }
+
+  private void checkForDirectory(File file) throws FileNotFoundException {
+    if (!file.exists() || file.isDirectory()) {
+      throw new FileNotFoundException(file.getPath() + " is a directory");
+    }
   }
 
   public final FileDescriptor getFD() throws IOException {

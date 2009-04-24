@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -29,15 +29,39 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-#include "wonka.h"
+#include "core-classes.h"
 #include "threads.h"
+#include "vfs.h"
+#include "wonka.h"
+#include "wstrings.h"
 
 /*
- * Class:     FileDescriptor
- * Method:    sync
- * Signature: ()V
- */
-void Java_FileDescriptor_sync
+** Open a file and store the fileName and wotsit fields in thisFileDescriptor;
+** set validFD true. The path string must be an absolute path and 'modenum' 
+** must be one of the following:
+** 0 -> read -> fopen(3) mode "r"
+*/
+void FileDescriptor_createFromPath(JNIEnv *env, w_instance thisFileDescriptor, w_instance pathString, w_int modenum) {
+  w_string path_string = pathString ? String2string(pathString) : NULL;
+  w_int path_length;
+  w_ubyte *path = string2UTF8(path_string, &path_length) + 2;
+  w_ubyte *mode = modenum == 0 ? "r" : modenum == 1 ? "w+" : modenum == 2 ? "a+" : NULL;
+  void *file;
+
+  if (!mode) {
+    throwException(JNIEnv2w_thread(env), clazzInternalError, NULL);
+  }
+
+  file = vfs_fopen(path, mode);
+  if (!file) {
+    throwException(JNIEnv2w_thread(env), clazzIOException, "could not open file '%s' using mode '%s': %s\n", path, mode, strerror(errno));
+  }
+  releaseMem(path - 2);
+
+  setWotsitField(thisFileDescriptor, F_FileDescriptor_fd, file);
+}
+
+void FileDescriptor_sync
   (JNIEnv *env, jobject thisObj) {
 
   woempa(9, "sync !");

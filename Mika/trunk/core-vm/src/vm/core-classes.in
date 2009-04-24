@@ -720,22 +720,24 @@ java/io/FileDescriptor
 	validFD			Z
 	fileName		Ljava/lang/String;
 	fd			+
-        sync                    ()V                                             Java_FileDescriptor_sync
+	createFromPath		(Ljava/lang/String;I)V	FileDescriptor_createFromPath
+        sync                    ()V                     FileDescriptor_sync
 java/io/FileInputStream
-        createFromString        (Ljava/lang/String;)I                           Java_FileInputStream_createFromString
-        read                    ()I                                             Java_FileInputStream_read 
-        readIntoBuffer          ([BII)I                                         Java_FileInputStream_readIntoBuffer
-        skip                    (J)J                                            Java_FileInputStream_skip
-        available               ()I                                             Java_FileInputStream_available
-        close                   ()V                                             Java_FileInputStream_close
+	fd			java/io/FileDescriptor
+        read                    ()I                                             FileInputStream_read 
+        readIntoBuffer          ([BII)I                                         FileInputStream_readIntoBuffer
+        skip                    (J)J                                            FileInputStream_skip
+        available               ()I                                             FileInputStream_available
+        close                   ()V                                             FileInputStream_close
 java/io/FileOutputStream
-        createFromString        (Ljava/lang/String;Z)I                          Java_FileOutputStream_createFromString
-        write                   (I)V                                            Java_FileOutputStream_write
-        writeFromBuffer         ([BII)V                                         Java_FileOutputStream_writeFromBuffer
-        close                   ()V                                             Java_FileOutputStream_close
-        flush                   ()V                                             Java_FileOutputStream_flush
+	fd			java/io/FileDescriptor
+        write                   (I)V                                            FileOutputStream_write
+        writeFromBuffer         ([BII)V                                         FileOutputStream_writeFromBuffer
+        close                   ()V                                             FileOutputStream_close
+        flush                   ()V                                             FileOutputStream_flush
 java/io/File
 	absname			Ljava/lang/String;
+        _createNew		()Z                     File_createNew
         _exists			()Z                     File_exists
         _list			()[Ljava/lang/String;   File_list
         _canRead		()Z                     File_canRead
