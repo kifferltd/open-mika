@@ -331,7 +331,8 @@ public final class SystemClassLoader extends ClassLoader {
         catch (IOException e){}
       }
       catch (ClassCastException cce) {
-        File f = new File(bootclasspath[i] + name);
+        // if it's not a jarfile it must be a directory
+        File f = new File((File)bootclasspath[i], name);
         if (f.isFile()) {
           try {
             return new FileInputStream(f);
