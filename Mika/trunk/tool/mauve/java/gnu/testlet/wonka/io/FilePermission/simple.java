@@ -30,6 +30,7 @@ public class simple implements Testlet
 {
   public void test(TestHarness harness)
   {
+    harness.setclass("java.io.FilePermission");
     // Test for a classpath regression.
     Permissions p = new Permissions();
     // (The following used to use the bogus action "nothing" ... but

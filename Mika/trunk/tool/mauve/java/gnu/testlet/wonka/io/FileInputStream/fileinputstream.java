@@ -39,6 +39,7 @@ public class fileinputstream implements Testlet
   {
     String tmpfile = ".";
 
+    harness.setclass("java.io.FileInputStream");
     try
       {
 	new FileInputStream(tmpfile);
