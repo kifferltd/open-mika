@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -33,6 +33,7 @@
 #include <vfs.h>
 #include <vfs_fcntl.h>
 #include "core-classes.h"
+#include "exception.h"
 #include "fields.h"
 #include "wstrings.h"
 
@@ -54,11 +55,34 @@ char *getFileName(w_instance thisFile) {
 
 w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
   char *pathname;
-  jboolean result;
+  w_boolean result;
   
   pathname = getFileName(thisFile);	  
 
   result = (vfs_stat(pathname, statbufptr) != -1);
+
+  freeFileName(pathname);
+
+  return result;
+}
+
+w_boolean File_createNew (JNIEnv *env, w_instance thisFile) {
+  struct vfs_STAT statbuf;
+  struct vfs_FILE *file;
+  char *pathname;
+  w_boolean result;
+  
+  pathname = getFileName(thisFile);	  
+  result = !!vfs_stat(pathname, &statbuf);
+  if (result) {
+    file = vfs_fopen(pathname, "w+");
+    if (file) {
+      vfs_fclose(file);
+    }
+    else {
+      throwException(JNIEnv2w_thread(env), clazzIOException, "could not open file '%s' using mode w+: %s\n", pathname, strerror(errno));
+    }
+  }
 
   freeFileName(pathname);
 
@@ -141,7 +165,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
 w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
   char *pathname;
   struct vfs_STAT statbuf;
-  jboolean result;
+  w_boolean result;
   const int WRITABLE = VFS_S_IWUSR | VFS_S_IWGRP | VFS_S_IWOTH;
   
   pathname = getFileName(thisFile);	  

@@ -35,11 +35,6 @@ public class FileInputStream extends InputStream {
 
   private FileDescriptor fd;
 
-  private native int createFromString(String path);
-
-  private native void createFromFileDescriptor(FileDescriptor fdObj)
-    throws SecurityException;
-
   public FileInputStream(String path) throws SecurityException, FileNotFoundException {
     if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
@@ -47,9 +42,11 @@ public class FileInputStream extends InputStream {
         sm.checkRead(path);
       }
     }
-    if(createFromString((new File(path)).getAbsolutePath()) != 0) {
+    File file = new File(path);
+    if (!file.exists() || file.isDirectory()) {
       throw new FileNotFoundException(path);
     }
+    fd = new FileDescriptor(new File(path).getAbsolutePath(), FileDescriptor.MODE_READ);
   }
   
   public FileInputStream(File file) throws SecurityException, FileNotFoundException {
@@ -59,9 +56,10 @@ public class FileInputStream extends InputStream {
         sm.checkRead(file.getAbsolutePath());
       }
     }
-    if(createFromString(file.getAbsolutePath()) != 0) {
-      throw new FileNotFoundException("" + file);
+    if (!file.exists() || file.isDirectory()) {
+      throw new FileNotFoundException(file.getPath());
     }
+    fd = new FileDescriptor(file.getAbsolutePath(), FileDescriptor.MODE_READ);
   }
 
   public FileInputStream(FileDescriptor fdObj) throws SecurityException {
@@ -72,7 +70,6 @@ public class FileInputStream extends InputStream {
       }
     }
     fd = fdObj;
-    createFromFileDescriptor(fdObj);
   }
 
   public synchronized native int read()

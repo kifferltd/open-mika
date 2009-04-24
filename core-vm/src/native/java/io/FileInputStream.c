@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -35,126 +35,62 @@
 #include "fields.h"
 #include "vfs.h"
 #include "vfs_fcntl.h"
-
-static w_instance fileinput_clazz;
-static w_instance filedesc_clazz;
-static w_method filedesc_constructor;
-static w_field fd_field;
-static w_field fd;
-static w_field name;
-static w_field filedesc_validFD;
-
-static void FileInputStreamInit(JNIEnv *env, jobject thisObj) {
-  fileinput_clazz = (*env)->GetObjectClass(env, thisObj);
-  filedesc_clazz = (*env)->FindClass(env, "java/io/FileDescriptor");
-  filedesc_constructor = (*env)->GetMethodID(env, filedesc_clazz, "<init>", "()V");
-  fd_field = (*env)->GetFieldID(env, fileinput_clazz, "fd", "Ljava/io/FileDescriptor;");
-  fd = (*env)->GetFieldID(env, filedesc_clazz, "fd", "I");
-  name = (*env)->GetFieldID(env, filedesc_clazz, "fileName", "Ljava/lang/String;");
-  filedesc_validFD = (*env)->GetFieldID(env, filedesc_clazz, "validFD", "Z");
-}
+#include "wstrings.h"
 
 /*
- * Class:     FileInputStream
- * Method:    createFromString
- * Signature: (Ljava/lang/String;)V
- */
+** Get the file descriptor's name as a C-style UTF8 string. After you've
+** finished with the name, call freeFileDescriptorName() on the result to
+** free up the memory.
+*/
+char *getFISFileName(w_instance thisFileInputStream) {
+  w_instance fd;
+  w_instance pathString;
+  w_string path;
 
-JNIEXPORT jint JNICALL Java_FileInputStream_createFromString
-(JNIEnv *env, jobject thisObj, jstring path) {
+  fd = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
+  pathString = getReferenceField(fd, F_FileDescriptor_fileName);
+  path = String2string(pathString);
 
-	const char  *pathname;
-	jboolean    isCopy;
-	vfs_FILE    *file;
-	jobject     obj;
-
-	if(!name) FileInputStreamInit(env, thisObj);
-
-	pathname = (*env)->GetStringUTFChars(env, path, &isCopy);	  
-
-	file = vfs_fopen(pathname, "r");
-
-	if(isCopy == JNI_TRUE) (*env)->ReleaseStringUTFChars(env, path, pathname);
-
-	if(file == NULL) {
-
-		return 1;
-
-	} else {
-		obj = (*env)->NewObject(env, filedesc_clazz, filedesc_constructor);
-		(*env)->SetObjectField(env, thisObj, fd_field, obj);
-
-		(*env)->SetBooleanField(env, obj, filedesc_validFD, 1);
-		setWotsitField(obj, F_FileDescriptor_fd, file);
-		(*env)->SetObjectField(env, obj, name, path);
-	}
-
-	return 0;
-
+  return (char*)string2UTF8(path, NULL) + 2;
 }
 
-/*
- * Class:     FileInputStream
- * Method:    createFromFileDescriptor
- * Signature: (Ljava/io/FileDescriptor;)V
- */
-JNIEXPORT void JNICALL Java_FileInputStream_createFromFileDescriptor
-  (JNIEnv *env, jobject thisObj, jobject filedesc) {
+#define freeFileName(n) releaseMem((n)-2)
 
-  if(!name) FileInputStreamInit(env, thisObj);
-  
-  (*env)->SetObjectField(env, thisObj, fd_field, filedesc);
-	  
-}
-
-/*
- * Class:     FileInputStream
- * Method:    read
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_FileInputStream_read
-  (JNIEnv *env, jobject thisObj) {
-
-  jobject     obj;
+w_int FileInputStream_read
+  (JNIEnv *env, w_instance thisFileInputStream) {
+  w_instance     fdObj;
   vfs_FILE    *file;
-  jint        result = -1;
+  w_int        result = -1;
 
-  obj = (*env)->GetObjectField(env, thisObj, fd_field);
-  file = getWotsitField(obj, F_FileDescriptor_fd);
+  fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
+  file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
     throwIOException(JNIEnv2w_thread(env));
     result = 0;
   } else {
-    if(!vfs_feof(file)) result = vfs_fgetc(file);
+    if(!vfs_feof(file)) {
+      result = vfs_fgetc(file);
+    }
   }
 
   return result;
 }
 
-/*
- * Class:     FileInputStream
- * Method:    readIntoBuffer
- * Signature: ([BII)I
- */
-JNIEXPORT jint JNICALL Java_FileInputStream_readIntoBuffer
-  (JNIEnv *env, jobject thisObj, jbyteArray buffer, jint offset, jint length) {
-
-  jobject     obj;
+w_int FileInputStream_readIntoBuffer
+  (JNIEnv *env, w_instance thisFileInputStream, w_instance buffer, w_int offset, w_int length) {
+  w_instance     fdObj;
   vfs_FILE    *file;
-  jint        result;
-  jboolean    isCopy;
-  jbyte       *bytes;
-  jbyte       *data;
+  w_int        result;
+  w_byte       *bytes;
+  w_byte       *data;
 
   if(!buffer) {
     throwNullPointerException(JNIEnv2w_thread(env));
     return -1;
   }
   
-  bytes = (*env)->GetByteArrayElements(env, buffer, &isCopy);
-  
-  if(offset < 0 || length < 0 || offset > (*env)->GetArrayLength(env, buffer) - length) {
+  if(offset < 0 || length < 0 || offset > instance2Array_length(buffer) - length) {
     throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
     return -1;
   }
@@ -163,8 +99,9 @@ JNIEXPORT jint JNICALL Java_FileInputStream_readIntoBuffer
     return 0;
   }
 
-  obj = (*env)->GetObjectField(env, thisObj, fd_field);
-  file = getWotsitField(obj, F_FileDescriptor_fd);
+  bytes = instance2Array_byte(buffer);
+  fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
+  file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
     throwIOException(JNIEnv2w_thread(env));
@@ -177,26 +114,19 @@ JNIEXPORT jint JNICALL Java_FileInputStream_readIntoBuffer
     }
   }
 
-  if(isCopy == JNI_TRUE) (*env)->ReleaseByteArrayElements(env, buffer, bytes, 0);
-
   return result;
 }
 
-/*
- * Class:     FileInputStream
- * Method:    skip
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_FileInputStream_skip
-  (JNIEnv *env, jobject thisObj, jlong n) {
+w_long FileInputStream_skip
+  (JNIEnv *env, w_instance thisFileInputStream, w_long n) {
 
-  jobject     obj;
+  w_instance fdObj;
   vfs_FILE    *file;
-  jlong       result = n;
-  jlong       prev_pos;
+  w_long       result = n;
+  w_long       prev_pos;
 
-  obj = (*env)->GetObjectField(env, thisObj, fd_field);
-  file = getWotsitField(obj, F_FileDescriptor_fd);
+  fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
+  file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
     throwIOException(JNIEnv2w_thread(env));
@@ -216,27 +146,19 @@ JNIEXPORT jlong JNICALL Java_FileInputStream_skip
   return result;
 }
 
-/*
- * Class:     FileInputStream
- * Method:    available
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_FileInputStream_available
-  (JNIEnv *env, jobject thisObj) {
+w_int FileInputStream_available
+  (JNIEnv *env, w_instance thisFileInputStream) {
 
-  jobject         obj;
+  w_instance         fdObj;
   vfs_FILE        *file;
-  jint            result;
-  jboolean        isCopy;
-  jstring         path;
+  w_int            result;
   const char      *filename;
   struct vfs_STAT statbuf;
 
-  obj = (*env)->GetObjectField(env, thisObj, fd_field);
-  file = getWotsitField(obj, F_FileDescriptor_fd);
+  fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
+  file = getWotsitField(fdObj, F_FileDescriptor_fd);
 
-  path = (jstring)((*env)->GetObjectField(env, obj, name));
-  filename = (*env)->GetStringUTFChars(env, path, &isCopy);	 
+  filename = getFISFileName(thisFileInputStream);
   
   if(file == NULL) {
     throwIOException(JNIEnv2w_thread(env));
@@ -250,30 +172,23 @@ JNIEXPORT jint JNICALL Java_FileInputStream_available
     }
   }
 
-  if(isCopy == JNI_TRUE) (*env)->ReleaseStringUTFChars(env, path, filename);
-
   return result;  
 }
 
-/*
- * Class:     FileInputStream
- * Method:    close
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_FileInputStream_close
-  (JNIEnv *env, jobject thisObj) {
+void FileInputStream_close
+  (JNIEnv *env, w_instance thisFileInputStream) {
 
-  jobject     obj;
+  w_instance     fdObj;
   vfs_FILE    *file;
 
-  obj = (*env)->GetObjectField(env, thisObj, fd_field);
+  fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
 
-  if (obj) {
-    file = getWotsitField(obj, F_FileDescriptor_fd);
+  if (fdObj) {
+    file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
     if(file) {
       vfs_fclose(file);
-      clearWotsitField(obj, F_FileDescriptor_fd);
+      clearWotsitField(fdObj, F_FileDescriptor_fd);
     }
   }
 }
