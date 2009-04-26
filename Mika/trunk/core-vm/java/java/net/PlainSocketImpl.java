@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,21 +11,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 package java.net;
@@ -37,7 +40,11 @@ class PlainSocketImpl extends SocketImpl {
 
   private InputStream in;
   private OutputStream out;
-  private int timeout = 0;
+  private int timeout;
+  private boolean oob;
+  private boolean keepalive;
+  private boolean nodelay;
+  private int linger = -1;
   private boolean open;
 
   InetAddress localAddress;
@@ -49,40 +56,98 @@ class PlainSocketImpl extends SocketImpl {
   public PlainSocketImpl() { }
 
   public synchronized Object getOption(int opt) throws SocketException {
-    if (opt == SO_TIMEOUT){
+    switch (opt) {
+    case SO_TIMEOUT:
       return new Integer(timeout);
+
+    case SO_RCVBUF:
+      return new Integer(getRcvBuf());
+
+    case SO_SNDBUF:
+      return new Integer(getSndBuf());
+
+    case SO_KEEPALIVE:
+      return new Boolean(keepalive);
+
+    case SO_LINGER:
+      return new Integer(linger);
+
+    case SO_OOBINLINE:
+      return new Boolean(oob);
+
+    case TCP_NODELAY:
+      return new Boolean(nodelay);
+
+    case SO_BINDADDR:
+      return remoteAddress;
+
+    case IP_TOS:
+      return new Integer(getIpTos());
+
+    default:
+      return PlainDatagramSocketImpl.options(opt, null, getSocket());
     }
-    else if(opt == SO_KEEPALIVE) {
-      return new Boolean(getKeepAlive());
-    }
-    else if(opt == TCP_NODELAY) {
-      return new Boolean(getNoDelay());
-    }
-    return PlainDatagramSocketImpl.options(opt, null, getSocket());
   }
 
   public synchronized void setOption(int opt, Object value) throws SocketException {
     if(value == null){
       throw new SocketException("a non 'null' option value is required");
     }
-    if(opt == SO_TIMEOUT){
+
+    switch (opt) {
+    case SO_TIMEOUT:
       if(value instanceof Integer){
         Integer iv = (Integer)value;
         timeout = iv.intValue();
-        setSoTimeout(iv);
+        setSoTimeout(timeout);
       }
-    }
-    else if(opt == SO_KEEPALIVE){
-       if(value instanceof Boolean){
-         setKeepAlive((Boolean)value);
+      break;
+
+    case SO_RCVBUF:
+      if(value instanceof Integer){
+        setRcvBuf(((Integer)value).intValue());
+      }
+      break;
+
+    case SO_SNDBUF:
+      if(value instanceof Integer){
+        setSndBuf(((Integer)value).intValue());
+      }
+      break;
+
+    case SO_KEEPALIVE:
+      keepalive = value instanceof Boolean ? ((Boolean)value).booleanValue() : true;
+      setKeepAlive(keepalive);
+      break;
+
+    case SO_LINGER:
+       if(value instanceof Boolean && !((Boolean)value).booleanValue()) {
+         linger = -1;
+         setLinger(-1);
        }
-    }
-    else if(opt == TCP_NODELAY) {
-       if(value instanceof Boolean){
-         setNoDelay((Boolean)value);
+       else if(value instanceof Integer){
+         linger = ((Integer)value).intValue();
+         setLinger(linger);
        }
-    }
-    else {
+      break;
+
+    case SO_OOBINLINE:
+      oob = value instanceof Boolean ? ((Boolean)value).booleanValue() : true;
+      setOOBInline(oob);
+      break;
+
+    case TCP_NODELAY:
+      nodelay = value instanceof Boolean ? ((Boolean)value).booleanValue() : true;
+      setNoDelay(nodelay);
+      break;
+
+    case IP_TOS:
+      if(value instanceof Integer){
+        setIpTos(((Integer)value).intValue());
+      }
+      break;
+
+    default:
       PlainDatagramSocketImpl.options(opt, value, getSocket());
     }
   }
@@ -181,29 +246,42 @@ class PlainSocketImpl extends SocketImpl {
   private native void nativeCreate();
   private native int nativeAccept(SocketImpl s) throws IOException;
   private native void shutdown(boolean in) throws IOException;
-  private native boolean getKeepAlive() throws SocketException;
-  private native void setKeepAlive(Boolean b) throws SocketException;
-  private native boolean getNoDelay() throws SocketException;
-  private native void setNoDelay(Boolean b) throws SocketException;
-  private native void setSoTimeout(Integer t) throws SocketException;
+  private native void setKeepAlive(boolean on) throws SocketException;
+  private native void setNoDelay(boolean on) throws SocketException;
+  private native void setSoTimeout(int millis) throws SocketException;
+  private native int getRcvBuf() throws SocketException;
+  private native void setRcvBuf(int size) throws SocketException;
+  private native int getSndBuf() throws SocketException;
+  private native void setSndBuf(int size) throws SocketException;
+  private native void setLinger(int secs) throws SocketException;
+  private native void setOOBInline(boolean on) throws SocketException;
+  private native int getIpTos() throws SocketException;
+  private native void setIpTos(int tos) throws SocketException;
   protected synchronized native void nativeConnect() throws IOException;
   protected synchronized native void nativeBind() throws IOException;
   protected synchronized native void nativeListen(int backlog) throws IOException;
 
   //straight calls to native code ...
 
+  protected native void sendUrgentData(int udata) throws IOException;
   protected synchronized native int available() throws IOException;
   protected synchronized native void close() throws IOException;
 
   /*
   TCP_NODELAY = 0x0001;    --> Boolean
+  IP_TOS = 0x0003;         --> Integer
   SO_LINGER = 0x0080;      --> Boolean
   SO_BINDADDR = 0x000F;    --> InetAddress
   SO_REUSEADDR = 0x04;     --> Integer
+  SO_BROADCAST = 0x0020;   --> Boolean
   IP_MULTICAST_IF = 0x10;  --> InetAddress
+  IP_MULTICAST_IF2 = 0x1F; --> InetAddress
+  IP_MULTICAST_LOOP = 0x0012;> Boolean
   SO_TIMEOUT = 0x1006;     --> Integer
   SO_SNDBUF =0x1001;       --> Integer
   SO_RCVBUF = 0x1002;      --> Integer
+  SO_OOBINLINE = 0x1003;   --> Boolean
+  SO_KEEPALIVE = 0x0008;   --> Boolean
 */
 
 
