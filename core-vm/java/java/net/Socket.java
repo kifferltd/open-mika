@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -40,6 +40,8 @@ public class Socket {
   SocketImpl socket;   //default acces for communication with serverSocket
   private InetAddress local=null;
   boolean bound;
+  boolean inputShut;
+  boolean outputShut;
 
   public Socket(){
     socket = getImpl();
@@ -353,14 +355,28 @@ public class Socket {
      if (socket == null) {
        throw new SocketException();
      }
-    socket.shutdownInput();
+    if (!inputShut) {
+      inputShut = true;
+      socket.shutdownInput();
+    }
+  }
+
+  public boolean isInputShutdown() {
+    return inputShut;
   }
 
   public void shutdownOutput() throws IOException {
      if (socket == null) {
        throw new SocketException();
      }
-    socket.shutdownOutput();
+    if (!outputShut) {
+      outputShut = true;
+      socket.shutdownOutput();
+    }
+  }
+
+  public boolean isOutputShutdown() {
+    return outputShut;
   }
 
   public void setKeepAlive(boolean on) throws SocketException {
@@ -376,4 +392,54 @@ public class Socket {
      }
      return ((Boolean)socket.getOption(SocketOptions.SO_KEEPALIVE)).booleanValue();
   }
+
+  public void sendUrgentData(int udata) throws IOException {
+    if (socket == null) {
+       throw new SocketException();
+     }
+     socket.sendUrgentData(udata);
+  }
+
+  public void setOOBInline(boolean on) throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+    socket.setOption(SocketOptions.SO_OOBINLINE, new Boolean(on));
+  }
+
+  public boolean getOOBInline() throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+     return ((Boolean)socket.getOption(SocketOptions.SO_OOBINLINE)).booleanValue();
+  }
+
+  public void setTrafficClass(int tcl) throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+    socket.setOption(SocketOptions.IP_TOS, new Integer(tcl));
+  }
+
+  public int getTrafficClass() throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+     return ((Integer)socket.getOption(SocketOptions.IP_TOS)).intValue();
+  }
+
+  public void setReuseAddress(boolean on) throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+    socket.setOption(SocketOptions.SO_REUSEADDR, new Boolean(on));
+  }
+
+  public boolean getReuseAddress() throws SocketException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+     return ((Boolean)socket.getOption(SocketOptions.SO_REUSEADDR)).booleanValue();
+  }
+
 }
