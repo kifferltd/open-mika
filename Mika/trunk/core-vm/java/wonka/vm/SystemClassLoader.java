@@ -271,9 +271,9 @@ public final class SystemClassLoader extends ClassLoader {
           url = new URL("jar:file:" + jf.getName() + "!/"+name);
         }
       } catch (ClassCastException cce) {
-        File f = new File(bcpelem + name);
+        File f = new File((File)bcpelem, name);
         if (f.isFile()) {
-          url = new URL("file:"+f);
+          url = new URL("file:" + f);
         }
       }
     }
