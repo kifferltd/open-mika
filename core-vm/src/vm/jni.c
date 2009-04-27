@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -629,6 +629,46 @@ jclass FindClass(JNIEnv *env, const char *Name) {
 
 }
 
+jfieldID FromReflectedField(JNIEnv *env, jobject fieldobj) {
+  return getWotsitField(fieldobj, F_Field_wotsit);
+}
+
+jmethodID FromReflectedMethod(JNIEnv *env, jobject methodobj) {
+  return getWotsitField(methodobj, F_Method_wotsit);
+}
+
+jobject ToReflectedField(JNIEnv *env, jclass cls, jfieldID fid, jboolean isStatic) {
+  w_thread   thread = JNIEnv2w_thread(env);
+  w_clazz    clazz = Class2clazz(cls);
+  w_instance aField;
+
+  mustBeInitialized(clazzField);
+
+  enterUnsafeRegion(thread);
+  aField = allocInstance(JNIEnv2w_thread(env), clazzField);
+  enterSafeRegion(thread);
+  if (aField) {
+    setWotsitField(aField, F_Field_wotsit, fid);
+  }
+  return aField;
+}
+
+jobject ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID mid, jboolean isStatic) {
+  w_thread   thread = JNIEnv2w_thread(env);
+  w_clazz    clazz = Class2clazz(cls);
+  w_instance aMethod;
+
+  mustBeInitialized(clazzMethod);
+
+  enterUnsafeRegion(thread);
+  aMethod = allocInstance(JNIEnv2w_thread(env), clazzMethod);
+  enterSafeRegion(thread);
+  if (aMethod) {
+    setWotsitField(aMethod, F_Method_wotsit, mid);
+  }
+  return aMethod;
+}
+
 jclass GetSuperclass(JNIEnv *env, jclass class) {
   return clazz2Class(getSuper(Class2clazz(class)));
 }
@@ -688,6 +728,19 @@ jobject NewGlobalRef(JNIEnv *env, jobject obj) {
   return obj;
 }
 
+/* [CG 20090427]
+** This is not really correct and may cause memory leaks. But doing it
+** correctly is hard - either we wrap the ref in an object of some special
+** class and we check EVERY incoming jobject to see ifi it needs unwrapping,
+** or we completely change all jobject's to be indirect references through
+** one of several tables (local ref, global ref, weak global ref).
+** Weak global refs are pretty funky anyway if you ask me: can become
+** equivalent to NULL at any time ...
+*/
+jweak NewWeakGlobalRef(JNIEnv *env, jobject obj) {
+  return NewGlobalRef(env, obj);
+}
+
 jobject NewLocalRef(JNIEnv *env, jobject obj) {
   w_thread thread = JNIEnv2w_thread(env);
 
@@ -710,12 +763,42 @@ void DeleteGlobalRef(JNIEnv *env, jobject obj) {
 
 }
 
+/* [CG 20090427] - see comment re: NewWeakGlobalRef above
+*/
+void DeleteWeakGlobalRef(JNIEnv *env, jweak ref) {
+  DeleteGlobalRef(env, ref);
+}
+
 void DeleteLocalRef(JNIEnv *env, jobject instance) {
   w_thread thread = JNIEnv2w_thread(env);
 
   woempa(1, "deleting local reference to instance %p of %k\n", instance, instance2clazz((w_instance)instance));
   removeLocalReference(thread, instance);
 
+}
+
+jint EnsureLocalCapacity(JNIEnv *env, jint cap) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (thread->top->auxstack_top - thread->top->jstack_top < cap) {
+    throwException(thread, clazzOutOfMemoryError, NULL);
+    return -1;
+  }
+
+  return 0;
+
+}
+
+/* [CG 20090427]
+** Not really correct, can cause memory leaks.
+** TODO: decouple local ref frames from call frames so this can work correctly.
+*/
+jint PushLocalFrame(JNIEnv *env, jint cap) {
+  return 0; // 0 = OK, <0 = error
+}
+
+jobject PopLocalFrame(JNIEnv *env, jobject result) {
+  return result;
 }
 
 jboolean IsSameObject(JNIEnv *env, jobject ref1, jobject ref2) {
@@ -3339,14 +3422,14 @@ const struct JNINativeInterface w_JNINativeInterface = {
   DefineClass,
   FindClass,
 
-  NULL,
-  NULL,
-  NULL,
+  FromReflectedMethod,
+  FromReflectedField,
+  ToReflectedMethod,
   
   GetSuperclass,                        /* 10 */
   IsAssignableFrom,
   
-  NULL,
+  ToReflectedField,
 
   Throw,
   ThrowNew,
@@ -3355,8 +3438,8 @@ const struct JNINativeInterface w_JNINativeInterface = {
   ExceptionClear,
   FatalError,
   
-  NULL,
-  NULL,                                 /* 20 */
+  PushLocalFrame,
+  PopLocalFrame,                        /* 20 */
   
   NewGlobalRef,
   DeleteGlobalRef,
@@ -3364,7 +3447,7 @@ const struct JNINativeInterface w_JNINativeInterface = {
   IsSameObject,
   
   NewLocalRef,
-  NULL,
+  EnsureLocalCapacity,
   
   AllocObject,
   NewObject,
@@ -3580,15 +3663,15 @@ const struct JNINativeInterface w_JNINativeInterface = {
   MonitorEnter,
   MonitorExit,
 
-  GetJavaVM, //reserved219,
+  GetJavaVM,
   GetStringRegion,           /* 220 */
   GetStringUTFRegion,
   GetPrimitiveArrayCritical,
   ReleasePrimitiveArrayCritical,
   GetStringCritical,
   ReleaseStringCritical,
-  NULL, //NewWeakGlobalRef,
-  NULL, //reserved227,
+  NewWeakGlobalRef,
+  DeleteWeakGlobalRef,
   ExceptionCheck,
 
 };
