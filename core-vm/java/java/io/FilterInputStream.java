@@ -34,7 +34,7 @@ package java.io;
 
 public class FilterInputStream extends InputStream {
 
-  protected InputStream in;
+  protected volatile InputStream in;
 
   protected FilterInputStream(InputStream input) {
     in = input;
