@@ -85,7 +85,7 @@ public class FileOutputStream extends OutputStream {
   }
 
   private void checkForDirectory(File file) throws FileNotFoundException {
-    if (!file.exists() || file.isDirectory()) {
+    if (file.isDirectory()) {
       throw new FileNotFoundException(file.getPath() + " is a directory");
     }
   }
