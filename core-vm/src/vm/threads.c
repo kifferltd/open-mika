@@ -704,7 +704,7 @@ w_boolean enterSafeRegion(const w_thread thread) {
 
   if (isSet(thread->flags, WT_THREAD_GC_PENDING)) {
     unsetFlag(thread->flags, WT_THREAD_GC_PENDING);
-    gc_reclaim(thread, thread->to_be_reclaimed);
+    gc_reclaim(thread->to_be_reclaimed, NULL);
     thread->to_be_reclaimed = 0;
   }
 
