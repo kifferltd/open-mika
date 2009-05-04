@@ -2323,6 +2323,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   w_int   remaining = 0;
   w_int   initial = 0;
   w_thread thread = currentWonkaThread;
+  w_int weighted = requested * (memory_load_factor + 1);
 
   if (requested < 0) {
     woempa(1, "requested < 0, ignoring\n");
@@ -2341,37 +2342,6 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   }
 
-  if (thread == marking_thread) {
-    woempa(1, "Already marking heap\n");
-    //if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    //  wprintf("GC: thread %t is the marking thread, skipping gc_reclaim()\n", thread);
-    //}
-
-    return 0;
-
-  }
-  
-  if (thread == sweeping_thread) {
-    woempa(1, "Already sweeping heap\n");
-    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t is the sweeping thread, skipping gc_reclaim()\n", thread);
-    }
-
-    return 0;
-
-  }
-  
-#ifdef JDWP
-  if (thread == jdwp_thread) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t is the JDWP thread, skipping gc_reclaim()\n", thread);
-    }
-
-    return 0;
-
-  }
-#endif
-  
   if (isSet(blocking_all_threads, BLOCKED_BY_GC)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
       wprintf("GC: cowardly refusal by thread %t to start a rival garbage collection cycle\n", thread);
@@ -2388,15 +2358,21 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
 #endif
   
-  reclaim_accumulator += requested * (memory_load_factor + 1);
+  reclaim_accumulator += weighted;
   remaining = initial = reclaim_accumulator;
 
-  if (reclaim_accumulator > reclaim_threshold) {
+  if (x_mem_avail() - requested <= min_heap_free || reclaim_accumulator > reclaim_threshold) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC) && sizeOfWordset(&reclaim_listener_list) && gc_phase != GC_PHASE_UNREADY) {
       wprintf("GC: thread %t trying to reclaim %d bytes\n", thread, remaining);
     }
 
-    if (threadIsSafe(thread) && enter_reclaim_listener_monitor()) {
+    if (thread 
+     && thread != marking_thread && thread != sweeping_thread 
+#ifdef JDWP
+     && thread != jdwp_thread 
+#endif
+     && threadIsSafe(thread) && enter_reclaim_listener_monitor()
+       ) {
       reclaimed_this_cycle = 0;
       for (i= 0; remaining > 0 && i < sizeOfWordset(&reclaim_listener_list); ++i) {
         w_reclaim_callback callback = (w_reclaim_callback)elementOfWordset(&reclaim_listener_list, i);
@@ -2413,13 +2389,20 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
       }
       reclaim_accumulator = 0;
     }
-    else {
+    else if (thread) {
       if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-        wprintf("GC: thread %t postponing heap_request for %d bytes\n", thread, requested);
-        setFlag(thread->flags, WT_THREAD_GC_PENDING);
-        thread->to_be_reclaimed += requested;
-        reclaim_accumulator -= requested * (memory_load_factor + 1);
+        wprintf("GC: thread %t postponing request for %d bytes because %s\n", thread, requested,
+          thread == marking_thread ? " is marking_thread" :
+          thread == sweeping_thread ? " is sweeping_thread" :
+#ifdef JDWP
+          thread == jdwp_thread ? " is JDWP thread" :
+#endif
+          !threadIsSafe(thread) ? " is not GC safe" :
+          " enter_reclaim_listener_monitor() failed");
       }
+      setFlag(thread->flags, WT_THREAD_GC_PENDING);
+      thread->to_be_reclaimed += weighted;
+      reclaim_accumulator -= weighted;
     }
   }
 
@@ -2670,9 +2653,10 @@ w_int gc_request(w_int requested) {
   w_int retcode;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", instance_use, instance_allocated, instance_returned);
-    wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
+    wprintf("GC: %t starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", this_thread, instance_use, instance_allocated, instance_returned);
+    wprintf("GC: %d bytes available out of %d, memory load factor = %d, requested = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, remaining, killing_soft_references ? "" : "not ");
   }
+
   while (tries > 0 && remaining > 0) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
       wprintf("GC: tries remaining = %d, looking to collect %d bytes, GC phase = %s.\n", tries, remaining, gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
