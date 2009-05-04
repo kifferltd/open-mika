@@ -581,6 +581,40 @@ void histogram(void) {
 }
 #endif
 
+/*
+ * MAX_RETRIES defines how often a low-priority thread (Java priority 1) will
+ * try to satisfy a enough_free_memory by calling gc_request(); higher-priority
+ * threads will make less tries, and a thread of priority > 10 will only
+ * return TRUE from enough_free_memory if sufficient memory is already available.
+ * retry_incr is calculated such that (priority * num_retries * retry_incr)
+ * is at least 100.
+ */
+#define MAX_RETRIES 10
+static const int retry_incr = 100 / MAX_RETRIES;
+
+static w_boolean enough_free_memory(w_thread thread, w_int bytes) {
+  w_int count = 0;
+  w_boolean unsafe;
+
+  if (thread == gc_thread || gc_instance == NULL || x_mem_avail() - bytes > min_heap_free) {
+    return TRUE;
+  }
+
+  if (thread->jpriority > 10) {
+    return FALSE;
+  }
+
+  unsafe = enterSafeRegion(thread);
+  while (count < 100 && x_mem_avail() - bytes <= min_heap_free) {
+    gc_reclaim(bytes, NULL);
+    count += retry_incr * thread->jpriority;
+  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return count < 100;
+}
+
 inline static void i_callMethod(w_frame caller, w_method method) {
 
 #ifdef JAVA_PROFILE
@@ -1646,9 +1680,7 @@ void interpret(w_frame caller, w_method method) {
     // fall through
 
   new_common: {
-    w_boolean enough = heap_request(thread, (w_int)clazz->bytes_needed);
-
-    if (!enough) {
+    if (!enough_free_memory(thread, clazz->bytes_needed)) {
       do_throw_clazz(clazzOutOfMemoryError);
     }
     if (thread->exception) {
@@ -1910,6 +1942,7 @@ void interpret(w_frame caller, w_method method) {
 
     if (instance2object(a)->clazz->previousDimension == clazz_boolean) {
       s = instance2Array_byte(a)[i / 8];
+      // TODO: this is not thread-safe!!! FIXME
       s &= 0xff ^ (1 << i % 8);
       instance2Array_byte(a)[i / 8] = s | ((tos[-1].c & 1) << (i % 8));
     }
@@ -3857,7 +3890,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_newarray: {
     w_size bytes;
-    w_boolean enough;
+    //w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3870,8 +3903,7 @@ void interpret(w_frame caller, w_method method) {
 
     clazz = atype2clazz[*(current + 1)];
     bytes = (F_Array_data + roundBitsToWords(clazz->previousDimension->bits * s)) * sizeof(w_word);
-    enough = heap_request(thread, bytes);
-    if (!enough) {
+    if (!enough_free_memory(thread, bytes)) {
       do_throw_clazz(clazzOutOfMemoryError);
     }
 
@@ -3908,8 +3940,7 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNegativeArraySizeException);
     }
     bytes = (F_Array_data + s) * sizeof(w_word);
-    enough = heap_request(thread, bytes);
-    if (!enough) {
+    if (!enough_free_memory(thread, bytes)) {
       do_throw_clazz(clazzOutOfMemoryError);
     }
 
@@ -4109,7 +4140,7 @@ void interpret(w_frame caller, w_method method) {
         element_clazz = element_clazz->previousDimension;
       }
       bytes *= (F_Array_data + roundBitsToWords(element_clazz->bits * dimensions[s - 1])) * sizeof(w_word);
-      enough = heap_request(thread, bytes);
+      enough = enough_free_memory(thread, bytes);
     }
     if (!enough) {
       releaseMem(dimensions);
