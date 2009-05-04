@@ -44,10 +44,17 @@
 #define ALLOCMEM_RETRIES 10
 #define ALLOCMEM_SLEEP    5
 
+/**
+ ** alloc_barrier acts to slow down a thread which is allocating memory while
+ ** another thread is sweeping the heap.
+ */
 static void alloc_barrier(w_thread thread) {
-  int p = thread ? thread->jpriority : 5;
-  while (p++ < 10 && gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
-    x_thread_sleep(1);
+  if (gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
+    int p = thread ? thread->jpriority : 5;
+    if (p < 10) {
+      woempa(7, "sleeping for (%d + %d + 1) * %d = %d ticks\n", *gc_kicks_pointer, memory_load_factor, 5 - p / 2, (*gc_kicks_pointer + memory_load_factor + 1) * (5 - p / 2));
+      x_thread_sleep((*gc_kicks_pointer + memory_load_factor + 1) * (5 - p / 2));
+    }
   }
 }
 
@@ -58,6 +65,7 @@ void * _allocClearedMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   gc_reclaim(rsize, NULL);
 
@@ -68,18 +76,31 @@ void * _allocClearedMem(w_size rsize) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count-- && !chunk) {
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       if (ALLOCMEM_SLEEP) {
         x_thread_sleep(ALLOCMEM_SLEEP);
       }
-      //wprintf("allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
+      woempa(7, "allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
+      if (chunk || --count <= 0) {
+        break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
+      }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!chunk) {
     wprintf("Failed to allocate %d bytes\n", rsize);
 
@@ -101,6 +122,7 @@ void * _allocMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   gc_reclaim(rsize, NULL);
 
@@ -111,18 +133,28 @@ void * _allocMem(w_size rsize) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count-- && !chunk) {
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
-      //wprintf("allocMem_realm(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
+      woempa(7, "allocMem_realm(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
+      if (chunk || --count <= 0) {
+        break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
+      }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!chunk) {
     wprintf("Failed to allocate %d bytes\n", rsize);
 
@@ -142,6 +174,7 @@ void * _reallocMem(void * block, w_size newsize) {
   w_size  oldsize;
   w_chunk newchunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   oldchunk = block2chunk(block);
   oldsize = x_mem_size(oldchunk);
@@ -155,21 +188,28 @@ void * _reallocMem(void * block, w_size newsize) {
   if (!newchunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
-      //wprintf("reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
+      woempa(7, "reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(newsize - oldsize, NULL);
       newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
-      if (newchunk) {
+      if (newchunk || --count <= 0) {
         break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!newchunk) {
     wprintf("Failed to reallocate %d bytes\n", newsize);
 
@@ -421,6 +461,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   alloc_barrier(thread);
@@ -431,18 +472,23 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
       chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
-      if (chunk) {
+      if (chunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -451,6 +497,9 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   if (chunk == NULL) {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes\n", rsize);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -463,9 +512,9 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-//  if (chunk == (w_chunk)0x30377090 || chunk == (w_chunk) 0x30483240) {
-//    wprintf("allocated weird chunk %w at %s:%d\n", chunk, file, line);
-//  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
 
   return chunk->data;
 
@@ -475,8 +524,7 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-
-  if (rsize > 163840) printf("Request for %d bytes at %s.%d\n", rsize, file, line);
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   gc_reclaim(rsize, NULL);
@@ -489,18 +537,23 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "allocMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
       chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
-      if (chunk) {
+      if (chunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -509,6 +562,9 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   if (chunk == NULL) {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes for %s:%d\n", rsize, file, line);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -521,9 +577,9 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-//  if (chunk == (w_chunk)0x30377090 || chunk == (w_chunk) 0x30483240) {
-//    wprintf("allocated weird chunk %w at %s:%d\n", chunk, file, line);
-//  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   
   return chunk->data;
 
@@ -534,6 +590,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   w_chunk newchunk;
   w_size  oldsize;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Reallocating block %p, new size = %d\n", file, line, block, newsize);
   oldchunk = checkChunk(block, 1, file, line);
@@ -544,10 +601,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   }
 
-  //if (oldchunk == (w_chunk)0x30377090 || oldchunk == (w_chunk) 0x30483240) {
-  //  wprintf("reallocating weird chunk %w at %s:%d\n", oldchunk, file, line);
-  //}
-
   oldsize = x_mem_size(oldchunk);
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, newsize, sizeof(w_Chunk) + newsize);
   gc_reclaim(newsize - oldsize, NULL);
@@ -557,21 +610,26 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
 
 #ifdef ALLOCMEM_RETRIES
-  if (!newchunk && thread && threadIsSafe(thread) && thread != marking_thread) {
+  if (!newchunk && thread && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(newsize - oldsize, NULL);
       x_mem_lock(x_eternal);
       newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
-      if (newchunk) {
+      if (newchunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -581,6 +639,9 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   if (!newchunk) {
     x_mem_unlock();
     printf("Failed to reallocate %d bytes for %s:%d\n", newsize, file, line);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -590,13 +651,13 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   }
 
-  // if (newchunk == (w_chunk)0x30377090 || newchunk == (w_chunk) 0x30483240) {
-  //   wprintf("reallocating weird chunk %w at %s:%d\n", newchunk, file, line);
-  // }
   woempa(1,"%s.%d: Reallocated %d bytes at %p\n", file, line, newsize, newchunk);
   prepareChunk(newchunk, newsize, file, line);  
   x_mem_unlock();
   checkChunk(newchunk->data, 1, file, line);
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
 
   return newchunk->data;
 }
