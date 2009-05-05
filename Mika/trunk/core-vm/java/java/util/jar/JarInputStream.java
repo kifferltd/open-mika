@@ -176,6 +176,7 @@ public class JarInputStream extends ZipInputStream {
             if (jarEntry == null) {
                 return null;
             }
+            jarEntry.verifier = verifier;
             if (verifier != null) {
                 isMeta = toASCIIUpperCase(jarEntry.getName()).startsWith(
                         JarFile.META_DIR);
