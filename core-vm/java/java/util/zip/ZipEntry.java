@@ -200,5 +200,9 @@ public class ZipEntry implements ZipConstants, Cloneable {
       catch(IOException ioe){}
         initPointer = 0;
   }
+
+  public String toString() {
+    return name;
+  }
 }
 
