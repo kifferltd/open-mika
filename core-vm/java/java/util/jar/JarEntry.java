@@ -39,6 +39,7 @@ public class JarEntry extends ZipEntry {
     private Attributes attributes;
 
     JarFile parentJar;
+    JarVerifier verifier;
 
     private boolean isFactoryChecked = false;
 
@@ -88,14 +89,13 @@ public class JarEntry extends ZipEntry {
      * @return java.security.cert.Certificate[] Certificates for this entry
      */
     public Certificate[] getCertificates() {
-        if (null == parentJar) {
+        if (verifier == null && parentJar != null) {
+          verifier = parentJar.verifier;
+        }
+        if (verifier == null) {
             return null;
         }
-        JarVerifier jarVerifier = parentJar.verifier;
-        if (null == jarVerifier) {
-            return null;
-        }
-        return jarVerifier.getCertificates(getName());
+        return verifier.getCertificates(getName());
     }
 
     void setAttributes(Attributes attrib) {
