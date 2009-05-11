@@ -389,7 +389,7 @@ void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int uda
   }
 
   if (res == -1) {
-    woempa(9,"got error while sending OOB from SocketImpl %p --> error = %i\n", ThisImpl, w_errno(sock));
+    woempa(9,"got error while sending OOB from SocketImpl %p --> error = %i\n", thisImpl, w_errno(sock));
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d OOB write failed: %s\n", sock, strerror(errno));
     }
