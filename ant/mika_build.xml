@@ -269,6 +269,10 @@
     <flag property="DEBUG" flag="DEBUG.FLAG"/>
     <flag property="STATIC" flag="STATIC.FLAG"/>
     <flag property="AWT_DEF" flag="AWT.FLAGS"/>
+    <exec executable="svnversion" outputproperty="svn.revision">
+      <arg value="."/>
+      <arg value="-n"/>
+    </exec>
 
     <mkdir dir="${log.dir}"/>
     <mkdir dir="${mika.bin.dir}"/>
@@ -276,7 +280,7 @@
     <mkdir dir="${test.release.dir}"/>
 
     <antcall target="run-awk" />
-    <property name="MIKA.VERSION" value="&quot;Developer_version_${ANT.PLATFORM}&quot;"/>
+    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
     <property environment="env"/>
     <jamflags property="jam.flags"/>
     <property name="config.jam.flags" 
