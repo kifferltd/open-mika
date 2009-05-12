@@ -172,6 +172,13 @@ public class JarInputStream extends ZipInputStream {
             mEntry = null;
             jarEntry.setAttributes(null);
         } else {
+            if (isMeta) {
+                byte[] junk = new byte[1024];
+                int rc = read(junk, 0, 1024);
+                while (rc >= 0) {
+                    rc = read(junk, 0, 1024);
+                }
+            }
             jarEntry = (JarEntry) super.getNextEntry();
             if (jarEntry == null) {
                 return null;
