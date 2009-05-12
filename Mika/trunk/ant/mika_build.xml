@@ -136,7 +136,7 @@
     <property file="${platform.file}"/>
     <fail message="Please specify your UNICODE_SUBSETS config. example: 0 or 999" unless="UNICODE_SUBSETS"/>
 
-    <propertychecker property="SECURITY" values="none|fine|coarse"/>
+    <propertychecker property="SECURITY" values="none|fine|coarse|java2"/>
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>

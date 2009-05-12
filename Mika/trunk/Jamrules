@@ -531,10 +531,18 @@ switch $(NETWORK) {
 
 switch $(SECURITY) {
   case fine : {
-    WONKA_INFO += "fine-grained (Java2) security;" ;
+    ECHO "Warning: SECURITY=fine is deprecated, using SECURITY=java2" ;
+    SECURITY = java2 ;
   }
   case coarse : {
-    WONKA_INFO += "coarse-grained (Java 1.1) security;" ;
+    ECHO "Warning: SECURITY=coarse is deprecated, using SECURITY=java2" ;
+    SECURITY = java2 ;
+  }
+}
+
+switch $(SECURITY) {
+  case coarse : {
+    WONKA_INFO += "fine-grained (Java2) security;" ;
   }
   case none : {
     WONKA_INFO += "no security;" ;
