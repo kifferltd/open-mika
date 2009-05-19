@@ -233,7 +233,7 @@ END {
   print  "  dotified = slashes2dots(name);"
   print  "  clazz = seekClazzByName(dotified, NULL);"
   print  "  if (clazz == NULL) {"
-  print  "    clazz = loadNonBootstrapClass(extensionClassLoader, dotified);"
+  print  "    clazz = loadBootstrapClass(dotified);"
   print  "    if (clazz == NULL) {"
   printf "      woempa(9,\"Unable to find WNI class %%w:\\n\",name);\n"
   print  "    }"
