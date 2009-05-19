@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -264,6 +264,12 @@ static const w_double         piby4 = 0x3fe921fb54442d18LL;    /* 0.785398163397
 //static const w_double       	ten = 0x4024000000000000LL;    /* 10                       */
 
 #ifdef NATIVE_MATH
+extern void init_math(void);
+
+void Math_static_init(JNIEnv *env, w_instance classMath) {
+  init_math();
+}
+
 void fast_Math_static_sqrt(w_frame frame) {
   union {w_double d; w_word w[2];} double_x;
 
@@ -381,6 +387,11 @@ void fast_Math_static_exp(w_frame frame) {
   }
   frame->jstack_top[-2].c = double_x.w[0];
   frame->jstack_top[-1].c = double_x.w[1];
+}
+
+#else
+
+void Math_static_init(JNIEnv *env, w_instance classMath) {
 }
 
 #endif

@@ -145,6 +145,7 @@ java/lang/Class
 	getDeclaredClasses0	()[Ljava/lang/Class;		Class_getDeclaredClasses0
 	getClasses0		()[Ljava/lang/Class;		Class_getClasses0
 java/lang/Math
+	init			()V				Math_static_init
 java/lang/NativeProperties
 	init			()[Ljava/lang/String;				NativeProperties_init
 	get		(Ljava/lang/Object;)Ljava/lang/Object;	NativeProperties_get
