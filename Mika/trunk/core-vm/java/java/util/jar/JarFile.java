@@ -226,6 +226,7 @@ public class JarFile extends ZipFile {
             public Object nextElement() {
                 JarEntry je = new JarEntry((ZipEntry)ze.nextElement());
                 je.parentJar = jf;
+                je.verifier = jf.verifier;
                 return je;
             }
         }
