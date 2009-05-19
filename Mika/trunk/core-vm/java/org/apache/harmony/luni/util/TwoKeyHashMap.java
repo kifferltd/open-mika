@@ -306,7 +306,7 @@ public class TwoKeyHashMap extends AbstractMap {
             this.next = next;
         }
 
-        public String getKey() {
+        public Object getKey() {
             return key1.toString() + key2.toString();
         }
 
@@ -426,7 +426,7 @@ public class TwoKeyHashMap extends AbstractMap {
             return found = (curr_entry != null);
         }
 
-        public Map.Entry next() {
+        public Object next() {
             if (modCount != startModCount) {
                 throw new ConcurrentModificationException();
             }
@@ -558,7 +558,7 @@ public class TwoKeyHashMap extends AbstractMap {
         }
 
         public Object next() {
-            return itr.next().getValue();
+            return ((Map.Entry)itr.next()).getValue();
         }
 
         public void remove() {
