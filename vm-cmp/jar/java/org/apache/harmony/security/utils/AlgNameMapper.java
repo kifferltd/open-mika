@@ -74,6 +74,7 @@ public class AlgNameMapper {
         {"1.2.840.113549.3.8",      "rc5CBC"}, //$NON-NLS-1$ //$NON-NLS-2$
         {"1.2.840.113549.3.9",      "RC5-CBC"}, //$NON-NLS-1$ //$NON-NLS-2$
         {"1.2.840.113549.3.10",     "DESCDMF"}, //$NON-NLS-1$ //$NON-NLS-2$
+        {"1.3.14.3.2.26",           "SHA1"}, //$NON-NLS-1$ //$NON-NLS-2$
         {"2.23.42.9.11.4.1",        "ECDSA"}, //$NON-NLS-1$ //$NON-NLS-2$
     };
     // Maps alg name to OID
