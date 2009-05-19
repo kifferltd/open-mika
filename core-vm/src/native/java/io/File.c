@@ -230,7 +230,7 @@ w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
   
   pathname = getFileName(thisFile);	  
 
-  result == (vfs_stat(pathname, &statbuf) == 0);
+  result = (vfs_stat(pathname, &statbuf) == 0);
   if (result) {
     if(VFS_S_ISDIR(statbuf.st_mode)) {
       result = (vfs_rmdir(pathname) == 0);
