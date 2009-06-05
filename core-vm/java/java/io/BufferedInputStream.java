@@ -57,10 +57,12 @@ public class BufferedInputStream extends FilterInputStream {
      */
     protected int pos;
 
-    /**
-     * The size of the last-allocated 'buf'.
-     */
-    private int prevBufLength = 8192;
+    /* fib0 and fib1 are fibonacci numbers multiplied by 8192. In general    */
+    /* fib1 holds the size of the current buffer and fib0 holds the previous */
+    /* number in the fibonacci sequence; however the size of the current     */
+    /* buffer will be less than fib1 if the buffer has been "trimmed".       */
+    private int fib0 = 8192;
+    private int fib1 = 8192;
 
     /**
      * Constructs a new <code>BufferedInputStream</code> on the InputStream
@@ -145,14 +147,16 @@ public class BufferedInputStream extends FilterInputStream {
             /* fragmentation by favouring multiples of 8192 bytes.        */
             int newLength = (count + 8192) & -8192;
             if (newLength > localBuf.length) {
-              newLength += prevBufLength - 8192;
-              //System.out.println("old length = " + localBuf.length + ", previous = " + prevBufLength + ", new = " + newLength);
-              prevBufLength = localBuf.length < 8192 ? 8192 : localBuf.length;
+              newLength += fib0 - 8192;
+              fib1 = newLength;
+              //System.out.println("old length = " + localBuf.length + ", previous = " + fib0 + ", new = " + newLength);
+              fib0 = localBuf.length < 8192 ? 8192 : localBuf.length;
               if (newLength > marklimit) {
                 newLength = marklimit;
               }
               byte[] newbuf = new byte[newLength];
               System.arraycopy(localBuf, 0, newbuf, 0, localBuf.length);
+              // System.out.println(this + " expanded from " + localBuf.length + " to " + newLength);
               // Reassign buf, which will invalidate any local references
               // FIXME: what if buf was null?
               localBuf = buf = newbuf;
@@ -160,6 +164,7 @@ public class BufferedInputStream extends FilterInputStream {
         } else if (markpos > 0) {
             System.arraycopy(localBuf, markpos, localBuf, 0, localBuf.length
                     - markpos);
+            // System.out.println(this + " shuffled down " + localBuf.length + " bytes from offset " + markpos + " to offset 0");
         }
         /* Set the new position and mark position */
         pos -= markpos;
@@ -171,7 +176,7 @@ public class BufferedInputStream extends FilterInputStream {
           count = pos;
           byte[] newbuf = new byte[pos];
           System.arraycopy(localBuf, 0, newbuf, 0, pos);
-          //System.out.println("trimmed from " + localBuf.length + " to " + pos);
+          // System.out.println(this + " trimmed from " + localBuf.length + " to " + pos);
           localBuf = buf = newbuf;
         }
         else {
@@ -179,6 +184,22 @@ public class BufferedInputStream extends FilterInputStream {
         }
         return bytesread;
     }
+
+    private void emptybuf(byte[] localBuf)
+            throws IOException {
+        if (markpos == -1 || (pos - markpos >= marklimit)) {
+          if (count - pos < fib0 && fib0 < localBuf.length) {
+            // System.out.println(this + " shrinking from " + localBuf.length + " to " + fib0);
+            byte[] newbuf = new byte[fib0];
+            System.arraycopy(localBuf, pos, newbuf, 0, count - pos);
+            count -= pos;
+            pos = 0;
+            fib0 = fib1 - fib0;
+            fib1 = fib1 - fib0;
+            localBuf = buf = newbuf;
+          }
+        }
+      }
 
     /**
      * Set a Mark position in this BufferedInputStream. The parameter
@@ -243,7 +264,9 @@ public class BufferedInputStream extends FilterInputStream {
 
         /* Did filling the buffer fail with -1 (EOF)? */
         if (count - pos > 0) {
-            return localBuf[pos++] & 0xFF;
+            int result = localBuf[pos++] & 0xFF;
+            emptybuf(localBuf);
+            return result;
         }
         return -1;
     }
@@ -297,6 +320,7 @@ public class BufferedInputStream extends FilterInputStream {
             System.arraycopy(localBuf, pos, buffer, offset, copylength);
             pos += copylength;
             if (copylength == length || localIn.available() == 0) {
+                emptybuf(localBuf);
                 return copylength;
             }
             offset += copylength;
@@ -334,9 +358,11 @@ public class BufferedInputStream extends FilterInputStream {
             }
             required -= read;
             if (required == 0) {
+                emptybuf(localBuf);
                 return length;
             }
             if (localIn.available() == 0) {
+                emptybuf(localBuf);
                 return length - required;
             }
             offset += read;
