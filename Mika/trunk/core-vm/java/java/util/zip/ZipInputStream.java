@@ -531,6 +531,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
     }
 
     in.reset();
+    in.mark(0);
   }
   
   private boolean readEntries(byte [] bytes, int size, int pos) {
