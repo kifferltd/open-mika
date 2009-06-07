@@ -23,6 +23,11 @@ AWT=none
 SECURITY=none
 
 #
+# Define your security provider: currently either harmony or none
+#
+SECURITY_PROVIDER=none
+
+#
 # Allows you to enable jarfile verification.
 # none: no jar verification
 # java: jarfile verification is done in java
