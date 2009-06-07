@@ -200,41 +200,64 @@ END {
     }
   }
 
-  print "void collectCoreFixups() {"
-  print "  w_string slashed, dotified;"
+  print "struct {"
+  print "  w_clazz *clazzptr;"
+  print "  const char *classname;"
+  print "  w_fixup fixup1;"
+  print "  w_fixup fixup2;"
+  print "} classmap[] = {"
+  ccount = 0
   for(c = 1; c in clazz; ++c) {
-    thisclazz = clazz[c]
-    gsub("_dollar_", "$", thisclazz);
-    fu = clazz_fixup1[c];
-    if (fu) {
-      string = sprintf("%s%s", path[c], thisclazz);
-      printf "        slashed = cstring2String(\"%s\",%d);\n",string,length(string)
-      printf "        dotified = slashes2dots(slashed);\n"
-      printf "        woempa(1,\"Adding {%%w,%%p} to fixup1_hashtable\\n\",dotified,%s);\n",fu
-      printf "        deregisterString(slashed);\n"
-      printf "        ht_write_no_lock(fixup1_hashtable,(w_word)dotified,(w_word)%s);\n",fu
-    }
-    fu = clazz_fixup2[c];
-    if (fu) {
-      string = sprintf("%s%s", path[c], thisclazz);
-      printf "        slashed = cstring2String(\"%s\",%d);\n",string,length(string)
-      printf "        dotified = slashes2dots(slashed);\n"
-      printf "        woempa(1,\"Adding {%%w,%%p} to fixup2_hashtable\\n\",dotified,%s);\n",fu
-      printf "        deregisterString(slashed);\n"
-      printf "        ht_write_no_lock(fixup2_hashtable,(w_word)dotified,(w_word)%s);\n",fu
-    }
+    basename = clazz[c]
+    thisclazz = basename
+    gsub("_dollar_", "$", basename)
+    fullname = sprintf("%s%s", path[c], basename)
+    fu1 = clazz_fixup1[c];
+    if (!fu1) fu1 = "NULL"
+    fu2 = clazz_fixup2[c];
+    if (!fu2) fu2 = "NULL"
+    printf "  {&clazz%s, \"%s\", %s, %s},\n", thisclazz, fullname, fu1, fu2
+    ++ccount
   }
-  print "}"
+  print "};"
+  print ""
 
-  print  "w_clazz loadOneCoreClass(w_string name) {"
+  print "void collectCoreFixups() {"
+  print "  char *cname;"
+  print "  w_string slashed, dotified;"
+  print "  int i;"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print  "    w_fixup fu = classmap[i].fixup1;"
+  print  "    if (fu) {"
+  print  "      cname = classmap[i].classname;"
+  print  "      slashed = cstring2String(cname, strlen(cname));"
+  print  "      dotified = slashes2dots(slashed);"
+  print  "      deregisterString(slashed);"
+  print  "      ht_write_no_lock(fixup1_hashtable,(w_word)dotified,(w_word)fu);"
+  print  "    }"
+  print  "  }"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print  "    w_fixup fu = classmap[i].fixup2;"
+  print  "    if (fu) {"
+  print  "      cname = classmap[i].classname;"
+  print  "      slashed = cstring2String(cname, strlen(cname));"
+  print  "      dotified = slashes2dots(slashed);"
+  print  "      deregisterString(slashed);"
+  print  "      ht_write_no_lock(fixup2_hashtable,(w_word)dotified,(w_word)fu);"
+  print  "    }"
+  print  "  }"
+  print  "}"
+  print  ""
+
+  print  "w_clazz loadOneCoreClass(char *name) {"
   print  "  w_string dotified;"
   print  "  w_clazz clazz;"
-  print  "  dotified = slashes2dots(name);"
+  print  "  dotified = slashes2dots(cstring2String(name, strlen(name)));"
   print  "  clazz = seekClazzByName(dotified, NULL);"
   print  "  if (clazz == NULL) {"
   print  "    clazz = loadBootstrapClass(dotified);"
   print  "    if (clazz == NULL) {"
-  printf "      woempa(9,\"Unable to find WNI class %%w:\\n\",name);\n"
+  printf "      woempa(9,\"Unable to find WNI class %%s:\\n\",name);\n"
   print  "    }"
   print  "  }"
   print  "  deregisterString(dotified);"
@@ -242,14 +265,10 @@ END {
   print "}"
   print ""
   print "void loadCoreClasses() {"
-
-  for(c = 1; c in clazz; ++c) {
-    basename = clazz[c];
-    thisclazz = basename;
-    gsub("_dollar_", "$", basename);
-    fullname = sprintf("%s%s", path[c], basename);
-    printf "  clazz%s = loadOneCoreClass(cstring2String(\"%s\", %d));\n", thisclazz, fullname, length(fullname);
-  }
-  printf  "\n}\n\n"
+  print "  int i;"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print "    *classmap[i].clazzptr = loadOneCoreClass(classmap[i].classname);"
+  print "  }"
+  print "}"
 
 }
