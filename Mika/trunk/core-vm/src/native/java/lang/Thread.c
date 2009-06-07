@@ -211,7 +211,7 @@ w_instance Thread_getName(JNIEnv *env, w_instance thisThread) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
 
-  return newStringInstance(thread->name);
+  return getStringInstance(thread->name);
 
 }
 

@@ -319,7 +319,7 @@ w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
   w_instance Result;
   w_string result;
   result = cstring2String(system_vm_args->classpath, strlen(system_vm_args->classpath));
-  Result = newStringInstance(result);
+  Result = getStringInstance(result);
   deregisterString(result);
 
   return Result;

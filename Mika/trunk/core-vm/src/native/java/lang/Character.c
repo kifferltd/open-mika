@@ -61,7 +61,7 @@ w_instance
 Character_static_getCategory
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return newStringInstance(charToCategory(ch));
+  return getStringInstance(charToCategory(ch));
 }
 
 /*

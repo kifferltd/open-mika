@@ -55,7 +55,7 @@
 ** getName() returns the name held in clazz->dotified.
 */
 w_instance Class_getName(JNIEnv *env, w_instance Class) {
-  w_instance Name = newStringInstance(Class2clazz(Class)->dotified);
+  w_instance Name = getStringInstance(Class2clazz(Class)->dotified);
   
   return Name;
 

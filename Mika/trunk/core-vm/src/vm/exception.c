@@ -188,9 +188,11 @@ void fillThrowable(w_thread thread, w_instance Throwable) {
 
     records = allocClearedMem(sizeof(w_Exr) * n);
     if (records) {
+      woempa(7, "Filling in stack trace for %p\n", Throwable);
       setWotsitField(Throwable, F_Throwable_records,  records);
       for (i = 0, frame = thread->top; frame; frame = frame->previous) {
         if (frame->method) {
+          //woempa(7, "  Frame[%d]: %M pc %d posn %d\n", frame->method, frame->current - frame->method->exec.code, n - 1);
           records[i].method = frame->method;
           records[i].pc = frame->current - frame->method->exec.code;
           records[i].position = --n;
@@ -296,7 +298,7 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
 
     if (theThrowable) {
       if (message) {
-        theMessage = newStringInstance(message);
+        theMessage = getStringInstance(message);
         if (theMessage) {
           setReferenceField(theThrowable, theMessage, F_Throwable_detailMessage);
           removeLocalReference(thread, theMessage);

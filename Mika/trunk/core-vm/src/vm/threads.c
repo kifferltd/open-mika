@@ -363,7 +363,7 @@ void startInitialThreads(void* data) {
 #endif
   mustBeInitialized(clazzString);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
-  setReferenceField(I_ThreadGroup_system, newStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
+  setReferenceField(I_ThreadGroup_system, getStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
   setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
 
@@ -382,7 +382,7 @@ void startInitialThreads(void* data) {
     enterSafeRegion(W_Thread_sysInit);
     for (i = 0; i < command_line_argument_count; i++) {
       woempa(7, "Getting string instance of '%s', thread is '%t'\n", command_line_arguments[i], currentWonkaThread);
-      String = newStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
+      String = getStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
       setArrayReferenceField(arglist, String, i);
       woempa(9,"args[%d] = \"%w\" bytecodecount = %d\n",i,String2string(instance2Array_instance(arglist)[i]), woempa_bytecodecount);
     }

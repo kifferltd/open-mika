@@ -57,8 +57,8 @@ void throwInvalidClassException(w_thread thread, w_instance Class, char * messag
     w_string string = cstring2String(message, l);
     
     if(string){
-      setReferenceField_unsafe(ice, newStringInstance(string), F_Throwable_detailMessage);
-      setReferenceField_unsafe(ice, newStringInstance(clazz->dotified), F_InvalidClassException_classname);
+      setReferenceField_unsafe(ice, getStringInstance(string), F_Throwable_detailMessage);
+      setReferenceField_unsafe(ice, getStringInstance(clazz->dotified), F_InvalidClassException_classname);
       deregisterString(string);
       throwExceptionInstance(thread,ice);
     }

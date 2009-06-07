@@ -61,7 +61,7 @@ w_instance Method_getDeclaringClass(JNIEnv *env, w_instance thisMethod) {
 w_instance Method_getName(JNIEnv *env, w_instance thisMethod) {
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
   
-  return newStringInstance(method->spec.name);
+  return getStringInstance(method->spec.name);
   
 }
 

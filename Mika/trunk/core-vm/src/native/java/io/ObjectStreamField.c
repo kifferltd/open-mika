@@ -62,7 +62,7 @@ void ObjectStreamField_create(JNIEnv *env, w_instance this, w_instance String, w
     return;
   }
 
-  setReferenceField(this, newStringInstance(typestring), F_ObjectStreamField_typeString);
+  setReferenceField(this, getStringInstance(typestring), F_ObjectStreamField_typeString);
   deregisterString(typestring);
 
 
