@@ -1,238 +1,215 @@
-/* CertPathBuilder.java -- bulids CertPath objects from Certificates.
-   Copyright (C) 2003, 2004  Free Software Foundation, Inc.
-
-This file is part of GNU Classpath.
-
-GNU Classpath is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
- 
-GNU Classpath is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Classpath; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-02110-1301 USA.
-
-Linking this library statically or dynamically with other modules is
-making a combined work based on this library.  Thus, the terms and
-conditions of the GNU General Public License cover the whole
-combination.
-
-As a special exception, the copyright holders of this library give you
-permission to link this library with independent modules to produce an
-executable, regardless of the license terms of these independent
-modules, and to copy and distribute the resulting executable under
-terms of your choice, provided that you also meet, for each linked
-independent module, the terms and conditions of the license of that
-module.  An independent module is a module which is not derived from
-or based on this library.  If you modify this library, you may extend
-this exception to your version of the library, but you are not
-obligated to do so.  If you do not wish to do so, delete this
-exception statement from your version. */
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 package java.security.cert;
 
-import gnu.java.security.Engine;
-
+import java.security.AccessController;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Provider;
 import java.security.Security;
 
+import org.apache.harmony.security.fortress.Engine;
+
+
 /**
- * This class builds certificate paths (also called certificate chains),
- * which can be used to establish trust for a particular certificate by
- * building a path from a trusted certificate (a trust anchor) to the
- * untrusted certificate.
- *
- * @see CertPath
+ * This class implements the functionality of a builder for an unverified
+ * <i>Certification Path</i>s from a specified certificate to a trust anchor.
  */
-public class CertPathBuilder
-{
+public class CertPathBuilder {
 
-  // Constants and fields.
-  // ------------------------------------------------------------------------
+    // Store CertPathBuilder service name
+    private static final String SERVICE = "CertPathBuilder"; //$NON-NLS-1$
 
-  /** Service name for CertPathBuilder. */
-  private static final String CERT_PATH_BUILDER = "CertPathBuilder";
+    // Used to access common engine functionality
+    private static Engine engine = new Engine(SERVICE);
 
-  /** The underlying implementation. */
-  private CertPathBuilderSpi cpbSpi;
+    // Store default property name
+    private static final String PROPERTYNAME = "certpathbuilder.type"; //$NON-NLS-1$
 
-  /** The provider of this implementation. */
-  private Provider provider;
+    // Default value of CertPathBuilder type. It returns if certpathbuild.type
+    // property is not defined in java.security file
+    private static final String DEFAULTPROPERTY = "PKIX"; //$NON-NLS-1$
 
-  /** The name of this implementation. */
-  private String algorithm;
+    // Store used provider
+    private final Provider provider;
 
-  // Constructor.
-  // ------------------------------------------------------------------------
+    // Store spi implementation
+    private CertPathBuilderSpi spiImpl;
 
-  /**
-   * Creates a new CertPathBuilder.
-   *
-   * @param cpbSpi    The underlying implementation.
-   * @param provider  The provider of the implementation.
-   * @param algorithm This implementation's name.
-   */
-  protected CertPathBuilder(CertPathBuilderSpi cpbSpi, Provider provider,
-                            String algorithm)
-  {
-    this.cpbSpi = cpbSpi;
-    this.provider = provider;
-    this.algorithm = algorithm;
-  }
+    // Store algorithm name
+    private final String algorithm;
 
-  // Class methods.
-  // ------------------------------------------------------------------------
+    /**
+     * Creates a new {@code CertPathBuilder}.
+     *
+     * @param builderSpi
+     *            the implementation delegate.
+     * @param provider
+     *            the provider.
+     * @param algorithm
+     *            the desired algorithm available at the provider.
+     */
+    protected CertPathBuilder(CertPathBuilderSpi builderSpi, Provider provider,
+            String algorithm) {
+        this.provider = provider;
+        this.algorithm = algorithm;
+        this.spiImpl = builderSpi;
+    }
 
-  /**
-   * Get the default cert path builder type.
-   *
-   * <p>This value can be set at run-time by the security property
-   * <code>"certpathbuilder.type"</code>. If this property is not set,
-   * then the value returned is <code>"PKIX"</code>.
-   *
-   * @return The default CertPathBuilder algorithm.
-   */
-  public static final String getDefaultType()
-  {
-    String type = Security.getProperty("certpathbuilder.type");
-    if (type == null)
-      type = "PKIX";
-    return type;
-  }
+    /**
+     * Returns the algorithm name of this instance.
+     *
+     * @return the algorithm name of this instance.
+     */
+    public final String getAlgorithm() {
+        return algorithm;
+    }
 
-  /**
-   * Get an instance of a named CertPathBuilder, from the first provider
-   * that implements it.
-   *
-   * @param algorithm The name of the CertPathBuilder to create.
-   * @return The new instance.
-   * @throws NoSuchAlgorithmException If no installed provider
-   *   implements the named algorithm.
-   */
-  public static CertPathBuilder getInstance(String algorithm)
-    throws NoSuchAlgorithmException
-  {
-    Provider[] p = Security.getProviders();
+    /**
+     * Returns the provider of this instance.
+     *
+     * @return the provider of this instance.
+     */
+    public final Provider getProvider() {
+        return provider;
+    }
 
-    for (int i = 0; i < p.length; i++)
-      {
-        try
-          {
-            return getInstance(algorithm, p[i]);
-          }
-        catch (NoSuchAlgorithmException e)
-          {
-	    // Ignored.
-          }
-      }
+    /**
+     * Creates a new {@code CertPathBuilder} instance with the specified
+     * algorithm.
+     * 
+     * @param algorithm
+     *            the name of the algorithm.
+     * @return a builder for the requested algorithm.
+     * @throws NullPointerException
+     *             if the algorithm is {@code null}.
+     * @throws NoSuchAlgorithmException
+     *             if no installed provider can provide the algorithm.
+     */
+    public static CertPathBuilder getInstance(String algorithm)
+            throws NoSuchAlgorithmException {
+        if (algorithm == null) {
+            throw new NullPointerException("null algorithm");
+        }
+        synchronized (engine) {
+            engine.getInstance(algorithm, null);
+            return new CertPathBuilder((CertPathBuilderSpi) engine.spi,
+                    engine.provider, algorithm);
+        }
+    }
 
-    throw new NoSuchAlgorithmException(algorithm);
-  }
+    /**
+     * Creates a new {@code CertPathBuilder} instance from the specified
+     * provider providing the specified algorithm.
+     * 
+     * @param algorithm
+     *            the name of the algorithm.
+     * @param provider
+     *            the name of the provider.
+     * @return a builder for the requested algorithm.
+     * @throws NoSuchAlgorithmException
+     *             if the specified provider cannot provide the algorithm.
+     * @throws NoSuchProviderException
+     *             if no provider with the specified name can be found.
+     * @throws NullPointerException
+     *             if algorithm is {@code null}.
+     * @throws IllegalArgumentException
+     *             if provider is {@code null} or empty.
+     */
+    public static CertPathBuilder getInstance(String algorithm, String provider)
+            throws NoSuchAlgorithmException, NoSuchProviderException {
+        if ((provider == null) || (provider.length() == 0)) {
+            throw new IllegalArgumentException("null/empty provider");
+        }
+        Provider impProvider = Security.getProvider(provider);
+        if (impProvider == null) {
+            throw new NoSuchProviderException(provider);
+        }
+        return getInstance(algorithm, impProvider);
 
-  /**
-   * Get an instance of a named CertPathBuilder from the named
-   * provider.
-   *
-   * @param algorithm The name of the CertPathBuilder to create.
-   * @param provider  The name of the provider from which to get the
-   *   implementation.
-   * @return The new instance.
-   * @throws NoSuchAlgorithmException If no installed provider
-   *   implements the named algorithm.
-   * @throws NoSuchProviderException If the named provider does not
-   *   exist.
-   */
-  public static CertPathBuilder getInstance(String algorithm, String provider)
-    throws NoSuchAlgorithmException, NoSuchProviderException
-  {
-    Provider p = Security.getProvider(provider);
-    if (p == null)
-      throw new NoSuchProviderException(provider);
-    return getInstance(algorithm, p);
-  }
+    }
 
-  /**
-   * Get an instance of a named CertPathBuilder from the specified
-   * provider.
-   *
-   * @param algorithm The name of the CertPathBuilder to create.
-   * @param provider  The provider from which to get the implementation.
-   * @return The new instance.
-   * @throws NoSuchAlgorithmException If no installed provider
-   *   implements the named algorithm.
-   * @throws IllegalArgumentException If <i>provider</i> in
-   *   <tt>null</tt>.
-   */
-  public static CertPathBuilder getInstance(String algorithm, Provider provider)
-    throws NoSuchAlgorithmException
-  {
-    if (provider == null)
-      throw new IllegalArgumentException("null provider");
-    try
-      {
-        return new CertPathBuilder((CertPathBuilderSpi)
-          Engine.getInstance(CERT_PATH_BUILDER, algorithm, provider),
-          provider, algorithm);
-      }
-    catch (java.lang.reflect.InvocationTargetException ite)
-      {
-        throw new NoSuchAlgorithmException(algorithm);
-      }
-    catch (ClassCastException cce)
-      {
-        throw new NoSuchAlgorithmException(algorithm);
-      }
-  }
+    /**
+     * Creates a new {@code CertPathBuilder} instance from the specified
+     * provider providing the specified algorithm.
+     * 
+     * @param algorithm
+     *            the name of the algorithm.
+     * @param provider
+     *            the provider.
+     * @return a builder for the requested algorithm
+     * @throws NoSuchAlgorithmException
+     *             if the specified provider cannot provide the algorithm.
+     * @throws IllegalArgumentException
+     *             if provider is {@code null}.
+     * @throws NullPointerException
+     *             if algorithm is {@code null}.
+     */
+    public static CertPathBuilder getInstance(String algorithm,
+            Provider provider) throws NoSuchAlgorithmException {
+        if (provider == null) {
+            throw new IllegalArgumentException("null provider");
+        }
+        if (algorithm == null) {
+            throw new NullPointerException("null algorithm");
+        }
+        synchronized (engine) {
+            engine.getInstance(algorithm, provider, null);
+            return new CertPathBuilder((CertPathBuilderSpi) engine.spi, provider,
+                    algorithm);
+        }
+    }
 
-  // Instance methods.
-  // ------------------------------------------------------------------------
+    /**
+     * Builds a certification path with the specified algorithm parameters.
+     *
+     * @param params
+     *            the algorithm parameters.
+     * @return the built certification path.
+     * @throws CertPathBuilderException
+     *             if the build fails.
+     * @throws InvalidAlgorithmParameterException
+     *             if the specified parameters cannot be used to build with this
+     *             builder.
+     * @see CertPathBuilderResult
+     */
+    public final CertPathBuilderResult build(CertPathParameters params)
+            throws CertPathBuilderException, InvalidAlgorithmParameterException {
+        return spiImpl.engineBuild(params);
+    }
 
-  /**
-   * Return the name of this CertPathBuilder algorithm.
-   *
-   * @return The algorithm name.
-   */
-  public final String getAlgorithm()
-  {
-    return algorithm;
-  }
-
-  /**
-   * Return the provider of this instance's implementation.
-   *
-   * @return The provider.
-   */
-  public final Provider getProvider()
-  {
-    return provider;
-  }
-
-  /**
-   * Builds a certificate path. The {@link CertPathParameters} parameter
-   * passed to this method is implementation-specific, but in general
-   * should contain some number of certificates and some number of
-   * trusted certificates (or "trust anchors").
-   *
-   * @param params The parameters.
-   * @retrun The certificate path result.
-   * @throws CertPathBuilderException If the certificate path cannot be
-   *   built.
-   * @throws InvalidAlgorithmParameterException If the implementation
-   *   rejects the specified parameters.
-   */
-  public final CertPathBuilderResult build(CertPathParameters params)
-    throws CertPathBuilderException, InvalidAlgorithmParameterException
-  {
-    return cpbSpi.engineBuild(params);
-  }
+    /**
+     * Returns the default {@code CertPathBuilder} type from the <i>Security
+     * Properties</i>.
+     *
+     * @return the default {@code CertPathBuilder} type from the <i>Security
+     *         Properties</i>, or the string "{@code PKIX}" if it cannot be
+     *         determined.
+     */
+    public static final String getDefaultType() {
+        String defaultType = (String)AccessController
+                .doPrivileged(new java.security.PrivilegedAction() {
+                    public String run() {
+                        return Security.getProperty(PROPERTYNAME);
+                    }
+                });
+        return (defaultType != null ? defaultType : DEFAULTPROPERTY);
+    }
 }
+

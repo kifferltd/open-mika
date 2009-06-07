@@ -51,6 +51,8 @@ files:
     core-vm/java/java/math/BitLevel.java
     core-vm/java/java/math/Division.java
     core-vm/java/java/math/Multiplication.java
+    core-vm/java/java/security/Signature.java
+    core-vm/java/java/security/cert/CertPathBuilder.java
     core-vm/java/java/util/Calendar.java
     core-vm/java/java/util/GregorianCalendar.java
 Refer to the copyright header of those files for more information.

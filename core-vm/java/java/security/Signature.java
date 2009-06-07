@@ -1,216 +1,647 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 /*
-** $Id: Signature.java,v 1.2 2006/04/18 11:35:28 cvs Exp $
-*/
-
+ * Imported by CG 20090519 based on Apache Harmony ("enhanced") revision 769463 .
+ */
 package java.security;
 
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.Iterator;
+import java.util.Set;
 
+import org.apache.harmony.security.fortress.Engine;
+
+
+/**
+ * {@code Signature} is an engine class which is capable of creating and
+ * verifying digital signatures, using different algorithms that have been
+ * registered with the {@link Security} class.
+ * 
+ * @see SignatureSpi
+ */
 public abstract class Signature extends SignatureSpi {
+    
+    // The service name.
+    private static final String SERVICE = "Signature"; //$NON-NLS-1$
 
-  protected static final int SIGN = 2;
-  protected static final int UNINITIALIZED = 0;
-  protected static final int VERIFY = 3;
+    // Used to access common engine functionality
+    private static Engine engine = new Engine(SERVICE);
 
-  private static final String SIGNATURE_DOT = "Signature.";
+    // The provider
+    private Provider provider;
 
-  public static Signature getInstance(String algorithm) throws NoSuchAlgorithmException{
-    SecurityAction action = new SecurityAction(algorithm, SIGNATURE_DOT);
-    Signature sign = (action.spi instanceof Signature) ? (Signature)action.spi :
-     new SignatureSpiWrapper((SignatureSpi)action.spi,algorithm);
-    sign.provider = action.provider;
-    return sign;
-  }
+    // The algorithm.
+    private String algorithm;
 
-  public static Signature getInstance(String algorithm, String provider)
-    throws NoSuchAlgorithmException, NoSuchProviderException {
+    /**
+     * Constant that indicates that this {@code Signature} instance has not yet
+     * been initialized.
+     */
+    protected static final int UNINITIALIZED = 0;
 
-    SecurityAction action = new SecurityAction(algorithm, provider, SIGNATURE_DOT);
-    Signature sign = (action.spi instanceof Signature) ? (Signature)action.spi :
-      new SignatureSpiWrapper((SignatureSpi)action.spi,algorithm);
-    sign.provider = action.provider;
-    return sign;
-  }
+    /**
+     * Constant that indicates that this {@code Signature} instance has been
+     * initialized for signing.
+     */
+    protected static final int SIGN = 2;
 
-  public static Signature getInstance(String algorithm, Provider provider)
-    throws NoSuchAlgorithmException {
+    /**
+     * Constant that indicates that this {@code Signature} instance has been
+     * initialized for verification.
+     */
+    protected static final int VERIFY = 3;
 
-    SecurityAction action = new SecurityAction(algorithm, provider, SIGNATURE_DOT);
-    Signature sign = (action.spi instanceof Signature) ? (Signature)action.spi :
-      new SignatureSpiWrapper((SignatureSpi)action.spi,algorithm);
-    sign.provider = provider;
-    return sign;
-  }
+    /**
+     * Represents the current state of this {@code Signature}. The three
+     * possible states are {@link #UNINITIALIZED}, {@link #SIGN} or
+     * {@link #VERIFY}.
+     */
+    protected int state = UNINITIALIZED;
 
-  private String algorithm;
-  private Provider provider;
-
-  protected int state = UNINITIALIZED;
-
-  protected Signature(String algorithm){
-    if (algorithm == null){
-      throw new NullPointerException();
+    /**
+     * Constructs a new instance of {@code Signature} with the name of
+     * the algorithm to use.
+     *
+     * @param algorithm
+     *            the name of algorithm to use.
+     */
+    protected Signature(String algorithm) {
+        this.algorithm = algorithm;
     }
-    this.algorithm = algorithm;
-  }
 
-  public Object clone() throws CloneNotSupportedException{
-    return super.clone();
-  }
-
-  public final AlgorithmParameters getParameters() {
-    return this.engineGetParameters();
-  }
-  
-  public final boolean verify(byte[] signature, int offset, int length) 
-    throws SignatureException {
-    if(signature == null || offset < 0 || length < 0 ||
-        length + offset > signature.length) {
-      throw new IllegalArgumentException();
+    /**
+     * Returns a new instance of {@code Signature} that utilizes the specified
+     * algorithm.
+     *
+     * @param algorithm
+     *            the name of the algorithm to use.
+     * @return a new instance of {@code Signature} that utilizes the specified
+     *         algorithm.
+     * @throws NoSuchAlgorithmException
+     *             if the specified algorithm is not available.
+     * @throws NullPointerException
+     *             if {@code algorithm} is {@code null}.
+     */
+    public static Signature getInstance(String algorithm)
+            throws NoSuchAlgorithmException {
+        if (algorithm == null) {
+            throw new NullPointerException("Algorithm is null");
+        }
+        Signature result;
+        synchronized (engine) {
+            engine.getInstance(algorithm, null);
+            if (engine.spi instanceof Signature) {
+                result = (Signature) engine.spi;
+                result.algorithm = algorithm;
+                result.provider = engine.provider;
+            } else {
+                result = new SignatureImpl((SignatureSpi) engine.spi,
+                        engine.provider, algorithm);
+            }
+        }
+        return result;
     }
-    return this.engineVerify(signature, offset, length);
-  }
-  
-  public final String getAlgorithm(){
-    return algorithm;
-  }
-/**
-** @deprecated
-*/
-  public final Object getParameter(String param){
-    //System.out.println("java.security.Signature: getParameter("+param+") is called");
-    return engineGetParameter(param);
-  }
 
-  public final Provider getProvider(){
-    return provider;
-  }
-
-  public final void initSign(PrivateKey prtKey) throws InvalidKeyException{
-    //System.out.println("java.security.Signature: initSign("+prtKey+") is called");
-    engineInitSign(prtKey);
-    state = SIGN;
-  }
-
-  public final void initSign(PrivateKey prtKey, SecureRandom rnd) throws InvalidKeyException{
-    //System.out.println("java.security.Signature: initSign("+prtKey+", "+rnd+") is called");
-    engineInitSign(prtKey, rnd);
-    state = SIGN;
-  }
-
-  public final void initVerify(PublicKey publicKey) throws InvalidKeyException{
-    //System.out.println("java.security.Signature: initVerify("+publicKey+") is called");
-    engineInitVerify(publicKey);
-    state = VERIFY;
-  }
-
-  public final void initVerify(java.security.cert.Certificate certificate) throws InvalidKeyException {
-    engineInitVerify(certificate.getPublicKey());
-    state = VERIFY;
-  }
-
-  public final void setParameter(AlgorithmParameterSpec params) throws InvalidAlgorithmParameterException{
-    //System.out.println("java.security.Signature: setParameter("+params+") is called");
-    engineSetParameter(params);
-  }
-
-/**
-** @deprecated. Use setParameter.
-*/
-  public final void setParameter(String param, Object value){
-    //System.out.println("java.security.Signature: setParameter("+param+", "+value+") is called");
-    engineSetParameter(param, value);
-  }
-
-  public final byte[] sign() throws SignatureException{
-    //System.out.println("java.security.Signature: sign() is called");
-    if(state != SIGN){
-      throw new SignatureException("the Signature has an invalid state");
+    /**
+     * Returns a new instance of {@code Signature} that utilizes the specified
+     * algorithm from the specified provider.
+     *
+     * @param algorithm
+     *            the name of the algorithm to use.
+     * @param provider
+     *            the name of the provider.
+     * @return a new instance of {@code Signature} that utilizes the specified
+     *         algorithm from the specified provider.
+     * @throws NoSuchAlgorithmException
+     *             if the specified algorithm is not available.
+     * @throws NoSuchProviderException
+     *             if the specified provider is not available.
+     * @throws NullPointerException
+     *             if {@code algorithm} is {@code null}.
+     */
+    public static Signature getInstance(String algorithm, String provider)
+            throws NoSuchAlgorithmException, NoSuchProviderException {
+        if (algorithm == null) {
+            throw new NullPointerException("Algorithm is null");
+        }
+        if ((provider == null) || (provider.length() == 0)) {
+            throw new IllegalArgumentException("Provider is null or empty string");
+        }
+        Provider p = Security.getProvider(provider);
+        if (p == null) {
+            throw new NoSuchProviderException("Provider " + provider + " is not available");
+        }
+        return getSignatureInstance(algorithm, p);
     }
-    return engineSign();
-  }
 
-  public final int sign(byte[] buf, int offset, int len) throws SignatureException{
-    //System.out.println("java.security.Signature: sign("+buf+", "+offset+", "+len+") is called");
-    if(state != SIGN){
-      throw new SignatureException("the Signature has an invalid state");
+    /**
+     * Returns a new instance of {@code Signature} that utilizes the specified
+     * algorithm from the specified provider.
+     *
+     * @param algorithm
+     *            the name of the algorithm to use.
+     * @param provider
+     *            the security provider.
+     * @return a new instance of {@code Signature} that utilizes the specified
+     *         algorithm from the specified provider.
+     * @throws NoSuchAlgorithmException
+     *             if the specified algorithm is not available.
+     * @throws NullPointerException
+     *             if {@code algorithm} is {@code null}.
+     */
+    public static Signature getInstance(String algorithm, Provider provider)
+            throws NoSuchAlgorithmException {
+        if (algorithm == null) {
+            throw new NullPointerException("Algorithm is null");
+        }
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider is null");
+        }
+        return getSignatureInstance(algorithm, provider);
     }
-    return engineSign(buf, offset, len);
-  }
-
-  public String toString(){
-    String s = null;
-    switch(state){
-      case SIGN:
-        s = "SIGN";
-        break;
-      case VERIFY:
-        s = "VERIFY";
-        break;
-      default:
-        s = "UNINITIALIZED";
+    
+    private static Signature getSignatureInstance(String algorithm,
+            Provider provider) throws NoSuchAlgorithmException {
+        Signature result;
+        synchronized (engine) {
+            engine.getInstance(algorithm, provider, null);
+            if (engine.spi instanceof Signature) {
+                result = (Signature) engine.spi;
+                result.algorithm = algorithm;
+                result.provider = provider;
+            } else {
+                result = new SignatureImpl((SignatureSpi) engine.spi, provider,
+                        algorithm);
+            }
+        }
+        return result;
     }
-    return "Signature state = "+s+" using "+algorithm;
-  }
 
-  public final void update(byte b) throws SignatureException{
-    //System.out.println("java.security.Signature: update("+b+") is called");
-    if(state == UNINITIALIZED){
-      throw new SignatureException("the Signature has not initialized");
+    /**
+     * Returns the provider associated with this {@code Signature}.
+     *
+     * @return the provider associated with this {@code Signature}.
+     */
+    public final Provider getProvider() {
+        return provider;
     }
-    engineUpdate(b);
-  }
 
-  public final void update(byte[] data) throws SignatureException{
-    //System.out.println("java.security.Signature: update("+data+") is called");
-    if(state == UNINITIALIZED){
-      throw new SignatureException("the Signature has not initialized");
+    /**
+     * Returns the name of the algorithm of this {@code Signature}.
+     *
+     * @return the name of the algorithm of this {@code Signature}.
+     */
+    public final String getAlgorithm() {
+        return algorithm;
     }
-    engineUpdate(data, 0, data.length);
-  }
 
-  public final void update(byte[] data, int off, int len) throws SignatureException{
-    //System.out.println("java.security.Signature: update("+data+", "+off+", "+len+") is called");
-    if(state == UNINITIALIZED){
-      throw new SignatureException("the Signature has not initialized");
+    /**
+     * Initializes this {@code Signature} instance for signature verification,
+     * using the public key of the identity whose signature is going to be
+     * verified.
+     *
+     * @param publicKey
+     *            the public key.
+     * @throws InvalidKeyException
+     *             if {@code publicKey} is not valid.
+     */
+    public final void initVerify(PublicKey publicKey)
+            throws InvalidKeyException {
+        engineInitVerify(publicKey);
+        state = VERIFY;
     }
-    engineUpdate(data, off, len);
-  }
 
-  public final boolean verify(byte[] signature) throws SignatureException{
-    //System.out.println("java.security.Signature: verify("+signature+") is called");
-    if(state != VERIFY){
-      throw new SignatureException("the Signature has an invalid state");
+    /**
+     * Initializes this {@code Signature} instance for signature verification,
+     * using the certificate of the identity whose signature is going to be
+     * verified.
+     * <p>
+     * If the given certificate is an instance of {@link X509Certificate} and
+     * has a key usage parameter that indicates, that this certificate is not to
+     * be used for signing, an {@code InvalidKeyException} is thrown.
+     *
+     * @param certificate
+     *            the certificate used to verify a signature.
+     * @throws InvalidKeyException
+     *             if the publicKey in the certificate is not valid or not to be
+     *             used for signing.
+     */
+    public final void initVerify(Certificate certificate)
+            throws InvalidKeyException {
+        if (certificate instanceof X509Certificate) {
+            Set ce = ((X509Certificate) certificate).getCriticalExtensionOIDs();
+            boolean critical = false;
+            if (ce != null && !ce.isEmpty()) {
+                for (Iterator i = ce.iterator(); i.hasNext();) {
+                    if ("2.5.29.15".equals(i.next())) {  //$NON-NLS-1$
+                        //KeyUsage OID = 2.5.29.15
+                        critical = true;
+                        break;
+                    }
+                }
+                if (critical) {
+                    boolean[] keyUsage = ((X509Certificate) certificate)
+                            .getKeyUsage();
+                    // As specified in RFC 3280 -
+                    // Internet X.509 Public Key Infrastructure
+                    // Certificate and Certificate Revocation List (CRL) Profile.
+                    // (http://www.ietf.org/rfc/rfc3280.txt)
+                    //
+                    // KeyUsage ::= BIT STRING { digitalSignature (0), <skipped> }
+                    if ((keyUsage != null) && (!keyUsage[0])) { // digitalSignature
+                        throw new InvalidKeyException("The public key in the certificate cannot be used for digital signature purposes");
+                    }
+                }
+            }
+        }
+        engineInitVerify(certificate.getPublicKey());
+        state = VERIFY;
     }
-    return engineVerify(signature);
-  }
 
+    /**
+     * Initializes this {@code Signature} instance for signing, using the
+     * private key of the identity whose signature is going to be generated.
+     *
+     * @param privateKey
+     *            the private key.
+     * @throws InvalidKeyException
+     *             if {@code privateKey} is not valid.
+     */
+    public final void initSign(PrivateKey privateKey)
+            throws InvalidKeyException {
+        engineInitSign(privateKey);
+        state = SIGN;
+    }
+
+    /**
+     * Initializes this {@code Signature} instance for signing, using the
+     * private key of the identity whose signature is going to be generated and
+     * the specified source of randomness.
+     *
+     * @param privateKey
+     *            the private key.
+     * @param random
+     *            the {@code SecureRandom} to use.
+     * @throws InvalidKeyException
+     *             if {@code privateKey} is not valid.
+     */
+    public final void initSign(PrivateKey privateKey, SecureRandom random)
+            throws InvalidKeyException {
+        engineInitSign(privateKey, random);
+        state = SIGN;
+    }
+
+    /**
+     * Generates and returns the signature of all updated data.
+     * <p>
+     * This {@code Signature} instance is reset to the state of its last
+     * initialization for signing and thus can be used for another signature
+     * from the same identity.
+     *
+     * @return the signature of all updated data.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     */
+    public final byte[] sign() throws SignatureException {
+        if (state != SIGN) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        return engineSign();
+    }
+
+    /**
+     * Generates and stores the signature of all updated data in the provided
+     * {@code byte[]} at the specified position with the specified length.
+     * <p>
+     * This {@code Signature} instance is reset to the state of its last
+     * initialization for signing and thus can be used for another signature
+     * from the same identity.
+     *
+     * @param outbuf
+     *            the buffer to store the signature.
+     * @param offset
+     *            the index of the first byte in {@code outbuf} to store.
+     * @param len
+     *            the number of bytes allocated for the signature.
+     * @return the number of bytes stored in {@code outbuf}.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     * @throws IllegalArgumentException
+     *             if {@code offset} or {@code len} are not valid in respect to
+     *             {@code outbuf}.
+     */
+    public final int sign(byte[] outbuf, int offset, int len)
+            throws SignatureException {       
+        if (outbuf == null || offset < 0 || len < 0 ||
+                offset + len > outbuf.length) {
+            throw new IllegalArgumentException("Incorrect offset/len parameters");
+        }
+        if (state != SIGN) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        return engineSign(outbuf, offset, len);
+    }
+
+    /**
+     * Indicates whether the given {@code signature} can be verified using the
+     * public key or a certificate of the signer.
+     * <p>
+     * This {@code Signature} instance is reset to the state of its last
+     * initialization for verifying and thus can be used to verify another
+     * signature of the same signer.
+     *
+     * @param signature
+     *            the signature to verify.
+     * @return {@code true} if the signature was verified, {@code false}
+     *         otherwise.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     */
+    public final boolean verify(byte[] signature) throws SignatureException {
+        if (state != VERIFY) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        return engineVerify(signature);
+    }
+
+    /**
+     * Indicates whether the given {@code signature} starting at index {@code
+     * offset} with {@code length} bytes can be verified using the public key or
+     * a certificate of the signer.
+     * <p>
+     * This {@code Signature} instance is reset to the state of its last
+     * initialization for verifying and thus can be used to verify another
+     * signature of the same signer.
+     *
+     * @param signature
+     *            the {@code byte[]} containing the signature to verify.
+     * @param offset
+     *            the start index in {@code signature} of the signature.
+     * @param length
+     *            the number of bytes allocated for the signature.
+     * @return {@code true} if the signature was verified, {@code false}
+     *         otherwise.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     * @throws IllegalArgumentException
+     *             if {@code offset} or {@code length} are not valid in respect
+     *             to {@code signature}.
+     */
+    public final boolean verify(byte[] signature, int offset, int length)
+            throws SignatureException {
+        if (state != VERIFY) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        if (signature == null || offset < 0 || length < 0 ||
+                offset + length > signature.length) {
+            throw new IllegalArgumentException("Incorrect offset/len parameters");
+        }
+        return engineVerify(signature, offset, length);
+    }
+
+    /**
+     * Updates the data to be verified or to be signed, using the specified
+     * {@code byte}.
+     *
+     * @param b
+     *            the byte to update with.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     */
+    public final void update(byte b) throws SignatureException {
+        if (state == UNINITIALIZED) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        engineUpdate(b);
+    }
+
+    /**
+     * Updates the data to be verified or to be signed, using the specified
+     * {@code byte[]}.
+     *
+     * @param data
+     *            the byte array to update with.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     */
+    public final void update(byte[] data) throws SignatureException {
+        if (state == UNINITIALIZED) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        engineUpdate(data, 0, data.length);
+    }
+
+    /**
+     * Updates the data to be verified or to be signed, using the given {@code
+     * byte[]}, starting form the specified index for the specified length.
+     *
+     * @param data
+     *            the byte array to update with.
+     * @param off
+     *            the start index in {@code data} of the data.
+     * @param len
+     *            the number of bytes to use.
+     * @throws SignatureException
+     *             if this {@code Signature} instance is not initialized
+     *             properly.
+     */
+    public final void update(byte[] data, int off, int len)
+            throws SignatureException {
+        if (state == UNINITIALIZED) {
+            throw new SignatureException("Signature object is not initialized properly");
+        }
+        if (data == null || off < 0 || len < 0 ||
+                off + len > data.length) {
+            throw new IllegalArgumentException("Incorrect offset/len parameters");
+        }
+        engineUpdate(data, off, len);
+    }
+
+    /**
+     * Returns a string containing a concise, human-readable description of this
+     * {@code Signature} including its algorithm and its state.
+     *
+     * @return a printable representation for this {@code Signature}.
+     */
+    public String toString() {
+        return "SIGNATURE " + algorithm + " state: " + stateToString(state); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    // Convert state to string
+    private String stateToString(int state) {
+        switch (state) {
+        case UNINITIALIZED:
+            return "UNINITIALIZED"; //$NON-NLS-1$
+        case SIGN:
+            return "SIGN"; //$NON-NLS-1$
+        case VERIFY:
+            return "VERIFY"; //$NON-NLS-1$
+        default:
+            return ""; //$NON-NLS-1$
+        }
+    }
+
+    /**
+     * Sets the specified parameter to the given value.
+     *
+     * @param param
+     *            the name of the parameter.
+     * @param value
+     *            the parameter value.
+     * @throws InvalidParameterException
+     *             if the parameter is invalid, already set or is not allowed to
+     *             be changed.
+     * @deprecated Use {@link #setParameter(AlgorithmParameterSpec)}
+     */
+    public final void setParameter(String param, Object value)
+            throws InvalidParameterException {
+        engineSetParameter(param, value);
+    }
+
+    /**
+     * Sets the specified {@code AlgorithmParameterSpec}.
+     *
+     * @param params
+     *            the parameter to set.
+     * @throws InvalidAlgorithmParameterException
+     *             if the parameter is invalid, already set or is not allowed to
+     *             be changed.
+     */
+    public final void setParameter(AlgorithmParameterSpec params)
+            throws InvalidAlgorithmParameterException {
+        engineSetParameter(params);
+    }
+
+    /**
+     * Returns the {@code AlgorithmParameters} of this {@link Signature}
+     * instance.
+     *
+     * @return the {@code AlgorithmParameters} of this {@link Signature}
+     *         instance, maybe {@code null}.
+     */
+    public final AlgorithmParameters getParameters() {
+        return engineGetParameters();
+    }
+
+    /**
+     * Returns the value of the parameter with the specified name.
+     * 
+     * @param param
+     *            the name of the requested parameter value
+     * @return the value of the parameter with the specified name, maybe {@code
+     *         null}.
+     * @throws InvalidParameterException
+     *             if {@code param} is not a valid parameter for this {@code
+     *             Signature} or an other error occures.
+     * @deprecated There is no generally accepted parameter naming convention.
+     */
+    public final Object getParameter(String param)
+            throws InvalidParameterException {
+        return engineGetParameter(param);
+    }
+
+    public Object clone() throws CloneNotSupportedException {
+        if (this instanceof Cloneable) {
+            return super.clone();
+        } else {
+            throw new CloneNotSupportedException();
+        }
+    }
+
+    /**
+     * 
+     * Internal Signature implementation
+     * 
+     */
+    private static class SignatureImpl extends Signature {
+
+        private SignatureSpi spiImpl;
+
+        // Constructor
+        public SignatureImpl(SignatureSpi signatureSpi, Provider provider,
+                String algorithm) {
+            super(algorithm);
+            super.provider = provider;
+            spiImpl = signatureSpi;
+        }
+
+        // engineSign() implementation
+        protected byte[] engineSign() throws SignatureException {
+            return spiImpl.engineSign();
+        }
+
+        //  engineUpdate() implementation
+        protected void engineUpdate(byte arg0) throws SignatureException {
+            spiImpl.engineUpdate(arg0);
+        }
+
+        // engineVerify() implementation
+        protected boolean engineVerify(byte[] arg0) throws SignatureException {
+            return spiImpl.engineVerify(arg0);
+        }
+
+        // engineUpdate() implementation
+        protected void engineUpdate(byte[] arg0, int arg1, int arg2)
+                throws SignatureException {
+            spiImpl.engineUpdate(arg0, arg1, arg2);
+        }
+
+        // engineInitSign() implementation
+        protected void engineInitSign(PrivateKey arg0)
+                throws InvalidKeyException {
+            spiImpl.engineInitSign(arg0);
+        }
+
+        // engineInitVerify() implementation
+        protected void engineInitVerify(PublicKey arg0)
+                throws InvalidKeyException {
+            spiImpl.engineInitVerify(arg0);
+        }
+
+        // engineGetParameter() implementation
+        protected Object engineGetParameter(String arg0)
+                throws InvalidParameterException {
+            return spiImpl.engineGetParameter(arg0);
+        }
+
+        // engineSetParameter() implementation
+        protected void engineSetParameter(String arg0, Object arg1)
+                throws InvalidParameterException {
+            spiImpl.engineSetParameter(arg0, arg1);
+        }
+
+        // Returns a clone if the spiImpl is cloneable
+        public Object clone() throws CloneNotSupportedException {
+            if (spiImpl instanceof Cloneable) {
+                SignatureSpi spi = (SignatureSpi) spiImpl.clone();
+                return new SignatureImpl(spi, getProvider(), getAlgorithm());
+            } else {
+                throw new CloneNotSupportedException();
+            }
+        }
+    }
 }
+
