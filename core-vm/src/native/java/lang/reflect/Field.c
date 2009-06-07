@@ -55,7 +55,7 @@ w_instance Field_getDeclaringClass(JNIEnv *env, w_instance Field) {
 
 w_instance Field_getName(JNIEnv *env, w_instance Field) {
 
-  return newStringInstance(Field2field(Field)->name);
+  return getStringInstance(Field2field(Field)->name);
 
 }
 

@@ -158,7 +158,7 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
 
   //wprintf("canonical name = %s (%d)\n", h_name, host->h_addrtype);
   h_name = cstring2String(host->h_name, strlen(host->h_name));
-  setReferenceField(InetAddress, newStringInstance(h_name), F_InetAddress_hostName);
+  setReferenceField(InetAddress, getStringInstance(h_name), F_InetAddress_hostName);
   deregisterString(h_name);
   //setReferenceField(InetAddress, Name, F_InetAddress_hostName);
 

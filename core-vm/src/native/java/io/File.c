@@ -96,11 +96,11 @@ w_boolean File_exists (JNIEnv *env, w_instance thisFile) {
 }
 
 w_instance File_get_CWD (JNIEnv *env, w_instance thisFile) {
-  return newStringInstance(utf2String(current_working_dir, strlen(current_working_dir)));
+  return getStringInstance(utf2String(current_working_dir, strlen(current_working_dir)));
 }
 
 w_instance File_get_fsroot (JNIEnv *env, w_instance thisFile) {
-  return newStringInstance(utf2String(fsroot, strlen(fsroot)));
+  return getStringInstance(utf2String(fsroot, strlen(fsroot)));
 }
 
 w_instance File_list (JNIEnv *env, w_instance thisFile) {
@@ -149,7 +149,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
       entryname = dirent->d_name;
       if (strcmp(entryname, ".") && strcmp(entryname, "..")) {
         entry_string = utf2String(entryname, strlen(entryname));
-        entry = newStringInstance(entry_string);
+        entry = getStringInstance(entry_string);
         setArrayReferenceField(result, entry, i++);
         deregisterString(entry_string);
       }	

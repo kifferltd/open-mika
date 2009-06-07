@@ -1517,7 +1517,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   method = virtualLookup(loadClass_method, initiating_loader_clazz);
   woempa(7, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
 
-  Name = newStringInstance(name);
+  Name = getStringInstance(name);
   if (!Name) {
     woempa(9, "Unable to get String instance of '%w'\n", name);
 

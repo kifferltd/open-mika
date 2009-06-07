@@ -57,7 +57,7 @@ w_instance Constructor_getDeclaringClass(JNIEnv *env, w_instance thisConstructor
 w_instance Constructor_getName(JNIEnv *env, w_instance thisConstructor) {
   w_method method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   
-  return newStringInstance(method->spec.declaring_clazz->dotified);
+  return getStringInstance(method->spec.declaring_clazz->dotified);
   
 }
 
