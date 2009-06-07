@@ -568,7 +568,7 @@ static w_int releaseInstance(w_object object) {
 //  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)instance, object, clazz, printFlags(object->flags));
 
   if (clazz == clazzString && getWotsitField(instance, F_String_wotsit)) {
-    woempa(7, "Deferring sweeping of %j (%w)\n", instance, instance[F_String_wotsit]);
+    woempa(3, "Deferring sweeping of %j (%w)\n", instance, instance[F_String_wotsit]);
     if (putFifo(instance, dead_string_fifo) < 0) {
       wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
     };
