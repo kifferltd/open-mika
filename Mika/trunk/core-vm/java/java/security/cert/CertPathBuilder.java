@@ -205,7 +205,7 @@ public class CertPathBuilder {
     public static final String getDefaultType() {
         String defaultType = (String)AccessController
                 .doPrivileged(new java.security.PrivilegedAction() {
-                    public String run() {
+                    public Object run() {
                         return Security.getProperty(PROPERTYNAME);
                     }
                 });
