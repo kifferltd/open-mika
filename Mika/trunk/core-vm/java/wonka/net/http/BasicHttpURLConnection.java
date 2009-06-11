@@ -195,7 +195,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   /**
    ** The stream used to write to <var>socket</var>.
    */
-  private HttpOutputStream out;
+  private OutputStream out;
     
   
   /**
@@ -472,7 +472,14 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       throw new IOException("output is disabled");
     }
     if (out == null) {
-      out = new HttpOutputStream(socket.getOutputStream(),this);
+      if (requestContentLength < 0) {
+        out = new HttpOutputStream(socket.getOutputStream(), requestContentLength);
+      }
+      else {
+        out = socket.getOutputStream();
+        out.write(13);
+        out.write(10);
+      }
     }
     return out;
   }
@@ -851,7 +858,10 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     if (out != null) {
       try {
-        out.flush_internal();
+        ((HttpOutputStream)out).flush_internal();
+      }
+      catch (ClassCastException ioe) {
+        // Ignore - we were writing directly to the socket
       }
       catch (IOException ioe) {
         // Ignore - probably stream was already closed

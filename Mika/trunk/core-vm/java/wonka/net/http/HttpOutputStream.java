@@ -94,16 +94,18 @@ class HttpOutputStream extends OutputStream {
   /**
    ** The BasicHttpURLConnection by which this HttpOutputStream was created.
    */
-  private BasicHttpURLConnection httpCon;
+  int contentLength;
 
   /**
-   ** Construct a HttpOutputStream which wraps <var>out</var>, with parent <var>httpC</var>.
+   ** Construct a HttpOutputStream which wraps <var>out</var>.
+   ** The buffer size is <var>contentLength</var> if this is >=0,
+   ** <var>bufsize</var> otherwise.
    */
-  HttpOutputStream(OutputStream out, BasicHttpURLConnection httpC) throws IOException {
+  HttpOutputStream(OutputStream out, int contentLength) throws IOException {
     this.out = out;
-    httpCon = httpC;
-    contentLengthNeeded = httpC.requestContentLength < 0;
-    buffer = new byte[contentLengthNeeded ? bufsize : httpC.requestContentLength];
+    this.contentLength = contentLength;
+    contentLengthNeeded = contentLength < 0;
+    buffer = new byte[contentLengthNeeded ? bufsize : contentLength];
   }
 
   /**
@@ -149,15 +151,17 @@ class HttpOutputStream extends OutputStream {
       if(chunked) {
         flushBuffer(buffer, 0);
       }
-      else if (count >= httpCon.requestContentLength) {
+      else if (count >= contentLength) {
         if (contentLengthNeeded) {
-          out.write(("Content-Length: "+httpCon.requestContentLength+"\r\n").getBytes());
+          out.write(("Content-Length: " + contentLength+"\r\n").getBytes());
           contentLengthNeeded = false;
         }
         out.write(NEWLINE,0,2);
-        out.write(buffer,0,httpCon.requestContentLength);
-        count = 0;
-        out.flush();
+        if (contentLength > 0) {
+          out.write(buffer,0,contentLength);
+          count = 0;
+          out.flush();
+        }
       }
     }
   }
@@ -227,15 +231,19 @@ class HttpOutputStream extends OutputStream {
    ** already enabled.
    */
   private void flushBuffer(byte[] buf, int off) throws IOException {
-    if(!chunked){
-      chunked = true;
-      contentLengthNeeded = false;
-      out.write(CHUNKED,0,CHUNKED.length);
+    // if contentLengthNeeded is not set then we already sent a
+    // Content-length, so we mustn't enter chunked mode.
+    if (contentLengthNeeded) {
+      if(!chunked){
+        chunked = true;
+        contentLengthNeeded = false;
+        out.write(CHUNKED,0,CHUNKED.length);
+      }
+      out.write((Integer.toHexString(count)+"\r\n").getBytes());
+      out.write(buf,off, count);
+      count = 0;
+      out.write(NEWLINE,0,2);
     }
-    out.write((Integer.toHexString(count)+"\r\n").getBytes());
-    out.write(buf,off, count);
-    count = 0;
-    out.write(NEWLINE,0,2);
     out.flush();
   }
 }
