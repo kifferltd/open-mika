@@ -133,7 +133,12 @@ public abstract class HttpURLConnection extends URLConnection {
   ** @status implemented
   */
   public Permission getPermission() throws IOException {   	
-   	return new SocketPermission(url.getHost()+":"+(url.getPort()== -1 ? 80 : url.getPort()) , "connect");
+    int port = url.getPort();
+    if (port < 0) {
+      port = 80;
+    }
+
+    return new SocketPermission(url.getHost() + ":" + port , "connect,resolve");
   }
 
   /**
