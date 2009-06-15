@@ -541,7 +541,7 @@ switch $(SECURITY) {
 }
 
 switch $(SECURITY) {
-  case coarse : {
+  case java2 : {
     WONKA_INFO += "fine-grained (Java2) security;" ;
   }
   case none : {
