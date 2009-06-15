@@ -19,23 +19,23 @@ the following files:
     core-vm/java/java/util/HashMap.java
     core-vm/java/java/util/LinkedHashMap.java
     core-vm/java/java/util/LinkedHashSet.java
-    core-vm/java/java/security/cert/CertPathBuilderSpi.java
-    core-vm/java/java/security/cert/CertPathValidator.java
-    core-vm/java/java/security/cert/PKIXCertPathValidatorResult.java
-    core-vm/java/java/security/cert/X509CertSelector.java
-    core-vm/java/java/security/cert/CertPathBuilderException.java
-    core-vm/java/java/security/cert/X509CRLSelector.java
-    core-vm/java/java/security/cert/CertPathValidatorResult.java
-    core-vm/java/java/security/cert/CertPathParameters.java
-    core-vm/java/java/security/cert/CertStoreSpi.java
-    core-vm/java/java/security/cert/CertPathValidatorSpi.java
-    core-vm/java/java/security/cert/CertPathBuilderResult.java
-    core-vm/java/java/security/cert/PKIXCertPathChecker.java
-    core-vm/java/java/security/cert/PKIXBuilderParameters.java
-    core-vm/java/java/security/cert/TrustAnchor.java
-    core-vm/java/java/security/cert/CollectionCertStoreParameters.java
-    core-vm/java/java/security/cert/PolicyNode.java
-    core-vm/java/java/security/cert/PKIXParameters.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathBuilderSpi.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathValidator.java
+    vm-cmp/security/java2/java/java/security/cert/PKIXCertPathValidatorResult.java
+    vm-cmp/security/java2/java/java/security/cert/X509CertSelector.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathBuilderException.java
+    vm-cmp/security/java2/java/java/security/cert/X509CRLSelector.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathValidatorResult.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathParameters.java
+    vm-cmp/security/java2/java/java/security/cert/CertStoreSpi.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathValidatorSpi.java
+    vm-cmp/security/java2/java/java/security/cert/CertPathBuilderResult.java
+    vm-cmp/security/java2/java/java/security/cert/PKIXCertPathChecker.java
+    vm-cmp/security/java2/java/java/security/cert/PKIXBuilderParameters.java
+    vm-cmp/security/java2/java/java/security/cert/TrustAnchor.java
+    vm-cmp/security/java2/java/java/security/cert/CollectionCertStoreParameters.java
+    vm-cmp/security/java2/java/java/security/cert/PolicyNode.java
+    vm-cmp/security/java2/java/java/security/cert/PKIXParameters.java
 Refer to the copyright header of those files for more information.
 
 Parts of the class libraries are taken from the Apache Harmony project, and
