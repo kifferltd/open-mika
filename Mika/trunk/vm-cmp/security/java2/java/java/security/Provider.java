@@ -409,10 +409,10 @@ public abstract class Provider extends Properties {
      * Set the provider preference order number.
      * 
      * @param n
+     */
     void setProviderNumber(int n) {
         providerNumber = n;
     }
-     */
 
     /**
      * 
