@@ -193,7 +193,7 @@ public final class SystemClassLoader extends ClassLoader {
 
     for (int i = 0; i < bootclasspath.length; ++i) {
       Object bootclasspath_entry = bootclasspath[i];
-      Etc.woempa(9, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry);
+      //Etc.woempa(9, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry);
       if (bootclasspath_entry == bootstrap_zipfile_path) {
         bytes = getBootstrapFile(filename);
       }
@@ -205,12 +205,12 @@ public final class SystemClassLoader extends ClassLoader {
             if (je != null){
               int length = (int)je.getSize();
               in = jf.getInputStream(je);
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
             }
             else {
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
             }
           } catch (IOException e){
             e.printStackTrace();
@@ -221,12 +221,12 @@ public final class SystemClassLoader extends ClassLoader {
             try {
               int length = (int)f.length();
               in = new FileInputStream(f);
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
             }
             catch (FileNotFoundException fnfe) {
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
             }
             catch(IOException ioe) {
               ioe.printStackTrace();
