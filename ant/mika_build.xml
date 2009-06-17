@@ -85,6 +85,7 @@
   <target name="source" depends="prepare,check-build-env">
     <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
     <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
     <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
@@ -95,6 +96,7 @@
       <fileset dir="${vm.ext.dir}beans/java"/>
       <fileset dir="${vm.java.dir}"/>
       <fileset dir="${security.dir}"/>
+      <fileset dir="${security.provider.dir}"/>
       <fileset dir="${math.dir}"/>
       <fileset dir="${awt.dir}"/>
       <fileset dir="${jar.dir}"/>
@@ -120,6 +122,7 @@
       <fileset dir="${vm.ext.dir}beans/java" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${vm.java.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${security.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.provider.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${math.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${awt.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${jar.dir}" excludes="com/**/,gnu/**,wonka/**"/>
@@ -140,6 +143,13 @@
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>
+    <condition property="SECURITY_PROVIDER.MISSING">
+      <and>
+        <equals arg1="${JAR}" arg2="none"/>
+        <not><isset property="SECURITY_PROVIDER"/></not>
+      </and>
+    </condition>
+    <fail message="Please specify a SECURITY_PROVIDER config. example: harmony, none" if="SECURITY_PROVIDER.MISSING"/>
     <condition property="AWT.DEF.MISSING">
       <and>
         <equals arg1="${AWT}" arg2="rudolph"/>
@@ -152,6 +162,7 @@
   <target name="build-wre">
     <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
     <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
 
@@ -161,7 +172,7 @@
 
     <javac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
            target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${vm.java.dir}:${security.dir}:${jar.dirs}:${math.dir}:${awt.dir}"/>
+           srcdir="${vm.java.dir}:${security.dir}:${security.provider.dir}:${jar.dirs}:${math.dir}:${awt.dir}"/>
 
     <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
            target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
