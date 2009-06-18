@@ -139,17 +139,27 @@
     <property file="${platform.file}"/>
     <fail message="Please specify your UNICODE_SUBSETS config. example: 0 or 999" unless="UNICODE_SUBSETS"/>
 
-    <propertychecker property="SECURITY" values="none|fine|coarse|java2"/>
+    <propertychecker property="SECURITY" values="none|java2"/>
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>
-    <condition property="SECURITY_PROVIDER.MISSING">
+    <condition property="JAVA2_SECURITY_BUT_NO_JARSIGNING">
       <and>
+        <equals arg1="${SECURITY}" arg2="java2"/>
         <equals arg1="${JAR}" arg2="none"/>
-        <not><isset property="SECURITY_PROVIDER"/></not>
       </and>
     </condition>
-    <fail message="Please specify a SECURITY_PROVIDER config. example: harmony, none" if="SECURITY_PROVIDER.MISSING"/>
+    <fail message="SECURITY=java2 is not compatible with JAR=none." if="JAVA2_SECURITY_BUT_NO_JARSIGNING"/>
+    <condition property="SECURITY_PROVIDER.MISSING">
+      <and>
+        <equals arg1="${JAR}" arg2="java"/>
+        <or>
+          <not><isset property="SECURITY_PROVIDER"/></not>
+          <equals arg1="${SECURITY_PROVIDER}" arg2="none"/>
+        </or>
+      </and>
+    </condition>
+    <fail message="JAR=java requires a SECURITY_PROVIDER setting, e.g. harmony (not 'none')." if="SECURITY_PROVIDER.MISSING"/>
     <condition property="AWT.DEF.MISSING">
       <and>
         <equals arg1="${AWT}" arg2="rudolph"/>
