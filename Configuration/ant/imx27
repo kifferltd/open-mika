@@ -16,19 +16,24 @@ AWT=rudolph
 AWT_DEF=fdev
 
 #
-# Define your security level: either none, coarse or fine
+# Define your security level: either java2 or none.
+# If java2 is selected, a jarfile verification implementation must be selected
+# (JAR!=none)).
 #
 SECURITY=none
 
 #
-# Define your security provider: currently either harmony or none
+# Define your security provider: currently either harmony or none.
+# Note that it can make sense to have a security provider even when SECURITY
+# is set to 'none', for example in order to be able to perform encryption.
 #
-SECURITY_PROVIDER=none
+SECURITY_PROVIDER=harmony
 
 #
 # Allows you to enable jarfile verification.
 # none: no jar verification
 # java: jarfile verification is done in java
+#       In this case a SECURITY_PROVIDER must be specified.
 #
 JAR=java
 
