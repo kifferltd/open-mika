@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          #
+# Copyright (c) 2006, 2009 by Chris Gray, /k/ Embedded Java Solutions.    #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -29,7 +29,10 @@
 
 # list of security providers
 security.provider.1=com.acunia.wonka.security.DefaultProvider
-security.provider.2=gnu.java.security.provider.Gnu
+security.provider.2=org.apache.harmony.security.provider.cert.DRLCertFactory
+security.provider.3=org.apache.harmony.security.provider.crypto.CryptoProvider
+#security.provider.4=org.bouncycastle.jce.provider.BouncyCastleProvider
+#security.provider.5=gnu.java.security.provider.Gnu
 
 # the default Policy
 policy.provider=com.acunia.wonka.security.DefaultPolicy

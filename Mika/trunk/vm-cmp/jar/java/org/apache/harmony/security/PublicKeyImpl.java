@@ -16,52 +16,62 @@
  */
 
 /*
- * Imported by CG 20090321 based on Apache Harmony ("enhanced") revision 520274.
+ * Imported by CG 20090620 based on Apache Harmony ("enhanced") revision 476395.
  */
 
-package org.apache.harmony.security.x509;
+
+package org.apache.harmony.security;
 
 import java.security.PublicKey;
 
-public class X509PublicKey implements PublicKey {
 
-    private final String algorithm;
+/**
+ * PublicKeyImpl
+ */
+public class PublicKeyImpl implements PublicKey {
+    
+    /**
+     * @serial
+     */
+    private static final long serialVersionUID = 7179022516819534075L;
 
-    private final byte[] encoded;
 
-    private final byte[] keyBytes;
+    private byte[] encoding;
 
-    public X509PublicKey(String algorithm, byte[] encoded, byte[] keyBytes) {
+    private String algorithm;
+
+
+    public PublicKeyImpl(String algorithm) { 
         this.algorithm = algorithm;
-        this.encoded = encoded;
-        this.keyBytes = keyBytes;
     }
+
 
     public String getAlgorithm() {
         return algorithm;
     }
 
+
     public String getFormat() {
-        return "X.509"; // $NON-NLS-1$
+        return "X.509"; //$NON-NLS-1$
     }
+
 
     public byte[] getEncoded() {
-        return encoded;
+        byte[] result = new byte[encoding.length];
+        System.arraycopy(encoding, 0, result, 0, encoding.length);
+        return result;
     }
 
-    public String toString() {
-        StringBuffer buf = new StringBuffer("algorithm = ");
-        buf.append(algorithm);
-        buf.append(", params unparsed, unparsed keybits =");
-        // TODO: implement compatible toString method() 
-        // buf.append(Arrays.toString(keyBytes));
-        for (int i = 0; i < keyBytes.length; ++i) {
-          buf.append(' ');
-          buf.append(Byte.toString(keyBytes[i]));
-        }
-        buf.append("\n");
 
-        return buf.toString();
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
+    }
+
+
+    public void setEncoding(byte[] encoding) {
+        this.encoding = new byte[encoding.length];
+        System.arraycopy(encoding, 0, this.encoding, 0, encoding.length);
     }
 }
+
 

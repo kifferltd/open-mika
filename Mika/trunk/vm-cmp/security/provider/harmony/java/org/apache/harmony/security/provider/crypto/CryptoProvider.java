@@ -87,6 +87,7 @@ public final class CryptoProvider extends Provider {
                 put("Alg.Alias.Signature.1.2.840.10040.4.3", SIGN_ALIAS);
                 put("Alg.Alias.Signature.1.3.14.3.2.13", SIGN_ALIAS);
                 put("Alg.Alias.Signature.1.3.14.3.2.27", SIGN_ALIAS);
+                put("Alg.Alias.Signature.1.3.14.3.2.26with1.2.840.10040.4.1", SIGN_ALIAS);
 
                 put("KeyFactory.DSA", KEYF_NAME);
                 put("KeyFactory.DSA ImplementedIn", "Software");
