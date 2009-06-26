@@ -1,1 +1,0 @@
-Vendor: k-embedded Java Solutions
