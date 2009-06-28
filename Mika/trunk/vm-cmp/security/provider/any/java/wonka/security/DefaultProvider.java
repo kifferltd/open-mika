@@ -26,13 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
-
-/**
- * $Id: DefaultProvider.java,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
- */
-
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.security.Provider;
 import java.util.Properties;

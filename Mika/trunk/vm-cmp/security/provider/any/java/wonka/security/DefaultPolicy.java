@@ -29,7 +29,7 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.security.AccessController;
 import java.security.CodeSource;

@@ -26,13 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
-
-/**
- * $Id: PolicyReader.java,v 1.3 2006/04/18 11:35:27 cvs Exp $
- */
-
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.io.IOException;
 import java.io.InputStream;

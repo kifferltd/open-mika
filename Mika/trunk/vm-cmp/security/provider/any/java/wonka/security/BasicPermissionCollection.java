@@ -26,13 +26,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-
-
-/**
- * $Id: BasicPermissionCollection.java,v 1.2 2006/02/23 12:32:12 cvs Exp $
- */
-
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.security.BasicPermission;
 import java.security.Permission;

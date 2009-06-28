@@ -28,14 +28,14 @@
 ###########################################################################
 
 # list of security providers
-security.provider.1=com.acunia.wonka.security.DefaultProvider
+security.provider.1=wonka.security.DefaultProvider
 security.provider.2=org.apache.harmony.security.provider.cert.DRLCertFactory
 security.provider.3=org.apache.harmony.security.provider.crypto.CryptoProvider
 #security.provider.4=org.bouncycastle.jce.provider.BouncyCastleProvider
 #security.provider.5=gnu.java.security.provider.Gnu
 
 # the default Policy
-policy.provider=com.acunia.wonka.security.DefaultPolicy
+policy.provider=wonka.security.DefaultPolicy
 
 # list of url to look for policy files
 policy.url.1=file:${java.home}/lib/mika/wonka.policy

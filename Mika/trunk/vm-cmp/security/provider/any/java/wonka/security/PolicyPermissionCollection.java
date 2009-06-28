@@ -26,60 +26,100 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/**
- * $Id: UnresolvedPermissionCollection.java,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
- */
-
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.security.Permission;
-import java.security.UnresolvedPermission;
 import java.security.PermissionCollection;
+import wonka.security.DefaultPermissionCollection;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Vector;
 
 /**
- * The class UnresolvedPermissionCollection is a catch-all for all subclasses
- * of Permission for which no special optimized collection is defined.
+ * The class Permissions represents a collection of PermissionCollection's
+ * (a super-collection).  One PermissionObject is present for each subclass
+ * of java.security.Permission which has at least one instance in the
+ * super-collection.
  */
-public final class UnresolvedPermissionCollection extends PermissionCollection {
+final class PolicyPermissionCollection extends PermissionCollection implements Cloneable {
 
-  private Hashtable hashtable;
+  private Hashtable collections;
+  private boolean allPermissions=false;
 
   private static final int INITIAL_TABSIZE=11;
+
+
   /**
-   ** Constructor UnresolvedPermissionCollection() builds an empty Hashtable.
+   ** Constructor Permissions() builds an empty Hashtable.
    */
-  public UnresolvedPermissionCollection() {
-    hashtable = new Hashtable(INITIAL_TABSIZE);
+  PolicyPermissionCollection() {
+    collections = new Hashtable(INITIAL_TABSIZE);
   }
 
   /**
-   * Method add(Permission) adds the new permission to the hashtable.
+   * Method add(Permission) adds the specified Permission to the
+   * collection appropriate to the class of the Permission.  If no
+   * collection yet exists for this class then one is created.
    */
   public synchronized void add (Permission permission) throws SecurityException {
     if (super.isReadOnly()) throw new SecurityException("read-only");
-    if (!(permission instanceof  UnresolvedPermission)) {
-     	
-    }
-    hashtable.put(permission,permission);
 
-    //System.out.println("Hashtable after adding permission '"+permission+"': "+hashtable);
+    Class pc = permission.getClass();
+    PermissionCollection c = (PermissionCollection)collections.get(pc);
+
+    if (c == null) {
+      c = permission.newPermissionCollection();
+      if (c == null) {
+        c = new DefaultPermissionCollection();
+      }
+      collections.put(pc,c);
+
+      if (pc.getName().equals("java.security.AllPermission")) {
+         	allPermissions=true;
+      }
+    }
+
+    c.add(permission);
   }
 
   /**
    * Method 'implies' tests whether a given permission is implied by any
-   * of the Permissions in this collection.  Since we know nothing about
-   * the semantics of the Permissions, we iterate over the collection
-   * until we find a match (or fail).
+   * of the Permissions in this collection.   We first identify the
+   * PermissionCollection appropriate to this subclass of Permission,
+   * and delegate to that.
    */
-  public synchronized boolean implies (Permission permission) {
-    return false;
+  public boolean implies (Permission permission) {
+    Class pc = permission.getClass();
+    PermissionCollection c = (PermissionCollection)collections.get(pc);
+    if (c == null || allPermissions) {
+      return allPermissions;
+    }
+    return c.implies(permission);
   }
 
+  /**
+  */
   public Enumeration elements() {
-    return hashtable.elements();
+  	Vector v = new Vector();
+  	Enumeration cols = collections.elements();
+  	Enumeration pers;
+  	while (cols.hasMoreElements()) {
+  		pers = ((PermissionCollection)cols.nextElement()).elements();
+  		while (pers.hasMoreElements()) {
+  		 	v.add(pers.nextElement());
+  		}
+  	}
+  	return v.elements();
   }
 
-
+  protected Object clone(){
+    try {
+      PolicyPermissionCollection ppc = (PolicyPermissionCollection) super.clone();
+      ppc.collections = (Hashtable) collections.clone();
+      return ppc;
+    }
+    catch(CloneNotSupportedException cnse){
+      return null;
+    }
+  }
 }

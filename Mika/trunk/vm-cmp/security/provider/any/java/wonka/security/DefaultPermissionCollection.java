@@ -26,64 +26,65 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+package wonka.security;
 
+import java.security.Permission;
+import java.security.PermissionCollection;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 /**
- * $Id: SecureRandomImpl.java,v 1.2 2005/03/19 13:42:30 cvs Exp $
+ * The class DefaultPermissionCollection is a catch-all for all subclasses
+ * of Permission for which no special optimized collection is defined.
  */
+public class DefaultPermissionCollection extends PermissionCollection {
 
-package com.acunia.wonka.security;
+  private Hashtable hashtable;
 
-import java.security.SecureRandomSpi;
-import java.util.Random;
-
-/**
-** This class is not very Secure since we use a the java.util.Random to get the next values.
-** But at least it is a start and it will make sure that the SecureRandom class will work
-** (but not so secure as wanted ...).
-*/
-public final class SecureRandomImpl extends SecureRandomSpi {
-
-  private Random random;
-
-  public SecureRandomImpl(){
-    long seed = System.currentTimeMillis();
-    int sign = (short)seed;
-    seed = seed ^ ((long)sign)<<32;
-    Runtime rt = Runtime.getRuntime();
-    seed ^= rt.freeMemory()<<47;
-    seed ^= (rt.totalMemory())<<33;
-    seed ^= (((long)hashCode()) << 32 ) | rt.hashCode();
-    random = new Random(seed);
+  private static final int INITIAL_TABSIZE=11;
+  /**
+   ** Constructor DefaultPermissionCollection() builds an empty Hashtable.
+   */
+  public DefaultPermissionCollection() {
+    hashtable = new Hashtable(INITIAL_TABSIZE);
   }
 
-  protected byte[] engineGenerateSeed(int numOfBytes) {
-    byte[] seed = new byte[numOfBytes];
-    engineNextBytes(seed);
-    return seed;
+  /**
+   * Method add(Permission) adds the new permission to the hashtable.
+   */
+  public synchronized void add (Permission permission) throws SecurityException {
+    if (super.isReadOnly()) throw new SecurityException("read-only");
+
+    hashtable.put(permission.getName(),permission);
+
+    // System.out.println("Hashtable after adding permission '"+permission+"': "+hashtable);
   }
 
-  protected void engineNextBytes(byte[] bytes) {
-    random.nextBytes(bytes);
-    int size = bytes.length;
-    for (int i = 0 ; i < size ; i++){
-      int pos = random.nextInt(size);
-      byte b = bytes[i];
-      bytes[i] = bytes[pos];
-      bytes[pos] = b;
+  /**
+   * Method 'implies' tests whether a given permission is implied by any
+   * of the Permissions in this collection.  Since we know nothing about
+   * the semantics of the Permissions, we iterate over the collection
+   * until we find a match (or fail).
+   */
+  public synchronized boolean implies (Permission permission) {
+    Enumeration e = hashtable.elements();
+
+    while (e.hasMoreElements()) {
+      Permission p = (Permission)(e.nextElement());
+      if (p.implies(permission)) {
+
+        return true;
+
+      }
     }
+
+    return false;
+
   }
 
-  protected void engineSetSeed(byte[] seedBytes) {
-    int stop = seedBytes.length;
-    if(stop > 8){
-      stop = 8;
-    }
-    long seed = 0;
-    for(int i = 0 ; i < stop ; i++){
-      seed = seed<<8 | (0xff & (char)seedBytes[i]);
-    }
-    random.setSeed(seed);
+  public Enumeration elements() {
+    return hashtable.elements();
   }
+
+
 }
-
