@@ -29,63 +29,65 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-package java.security;
+package wonka.security;
 
-import wonka.security.DefaultPolicy;
+import java.security.AccessController;
+import java.security.CodeSource;
+import java.security.PermissionCollection;
+import java.security.Policy;
+import java.util.HashMap;
+import java.util.Iterator;
 
-public abstract class Policy {
+public final class DefaultPolicy extends Policy {
 
-  public Policy() { }
+  private HashMap collections;
 
-  private static void permissionCheck(String permission) {
+  static final CodeSource DEFAULT_CS = new CodeSource(null,null);
+
+  public DefaultPolicy(){
+    collections = (HashMap) AccessController.doPrivileged(new PolicyReader());
+    if(collections == null){
+      collections = new HashMap(3);
+      collections.put(DEFAULT_CS, new PolicyPermissionCollection());
+    }
+  }
+
+  public PermissionCollection getPermissions(CodeSource codesource) throws SecurityException {
+    // [CG 20090628] In vm-cmp/security/java2 this condition should always 
+    // be satisfied, but we leave it there in case we refactor yet again.
+    // It's reolved at compile time, so it "costs nothing".
     if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
-        sm.checkSecurityAccess(permission);
+        sm.checkSecurityAccess("getPolicy");
       }
     }
-  }
 
-  public static Policy getPolicy() {
-    permissionCheck("getPolicy");
-    return Singleton.policy;
-  }
-
-  public static void setPolicy (Policy policy) {
-    if(policy == null){
-      throw new SecurityException("cannot intall a 'null' policy");
-    }
-    permissionCheck("setPolicy");
-    Singleton.policy = policy;
-  }
-
-  public boolean implies(ProtectionDomain domain, Permission permission) {
-    return getPermissions(domain).implies(permission);
-  }
-  
-  public PermissionCollection getPermissions(ProtectionDomain domain) {
-    if(domain.loader != null) {
-      //TODO use loader && principals to generate a permissioncollection
-    }
-    return domain.getPermissions();
-  }
-  
-  public abstract PermissionCollection getPermissions(CodeSource codesource);
-
-  public abstract void refresh();
-
-  private static class Singleton {
-    static Policy policy;
-
-    static {
-      try {
-        String policy_provider = Security.getProperty("policy.provider");
-        policy = policy_provider == null ? new DefaultPolicy() :
-          (Policy)Class.forName(policy_provider).newInstance();
+    PolicyPermissionCollection pc = (PolicyPermissionCollection) collections.get(codesource);
+    if(pc == null){
+      //for now we don't make a special class to find a codesource which implies 'codesource'.
+      //it will only make sense if we have a lot of different CodeSources in the HashMap ...
+      Iterator it = collections.keySet().iterator();
+      int size = collections.size();
+      CodeSource implied = null;
+      for(int i = 0 ; i < size ; i++){
+        CodeSource current = (CodeSource) it.next();
+        // System.out.println("" + i + ".  current: " + current + "  codesource: (" + codesource + ") " + current.implies(codesource) + " (" + implied + ") " + current.implies(implied) + " "+ (implied != null ? "" + implied.implies(current) : "<nada>"));
+        if(current.implies(codesource) && (implied != null ? implied.implies(current) : true)) {
+          implied = current;
+        }
       }
-      catch(Exception e){
-        policy = new DefaultPolicy();
-      }
+      // System.out.println("--> implied : " + implied);
+      pc = (PolicyPermissionCollection) collections.get((implied == null ? DEFAULT_CS : implied));
+    }
+    return (PermissionCollection)pc.clone();
+  }
+
+  public void refresh(){
+    HashMap newCollections = (HashMap) AccessController.doPrivileged(new PolicyReader());
+    if(newCollections != null){
+      collections = newCollections;
     }
   }
 }
+

@@ -37,7 +37,7 @@ package java.security;
 import java.io.Serializable;
 import java.security.Permission;
 import java.security.PermissionCollection;
-import com.acunia.wonka.security.DefaultPermissionCollection;
+import wonka.security.DefaultPermissionCollection;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;

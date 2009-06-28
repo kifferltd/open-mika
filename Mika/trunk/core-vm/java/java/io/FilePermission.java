@@ -222,6 +222,6 @@ public final class FilePermission extends Permission {
   }
 
   public PermissionCollection newPermissionCollection() {
-    return new com.acunia.wonka.security.FilePermissionCollection();
+    return new wonka.security.FilePermissionCollection();
   }
 }

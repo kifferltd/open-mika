@@ -29,6 +29,8 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
+// [CG 20090628] Dummy version for vm-cmp/security/none
+
 package wonka.security;
 
 import java.security.AccessController;
@@ -40,51 +42,14 @@ import java.util.Iterator;
 
 public final class DefaultPolicy extends Policy {
 
-  private HashMap collections;
-
-  static final CodeSource DEFAULT_CS = new CodeSource(null,null);
-
   public DefaultPolicy(){
-    collections = (HashMap) AccessController.doPrivileged(new PolicyReader());
-    if(collections == null){
-      collections = new HashMap(3);
-      collections.put(DEFAULT_CS, new PolicyPermissionCollection());
-    }
   }
 
   public PermissionCollection getPermissions(CodeSource codesource) throws SecurityException {
-    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
-      SecurityManager sm = System.getSecurityManager();
-      if (sm != null) {
-        sm.checkSecurityAccess("getPolicy");
-      }
+      return null;
     }
-
-    PolicyPermissionCollection pc = (PolicyPermissionCollection) collections.get(codesource);
-    if(pc == null){
-      //for now we don't make a special class to find a codesource which implies 'codesource'.
-      //it will only make sense if we have a lot of different CodeSources in the HashMap ...
-      Iterator it = collections.keySet().iterator();
-      int size = collections.size();
-      CodeSource implied = null;
-      for(int i = 0 ; i < size ; i++){
-        CodeSource current = (CodeSource) it.next();
-        // System.out.println("" + i + ".  current: " + current + "  codesource: (" + codesource + ") " + current.implies(codesource) + " (" + implied + ") " + current.implies(implied) + " "+ (implied != null ? "" + implied.implies(current) : "<nada>"));
-        if(current.implies(codesource) && (implied != null ? implied.implies(current) : true)) {
-          implied = current;
-        }
-      }
-      // System.out.println("--> implied : " + implied);
-      pc = (PolicyPermissionCollection) collections.get((implied == null ? DEFAULT_CS : implied));
-    }
-    return (PermissionCollection)pc.clone();
-  }
 
   public void refresh(){
-    HashMap newCollections = (HashMap) AccessController.doPrivileged(new PolicyReader());
-    if(newCollections != null){
-      collections = newCollections;
-    }
   }
 }
 

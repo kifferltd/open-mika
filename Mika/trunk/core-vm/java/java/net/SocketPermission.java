@@ -336,7 +336,7 @@ public final class SocketPermission extends Permission implements java.io.Serial
   }
 
   public java.security.PermissionCollection newPermissionCollection() {
-    return new com.acunia.wonka.security.SocketPermissionCollection();
+    return new wonka.security.SocketPermissionCollection();
   }
 
 }

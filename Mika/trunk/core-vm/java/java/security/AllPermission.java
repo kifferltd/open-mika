@@ -61,7 +61,7 @@ public final class AllPermission extends Permission implements Serializable {
   }
 
   public PermissionCollection newPermissionCollection() {
-    return new com.acunia.wonka.security.DefaultPermissionCollection();
+    return new wonka.security.DefaultPermissionCollection();
   }
 
   public boolean implies (Permission p) {

@@ -118,6 +118,6 @@ public final class UnresolvedPermission extends Permission implements Serializab
   }
 
   public PermissionCollection newPermissionCollection() {
-   	return new com.acunia.wonka.security.UnresolvedPermissionCollection();
+   	return new wonka.security.UnresolvedPermissionCollection();
   }
 }
