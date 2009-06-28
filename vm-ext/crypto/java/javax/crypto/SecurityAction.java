@@ -27,7 +27,7 @@
  */
 package javax.crypto;
 
-import com.acunia.wonka.security.DefaultProvider;
+import wonka.security.DefaultProvider;
 import java.security.AccessController;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;

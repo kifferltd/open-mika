@@ -145,6 +145,6 @@ public final class PropertyPermission extends BasicPermission {
   }
 
   public PermissionCollection newPermissionCollection() {
-    return new com.acunia.wonka.security.PropertyPermissionCollection();
+    return new wonka.security.PropertyPermissionCollection();
   }
 }

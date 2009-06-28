@@ -91,7 +91,7 @@ public final class NewSystemClassLoader extends ClassLoader {
       PermissionCollection theAllPermission;
 
       if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
-        theAllPermission = new com.acunia.wonka.security.DefaultPermissionCollection();
+        theAllPermission = new wonka.security.DefaultPermissionCollection();
         theAllPermission.add(new AllPermission());
         systemProtectionDomain = new ProtectionDomain(null, theAllPermission);
       }
@@ -367,7 +367,7 @@ public final class NewSystemClassLoader extends ClassLoader {
     definePackage("com.acunia.device.uart","","","","","","",null);
     definePackage("com.acunia.device.serial","","","","","","",null);
     definePackage("wonka.resource","","","","","","",null);
-    definePackage("com.acunia.wonka.security","","","","","","",null);
+    definePackage("wonka.security","","","","","","",null);
     definePackage("java.lang","","","","","","",null);
     definePackage("java.lang.ref","","","","","","",null);
     definePackage("java.lang.reflect","","","","","","",null);

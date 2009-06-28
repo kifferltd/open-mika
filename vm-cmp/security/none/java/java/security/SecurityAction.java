@@ -26,20 +26,16 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+// [CG 20090628] Stripped version for vm-cmp/security/none
 
-/**
- * $Id: SecurityAction.java,v 1.2 2006/04/18 11:35:28 cvs Exp $
- */
 package java.security;
 
-import com.acunia.wonka.security.DefaultProvider;
+import wonka.security.DefaultProvider;
 
-class SecurityAction implements PrivilegedAction {
-
-  private final static Provider defaultProvider = DefaultProvider.getInstance();
+class SecurityAction /*implements PrivilegedAction*/ {
 
   static ClassLoader getClassLoader(Provider prov){
-    return (ClassLoader)AccessController.doPrivileged(new SecurityAction(prov));
+    return prov.getClass().getClassLoader();
   }
 
   Provider provider;
@@ -58,14 +54,14 @@ class SecurityAction implements PrivilegedAction {
       String classname = provider.getProperty(propName);
       if (classname != null){
         try {
-          spi = Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+          spi = Class.forName(classname, true, getClassLoader(p[i])).newInstance();
           return;
         }catch(Exception e){}
       }
       classname =  getAliasName(aliasName, type);
       if (classname != null){
         try {
-          spi =  Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+          spi =  Class.forName(classname, true, getClassLoader(p[i])).newInstance();
           return;
         }catch(Exception e){}
       }
@@ -82,14 +78,14 @@ class SecurityAction implements PrivilegedAction {
     String classname = provider.getProperty(propName);
     if (classname != null){
       try {
-        spi = Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+        spi = Class.forName(classname, true, getClassLoader(provider)).newInstance();
         return;
       }catch(Exception e){}
     }
     classname = getAliasName("Alg.Alias." + propName, type);
     if (classname != null){
       try {
-        spi = Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+        spi = Class.forName(classname, true, getClassLoader(provider)).newInstance();
         return;
       }catch(Exception e){}
     }
@@ -102,30 +98,23 @@ class SecurityAction implements PrivilegedAction {
     String classname = provider.getProperty(propName);
     if (classname != null){
       try {
-        spi = Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+        spi = Class.forName(classname, true, getClassLoader(provider)).newInstance();
         return;
       }catch(Exception e){}
     }
     classname = getAliasName("Alg.Alias." + propName, type);
     if (classname != null){
       try {
-        spi = Class.forName(classname, true, (ClassLoader)AccessController.doPrivileged(this)).newInstance();
+        spi = Class.forName(classname, true, getClassLoader(provider)).newInstance();
         return;
       }catch(Exception e){}
     }
     throw new NoSuchAlgorithmException("couldn't find "+algorithm+" of type "+type);
   }
 
-  public Object run(){
-    return provider.getClass().getClassLoader();
-  }
-
   private String getAliasName(String aliasName, String type){
     String alias =  provider.getProperty(aliasName);
     String classname = null;
-    if(alias != null){
-      classname = defaultProvider.getProperty(type+alias);
-    }
     if(classname == null){
       classname = provider.getProperty(type+alias);
     }

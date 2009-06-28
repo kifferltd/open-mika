@@ -28,26 +28,28 @@
 
 
 /**
- * $Id: CertAction.java,v 1.3 2006/04/18 11:35:28 cvs Exp $
+ * $Id: SecurityAction.java,v 1.2 2006/04/18 11:35:28 cvs Exp $
  */
-package java.security.cert;
-
-import java.security.AccessController;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.Provider;
-import java.security.Security;
+package java.security;
 
 import wonka.security.DefaultProvider;
 
-class CertAction implements java.security.PrivilegedAction {
+class SecurityAction implements PrivilegedAction {
 
   private final static Provider defaultProvider = DefaultProvider.getInstance();
+
+  static ClassLoader getClassLoader(Provider prov){
+    return (ClassLoader)AccessController.doPrivileged(new SecurityAction(prov));
+  }
 
   Provider provider;
   Object spi;
 
-  CertAction(String algorithm, String type) throws CertificateException {
+  private SecurityAction(Provider prov){
+    provider = prov;
+  }
+
+  SecurityAction(String algorithm, String type) throws NoSuchAlgorithmException {
     Provider[] p = Security.getProviders();
     String propName = type+algorithm;
     String aliasName = "Alg.Alias." + propName;
@@ -68,10 +70,10 @@ class CertAction implements java.security.PrivilegedAction {
         }catch(Exception e){}
       }
     }
-    throw new CertificateException("couldn't find "+algorithm+" of type "+type);
+    throw new NoSuchAlgorithmException("couldn't find "+algorithm+" of type "+type);
   }
 
-  CertAction(String algorithm, String providerName, String type) throws NoSuchAlgorithmException, NoSuchProviderException {
+  SecurityAction(String algorithm, String providerName, String type) throws NoSuchAlgorithmException, NoSuchProviderException {
     provider = Security.getProvider(providerName);
     if (provider == null){
       throw new NoSuchProviderException("couldn't find "+provider);
@@ -94,7 +96,7 @@ class CertAction implements java.security.PrivilegedAction {
     throw new NoSuchAlgorithmException("couldn't find "+algorithm+" of type "+type);
   }
 
-  CertAction(String algorithm, Provider provider, String type) throws CertificateException {
+  SecurityAction(String algorithm, Provider provider, String type) throws NoSuchAlgorithmException {
     this.provider = provider;
     String propName = type+algorithm;
     String classname = provider.getProperty(propName);
@@ -111,7 +113,7 @@ class CertAction implements java.security.PrivilegedAction {
         return;
       }catch(Exception e){}
     }
-    throw new CertificateException("couldn't find "+algorithm+" of type "+type);
+    throw new NoSuchAlgorithmException("couldn't find "+algorithm+" of type "+type);
   }
 
   public Object run(){
@@ -120,12 +122,14 @@ class CertAction implements java.security.PrivilegedAction {
 
   private String getAliasName(String aliasName, String type){
     String alias =  provider.getProperty(aliasName);
+    String classname = null;
     if(alias != null){
-      alias = defaultProvider.getProperty(aliasName);
+      classname = defaultProvider.getProperty(type+alias);
     }
-    if(alias != null){
-      return provider.getProperty(type+alias);
+    if(classname == null){
+      classname = provider.getProperty(type+alias);
     }
-    return null;
+    return classname;
   }
 }
+

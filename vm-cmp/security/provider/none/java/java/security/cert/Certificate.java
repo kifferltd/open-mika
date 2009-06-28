@@ -26,64 +26,64 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/*
-** $Id: BasicPermission.java,v 1.3 2006/02/23 12:32:12 cvs Exp $
-*/
+// [CG 20090628] Stripped-down version for vm-cmp/security/provider/none
 
-package java.security;
+package java.security.cert;
 
-import java.io.Serializable;
+import java.util.Arrays;
 
-public abstract class BasicPermission extends Permission implements Serializable {
+import java.security.PublicKey;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.InvalidKeyException;
+import java.security.SignatureException;
 
-  public BasicPermission(String name) {
-    super(name);
-    if (name.equals("")) {
-      throw new IllegalArgumentException();
+public abstract class Certificate implements java.io.Serializable {
+
+  private static final long serialVersionUID = -6751606818319535583L;
+
+  private String type;
+
+  protected Certificate ( String type) {
+  	this.type = type;
+  }
+
+  public final String getType () {
+  	return type;
+  }
+
+  public boolean equals (Object other) {
+    if (!(other instanceof Certificate)){
+      return false;
+    }
+    Certificate cert = (Certificate) other;
+    try {
+      return Arrays.equals(cert.getEncoded(), getEncoded());
+    } catch(CertificateEncodingException e){
+      return false;
     }
   }
 
-  public BasicPermission(String name, String actions) {
-    this(name);
-  }
-
-  public boolean equals (Object o) {
-    if (o == null)  {
-    	return false;
+  public int hashCode(){
+    try {
+      return getEncoded().hashCode();
+    } catch(CertificateEncodingException e){
+      return 0;
     }
-    if (this.getClass().equals(o.getClass())) {
-      Permission p = (Permission)o;
-      return this.getName().equals(p.getName());
-    }
-    else return false;
   }
 
-  public int hashCode() {
-    return getName().hashCode();
-  }
+  public abstract byte [] getEncoded() throws CertificateEncodingException;
+  public abstract void verify (PublicKey key)
+  	throws CertificateException, NoSuchAlgorithmException,
+  		InvalidKeyException, NoSuchProviderException,
+  		SignatureException;
 
-  public String getActions() {
-    return "";
-  }
+  public abstract void verify(PublicKey key, String sigProvider)
+  	throws CertificateException, NoSuchAlgorithmException,
+  		InvalidKeyException, NoSuchProviderException,
+  		SignatureException;
 
-  public PermissionCollection newPermissionCollection() {
-    return new wonka.security.BasicPermissionCollection();
-  }
+  public abstract String toString();	
+  public abstract PublicKey getPublicKey();
 
-  public boolean implies (Permission p) {
-    if (this.getClass().equals(p.getClass())) {
-      String ourname = this.getName();
-      if (ourname.equals("*")) {
-         return true;
-      }
-      if (ourname.endsWith(".*")) {
-        String name = p.getName();
-        return name.length() >= ourname.length() && 
-        name.startsWith(ourname.substring(0, ourname.length() - 1));
-
-       }
-       return ourname.equals(p.getName());
-    }
-    return false;
-  }
 }
