@@ -1,7 +1,0 @@
-Vendor: /K/ Embedded Java Solutions
-Specification-Title: Java Platform API Specification
-Implementation-Title: Java Runtime Environment
-Specification-Version: 1.3
-Implementation-Version: 1.3.0.1
-Implementation-Vendor: /K/ Embedded Java Solutions
-
