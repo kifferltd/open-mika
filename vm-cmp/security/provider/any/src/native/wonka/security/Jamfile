@@ -29,12 +29,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            #
 ###########################################################################
 
-SubDir WONKA_TOP core-vm src native com acunia wonka ;
+SubDir WONKA_TOP vm-cmp security provider any src native wonka security ;
 
 LOCATE_TARGET = $(OROOT)/mika/bin ;
 
 SUBDIRHDRS += $(FS_TOP)/hal/hostos/$(HOSTOS)/include ;
 SUBDIRHDRS += $(FS_TOP)/include ;
 
-SubInclude WONKA_TOP core-vm src native com acunia wonka rmi ;
+Library $(WONKA_LIB) : MD5MessageDigest.c ShaMessageDigest.c ;
 

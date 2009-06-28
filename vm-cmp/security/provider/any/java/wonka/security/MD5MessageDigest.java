@@ -26,81 +26,56 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-package com.acunia.wonka.security;
+package wonka.security;
 
 import java.security.MessageDigestSpi;
 import java.security.DigestException;
 
-public class ShaMessageDigest extends MessageDigestSpi implements Cloneable {
+public class MD5MessageDigest extends MessageDigestSpi implements Cloneable {
 
-  private static final byte[] oneByte = new byte[1];
+  private static final byte[] OneByte = new byte[1];
 
-  public ShaMessageDigest(){}
+  public MD5MessageDigest() {}
 
-  /** set-up of native structures */
   protected synchronized native void engineReset();
 
   protected synchronized void engineUpdate(byte input){
-    oneByte[0] = input;
-    engineUpdate(oneByte,0,1);
+    OneByte[0] = input;
+    engineUpdate(OneByte,0,1);
   }
 
-  /**
-  ** Add bytes to the message from the specified array
-  ** @param input the array of bytes
-  ** @param offset the starting point in the specified array
-  ** @param len the number of bytes to add
-  */
-  protected synchronized  native void engineUpdate(byte[] input, int offset, int len);
+  protected synchronized native void engineUpdate(byte[] input, int offset, int len);
 
-  /**
-  ** Calculate the digest
-  ** @return the byte array containing the digest
-  */
-  protected byte[] engineDigest() {
-    byte[] bytes = new byte[20];
+  protected byte[] engineDigest(){
+    byte[] bytes = new byte[16];
     nativeDigest(bytes,0);
     return bytes;
   }
 
-  /**
-  ** Calculate the digest for the message and place it in the specified buffer
-  ** @param buf the buffer in which to store the digest
-  ** @param offset offset to start from in the buffer
-  ** @param len number of bytes in buffer allocated for digest. This must be at least equal to the length of the digest
-  ** @return the length of the digest stored in the buffer
-  ** @exception DigestException not enough space has been allocated in the output buffer for the digest
-  */
   protected int engineDigest(byte[] buf, int offset, int len) throws DigestException {
-    if(len < 20){
+    if(len < 16){
       throw new DigestException();
     }
     nativeDigest(buf,offset);
-    return 20;
+    return 16;
   }
 
-  /**
-  ** Return length of digest in bytes
-  ** @return the length of the digest in bytes
-  */
   protected int engineGetDigestLength(){
-    return 20;
+	  return 16;
   }
 
-  /** clean-up of native part */
   protected synchronized native void finalize();
 
-  /** fills up the array with the digest data */
   private synchronized native void nativeDigest(byte[] bytes, int off);
 
-   public Object clone() throws CloneNotSupportedException {
-      ShaMessageDigest clone = (ShaMessageDigest)  super.clone();
-      // copy the native sha fields to the clone
-      this.shaClone(clone);
+  public Object clone() throws CloneNotSupportedException {
+      MD5MessageDigest clone = (MD5MessageDigest)  super.clone();
+      // copy the native md5 fields to the clone
+      this.md5Clone(clone);
       return clone;
   }
 
-  private native void shaClone(ShaMessageDigest clone);
+  private native void md5Clone(MD5MessageDigest clone);
 
 }
 

@@ -463,20 +463,20 @@ wonka/decoders/UTF8Decoder
 	bToC		([BII)[C			UTF8Decoder_bToC
 	stringToB	(Ljava/lang/String;)[B 		UTF8Decoder_stringToB
 	bToString	([BII)Ljava/lang/String;	UTF8Decoder_bToString
-com/acunia/wonka/security/ShaMessageDigest
+wonka/security/ShaMessageDigest
 	wotsit		+
 	engineReset	()V		ShaMessageDigest_engineReset
 	engineUpdate	([BII)V		ShaMessageDigest_engineUpdate
 	finalize	()V		ShaMessageDigest_finalize
 	nativeDigest	([BI)V		ShaMessageDigest_nativeDigest
-	shaClone	(Lcom/acunia/wonka/security/ShaMessageDigest;)V	ShaMessageDigest_shaClone
-com/acunia/wonka/security/MD5MessageDigest
+	shaClone	(Lwonka/security/ShaMessageDigest;)V	ShaMessageDigest_shaClone
+wonka/security/MD5MessageDigest
 	wotsit		+
 	engineReset	()V		MD5MessageDigest_engineReset
 	engineUpdate	([BII)V		MD5MessageDigest_engineUpdate
 	finalize	()V		MD5MessageDigest_finalize
 	nativeDigest	([BI)V		MD5MessageDigest_nativeDigest
-	md5Clone	(Lcom/acunia/wonka/security/MD5MessageDigest;)V	MD5MessageDigest_md5Clone
+	md5Clone	(Lwonka/security/MD5MessageDigest;)V	MD5MessageDigest_md5Clone
 java/security/AccessController
 	initialize	()V		AccessController_static_initialize
 	doPrivileged0	(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;	AccessController_static_doPrivileged0
