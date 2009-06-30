@@ -822,6 +822,19 @@ void interpret(w_frame caller, w_method method) {
   frame->auxstack_top = caller->auxstack_top;
   frame->thread = thread;
   frame->method = method;
+#ifdef TRACE_CLASSLOADERS
+  { 
+    w_instance loader = method->spec.declaring_clazz->loader; 
+    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+wprintf("Frame %m : set udcl to %j\n", method, loader);
+      frame->udcl = loader;
+    }
+    else {
+wprintf("Frame %m : copy udcl from %m\n", method, caller->method);
+      frame->udcl = caller->udcl;
+    }
+  }
+#endif
 
 #ifndef OVERLAPPING_FRAMES
   stack2locals(frame->jstack_base, caller->jstack_top, method->exec.arg_i);
@@ -4536,6 +4549,19 @@ w_frame pushFrame(w_thread thread, w_method method) {
     frame->method = method;
     frame->current = method->exec.code;
     frame->flags = isSet(method->flags, ACC_NATIVE) ? FRAME_NATIVE : 0;
+#ifdef TRACE_CLASSLOADERS
+  { 
+    w_instance loader = method->spec.declaring_clazz->loader; 
+    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+wprintf("Frame %m : set udcl to %j\n", method, loader);
+      frame->udcl = loader;
+    }
+    else {
+wprintf("Frame %m : copy udcl from %m\n", method, thread->top->method);
+      frame->udcl = thread->top->udcl;
+    }
+  }
+#endif
 
     thread->top = frame;
     woempa(1, "%t jstack_base = jstack_top = %p, auxstack_base = auxstack_top = %p\n", frame->jstack_top, frame->auxstack_top);

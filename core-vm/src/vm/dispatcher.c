@@ -681,7 +681,19 @@ static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w
   frame->jstack_base[0].s = stack_notrace;
   frame->auxstack_base = caller->auxstack_top;
   frame->auxstack_top = caller->auxstack_top;
-
+#ifdef TRACE_CLASSLOADERS
+  { 
+    w_instance loader = method->spec.declaring_clazz->loader; 
+    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+wprintf("Frame %m : set udcl to %j\n", method, loader);
+      frame->udcl = loader;
+    }
+    else {
+wprintf("Frame %m : copy udcl from %m\n", method, caller->method);
+      frame->udcl = caller->udcl;
+    }
+  }
+#endif
 }
 
 void native_instance_synchronized_reference(w_frame caller, w_method method) {
