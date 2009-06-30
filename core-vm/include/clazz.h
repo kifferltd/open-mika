@@ -195,16 +195,17 @@ typedef struct w_UnloadedClazz {
 **
 ** +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ** | | | | | | | | | | | | | state |       ACC_xxxxx flags         |
-** +-+^+^+^+-+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-**    | | |   | | | | | |
-**    | | |   | | | | | +--- CLAZZ_IS_TRUSTED 
-**    | | |   | | | | +----- CLAZZ_IS_SCRAMBLED
-**    | | |   | | | +------- CLAZZ_IS_PRIMITIVE
-**    | | |   | | +--------- CLAZZ_IS_PROXY
-**    | | |   | +----------- CLAZZ_IS_THROWABLE
-**    | | |   +------------- CLAZZ_IS_THREAD
-**    | | +----------------- CLAZZ_IS_REFERENCE
-**    | +------------------- CLAZZ_IS_CLASSLOADER
+** +-+^+^+^+^+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+**    | | | | | | | | | |
+**    | | | | | | | | | +--- CLAZZ_IS_TRUSTED 
+**    | | | | | | | | +----- CLAZZ_IS_SCRAMBLED
+**    | | | | | | | +------- CLAZZ_IS_PRIMITIVE
+**    | | | | | | +--------- CLAZZ_IS_PROXY
+**    | | | | | +----------- CLAZZ_IS_THROWABLE
+**    | | | | +------------- CLAZZ_IS_THREAD
+**    | | | +--------------- CLAZZ_IS_REFERENCE
+**    | | +----------------- CLAZZ_IS_CLASSLOADER
+**    | +------------------- CLAZZ_IS_UDCL
 **    +--------------------- CLAZZ_HAS_FINALIZER
 */
 #define CLAZZ_STATE_MASK        0x000f0000
@@ -246,18 +247,20 @@ typedef struct w_UnloadedClazz {
 ** or void.  The flags CLAZZ_IS_THROWABLE, CLAZZ_IS_THREAD, CLAZZ_IS_THREADGROUP,
 ** CLAZZ_IS_REFERENCE, CLAZZ_IS_CLASSLOADER indicate that the class is (a
 ** subclass of) java.lang.Throwable, java.lang.Thread, java.lang.ThreadGroup,
-** java.lang.ref.Reference, or java.lang.ClassLoader respectively.  These
+** java.lang.ref.Reference, or java.lang.ClassLoader respectively; 
+** CLAZZ_IS_UDCL indicates that the class is a user-defined class loader. These
 ** flags are inherited by all subclasses of this clazz.
 */
 #define CLAZZ_IS_PRIMITIVE      0x00800000
 #define CLAZZ_IS_PROXY          0x01000000
 #define CLAZZ_IS_THROWABLE      0x02000000
 #define CLAZZ_IS_THREAD         0x04000000
-#define CLAZZ_IS_REFERENCE      0x10000000
-#define CLAZZ_IS_CLASSLOADER    0x20000000
+#define CLAZZ_IS_REFERENCE      0x08000000
+#define CLAZZ_IS_CLASSLOADER    0x10000000
+#define CLAZZ_IS_UDCL           0x20000000
 #define CLAZZ_HAS_FINALIZER     0x40000000
 
-#define CLAZZ_HERITABLE_FLAGS  (CLAZZ_IS_REFERENCE | CLAZZ_IS_THROWABLE | CLAZZ_IS_THREAD | CLAZZ_IS_CLASSLOADER)
+#define CLAZZ_HERITABLE_FLAGS  (CLAZZ_IS_REFERENCE | CLAZZ_IS_THROWABLE | CLAZZ_IS_THREAD | CLAZZ_IS_CLASSLOADER | CLAZZ_IS_UDCL)
 
 /*
 ** The "type" byte.  These definitions are congruent with JIFF.
