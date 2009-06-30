@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -212,7 +212,7 @@ char *print_clazz_long(char *buffer, int *remain, void *c, int w, int p, unsigne
   temp += nbytes;
   *remain -= nbytes;
 
-  if (clazz->loader  && clazz->loader != systemClassLoader) {
+  if (!isSystemClassLoader(clazz->loader)) {
     nbytes = x_snprintf(temp, *remain, "{%j}", clazz->loader);
     temp += nbytes;
     *remain -= nbytes;
@@ -1709,7 +1709,7 @@ void deallocClazz(w_clazz clazz) {
 w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader, w_boolean trusted) {
   w_clazz clazz;
 
-  if (loader && systemClassLoader && loader != systemClassLoader && namedClassIsSystemClass(name)) {
+  if (systemClassLoader && !isSystemClassLoader(loader) && namedClassIsSystemClass(name)) {
     throwException(thread, clazzSecurityException, "not allowed to define system class %w", name);
 
     return NULL;
@@ -1935,8 +1935,8 @@ w_int destroyClazz(w_clazz clazz) {
 
   if (!clazz->dims) {
 #ifdef RUNTIME_CHECKS
-    if (!clazz->loader || clazz->loader == systemClassLoader) {
-      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy primitive class %k", clazz);
+    if (isSystemClassLoader(clazz->loader)) {
+      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy system class %k", clazz);
     }
 #endif
 

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions.  All rights reserved.                                   *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -185,6 +185,13 @@ extern w_hashtable2k interface_hashtable;
 ** Must only be set once, using setSystemClassLoader()!
 */
 extern w_instance systemClassLoader;
+
+/*
+** Test to see if the argument is either null or the system class loader.
+** Note that the test also succeeds if the SystemClassLoader has not been
+** installed and the argument is null (i.e. during the bootstrap phase).
+*/
+#define isSystemClassLoader(l) (!(l) || (l) == systemClassLoader)
 
 /*
 ** The unique instance of ExtensionClassLoader, or NULL if none exists.

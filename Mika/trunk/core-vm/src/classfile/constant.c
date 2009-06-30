@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -373,7 +373,7 @@ static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
   w_int i;
   w_thread thread;
 
-  if (ref_clazz->loader == NULL || ref_clazz->loader == systemClassLoader) {
+  if (isSystemClassLoader(ref_clazz->loader)) {
     woempa(1, "%K is a system class, doing nowt\n", ref_clazz);
 
     return;
@@ -501,7 +501,7 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
     wabort(ABORT_WONKA, "Unable to dotify name\n");
   }
 
-  if (loader && loader != systemClassLoader && isInternalClass(dotified)) {
+  if (!isSystemClassLoader(loader) && isInternalClass(dotified)) {
     x_monitor_exit(clazz->resolution_monitor);
     throwException(thread, clazzLinkageError, "%w may only be loaded by a system class", dotified);
     
