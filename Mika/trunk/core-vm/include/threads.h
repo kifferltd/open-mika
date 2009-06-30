@@ -37,6 +37,12 @@
 #include "oswald.h"
 #include "wonka.h"
 
+// If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
+// user-defined class loader in each frame.
+#ifdef DEBUG
+#define TRACE_CLASSLOADERS
+#endif
+
 extern w_size numThreads;
 extern w_thread W_Thread_system;
 extern w_thread W_Thread_sysInit;
@@ -141,6 +147,9 @@ typedef struct w_Frame {
   w_thread        thread;              // points to current wonka thread
   volatile w_code current;             // The opcode pointer at method call or exception; pc = frame->current - frame->method_.exec.code
   volatile w_instance * map;           // A pointer to an array of references (stack map)
+#ifdef TRACE_CLASSLOADERS
+  w_instance      udcl;                // Nearest user-defined class loader or NULL
+#endif
 } w_Frame;
 
 /*
