@@ -685,11 +685,9 @@ static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w
   { 
     w_instance loader = method->spec.declaring_clazz->loader; 
     if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
-wprintf("Frame %m : set udcl to %j\n", method, loader);
       frame->udcl = loader;
     }
     else {
-wprintf("Frame %m : copy udcl from %m\n", method, caller->method);
       frame->udcl = caller->udcl;
     }
   }
