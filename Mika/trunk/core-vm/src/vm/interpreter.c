@@ -826,11 +826,9 @@ void interpret(w_frame caller, w_method method) {
   { 
     w_instance loader = method->spec.declaring_clazz->loader; 
     if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
-wprintf("Frame %m : set udcl to %j\n", method, loader);
       frame->udcl = loader;
     }
     else {
-wprintf("Frame %m : copy udcl from %m\n", method, caller->method);
       frame->udcl = caller->udcl;
     }
   }
@@ -4553,11 +4551,9 @@ w_frame pushFrame(w_thread thread, w_method method) {
   { 
     w_instance loader = method->spec.declaring_clazz->loader; 
     if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
-wprintf("Frame %m : set udcl to %j\n", method, loader);
       frame->udcl = loader;
     }
     else {
-wprintf("Frame %m : copy udcl from %m\n", method, thread->top->method);
       frame->udcl = thread->top->udcl;
     }
   }
