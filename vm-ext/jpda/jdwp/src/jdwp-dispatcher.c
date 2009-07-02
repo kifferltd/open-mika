@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2006, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -72,13 +72,6 @@ static char   *jdwp_address_port  = "5555";
 static w_int  jdwp_config_server  = 0; 
 w_int  jdwp_config_suspend = 1; 
 
-/*
-** The sockets which will be used for transport.
-*/
-
-static w_int sock;
-static w_int serversock;
-
 
 /*
 ** The mutex used for locking.
@@ -113,195 +106,6 @@ void print_jdwp_help(void) {
 
 }
 
-
-void  abortJDWP() {
-  wabort(ABORT_WONKA, "failed to create JDWP socket due to '%s'\n",strerror(errno));
-
-}
-/*
-** Connect to the debugger. Only TCP/IP socket connections are possible for now. In the future, 
-** this will most likely be extended to connections over serial ports and others.
-** PS: These functions should eventually move to a seperate file/layer, which makes it easier
-**     to implement different transports for JDWP.
-*/
-
-void jdwp_connect() {
-  
-  int rc = 1;
-  struct sockaddr_in sa;
-  char *buffer;
-  int  count = 0;
-  struct hostent *host;
-  int port_nr;
-  int timeout = 0;
-
-  /*
-  ** Get the host address and port.
-  */
-
-  woempa(9, "JDWP Host : %s\n", jdwp_address_host);
-  woempa(9, "JDWP Port : %s\n", jdwp_address_port);
-  
-  host = w_gethostbyname(jdwp_address_host);
-  sscanf(jdwp_address_port, "%d", &port_nr);
-
-  /*
-  ** Get a socket and fill in the address structure.
-  */
-
-  sock = w_socket(PF_INET, SOCK_STREAM, 0);
-
-  if(sock == -1) {
-    abortJDWP();
-  }
-
-  memset(&sa,0,sizeof(sa)); 
-  sa.sin_addr.s_addr = *((unsigned long*)host->h_addr_list[0]);
-  sa.sin_family = host->h_addrtype;
-  sa.sin_port = swap_short(port_nr);
- 
-  if(jdwp_config_server) {
-
-    /*
-    ** We should behave as a server and wait for jdwp connections.
-    */
-   
-    w_size socksize = sizeof(struct sockaddr_in);
-
-    if(serversock == 0) {
-    
-      serversock = sock;
-      sa.sin_addr.s_addr = INADDR_ANY;
-      rc = w_bind(serversock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
-      if(rc == -1) {
-        abortJDWP();
-      }
-      rc = w_listen(serversock, 1);
-      if(rc == -1) {
-        abortJDWP();
-      }
-    }
-
-    woempa(7, "Calling accept() on socket %d\n", serversock);
-    sock = w_accept(serversock, (struct sockaddr *)&sa, &socksize, 0);
-    woempa(7, "accepted() returned %d\n", sock);
-    rc = (sock < 0) ? -1 : 0;
-  } else {
-
-    /*
-    ** We should behave as a client and connect to the debugger at startup.
-    */
-    
-    woempa(7, "Connecting socket %d\n", sock);
-    rc = w_connect(sock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
-    woempa(7, "connect() return code = %d\n", rc);
-    
-  }
-
-  if(rc != 0) {
-    woempa(9, "-------------------------------------------------------------------------------------------------\n");
-    woempa(9, "         J D W P :     C O U L D    N O T    C O N N E C T    TO    T H E    D E B U G G E R\n");
-    woempa(9, "-------------------------------------------------------------------------------------------------\n");
-    abortJDWP();
-  }
-
-  /*
-  ** Wait for the handshake. Keep receiving bytes until we have received the full 14 bytes.
-  */
-
-  buffer = allocClearedMem(15);
-  
-  while(count < 14) {
-    rc = w_recv(sock, (buffer + count), (w_word)(14 - count), 0, (w_int *)&timeout);
-    if (rc > 0) count += rc;
-  }
-  woempa(7, "Received handshake: '%s'\n", buffer);
-  
-  if(strcmp(buffer, (char*)"JDWP-Handshake") != 0) {
-    wabort(ABORT_WONKA, "Incredible bad handshake: %s\n", buffer);
-  }
-  
-  releaseMem(buffer);
-
-  /*
-  ** Respond to the handshake.
-  */
-
-  w_send(sock, "JDWP-Handshake", 14, 0);
-
-  woempa(9, "JDWP connection established.\n");
-
-  jdwp_state = jdwp_state_connected;
-
-  /*
-  ** From now on, it's safe to send events.
-  */ 
-
-  jdwp_events_enabled = 1;
-  
-  return;
-}
-
-
-/*
-** Disconnect the debugger.
-*/
-
-void jdwp_disconnect() {
-  if(sock) w_socketclose(sock);
-  jdwp_state = jdwp_state_initialised;
-  return;
-}
-
-
-/*
-** Receive a packet from the debugger. This function will block the thread that called it if
-** there aren't any packets available.
-*/
-
-void *jdwp_recv_packet() {
-  
-  jdwp_command_packet cmd;
-  w_int peek;
-  w_int count = 0;
-  w_int timeout = 0;
-  w_int rc = 0;
-  
-  /*
-  ** First peek to get the length of this packet
-  */
-    
-  while (rc < 4) {
-    rc = w_recv(sock, &peek, sizeof(w_int), MSG_PEEK, (w_int *)&timeout);
-  }
-  peek = swap_int(peek);
-  woempa(1, "Peek result = %d, peek = 0x%08x\n", rc, peek);
-
-  /*
-  ** We now know the length of the entire command so we can allocate a
-  ** buffer and retrieve the whole packet.
-  */
-    
-  cmd = allocMem((w_word)peek);
-  while(count < peek) {
-    rc = w_recv(sock, ((w_ubyte *)cmd + count), (w_word)(peek - count), 0, (w_int *)&timeout);
-    woempa(1, "Recv result = %d\n", rc);
-    if (rc > 0) count += rc;
-    woempa(1, "      count = %d\n", count);
-  }
-  
-  return cmd;
-}
-
-
-/*
-** Send a packet to the debugger.
-*/
-
-void jdwp_send_packet(void *packet) {
-  w_send(sock, packet, swap_int(((jdwp_reply_packet)packet)->length), 0);
-  return;
-}
 
 static w_int current_cmdID = 0;
 
@@ -341,7 +145,7 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   ** Send the packet to the debugger.
   */
 
-  jdwp_send_packet(command);
+  jdwp_send_packet_dt_socket(command);
 
   /*
   ** Clean up.
@@ -440,12 +244,27 @@ void jdwp_parse_arguments(char *args) {
     else if(strcmp(key, "address") == 0) {
       jdwp_address_host = value;
       jdwp_address_port = strchr(value, ':');
-      if(jdwp_address_port != NULL) {
-        jdwp_address_port[0] = '\0';
-        jdwp_address_port++;
-      } else {
-        jdwp_address_port = value;
+      if(jdwp_address_port == value) {
+        // hostname part is empty, port is present
         jdwp_address_host = "127.0.0.1";
+        jdwp_address_port++;
+        if (!*jdwp_address_port) {
+          jdwp_address_port = "5555";
+        }
+      }
+      else if(jdwp_address_port) {
+        // both hostname and port are present, insert a null char between them
+        *jdwp_address_port++ = 0;
+        if (!*jdwp_address_port) {
+          jdwp_address_port = "5555";
+        }
+      } else {
+        // no colon found, use default port
+        jdwp_address_port = "5555";
+        if (!*value) {
+          // no address either (empty string)
+          jdwp_address_host = "127.0.0.1";
+        }
       }
       woempa(7, "Setting jdwp_address_host to %s, jdwp_address_port to %s\n", jdwp_address_host, jdwp_address_port);
     }
@@ -463,8 +282,13 @@ void jdwp_parse_arguments(char *args) {
 
 static w_boolean jdwp_have_sent_vm_start;
 
+static w_int connection_attempt_count;
+#define MAX_CONNECTION_ATTEMPTS 12
+#define CONNECTION_REATTEMPT_MILLIS 2500
+extern int wonka_killed;
+
 void jdwp_dispatcher() {
-  jdwp_command_packet cmd;
+  jdwp_command_packet cmd = NULL;
   
   if(!jdwp_enabled) {
     jdwp_state = jdwp_state_terminated;
@@ -510,13 +334,19 @@ void jdwp_dispatcher() {
   woempa(7, "Setting jdwp_state to jdwp_state_initialised\n");
   jdwp_state = jdwp_state_initialised;
 
-  while(1) {
-
-    /*
-    ** Try to connect to the debugger.
-    */
-
-    jdwp_connect();
+  while(jdwp_state != jdwp_state_terminated) {
+    if (!jdwp_connect_dt_socket(jdwp_address_host, jdwp_address_port, jdwp_config_server)) {
+      if (!wonka_killed && connection_attempt_count++ < MAX_CONNECTION_ATTEMPTS) {
+        x_thread_sleep(x_millis2ticks(CONNECTION_REATTEMPT_MILLIS));
+      }
+      else {
+        while (jdwp_global_suspend_count) {
+          jdwp_internal_resume_all();
+        }
+        jdwp_state = jdwp_state_terminated;
+      }
+      continue;
+    }
 
     /*
     ** If VM_START was not yet sent, send it now.
@@ -534,7 +364,7 @@ void jdwp_dispatcher() {
 
     while(jdwp_state == jdwp_state_connected) {
 
-      cmd = jdwp_recv_packet();
+      cmd = jdwp_recv_packet_dt_socket();
 
       if(cmd->flags == 0) {
 
@@ -593,11 +423,13 @@ void jdwp_dispatcher() {
       }
     }
 
-    jdwp_disconnect();
+    jdwp_disconnect_dt_socket();
 
   }
 
-  releaseMem(cmd);
+  if (cmd) {
+    releaseMem(cmd);
+  }
   
   return;
 }

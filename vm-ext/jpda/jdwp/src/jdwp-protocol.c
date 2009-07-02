@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (C) 2006 by Chris Gay, /k/ Embedded Java Solutions.           *
+* Copyright (C) 2006, 2009 by Chris Gay, /k/ Embedded Java Solutions.     *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -223,7 +223,7 @@ void jdwp_send_reply(w_int id, w_grobag *gb, w_int error) {
   ** Send the packet to the debugger.
   */
 
-  jdwp_send_packet(reply);
+  jdwp_send_packet_dt_socket(reply);
 
   /*
   ** Clean up.

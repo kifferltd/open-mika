@@ -598,6 +598,17 @@ w_ubyte jdwp_event_breakpoint(w_ubyte *code);
 
 void jdwp_event_step(w_thread thread);
 
+// TODO: create a plug-in mechanism for different transports (e.g. a struct
+// of function pointers to connect, disconnect, read, write functions).
+
+extern w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp_address_port, const w_boolean jdwp_config_server);
+
+extern void *jdwp_recv_packet_dt_socket();
+
+extern void jdwp_send_packet_dt_socket(void *packet);
+
+extern void jdwp_disconnect_dt_socket();
+
 /*
 ** The following static const indicates if JDWP was enabled or not. 
 */
