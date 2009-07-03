@@ -37,7 +37,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TimeZone;
@@ -122,7 +122,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Mapping of protection spaces (represented as InetAddress ":" realm)
    ** onto credentials (represented as base64-encoded userid:password).
    */
-  private static Hashtable basicCredentials = new Hashtable();
+  private static HashMap basicCredentials = new HashMap();
 
   /**
    ** Default value for instanceFollowRedirects.
@@ -204,6 +204,11 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private Map requestHeaders;
 
   /**
+   ** The status line (e.g. "HTTP 200 OK") received from the server.
+   */
+  private String responseLine;
+
+  /**
    ** The response headers, as a Map from key to value.
    ** Only valid after <code>connect()</code>.
    */
@@ -267,6 +272,34 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     instanceFollowRedirects = defaultFollowRedirects;
   }
 
+  /*
+  ** Get the attribute name of the n'th header field. Note that if n == 0
+  ** null will be returned, because we associate 0 with the HTTP status line.
+  */
+  public String getHeaderFieldKey(int n) {
+    if (keys == null || n <= 0 || n > keys.size()) {
+      return null;
+    }
+
+    return (String)keys.get(n - 1);
+  }
+
+  /*
+  ** Get the attribute value of the n'th header field. Note that if n == 0
+  ** the HTTP status line will be returned.
+  */
+  public String getHeaderField(int n) {
+    if (keys == null || n < 0 || n > keys.size()) {
+      return null;
+    }
+
+    if (n == 0) {
+      return responseLine;
+    }
+
+    return (String)responseHeaders.get(keys.get(n - 1));
+  }
+
   /**
    ** Resolve URL host as an <code>InetAddress</code> 
    ** and store it in <code>hostAddr</code>.
@@ -301,9 +334,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   /**
    ** Connect to the remote host, send the request, and get the response.
    */
-  public synchronized void connect() throws IOException {
+  public void connect() throws IOException {
     if(!connected){
-      responseHeaders = new Hashtable();
+      responseHeaders = new HashMap();
       keys = new ArrayList();
       int port = url.getPort();
       if (port < 0) {
@@ -356,7 +389,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   /**
    ** Disconnect from the host, by closing the socket.
    */
-  public synchronized void disconnect(){
+  public void disconnect(){
+    debug("HTTP: disconnecting " +  this);
     // [CG 20090226] Close input stream
     InputStream local_in = in;
     in = null;
@@ -368,14 +402,25 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       catch(IOException ioe){}
     }
 
-    if(socket != null){
-      debug("HTTP: disconnecting " +  socket);
+    // [CG 20090702] Close output stream
+    OutputStream local_out = out;
+    out = null;
+    if (local_out != null) {
+      debug("HTTP: closing " +  local_out);
       try {
-        socket.close();
+        local_out.close();
       }
       catch(IOException ioe){}
-      connected = false;
-      socket = null;
+    }
+
+    Socket local_socket = socket;
+    socket = null;
+    if(local_socket != null){
+      debug("HTTP: disconnecting " +  local_socket);
+      try {
+        local_socket.close();
+      }
+      catch(IOException ioe){}
     }
     connected = false;
   }
@@ -398,14 +443,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Get the HTTP response code. Implies connecting and parsing the HTTP
    ** response headers.
    */
-  public int getResponseCode() {
-    try {
-      parseResponse();
-    }
-    catch(IOException ioe){
-      ioe.printStackTrace();
-      return -1;
-    }
+  public int getResponseCode() throws IOException {
+    parseResponse();
+
     return responseCode;
   }
 
@@ -413,14 +453,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Get the HTTP response message. Implies connecting and parsing the HTTP
    ** response headers.
    */
-  public String getResponseMessage() {
-    try {
-      parseResponse();
-    }
-    catch(IOException ioe){
-      ioe.printStackTrace();
-      return null;
-    }
+  public String getResponseMessage() throws IOException {
+    parseResponse();
+
     return responseMessage;
   }
 
@@ -464,10 +499,10 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Get the OutputStream to which the request content should be written.
    ** If necessary, <code>connect()</code> first.
    */
-  public synchronized OutputStream getOutputStream() throws IOException {
-    if (!connected) {
-      connect();
-    }
+  public OutputStream getOutputStream() throws IOException {
+
+    connect();
+
     if(!doOutput){
       throw new IOException("output is disabled");
     }
@@ -497,14 +532,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private String internal_getRequestProperty (String key) {
     return (String) requestHeaders.get(new Attributes.Name(key));  
   }
-
-  /**
-   ** Check that the request property indicated by <var>key</var> has the
-   ** value <code>value</code>.
-   */
-//  private boolean internal_checkRequestProperty (String key, String value) {
-//    return ((String) requestHeaders.get(new Attributes.Name(key))).equalsIgnoreCase(value);  
-//  }
 
   /**
    ** Get the value of the response header named <var>name</var>.
@@ -845,16 +872,14 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Parse an HTTP response into a response code, a response message (if any),
    ** and a set of response headers.
    */
-  synchronized void parseResponse() throws IOException {
+  void parseResponse() throws IOException {
     if (responseParsed) {
 
         return;
 
     }
 
-    if (!connected) {
-      connect();
-    }
+    connect();
 
     if (out != null) {
       try {
@@ -871,6 +896,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     try {
       if(probeStatusLine()){
         String line = readLine(false);
+        responseLine = line;
         debug("HTTP: response: " + line);
         int space1 = line.indexOf(' ');
         if (space1 >= 0) {
