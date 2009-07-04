@@ -706,7 +706,7 @@ java/net/PlainSocketImpl
 	setLinger		(I)V	PlainSocketImpl_setLinger
 	setOOBInline		(Z)V	PlainSocketImpl_setOOBInline
 	sendUrgentData		(I)V	PlainSocketImpl_sendUrgentData
-        read            	([BII)I	PlainSocketImpl_read
+        _read            	([BII)I	PlainSocketImpl_read
         write           	([BII)V	PlainSocketImpl_write
         nativeCreate    	()V	PlainSocketImpl_nativeCreate   
 	finalize		()V	PlainSocketImpl_finalize
@@ -714,9 +714,10 @@ java/net/PlainSocketImpl
         nativeAccept		(Ljava/net/SocketImpl;)I	PlainSocketImpl_accept
         available       	()I	PlainSocketImpl_available
         nativeBind            	()V	PlainSocketImpl_bind
-        close           	()V	PlainSocketImpl_close
+        _close           	()V	PlainSocketImpl_close
         nativeConnect         	()V	PlainSocketImpl_connect
 	getSocket		()I	PlainSocketImpl_getSocket
+	signal			(Ljava/lang/Thread;)V	PlainSocketImpl_signal
 java/net/ConnectException                                         
 java/net/BindException                                         
 java/net/SocketException                                         

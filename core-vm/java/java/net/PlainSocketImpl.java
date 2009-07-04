@@ -35,8 +35,59 @@ import java.io.FileDescriptor;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 
+/**
+ * Package-local implementation of SocketImpl for "plain vanilla" sockets.
+ */
 class PlainSocketImpl extends SocketImpl {
+
+  /**
+   * Set of all sockets for which listen(), accept(), or connect() has been
+   * called but not yet close(). We store these as weak references to avoid
+   * accidentally keeping sockets from getting garbage-collected. During
+   * VM shutdown we try to close() any sockets which are found in this set.
+   */
+  private static HashSet opensockets;
+
+  /**
+   * Number of references which have been added to <code<opensockets</code>
+   * since the last purge of stqle references.
+   */
+  private static int regcount;
+
+  static {
+    opensockets = new HashSet();
+
+    /*
+     * We add a shutdown hook which attempts to close() every socket
+     * found in <code>opensockets</code>.
+     */
+    Runtime.getRuntime().addShutdownHook(new Thread("CloseOpenSockets") {
+      public void run() {
+        Iterator iter = opensockets.iterator();
+        ArrayList threadlist = new ArrayList();
+        while(iter.hasNext()) {
+          threadlist.add(iter.next());
+        }
+        iter = threadlist.iterator();
+        while(iter.hasNext()) {
+          WeakReference wr = (WeakReference)iter.next();
+          PlainSocketImpl psi = (PlainSocketImpl)wr.get();
+          if (psi != null) {
+            try {
+              psi.close();
+            }
+            catch (IOException ioe) {
+            }
+          }
+        }
+      }
+    });
+   }
 
   private InputStream in;
   private OutputStream out;
@@ -46,6 +97,7 @@ class PlainSocketImpl extends SocketImpl {
   private boolean nodelay;
   private int linger = -1;
   private boolean open;
+  private WeakReference wr;
 
   InetAddress localAddress;
   private int         localPort;
@@ -152,7 +204,7 @@ class PlainSocketImpl extends SocketImpl {
     }
   }
 
-  protected void connect(String host, int port) throws IOException{
+  protected void connect(String host, int port) throws IOException {
     connect(InetAddress.getByName(host),port);
   }
 
@@ -184,8 +236,13 @@ class PlainSocketImpl extends SocketImpl {
   }
 
   protected synchronized void accept(SocketImpl s) throws IOException {
-     int ip = nativeAccept(s);
+    int ip = nativeAccept(s);
     s.address = InetAddress.createInetAddress(ip);
+    try {
+      ((PlainSocketImpl)s).register();
+    }
+    catch (ClassCastException cce) {
+    }
   }
 
   protected synchronized void shutdownInput() throws IOException {
@@ -199,18 +256,30 @@ class PlainSocketImpl extends SocketImpl {
   protected synchronized void connect(InetAddress address, int port) throws IOException {
     remoteAddress = address;
     remotePort = port;
-    if(remoteAddress instanceof Inet6Address) ipv6 = true;
-    nativeCreate();
-    nativeBind();
-    nativeConnect();
+    if (remoteAddress instanceof Inet6Address) {
+      ipv6 = true;
+    }
+    try {
+      SocketUsers.put(this, Thread.currentThread());
+      nativeCreate();
+      nativeBind();
+      nativeConnect();
+      register();
+    }
+    finally {
+      SocketUsers.remove(this);
+    }
   }
   
   protected synchronized void connect(SocketAddress sa, int timeout) throws IOException {
     try {
+      SocketUsers.put(this, Thread.currentThread());
       InetSocketAddress isa = (InetSocketAddress)sa;
       remoteAddress = isa.addr;
       remotePort = isa.port;
-      if(remoteAddress instanceof Inet6Address) ipv6 = true;
+      if (remoteAddress instanceof Inet6Address) {
+        ipv6 = true;
+      }
       this.timeout = timeout;
       nativeCreate();
       nativeBind();
@@ -218,6 +287,9 @@ class PlainSocketImpl extends SocketImpl {
     }
     catch (ClassCastException cce) {
       throw new SocketException();
+    }
+    finally {
+      SocketUsers.remove(this);
     }
   }
   
@@ -231,17 +303,65 @@ class PlainSocketImpl extends SocketImpl {
     nativeCreate();
     nativeBind();
     nativeListen(backlog);
+    register();
   }
   
+  protected synchronized void close() throws IOException {
+    Thread t = SocketUsers.get(this);
+    if (t != null) {
+      signal(t);
+    }
+    _close();
+  }
+
+  private void register() {
+    if (wr == null) {
+      wr = new WeakReference(this);
+      synchronized (opensockets) {
+        opensockets.add(wr);
+        if (++regcount >= 100) {
+          // Clean up stale references
+          regcount = 0;
+          Iterator iter = opensockets.iterator();
+          while (iter.hasNext()) {
+            WeakReference wr0 = (WeakReference)iter.next();
+            if (wr0.get() == null) {
+              iter.remove();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void deregister() {
+    if (wr != null) {
+      synchronized (opensockets) {
+        opensockets.remove(wr);
+      }
+    }
+  }
+
   //package private methods for communication with SocketStreams ...
 
-  native int read(byte [] bytes, int off, int length) throws IOException;
+  int read(byte [] bytes, int off, int length) throws IOException {
+    try {
+      SocketUsers.put(this, Thread.currentThread());
+      return _read(bytes, off, length);
+    }
+    finally {
+      SocketUsers.remove(this);
+    }
+  }
+
+  native int _read(byte [] bytes, int off, int length) throws IOException;
   native void write(byte [] bytes, int off, int length) throws IOException;
 
   protected native void finalize();
 
   //private native methods
 
+  private native void signal(Thread t);
   private native int getSocket() throws SocketException;
   private native void nativeCreate();
   private native int nativeAccept(SocketImpl s) throws IOException;
@@ -265,7 +385,7 @@ class PlainSocketImpl extends SocketImpl {
 
   protected native void sendUrgentData(int udata) throws IOException;
   protected synchronized native int available() throws IOException;
-  protected synchronized native void close() throws IOException;
+  protected synchronized native void _close() throws IOException;
 
   /*
   TCP_NODELAY = 0x0001;    --> Boolean
