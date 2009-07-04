@@ -248,6 +248,9 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
   
 }
 
+static sigusr_handler(int sig) {
+}
+
 w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -256,6 +259,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   w_int timeout;
   w_int i;
   unsigned char c;
+  struct sigaction action, savedaction;
   
   woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
@@ -285,12 +289,17 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   */
 
   timeout = getIntegerField(ThisImpl, F_PlainSocketImpl_timeout);
+  action.sa_handler = sigusr_handler;
+  sigemptyset (&action.sa_mask);
+  action.sa_flags = 0;
+  sigaction(SIGUSR1, &action, &savedaction);
   woempa(2, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
 #ifdef UCLINUX
   res = w_recv(ThisImpl, sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
 #else
   res = w_recv(sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
 #endif
+  sigaction(SIGUSR1, &savedaction, NULL);
   if (res == -1) {
     if( timeout == -1) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -820,5 +829,12 @@ void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int milli
   setOption(thread, ThisImpl, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 }
 
+void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance aThread) {
+  w_thread wt = w_threadFromThreadInstance(aThread);
+  // TODO: somehow represent this in OSwald API
+  x_thread xt = wt->kthread;
+  pthread_t pt = xt->o4p_pthread;
+  pthread_kill(pt, SIGUSR1);
+}
 
 
