@@ -831,10 +831,10 @@ void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int milli
 
 void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance aThread) {
   w_thread wt = w_threadFromThreadInstance(aThread);
-  // TODO: somehow represent this in OSwald API
   x_thread xt = wt->kthread;
-  pthread_t pt = xt->o4p_pthread;
-  pthread_kill(pt, SIGUSR1);
+  if (xt) {
+    x_thread_signal(xt, x_signal_1);
+  }
 }
 
 

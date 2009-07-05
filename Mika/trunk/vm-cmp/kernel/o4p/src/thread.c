@@ -752,3 +752,21 @@ x_status x_thread_stop_waiting(x_thread thread) {
 
   return xs_no_instance;
 }
+
+x_status x_thread_signal(x_thread thread, w_int signum) {
+  pthread_t pt = thread->o4p_pthread;
+  int rc;
+
+  rc = pthread_kill(pt, signum);
+  switch (rc) {
+    case 0:
+      return xs_success;
+
+    case ESRCH:
+      return xs_no_instance;
+
+    default:
+     return xs_bad_argument;
+  }
+}
+
