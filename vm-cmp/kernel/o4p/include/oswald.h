@@ -191,6 +191,9 @@ x_status x_thread_stop_waiting(x_thread);
 x_status x_thread_wakeup(x_thread);
 x_status x_thread_attach_current(x_thread);
 x_status x_thread_detach(x_thread);
+x_status x_thread_signal(x_thread, w_int signum);
+
+#define x_signal_1 SIGUSR1
 
 inline static x_state x_thread_state(x_thread thread) {
   return thread->state;
