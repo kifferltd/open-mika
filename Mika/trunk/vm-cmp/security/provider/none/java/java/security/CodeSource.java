@@ -59,7 +59,7 @@ public class CodeSource implements Serializable {
      *            the {@code Certificate} used to verify the code, loaded from
      *            the specified {@code location}, maybe {@code null}.
      */
-    public CodeSource(URL location, Certificate[] certs) {
+    public CodeSource(URL location, java.security.cert.Certificate[] certs) {
         this.location = location;
     }
 
@@ -87,7 +87,7 @@ public class CodeSource implements Serializable {
     /**
      * @return {@code null}
      */
-    public final Certificate[] getCertificates() {
+    public final java.security.cert.Certificate[] getCertificates() {
         return null;
     }
 

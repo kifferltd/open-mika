@@ -181,7 +181,7 @@ public class URLClassLoader extends SecureClassLoader{
           catch(Exception e) {
           }
         }
-        return defineClass(name, bytes, 0, bytes.length, new CodeSource(url, null));
+        return defineClass(name, bytes, 0, bytes.length, new CodeSource(url, (java.security.cert.Certificate[])null));
       }
     }
     throw new ClassNotFoundException(name);
