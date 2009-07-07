@@ -100,11 +100,11 @@ public class HashMap extends AbstractMap
   implements Map, Cloneable, Serializable
 {
   /**
-   * Default number of buckets. This is the value the JDK 1.3 uses. Some
+   * Default number of buckets. This is the value specified in JSR 219. Some
    * early documentation specified this value as 101. That is incorrect.
    * Package visible for use by HashSet.
    */
-  static final int DEFAULT_CAPACITY = 11;
+  static final int DEFAULT_CAPACITY = 16;
 
   /**
    * The default load factor; this is explicitly specified by the spec.

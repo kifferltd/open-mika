@@ -39,7 +39,7 @@ public class HashSet extends AbstractSet implements Set, Cloneable, Serializable
 
   private static final long serialVersionUID = -5024744406713321676L;
 
-  private static int defaultSize = 101;
+  private static int defaultSize = HashMap.DEFAULT_CAPACITY;
   private static float defaultLoadFactor= 0.75f;
   final static Object nullKey = new Object();
 
