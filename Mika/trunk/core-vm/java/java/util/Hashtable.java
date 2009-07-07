@@ -47,7 +47,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
   private int threshold;
   private transient int capacity;
   transient int occupancy;
-  private final static int DEFAULT_CAPACITY = 101;
+  private final static int DEFAULT_CAPACITY = 11;
 
   transient int modCount;
 

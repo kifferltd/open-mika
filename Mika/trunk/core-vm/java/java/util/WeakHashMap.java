@@ -40,7 +40,7 @@ public class WeakHashMap extends AbstractMap implements Map {
   final static Object nullKey = new Object();
 
   private final static float DEFAULT_LOADFACTOR = (float).75;
-  private final static int DEFAULT_CAPACITY = 101;
+  private final static int DEFAULT_CAPACITY = 16;
 
   WeakHashReference[] entries;
   private ReferenceQueue queue;

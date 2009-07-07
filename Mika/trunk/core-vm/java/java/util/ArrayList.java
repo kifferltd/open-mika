@@ -41,7 +41,7 @@ public class ArrayList extends AbstractList
   private static final long serialVersionUID = 8683452581122892189L;
   private transient Object[] elements;
   private int size;
-  private static final int defaultCapacity = 7;
+  private static final int defaultCapacity = 10;
 
   private void writeObject (ObjectOutputStream s) throws IOException {
     s.defaultWriteObject();
