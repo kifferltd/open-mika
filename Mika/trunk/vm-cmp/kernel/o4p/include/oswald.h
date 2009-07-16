@@ -258,6 +258,8 @@ void x_mem_discard(void * block);
 x_status x_mem_collect(w_size * bytes, w_size * num);
 x_boolean x_mem_is_block(void * mem);
 
+x_long x_time_now_millis(void);
+
 void * x_alloc_static_mem(void * memory, w_size size);
 
 

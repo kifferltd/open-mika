@@ -140,7 +140,9 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
     if(ref) {
       return ref;
     } else {
-      w_long now = getNativeSystemTime();
+      w_long now = x_time_now_millis();
+      w_long diff;
+
       x_monitor_eternal(lock);
       if(isEmptyFifo(fifo)) {
        x_status status; 
@@ -157,8 +159,8 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
         }
       }
       x_monitor_exit(lock);
-      now = getNativeSystemTime() - now;
-      waittime -= now;
+      diff = x_time_now_millis() - now;
+      waittime -= diff;
     }
   }
 }

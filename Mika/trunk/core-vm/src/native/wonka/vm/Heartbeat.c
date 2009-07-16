@@ -269,7 +269,8 @@ static struct timeval before;
 static struct timeval now;
 static w_boolean inited;
 
-w_long system_time_offset;
+// Volatile 'coz gcc might screw up otherwise
+volatile w_long system_time_offset;
 
 void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
   long micros = millis * 1000;
@@ -292,10 +293,9 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
   else {
     before = now;
     gettimeofday(&now, NULL);
-    diff = (now.tv_usec - before.tv_usec) / 1000 + (now.tv_sec - before.tv_sec) * 1000;
+    diff = ((w_long)now.tv_usec - (w_long)before.tv_usec) / 1000LL + ((w_long)now.tv_sec - (w_long)before.tv_sec) * 1000LL;
     if (diff < 0 || diff > 2 * millis) {
       system_time_offset += diff - millis;
-      x_adjust_timers(diff);
     }
   }
 }

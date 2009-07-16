@@ -268,8 +268,6 @@ void setScheduler(int scheduler);
 
 extern void x_setup_timers(x_size);
 
-extern void x_adjust_timers(x_long);
-
 /// Number of command line arguments (copy of argc)
 extern int command_line_argument_count;
 
@@ -331,38 +329,6 @@ x_size x_ticks2usecs(x_size ticks);
 
 extern void x_now_plus_ticks(x_size ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
-
-// HACK for some buggy linuces
-extern long previous_seconds;
-extern long previous_microseconds;
-
-static inline int x_gettimeofday(struct timeval *tv, struct timezone *tz) {
-  int retcode;
-
-  while (1) {
-    usleep(0);
-    retcode = gettimeofday(tv, NULL);
-    if (retcode < 0) {
-      perror("mika : gettimeofday");
-
-      return retcode;
-
-    }
-    if (tv->tv_sec > previous_seconds) {
-      previous_seconds = tv->tv_sec;
-      previous_microseconds = tv->tv_usec;
-      break;
-    }
-    else if (tv->tv_sec == previous_seconds && tv->tv_usec >= previous_microseconds) {
-      previous_microseconds = tv->tv_usec;
-      break;
-    }
-
-//    printf("Time went backwards: %ld%03ld < %ld%03ld\n", tv->tv_sec, tv->tv_usec / 1000, previous_seconds, previous_microseconds / 1000);
-  }
-
-  return 0;
-}
 
 void _o4p_abort(char *file, int line, int type, char *message, int rc);
 
