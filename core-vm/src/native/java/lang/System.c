@@ -50,14 +50,14 @@
 #include "wonkatime.h"
 
 w_long System_static_currentTimeMillis(JNIEnv *env, w_instance classSystem) {
-  return (w_long)getNativeSystemTime();
+  return x_time_now_millis();
 }
 
 void fast_System_static_currentTimeMillis(w_frame frame) {
   // Volatile 'coz gcc might screw up otherwise
   volatile union {w_long l; w_word w[2];} millis;
 
-  millis.l = getNativeSystemTime();
+  millis.l = x_time_now_millis();
   frame->jstack_top[0].s = 0;
   frame->jstack_top[0].c = millis.w[0];
   frame->jstack_top[1].s = 0;
