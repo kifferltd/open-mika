@@ -116,7 +116,7 @@ x_status x_mutex_lock(x_mutex mutex, x_sleep timeout) {
      sec = usec / 1000000;
      usec -= sec * 1000000;
 
-     x_gettimeofday(&end, NULL);
+     gettimeofday(&end, NULL);
      end.tv_sec += sec;
      end.tv_usec += usec;
 
@@ -131,7 +131,7 @@ x_status x_mutex_lock(x_mutex mutex, x_sleep timeout) {
          break;
 
        nanosleep(&one_tick_ts, NULL);
-       x_gettimeofday(&now, NULL);
+       gettimeofday(&now, NULL);
      } while (retcode == EBUSY || (now.tv_sec > end.tv_sec || (now.tv_sec == end.tv_sec && now.tv_usec > end.tv_usec)));
 
      if (retcode == 0) {

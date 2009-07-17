@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,22 +11,25 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
+
+#include "oswald.h"
 
 #ifdef USE_NANOSLEEP
 #include <time.h>
@@ -40,10 +45,6 @@
 #include "oswald.h"
 
 x_size usecs_per_tick;
-
-// Used for "time runs backwards" hack
-long previous_seconds;
-long previous_microseconds;
 
 #ifndef HAVE_TIMEDWAIT
 /*
@@ -188,64 +189,22 @@ void x_setup_timers(x_size millis) {
   x_thread_create(timer_thread, timer_entry_function, NULL, NULL, TIMER_THREAD_STACK_SIZE, NUM_PRIORITIES - 1, 0);
 }
 
-// No-op because we don't care about system time, only our own ticks
-void x_adjust_timers(x_long millis) {
-}
-
 #else
 void x_setup_timers(x_size millis) {
   usecs_per_tick = millis * 1000;
 }
-
-/*
- * Adjust for timer jump (e.g. when another process calls settimeofday()).
- * If the jump is positive, no action is taken. Otherwise we iterate over
- * threads: if a thread is waiting or sleeping, we wake it up. This may
- * result in threads returning from a wait() unexpectedly (spurious
- * notification): tant pis, recent versions of the Java specs allow this
- * behaviour. If the thread was sleeping we rely on the
- * x_thread_sleep() logic to recalculate the wakeup time.
- */
-void x_adjust_timers(x_long millis) {
-  int res;
-  x_thread t;
-
-  if (millis > 0) {
-
-    return;
-
-  }
-
-  res = pthread_mutex_trylock(&o4pe->threadsLock);
-  if (res != 0) {
-    w_dump("Attempt to lock o4pe->threadsLock failed... %d\n", res);
-    return;
-  }
-
-  for (t = o4pe->threads; t != NULL; t = t->o4p_thread_next) {
-    if (!t->xref) {
-      continue;
-    }
-
-    if (t->state == xt_sleeping) {
-      pthread_cond_broadcast(&t->sleep_cond);
-    }
-    else {
-      x_monitor monitor = t->waiting_on;
-
-      if (monitor) {
-        pthread_cond_broadcast(&monitor->mon_cond);
-      }
-    }
-  }
-  res = pthread_mutex_unlock(&o4pe->threadsLock);
-  if (res != 0) {
-    w_dump("Attempt to unlock o4pe->threadsLock failed... %d\n", res);
-    abort();
-  }
-}
-
 #endif
+
+x_long x_time_now_millis() {
+  struct timeval tv;
+  x_long result;
+
+  gettimeofday(&tv, NULL);
+  result = (x_long)tv.tv_sec * 1000;
+  result += ((x_long)tv.tv_usec + 500) / 1000;
+
+  return result;
+}
 
 void x_now_plus_ticks(x_size ticks, struct timespec *ts)
 {
@@ -257,7 +216,7 @@ void x_now_plus_ticks(x_size ticks, struct timespec *ts)
   sec = usec / 1000000;
   usec %= 1000000;
 
-  x_gettimeofday(&now, NULL);
+  gettimeofday(&now, NULL);
   ts->tv_sec = now.tv_sec + sec;
   ts->tv_nsec = (now.tv_usec + usec) * 1000;
 
@@ -270,7 +229,7 @@ void x_now_plus_ticks(x_size ticks, struct timespec *ts)
 x_boolean x_deadline_passed(struct timespec *ts) {
   struct timeval now;
 
-  x_gettimeofday(&now, NULL);
+  gettimeofday(&now, NULL);
 
   return (ts->tv_sec < now.tv_sec)  || ((ts->tv_sec == now.tv_sec) && (ts->tv_nsec <= now.tv_usec));
 }
