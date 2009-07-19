@@ -229,8 +229,8 @@ void deregisterString(w_string string);
 ** after it (and it will see our O_BLACK flag and not reclaim the instance).
 */
 static inline w_instance getCanonicalStringInstance(w_thread thread, w_string s) {
-  w_string canonical;
-  w_flags *flagsptr;
+  w_instance canonical;
+  volatile w_flags *flagsptr;
 
   threadMustBeSafe(thread);
   canonical = s->interned;
