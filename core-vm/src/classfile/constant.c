@@ -84,7 +84,9 @@ w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
  * The calling thread must GC safe!
  */
 w_field getFieldConstant(w_clazz clazz, w_int i) {
+#ifdef RUNTIME_CHECKS
   w_thread thread = currentWonkaThread;
+#endif
   int tag;
   threadMustBeSafe(thread);
   check_constant_index(clazz, i);
@@ -107,7 +109,9 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getMethodConstant(w_clazz clazz, w_int i) {
+#ifdef RUNTIME_CHECKS
   w_thread thread = currentWonkaThread;
+#endif
   int tag;
   threadMustBeSafe(thread);
   check_constant_index(clazz, i);
@@ -130,7 +134,9 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getIMethodConstant(w_clazz clazz, w_int i) {
+#ifdef RUNTIME_CHECKS
   w_thread thread = currentWonkaThread;
+#endif
   int tag;
   threadMustBeSafe(thread);
   check_constant_index(clazz, i);
@@ -837,7 +843,7 @@ static w_method seekMethodInClass(w_string name, w_string desc_string, w_MethodS
   for (i = 0; i < search_clazz->numDeclaredMethods; ++i) {
     m = &search_clazz->own_methods[i];
 
-    woempa(1, "Candidate: %w%w\n", m->spec.name, m->spec.name);
+    woempa(1, "Candidate: %w%w\n", m->spec.name, m->desc);
     woempa(1, "Is %spublic, %sprivate, %sprotected, %ssame package, %sancestor\n", isSet(m->flags, ACC_PUBLIC) ? "" : "not ", isSet(m->flags, ACC_PRIVATE) ? "" : "not ", isSet(m->flags, ACC_PROTECTED) ? "" : "not ", same_package ? " " : "not ", ancestor ? " " : "not ");
     if (m->spec.name == name && m->desc == desc_string) {
       woempa(1, "=> name matches, descriptor matches ...\n");
@@ -1334,12 +1340,14 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
   }
   else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
 
-    result == internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+    result = internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
 
   }
   // else we return FALSE (e.g. COULD_NOT_RESOLVE)
 
   x_monitor_exit(clazz->resolution_monitor);
+
+  return result;
 }
 
 #ifdef DEBUG
