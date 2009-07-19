@@ -1424,7 +1424,7 @@ woempa(7, "existing = %p\n", existing);
         for (i = 0; i < clazz->numFields; ++i) {
           existing->own_fields[i].declaring_clazz = existing;
         }
-        for (i = 0; i < clazz->numDeclaredMethods; ++i) {
+        for (i = 0; i < (w_int)clazz->numDeclaredMethods; ++i) {
           existing->own_methods[i].spec.declaring_clazz = existing;
         }
         if (!clazz->dims) {
@@ -1672,7 +1672,7 @@ static void get_attributes(w_thread thread, w_clazz clazz, w_bar s) {
 
 }
 
-w_clazz allocClazz() {
+w_clazz allocClazz(void) {
 
   w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
   if (!clazz) {
