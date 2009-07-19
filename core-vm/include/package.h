@@ -1,6 +1,6 @@
 /**************************************************************************
-* Parts Copyright (C) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts Copyright (C) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -63,7 +63,7 @@ w_package getPackageForClazz(w_clazz clazz, w_instance loader);
 ** Function called as soon as the system class loader has been created,
 ** to back-patch all existing packages to have loader = systemClassLoader.
 */
-void patchPackages();
+void patchPackages(void);
 
 #endif /* _PACKAGE_H */
 
