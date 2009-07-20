@@ -68,9 +68,7 @@ typedef struct w_Wordset *w_wordset;
 /*
 ** Find out how many items are in a wordset.
 */
-inline static w_size sizeOfWordset(w_wordset *wordset) {
-  return (*wordset) ? (*wordset)->occupancy / sizeof(w_word) : 0;
-}
+w_size sizeOfWordset(w_wordset *wordset);
 
 /*
 ** Sometimes we only care whether a wordset is empty or not.

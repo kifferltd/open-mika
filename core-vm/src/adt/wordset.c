@@ -209,3 +209,9 @@ w_word takeLastFromWordset(w_wordset* wordset) {
   return result;
 }
 
+/*
+** Find out how many items are in a wordset.
+*/
+w_size sizeOfWordset(w_wordset *wordset) {
+  return (*wordset) ? (*wordset)->occupancy / sizeof(w_word) : 0;
+}

@@ -288,8 +288,8 @@ ht_destroy(w_hashtable theHashtable) {
 }
 
 void ht_check_size(w_hashtable hashtable) {
-  w_int  oldsize;
-  w_int  newsize;
+  w_size  oldsize;
+  w_size  newsize;
   w_word *oldkeys;
   w_word *newkeys = NULL;
   w_word *oldvalues = hashtable->values;
@@ -495,7 +495,7 @@ ht_rehash(w_hashtable oldtable) {
 
 }
 
-static inline void set_value(w_hashtable hashtable, w_int idx, w_word key, w_word value) {
+static void set_value(w_hashtable hashtable, w_int idx, w_word key, w_word value) {
   if (hashtable->values) {
     hashtable->values[idx] = value;
   }
@@ -623,6 +623,16 @@ ht_delete(w_hashtable hashtable, w_int idx) {
 /*
 ***************************************************************************
 */
+
+w_word /* value found or NULL */
+ht_read(w_hashtable hashtable, w_word key) {
+  w_word value;
+  ht_lock(hashtable);
+  value = ht_read_no_lock(hashtable, key);
+  ht_unlock(hashtable);
+
+  return value;
+}
 
 w_word /* previous value or hashtable->nullvalue */
 ht_write(w_hashtable hashtable, w_word key, 
@@ -789,6 +799,16 @@ ht_findkey_no_lock(w_hashtable hashtable, w_word key) {
 
 }
 
+w_word /* key found or NULL */
+ht_findkey(w_hashtable hashtable, w_word key) {
+  w_word foundkey;
+  ht_lock(hashtable);
+  foundkey = ht_read_no_lock(hashtable, key);
+  ht_unlock(hashtable);
+
+  return foundkey;
+}
+
 w_word /* value found or NULL */
 ht_erase_no_lock(w_hashtable hashtable, w_word key) {
   w_int  seq;
@@ -921,6 +941,16 @@ ht_list_values_no_lock(w_hashtable hashtable) {
   return result;
 }
 
+w_fifo /* list of keys */
+ht_list_values(w_hashtable hashtable) {
+  w_fifo fifo;
+  ht_lock(hashtable);
+  fifo = ht_list_values_no_lock(hashtable);
+  ht_unlock(hashtable);
+
+  return fifo;
+}
+
 w_int
 ht_iterate_no_lock(w_hashtable hashtable, void (*fun)(w_word key,w_word value, void *arg1, void *arg2), void *arg1, void *arg2) {
   w_int count = 0;
@@ -945,6 +975,17 @@ ht_iterate_no_lock(w_hashtable hashtable, void (*fun)(w_word key,w_word value, v
 
   return count;
 
+}
+
+w_int /* number of occupied slots */
+ht_iterate(w_hashtable hashtable,void (*fun)(w_word key,w_word value, void * arg1, void * arg2), void *arg1, void *arg2) {
+  w_int count;
+
+  ht_lock(hashtable);
+  count = ht_iterate_no_lock(hashtable, fun, arg1, arg2);
+  ht_unlock(hashtable);
+
+  return count;
 }
 
 
@@ -1160,7 +1201,7 @@ static inline w_int ht2k_reprobe(w_hashtable2k hashtable, w_int current) {
 ** to make 'from' into 'to' ...
 */
 
-static inline w_int ht2k_distance(w_hashtable2k hashtable, w_int from, w_int to) {
+static w_int ht2k_distance(w_hashtable2k hashtable, w_int from, w_int to) {
   return from>=to ? from-to : hashtable->currentsize + from-to;
 }
 
@@ -1208,7 +1249,7 @@ static inline w_word hash2k(w_word key1, w_word key2) {
   return key1 ^ key2;
 }
 
-static inline w_boolean
+static w_boolean
 ht2k_match(w_hashtable2k hashtable, int idx, w_word h, w_word k1, w_word k2) {
   woempa(1, "%s: index %d holds 0x%08x/0x%08x, looking for  0x%08x/0x%08x\n", hashtable->label, idx, hashtable->keys1[idx], hashtable->keys2[idx], k1, k2);
 
