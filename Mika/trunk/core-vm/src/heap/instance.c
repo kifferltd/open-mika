@@ -65,7 +65,7 @@ char * print_instance_short(char * buffer, int * remain, void * data, int w, int
   }
 
   temp = buffer;
-  nbytes = x_snprintf(temp, *remain, "%k@%p", instance2clazz(instance), instance);
+  nbytes = x_snprintf(temp, *remain, "%k@%16p", instance2clazz(instance), instance);
   *remain -= nbytes;
 
   return temp + nbytes;
@@ -108,7 +108,7 @@ w_int instance_allocated = 0;
 w_int instance_returned = 0;
 w_object instance_first = NULL;
 
-inline static void registerObject(w_object object, w_thread thread) {
+static void registerObject(w_object object, w_thread thread) {
 
   if (thread) {
     threadMustBeUnsafe(thread);

@@ -86,7 +86,7 @@
 ** files such as strings.h also need to know about it).
 */
 
-#define CATCH_FLYING_PIGS
+//#define CATCH_FLYING_PIGS
 
 #ifndef PIGS_MIGHT_FLY
 #ifdef CATCH_FLYING_PIGS
@@ -489,8 +489,10 @@ static w_int reallyReleaseInstance(w_object object) {
   w_size  bytes = 0;
   w_clazz clazz = object->clazz;
   w_instance instance = object->fields;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
   w_boolean done = FALSE;
   static int fudge;
+#endif
 
   if (isSet(object->flags, O_HAS_LOCK)) {
     if (putFifo(instance, dead_lock_fifo) < 0) {
@@ -609,7 +611,7 @@ static w_int releaseInstance(w_object object) {
 ** is at least as high-order as the single 1 bit in flag2.
 ** N.B. flag2 must be a power of 2!
 */
-static inline w_boolean impliesMark(w_word flag1, w_word flag2) {
+static w_boolean impliesMark(w_word flag1, w_word flag2) {
   return flag1 > (flag2 - 1);
 }
 
@@ -621,7 +623,7 @@ static inline w_boolean impliesMark(w_word flag1, w_word flag2) {
 ** Note that we rely on the fact that the flags in question appear in
 ** the object flags word contiguously and in the order shown above.
 */
-static inline w_boolean isMarked(w_object o, w_word flag) {
+static w_boolean isMarked(w_object o, w_word flag) {
   return ((flag != O_FINALIZE_BLACK) ? impliesMark(o->flags & (O_BLACK | O_PHANTOM_BLACK), flag) : (w_boolean)isSet(o->flags, O_BLACK | O_FINALIZE_BLACK));
 }
 
@@ -631,7 +633,7 @@ static inline w_boolean isMarked(w_object o, w_word flag) {
 ** Try to add a given instance to a given fifo. Return 1 if successful,
 ** -1 if failed (because fifo is already full and could not be extended).
 */
-static inline w_int tryPutFifo(w_instance instance, w_fifo fifo) {
+static w_int tryPutFifo(w_instance instance, w_fifo fifo) {
   if (!instance) {
     wabort(ABORT_WONKA, "Attempt to enqueue null instance!\n");
   }
@@ -1980,7 +1982,7 @@ static w_hashtable dead_clazz_hashtable;
 /*
 ** Swap function for the sort.
 */
-static inline void dead_clazz_swap(int i, int j) {
+static void dead_clazz_swap(int i, int j) {
   w_clazz this_clazz = dead_clazz_array[i];
   w_clazz other_clazz = dead_clazz_array[j];
 
@@ -2237,7 +2239,7 @@ w_wordset reclaim_listener_list = NULL;
 x_Monitor reclaim_listener_Monitor;
 x_monitor reclaim_listener_monitor = NULL;
 
-static inline int enter_reclaim_listener_monitor(void) {
+static int enter_reclaim_listener_monitor(void) {
   x_status status = x_monitor_eternal(reclaim_listener_monitor);
 
   if (status == xs_no_instance) {
@@ -2253,7 +2255,7 @@ static inline int enter_reclaim_listener_monitor(void) {
   return TRUE;
 }
 
-static inline void exit_reclaim_listener_monitor(void) {
+static void exit_reclaim_listener_monitor(void) {
   x_status status = x_monitor_exit(reclaim_listener_monitor);
 
   if (status != xs_success) {
@@ -2318,7 +2320,6 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
 #ifdef DISTRIBUTED_GC
   w_size   i;
-  w_size   n;
   w_int   reclaimed_this_cycle;
   w_int   remaining = 0;
   w_int   initial = 0;
@@ -2502,7 +2503,6 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
 
 
 void gc_collect(w_instance theGarbageCollector) {
-  x_status status;
   w_thread   this_thread = currentWonkaThread;
   w_int gc_pass_count = getIntegerField(theGarbageCollector, F_GarbageCollector_passes);
   w_int done = 0;
@@ -2644,7 +2644,6 @@ void gc_collect(w_instance theGarbageCollector) {
 }
 
 w_int gc_request(w_int requested) {
-  x_status status;
   w_thread   this_thread = currentWonkaThread;
   w_int released = 0;
   w_int remaining = requested;
