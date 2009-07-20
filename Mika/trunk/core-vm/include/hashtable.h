@@ -475,30 +475,16 @@ w_word /* previous key or NULL */
 ht_write_no_lock(w_hashtable, w_word key, w_word newvalue);
 
 w_word /* value found or NULL */
+ht_read(w_hashtable, w_word key);
+
+w_word /* value found or NULL */
 ht_read_no_lock(w_hashtable, w_word key);
 
-inline static w_word /* value found or NULL */
-ht_read(w_hashtable hashtable, w_word key) {
-  w_word value;
-  ht_lock(hashtable);
-  value = ht_read_no_lock(hashtable, key);
-  ht_unlock(hashtable);
-
-  return value;
-}
+w_word /* key found or NULL */
+ht_findkey(w_hashtable, w_word key);
 
 w_word /* key found or NULL */
 ht_findkey_no_lock(w_hashtable, w_word key);
-
-inline static w_word /* key found or NULL */
-ht_findkey(w_hashtable hashtable, w_word key) {
-  w_word foundkey;
-  ht_lock(hashtable);
-  foundkey = ht_read_no_lock(hashtable, key);
-  ht_unlock(hashtable);
-
-  return foundkey;
-}
 
 w_word /* value found or NULL */
 ht_erase_no_lock(w_hashtable, w_word key);
@@ -531,31 +517,16 @@ ht_list_keys(w_hashtable hashtable) {
 }
 
 w_fifo /* list of values */
+ht_list_values(w_hashtable);
+
+w_fifo /* list of values */
 ht_list_values_no_lock(w_hashtable);
 
-inline static w_fifo /* list of keys */
-ht_list_values(w_hashtable hashtable) {
-  w_fifo fifo;
-  ht_lock(hashtable);
-  fifo = ht_list_values_no_lock(hashtable);
-  ht_unlock(hashtable);
-
-  return fifo;
-}
+w_int /* number of occupied slots */
+ht_iterate(w_hashtable, void (*fun)(w_word key,w_word value, void * arg1, void * arg2), void *arg1, void *arg2);
 
 w_int /* number of occupied slots */
 ht_iterate_no_lock(w_hashtable, void (*fun)(w_word key,w_word value, void * arg1, void * arg2), void *arg1, void *arg2);
-
-inline static w_int /* number of occupied slots */
-ht_iterate(w_hashtable hashtable,void (*fun)(w_word key,w_word value, void * arg1, void * arg2), void *arg1, void *arg2) {
-  w_int count;
-
-  ht_lock(hashtable);
-  count = ht_iterate_no_lock(hashtable, fun, arg1, arg2);
-  ht_unlock(hashtable);
-
-  return count;
-}
 
 w_word /* old key or nullkey */
 ht_register(w_hashtable, w_word key);
