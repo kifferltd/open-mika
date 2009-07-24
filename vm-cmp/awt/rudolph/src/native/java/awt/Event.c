@@ -306,7 +306,7 @@ static void addMouseEvent(r_component source, r_event event) {
   setIntegerField(mouseEvent, F_MouseEvent_y, event->y - y + dy);  // relative y coordinate
   setIntegerField(mouseEvent, F_MouseEvent_clickCount, 1); 
   setIntegerField(mouseEvent, F_InputEvent_modifiers, event->modifiers); 
-  setLongField(mouseEvent, F_InputEvent_timeStamp, (w_long)getNativeSystemTime());
+  setLongField(mouseEvent, F_InputEvent_timeStamp, x_time_now_millis());
   setReferenceField(mouseEvent, source->instance, F_EventObject_source);
 
   // Attach MouseEvent to EventQueue instance:
@@ -351,7 +351,7 @@ static void addMouseMotionEvent(r_component source, r_event event) {
     setIntegerField(mouseEvent, F_MouseEvent_x, event->x - x + dx);  // relative x coordinate
     setIntegerField(mouseEvent, F_MouseEvent_y, event->y - y + dy);  // relative y coordinate
     setIntegerField(mouseEvent, F_InputEvent_modifiers, event->modifiers);
-    setLongField(mouseEvent, F_InputEvent_timeStamp, (w_long)getNativeSystemTime());
+    setLongField(mouseEvent, F_InputEvent_timeStamp, x_time_now_millis());
     setReferenceField(mouseEvent, source->instance, F_EventObject_source);
 
     // Attach MouseEvent to EventQueue instance:
@@ -465,7 +465,7 @@ void Event_addKeyEvent(w_int VK, w_int keychar, w_int mod, w_int pressed, w_inst
 	}
 
     setIntegerField(keyEvent, F_InputEvent_modifiers, mod);
-    setLongField(keyEvent, F_InputEvent_timeStamp, (w_long)getNativeSystemTime());
+    setLongField(keyEvent, F_InputEvent_timeStamp, x_time_now_millis());
     setReferenceField(keyEvent, source, F_EventObject_source);
 
     // Attach KeyEvent to EventQueue instance:
