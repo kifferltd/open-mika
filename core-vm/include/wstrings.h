@@ -235,14 +235,14 @@ static inline w_instance getCanonicalStringInstance(w_thread thread, w_string s)
   threadMustBeSafe(thread);
   canonical = s->interned;
   if (canonical) {
-    enterUnsafeRegion(thread);
-    addLocalReference(thread, canonical);
+    thread->top->auxstack_top[0].c = (w_word) canonical;
+    thread->top->auxstack_top[0].s = stack_trace;
+    thread->top->auxstack_top -= 1;
     flagsptr = instance2flagsptr(canonical);
 #ifdef PIGS_MIGHT_FLY
     unsetFlag(*flagsptr, O_GARBAGE);
 #endif
     setFlag(*flagsptr, O_BLACK);
-    enterSafeRegion(thread);
   }
 
   return canonical;
@@ -250,7 +250,7 @@ static inline w_instance getCanonicalStringInstance(w_thread thread, w_string s)
 
 /*
 ** If the w_string referenced by theString has no canonical instance, record
-** 'theString' as the cononical instance and return it as the result. If the
+** 'theString' as the canonical instance and return it as the result. If the
 ** w_string already has a canonical instance, return the canonical instance.
 ** The caller of this function must own the lock on string_hashtable(!).
 */
