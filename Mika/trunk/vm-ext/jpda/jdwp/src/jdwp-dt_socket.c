@@ -121,6 +121,7 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
 
         return FALSE;
       }
+      printf("Listening for transport dt_socket at address: %d\n", port_nr);
     }
 
     woempa(7, "Calling accept() on socket %d\n", serversock);
