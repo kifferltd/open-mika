@@ -318,7 +318,7 @@ if $(DEBUG) = true {
     OPTIM += -Os ;
   }
 
-#  CCFLAGS += -ggdb ;
+  CCFLAGS += -ggdb ;
 }
 
 if $(GDB_SYMBOLS) = true {
@@ -517,6 +517,15 @@ switch $(FILESYSTEM) {
   }
   case native : {
     WONKA_INFO += "using host OS filesystem, with virtual root at $(FSROOT);" ;
+  }
+}
+
+switch $(JDWP) {
+  case true : {
+    WONKA_INFO += "with JDWP enabled;" ;
+  }
+  case false : {
+    WONKA_INFO += "no JDWP;" ;
   }
 }
 
