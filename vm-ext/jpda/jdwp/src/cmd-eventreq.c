@@ -337,30 +337,8 @@ w_void jdwp_evtreq_clear(jdwp_command_packet cmd) {
       jdwp_single_step_clear(event);
     }
 
-    /*
-    ** Clear the modifiers and release memory.
-    */
-
-    mod = event->modifiers;
-    if(mod != NULL) mod->prev->next = NULL;
-
-    while(mod != NULL) {
-      tmp = mod;
-      mod = mod->next;
-
-      /* TODO: Some modifiers have extra allocated memory. Deal with it. */
-      
-      releaseMem(tmp);
-    }
-
-    /* 
-    ** Clear the event and release memory.
-    */
-
     jdwp_event_remove(event->eventID);
-
-    releaseMem(event);
-
+    jdwp_dealloc_event(event);
   }
   
   jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);

@@ -169,12 +169,17 @@ jdwp_event jdwp_event_alloc(w_int event_kind, w_int suspend_policy) {
 */
 
 void jdwp_dealloc_event(jdwp_event event) {
-  jdwp_event_modifier modifier = event->modifiers;
+  jdwp_event_modifier first_modifier = event->modifiers;
+  jdwp_event_modifier modifier = first_modifier;
   jdwp_event_modifier next;
 
   while (modifier) {
     next = modifier->next;
+    /* TODO: Some modifiers have extra allocated memory. Deal with it. */
     releaseMem(modifier);
+    if (first_modifier == next) {
+      break;
+    }
     modifier = next;
   }
 
