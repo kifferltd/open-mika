@@ -155,6 +155,7 @@ extern w_flags verbose_flags;
 #define VERBOSE_FLAG_URL      0x00000200 // "url"
 #define VERBOSE_FLAG_HTTP     0x00000400 // "http"
 #define VERBOSE_FLAG_EXEC     0x00000800 // "exec"
+#define VERBOSE_FLAG_JDWP     0x00001000 // "jdwp"
 
 /*
 ** Function which behaves like printf, except that it recognizes wonka-specific
