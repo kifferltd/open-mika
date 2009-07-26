@@ -770,6 +770,9 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     if (strstr(verbose_cstring, "exec")) {
       verbose_flags |= VERBOSE_FLAG_EXEC;
     }
+    if (strstr(verbose_cstring, "jdwp")) {
+      verbose_flags |= VERBOSE_FLAG_JDWP;
+    }
   }
 }
 

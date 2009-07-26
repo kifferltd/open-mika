@@ -144,6 +144,8 @@ w_void jdwp_class_set_values(jdwp_command_packet cmd) {
 /*
 ** Create an instance of the given class.
 
+extern w_size jdwp_global_suspend_count;
+
 w_void jdwp_class_new_instance(jdwp_command_packet cmd) {
   w_size offset = 0;
   w_clazz clazz;
@@ -157,7 +159,7 @@ w_void jdwp_class_new_instance(jdwp_command_packet cmd) {
   if (jdwp_check_clazz(clazz) & isNotSet(clazz->flags, ACC_INTERFACE)) {
     thread = jdwp_get_thread(cmd->data, &offset);
     if (jdwp_check_thread(thread)) {
-      if (thread->WT_THREAD_SUSPEND_COUNT_MASK) {
+      if (thread->WT_THREAD_SUSPEND_COUNT_MASK || jdwp_global_suspend_count) {
         method = jdwp_get_method((cmd->data, &offset);
         if (jdwp_check_method(method)) {
           count = jdwp_get_u4(cmd->data, &offset);

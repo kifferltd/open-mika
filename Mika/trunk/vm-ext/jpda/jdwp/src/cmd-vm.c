@@ -366,6 +366,8 @@ static void jdwp_vm_threadgroups(jdwp_command_packet cmd) {
 **    as it takes).
 */
 
+extern w_size jdwp_global_suspend_count;
+
 static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
   w_fifo fifo = ht_list_values(thread_hashtable);
   w_thread thread;
@@ -373,6 +375,9 @@ static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
   while((thread = getFifo(fifo)) != NULL) {
     woempa(7, "Clearing suspend count of %t\n", thread);
     thread->flags &= ~WT_THREAD_SUSPEND_COUNT_MASK;
+  }
+  while (jdwp_global_suspend_count) {
+    jdwp_internal_resume_all();
   }
 
   unsetFlag(blocking_all_threads, BLOCKED_BY_JDWP);
