@@ -58,6 +58,9 @@ w_void jdwp_classobjref_refltype(jdwp_command_packet cmd) {
   if (instance) {
     if (instance2clazz(instance) == clazzClass) {
       clazz = Class2clazz(instance);
+      if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+        wprintf("JDWP: clazz = %k\n", clazz);
+      }
       jdwp_put_u1(&reply_grobag, clazz->dims ? jdwp_tt_array : clazz->vmlt ? jdwp_tt_class : jdwp_tt_interface);
       jdwp_put_clazz(&reply_grobag, clazz);
 

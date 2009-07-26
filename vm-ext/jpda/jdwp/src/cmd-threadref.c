@@ -349,7 +349,7 @@ w_void jdwp_thr_frames(jdwp_command_packet cmd) {
       length = jdwp_get_u4(cmd->data, &offset);
       woempa(7, "Request is for %d frames starting with frame %d\n", length, start);
 
-      if(thread->kthread->state == xt_suspended || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
+      if(thread->kthread->state == xt_suspended || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK) || jdwp_global_suspend_count) {
         cursor = thread->top;
         woempa(7, "  top frame is at %p\n", cursor);
       
@@ -434,7 +434,7 @@ w_void jdwp_thr_countframes(jdwp_command_packet cmd) {
     woempa(7, "%t\n", thread);
   
     if (thread) {
-      if(thread->kthread->state == xt_suspended || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
+      if(thread->kthread->state == xt_suspended || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK) || jdwp_global_suspend_count) {
         cursor = thread->top;
         while(cursor) {
           count += isNotSet(cursor->flags, JDWP_IGNORE_FRAME);;

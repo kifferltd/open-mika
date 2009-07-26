@@ -85,6 +85,22 @@ x_mutex  jdwp_mutex;
 
 w_int    jdwp_events_enabled = 0;
 
+/*
+** Command set names
+*/
+extern const char *command_set_names[];
+
+/*
+** Command names
+*/
+extern const char **command_names[];
+
+/*
+** Highest-numbered command in each command set
+*/
+const int command_set_max_command[] = {
+  0, 16, 11, 4, 1, 0, 3, 0, 0, 9, 1, 12, 3, 3, 1, 3, 3, 1
+  };
 
 /*
 ** Show a little explanation about the JDWP parameters.
@@ -131,6 +147,13 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   command->flags = 0;
   command->command_set = cmd_set;
   command->command = cmd;
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    char *contents = bytes2hex((*gb)->contents, (*gb)->occupancy);
+
+    wprintf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], swap_int(command->length), contents);
+    releaseMem(contents);
+  }
 
   /*
   ** If there's data to be added to the packet, do so.
@@ -338,16 +361,25 @@ void jdwp_dispatcher() {
     if (!jdwp_connect_dt_socket(jdwp_address_host, jdwp_address_port, jdwp_config_server)) {
       if (!wonka_killed && connection_attempt_count++ < MAX_CONNECTION_ATTEMPTS) {
         x_thread_sleep(x_millis2ticks(CONNECTION_REATTEMPT_MILLIS));
+        if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+          wprintf("JDWP: Unable to establish connection, retrying in %d ms", CONNECTION_REATTEMPT_MILLIS);
+        }
       }
       else {
         while (jdwp_global_suspend_count) {
           jdwp_internal_resume_all();
         }
         jdwp_state = jdwp_state_terminated;
+        if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+          wprintf("JDWP: Unable to establish connection after %d attempts, giving up", MAX_CONNECTION_ATTEMPTS);
+        }
       }
       continue;
     }
 
+    if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+      wprintf("JDWP: Connection established\n");
+    }
     /*
     ** If VM_START was not yet sent, send it now.
     */
@@ -366,11 +398,49 @@ void jdwp_dispatcher() {
 
       cmd = jdwp_recv_packet_dt_socket();
 
-      if(cmd->flags == 0) {
-
+      if (cmd->flags == 0) {
         /*
         ** It's a command packet.
         */
+
+        if (cmd->command_set > 0 || cmd->command_set <= 17) {
+          if (cmd->command <= 0 || cmd->command > command_set_max_command[cmd->command_set]) {
+            if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+              wprintf("JDWP: Received command id %d, command set: %d (%s),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, swap_int(cmd->length));
+            }
+            continue;
+          }
+          else {
+            if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+              char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
+
+              wprintf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], swap_int(cmd->length), contents);
+              releaseMem(contents);
+            }
+          }
+        }
+        else if (cmd->command_set == 64) {
+          if (cmd->command != 100) {
+            if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+              wprintf("JDWP: Received command id %d, command set: %d (Event),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command, swap_int(cmd->length));
+            }
+            continue;
+          }
+          else {
+            if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+              char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
+
+              wprintf("JDWP: Received command id %d, command set: 64 (Event),  command: 100 (Composite),  length: %d, contents: %s\n", swap_int(cmd->id), swap_int(cmd->length), contents);
+              releaseMem(contents);
+            }
+          }
+        }
+        else {
+          if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+            wprintf("JDWP: Received command id %d, command set: %d (unknown!)  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, swap_int(cmd->length));
+          }
+          continue;
+        }
 
         woempa(9, "Command id %d, command set: %d,  command: %d,  length: %d\n", swap_int(cmd->id), cmd->command_set, cmd->command, swap_int(cmd->length));
 

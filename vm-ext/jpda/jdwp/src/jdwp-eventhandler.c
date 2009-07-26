@@ -289,6 +289,47 @@ jdwp_breakpoint jdwp_breakpoint_get(w_code code) {
   return breakpoint;
 }
 
+static const char *event_kind2name(int event_kind) {
+  switch (event_kind) {
+    case 1:
+      return "SINGLE_STEP";
+    case 2:
+      return "BREAKPOINT";
+    case 3:
+      return "FRAME_POP";
+    case 4:
+      return "EXCEPTION";
+    case 5:
+      return "USER_DEFINED";
+    case 6:
+      return "THREAD_START";
+    case 7:
+      return "THREAD_END";
+    case 8:
+      return "CLASS_PREPARE";
+    case 9:
+      return "CLASS_UNLOAD";
+    case 10:
+      return "CLASS_LOAD";
+    case 20:
+      return "FIELD_ACCESS";
+    case 21:
+      return "FIELD_MODIFICATION";
+    case 30:
+      return "EXCEPTION_CATCH";
+    case 40:
+      return "METHOD_ENTRY";
+    case 41:
+      return "METHOD_EXIT";
+    case 90:
+      return "VM_INIT";
+    case 99:
+      return "VM_DEATH";
+    default:
+      return "???";
+  }
+}
+
 
 /*
 ** Send an event to the debugger.
@@ -310,6 +351,9 @@ w_void jdwp_send_event(jdwp_event event, w_grobag *data) {
   **   ...    ...              Event specific data.
   */
   woempa(7, "Sending composite event: suspend policy = %d, 1 event, kind %d, requestID %d\n", event->suspend_policy, event->event_kind, event->eventID);
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    wprintf("JDWP: Sending composite event: suspend policy= %d, 1 event of kind %d (%s),  request id = %d\n", event->suspend_policy, event->event_kind, event_kind2name(event->event_kind), event->eventID);
+  }
 
   // suspend policy
   jdwp_put_u1(&command_grobag, event->suspend_policy);
