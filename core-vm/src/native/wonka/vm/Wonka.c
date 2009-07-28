@@ -731,7 +731,26 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     x_snprintf(verbose_cstring, l + 1, "%w", verbose_string);
     // Don't think the next line is needed, but here it is anyway
     verbose_cstring[l] = 0;
-    if (l) {
+    if (l == 1 && verbose_cstring[0] == '?') {
+      wprintf("mika.verbose should be a colon(:)-separated selection from the following list\n");
+      wprintf("  startup:  VM startup\n");
+      wprintf("  shutdown: VM shutdown\n");
+      wprintf("  gc:       garbage collection\n");
+      wprintf("  threads:  thread creation/completion\n");
+      wprintf("  loading:  loading and unloading of classes\n");
+#ifdef DEBUG_STACKS
+      wprintf("  stack:    stack depth etc. at each method invocation\n");
+#endif
+      wprintf("  throw:    exception handling\n");
+      wprintf("  socket:   socket activity\n");
+      wprintf("  traffic:  bytes sent/received over sockets\n");
+      wprintf("  http:     traffic interpreted as HTTP\n");
+      wprintf("  exec:     Runtime.exec()\n");
+#ifdef JDWP
+      wprintf("  jdwp:     JDWP\n");
+#endif
+    }
+    else if (l) {
       wprintf("mika.verbose=%s\n", verbose_cstring);
     }
     if (strstr(verbose_cstring, "start")) {
