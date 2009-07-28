@@ -149,7 +149,7 @@ w_ushort jdwp_get_u2(char *buffer, w_size *offset) {
   return s;
 }
 
-w_word jdwp_get_u4(char *buffer, w_size *offset) {
+static w_word i_get_u4(char *buffer, w_size *offset) {
   w_word w;
   char* p = buffer + *offset;
 
@@ -158,6 +158,12 @@ w_word jdwp_get_u4(char *buffer, w_size *offset) {
   w = (w << 8) | (w_ubyte)*p++;
   w = (w << 8) | (w_ubyte)*p++;
   *offset += 4;
+
+  return w;
+}
+
+w_word jdwp_get_u4(char *buffer, w_size *offset) {
+  w_word w = i_get_u4(buffer, offset);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: get int = %08x\n", w);
   }
@@ -166,7 +172,7 @@ w_word jdwp_get_u4(char *buffer, w_size *offset) {
 }
 
 w_instance jdwp_get_objectref(char *buffer, w_size *offset) {
-  w_word objectID = jdwp_get_u4(buffer, offset);
+  w_word objectID = i_get_u4(buffer, offset);
   w_instance result = jdwp_objectID2instance(objectID);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: get objectref = %d = %j\n", objectID, result);
@@ -201,7 +207,7 @@ void jdwp_get_bytes_here(char *buffer, w_size *offset, w_size len, w_ubyte *here
 }
 
 w_string jdwp_get_string(char *buffer, w_size *offset) {
-  w_size len = jdwp_get_u4(buffer, offset);
+  w_size len = i_get_u4(buffer, offset);
   w_ubyte *bytes = allocMem(len + 1);
   w_string result;
 
@@ -221,8 +227,8 @@ void jdwp_get_location_here(char *buffer, w_size *offset, jdwp_location location
   jdwp_get_u1(buffer, offset);
   jdwp_get_clazz(buffer, offset);
   location->method = jdwp_get_method(buffer, offset);
-  jdwp_get_u4(buffer, offset); // skip MS 4 bytes
-  location->pc = jdwp_get_u4(buffer, offset);
+  i_get_u4(buffer, offset); // skip MS 4 bytes
+  location->pc = i_get_u4(buffer, offset);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: get location = %M at pc %d\n", location->method, location->pc);
   }
@@ -241,22 +247,26 @@ void jdwp_put_u2(w_grobag *gb, w_ushort s) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: put short = %04x\n", s);
   }
-  temp[0] = s >> 8;
+  temp[0] = (s >> 8) & 0xff;
   temp[1] = s & 0xff;
   appendToGrobag(gb, temp, 2);
 }
 
-void jdwp_put_u4(w_grobag *gb, w_word w) {
+void i_put_u4(w_grobag *gb, w_word w) {
   w_ubyte temp[4];
 
-  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put int = %08x\n", w);
-  }
-  temp[0] = w >> 24;
+  temp[0] = (w >> 24) & 0xff;
   temp[1] = (w >> 16) & 0xff;
   temp[2] = (w >> 8) & 0xff;
   temp[3] = w & 0xff;
   appendToGrobag(gb, temp, 4);
+}
+
+void jdwp_put_u4(w_grobag *gb, w_word w) {
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    wprintf("JDWP: put int = %08x\n", w);
+  }
+  i_put_u4(gb, w);
 }
 
 void jdwp_put_objectref(w_grobag *gb, w_instance instance) {
@@ -265,7 +275,7 @@ void jdwp_put_objectref(w_grobag *gb, w_instance instance) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: put objectref = %d = %j\n", objectID, instance);
   }
-  jdwp_put_u4(gb, objectID);
+  i_put_u4(gb, objectID);
 }
 
 void jdwp_put_bytes(w_grobag *gb, w_ubyte *b, w_size l) {
@@ -281,7 +291,7 @@ void jdwp_put_cstring(w_grobag *gb, char *b, w_size l) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: put string = %s\n", b);
   }
-  jdwp_put_u4(gb, l);
+  i_put_u4(gb, l);
   appendToGrobag(gb, b, l);
 }
 
@@ -292,7 +302,7 @@ void jdwp_put_string(w_grobag *gb, w_string string) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     wprintf("JDWP: put string = %w\n", string);
   }
-  jdwp_put_u4(gb, length);
+  i_put_u4(gb, length);
   appendToGrobag(gb, cstring + 4, length);
   releaseMem(cstring);
 }
@@ -304,10 +314,10 @@ void jdwp_put_location(w_grobag *gb, jdwp_location location) {
     wprintf("JDWP: put location = %M at pc %d\n", location->method, location->pc);
   }
   jdwp_put_u1(gb, isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class);
-  jdwp_put_u4(gb, (w_word)clazz);
-  jdwp_put_u4(gb, (w_word)location->method);
-  jdwp_put_u4(gb, 0);
-  jdwp_put_u4(gb, location->pc);
+  i_put_u4(gb, (w_word)clazz);
+  i_put_u4(gb, (w_word)location->method);
+  i_put_u4(gb, 0);
+  i_put_u4(gb, location->pc);
 }
 
 /*
@@ -325,6 +335,7 @@ char *bytes2hex(char *bytes, w_size length) {
     snprintf(toptr, 4, " %02x", *fromptr++);
     toptr += 3;
   }
+  *toptr = 0;
 
   return buffer;
 }
