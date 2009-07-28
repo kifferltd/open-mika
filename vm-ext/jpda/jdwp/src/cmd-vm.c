@@ -201,6 +201,9 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
   sig = jdwp_UTF82cstring((w_ubyte*)cmd->data, &length);
   sig_string = cstring2String((char*)sig, (w_word)length);
   classname = undescriptifyClassName(sig_string);
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    wprintf("JDWP: signature = %w -> classname = %w\n", sig_string, classname);
+  }
   releaseMem(sig);
   deregisterString(sig_string);
 
