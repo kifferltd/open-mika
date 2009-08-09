@@ -371,9 +371,13 @@ static inline struct hostent *w_gethostbyname2(const char *name, int af) {
 #define w_setsockopt(s,lev,n,v,l) setsockopt((s),(lev),(n),(v),(l))
 #define w_getsockname(s,n,l) getsockname((s),(n),(l))
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 static inline int w_switchPortBytes(int port){
   return ((port & 0x00ff) << 8) | ((port & 0xff00) >> 8);
 }
+#else
+#define w_switchPortBytes(p) (p)
+#endif
 
 static inline int w_errno(int s) {
   return errno;
