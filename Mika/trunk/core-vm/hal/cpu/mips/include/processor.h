@@ -54,13 +54,17 @@
 #define __LITTLE_ENDIAN 1234
 #endif
 
+#ifndef __BIG_ENDIAN
+#define __BIG_ENDIAN 4321
+#endif
+
 #ifndef __BYTE_ORDER
-#define __BYTE_ORDER __LITTLE_ENDIAN
+#define __BYTE_ORDER __BIG_ENDIAN
 #endif
 
 #define WORDS2LONG(m, l)             (w_long)(((w_long)(m) << 32) | (l))
 
-#define WORD_MSW                       1
-#define WORD_LSW                       0
+#define WORD_MSW                       0
+#define WORD_LSW                       1
 
 #endif /* _PROCESSOR_H */
