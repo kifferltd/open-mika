@@ -30,7 +30,7 @@
 **************************************************************************/
 
 #include <termios.h>
-#include <poll.h>
+#include <sys/poll.h>
 #include "oswald.h"
 #include "wonka.h"
 
