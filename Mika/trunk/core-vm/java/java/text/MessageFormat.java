@@ -264,7 +264,7 @@ public class MessageFormat extends Format {
     return locale.hashCode() ^ pattern.hashCode() ^ maxOffset;
   }
 
-  public Object[] parse(String src, ParsePosition pos){
+  public Object[] parse(String src, ParsePosition pos) throws ParseException {
     if(subPatterns == null){
       createSubPatterns();
     }
@@ -321,7 +321,7 @@ public class MessageFormat extends Format {
     return res;
   }
 
-  public Object parseObject(String source, ParsePosition pos){
+  public Object parseObject(String source, ParsePosition pos) throws ParseException {
     return parse(source, pos);
   }
 

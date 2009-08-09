@@ -75,8 +75,8 @@ public abstract class DateFormat extends Format {
     return getDateInstance(style, Locale.getDefault());
   }
 
-  private static final String[] DATESTYLES = {"EEEE, MMMM d, yyyy G", "MMMM d, yyyy", "d-MMM-yy", "M/d/yy"};
-  private static final String[] TIMESTYLES = {"K:mm:ss 'o''clock' a z", "K:mm:ss a z", "K:mm:ss a", "K:mm a"};
+  private static final String[] DATESTYLES = {"EEEE, d MMMM yyyy", "dd MMMM yyyy", "dd-MMM-yyyy", "dd/MM/yy"};
+  private static final String[] TIMESTYLES = {"HH:mm:ss 'o''clock' z", "HH:mm:ss z", "HH:mm:ss", "HH:mm"};
 
   public final static DateFormat getDateInstance(int style, Locale loc){
     return new SimpleDateFormat(DATESTYLES[style], loc);
@@ -172,9 +172,9 @@ public abstract class DateFormat extends Format {
     return d;
   }
 
-  public abstract Date parse(String date, ParsePosition pp);
+  public abstract Date parse (String date, ParsePosition pp) throws ParseException;
 
-  public Object parseObject(String date, ParsePosition pp){
+  public Object parseObject(String date, ParsePosition pp) throws ParseException {
     return parse(date, pp);
   }
 
