@@ -156,7 +156,7 @@ public class SimpleDateFormat extends DateFormat {
     return pattern.hashCode() ^ 0xaaaaaaaa;
   }
 
-  public Date parse(String str, ParsePosition pos){
+  public Date parse(String str, ParsePosition pos) throws ParseException {
     //System.out.println("parsing '"+str+"' ("+pos.getIndex()+") using "+pattern);
     calendar.clear();
     TimeZone current = calendar.getTimeZone();
@@ -164,77 +164,85 @@ public class SimpleDateFormat extends DateFormat {
     boolean formatting = true;
     int p = pos.getIndex();
     boolean checkDST = false;
-    for(int i = 0 ; i < size ; i++,p++){
-      char ch = pattern.charAt(i);
-      //System.out.println("pattern char = '"+ch+"' at ("+i+") formatting "+formatting);
-      if(ch == '\''){ // lets find quotes ...
-        if((++i) < size && pattern.charAt(i) == ch){
-          if(str.charAt(p) != ch){
-            pos.setIndex(p);
-            pos.setErrorIndex(p);
-            //System.out.println("PARSE ERROR -- MISSING QUOTE");
-            return null;
+    try {
+      for(int i = 0 ; i < size ; i++,p++){
+        char ch = pattern.charAt(i);
+        //System.out.println("pattern char = '"+ch+"' at ("+i+") formatting "+formatting);
+        if(ch == '\''){ // lets find quotes ...
+          if((++i) < size && pattern.charAt(i) == ch){
+            if(str.charAt(p) != ch){
+              pos.setIndex(p);
+              pos.setErrorIndex(p);
+              //System.out.println("PARSE ERROR -- MISSING QUOTE");
+              return null;
+            }
+          }
+          else {
+            i--; formatting = !formatting; p--;
           }
         }
         else {
-          i--; formatting = !formatting; p--;
-        }
-      }
-      else {
-        if(formatting){
-          int field = PATTERNCHARS.indexOf(ch);
-          if(field != -1){
-            pos.setIndex(p);
-            if (field == 17 || field == 18) {
-              // special case: z/Z
-              int nr = 1;
-              for (++i; i < size ; i++){
-                if(pattern.charAt(i) == ch){ nr++; }
-                else{ break; }
-              }
-              i--;
+          if(formatting){
+            int field = PATTERNCHARS.indexOf(ch);
+            if(field != -1){
+              pos.setIndex(p);
+              if (field == 17 || field == 18) {
+                // special case: z/Z
+                int nr = 1;
+                for (++i; i < size ; i++){
+                  if(pattern.charAt(i) == ch){ nr++; }
+                  else{ break; }
+                }
+                i--;
 
-              int res = -1;
-              if (str.charAt(p) == '+' || str.charAt(p) == '-') {
-                String syntheticTZ  = "GMT" + str.substring(p, p + 3) + ":" + str.substring(p + 3);
-                //System.out.println("using synthetic timezone " + syntheticTZ);
-                calendar.setTimeZone(TimeZone.getTimeZone(syntheticTZ));
-                p += 5;
-                res = 0;
+                int res = -1;
+                if (str.charAt(p) == '+' || str.charAt(p) == '-') {
+                  String syntheticTZ  = "GMT" + str.substring(p, p + 3) + ":" + str.substring(p + 3);
+                  //System.out.println("using synthetic timezone " + syntheticTZ);
+                  calendar.setTimeZone(TimeZone.getTimeZone(syntheticTZ));
+                  p += 5;
+                  res = 0;
+                }
+                else {
+                  res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+                }
+
+                if(res == -1){
+                  //System.out.println("time zone not found");
+                  return null;
+                }
+                checkDST = (res == 1);
+                continue;
               }
               else {
-                res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+                i = readField(ch, i, field, str,pos);
+                //System.out.println("readField stopped at "+i);
+                if(i == -1){
+                  //System.out.println("PARSE ERROR -- READFIELD FAILED");
+                  return null;
+                }
+                p = pos.getIndex()-1;
+                //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str.substring(0,p+1) + "^" + str.substring(p+1));
+                continue;
               }
-
-              if(res == -1){
-                //System.out.println("time zone not found");
-                return null;
-              }
-              checkDST = (res == 1);
-              continue;
-            }
-            else {
-              i = readField(ch, i, field, str,pos);
-              //System.out.println("readField stopped at "+i);
-              if(i == -1){
-                //System.out.println("PARSE ERROR -- READFIELD FAILED");
-                return null;
-              }
-              p = pos.getIndex()-1;
-              //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str.substring(0,p+1) + "^" + str.substring(p+1));
-              continue;
             }
           }
-        }
-        if(str.charAt(p) != ch){
-          pos.setIndex(p);
-          pos.setErrorIndex(p);
-          //System.out.println("PARSE ERROR -- WRONG CHAR ENCOUNTERED");
-          return null;
+          if(str.charAt(p) != ch){
+            pos.setIndex(p);
+            pos.setErrorIndex(p);
+            //System.out.println("PARSE ERROR -- WRONG CHAR ENCOUNTERED");
+            return null;
+          }
         }
       }
+      pos.setIndex(p);
     }
-    pos.setIndex(p);
+    catch (IndexOutOfBoundsException ioobe) {
+      throw new ParseException("premature end of input at position ", p);
+    }
+    catch (NumberFormatException nfe) {
+      throw new ParseException("number format error at position ", p);
+    }
     //System.out.println("parsed '"+str+"' to "+calendar.getTime());
     Date time = calendar.getTime();
     if(checkDST && calendar.getTimeZone().inDaylightTime(time)){
