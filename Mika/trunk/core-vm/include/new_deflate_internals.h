@@ -62,10 +62,10 @@ typedef struct w_Inflate_Control {
   w_bits i_bits;                                // input op bitniveau
   w_bits o_bits, o_mask;                        // output op bitniveau
 
-  w_ubyte *output_bekken;                       // 32k sliding window en 1024 bytes block voor in queue te steken
+  w_ubyte output_bekken[32 * 1024 + 1024];      // 32k sliding window en 1024 bytes block voor in queue te steken
   w_int offset_bek_out, size_bek_out;
 
-  w_ubyte *input_bekken;                        // 32k sliding window met 512 bytes lookahead gebruikt door 
+  w_ubyte input_bekken[32 * 1024 + 512];        // 32k sliding window met 512 bytes lookahead gebruikt door 
                                                 // de zipper
   w_int offset_bek_in, lookahead_bek_in;
 
@@ -80,8 +80,9 @@ typedef struct w_Inflate_Control {
   w_int processed_size;
   w_int finished;
 
-  w_int reset;
-  w_int stop;
+  volatile w_int stop;
+  volatile w_short resets_requested;
+  volatile w_short resets_completed;
 
   w_int dictionary;
 } w_Inflate_Control;
@@ -158,7 +159,7 @@ int inflate_control_getbytes_from_queue(w_inflate_control control, w_ubyte* byte
 static w_int new_writeLiteralByte(w_inflate_control bs, w_word obyte) {
   obyte = (w_byte)(obyte & 0x000000ff);
   
-  bs->output_bekken[bs->offset_bek_out] = (w_byte)obyte;
+  (*bs).output_bekken[bs->offset_bek_out] = (w_byte)obyte;
   bs->offset_bek_out += 1;
   bs->size_bek_out += 1;
 
