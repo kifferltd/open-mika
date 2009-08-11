@@ -605,6 +605,8 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
   }
 }
 
+static const w_word oldbitrates[] = { 0, 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400 };
+static const w_word newbitrates[] = { 57600, 115200, 230400, 460800, 500000, 576000, 921600, -1, 1000000, 1115200, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000 };
 
 w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, x_sleep timeout) {
   w_control_sio sio = device->control;
@@ -614,7 +616,8 @@ w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, 
 
   switch (query) {
     case(wdi_get_bitrate):
-      *reply = cfgetospeed(sio->newtermios);
+      temp = cfgetospeed(sio->newtermios);
+      *reply = temp <= 15 ? oldbitrates[temp] : temp > 0010017 ? -1 : temp <= 0010000 ? -1 : newbitrates[temp - 0010000];
       return wds_success;
 
     case(wdi_get_databits):
