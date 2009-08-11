@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -52,11 +52,11 @@ public class MessageFormat extends Format {
   private transient String[] subPatterns;
   private transient String origPattern;
 
-  public MessageFormat(String pattern){
+  public MessageFormat(String pattern) throws IllegalArgumentException {
     applyPattern(pattern);
   }
 
-  public MessageFormat(String pattern, Locale locale) {
+  public MessageFormat(String pattern, Locale locale) throws IllegalArgumentException {
     this.locale = locale;
     applyPattern(pattern);
   }
@@ -162,7 +162,7 @@ public class MessageFormat extends Format {
     return end;
   }
 
-  public void applyPattern(String pattern){
+  public void applyPattern(String pattern) throws IllegalArgumentException {
     //System.out.println("applying pattern '"+pattern+"'");
     int len = pattern.length();
     maxOffset = -1;
@@ -264,7 +264,7 @@ public class MessageFormat extends Format {
     return locale.hashCode() ^ pattern.hashCode() ^ maxOffset;
   }
 
-  public Object[] parse(String src, ParsePosition pos) throws ParseException {
+  public Object[] parse(String src, ParsePosition pos) {
     if(subPatterns == null){
       createSubPatterns();
     }
@@ -321,7 +321,7 @@ public class MessageFormat extends Format {
     return res;
   }
 
-  public Object parseObject(String source, ParsePosition pos) throws ParseException {
+  public Object parseObject(String source, ParsePosition pos) {
     return parse(source, pos);
   }
 
