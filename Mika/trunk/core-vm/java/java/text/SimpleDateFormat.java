@@ -156,7 +156,7 @@ public class SimpleDateFormat extends DateFormat {
     return pattern.hashCode() ^ 0xaaaaaaaa;
   }
 
-  public Date parse(String str, ParsePosition pos) throws ParseException {
+  public Date parse(String str, ParsePosition pos) {
     //System.out.println("parsing '"+str+"' ("+pos.getIndex()+") using "+pattern);
     calendar.clear();
     TimeZone current = calendar.getTimeZone();
@@ -238,10 +238,14 @@ public class SimpleDateFormat extends DateFormat {
       pos.setIndex(p);
     }
     catch (IndexOutOfBoundsException ioobe) {
-      throw new ParseException("premature end of input at position ", p);
+      pos.setErrorIndex(p);
+      //System.out.println("PARSE ERROR -- premature end of input at position " + p);
+            return null;
     }
     catch (NumberFormatException nfe) {
-      throw new ParseException("number format error at position ", p);
+      pos.setErrorIndex(p);
+      //System.out.println("PARSE ERROR -- number format error at position " + p);
+      return null;
     }
     //System.out.println("parsed '"+str+"' to "+calendar.getTime());
     Date time = calendar.getTime();

@@ -164,7 +164,7 @@ public abstract class Format implements Serializable, Cloneable {
    * @throws IllegalArgumentException
    *            if the object cannot be formatted by this format.
    */
-    public AttributedCharacterIterator formatToCharacterIterator(Object object) {
+    public AttributedCharacterIterator formatToCharacterIterator(Object object) throws IllegalArgumentException {
         return new AttributedString(format(object)).getIterator();
     }
 
@@ -208,5 +208,26 @@ public abstract class Format implements Serializable, Cloneable {
    *         an error.
    */
   public abstract Object parseObject(String source, ParsePosition pos);
+
+  /**
+   * Inner class used to represent {@code Format} attributes in the
+   * {@code AttributedCharacterIterator} that the
+   * {@code formatToCharacterIterator()} method returns in {@code Format}
+   * subclasses.
+   */
+  public static class Field extends AttributedCharacterIterator.Attribute {
+
+    private static final long serialVersionUID = 276966692217360283L;
+
+    /**
+     * Constructs a new instance of {@code Field} with the given field name.
+     *
+     * @param fieldName
+     *            the field name.
+     */
+    protected Field(String fieldName) {
+      super(fieldName);
+    }
+  }
   
 }
