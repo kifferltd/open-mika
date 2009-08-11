@@ -209,8 +209,8 @@ static inline w_short find_longest_match(w_deflate_control l, w_int entry) {
   if (end > (l->offset_bek_in - l->lookahead_bek_in)) end = l->offset_bek_in - l->lookahead_bek_in;
   
   // entry = index of hashentry
-  this = l->input_bekken + entry;
-  that = l->input_bekken + l->lookahead_bek_in;
+  this = (*l).input_bekken + entry;
+  that = (*l).input_bekken + l->lookahead_bek_in;
   othis = (w_int)this;  
   
   end = end + (w_int)this;
@@ -636,7 +636,7 @@ w_int store_stream(w_deflate_control l) {
 
   count = 32768;
   end = 0;
-  while (!end && !l->reset) {
+  while (!end && l->resets_completed == l-> resets_requested) {
     // if full block, write a header
     if(count >= 32768) {
       writeLiteralByte(l, 0);   // header of non-comp, not last block
@@ -665,27 +665,27 @@ w_int store_stream(w_deflate_control l) {
       check = ~size;
 
       if (l->offset_bek_out - count - 5 < 0)
-        l->output_bekken[33 * 1024 + l->offset_bek_out - count - 5] = 1;  // header of non-comp, last block
+        (*l).output_bekken[33 * 1024 + l->offset_bek_out - count - 5] = 1;  // header of non-comp, last block
       else
-        l->output_bekken[l->offset_bek_out - count - 5] = 1;  // header of non-comp, last block
+        (*l).output_bekken[l->offset_bek_out - count - 5] = 1;  // header of non-comp, last block
       
       // change size
       if (l->offset_bek_out - count - 4 < 0)
-        l->output_bekken[33 * 1024 + l->offset_bek_out - count - 4] = size & 0x000000ff;
+        (*l).output_bekken[33 * 1024 + l->offset_bek_out - count - 4] = size & 0x000000ff;
       else
-        l->output_bekken[l->offset_bek_out - count - 4] = size & 0x000000ff;
+        (*l).output_bekken[l->offset_bek_out - count - 4] = size & 0x000000ff;
       if (l->offset_bek_out - count - 3 < 0)
-        l->output_bekken[33 * 1024 + l->offset_bek_out - count - 3] = (size & 0x0000ff00) >> 8;
+        (*l).output_bekken[33 * 1024 + l->offset_bek_out - count - 3] = (size & 0x0000ff00) >> 8;
       else
-        l->output_bekken[l->offset_bek_out - count - 3] = (size & 0x0000ff00) >> 8;
+        (*l).output_bekken[l->offset_bek_out - count - 3] = (size & 0x0000ff00) >> 8;
       if (l->offset_bek_out - count - 2 < 0)
-        l->output_bekken[33 * 1024 + l->offset_bek_out - count - 2] = check & 0x000000ff;
+        (*l).output_bekken[33 * 1024 + l->offset_bek_out - count - 2] = check & 0x000000ff;
       else
-        l->output_bekken[l->offset_bek_out - count - 2] = check & 0x000000ff;
+        (*l).output_bekken[l->offset_bek_out - count - 2] = check & 0x000000ff;
       if (l->offset_bek_out - count - 1 < 0)
-        l->output_bekken[33 * 1024 + l->offset_bek_out - count - 1] = (check & 0x0000ff00) >> 8;
+        (*l).output_bekken[33 * 1024 + l->offset_bek_out - count - 1] = (check & 0x0000ff00) >> 8;
       else
-        l->output_bekken[l->offset_bek_out - count - 1] = (check & 0x0000ff00) >> 8;
+        (*l).output_bekken[l->offset_bek_out - count - 1] = (check & 0x0000ff00) >> 8;
       
       end = 1;
     }
@@ -732,7 +732,7 @@ static w_int fillWindow(w_deflate_control bs) {
     // ok, we have data available, now copy it
     if ((32768 + 512 - bs->offset_bek_in) > (bs->par_in->size - bs->offset_in)) {
       // everything we received can be put in the buffer     
-      w_memcpy(bs->input_bekken + bs->offset_bek_in, bs->par_in->data + bs->offset_in, (unsigned)(bs->par_in->size - bs->offset_in));
+      w_memcpy((*bs).input_bekken + bs->offset_bek_in, bs->par_in->data + bs->offset_in, (unsigned)(bs->par_in->size - bs->offset_in));
 
       bs->processed_size += bs->par_in->size - bs->offset_in;
 
@@ -741,7 +741,7 @@ static w_int fillWindow(w_deflate_control bs) {
     }
     else if (bs->offset_bek_in < 32768 + 512) {    // not full
       // copy to the space  we have left
-      w_memcpy(bs->input_bekken + bs->offset_bek_in, bs->par_in->data + bs->offset_in, (unsigned)(32768 + 512 - bs->offset_bek_in));
+      w_memcpy((*bs).input_bekken + bs->offset_bek_in, bs->par_in->data + bs->offset_in, (unsigned)(32768 + 512 - bs->offset_bek_in));
 
       bs->processed_size += (32768 + 512 - bs->offset_bek_in);
 
@@ -860,11 +860,11 @@ w_int deflate_stream(w_deflate_control l) {
   key = 0;
   still_data = fillWindow(l);
   if (l->offset_bek_in - l->lookahead_bek_in >= 3) {
-    key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in]);
-    key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in + 1]);
+    key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in]);
+    key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in + 1]);
   }
 
-  while (!end && !l->reset) {
+  while (!end && l->resets_completed == l-> resets_requested) {
     if (l->lookahead_bek_in >= 32768) {
 
       // the end-of-block marker
@@ -906,7 +906,7 @@ w_int deflate_stream(w_deflate_control l) {
       // this way all indexes in a window start at 0 and just count up, so hashentries just have
       // a "pointer" in it and no index, because the index in hash_blocks is the same as in the
       // sliding window
-      w_memcpy(l->input_bekken, l->input_bekken + l->lookahead_bek_in, (unsigned)(l->offset_bek_in - l->lookahead_bek_in));
+      w_memcpy((*l).input_bekken, (*l).input_bekken + l->lookahead_bek_in, (unsigned)(l->offset_bek_in - l->lookahead_bek_in));
       
       l->offset_bek_in = l->offset_bek_in - l->lookahead_bek_in;
       l->lookahead_bek_in = 0;
@@ -917,8 +917,8 @@ w_int deflate_stream(w_deflate_control l) {
       key = 0;
       still_data = fillWindow(l);
       if (l->offset_bek_in - l->lookahead_bek_in >= 3) {
-        key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in]);
-        key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in + 1]);
+        key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in]);
+        key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in + 1]);
       }
     }
     if (still_data)
@@ -945,7 +945,7 @@ w_int deflate_stream(w_deflate_control l) {
       // ok, at least 3 bytes left, so keep on processing
 
       // add current 3 bytes lookahead to the hashtable
-      key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in + 2]);
+      key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in + 2]);
       l->zip_hash_blocks[l->zip_hash_first].next = l->zip_hash_table[key];
       run = l->zip_hash_table[key];  // here we will start searching
       l->zip_hash_table[key] = l->zip_hash_first;
@@ -1004,7 +1004,7 @@ w_int deflate_stream(w_deflate_control l) {
 
             // replace old by literal
             tso -= 2;
-            temp_store[tso] = l->input_bekken[l->lookahead_bek_in - 1];
+            temp_store[tso] = (*l).input_bekken[l->lookahead_bek_in - 1];
             temp_store[tso + 1] = 255;
             tso += 2;
 
@@ -1030,7 +1030,7 @@ w_int deflate_stream(w_deflate_control l) {
             for (i = 0; i < prev_match - 1 - 1; i++) { 
               // if not at the end
               if (l->zip_hash_first < 32768 && (l->lookahead_bek_in + 2) <= l->offset_bek_in) {
-                key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in + 2]);
+                key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in + 2]);
                 l->zip_hash_blocks[l->zip_hash_first].next = l->zip_hash_table[key];
                 l->zip_hash_table[key] = l->zip_hash_first;
                 l->zip_hash_first += 1;
@@ -1066,7 +1066,7 @@ w_int deflate_stream(w_deflate_control l) {
           for (i = 0; i < prev_match - 1 - 1; i++) { 
             // if not at the end
             if (l->zip_hash_first < 32768 && (l->lookahead_bek_in + 2) <= l->offset_bek_in) {
-              key = running_hash_function(key, l->input_bekken[l->lookahead_bek_in + 2]);
+              key = running_hash_function(key, (*l).input_bekken[l->lookahead_bek_in + 2]);
               l->zip_hash_blocks[l->zip_hash_first].next = l->zip_hash_table[key];
               l->zip_hash_table[key] = l->zip_hash_first;
               l->zip_hash_first += 1;
@@ -1076,7 +1076,7 @@ w_int deflate_stream(w_deflate_control l) {
           lazy_match = 0;        
         }
         else {
-          temp_store[tso] = l->input_bekken[l->lookahead_bek_in];
+          temp_store[tso] = (*l).input_bekken[l->lookahead_bek_in];
           temp_store[tso + 1] = 255;
           tso += 2;
 
@@ -1096,7 +1096,7 @@ w_int deflate_stream(w_deflate_control l) {
       }
 
       for (i = 0; i < size; i++) {
-        temp_store[tso] = l->input_bekken[l->lookahead_bek_in];
+        temp_store[tso] = (*l).input_bekken[l->lookahead_bek_in];
         temp_store[tso + 1] = 255;
         tso += 2;
         l->lookahead_bek_in += 1;      
@@ -1158,10 +1158,10 @@ w_void zzzdeflate(w_void *ll) {
   w_deflate_control l = ll;
   w_int err, no_auto, stop;
   x_status s;
-  x_monitor_eternal(l->ready);
-  x_monitor_notify_all(l->ready);
+  x_monitor_eternal(&l->ready);
+  x_monitor_notify_all(&l->ready);
   l->state = COMPRESSION_THREAD_RUNNING;
-  x_monitor_exit(l->ready);
+  x_monitor_exit(&l->ready);
 
   err = stop = no_auto = 0;
   while (!err && !no_auto && !stop) {
@@ -1188,18 +1188,18 @@ w_void zzzdeflate(w_void *ll) {
 
     // try to get monitor
     woempa(INF_WOEMP_LEV_1, "Entering\n");
-    woempa(INF_WOEMP_LEV_1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
-    s = x_monitor_eternal(l->ready);
+    woempa(INF_WOEMP_LEV_1, "State: err %i, stop %i, resets %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
+    s = x_monitor_eternal(&l->ready);
     if (s == xs_success) {
 
       // if we need to stop or we had an error, try to synchonise with the other thread
       if (l->no_auto || err) {
       
-        while (!l->reset) {
+        while (l->resets_completed == l->resets_requested) {
           woempa(INF_WOEMP_LEV_1, "Trying ...\n");
-          s = x_monitor_wait(l->ready, COMPRESSION_WAIT_TICKS);
+          s = x_monitor_wait(&l->ready, COMPRESSION_WAIT_TICKS);
           if (s == xs_interrupted) {
-            x_monitor_eternal(l->ready);
+            x_monitor_eternal(&l->ready);
           }
         }
       }
@@ -1208,15 +1208,15 @@ w_void zzzdeflate(w_void *ll) {
       no_auto = l->no_auto;
       stop = l->stop;
 
-      woempa(INF_WOEMP_LEV_1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
+      woempa(INF_WOEMP_LEV_1, "State: err %i, stop %i, resets %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
 
       // if reset, clear all queues and partial data
-      if (l->reset == 1) {
+      if (l->resets_completed != l->resets_requested) {
         woempa(INF_WOEMP_LEV_1, "Resetting\n");
-        l->reset = 0;
+        l->resets_completed = l->resets_requested;
         no_auto = 0;
 
-        switch (x_mutex_lock(l->mutx, x_eternal)) {
+        switch (x_mutex_lock(&l->mutx, x_eternal)) {
           case xs_success:
             break;
           default:
@@ -1224,8 +1224,8 @@ w_void zzzdeflate(w_void *ll) {
             break;
         }
 
-        x_queue_flush(l->q_in, unzip_freeQueue);
-        x_queue_flush(l->q_out, unzip_freeQueue);
+        x_queue_flush(&l->q_in, unzip_freeQueue);
+        x_queue_flush(&l->q_out, unzip_freeQueue);
 
         if (l->par_in != NULL) {
           woempa(INF_WOEMP_LEV_1, "--in-- %p %p\n", l->par_in, l->par_in->data);
@@ -1240,10 +1240,10 @@ w_void zzzdeflate(w_void *ll) {
         l->par_out = l->par_in = NULL;
         l->offset_out = 0;
 
-        x_mutex_unlock(l->mutx);
+        x_mutex_unlock(&l->mutx);
         
         // notify thread we are ready
-        x_monitor_notify_all(l->ready);
+        x_monitor_notify_all(&l->ready);
       }
 
       l->processed_size = 0;
@@ -1251,15 +1251,15 @@ w_void zzzdeflate(w_void *ll) {
 
       woempa(INF_WOEMP_LEV_1, "Exiting\n");
 
-      x_monitor_exit(l->ready);
+      x_monitor_exit(&l->ready);
     }
     else {
       woempa(9, "Monitor error !!!!\n");
       err = 1;
     }
   }
-  x_monitor_eternal(l->ready);
-  x_monitor_notify_all(l->ready);
+  x_monitor_eternal(&l->ready);
+  x_monitor_notify_all(&l->ready);
   l->state = COMPRESSION_THREAD_STOPPED;
-  x_monitor_exit(l->ready);
+  x_monitor_exit(&l->ready);
 }

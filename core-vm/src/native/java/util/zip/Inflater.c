@@ -59,7 +59,7 @@ void Inflater_reset(JNIEnv *env, w_instance thisInflater) {
   woempa(6,"DEBUG - resetting inflater %j\n", thisInflater);
   if (zstream) {
     woempa(6, "reseting inflater\n");
-    deviceBSSet(zstream, wdi_reset, 0, x_millis2ticks(50));
+    deviceBSSet(zstream, wdi_reset, 0, x_millis2ticks(250));
   }
 }
 
@@ -99,7 +99,7 @@ void Inflater_setDictionary(JNIEnv *env, w_instance thisInflater, w_instance byt
       if (zstream) {
         w_int l;
         w_driver_status status;
-        while ((status = deviceBSSet(zstream, wdi_send_dictionary, 1, x_millis2ticks(50))) == wds_no_instance);
+        while ((status = deviceBSSet(zstream, wdi_send_dictionary, 1, x_millis2ticks(250))) == wds_no_instance);
         if (status != wds_success) {
           wprintf("internal error occured while setting dictionary for %p\n",thisInflater);
         }

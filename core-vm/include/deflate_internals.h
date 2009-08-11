@@ -53,25 +53,26 @@ typedef struct w_Deflate_QueueElem {
 typedef w_Deflate_QueueElem *w_deflate_queueelem;
 
 typedef struct w_Deflate_Control {
-  x_queue q_in, q_out;
-  w_void *qmem_in, *qmem_out;                   // need to remember this to free it at release
+  x_Queue q_in, q_out;
+  w_ubyte qmem_in[4 * 512];
+  w_ubyte qmem_out[4 * 512];
 
   w_deflate_queueelem par_in, par_out;          // partial
   w_int offset_in, offset_out;                  // read offset in data block for partial reads
-  x_mutex mutx;                                 // enkel lock nodig voor par_out, omdat par_in enkel 
+  x_Mutex mutx;                                 // enkel lock nodig voor par_out, omdat par_in enkel 
 						// door inflate thread gebruikt wordt
   w_bits i_bits;                                // input op bitniveau
   w_bits o_bits, o_mask;                        // output op bitniveau
 
-  w_ubyte *output_bekken;                       // 32k sliding window en 1024 bytes block voor in queue te steken
+  w_ubyte output_bekken[32 * 1024 + 1024];      // 32k sliding window en 1024 bytes block voor in queue te steken
   w_int offset_bek_out, size_bek_out;
 
-  w_ubyte *input_bekken;                        // 32k sliding window met 512 bytes lookahead gebruikt door 
+  w_ubyte input_bekken[32 * 1024 + 512];        // 32k sliding window met 512 bytes lookahead gebruikt door 
                                                 // de zipper
   w_int offset_bek_in, lookahead_bek_in;
 
   w_ubyte *stack;
-  x_thread thread;
+  x_Thread thread;
 
   w_int nomoreinput;
   w_short *zip_hash_table;                      // the actual hashtable
@@ -81,11 +82,12 @@ typedef struct w_Deflate_Control {
   w_int compression_level;
   w_int processed_size;
 
-  x_monitor ready;				// needed for proper reset and stop
+  x_Monitor ready;				// needed for proper reset and stop
   volatile w_ubyte no_auto;
   volatile w_ubyte need_more_input;
-  volatile w_ubyte reset;
   volatile w_ubyte stop;
+  volatile w_short resets_requested;
+  volatile w_short resets_completed;
 
   volatile w_int state;
 
@@ -175,7 +177,7 @@ w_void unzip_freeQueue(void *);
 static w_int writeLiteralByte(w_deflate_control bs, w_word obyte) {
   obyte = (w_byte)(obyte & 0x000000ff);
   
-  bs->output_bekken[bs->offset_bek_out] = (w_byte)obyte;
+  (*bs).output_bekken[bs->offset_bek_out] = (w_byte)obyte;
   bs->offset_bek_out += 1;
   bs->size_bek_out += 1;
 
