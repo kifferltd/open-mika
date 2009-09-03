@@ -87,7 +87,7 @@ char * print_exception(char * buffer, int * remain, void * data, int w, int p, u
 
   message = getReferenceField(exception, F_Throwable_detailMessage);
   if (message) {
-    nbytes = x_snprintf(temp, *remain, "%k : %w", instance2clazz(exception), String2string(message));
+    nbytes = x_snprintf(temp, *remain, "%k : \"%w\"", instance2clazz(exception), String2string(message));
   }
   else {
     nbytes = x_snprintf(temp, *remain, "%k (no message)", instance2clazz(exception));
