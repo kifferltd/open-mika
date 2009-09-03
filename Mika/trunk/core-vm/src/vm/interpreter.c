@@ -4443,7 +4443,7 @@ static w_code searchHandler(w_frame frame) {
   */
   
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: Seeking handler for %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+    wprintf("Thrown: Seeking handler for %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   woempa(7, "Seeking handler for %k in %t, current frame is running %M\n", instance2clazz(thread->exception), thread, frame->method);
   threadMustBeUnsafe(thread);
@@ -4472,7 +4472,7 @@ static w_code searchHandler(w_frame frame) {
       if (pc >= ex->start_pc && pc < ex->end_pc) {
         if (cc == NULL || isSuperClass(cc, instance2object(pending)->clazz)) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-            wprintf("Thrown: Catching %k '%w' in %M, thread %t\n", instance2clazz(pending), String2string((w_instance)pending[F_Throwable_detailMessage]), frame->method, thread);
+            wprintf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
           }
           woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
           woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
@@ -4498,7 +4498,7 @@ static w_code searchHandler(w_frame frame) {
   setReferenceField_unsafe(thread->Thread, pending, F_Thread_thrown);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: Propagating %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+    wprintf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   frame->auxstack_top = auxs;
 
