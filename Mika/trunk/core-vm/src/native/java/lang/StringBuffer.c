@@ -293,7 +293,7 @@ w_instance StringBuffer_substring(JNIEnv *env, w_instance StringBuffer, w_int st
     if (!string) {
       wabort(ABORT_WONKA, "Unable to create string\n");
     }
-    result = newStringInstance(string);
+    result = getStringInstance(string);
     // string is now registered twice, when once would be enough
     deregisterString(string);
   }
@@ -311,7 +311,7 @@ static w_instance i_StringBuffer_toString(w_instance thisStringBuffer) {
   if (!string) {
     wabort(ABORT_WONKA, "Unable to create string\n");
   }
-  String = newStringInstance(string);
+  String = getStringInstance(string);
   // string is now registered twice, when once would be enough
   deregisterString(string);
 
