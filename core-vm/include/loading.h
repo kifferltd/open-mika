@@ -268,4 +268,11 @@ void deregisterUnloadedClazz(w_clazz clazz);
 */
 w_fifo forEachClassLoader(void* (*fun)(w_instance));
 
+/*
+ * Return the number of classes which were defined by this class loader.
+ * (To find out how many were initiated, just check the occupancy of the
+ * loaded class hashtable).
+ */
+w_int numberOfDefinedClasses(w_instance loader);
+
 #endif /* _LOADING_H */

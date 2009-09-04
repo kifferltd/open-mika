@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -184,13 +184,11 @@ w_boolean sameClazz(w_clazz clazz1, w_clazz clazz2) {
 ** unload a class and we need to untangle its references to other classes.
 */
 w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
-/* [CG 20061201] see above
   if (*clazzptr1 == *clazzptr2) {
 
     return WONKA_TRUE;
 
   }
-*/
 
   if ((*clazzptr1)->dotified != (*clazzptr2)->dotified) {
 
@@ -198,13 +196,11 @@ w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
 
   }
 
-/* [CG 20061201] see above
-  if ((getClazzState(*clazzptr1) == CLAZZ_STATE_UNLOADED) && (getClazzState(*clazzptr2) == CLAZZ_STATE_UNLOADED) && (*clazzptr1)->loader == (*clazzptr2)->loader) {
+  if ((getClazzState(*clazzptr1) < CLAZZ_STATE_LOADED) && (getClazzState(*clazzptr2) < CLAZZ_STATE_LOADED) && (*clazzptr1)->loader == (*clazzptr2)->loader) {
 
     return WONKA_TRUE;
 
   }
-*/
 
   if (mustBeLoaded(clazzptr1) == CLASS_LOADING_FAILED) {
     woempa(7, "Failed to load %K\n", *clazzptr1);
@@ -313,7 +309,7 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   result = (w_clazz)ht_read(loader2loaded_classes(initiating_loader), (w_word)name);
   woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
-  if (!result) {
+  if (!result || getClazzState(result) < CLAZZ_STATE_LOADED) {
     result = allocMem(sizeof(w_UnloadedClazz));
     if (!result) {
       wabort(ABORT_WONKA, "Unable to allocate new UnloadedClazz\n");
@@ -384,7 +380,7 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
 
     x_monitor_eternal(monitor);
     while(state < CLAZZ_STATE_LOADED) {
-      woempa(1, "Another thread (%t) is loading %k (%p), %t waiting\n", current->resolution_thread, current, current, thread);
+      woempa(1, "Another thread is loading %k (%p), %t waiting\n", current, current, thread);
       status = x_monitor_wait(monitor, CLASS_STATE_WAIT_TICKS);
       if (status == xs_interrupted) {
         x_monitor_eternal(monitor);
@@ -489,11 +485,6 @@ static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
   clazz->loader = NULL;
   clazz->type = type;
   clazz->bits = bits;
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz->resolution_monitor\n");
-  }
-  x_monitor_create(clazz->resolution_monitor);
   woempa(1, "Created clazz_%w @ %p\n", name, clazz);
 
   return clazz;
@@ -569,6 +560,8 @@ static w_boolean attach_class_iteration(void * name, void * cl) {
   else if (!clazz->Class) {
     attachClassInstance(clazz, NULL);
   }
+
+  return TRUE;
 }
 
 static void attach_class_instances(void) {
@@ -1026,15 +1019,8 @@ w_clazz seekClazzByName(w_string classname, w_instance initiating_loader) {
   w_clazz result;
 
   woempa(1, "Seeking class '%w' in %s.\n", classname, hashtable->label);
-  result = (w_clazz)ht_read_no_lock(hashtable, (w_word)classname);
-
-  if (result && initiating_loader) {
-    while (getClazzState(result) == CLAZZ_STATE_LOADING && result->resolution_thread != currentWonkaThread) {
-      woempa(7, "%K is being loaded by %t, waiting in %t\n", result, result->resolution_thread, currentWonkaThread);
-      waitMonitor(initiating_loader, 2);
-    }
-  }
-
+  result = (w_clazz)ht_read(hashtable, (w_word)classname); 
+ 
   return result;
 }
 
@@ -1461,9 +1447,10 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
       current = loadBootstrapClass(name);
     }
     else {
-      w_clazz placeholder = allocClazz();
+      w_clazz placeholder = allocMem(sizeof(w_UnloadedClazz));
 
-      placeholder->resolution_thread = thread;
+      placeholder->dotified = registerString(name);
+      placeholder->loader = effectiveLoader;
       setClazzState(placeholder, CLAZZ_STATE_LOADING);
       registerClazz(thread, placeholder, effectiveLoader);
       exitMonitor(effectiveLoader);
@@ -1471,10 +1458,13 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
       current = loadNonBootstrapClass(effectiveLoader, name);
 
       enterMonitor(effectiveLoader);
-      if (current && getClazzState(current) == CLAZZ_STATE_LOADING) {
-        // Loading did not succeed, so delete the placeholder.
-        releaseMem(placeholder);
-        current = NULL;
+      if (current) { 
+        registerClazz(thread, current, effectiveLoader);
+      }
+      else if (seekClazzByName(name, effectiveLoader) == placeholder) {
+        deregisterClazz(placeholder, effectiveLoader); 
+        deregisterString(placeholder->dotified);
+        releaseMem(placeholder); 
       }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
@@ -1692,5 +1682,27 @@ w_clazz loadBootstrapClass(w_string name) {
   deleteBootstrapFile(filename);
 
   return clazz;
+}
+
+static void definedClassesIteration(w_word key, w_word value, void *arg1, void *arg2) {
+  w_clazz clazz = (w_clazz)value;
+  w_instance parent_loader = arg1;
+  w_int *countptr = arg2;
+
+  if (clazz->loader == parent_loader) {
+    w_int clazz_state = getClazzState(clazz);
+
+    if (clazz_state >= CLAZZ_STATE_LOADED && clazz_state != CLAZZ_STATE_BROKEN) {
+      ++(*countptr);
+    }
+  }
+}
+
+w_int numberOfDefinedClasses(w_instance loader) {
+  w_int n = 0;
+
+  ht_iterate(loader2loaded_classes(loader), definedClassesIteration, loader, &n);
+
+  return n;
 }
 

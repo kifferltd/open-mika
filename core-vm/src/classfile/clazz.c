@@ -1400,46 +1400,22 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   ht_lock(hashtable);
   existing = (w_clazz)ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)clazz);
 
-woempa(7, "existing = %p\n", existing);
   if (existing) {
     if (existing == clazz) {
       woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
     }
     else {
-#ifdef RUNTIME_CHECKS
-      if (getClazzState(existing) == CLAZZ_STATE_UNLOADED) {
-        wabort(ABORT_WONKA, "Woah now, what is an unloaded class doing in the loaded_classes hashtable?");
-      }
-      else
-#endif
-      if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(existing) == CLAZZ_STATE_LOADING) {
-        w_instance Class = clazz2Class(clazz);
-        w_int i;
-        // TODO: if we re-instate changeset 703 then we may need do something
-        // with the instance cache as well as with the resolution monitor.
-
-        woempa(7, "Placeholder %K (%p) found for class %K (%p) in %s, copying %d bytes from %p to %p.\n", existing, existing, clazz, clazz, hashtable->label, sizeof(w_Clazz), clazz, existing);
-        w_memcpy(existing, clazz, sizeof(w_Clazz));
-
-        for (i = 0; i < clazz->numFields; ++i) {
-          existing->own_fields[i].declaring_clazz = existing;
-        }
-        for (i = 0; i < (w_int)clazz->numDeclaredMethods; ++i) {
-          existing->own_methods[i].spec.declaring_clazz = existing;
-        }
-        if (!clazz->dims) {
-          setReferenceField_unsafe(Class, existing->loader, F_Class_loader);
-        }
-        setWotsitField(Class, F_Class_wotsit, existing);
-      }
-      else {
+      if (getClazzState(existing) != CLAZZ_STATE_LOADING) { 
         if (thread) {
           throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
         }
+        destroyClazz(existing);
       }
-      ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)existing);
-      deallocClazz(clazz);
-      result = existing;
+      else {
+        // Existing entry is a placeholder, throw it away 
+        deregisterString(existing->dotified);
+        releaseMem(existing); 
+      }
     }
   }
   ht_unlock(hashtable);
@@ -1679,6 +1655,11 @@ w_clazz allocClazz(void) {
     wabort(ABORT_WONKA, "Unable to allocate clazz\n");
   }
   clazz->label = (char *) "clazz";
+  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
+  if (!clazz->resolution_monitor) {
+    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
+  }
+  x_monitor_create(clazz->resolution_monitor);
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 #ifndef THREAD_SAFE_FIFOS
   clazz->cache_mutex = allocClearedMem(sizeof(x_Mutex));
@@ -1725,11 +1706,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   clazz->bits = 32;
   clazz->resolution_thread = thread;
   setClazzState(clazz, CLAZZ_STATE_LOADING);
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
-  }
-  x_monitor_create(clazz->resolution_monitor);
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_header(clazz, bar)) {
@@ -1935,11 +1911,14 @@ w_int destroyClazz(w_clazz clazz) {
 
   if (!clazz->dims) {
 #ifdef RUNTIME_CHECKS
-    if (isSystemClassLoader(clazz->loader)) {
+    if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && isSystemClassLoader(clazz->loader)) {
       wabort(ABORT_WONKA, "'S wounds! Attempt to destroy system class %k", clazz);
     }
 #endif
 
+    if (clazz->Class) {
+      clearWotsitField(clazz->Class, F_Class_wotsit);
+    }
     woempa(7, "Removing implementations from interface_hashtable \n");
     if (clazz->interfaces) {
       destroyImplementations(clazz);
