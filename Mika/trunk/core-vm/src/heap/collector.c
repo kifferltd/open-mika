@@ -383,11 +383,16 @@ extern void ReferenceQueue_destructor(w_instance);
 static void Class_destructor(w_instance theClass) {
   w_clazz clazz = getWotsitField(theClass, F_Class_wotsit);
 
+  if (!clazz) {
+    return;
+  }
+
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
     wprintf("Unloading %K\n", clazz);
   }
 
   clearWotsitField(theClass, F_Class_wotsit);
+  woempa(7, "Adding %K to dead_clazz_fifo\n", clazz);
   if (putFifo(clazz, dead_clazz_fifo) < 0) {
     wprintf("Failed to put %K on dead_clazz_fifo\n", clazz);
   };
@@ -412,7 +417,9 @@ static void trashPackages(w_word key, w_word value, void *dummy1, void*dummy2) {
   w_package package = (w_package)value;
 
   woempa(7, "trashing %w in %j\n", package->name, package->loader);
-  wprintf("trashing %w in %j\n", package->name, package->loader);
+  if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+    wprintf("Removing package %w from %j\n", package->name, package->loader);
+  }
   destroyPackage(package);
 }
 
@@ -587,7 +594,7 @@ static w_int releaseInstance(w_object object) {
     return 0;
 #endif
   }
-  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER)) {
+  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER | CLAZZ_IS_UDCL)) {
 #ifdef COLLECT_CLASSES_AND_LOADERS
     ClassLoader_destructor(instance);
 #else
@@ -749,11 +756,11 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
-  child_instance = clazz->loader;
-  if (!child_instance) {
-    child_instance = systemClassLoader;
+  if (getClazzState(clazz) < CLAZZ_STATE_LOADED) {
+    return 0;
   }
 
+  child_instance = clazz2Class(clazz);
   if (child_instance) {
     retcode = markInstance(child_instance, fifo, flag);
     if (retcode < 0) {
@@ -763,24 +770,11 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     }
     queued += retcode;
   }
-
-  if (getClazzState(clazz) >= CLAZZ_STATE_LOADED) {
-    child_instance = clazz2Class(clazz);
-    if (child_instance) {
-      retcode = markInstance(child_instance, fifo, flag);
-      if (retcode < 0) {
-
-        return retcode;
-
-      }
-      queued += retcode;
-    }
 #ifdef RUNTIME_CHECKS
-    else {
-      wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
-    }
-#endif
+  else {
+    wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
   }
+#endif
 
   if (state == CLAZZ_STATE_BROKEN) {
 
@@ -1117,7 +1111,7 @@ w_int markThrowableReachable(w_object object, w_fifo fifo, w_word flag) {
 
   while (record) {
     if (record->method) {
-      woempa(7, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
+      woempa(3, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
       retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
       if (retcode < 0) {
 
@@ -1999,10 +1993,10 @@ static void dead_clazz_swap(int i, int j) {
 */
 static w_int collect_dead_clazzes(void) {
   w_int bytes_freed = 0;
-  int i = 0;
-  int j;
-  int k;
-  int n = occupancyOfFifo(dead_clazz_fifo);
+  w_int i = 0;
+  w_int j;
+  w_int k;
+  w_int n = occupancyOfFifo(dead_clazz_fifo);
   w_clazz this_clazz;
   w_clazz other_clazz;
 
@@ -2014,8 +2008,10 @@ static w_int collect_dead_clazzes(void) {
   }
 
   for (i = 1; i < n; ++i) {
+    w_int clazz_state;
     this_clazz = dead_clazz_array[i];
-    if (getClazzState(this_clazz) == CLAZZ_STATE_BROKEN) {
+    clazz_state = getClazzState(this_clazz);
+    if (clazz_state < CLAZZ_STATE_LOADED || clazz_state == CLAZZ_STATE_BROKEN) {
       continue;
     }
 
@@ -2039,8 +2035,9 @@ static w_int collect_dead_clazzes(void) {
 
     for (k = 0; k < this_clazz->numSuperClasses; ++k) {
       other_clazz = this_clazz->supers[k];
-      j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
       if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }
@@ -2048,8 +2045,9 @@ static w_int collect_dead_clazzes(void) {
 
     for (k = 0; k < this_clazz->numDirectInterfaces; ++k) {
       other_clazz = this_clazz->interfaces[k];
-      j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
       if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }
@@ -2057,8 +2055,9 @@ static w_int collect_dead_clazzes(void) {
 
     other_clazz = this_clazz->previousDimension;
     if (other_clazz) {
-       j = ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+       j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
         if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }
@@ -2157,24 +2156,23 @@ w_size sweep(w_int target) {
           if (thread) {
             if (thread->state != wt_dead && thread->state != wt_unstarted) {
               woempa(9, "Hold on a moment - thread '%t' is still running...\n", thread);
-              wprintf("Hold on a moment - thread '%t' is still running...\n", thread);
               do_collect = 0;
             }
 #ifndef OSWALD
 // For OSWALD we need to do something else, TBD
             else if (thread->kthread && thread->kthread->waiting_on) {
               woempa(9, "Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
-              wprintf("Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
               do_collect = 0;
             }
 #endif
           }
         }
         else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-          w_hashtable hashtable = getWotsitField(object->fields, F_ClassLoader_loaded_classes);
-
-          if (hashtable && hashtable->occupancy) {
-            woempa(9, "Hold on a moment - loaded class hashtable of %j still holds %d classes\n", object->fields, hashtable->occupancy);
+          w_int ndef = numberOfDefinedClasses(object->fields);
+          if (ndef) {
+#ifdef DEBUG
+            woempa(9, "Hold on a moment - loaded class hashtable of %j still holds %d classes defined by this loader\n", object->fields, ndef);
+#endif
             do_collect = 0;
           }
         }
