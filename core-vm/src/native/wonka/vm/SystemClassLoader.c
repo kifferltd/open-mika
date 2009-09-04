@@ -45,7 +45,7 @@ extern Wonka_InitArgs *system_vm_args;
 extern w_boolean getBootstrapFile(char *filename, w_BAR *barptr);
 
 w_instance SystemClassLoader_getBootclasspath(JNIEnv *env, w_instance class) {
-  return newStringInstance(cstring2String(bootclasspath, strlen(bootclasspath)));
+  return getStringInstance(cstring2String(bootclasspath, strlen(bootclasspath)));
 }
 
 void SystemClassLoader_setSystemClassLoader(JNIEnv *env, w_instance class, w_instance this) {
