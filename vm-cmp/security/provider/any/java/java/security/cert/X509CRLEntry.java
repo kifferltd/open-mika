@@ -32,12 +32,7 @@ package java.security.cert;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Date;
-
-/**
- *
- * @version $Id: X509CRLEntry.java,v 1.1.1.1 2004/07/12 14:07:46 cvs Exp $
- *
- */
+import javax.security.auth.x500.X500Principal;
 
 public abstract class X509CRLEntry implements X509Extension {
 
@@ -64,4 +59,8 @@ public abstract class X509CRLEntry implements X509Extension {
   public abstract BigInteger getSerialNumber();
   public abstract boolean hasExtensions();
   public abstract String toString();
+
+  public X500Principal getCertificateIssuer() {
+      return null;
+  }
 }
