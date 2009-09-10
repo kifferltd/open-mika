@@ -20,9 +20,8 @@
 * @version $Revision$
 */
 
-/*
- * Imported by CG 20090319 based on Apache Harmony ("enhanced") revision 490473.
- */
+/* Imported 20090910 by CG based on Apache Harmony "advanced" revision 490473 */
+
 
 package org.apache.harmony.security.provider.cert;
 
