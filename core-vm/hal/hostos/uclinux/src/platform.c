@@ -36,6 +36,8 @@ void w_dump_info(void);
 
 static struct sigaction term;
 static struct sigaction quit;
+static struct sigaction usr1_action;
+static struct sigaction usr1_oldaction;
 
 int wonka_killed;
 int dumping_info;
@@ -79,6 +81,15 @@ void install_term_handler(void) {
   result = sigaction(SIGQUIT, &quit, NULL);
   if (result == -1) {
     woempa(9, "Registering the quit handler failed.\n");
+    abort();
+  }
+
+  usr1_action.sa_handler = SIG_IGN;
+  sigemptyset(&usr1_action.sa_mask);
+  usr1_action.sa_flags = 0;
+  result = sigaction(SIGUSR1, &usr1_action, &usr1_oldaction);
+  if (result == -1) {
+    printf("Registering the usr1 handler failed, return code = %d.\n", result);
     abort();
   }
 
