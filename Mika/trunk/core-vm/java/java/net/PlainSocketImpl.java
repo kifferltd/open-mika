@@ -306,7 +306,7 @@ class PlainSocketImpl extends SocketImpl {
     register();
   }
   
-  protected synchronized void close() throws IOException {
+  protected void close() throws IOException {
     Thread t = SocketUsers.get(this);
     if (t != null) {
       signal(t);
@@ -385,7 +385,7 @@ class PlainSocketImpl extends SocketImpl {
 
   protected native void sendUrgentData(int udata) throws IOException;
   protected synchronized native int available() throws IOException;
-  protected synchronized native void _close() throws IOException;
+  protected native void _close() throws IOException;
 
   /*
   TCP_NODELAY = 0x0001;    --> Boolean

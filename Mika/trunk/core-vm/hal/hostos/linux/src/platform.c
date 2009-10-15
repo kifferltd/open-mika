@@ -41,6 +41,8 @@ static struct sigaction int_action;
 static struct sigaction int_oldaction;
 static struct sigaction quit_action;
 static struct sigaction quit_oldaction;
+static struct sigaction usr1_action;
+static struct sigaction usr1_oldaction;
 #ifdef O4P
 static struct sigaction segv_action;
 static struct sigaction segv_oldaction;
@@ -136,6 +138,15 @@ void install_term_handler(void) {
   }
   else {
     woempa(7, "Old quit handler was %p\n", quit_oldaction.sa_handler);
+  }
+
+  usr1_action.sa_handler = SIG_IGN;
+  sigemptyset(&usr1_action.sa_mask);
+  usr1_action.sa_flags = 0;
+  result = sigaction(SIGUSR1, &usr1_action, &usr1_oldaction);
+  if (result == -1) {
+    printf("Registering the usr1 handler failed, return code = %d.\n", result);
+    abort();
   }
 
 #ifdef O4P
