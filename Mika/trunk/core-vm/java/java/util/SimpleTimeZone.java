@@ -47,6 +47,7 @@ public class SimpleTimeZone extends TimeZone {
   private int endMode;
   private int endMonth;
   private int endTime;
+  private int endTimeMode;
   private int rawOffset;
   private int serialVersionOnStream=2;
   private int startDay;
@@ -54,6 +55,7 @@ public class SimpleTimeZone extends TimeZone {
   private int startMode;
   private int startMonth;
   private int startTime;
+  private int startTimeMode;
   private int startYear=0;
 
   private void readObject(ObjectInputStream stream)
@@ -135,7 +137,15 @@ public class SimpleTimeZone extends TimeZone {
       int endDay, int endDayOfWeek, int endTime, int endTimeMode, int dstSavings) {
     
     this(rawOffset,ID,startMonth,startDay,startDayOfWeek,startTime,endMonth,
-        endDay,endDayOfWeek,endDay,dstSavings);
+        endDay,endDayOfWeek,endTime,dstSavings);
+    if (startTimeMode < 0 || startTimeMode > 2) {
+      throw new IllegalArgumentException("bad startTimeMode");
+    }
+    if (endTimeMode < 0 || endTimeMode > 2) {
+      throw new IllegalArgumentException("bad endTimeMode");
+    }
+    this.startTimeMode = startTimeMode;
+    this.endTimeMode = endTimeMode;
   }
   
   private int calculatedstSavMode(int dow, int dowim) {
@@ -326,7 +336,7 @@ public class SimpleTimeZone extends TimeZone {
   	if (!(other instanceof SimpleTimeZone)) return false;
   	SimpleTimeZone ostz = (SimpleTimeZone)other;
   	boolean b = (rawOffset == ostz.rawOffset) && (useDaylight == ostz.useDaylight);
-  	if ( b && useDaylight ) return b;
+  	if ( b && !useDaylight ) return b;
   	b &= (startMonth == ostz.startMonth);
   	b &= (endMonth == ostz.endMonth);
   	b &= (startMode == ostz.startMode);
@@ -342,52 +352,6 @@ public class SimpleTimeZone extends TimeZone {
   		b &= (endDayOfWeek == ostz.endDayOfWeek);
   	}
   	return b;
-  }
-
-  private boolean inDaylightTime (int era, int year, int month, int day, int dayOffWeek, int millis) {
-    boolean b = (startYear <= year && era == GregorianCalendar.AD);
-    b &= !(((month < startMonth || month > endMonth ) && endMonth > startMonth)
-         ||((month < startMonth && month > endMonth ) && endMonth < startMonth));
-    int sDay;
-    if (month == startMonth  && b) { 	
-    	switch (startMode) {
-    	  case DOM_MODE:	
-    	    b = day > startDay || ( day == startDay && millis >= startTime);
-    	    break;
-    	  case DOW_IN_MONTH_MODE:
-    	   	sDay = calculateChangeDay(month, day, dayOffWeek, startDayOfWeek, startDay, year);
-    	   	b = day > sDay || ( day == sDay && millis >= startTime);
-    	   	break;
-    	  case DOW_GE_DOM_MODE:
-    	   	sDay = calculateChangeDay(month, day, dayOffWeek, startDayOfWeek, startDay, true);
-    	   	b = day > sDay || ( day == sDay && millis >= startTime);
-    	   	break;
-    	  case DOW_LE_DOM_MODE:
-    	   	sDay = calculateChangeDay(month, day, dayOffWeek, startDayOfWeek, startDay, false);
-    	   	b = day > sDay || ( day == sDay && millis >= startTime);
-    	   	break;
-    	}
-    }
-    if (month == endMonth  && b) { 	
-    	switch (endMode) {
-        case DOM_MODE:	
-           b = day < endDay || ( day == endDay && millis < endTime);
-           break;
-        case DOW_IN_MONTH_MODE:
-         	sDay = calculateChangeDay(month, day, dayOffWeek, endDayOfWeek, endDay, year);
-         	b = day < sDay || ( day == sDay && millis < endTime);
-        	break;
-        case DOW_GE_DOM_MODE:
-          sDay = calculateChangeDay(month, day, dayOffWeek, endDayOfWeek, endDay, true);
-          b = day < sDay || ( day == sDay && millis < endTime);
-          break;
-        case DOW_LE_DOM_MODE:
-        	sDay = calculateChangeDay(month, day, dayOffWeek, endDayOfWeek, endDay, false);
-        	b = day < sDay || ( day == sDay && millis < endTime);
-        	break;
-    	}
-    }
-    return b;
   }
 
   private int calculateChangeDay(int month, int day, int dayOffweek, int DOWinM, int chDOW, int year) {
@@ -422,22 +386,7 @@ public class SimpleTimeZone extends TimeZone {
     GregorianCalendar gc = new GregorianCalendar(this);
     gc.setTime(date);
     return gc.inDaylightTime();
-/*
-    int hour = gc.get(Calendar.HOUR);
-    int minute = gc.get(Calendar.MINUTE);
-    int second = gc.get(Calendar.SECOND);
-    int millisecond = gc.get(Calendar.MILLISECOND);
-    return (hour == 0 && minute == 0 && second == 0 && millisecond == 0) ?  inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), 0) : inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), (int) (date.getTime() - new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE)).getTimeInMillis()));
-    // return inDaylightTime(gc.get(Calendar.ERA), gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), gc.get(Calendar.DATE), gc.get(Calendar.DAY_OF_WEEK), ((hour * 60 + minute) * 60 + second) * 1000 + millisecond);
-*/
-
   }
-
-/*
-  public int getOffset(int era, int year, int month, int day, int dayOffWeek, int milliseconds) {
-   	return rawOffset + (inDaylightTime(era, year, month, day, dayOffWeek, milliseconds) ? dstSavings :0);
-  }
-*/
 
   public int hashCode(){
   	int hash = endDay * endDayOfWeek * endMode * endMonth + endTime;
@@ -575,6 +524,11 @@ public class SimpleTimeZone extends TimeZone {
         }
 
 //System.out.println("startDayOfMonth = " + startDayOfMonth + " startTime = " + startTime);
+        int startWallTime = startTime;
+        if (startTimeMode == UTC_TIME) {
+          startWallTime = startTime + rawOffset;
+        }
+
         if (day < startDayOfMonth) {
           startCompare = -1;
         }
@@ -582,10 +536,10 @@ public class SimpleTimeZone extends TimeZone {
           startCompare = 1;
         }
         else {
-          if (time < startTime){
+          if (time < startWallTime){
             startCompare = -1;
           }
-          else if (time > startTime){
+          else if (time > startWallTime){
             startCompare = 1;
           }
         }
@@ -631,6 +585,14 @@ public class SimpleTimeZone extends TimeZone {
           }
 
 //System.out.println("endDayOfMonth = " + endDayOfMonth + " endTime = " + endTime);
+        int endWallTime = endTime;
+        if (endTimeMode == UTC_TIME) {
+          endWallTime = endTime + rawOffset + dstSavings;
+        }
+        else if (endTimeMode == STANDARD_TIME) {
+          endWallTime = endTime + dstSavings;
+        }
+
           if (day < endDayOfMonth) {
             endCompare = -1;
           }
@@ -642,10 +604,10 @@ public class SimpleTimeZone extends TimeZone {
             // Following ICU4J we should re-normalize here in case adding
             // DST has pushed us into tomorrow. But that seems pretty far-
             // fetched so we don't bother.
-            if (time < endTime){
+            if (time < endWallTime){
               endCompare = -1;
             }
-            else if (time > endTime){
+            else if (time > endWallTime){
               endCompare = 1;
             }
           }
