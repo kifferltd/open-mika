@@ -49,7 +49,7 @@
     <taskdef name="propertysetter" classname="be.kiffer.mika.ant.PropertySetter"
              classpath="${tools.dir}/ant-mika.jar"/>
     <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
-    <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.dir}:${security.provider.any.dir}"
+    <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.any.dir}"
                     value="${security.provider.dir}"/>
 
      <javac compiler="jikes" destdir="${common.class.dir}" bootclasspath="${empty.dir}"

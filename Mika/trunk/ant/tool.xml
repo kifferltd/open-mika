@@ -40,7 +40,9 @@
   <target name="tool">
     <mkdir dir="${tools.class.dir}" />
     <mkdir dir="${test.dir}" />
-    <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}"/>
+    <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}">
+      <property name="SECURITY_PROVIDER" value="none"/>
+    </subant>
     <javac compiler="jikes" destdir="${tools.class.dir}" 
            bootclasspath="${common.class.dir}"
            target="1.3" debug="true" nowarn="true" failonerror="true"
