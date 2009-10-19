@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.     *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** References of the form [J+JVM ...] are to the book _Java and the Java
-** Virtual Machine_ by Robert Staerk, Joachim Schmid, and Egon Boerger.
-*/
 
 #include <string.h>
 
@@ -73,12 +73,13 @@ w_boolean use_method_debug_info = FALSE;
 
 /*
 ** Each classloader has associated with it a hashtable of loaded classes
-** and one of unloaded classes. For the "primordial" class loader these are
-** static items.
+** and one of unloaded classes, plus a hashtable of packages it has loaded.
+** For the "primordial" class loader these are static items.
 */
 
 w_hashtable system_loaded_class_hashtable;
 w_hashtable system_unloaded_class_hashtable;
+w_hashtable system_package_hashtable;
 
 /*
 ** The clazz we clone arrays from. See also comments in wonka.h
@@ -106,6 +107,8 @@ w_clazz clazzArrayOf_Class;
 w_clazz clazzArrayOf_String;
 
 static void parseMethodCodeAttributes(w_method, w_bar);
+
+void deallocClazz(w_clazz clazz);
 
 /*
 ** Function used by x_snprintf to print out the name of a clazz (format %k).
@@ -209,7 +212,7 @@ char *print_clazz_long(char *buffer, int *remain, void *c, int w, int p, unsigne
   temp += nbytes;
   *remain -= nbytes;
 
-  if (clazz->loader  && clazz->loader != systemClassLoader) {
+  if (!isSystemClassLoader(clazz->loader)) {
     nbytes = x_snprintf(temp, *remain, "{%j}", clazz->loader);
     temp += nbytes;
     *remain -= nbytes;
@@ -317,12 +320,12 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
       length = get_u2(s);
 
       if (length > 0) {
-        char *buffer = allocMem(length);
+        void *buffer = allocMem(length);
         if (!buffer) {
           wabort(ABORT_WONKA, "No space for buffer\n");
         }
-        barread(s, buffer, length);
-        clazz->values[*idx] = (w_ConstantValue)utf2String(buffer, length);
+        barread(s, (w_ubyte*)buffer, length);
+        clazz->values[*idx] = (w_ConstantValue)utf2String((char*)buffer, length);
         releaseMem(buffer);
       }
       else {
@@ -350,7 +353,7 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
         w_long val = get_u4(s);
 
         val = (val << 32) | get_u4(s);
-	memcpy(clazz->values + *idx, &val, 8);
+	memcpy((w_word*)clazz->values + *idx, &val, 8);
         clazz->tags[*idx + 1] = NO_VALID_ENTRY;
         woempa(1, "Constant[%d] = %s 0x%08x%08x\n", *idx, tag == CONSTANT_LONG ? "long" : "double", clazz->values[*idx], clazz->values[*idx + 1]);
         *idx += 2;
@@ -445,9 +448,10 @@ static w_boolean pre_check_header(w_clazz clazz, w_bar bar) {
  ** Check file is big enough to contain constant pool.
  ** 'bar' should be set to byte 8 of the classfile, and will be rewound
  ** to there on exit.
- ** Returns TRUE for success, FALSE for failure.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */ 
-static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thread) {
   w_size n;
   u1 tag;
   u2 val;
@@ -462,7 +466,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
   // We do this in two passes, because in theory forward references are possible.
   for (i = 1; ok && i < n; ) {
     if (bar_avail(bar) < 3) {
-      woempa(9, "Less than 3 bytes remaining at start of constant\n");
+      throwException(thread, clazzClassFormatError, "Less than 3 bytes remaining at start of constant[%d]", i);
       ok = FALSE;
     }
     tag = get_u1(bar);
@@ -472,7 +476,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         length = get_u2(bar);
         if (length) {
           if (bar_avail(bar) < length) {
-            woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
+            throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
             ok = FALSE;
           }
           bar_skip(bar, length);
@@ -483,7 +487,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_CLASS:
       case CONSTANT_STRING:
         if (bar_avail(bar) < 2) {
-          woempa(9, "Insufficient bytes remaining for CLASS/STRING constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for CLASS/STRING constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 2);
@@ -497,7 +501,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_IMETHOD:
       case CONSTANT_NAME_AND_TYPE:
         if (bar_avail(bar) < 4) {
-          woempa(9, "Insufficient bytes remaining for constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 4);
@@ -507,7 +511,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_LONG:
       case CONSTANT_DOUBLE:
         if (bar_avail(bar) < 8) {
-          woempa(9, "Insufficient bytes remaining for UTF8 constant\n");
+          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 8);
@@ -515,7 +519,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
         break;
 
       default:
-        woempa(9, "Illegal constant type tag %d\n", tag);
+        throwException(thread, clazzClassFormatError, "Illegal constant type tag %d", tag);
         ok = FALSE;
     }
   }
@@ -537,7 +541,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_STRING:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Class constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Class constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -554,12 +558,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_IMETHOD:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_CLASS) {
-          woempa(9, "Member constant[%d] references non-class constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-class constant[%d]", i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_NAME_AND_TYPE) {
-          woempa(9, "Member constant[%d] references non-name & type constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-name & type constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -568,12 +572,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
       case CONSTANT_NAME_AND_TYPE:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          woempa(9, "Name & type constant[%d] references non-utf8 constant[%d]\n", i, val);
+          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
           ok = FALSE;
         }
         ++i;
@@ -597,15 +601,17 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar) {
 /**
  ** Check a set of attributes beginning with the attribute count at the 
  ** current position of 'bar'. Afterwards 'bar' points past the last attribute.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */
-static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type, w_thread thread) {
   w_size n;
   w_size i;
   w_word val;
   w_int length;
 
   if (bar_avail(bar) < 2) {
-    woempa(9, "Class file too short for attribute count\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for %s attribute count", type);
 
     return FALSE;
   }
@@ -615,21 +621,21 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 6) {
-      woempa(9, "Less than 6 bytes remaining at start of attribute[%d]\n", i);
+      throwException(thread, clazzClassFormatError, "Less than 6 bytes remaining at start of %s attribute[%d]", type, i);
 
       return FALSE;
     }
 
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Attribute[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "%s attribute[%d] references non-utf8 constant[%d]", type, i, val);
 
       return FALSE;
     }
     length = get_u4(bar);
     woempa(1, "Attribute[%d] length = %d\n", i, length);
     if (bar_avail(bar) < length) {
-      woempa(9, "Less than <attribute length> bytes remaining\n");
+      throwException(thread, clazzClassFormatError, "Less than <attribute length> bytes remaining");
 
       return FALSE;
     }
@@ -643,9 +649,10 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar) {
  ** Check file is big enough to contain fields, methods, attributes.
  ** 'bar' should be set to byte following constant pool, and will be rewound
  ** to there on exit.
- ** Returns TRUE for success, FALSE for failure.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
  */ 
-static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
+static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar, w_thread thread) {
   w_int offset = bar->current;
   w_size n;
   w_word val;
@@ -654,7 +661,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   w_boolean result;
 
   if (bar_avail(bar) < 8) {
-    woempa(9, "Class file too short for class flags / this class / super class / num interfaces\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for class flags / this class / super class / num interfaces");
 
     return FALSE;
   }
@@ -662,8 +669,8 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   bar_skip(bar, 6);
   n = get_u2(bar);
 
-  if (bar_avail(bar) < (n * 2 + 2)) {
-    woempa(9, "Class file too short for interfaces / field count\n");
+  if (bar_avail(bar) < (signed)(n * 2 + 2)) {
+    throwException(thread, clazzClassFormatError, "Class file too short for interfaces / field count");
 
     return FALSE;
   }
@@ -671,7 +678,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
   for (i = 0; i < n; ++i) {
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_CLASS) {
-      woempa(9, "Interface[%d] references non-class constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Interface[%d] references non-class constant[%d]", i, val);
 
       return FALSE;
     }
@@ -682,7 +689,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {
-      woempa(9, "Less than 8 bytes remaining at start of field\n");
+      throwException(thread, clazzClassFormatError, "Less than 8 bytes remaining at start of field");
 
       return FALSE;
     }
@@ -690,25 +697,24 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
     bar_skip(bar, 2);
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Field[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Field[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Field[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Field[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar)) {
-      woempa(9, "Field[%d] attributes corrupt\n", i);
+    if (!pre_check_attributes(clazz, bar, "field", thread)) {
 
       return FALSE;
     }
   }
 
   if (bar_avail(bar) < 2) {
-    woempa(9, "Class file too short for method count\n");
+    throwException(thread, clazzClassFormatError, "Class file too short for method count");
 
     return FALSE;
   }
@@ -718,7 +724,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 8) {
-      woempa(9, "Less than 8 bytes remaining at start of method\n");
+      throwException(thread, clazzClassFormatError, "Less than 8 bytes remaining at start of method");
 
       return FALSE;
     }
@@ -726,28 +732,27 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
     bar_skip(bar, 2); // flags
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Method[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Method[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      woempa(9, "Method[%d] references non-utf8 constant[%d]\n", i, val);
+      throwException(thread, clazzClassFormatError, "Method[%d] references non-utf8 constant[%d]", i, val);
 
       return FALSE;
     }
-    if (!pre_check_attributes(clazz, bar)) {
-      woempa(9, "Method[%d] attributes corrupt\n", i);
+    if (!pre_check_attributes(clazz, bar, "method", thread)) {
 
       return FALSE;
     }
   }
 
-  result =  pre_check_attributes(clazz, bar);
+  result =  pre_check_attributes(clazz, bar, "class", thread);
 
   length = bar_avail(bar);
   if (length) {
-    woempa(9, "%d bytes left at end\n", bar_avail(bar));
+    throwException(thread, clazzClassFormatError, "%d bytes left at end of class file", bar_avail(bar));
 
     result = FALSE;
   }
@@ -760,8 +765,10 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar) {
 /*
 ** Check that the constant indexed by clazz->temp.this_index is a valid class
 ** constant and that its name matches 'name' (if the latter is non-NULL).
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
 */
-inline static w_boolean check_classname(w_clazz clazz, w_string name) {
+inline static w_boolean check_classname(w_clazz clazz, w_string name, w_thread thread) {
   w_int classConstantIndex;
   w_int classNameIndex;
   w_string slashed;
@@ -769,13 +776,13 @@ inline static w_boolean check_classname(w_clazz clazz, w_string name) {
 
   classConstantIndex = clazz->temp.this_index;
   if (clazz->tags[classConstantIndex] != CONSTANT_CLASS) {
-    woempa(9, "Own class index is not a CONSTANT_CLASS\n");
+    throwException(thread, clazzClassFormatError, "Own class index is not a CONSTANT_CLASS");
 
     return FALSE;
   }
   classNameIndex = clazz->values[classConstantIndex];
   if (clazz->tags[classNameIndex] != CONSTANT_UTF8) {
-    woempa(9, "Own class name is not a CONSTANT_UTF8\n");
+    throwException(thread, clazzClassFormatError, "Own class name is not a CONSTANT_UTF8");
 
     return FALSE;
   }
@@ -786,7 +793,7 @@ inline static w_boolean check_classname(w_clazz clazz, w_string name) {
     wabort(ABORT_WONKA, "Unable to dotify name\n");
   }
   if (name && dotified != name) {
-    woempa(9,"Impostor! The class which should be known as `%w' is really `%w'.\n",name,dotified);
+    throwException(thread, clazzClassFormatError, "Impostor! The class which should be known as `%w' is really `%w'.",name,dotified);
 
     return FALSE;
   }
@@ -824,7 +831,7 @@ static w_boolean check_field(w_clazz clazz, w_field f) {
 
   // Spec says to silently ignore ConstantValue if field not static
   if (f->initval && isSet(flags, ACC_STATIC)) {
-    w_int initval = f->initval;
+    w_ushort initval = f->initval;
     w_int inittag = clazz->tags[initval];
     if ((initval >= clazz->numConstants)) {
       return FALSE;
@@ -883,12 +890,12 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
 
   if (isSet(clazz->flags, ACC_INTERFACE)) {
     // Interface methods must be public static final and nowt else.
-    if ((flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != (ACC_PUBLIC | ACC_ABSTRACT)) {
+    if (m->spec.name != string_angle_brackets_clinit && (flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != (ACC_PUBLIC | ACC_ABSTRACT)) {
       return FALSE;
     }
   }
   else {
-    // Class fields may have at most one of the following flags set.
+    // Class methods may have at most one of the following flags set.
     switch(flags & (ACC_PRIVATE | ACC_PROTECTED | ACC_PUBLIC)) {
     case 0:
     case ACC_PRIVATE:
@@ -917,13 +924,32 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
   return TRUE;
 }
 
-static w_boolean post_checks(w_clazz clazz, w_string name) {
-  w_int i;
+/** Final checks on class file format.
+ ** Returns TRUE if all checks pass. If any check fails, throws a 
+ ** ClassFormatError and returns FALSE.
+*/
+static w_boolean post_checks(w_clazz clazz, w_string name, w_thread thread) {
+  w_size i;
+  w_boolean result = TRUE;
 
-  for (i = 0; i < clazz->numFields && check_field(clazz, &clazz->own_fields[i]); ++i) ;
-  for (i = 0; i < clazz->numDeclaredMethods && check_method(clazz, &clazz->own_methods[i]); ++i) ;
+  for (i = 0; result && i < clazz->numFields; ++i) {
+    result = check_field(clazz, &clazz->own_fields[i]);
+  }
+  if (!result) {
+    throwException(thread, clazzClassFormatError, "bad flags in field[%d]", i);
 
-  return check_classname(clazz, name);
+    return FALSE;
+  }
+  for (i = 0; result && i < clazz->numDeclaredMethods; ++i) {
+    result = check_method(clazz, &clazz->own_methods[i]);
+  }
+  if (!result) {
+    throwException(thread, clazzClassFormatError, "bad flags in method[%d]", i);
+
+    return FALSE;
+  }
+
+  return check_classname(clazz, name, thread);
 }
 #endif
 
@@ -1359,34 +1385,46 @@ w_boolean isReservedName(w_string name) {
 
 /*
 ** Register a w_Clazz structure in a class hashtable.  
+** See remarks in clazz.n.
 */
 
-void registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
+w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   w_clazz  existing;
+  w_clazz result = clazz;
   w_hashtable hashtable = loader2loaded_classes(loader);
 
-  if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
-    wabort(ABORT_WONKA, "%K\n", clazz);
-  }
-  woempa(1, "Registering clazz %k in %s.\n", clazz, hashtable->label);
+  woempa(7, "Registering %K in %s.\n", clazz, hashtable->label);
+
+  threadMustBeSafe(thread);
 
   ht_lock(hashtable);
   existing = (w_clazz)ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)clazz);
 
   if (existing) {
     if (existing == clazz) {
-      woempa(1, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
+      woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
     }
     else {
-      if (thread) {
-        throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
+      if (getClazzState(existing) != CLAZZ_STATE_LOADING) { 
+        if (thread) {
+          throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
+        }
+        destroyClazz(existing);
       }
-      ht_write_no_lock(hashtable, (w_word)clazz->dotified, (w_word)existing);
-      wabort(ABORT_WONKA, "Fascinating. The class %k (w_clazz %p) was already registered in %s as w_clazz %p.\n", clazz, clazz, hashtable->label, existing);
+      else {
+        // Existing entry is a placeholder, throw it away 
+        deregisterString(existing->dotified);
+        releaseMem(existing); 
+      }
     }
   }
   ht_unlock(hashtable);
+  woempa(7, "Returning %K (%p)\n", result);
+  if (loader) {
+    notifyMonitor(loader, TRUE);
+  }
 
+  return result;
 }
 
 /*
@@ -1565,7 +1603,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
     w_size n = get_u2(s);
     if (n * 8 + 2 != attribute_length) {
       if (thread) {
-        throwException(currentWonkaThread, clazzClassFormatError, "%k: InnerClasses attribute has wrong length", clazz);
+        throwException(thread, clazzClassFormatError, "InnerClasses attribute has wrong length");
       }
 
       return;
@@ -1610,7 +1648,38 @@ static void get_attributes(w_thread thread, w_clazz clazz, w_bar s) {
 
 }
 
-w_clazz allocClazz(void);
+w_clazz allocClazz(void) {
+
+  w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
+  if (!clazz) {
+    wabort(ABORT_WONKA, "Unable to allocate clazz\n");
+  }
+  clazz->label = (char *) "clazz";
+  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
+  if (!clazz->resolution_monitor) {
+    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
+  }
+  x_monitor_create(clazz->resolution_monitor);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+#ifndef THREAD_SAFE_FIFOS
+  clazz->cache_mutex = allocClearedMem(sizeof(x_Mutex));
+  if (!clazz->cache_mutex) {
+    wabort(ABORT_WONKA, "No space for clazz cache mutex\n");
+  }
+  x_mutex_create(clazz->cache_mutex);
+#endif
+  clazz->cache_fifo = allocThreadSafeFifo(510);
+#endif
+  
+  return clazz; 
+
+}
+
+void deallocClazz(w_clazz clazz) {
+  woempa(7,"Releasing w_clazz at %p\n", clazz);
+  releaseMem(clazz);
+}
+
 
 /*
 ** Create the w_Clazz structure corresponding to a class, reading the class
@@ -1621,7 +1690,7 @@ w_clazz allocClazz(void);
 w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader, w_boolean trusted) {
   w_clazz clazz;
 
-  if (loader && systemClassLoader && loader != systemClassLoader && namedClassIsSystemClass(name)) {
+  if (systemClassLoader && !isSystemClassLoader(loader) && namedClassIsSystemClass(name)) {
     throwException(thread, clazzSecurityException, "not allowed to define system class %w", name);
 
     return NULL;
@@ -1635,12 +1704,8 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   clazz->loader = loader;
   clazz->type = VM_TYPE_REF + VM_TYPE_OBJECT;
   clazz->bits = 32;
+  clazz->resolution_thread = thread;
   setClazzState(clazz, CLAZZ_STATE_LOADING);
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
-  }
-  x_monitor_create(clazz->resolution_monitor);
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_header(clazz, bar)) {
@@ -1654,8 +1719,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_header(clazz, bar);
 
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !pre_check_constant_pool(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, "error in constant pool");
+  if (!trusted && !pre_check_constant_pool(clazz, bar, thread)) {
     destroyClazz(clazz);
 
     return NULL;
@@ -1665,8 +1729,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_constantpool(clazz, bar);
 
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !pre_check_remainder(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, NULL);
+  if (!trusted && !pre_check_remainder(clazz, bar, thread)) {
     destroyClazz(clazz);
 
     return NULL;
@@ -1675,6 +1738,12 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
   // 'Or in' the access flags, so as not to destroy the clazz state
   clazz->flags |= get_u2(bar) & (ACC_PUBLIC | ACC_FINAL | ACC_SUPER | ACC_INTERFACE | ACC_ABSTRACT);
+  if(isSet(clazz->flags, ACC_INTERFACE) && isNotSet(clazz->flags, ACC_ABSTRACT)){
+    woempa(9,"How rude, clazz %w is has ACC_INTERFACE set but not ACC_ABSTRACT\n",name);
+    woempa(9,"Fixing this ...\n");
+    setFlag(clazz->flags, ACC_ABSTRACT);
+  } 
+
   clazz->temp.this_index = get_u2(bar);
   clazz->temp.super_index = get_u2(bar);
   get_interfaces(clazz, bar);
@@ -1682,28 +1751,22 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   get_methods(thread, clazz, bar);
   get_attributes(thread, clazz, bar);
 
+  if (exceptionThrown(thread)
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !post_checks(clazz, name)) {
-    throwException(thread, clazzClassFormatError, name);
+    || (!trusted && !post_checks(clazz, name, thread))
+#endif
+  ) {
     destroyClazz(clazz);
 
     return NULL;
   }
-#endif
 
   if (trusted) {
     setFlag(clazz->flags, CLAZZ_IS_TRUSTED);
   }
 
   set_classname(clazz);
-
-  if (! exceptionThrown(thread)) {
-    if(isSet(clazz->flags, ACC_INTERFACE) && isNotSet(clazz->flags, ACC_ABSTRACT)){
-      woempa(9,"How rude, clazz %w is has ACC_INTERFACE set but not ACC_ABSTRACT\n",name);
-      woempa(9,"Fixing this ...\n");
-      setFlag(clazz->flags, ACC_ABSTRACT);
-    } 
-  }
+  getPackageForClazz(clazz, loader);
 
   clazz->resolution_thread = NULL;
   setClazzState(clazz, CLAZZ_STATE_LOADED);
@@ -1711,24 +1774,20 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   // At the end of this phase all loaded classes get a Class instance attached,
   // from that point on it's done here at creation time.
   if (clazzClass && clazzClass->Class) {
-    attachClassInstance(clazz);
+    attachClassInstance(clazz, thread);
   }
-  registerClazz(thread, clazz, loader);  
 
-  woempa(1, "%j is the defining class loader of %k\n", loader, clazz);
-
-  return clazz;
-
+  return registerClazz(thread, clazz, loader);  
 }
 
 /*
 ** Attach an instance of java.lang.Class to this clazz.
 */
 
-w_instance attachClassInstance(w_clazz clazz) {
-  w_thread   thread = currentWonkaThread;
+w_instance attachClassInstance(w_clazz clazz, w_thread thread) {
   w_instance Class;
   w_int      i;
+  w_boolean unsafe;
 
 #ifdef RUNTIME_CHECKS
   if (clazzClass == NULL) {
@@ -1743,10 +1802,7 @@ w_instance attachClassInstance(w_clazz clazz) {
   }
 #endif
 
-  if (thread) {
-    threadMustBeSafe(thread);
-  }
-
+  unsafe = thread && enterUnsafeRegion(thread);
   Class = allocInstance(thread, clazzClass);
 
   if (Class) {
@@ -1762,24 +1818,16 @@ w_instance attachClassInstance(w_clazz clazz) {
       }
     }
     else {
-      setReferenceField(Class, clazz->loader, F_Class_loader);
+      setReferenceField_unsafe(Class, clazz->loader, F_Class_loader);
     }
     setWotsitField(Class, F_Class_wotsit, clazz);
   }
 
-  return Class;
-}
-
-w_clazz allocClazz() {
-
-  w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
-  if (!clazz) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz\n");
+  if (thread && !unsafe) {
+    enterSafeRegion(thread);
   }
-  clazz->label = (char *) "clazz";
-  
-  return clazz; 
 
+  return Class;
 }
 
 /*
@@ -1825,11 +1873,10 @@ static inline void destroyField(w_field field) {
 ** Examine an entry in interface_hashtable to see if it involves clazz c;
 ** if it does, put the imethod onto fifo f.
 */
-static w_int interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_word method_word, void *c, void *f) {
+static void interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_word method_word, void *c, void *f) {
   w_clazz found_clazz = (w_clazz) clazz_word;
   w_method imethod = (w_method) imethod_word;
   w_clazz target_clazz = c;
-  w_fifo fifo = f;
 
   if (found_clazz == target_clazz) {
     woempa(7, "Looking for %k: found it, %M implements %M\n", target_clazz, method_word, imethod);
@@ -1842,12 +1889,12 @@ static w_int interface_fifo_iterator(w_word clazz_word, w_word imethod_word, w_w
 */
 static void destroyImplementations(w_clazz clazz) {
   w_method imethod;
-  w_fifo fifo = allocFifo(255);
+  w_fifo fifo = allocFifo(254);
 
   ht2k_iterate(interface_hashtable, interface_fifo_iterator, clazz, fifo);
   while ((imethod = getFifo(fifo))) {
     woempa(7, "Erasing %k x %m from interface_hashtable\n", clazz, imethod);
-    ht2k_erase(interface_hashtable, clazz, imethod);
+    ht2k_erase(interface_hashtable, (w_word)clazz, (w_word)imethod);
   }
   releaseFifo(fifo);
 }
@@ -1862,94 +1909,114 @@ w_int destroyClazz(w_clazz clazz) {
   
   woempa(7,"Destroying class %k\n",clazz);
 
-  if (clazz->dotified) {
-    deregisterString(clazz->dotified);
-  }
-
-  if (getClazzState(clazz) == CLAZZ_STATE_UNLOADED) {
-    // TODO: [CG 20061201] can we really get here? I don't think so ...
-
-    return 0;
-  }
-
-  woempa(7, "Releasing constant pool\n");
-  for (i = 1; i < (w_int)clazz->numConstants; i++) {
-    dissolveConstant(clazz, i);
-  }
-  if (clazz->tags){
-    releaseMem((void*)clazz->tags);
-  }
-  if (clazz->values){
-    releaseMem((void*)clazz->values);
-  }
-
-  woempa(7, "Releasing class members\n");
-  for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
-    destroyMethod(&clazz->own_methods[i]);
-  }
-
-  if (clazz->own_methods) {
-    releaseMem(clazz->own_methods);
-  }
-  for (i = 0; i < (w_int)clazz->numFields; i++) {
-    destroyField(&clazz->own_fields[i]);
-  }
-  if (clazz->own_fields) {
-    releaseMem(clazz->own_fields);
-  }
-
-  if (clazz->vmlt) {
-    woempa(7, "Releasing vmlt and references\n");
-    releaseMem(clazz->vmlt);
-  }
-
-  if (clazz->references) {
-    releaseWordset(&clazz->references);
-  }
-  if (clazz->dims) {
-  // array classes use a static `supers' and `interfaces', so don't release 'em
-  }
-  else {
-    woempa(7, "Releasing supers and interfaces\n");
-    if (clazz->supers) {
-      releaseMem(clazz->supers);
+  if (!clazz->dims) {
+#ifdef RUNTIME_CHECKS
+    if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && isSystemClassLoader(clazz->loader)) {
+      wabort(ABORT_WONKA, "'S wounds! Attempt to destroy system class %k", clazz);
     }
+#endif
+
+    if (clazz->Class) {
+      clearWotsitField(clazz->Class, F_Class_wotsit);
+    }
+    woempa(7, "Removing implementations from interface_hashtable \n");
     if (clazz->interfaces) {
       destroyImplementations(clazz);
       releaseMem(clazz->interfaces);
     }
-  }
 
-  if (clazz->staticFields) {
-    releaseMem(clazz->staticFields);
-  }
+    woempa(7, "Releasing class members\n");
+    if (clazz->own_methods) {
+      for (i = 0; i < (w_int)clazz->numDeclaredMethods; i++) {
+        destroyMethod(&clazz->own_methods[i]);
+      }
+      releaseMem(clazz->own_methods);
+    }
 
-  if (clazz->filename) {
-    deregisterString(clazz->filename);
-  }
+    if (clazz->own_fields) {
+      for (i = 0; i < (w_int)clazz->numFields; i++) {
+        destroyField(&clazz->own_fields[i]);
+      }
+      releaseMem(clazz->own_fields);
+    }
 
-  if (clazz->temp.interface_index) {
-    woempa(7, "Releasing temp.interface_index\n");
-    releaseMem(clazz->temp.interface_index);
-  }
+    if (clazz->vmlt) {
+      woempa(7, "Releasing vmlt and references\n");
+      releaseMem(clazz->vmlt);
+    }
 
-  if (clazz->temp.inner_class_info) {
-    woempa(7, "Releasing temp.inner_class_info\n");
-    releaseMem(clazz->temp.inner_class_info);
+    if (clazz->references) {
+      releaseWordset(&clazz->references);
+    }
+    woempa(7, "Releasing supers and interfaces\n");
+    if (clazz->supers) {
+      releaseMem(clazz->supers);
+    }
+    if (clazz->staticFields) {
+      releaseMem(clazz->staticFields);
+    }
+
+    if (clazz->filename) {
+      deregisterString(clazz->filename);
+    }
+
+    if (clazz->temp.interface_index) {
+      woempa(7, "Releasing temp.interface_index\n");
+      releaseMem(clazz->temp.interface_index);
+    }
+
+    if (clazz->temp.inner_class_info) {
+      woempa(7, "Releasing temp.inner_class_info\n");
+      releaseMem(clazz->temp.inner_class_info);
+    }
+
+    if (clazz->resolution_monitor) {
+      woempa(7, "Releasing resolution_monitor\n");
+      x_monitor_delete(clazz->resolution_monitor);
+      releaseMem(clazz->resolution_monitor);
+    }
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+#ifndef THREAD_SAFE_FIFOS
+    if (clazz->cache_mutex) {
+      x_mutex_delete(clazz->cache_mutex);
+      releaseMem(clazz->cache_mutex);
+    }
+#endif
+
+    if (clazz->cache_fifo) {
+      releaseFifo(clazz->cache_fifo);
+    }
+#endif
   }
 
   woempa(7,"Deregistering %k\n", clazz);
   deregisterClazz(clazz, clazz->loader);  
 
-  woempa(7, "Releasing resolution_monitor\n");
-  x_monitor_delete(clazz->resolution_monitor);
-  releaseMem(clazz->resolution_monitor);
   if (clazz->failure_message) {
     woempa(7,"Deregistering failure message '%w'\n", clazz->failure_message);
     deregisterString(clazz->failure_message);
   }
-  woempa(7,"Releasing w_clazz at %p\n", clazz);
-  releaseMem(clazz);
+
+  if (!clazz->dims) {
+    woempa(7, "Releasing constant pool\n");
+    for (i = 1; i < (w_int)clazz->numConstants; i++) {
+      dissolveConstant(clazz, i);
+    }
+    if (clazz->tags){
+      releaseMem((void*)clazz->tags);
+    }
+    if (clazz->values){
+      releaseMem((void*)clazz->values);
+    }
+  }
+
+  woempa(7, "Deregistering [dotified] class name\n");
+  if (clazz->dotified) {
+    deregisterString(clazz->dotified);
+  }
+
+  deallocClazz(clazz);
 
   return freed;
 }
@@ -1999,6 +2066,7 @@ w_field getField(w_clazz clazz, w_string name) {
 ** as after the bootstrap phase every clazz gets a Class instance attached
 ** as soon as it is created.
 */
+#ifdef RUNTIME_CHECKS
 w_instance clazz2Class(w_clazz clazz) {
   w_instance Class;
 
@@ -2008,16 +2076,12 @@ w_instance clazz2Class(w_clazz clazz) {
 
   Class = clazz->Class;
   if (Class == NULL) {
-    Class = attachClassInstance(clazz);
-  }
-
-  if (!Class) {
-    wabort(ABORT_WONKA, "clazz %k has no Class", clazz);
+    wabort(ABORT_WONKA, "Gadzooks! %k->Class = NULL", clazz);
   }
 
   return Class;
-
 }
+#endif
 
 /*
 ** Get a copy of a reference field of a class
@@ -2030,8 +2094,7 @@ w_instance getStaticReferenceField(w_clazz clazz, w_int slot) {
 /*
 ** Set a reference field of a class.
 */
-void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
-  w_thread  thread = currentWonkaThread;
+void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child, w_thread thread) {
   w_boolean unsafe;
 
   mustBeInitialized(clazz);
@@ -2043,7 +2106,7 @@ void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
     setFlag(instance2flags(child), O_BLACK);
   }
 
-  if (!unsafe) {
+  if (thread && !unsafe) {
     enterSafeRegion(thread);
   }
 }
@@ -2051,8 +2114,8 @@ void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child) {
 /*
 ** Set a reference field of a class, when the context is known to be 'unsafe'.
 */
-void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child) {
-  threadMustBeUnsafe(currentWonkaThread);
+void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child, w_thread thread) {
+  threadMustBeUnsafe(thread);
 
   mustBeInitialized(clazz);
 

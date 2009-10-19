@@ -1,29 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ResourceBundle.java,v 1.2 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 package java.util;
 
@@ -60,7 +64,7 @@ public abstract class ResourceBundle {
       }
       check = check.parent;
     }
-    throw new MissingResourceException("key not found",this.getClass().getName(),key);
+    throw new MissingResourceException(this + ": key '" + key + "' not found",this.getClass().getName(),key);
   }
 
   public final String getString(String key) throws MissingResourceException {
@@ -95,8 +99,26 @@ public abstract class ResourceBundle {
     return ( i == -1 ? "" : name.substring(0,i));       	  	
   }
 
+  /**
+   ** Find or create the resource bundle corresponding to a given 'baseName'.
+   ** We search for bundles with the following names:
+   ** <ul><li>basename_lang_country_variant 
+   **     <li>basename_lang_country 
+   **     <li>basename_lang
+   **     <li>if the locale is not the default locale, the same three names
+   **         but for the default locale
+   **     <li>basename
+   ** </ul>
+   ** For each name we try to find first a class ans then a .properties file.
+   ** <p>[CG 20090108] Added negative caching to avoid repeated attempts
+   ** to load the same non-existent class or file. Note that this may not be
+   ** the Right Thing to do if users expect to be able to dynamically add
+   ** new resource bundles to the classpath. (In my view it would be better
+   ** to define a separate, OSGi-friendly API for this).
+   */
   private static final ResourceBundle getBundle(String baseName, Locale locale, ClassLoader loader, boolean defaultLoc)
     throws MissingResourceException {
+    boolean inNegativeCache;
 
     if (baseName == null){
       throw new NullPointerException();
@@ -106,42 +128,57 @@ public abstract class ResourceBundle {
           	
     String local = baseName+"_"+locale.toString();
     while (true) {
-      newBundle = (ResourceBundle) cache.get(local);
-      if (newBundle != null) {
-        return newBundle; //we found one in cache --> we have already loaded that bundle all OK
-      }
-      try {
-        rbClass =  Class.forName(local, true, loader);
-        newBundle = (ResourceBundle)rbClass.newInstance();
-        break;
-      }
-      catch(Exception cnfe){
-        // the class in not found or not suitable, how about a properties file ?
-        InputStream in = (loader == null ? ClassLoader.getSystemResourceAsStream(local.replace('.','/')+".properties") :
-        loader.getResourceAsStream(local.replace('.','/')+".properties"));
-        if (in == null) { // no properties file --> we cut down our string
-          local = cutEnd(local);
-          if ((local.equals(baseName)&& !defaultLoc)||local.equals("")) {
-            if (!defaultLoc) {
-              defaultLoc = true;
-              local = baseName+"_"+Locale.getDefault().toString();
-            }
-            else {
-              throw new MissingResourceException("couldn't find resourceBundle", baseName,locale.toString());
-            }
-          }
-          continue;
+      inNegativeCache = false;
+      Object cached = cache.get(local);
+      if (cached != null) {
+        if (cached instanceof String) {
+          inNegativeCache = true;
         }
-        // we have a properties file ...
+        else {
+          newBundle = (ResourceBundle)cached;
+          return newBundle; // found in cache
+        }
+      }
+      else {
         try {
-          newBundle = new PropertyResourceBundle(in);
-          break; //leave the WHILE- loop
+          rbClass =  Class.forName(local, true, loader);
+          newBundle = (ResourceBundle)rbClass.newInstance();
+          break;
         }
-        catch(IOException ioe) {
-          // something went wrong ??? --> lets look for something else ...
-          continue;
-        } 			
+        catch(Exception cnfe){
+        }
       }
+
+      // Not found in positive cache; either found in negative cache or we 
+      // tried to load the class and couldn't. Time to try something else ...
+      // How about a properties file ?
+      InputStream in = (loader == null ? ClassLoader.getSystemResourceAsStream(local.replace('.','/')+".properties") :
+      loader.getResourceAsStream(local.replace('.','/')+".properties"));
+      if (in == null) { // no properties file --> we cut down our string
+        if (!inNegativeCache) {
+          cache.put(local, baseName);
+        }
+        local = cutEnd(local);
+        if ((local.equals(baseName)&& !defaultLoc)||local.equals("")) {
+          if (!defaultLoc) {
+            defaultLoc = true;
+            local = baseName+"_"+Locale.getDefault().toString();
+          }
+          else {
+            throw new MissingResourceException("couldn't find resourceBundle '" + baseName + "' using locale '" + locale + (defaultLoc ? "' or default" : "'"), baseName,locale.toString());
+          }
+        }
+        continue;
+      }
+      // we have a properties file ...
+      try {
+        newBundle = new PropertyResourceBundle(in);
+        break; //leave the WHILE- loop
+      }
+      catch(IOException ioe) {
+        // something went wrong ??? --> lets look for something else ...
+        continue;
+      } 			
     }
 
     // We found a ResourceBundle now search for the parents ...      		

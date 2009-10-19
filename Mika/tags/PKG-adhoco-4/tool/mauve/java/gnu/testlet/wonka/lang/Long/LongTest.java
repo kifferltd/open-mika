@@ -18,647 +18,417 @@
    Boston, MA 02111-1307, USA.
 */
 
-// Tags: JLS1.0
+// Tags: JDK1.0
 
 package gnu.testlet.wonka.lang.Long;
 import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;
-import java.util.Properties;
 
 public class LongTest implements Testlet
 {
+
   protected static TestHarness harness;
-
-/**
-* tests the Long constructors Long(long) and Long(String), also checks the initialisation of the types
-* by calling on Long.equals and Long.longValue();
-* (by doing so, also tests the limits Long.MIN_VALUE and Long.MAX_VALUE
-*/
-  public void testConstructors()
-  {
-    harness.checkPoint("Long(long)/ Long");
-    Long a = new Long(0L);
-    Long b = new Long(1L);
-    Long c = new Long(0L);
-    Long d = a;
-    Long e = new Long(0xe);
-    long flong = 'f';
-    Long f = new Long(flong);
-    Long g = new Long((long)'a');
-    Integer i = new Integer(0);
-
-    harness.checkPoint("equals(java.lang.Object)boolean");
-    harness.check( a != null);
-    harness.check(!a.equals(null));
-    harness.check( a != b     );
-    harness.check(!a.equals(b));
-    harness.check( a != c     );
-    harness.check( a.equals(c));
-    harness.check( a == d     );
-    harness.check( a.equals(d));
-    harness.check( a == a     );
-    harness.check(!a.equals(i));
-
-    harness.checkPoint("longValue()long");
-    harness.check( a.longValue(), 0l);
-    harness.check( a.longValue(), a.longValue());
-    harness.check( a.longValue(), c.longValue());
-    harness.check( a.longValue(), d.longValue());
-    harness.check( a.longValue(), i.longValue());
-    harness.check( b.longValue(), 1l);
-    harness.check( e.longValue(), 14l);
-    harness.check( f.longValue(), flong);
-    harness.check( g.longValue(), (long)'a');
-    harness.check( g.longValue(), 0x61l);
-    harness.check( g.longValue(), 97l);
-
-    harness.checkPoint("MAX_VALUE(public)long");
-    harness.check (Long.MAX_VALUE,  0x7fffffffffffffffL);
-    harness.checkPoint("MIN_VALUE(public)long");
-    harness.check (Long.MIN_VALUE, -0x8000000000000000L);
-
-    harness.checkPoint("Long(java.lang.String)");
-    constructMustSucceed("1", 1);
-    constructMustSucceed("9223372036854775807", 0x7fffffffffffffffL);
-    constructMustSucceed("-9223372036854775808", -0x8000000000000000L);
-    constructMustFail("9223372036854775808");
-    constructMustFail("-9223372036854775809");
-    constructMustFail("0x77");
-    constructMustFail("#77");
-    constructMustFail("4f");
-    constructMustFail("0x4f");
-    constructMustFail(" ");
-    constructMustFail("");
-    constructMustFail(null);
-    constructMustFail("  1 ");
-  }
-
-  private void constructMustSucceed(String line, long expected)
-  {
-    try
-    {
-      Long constructed = new Long(line);
-      harness.check(constructed.longValue(), expected);
-    }
-    catch(NumberFormatException e8)
-    {
-      harness.fail("Could not construct desired value <" + line + ">\n"+e8);
-    }
-
-  }
-
-  private void constructMustFail(String line)
-  {
-    try
-    {
-      new Long(line);
-      harness.fail("Attempt to construct out-of-range long < " + line + " > ");
-    }
-    catch(Exception e)//(NumberFormatException e8)
-    {
-      harness.check(true);
-    }
-
-  }
-
-/**
-* tests the compareTo compare/orderring functions
-*/
-	public void testCompare()
+	public void test_Basics()
 	{
-		harness.checkPoint("compareTo(java.lang.Long)int");
-		checkCompare( 100L, 101L);
-		checkCompare(   0L, 101L);
-		checkCompare(-101L,-100L);
-		checkCompare(-100L,   0L);
-		checkCompare(-101L, 100L);
-		checkCompare(0x7ffffffffffffff0L, Long.MAX_VALUE);
-		checkCompare(Long.MIN_VALUE,-0x7ffffffffffffff0L);
-		
-		harness.checkPoint("compareTo(java.lang.Object)int");
-    try
-    {
-  		Long cha1 = new Long((long)'a');
-      harness.check (cha1.compareTo(new Long((long)'a') ) == 0 );
-    }
-    catch(ClassCastException e)
-    {
-      harness.fail("Exception comparing two instances of class Long ");
-    }
+		long min1 = Long.MIN_VALUE;
+		long min2 = 0x8000000000000000L;
+		long max1 = Long.MAX_VALUE;
+		long max2 = 0x7fffffffffffffffL;
 
-    try
-    {
-  		Long cha1 = new Long((long)'a');
-  		Character cha2 = new Character('a');
-      cha1.compareTo(cha2);
-      harness.fail("Attempt to compare two different objects ");
-    }
-    catch(ClassCastException e)
-    {
-      harness.check(true);
-    }
+		harness.check(!( min1 != min2 || max1 != max2 ), 
+			"test_Basics - 1" );
 
-    try
-    {
-  		Long cha1 = new Long(0x7ffffffeL);
-  		Integer cha2 = new Integer(0x7ffffffe);
-      cha1.compareTo(cha2);
-      harness.fail("Attempt to compare two different objects ");
-    }
-    catch(ClassCastException e)
-    {
-      harness.check(true);
-    }
-	}
-	
-	private void checkCompare(long smallvalue, long bigvalue)
-	{
-	  try
-	  {
-	    Long smalllong = new Long(smallvalue);
-	    Long   biglong = new Long(  bigvalue);
-	
-	    if(smalllong.compareTo(biglong) > 0)
-	      harness.fail("compareTo detected <"+smallvalue+"> bigger then <"+bigvalue+">");
-	    else if(smalllong.compareTo(biglong) == 0)
-	      harness.fail("compareTo detected <"+smallvalue+"> equal to <"+bigvalue+">");
-	    else
-	      harness.check(true);
-	
-	    if(biglong.compareTo(smalllong) < 0)
-	      harness.fail("compareTo detected <"+bigvalue+"> smaller then <"+smallvalue+">");
-	    else if(biglong.compareTo(smalllong) == 0)
-	      harness.fail("compareTo detected <"+bigvalue+"> equal to <"+smallvalue+">");
-	    else
-	      harness.check(true);
-	
-	    if(smalllong.compareTo(smalllong)!= 0)
-	      harness.fail("compareTo detected <"+smallvalue+"> not equal to itselves");
-	    else
-	      harness.check(true);
-	
-	    if(biglong.compareTo(biglong)!= 0)
-	      harness.fail("compareTo detected <"+bigvalue+"> not equal to itselves");
-	    else
-	      harness.check(true);
-	  }
-	  catch(Exception e)
-	  {
-	    harness.fail("Exception while comparing <"+ smallvalue+ "> and <" + bigvalue + ">");
-	  }
-	}
-	
-/**
-* tests the conversion Long to and from String using toString() and decode() functions
-*/
-	public void testStringConversion()
-	{
-		harness.checkPoint("toString(long)java.lang.String");
-		long along = (long)'a';
-		long zerolong = 0;
-		Long a = new Long(along);
-		Long zero = new Long(0);
-		String astring = "97";
-		
-		harness.check(zero.toString(), "0");
-		harness.check(Long.toString(zerolong), "0");
-		harness.check(a.toString(), astring);
-		harness.check(a.toString(), Long.toString(along));
-		
- 		harness.checkPoint("toBinaryString(long)java.lang.String");
-    harness.check (Long.toBinaryString(0L), "0");
-    harness.check (Long.toBinaryString(1L), "1");
-    harness.check (Long.toBinaryString(3L), "11");
-    harness.check (Long.toBinaryString(-1L),
-	     "1111111111111111111111111111111111111111111111111111111111111111");
-		
-    harness.checkPoint ("toOctalString(long)java.lang.String");
-    harness.check (Long.toOctalString(0L), "0");
-    harness.check (Long.toOctalString(1L), "1");
-    harness.check (Long.toOctalString(9L), "11");
-    harness.check (Long.toOctalString(-1L),"1777777777777777777777");
+		Long i1 = new Long(100);
 
-    harness.checkPoint ("toHexString(long)java.lang.String");
-    harness.check (Long.toHexString(0L), "0");
-    harness.check (Long.toHexString(1L), "1");
-    harness.check (Long.toHexString(17L),"11");
-    harness.check (Long.toHexString(31L),"1f");
-    harness.check (Long.toHexString(-1L),"ffffffffffffffff");
-		
-		harness.checkPoint("toString(long,int)java.lang.String");
-		harness.check(Long.toString(along,2) , Long.toBinaryString(along));
-		harness.check(Long.toString(along,8) , Long.toOctalString(along));
-    harness.check(Long.toString(along,10), Long.toString(along));
-		harness.check(Long.toString(along,16), Long.toHexString(along));
-		
-		harness.check(Long.toString(along,1), Long.toString(along));
-		harness.check(Long.toString(along,37), Long.toString(along));
-				
-		harness.check(Long.toString(4l,3),"11");
-		harness.check(Long.toString(11l,11), "10");
-		harness.check(Long.toString(21l,11), "1a");
-		harness.check(Long.toString(21l, 20),"11");
-		harness.check(Long.toString(20l,20), "10");
-		harness.check(Long.toString(39l,20), "1j");
-		harness.check(Long.toString(37l,36),"11");
-		harness.check(Long.toString(36l,36), "10");
-		harness.check(Long.toString(71l,36), "1z");
-		
+		harness.check(!( i1.longValue() != 100 ), 
+			"test_Basics - 2" );
 
-    harness.checkPoint("decode(java.lang.String)java.lang.Long");
-		decodeMustPass(   "11", 11L );
-		decodeMustPass(  "011",  9L);
-		decodeMustPass(  "#11", 17L);
-		decodeMustPass( "0x11", 17L);
-		decodeMustPass( "0xCAFEBABBE", 0xcafebabbel);
-		decodeMustPass( "0xd0edef0efe", 0xD0EDEf0EFEL);
-		decodeMustPass( "0", 0);
-		
-		//harness.checkPoint("Byte.decode(String): negative syntax");
-		/** NOTE: for some reason, the Java SDK seems to demand 0-7 for -07, #-f for -#f and 0x-f for -0xf. allthough the java compiler protests
-		when trying to compile a string 0x-f...  */
-		decodeMustPass(  "-11",-11L);
-		decodeMustPass( "-011", -9L);
-		decodeMustFail( "0-11");
-		decodeMustPass( "-#11",-17L);
-		decodeMustFail( "#-11");
-		decodeMustPass("-0x11",-17L);
-		decodeMustFail("0x-11");
-		
-		decodeMustPass( "0x7fffffffffffffff", Long.MAX_VALUE);
-		decodeMustPass( "0x7FFFFFFFFFFFFFFF", Long.MAX_VALUE);
-		
-		harness.check(Long.decode( "0x7fffffffffffffff"), new Long(Long.MAX_VALUE));
-		harness.check(Long.decode( "0x7FFFFFFFFFFFFFFF"), new Long(Long.MAX_VALUE));
-		harness.check(Long.decode("-0x8000000000000000"), new Long(Long.MIN_VALUE));
-		
-		//harness.checkPoint("Long.decode(String) : exceptions");
-		decodeMustFail( "0x8000000000000000");
-		decodeMustFail("-0x8000000000000001");
-		decodeMustFail( "019");
-		decodeMustFail("122.5");
-		decodeMustFail(  "4F");
-		decodeMustFail( "#4G");
-		decodeMustFail("0x4G");
-		decodeMustFail(" 11");
-		decodeMustFail(" ");
-		decodeMustFail("");
-		decodeMustFail(null);
- 		
-	}
-	
-	private void decodeMustPass(String line, long checkvalue)
-	{
-	  try
-	  {
-	    Long decoded = Long.decode(line);
-	    harness.check( decoded.longValue(),checkvalue );
-	  }
-	  catch(Exception e)
-	  {
-	    harness.fail("Exception while trying to decode string <" + line + ">");
-	  }
-	}
-		private void decodeMustFail(String line)
-	{
-	  try
-	  {
-	    Long.decode(line);
-	    harness.fail("Attempt to decode illegal string format <" + line + ">");
-	  }
-	  catch(Exception e)
-	  {
-	    harness.check(true);
-	  }
-	}
-	
-/**
-* tests the conversion from String to Long class/long primitive with different radix
-*/
-	public void testStringValueParsing()
-	{	
-		String astring = new String("100");;
-		Long target = new Long(100);
-		
-		harness.checkPoint("parseLong(java.lang.String)long");
-		harness.check(Long.parseLong(astring), 100);
-		harness.check( (Long.valueOf(astring)).equals(target) );
-		harness.check(Long.parseLong("0"), 0);
-		harness.check(Long.parseLong("-34"), -34);
-		harness.check( (Long.valueOf("-56")).equals(new Long(-56)) );
-		harness.check(Long.parseLong("9223372036854775807"), 9223372036854775807l);
-		harness.check( (Long.valueOf("9223372036854775807")).equals(new Long(Long.MAX_VALUE)) );
-		harness.check(Long.parseLong("-9223372036854775808"), -9223372036854775808l);
-		harness.check( (Long.valueOf("-9223372036854775808")).equals(new Long(Long.MIN_VALUE)) );
-		
-		harness.checkPoint("valueOf(java.lang.String)java.lang.Long");
- 	  parseCheckMustFail( "9223372036854775808", 10);
- 	  valueCheckMustFail( "9223372036854775808", 10);
- 	  parseCheckMustFail("-9223372036854775809", 10);
- 	  valueCheckMustFail("-9223372036854775809", 10);
- 	  parseCheckMustFail("0x60", 10);
- 	  valueCheckMustFail("0x60", 10);
- 	  parseCheckMustFail(" ", 10);
- 	  valueCheckMustFail(" ", 10);
- 	  parseCheckMustFail("", 10);
- 	  valueCheckMustFail("", 10);
- 	  parseCheckMustFail(null, 10);
- 	  valueCheckMustFail(null, 10);
- 	  parseCheckMustFail(" 78  ", 10);
- 	  valueCheckMustFail(" 78  ", 10);
-		
-	
-		//harness.checkPoint("long parseLong(String, radix)  / Long valueOf(String, radix)");
-		harness.check(Long.parseLong( "12", 10), Long.parseLong( "12") );
-		harness.check(Long.parseLong("-34", 10), Long.parseLong("-34") );
-		harness.check( (Long.valueOf( "56", 10)),  Long.valueOf( "56") );
-		harness.check( (Long.valueOf("-78", 10)),  Long.valueOf("-78") );
-		
-		harness.check(Long.parseLong( "11", 2), Long.parseLong( "3"), "parseLong binary " );
-		harness.check(Long.parseLong("-11", 2), Long.parseLong("-3"), "parseLong binary negative" );
-		harness.check(  Long.valueOf( "11", 2),   Long.valueOf( "3"),   "valueOf binary " );
-		harness.check(  Long.valueOf("-11", 2),   Long.valueOf("-3"),   "valueOf binary negative" );
-
-		harness.check(Long.parseLong( "11", 3), Long.parseLong( "4"), "parseLong 3-based " );
-		harness.check(Long.parseLong("-11", 3), Long.parseLong("-4"), "parseLong 3-based negative" );
-		harness.check(  Long.valueOf( "11", 3),   Long.valueOf( "4"),   "valueOf 3-based " );
-		harness.check(  Long.valueOf("-11", 3),   Long.valueOf("-4"),   "valueOf 3-based negative" );
-
-		harness.check(Long.parseLong( "11", 8), Long.parseLong( "9"), "parseLong octal " );
-		harness.check(Long.parseLong("-11", 8), Long.parseLong("-9"), "parseLong octal negative" );
-		harness.check(  Long.valueOf( "11", 8),   Long.valueOf( "9"),   "valueOf octal " );
-		harness.check(  Long.valueOf("-11", 8),   Long.valueOf("-9"),   "valueOf octal negative" );
-		
-		harness.check(Long.parseLong( "11", 16), Long.parseLong( "17"), "parseLong hex " );
-		harness.check(Long.parseLong("-11", 16), Long.parseLong("-17"), "parseLong hex negative" );
-		harness.check(  Long.valueOf( "11", 16),   Long.valueOf( "17"),   "valueOf hex " );
-		harness.check(  Long.valueOf("-11", 16),   Long.valueOf("-17"),   "valueOf hex negative" );
-		harness.check(Long.parseLong( "f" , 16), Long.parseLong( "15"), "parseLong hex " );
-		harness.check(Long.parseLong("-f" , 16), Long.parseLong("-15"), "parseLong hex negative" );
-		harness.check(Long.parseLong( "F" , 16), Long.parseLong( "15"), "parseLong hex capital" );
-		harness.check(  Long.valueOf( "f" , 16),   Long.valueOf( "15"),   "valueOf hex " );
-		harness.check(  Long.valueOf("-f" , 16),   Long.valueOf("-15"),   "valueOf hex negative" );
-		harness.check(  Long.valueOf( "F" , 16),   Long.valueOf( "15"),   "valueOf hex capital" );
-		
-		harness.check(Long.parseLong( "11", 25), Long.parseLong( "26"), "parseLong 25-based " );
-		harness.check(Long.parseLong("-11", 25), Long.parseLong("-26"), "parseLong 25-based negative" );
-		harness.check(  Long.valueOf( "11", 25),   Long.valueOf( "26"),   "valueOf 25-based " );
-		harness.check(  Long.valueOf("-11", 25),   Long.valueOf("-26"),   "valueOf 25-based negative" );
-		harness.check(Long.parseLong( "o" , 25), Long.parseLong( "24"), "parseLong 25-based " );
-		harness.check(Long.parseLong( "O" , 25), Long.parseLong( "24"), "parseLong 25-based capital" );
-		harness.check(Long.parseLong("-o" , 25), Long.parseLong("-24"), "parseLong 25-based negative" );
-		harness.check(  Long.valueOf( "o" , 25),   Long.valueOf( "24"),   "valueOf 25-based " );
-		harness.check(  Long.valueOf( "O" , 25),   Long.valueOf( "24"),   "valueOf 25-based capital" );
-		harness.check(  Long.valueOf("-o" , 25),   Long.valueOf("-24"),   "valueOf 25-based negative" );
-		
-		harness.check(Long.parseLong( "11", 36), Long.parseLong( "37"), "parseLong 36-based " );
-		harness.check(Long.parseLong("-11", 36), Long.parseLong("-37"), "parseLong 36-based negative" );
-		harness.check(  Long.valueOf( "11", 36),   Long.valueOf( "37"),   "valueOf 36-based " );
-		harness.check(  Long.valueOf("-11", 36),   Long.valueOf("-37"),   "valueOf 36-based negative" );
-		harness.check(Long.parseLong( "z" , 36), Long.parseLong( "35"), "parseLong 36-based " );
-		harness.check(Long.parseLong( "Z" , 36), Long.parseLong( "35"), "parseLong 36-based capital" );
-		harness.check(Long.parseLong("-z" , 36), Long.parseLong("-35"), "parseLong 36-based negative" );
-		harness.check(  Long.valueOf( "z" , 36),   Long.valueOf( "35"),   "valueOf 36-based " );
-		harness.check(  Long.valueOf( "Z" , 36),   Long.valueOf( "35"),   "valueOf 36-based capital" );
-		harness.check(  Long.valueOf("-z" , 36),   Long.valueOf("-35"),   "valueOf 36-based negative" );
-		
-		
-		//harness.checkPoint("parseLong(String, long)/ valueOf(String, int) : exceptions");
-  	  parseCheckMustFail(" 78  ", 2);
-  	  valueCheckMustFail(" 78  ", 2);
-  	  parseCheckMustFail(" 78  ", 3);
-  	  valueCheckMustFail(" 78  ", 3);
-  	  parseCheckMustFail(" 78  ", 8);
-  	  valueCheckMustFail(" 78  ", 8);
-  	  parseCheckMustFail(" 78  ", 16);
-  	  valueCheckMustFail(" 78  ", 16);
-  	  parseCheckMustFail(" 78  ", 25);
-  	  valueCheckMustFail(" 78  ", 25);
-  	  parseCheckMustFail(" 78  ", 36);
-  	  valueCheckMustFail(" 78  ", 36);
-		
-		//harness.checkPoint("parseLong(String, int)/ valueOf(String, int) : radix exceptions");
-		  parseCheckMustFail("11",1);
-		  valueCheckMustFail("11", 1);
-		  parseCheckMustFail("11",37);
-		  valueCheckMustFail("11", 37);
-		
-		//harness.checkPoint("parseLong(String, int)/ valueOf(String, int) : out-of-bound exceptions");
-		  parseCheckMustFail("3",2);
-		  valueCheckMustFail("3", 2);
-		  parseCheckMustFail("5",4);
-		  valueCheckMustFail("5", 4);
-		  parseCheckMustFail("9",8);
-		  valueCheckMustFail("9", 8);
-		  parseCheckMustFail("g",16);
-		  valueCheckMustFail("g", 16);
-		  parseCheckMustFail("z",35);
-		  valueCheckMustFail("z", 35);
-		
-		//harness.checkPoint("parseLong(String, int)/ valueOf(String, int) : int boundaries exceptions");
-		  parseCheckMustFail("1000000000000000000000000000000000000000000000000000000000000000",2);
-		  valueCheckMustFail("1000000000000000000000000000000000000000000000000000000000000000", 2);
-		  parseCheckMustFail("1000000000000000000000",8);
-		  valueCheckMustFail("1000000000000000000000", 8);
-		  parseCheckMustFail("8000000000000000",16);
-		  valueCheckMustFail("8000000000000000", 16);
-		  parseCheckMustFail("8000000000000",32);
-		  valueCheckMustFail("8000000000000", 32);
-		
-		  parseCheckMustFail("-1000000000000000000000000000000000000000000000000000000000000001",2);
-		  valueCheckMustFail("-1000000000000000000000000000000000000000000000000000000000000001", 2);
-		  parseCheckMustFail("-1000000000000000000001",8);
-		  valueCheckMustFail("-1000000000000000000001", 8);
-		  parseCheckMustFail("-8000000000000001",16);
-		  valueCheckMustFail("-8000000000000001", 16);
-		  parseCheckMustFail("-8000000000001",32);
-		  valueCheckMustFail("-8000000000001", 32);
-	
-	}
-
-  private void parseCheckMustFail(String line, int radix)
-  {
-		try
-		{
-		  Long.parseLong(line, radix);
-		  harness.fail("Attempt to parse illegal int string <" + line + ">");
+		try {
+		harness.check(!( (new Long("234")).longValue() != 234 ), 
+			"test_Basics - 3" );
 		}
-		catch(NumberFormatException e)
+		catch ( NumberFormatException e )
 		{
-		  harness.check(true);
+			harness.fail("test_Basics - 3" );
 		}
-  }
 
-  private void valueCheckMustFail(String line, int radix)
-  {
-		try
+		try {
+		harness.check(!( (new Long("-FF")).longValue() != -255 ), 
+			"test_Basics - 4" );
+		}
+		catch ( NumberFormatException e )
 		{
-		  Long.valueOf(line, radix);
-		  harness.fail("Attempt to get value from illegal long string <" + line + ">");
 		}
-		catch(NumberFormatException e)
+
+		try {
+		    new Long("babu");
+			harness.fail("test_Basics - 5" );
+		}
+		catch ( NumberFormatException e )
 		{
-		  harness.check(true);
 		}
-  }
-
-
-/**
-* tests the conversion between the Boolean object to the different primitives (short, integer , float...)
-*/
-	public void testValueConversion()
-	{
-		Long zero  = new Long( 0 );
-		Long along = new Long((long)'a');
-		Long min   = new Long(Long.MIN_VALUE);
-		Long max   = new Long(Long.MAX_VALUE);
-		
-		
-		// as the check comparisons by itself convert to longeger, float or string, it is better to do a direct (value == expected)??
-		// instead of Boolean check(long target, long expected)		
-		harness.checkPoint("Value conversins");
-		harness.check( zero.byteValue() == 0);
-		harness.check(along.byteValue() == (byte)'a');
-		harness.check(along.byteValue() == (byte)(along.longValue()) );		
-		harness.check(max.byteValue() == (byte) 9223372036854775807l);
-		harness.check(min.byteValue() == (byte)-9223372036854775808l);
-		
-		//harness.checkPoint("Value conversins: Long => shortValue");
-		harness.check( zero.shortValue() == 0);
-		harness.check(along.shortValue() == (short)'a');
-		harness.check(along.shortValue() == (short)(along.longValue()) );		
-		harness.check(max.shortValue() == (short) 9223372036854775807l);
-		harness.check(min.shortValue() == (short)-9223372036854775808l);
-		
-		//harness.checkPoint("Value conversions: Long => intValue");
-		harness.check( zero.intValue() == 0);
-		harness.check(along.intValue() == (int)'a');
-		harness.check(max.intValue() == (int) 9223372036854775807l);
-		harness.check(min.intValue() == (int)-9223372036854775808l);
-		
-		//harness.checkPoint("Value conversins: Long => longValue");
-		harness.check( zero.longValue() == 0l);
-		harness.check(along.longValue() == (long)'a');
-		harness.check(along.longValue() == (long)(along.longValue()) );		
-		harness.check(max.longValue() == 9223372036854775807l);
-		harness.check(min.longValue() ==-9223372036854775808l);
-		
-		//harness.checkPoint("Value conversins: Long => floatValue");
-		harness.check( zero.floatValue() == 0.0f);
-		harness.check(along.floatValue() == (float)'a');
-		harness.check(along.floatValue() == (float)(along.longValue()) );		
-		harness.check(max.floatValue() == 9223372036854775807.0f);
-		harness.check(min.floatValue() ==-9223372036854775808.0f);
-		
-		//harness.checkPoint("Value conversins: Long => doubleValue");
-		harness.check( zero.doubleValue() ,0.0);
-		harness.check(along.doubleValue() ,(double)'a');
-		harness.check(along.doubleValue() ,(double)(along.longValue()) );		
-		harness.check(max.doubleValue() , 9223372036854775807.0);
-		harness.check(min.doubleValue() ,-9223372036854775808.0);
 	}
 
-/**
-* tests the properties put() and getLong() methods
-*/
-  public void testProperties()
-  {
-      // Augment the System properties with the following.
-      // Overwriting is bad because println needs the
-      // platform-dependent line.separator property.
-      harness.checkPoint("getLong(java.lang.String)long");
-      Properties p = System.getProperties();
-      p.put("along", "97");
-      p.put("zero" , "0");
-      p.put("newa" , "97");
-      Long along = new Long('a');
-
-      harness.check (Long.getLong("along"), along);
-      harness.check (Long.getLong("zero"), new Long(0));
-      harness.check (Long.getLong("along") == Long.getLong("newa") );
-      harness.check (Long.getLong("along") != Long.getLong("zero") );
-      harness.check (Long.getLong("blong") == null );
-      harness.check (Long.getLong("clong",97), along );
-      harness.check (Long.getLong("dlong", along), along);
-  }
-
-/**
-* tests the Boolean object overwrites hashCode()
-*/
-  public void testHashCode()
-  {
-    Long a = new Long((long)'a');
-    long blong = 0x123456789abcdef0l;
-    Long b = new Long(blong);
-    Long zero = new Long( 0);
-    Long newa = new Long((long)'a');
-
-    harness.checkPoint("hashCode()int");
-    harness.check (a.hashCode(), newa.hashCode());
-    harness.check (a.hashCode(), (int)'a');
-    harness.check (b.hashCode(), (int)(blong^blong>>>32));
-    harness.check (zero.hashCode(),0);
-  }
-
-/**
-* tests the Boolean object overwrites getClass()
-*/
-  public void testGetClass()
-  {
-    Long a = new Long((long)'a');
-    Long b = new Long( 0l);
-    Integer i = new Integer(0);
-    Long c = new Long(0x123456789abcdef0l);
-
-    harness.checkPoint("TYPE(public)java.lang.Class");
-    try
-    {
-      harness.check (a instanceof Long );
-      harness.check (b instanceof Long );
-      harness.check (a.getClass().getName(), "java.lang.Long");
-      harness.check (b.getClass().getName(), "java.lang.Long");
-      harness.check (a.getClass(), Class.forName("java.lang.Long") );
-      harness.check (b.getClass(), Class.forName("java.lang.Long") );
-      harness.check (i.getClass() != Class.forName("java.lang.Long") );
-      harness.check (a.getClass(), b.getClass());
-      harness.check (a.getClass() != i.getClass());
-      harness.check ((Long.TYPE).getName(), "long");
-//      harness.check ( Boolean.TYPE, Class.forName("boolean"));
-    }
-    catch (ClassNotFoundException e)
-    {
-      harness.fail("error finding class name");
-      harness.debug(e);
-    }
-
-  }
-
-/**
-* calls the tests described
-*/
-  public void test (TestHarness newharness)
+	public void test_toString()
 	{
-		harness = newharness;
-		harness.setclass("java.lang.Long");
-		int i = 45;
-		int j = -999;
-		harness.check(j/i ,-22 , "-999 / 45 = -22");
-		j = 999;
-		harness.check(j/i , 22 , " 999 / 45 =  22");
-		i = -45;
-		harness.check(j/i ,-22 , " 999 /-45 = -22");
-		j = -999;
-		harness.check(j/i , 22 , "-999 /-45 =  22");
-		
-		
-		testConstructors();
-		testCompare();
-		testStringConversion();
-		testStringValueParsing();
-		testValueConversion();
-//	 	testProperties(); // not defined
-	 	testHashCode();
-	 	testGetClass();
+		harness.check(!( !( new Long(123)).toString().equals("123")), 
+			"test_toString - 1" );
+		harness.check(!( !( new Long(-44)).toString().equals("-44")), 
+			"test_toString - 2" );
+
+		harness.check(!( !Long.toString( 234 ).equals ("234" )), 
+			"test_toString - 3" );
+		harness.check(!( !Long.toString( -34 ).equals ("-34" )), 
+			"test_toString - 4" );
+		harness.check(!( !Long.toString( -34 ).equals ("-34" )), 
+			"test_toString - 5" );
+
+		harness.check(!( !Long.toString(99 , 1 ).equals("99")), 
+			"test_toString - 6" );
+		harness.check(!( !Long.toString(99 , 37 ).equals("99")), 
+			"test_toString - 7" );
+
+		harness.check(!( !Long.toString(15 , 2 ).equals("1111")), 
+			"test_toString - 8" );
+		harness.check(!( !Long.toString(37 , 36 ).equals("11")), 
+			"test_toString - 9" );
+		harness.check(!( !Long.toString(31 , 16 ).equals("1f")), 
+			"test_toString - 10" );
+
+
+		harness.check(!( !Long.toString(-99 , 1 ).equals("-99")), 
+			"test_toString - 11" );
+		harness.check(!( !Long.toString(-99 , 37 ).equals("-99")), 
+			"test_toString - 12" );
+
+		harness.check(!( !Long.toString(-15 , 2 ).equals("-1111")), 
+			"test_toString - 13" );
+		harness.check(!( !Long.toString(-37 , 36 ).equals("-11")), 
+			"test_toString - 14" );
+		harness.check(!( !Long.toString(-31 , 16 ).equals("-1f")), 
+			"test_toString - 15" );
 	}
+
+	public void test_equals()
+	{
+		Long i1 = new Long(23);
+		Long i2 = new Long(-23);
+
+		harness.check(!( !i1.equals( new Long(23))), 
+			"test_equals - 1" );
+		harness.check(!( !i2.equals( new Long(-23))), 
+			"test_equals - 2" );
+
+		
+		harness.check(!( i1.equals( i2 )), 
+			"test_equals - 3" );
+
+		harness.check(!( i1.equals(null)), 
+			"test_equals - 4" );
+	}
+
+	public void test_hashCode( )
+	{
+		Long b1 = new Long(34395555);
+		Long b2 = new Long(-34395555);
+		harness.check(!( b1.hashCode() != ((int)(b1.longValue()^(b1.longValue()>>>32)))  
+			|| b2.hashCode() != ((int)(b2.longValue()^(b2.longValue()>>>32))) ), 
+			"test_hashCode" );
+	}
+
+	public void test_intValue( )
+	{
+		Long b1 = new Long(32767);
+		Long b2 = new Long(-32767);
+
+		harness.check(!( b1.intValue() != 32767 ),  
+			"test_intValue - 1" );
+
+		harness.check(!( b2.intValue() != -32767 ),  
+			"test_intValue - 2" );
+	}
+	public void test_shortbyteValue( )
+	{
+		Long b1 = new Long(32767);
+		Long b2 = new Long(-32767);
+
+		harness.check(!( b1.byteValue() != (byte)32767 ),  
+			"test_shortbyteValue - 1" );
+
+		harness.check(!( b2.byteValue() != (byte)-32767 ),  
+			"test_shortbyteValue - 2" );
+		harness.check(!( b1.shortValue() != (short)32767 ),  
+			"test_shortbyteValue - 3" );
+
+		harness.check(!( b2.shortValue() != (short)-32767 ),  
+			"test_shortbyteValue - 4" );
+	}
+
+	public void test_longValue( )
+	{
+		Long b1 = new Long(-9223372036854775807L);
+		Long b2 = new Long(9223372036854775807L);
+
+		harness.check(!( b1.longValue() != (long)-9223372036854775807L ),  
+			"test_longValue - 1" );
+
+		harness.check(!( b2.longValue() != 9223372036854775807L ),  
+			"test_longValue - 2" );
+	}
+	public void test_floatValue( )
+	{
+		Long b1 = new Long(3276);
+		Long b2 = new Long(-3276);
+
+		harness.check(!( b1.floatValue() != 3276.0f ),  
+			"test_floatValue - 1" );
+
+		harness.check(!( b2.floatValue() != -3276.0f ),  
+			"test_floatValue - 2" );
+	}
+	public void test_doubleValue( )
+	{
+		Long b1 = new Long(0);
+		Long b2 = new Long(30);
+
+		harness.check(!( b1.doubleValue() != 0.0 ),  
+			"test_doubleValue - 1" );
+
+		harness.check(!( b2.doubleValue() != 30.0 ),  
+			"test_doubleValue - 2" );
+	}
+
+	public void test_toHexString()
+	{
+		String str, str1;
+
+		str = Long.toHexString(8375);
+		str1 = Long.toHexString( -5361 ); 
+
+		harness.check(!( !str.equalsIgnoreCase("20B7")), 
+			"test_toHexString - 1" );
+
+		harness.check(!( !str1.equalsIgnoreCase("ffffffffffffeb0f")), 
+			"test_toHexString - 2" );	
+	}
+
+	public void test_toOctalString()
+	{
+		String str, str1;
+		str = Long.toOctalString(5847);
+		str1= Long.toOctalString(-9863 );
+
+		harness.check(!( !str.equals("13327")), 
+			"test_toOctalString - 1" );
+
+		harness.check(!( !str1.equals("1777777777777777754571")), 
+			"test_toOctalString - 2" );	
+	}
+
+	public void test_toBinaryString()
+	{
+		String str1 = Long.toBinaryString( -5478 ); 
+		harness.check(!( !Long.toBinaryString(358).equals("101100110")), 
+			"test_toBinaryString - 1" );
+
+		harness.check(!( !str1.equals("1111111111111111111111111111111111111111111111111110101010011010")), 
+			"test_toBinaryString - 2" );	
+	}
+
+	public void test_parseLong()
+	{
+		harness.check(!( Long.parseLong("473") != Long.parseLong("473" , 10 )), 
+			"test_parseLong - 1" );	
+
+		harness.check(!( Long.parseLong("0" , 10 ) != 0L ),  
+			"test_parseLong - 2" );	
+
+		harness.check(!( Long.parseLong("473" , 10 ) != 473L ),  
+			"test_parseLong - 3" );	
+		harness.check(!( Long.parseLong("-0" , 10 ) != 0L ),  
+			"test_parseLong - 4" );	
+		harness.check(!( Long.parseLong("-FF" , 16 ) != -255L ),  
+			"test_parseLong - 5" );	
+		harness.check(!( Long.parseLong("1100110" , 2 ) != 102L ),  
+			"test_parseLong - 6" );	
+		harness.check(!( Long.parseLong("2147483647" , 10 )  !=  2147483647L ),  
+			"test_parseLong - 7" );	
+		harness.check(!( Long.parseLong("-2147483647" , 10 ) != -2147483647L ),  
+			"test_parseLong - 8" );	
+
+		try {
+			Long.parseLong("99" , 8 );
+			harness.fail("test_parseLong - 10" );	
+		}catch ( NumberFormatException e ){}
+
+		try {
+			Long.parseLong("Hazelnut" , 10 );
+			harness.fail("test_parseLong - 11" );	
+		}catch ( NumberFormatException e ){}
+
+        	harness.check(!( Long.parseLong("Hazelnut" , 36 ) != 1356099454469L ), 
+			"test_parseLong - 12" );	
+
+
+        	long_hex_ok("-8000000000000000", -0x8000000000000000L);
+        	long_hex_ok("7fffffffffffffff", 0x7fffffffffffffffL);
+        	long_hex_ok("7ffffffffffffff3", 0x7ffffffffffffff3L);
+        	long_hex_ok("7ffffffffffffffe", 0x7ffffffffffffffeL);
+        	long_hex_ok("7ffffffffffffff0", 0x7ffffffffffffff0L);
+
+        	long_hex_bad("80000000000000010");
+        	long_hex_bad("7ffffffffffffffff");
+        	long_hex_bad("8000000000000001");
+        	long_hex_bad("8000000000000002");
+	        long_hex_bad("ffffffffffffffff");
+       		long_hex_bad("-8000000000000001");
+        	long_hex_bad("-8000000000000002");
+
+        	long_dec_ok("-9223372036854775808", -9223372036854775808L);
+        	long_dec_ok("-9223372036854775807", -9223372036854775807L);
+        	long_dec_ok("-9223372036854775806", -9223372036854775806L);
+ 		long_dec_ok("9223372036854775807", 9223372036854775807L);
+        	long_dec_ok("9223372036854775806", 9223372036854775806L);
+        	long_dec_bad("-9223372036854775809");
+       		long_dec_bad("-9223372036854775810");
+        	long_dec_bad("-9223372036854775811");
+        	long_dec_bad("9223372036854775808");
+	}
+
+   	static void long_hex_ok ( String s, long ref ) {
+        	try {
+           		long l = Long.parseLong(s, 16);
+            		if (ref != l) {
+				System.out.println(
+				" Error : long_hex_ok failed - 1 " +
+				" expected " + ref + " actual " + l );
+			}
+		}
+		catch ( NumberFormatException e )
+		{
+			System.out.println(
+			       " Error : long_hex_ok failed - 2 " +
+			       " should not have thrown exception in parsing" + 
+			       s );
+		}
+	}
+
+    	static void long_hex_bad(String s) {
+       		try {
+            		Long.parseLong(s, 16);
+            		harness.fail("long_hex_bad "  +
+				s +  " should not be valid!" );
+       		} catch (NumberFormatException e ){
+		}
+	}
+
+   	static void long_dec_ok(String s, long ref) {
+       		try {
+            		long l = Long.parseLong(s, 10);
+            		if (ref != l) {
+				System.out.println(
+				" Error : long_dec_ok failed - 1 " +
+				" expected " + ref + " actual " + l );
+			}
+		}
+		catch ( NumberFormatException e )
+		{
+			System.out.println(
+			       " Error : long_dec_ok failed - 2 " +
+			       " should not have thrown exception in parsing" + 
+			       s );
+		}
+	}
+
+    	static void long_dec_bad(String s) {
+       		try {
+            		Long.parseLong(s, 10);
+            		System.out.println(" Error long_dec_bad failed for"+s );
+        	} catch (NumberFormatException e ){}
+	}
+
+
+	public void test_valueOf( )
+	{
+		harness.check(!( Long.valueOf("21234").longValue() != Long.parseLong("21234")), 
+			"test_valueOf - 1" );	
+		harness.check(!( Long.valueOf("Kona", 27).longValue() != Long.parseLong("Kona", 27)), 
+			"test_valueOf - 2" );	
+	}
+
+	public void test_getLong( )
+	{
+		java.util.Properties  prop = System.getProperties();
+		prop.put("longkey1" , "2345" );
+		prop.put("longkey2" , "-984" );
+		prop.put("longkey3" , "-0" );
+
+		prop.put("longkey4" , "#1f" );
+		prop.put("longkey5" , "0x1f" );
+		prop.put("longkey6" , "017" );
+
+		prop.put("longkey7" , "babu" );
+
+
+
+		System.setProperties(prop);
+		harness.checkPoint("getLong");
+		try {
+		  harness.check(Long.getLong("longkey1").longValue() == 2345);
+		} catch (NullPointerException npe) { harness.check(false); }
+		try {
+		  harness.check(Long.getLong("longkey2").longValue() == -984);
+		} catch (NullPointerException npe) { harness.check(false); }
+		try {
+		  harness.check(Long.getLong("longkey3").longValue() == 0);
+		} catch (NullPointerException npe) { harness.check(false); }
+
+		try {
+		  harness.check(Long.getLong("longkey4",new Long(0)).longValue() == 31);
+		} catch (NullPointerException npe) { harness.check(false); }
+		try {
+		  harness.check(Long.getLong("longkey5",new Long(0)).longValue() == 31);
+		} catch (NullPointerException npe) { harness.check(false); }
+		try {
+		  harness.check(Long.getLong("longkey6",new Long(0)).longValue() == 15);
+		} catch (NullPointerException npe) { harness.check(false); }
+
+		try {
+		  harness.check(!( Long.getLong("longkey7", new Long(0)).longValue() != 0 ), 
+			"test_getLong - 3" );
+		} catch (NullPointerException npe) { harness.check(false); }
+		try {
+		  harness.check(!( Long.getLong("longkey7", 0).longValue() != 0 ), 
+			"test_getLong - 4" );
+		} catch (NullPointerException npe) { harness.check(false); }
+
+	}
+
+
+
+	public void testall()
+	{
+		test_Basics();
+		test_toString();
+		test_equals();
+		test_hashCode();
+		test_intValue();
+		test_longValue();
+		test_floatValue();
+		test_doubleValue();
+		test_shortbyteValue();
+		test_toHexString();
+		test_toOctalString();
+		test_toBinaryString();
+		test_parseLong();
+		test_valueOf();
+		test_getLong();
+	}
+
+  public void test (TestHarness the_harness)
+  {
+    harness = the_harness;
+    testall ();
+  }
 
 }

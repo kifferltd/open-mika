@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "deflate_internals.h"
@@ -357,7 +361,7 @@ static w_int writeWindowBytes(w_deflate_control bs, w_int length, w_int distance
   if (off < 0) off = 33*1024 + off;
   
   for (j = 0; j < length; j++) {
-    obyte = bs->output_bekken[off];
+    obyte = (*bs).output_bekken[off];
     if (writeLiteralByte(bs, obyte)) {
       return 1;
     }
@@ -375,7 +379,7 @@ w_int inflateBlock(w_deflate_control bs, w_zdict dict) {
   w_hnode node;
   w_int status = 0;
 
-  while (!bs->reset) {
+  while (bs->resets_completed == bs->resets_requested) {
     node = decode(dict->lengths_literals, bs);
     j = node->symbol;
 
@@ -557,7 +561,7 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
     codeLength[i] = 0;
   }
   i = 0;
-  while (i < n && !in->reset) {
+  while (i < n && in->resets_completed == in->resets_requested) {
     node = decode(tmptable, in);
     j = node->symbol;
     if (j < 16) {
@@ -775,10 +779,10 @@ void zzzinflate(void *ll) {
   // this way we run at least one time (sometimes thread is even not started when trying to delete it)
   stop = no_auto = err = 0;
 
-  x_monitor_eternal(l->ready);
-  x_monitor_notify_all(l->ready);
-  l->state = 1;
-  x_monitor_exit(l->ready);
+  x_monitor_eternal(&l->ready);
+  x_monitor_notify_all(&l->ready);
+  l->state = COMPRESSION_THREAD_RUNNING;
+  x_monitor_exit(&l->ready);
 
   while (!err && !no_auto && !stop) {
     num = 1;
@@ -788,17 +792,17 @@ void zzzinflate(void *ll) {
     woempa(1, "Inflating stream.\n");
 
     do {
-      woempa(1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
+      woempa(1, "State: err %i, stop %i, reset %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
       lastblock = readSingleBit(l);
 
-      if (l->par_in == NULL || l->reset) {
+      if (l->par_in == NULL || l->resets_completed != l->resets_requested) {
         goto hastalavista;
       }
 
       woempa(1, "--> inflating block %d, it is %sthe last block.\n", num, lastblock ? "" : "NOT ");
       type = readBits(l, 2);
 
-      if (l->par_in == NULL || l->reset) {
+      if (l->par_in == NULL || l->resets_completed != l->resets_requested) {
         goto hastalavista;
       }
 
@@ -812,7 +816,7 @@ void zzzinflate(void *ll) {
           check = readLiteralByte(l);
           check |= (readLiteralByte(l) << 8);
 
-          if (l->par_in == NULL || l->reset) {
+          if (l->par_in == NULL || l->resets_completed != l->resets_requested) {
             goto hastalavista;
 	  }
 
@@ -871,7 +875,7 @@ void zzzinflate(void *ll) {
 
       }
       num += 1;
-    } while (! lastblock && !l->reset);
+    } while (! lastblock && l->resets_completed == l->resets_requested);
 
 hastalavista:
 
@@ -893,7 +897,7 @@ hastalavista:
       releaseDictionary(dict);
     }
 
-      woempa(1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
+      woempa(1, "State: err %i, stop %i, reset %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
     // reinit so we can keep on processing
     l->offset_in = l->offset_bek_out = 0;
     l->lookahead_bek_in = l->offset_bek_in = l->size_bek_out = 0;
@@ -903,18 +907,18 @@ hastalavista:
 
     // try to get monitor
     woempa(1, "Entering\n");
-    woempa(1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
-    s = x_monitor_eternal(l->ready);
+    woempa(1, "State: err %i, stop %i, reset %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
+    s = x_monitor_eternal(&l->ready);
     if (s == xs_success) {
 
       // if we need to stop or we had an error, try to synchonise with the other thread
       if (l->no_auto || err) {
       
-        while (!l->reset) {
+        while (l->resets_completed == l->resets_requested) {
           woempa(1, "Trying ...\n");
-          s = x_monitor_wait(l->ready, 10);
+          s = x_monitor_wait(&l->ready, COMPRESSION_WAIT_TICKS);
           if (s == xs_interrupted) {
-            x_monitor_eternal(l->ready);
+            x_monitor_eternal(&l->ready);
           }
         }
       }
@@ -923,15 +927,15 @@ hastalavista:
       no_auto = l->no_auto;
       stop = l->stop;
 
-      woempa(1, "State: err %i, stop %i, reset %i, noauto %i\n", err, stop, l->reset, no_auto);
+      woempa(1, "State: err %i, stop %i, reset %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
 
       // if reset, clear all queues and partial data
-      if (l->reset == 1) {
+      if (l->resets_completed != l->resets_requested) {
         woempa(1, "Resetting\n");
-        l->reset = 0;
+        l->resets_completed = l->resets_requested;
         no_auto = 0;
 
-        switch (x_mutex_lock(l->mutx, x_eternal)) {
+        switch (x_mutex_lock(&l->mutx, x_eternal)) {
           case xs_success:
             break;
           default:
@@ -940,8 +944,8 @@ hastalavista:
             break;
         }
 
-        x_queue_flush(l->q_in, unzip_freeQueue);
-        x_queue_flush(l->q_out, unzip_freeQueue);
+        x_queue_flush(&l->q_in, unzip_freeQueue);
+        x_queue_flush(&l->q_out, unzip_freeQueue);
 
         if (l->par_in != NULL) {
           woempa(1, "--in-- %p %p\n", l->par_in, l->par_in->data);
@@ -956,17 +960,17 @@ hastalavista:
         l->par_out = l->par_in = NULL;
         l->offset_out = 0;
 
-        x_mutex_unlock(l->mutx);
+        x_mutex_unlock(&l->mutx);
 
         // notify thread we are ready
-        x_monitor_notify_all(l->ready);
+        x_monitor_notify_all(&l->ready);
       }
 
       woempa(1, "Exiting\n");
       l->processed_size = 0;
       if (!l->stop) l->nomoreinput = 0;
 
-      x_monitor_exit(l->ready);
+      x_monitor_exit(&l->ready);
     }
     else {
       woempa(9, "Monitor error !!!!\n");
@@ -974,9 +978,9 @@ hastalavista:
       err = 1;
     }
   }
-  x_monitor_eternal(l->ready);
-  x_monitor_notify_all(l->ready);
-  l->state = 2;
-  x_monitor_exit(l->ready);
+  x_monitor_eternal(&l->ready);
+  x_monitor_notify_all(&l->ready);
+  l->state = COMPRESSION_THREAD_STOPPED;
+  x_monitor_exit(&l->ready);
 }
 

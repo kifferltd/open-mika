@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2003, 2004, 2005, 2006 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (C) 2003, 2004, 2005, 2006 by Chris Gray,       *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: inits.c,v 1.14 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include <time.h>
@@ -42,6 +43,7 @@
 #include "file_driver.h"
 #include "deflate_driver.h"
 #include "locks.h"
+#include "verifier.h"
 #include "wstrings.h"
 #include "wonka.h"
 #include "vfs.h"
@@ -79,7 +81,7 @@ void initWonka(void) {
 #endif
 
   initLocks();
-
+  initModules();
 #ifdef MODULES
   x_symtab_kernel();
 #endif
@@ -143,8 +145,9 @@ void args_read(void) {
 
   memset(args, 0, sizeof(Wonka_InitArgs));
   properties = allocMem(100 * sizeof(char *));
-
-
+#ifdef USE_BYTECODE_VERIFIER
+  verify_flags = VERIFY_LEVEL_DEFAULT;
+#endif
   classpath = get_default_classpath();
 
   woempa(7, "Found %d command line arguments\n", command_line_argument_count);
@@ -185,11 +188,43 @@ void args_read(void) {
       woempa(7, "Found an Xdebug argument\n");
       jdwp_enabled = 1;
     }
+
+#endif  /* JDWP */
+
+#ifdef USE_BYTECODE_VERIFIER
+    else if(strncmp(command_line_arguments[0], "-Xverify:all", 12) == 0) {
+      woempa(7, "Found an Xverify:all argument\n");
+      verify_flags = VERIFY_LEVEL_ALL;
+    }
+    else if(strncmp(command_line_arguments[0], "-Xverify:none", 13) == 0) {
+      woempa(7, "Found an Xverify:none argument\n");
+      verify_flags = VERIFY_LEVEL_NONE;
+    }
+    else if(strncmp(command_line_arguments[0], "-Xverify:remote", 15) == 0) {
+      woempa(7, "Found an Xverify:remote argument\n");
+      verify_flags = VERIFY_LEVEL_REMOTE;
+    }
+    else if(strncmp(command_line_arguments[0], "-verifyremote", 13) == 0) {
+      woempa(7, "Found a verifyremote argument\n");
+      verify_flags = VERIFY_LEVEL_REMOTE;
+    }
+    else if(strncmp(command_line_arguments[0], "-verify", 7) == 0) {
+      woempa(7, "Found a verify argument\n");
+      verify_flags = VERIFY_LEVEL_ALL;
+    }
+    else if(strncmp(command_line_arguments[0], "-noverify", 9) == 0) {
+      woempa(7, "Found a noverify argument\n");
+      verify_flags = VERIFY_LEVEL_NONE;
+    }
+#else
+    else if(strncmp(command_line_arguments[0], "-Xverify:", 9) == 0 || strncmp(command_line_arguments[0], "-verify", 7) == 0 || strncmp(command_line_arguments[0], "-noverify", 9) == 0) {
+      PutString("Warning: ignoring verify argument as verifier is disabled\n");
+    }
+#endif
+
     else if(strncmp(command_line_arguments[0], "-X", 2) == 0) {
       woempa(7, "Found an unknown argument '%s', ignoring it\n", command_line_arguments[0]);
     }
-
-#endif  /* JDWP */
 
 #ifdef JSPOT
     
@@ -259,15 +294,12 @@ void args_read(void) {
     fsroot = FSROOT;
   }
 
-  if (fsroot[0] == '.') {
+  {
     char *new_fsroot;
     char *path = host_getCommandPath();
     int l = strlen(path);
 
     woempa(7, "fsroot was '%s', path is '%s'\n", fsroot, path);
-    if (fsroot[1] == '/') {
-      fsroot += 2;
-    }
     while (path[--l] != '/') {
       if(l <= 0) {
         woempa(9,"Panic mode: where are we called from ?\n\tNo slash found in '%s'\n",path); 
@@ -275,6 +307,19 @@ void args_read(void) {
       }
     } 
 
+    while (strlen(fsroot) >= 2 && fsroot[0] == '.' && fsroot[1] == '/') {
+      fsroot += 2;
+    }
+
+    while (strlen(fsroot) >= 3 && fsroot[0] == '.' && fsroot[1] == '.' && fsroot[2] == '/') {
+      fsroot += 3;
+      while (path[--l] != '/') {
+        if(l <= 0) {
+          woempa(9,"Panic mode: too many ../ in fsroot\n"); 
+          wabort(ABORT_WONKA, "Unable to locate binary !\n");
+        }
+      } 
+    }
     woempa(7, "Allocating %d bytes for new fsroot\n", l + strlen(fsroot) + 2);
     new_fsroot = allocClearedMem(l + strlen(fsroot) + 2);
     memcpy(new_fsroot, path, l + 1);

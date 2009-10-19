@@ -1,24 +1,29 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 
@@ -70,18 +75,29 @@ public class Properties extends Hashtable {
   /**
    * Copy all key/value pairs in a new hashtable merged with the
    * default values if any.
-   *
-   * Note: we first expand the 'defaults' then override them with the specific key/values.
    */
   private Hashtable flatten() {
+    Hashtable h;
+
     if (defaults==null){
-      return (Hashtable)this.clone();
+      // Look out - this has to work with NativeProperties, which doesn't
+      // implement many methods of Hashtable. Change at your peril!
+      h = new Hashtable();
+      Object k;
+      Object v;
+      Enumeration e = keys();
+
+      while (e.hasMoreElements()) {
+        k = e.nextElement();
+        v = get(k);
+        h.put(k, v);
+      }
     }
     else {
-      Hashtable h = defaults.flatten();
+      h = defaults.flatten();
       h.putAll(this);
-      return h;
     }
+    return h;
   }
 
   public Enumeration propertyNames() {
@@ -192,6 +208,10 @@ public class Properties extends Hashtable {
               }
             case '\n':
               //continuation.	     
+              //[CG 20070522] comment lines cannot be extended using backslash
+              if (!nocomment) {
+                idx--;
+              }
               break;
             case 'u':
 	      int unicode = 0;
@@ -347,6 +367,10 @@ public class Properties extends Hashtable {
               }
             case '\n':
               //continuation.             
+              //[CG 20070522] comment lines cannot be extended using backslash
+              if (!nocomment) {
+                idx--;
+              }
 	      break;
 	    case 'u':
 	      int unicode = 0;
@@ -519,9 +543,7 @@ public class Properties extends Hashtable {
   }
   
   public void list(PrintStream out) throws NullPointerException {
-    if (out == null){
-      throw new NullPointerException();
-    }
+    out.println("-- listing properties --");
     Hashtable h = flatten();
     String key;
     String value;

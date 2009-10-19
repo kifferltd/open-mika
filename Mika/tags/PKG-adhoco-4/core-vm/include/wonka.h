@@ -1,36 +1,37 @@
-#ifndef _WONKA_H
-#define _WONKA_H
-
 /**************************************************************************
-* Copyright  (c) 2001, 2002 by Acunia N.V. All rights reserved.           *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 35      info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-/*
-** $Id: wonka.h,v 1.10 2006/10/04 14:24:14 cvsroot Exp $
-*/
+#ifndef _WONKA_H
+#define _WONKA_H
 
 #ifndef FALSE
 #define FALSE 0
@@ -92,7 +93,7 @@ typedef volatile u4 w_ConstantValue;
 #include "processor.h"
 
 #define LSW_PART(l)                  (w_word)(l)
-#define MSW_PART(l)                  (w_word)((l)>>32)
+#define MSW_PART(l)                  (w_word)((w_ulong)(l)>>32)
 #define DWORD_TO_WORDS(c, cm, cl)    (cm) = MSW_PART(c); (cl) = LSW_PART(c)
 
 #if (defined(DEBUG) || defined(LOWMEM))
@@ -397,7 +398,13 @@ typedef union w_u16 {
 
 extern w_boolean memoryAddressIsValid(w_size addr);
 
-int strcmp(const char *p1, const char *p2);
+/*
+** Convert a number of bits to a number of w_words, rounding up to the next
+** whole number.
+*/
+inline static w_size roundBitsToWords(w_int bits) {
+  return ((bits + 31) & ~31) >> 5;
+}
 
 /*
 ** w_memcpy is intended to be more efficient when the return value of memcpy(3)
@@ -412,6 +419,10 @@ void w_memcpy(void * adst, const void * asrc, w_size length);
 #define w_memcpy(d,s,l) memcpy(d,s,l)
 #endif
 
+/*
+** See core-vm/src/heap/collector.c for the use of PIGS_MIGHT_FLY.
+*/
+//#define PIGS_MIGHT_FLY
 
 /*
 ** If 'pedantic' is TRUE, Wonka will detect errors such as AbstractMethodError

@@ -1,29 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ClassLoader.java,v 1.12 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 package java.lang;
 
@@ -31,8 +36,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.security.CodeSource;
 import java.security.Policy;
 import java.security.ProtectionDomain;
@@ -42,6 +45,8 @@ import java.util.Hashtable;
 import java.util.Properties;
 import java.util.Vector;
 
+import wonka.vm.JDWP;
+import wonka.vm.NativeLibrary;
 import wonka.vm.SystemClassLoader;
 
 public abstract class ClassLoader {
@@ -50,18 +55,18 @@ public abstract class ClassLoader {
    ** The application class loader, used to load the starting class and
    ** (confusingly) the one returned by getSystemClassLoader().
    */
-  private static ClassLoader applicationClassLoader;
+  static ClassLoader applicationClassLoader;
 
   /**
    ** The extension class loader, used to load installed extensions.
    */
-  private static ClassLoader extensionClassLoader;
+  static ClassLoader extensionClassLoader;
 
   /**
    ** The real system class loader, i.e. the one which loads from bootclasspath
    ** those classes (and resources) not loaded by the bootstrap class loader.
    */
-  private static ClassLoader systemClassLoader;
+  static ClassLoader systemClassLoader;
 
   /**
    ** The default protection domain.  Has a CodeSource of (null,null)
@@ -90,16 +95,6 @@ public abstract class ClassLoader {
    */
   HashMap classAssertionStatus;
 
-  /** The list of packages known to the bootstrap class loader.
-  private static Vector bootstrap_packages;
-   */
-
-  /** A Vector of WeakReference's to all existing instances of ClassLoader.
-   */
-  private static Vector refsToClassLoaders;
-
-  private static ReferenceQueue refQ;
-
   /** The packages which have been defined by this ClassLoader.
    ** Only includes those for which a definePackage() was done.
    ** The key is the package name, with as associated data the 
@@ -116,10 +111,11 @@ public abstract class ClassLoader {
   private HashMap package_sources;
 
   /**
-   ** This lock controls access to the class hashtable, which lurks 
-   ** in native code.
-   */
-  private final Object lock = new Object();
+   ** List of libraries which were loaded by this ClassLoader.
+   ** Used so that the NativeLibrary objects will only be finalized and
+   ** reclaimed when this ClassLoader becomes unreachable.
+   */   
+  private Vector loadedLibraries = new Vector(); 
 
   /**
    ** Every ClassLoader has a parent, except the system ClassLoader,
@@ -138,7 +134,7 @@ public abstract class ClassLoader {
    ** A cheap substitute for having a static initialiser.
    */
   static synchronized ProtectionDomain get_defaultProtectionDomain() {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER && defaultProtectionDomain == null) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS && defaultProtectionDomain == null) {
       CodeSource cs = new CodeSource(null,null);
       defaultProtectionDomain = new ProtectionDomain(cs,Policy.getPolicy().getPermissions(cs));
     }
@@ -147,14 +143,18 @@ public abstract class ClassLoader {
 
   /**
    ** Identify the most useful classloader availble - the applicationClassLoader
-   ** if already defined, but failing that the systemClassLoader.  Used to load
-   ** resources (as opposed to classes) to avoid an infinite regress involving
-   ** system.properties (we use systemClassLoader to load system.properties, so
+   ** if already defined, but failing that the extensionClassLoader or
+   ** systemClassLoader.  Used to load resources (as opposed to classes)
+   ** to avoid an infinite regress involving system.properties
+   ** (we use systemClassLoader to load system.properties, so
    ** this needs to be in bootclasspath).
    ** Walks like a hack and quux like hack, so it probably is a hack.
    */
   private static ClassLoader getPertinentClassLoader() {
     ClassLoader loader = applicationClassLoader;
+    if (loader == null) {
+      loader = extensionClassLoader;
+    }
     if (loader == null) {
       systemClassLoader = SystemClassLoader.getInstance();
       loader = systemClassLoader;
@@ -164,47 +164,19 @@ public abstract class ClassLoader {
   }
 
   private static void permissionCheck(String permission) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission(permission));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkPermission(new RuntimePermission(permission));
       }
     }
   }
 
-  /** Remove from refsToClassLoaders all references which have been cleared.
-   */
-  private static void purgeClassLoaders() {
-    synchronized(refsToClassLoaders) {
-      WeakReference wr = (WeakReference)refQ.poll();
-      while (wr != null) {
-        refsToClassLoaders.remove(wr);
-        wr = (WeakReference)refQ.poll();
-      }
-    }
-  }
-
-  /** Add a WeakReference to this ClassLoader to refsToClassLoaders.
-   */
-  private static synchronized void registerClassLoader(ClassLoader cl) {
-    if (refQ == null) {
-      refQ = new ReferenceQueue();
-      refsToClassLoaders = new Vector();
-    }
-    else {
-      purgeClassLoaders();
-    }
-    refsToClassLoaders.add(new WeakReference(cl, refQ));
-  }
-
   /** Any ClassLoader created using the default constructor will
    ** have as its parent the system ClassLoader.
    */
   protected ClassLoader() throws SecurityException {
-    this(getSystemClassLoader());
+    this(applicationClassLoader);
   }
 
   /**
@@ -212,13 +184,10 @@ public abstract class ClassLoader {
    ** specified by the caller.
    */
   protected ClassLoader(ClassLoader parent) throws SecurityException {
-    registerClassLoader(this);
+    JDWP.registerClassLoader(this);
     if (getCallingClassLoader() != null || applicationClassLoader != null) {
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-        java.security.AccessController.checkPermission(new RuntimePermission("createClassLoader"));
-      }
-      else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-        SecurityManager sm = System.getSecurityManager();
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+        SecurityManager sm = System.theSecurityManager;
 
         if (sm!=null) {
           sm.checkCreateClassLoader();
@@ -226,9 +195,9 @@ public abstract class ClassLoader {
       }
     }
     /**
-    ** if parent is null we should replace it with the SystemClassLoader
+    ** if parent is null we should replace it with the applicationClassLoader
     */
-    this.parent = parent == null ? getSystemClassLoader() : parent;
+    this.parent = parent == null ? applicationClassLoader : parent;
     this.create();
   }
 
@@ -325,7 +294,7 @@ public abstract class ClassLoader {
       ownname = toString();
     }
 
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       int dot = classname.lastIndexOf('.');
       String package_name = dot < 0 ? "" : classname.substring(0, dot);
 
@@ -334,7 +303,12 @@ public abstract class ClassLoader {
       Package    existing_package;
       CodeSource existing_source;
 
-      if (pd == null) {
+      if (applicationClassLoader == null) {
+        // Don't try to get defaultProtectionDomain yet, it won't work
+        actual_pd = null;
+        actual_source = null;
+      }
+      else if (pd == null) {
         actual_pd = get_defaultProtectionDomain();
         actual_source = null;
       }
@@ -545,15 +519,17 @@ ClassFormatError
    ** Don't tell this to everybody!
    */
   public static synchronized ClassLoader getSystemClassLoader() {
-    if (applicationClassLoader != null) {
+    ClassLoader result = applicationClassLoader == null ? extensionClassLoader : applicationClassLoader;
+
+    if (result != null) {
       ClassLoader caller = getCallingClassLoader();
 
-      if (caller != null && caller != SystemClassLoader.getInstance() && caller != applicationClassLoader) {
+      if (!isSystemClassLoader(caller)) {
         permissionCheck("getClassLoader");
       }
     }
 
-    return applicationClassLoader;
+    return result;
   }
 
   /** Get the identity of the parent ClassLoader.
@@ -765,7 +741,9 @@ ClassFormatError
 
   private static native void installExtensionClassLoader(ClassLoader cl);
 
-  private static void getApplicationClasspath(String classpath) {
+  private static native void installApplicationClassLoader(ClassLoader cl);
+
+  private static URL[] getApplicationClasspath(String classpath) {
     Vector v;
     int i;
     int j;
@@ -801,13 +779,11 @@ ClassFormatError
       }
     }
 
-    ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
-
-    applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
+    return urls;
   }
 
   static void createApplicationClassLoader() {
-    String extdirs  = System.getProperty("java.ext.dirs");
+    String extdirs  = System.systemProperties.getProperty("java.ext.dirs");
     String classpath = getCommandLineClasspath();
 
     if (extdirs != null && extdirs.trim().length() != 0) {
@@ -817,11 +793,13 @@ ClassFormatError
       extensionClassLoader = null;
     }
 
-    getApplicationClasspath(classpath);
+    URL[] urls = getApplicationClasspath(classpath);
+    ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
+    applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
+    installApplicationClassLoader(applicationClassLoader);
 
-    Properties props = System.getProperties();
-    if (props != null) {
-      props.put("java.class.path", classpath);
+    if (System.systemProperties != null) {
+      System.systemProperties.put("java.class.path", classpath);
     }
   }
 
@@ -855,4 +833,20 @@ ClassFormatError
   public void setClassAssertionStatus(String className, boolean enabled) {
     classAssertionStatus.put(className, new Boolean(enabled));
   }
+
+  /**
+   ** Package-local method called by Runtime when a library is loaded.
+   */
+  void registerLibrary(NativeLibrary library) {
+    loadedLibraries.add(library);
+  }
+
+  /**
+   ** Package-private method by which java.lang.SecurityManager can detect whether
+   ** a class loader is a system class loader without triggering a security check.
+   */
+  static boolean isSystemClassLoader(ClassLoader cl) {
+    return cl == null || cl == systemClassLoader || cl == extensionClassLoader || cl == applicationClassLoader;
+  }
+
 }

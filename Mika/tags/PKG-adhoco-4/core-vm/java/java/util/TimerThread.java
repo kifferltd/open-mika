@@ -1,34 +1,38 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by /k/ Embedded Java Solutions.                *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/*
-** $Id: TimerThread.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
 
 package java.util;
 
 import java.lang.ref.WeakReference;
+import wonka.vm.Heartbeat;
 
 class TimerThread extends Thread implements Comparator {
 
@@ -37,6 +41,9 @@ class TimerThread extends Thread implements Comparator {
   boolean cancelled;
   boolean waiting;
   long waitTime;
+
+  private long savedtime;
+  private long savedoffset;
 
   /**
   ** we use a WeakReference to reference the Timer.  When all references to the timer are gone, the thread can terminate.
@@ -61,7 +68,11 @@ class TimerThread extends Thread implements Comparator {
   public void run(){
     //System.out.println("STARTING TIMERTHREAD " + this);
     TimerTask task;
-    long time;
+    long time0; // System.currentTimeMillis()
+    long time1; // earliest estimate of corrected time
+    long time2; // latest estimate of corrected time
+    long offset;
+
     while(true){
       synchronized(this){
         try {
@@ -97,18 +108,42 @@ class TimerThread extends Thread implements Comparator {
               continue;
             }
 
-            time = System.currentTimeMillis();
-            if(time < task.startTime){
+            offset = Heartbeat.getTimeOffset();
+            if (offset > savedoffset) {
+              //System.out.println("TIMERTHREAD " + this + ": offset has increased, " + savedoffset + " -> " + offset);
+            }
+            else if (offset < savedoffset) {
+              //System.out.println("TIMERTHREAD " + this + ": offset has decreased, " + savedoffset + " -> " + offset);
+            }
+            time0 = System.currentTimeMillis();
+            if (offset > savedoffset) {
+              time1 = time0 - offset;
+              time2 = time0 - savedoffset;
+            }
+            else {
+              time1 = time0 - savedoffset;
+              time2 = time0 - offset;
+            }
+            if (time0 < savedtime) {
+              //System.out.println("TIMERTHREAD " + this + ": time went backwards by " + (savedtime - time0));
+              time1 -= savedtime - time0;
+            }
+            if (time2 < task.startTime) {
+              long nap = task.startTime - time2;
+              if (nap > 10000) {
+                nap = 10000;
+              }
               //it is not yet time todo the task
-              //System.out.println("TIMERTHREAD " + this +": task is not ready to run waiting "+(task.startTime - time));
+              //System.out.println("TIMERTHREAD " + this +": task is not ready to run waiting " + nap);
               waiting = true;
-              this.wait(task.startTime - time);
+              this.wait(nap);
               waiting = false;
-              //System.out.println("TIMERTHREAD " + this +":  waited "+(System.currentTimeMillis() - time));
+              //System.out.println("TIMERTHREAD " + this +":  waited "+(System.currentTimeMillis() - Heartbeat.getTimeOffset() - time2));
               continue;
             }
-            //System.out.println("TIMERTHREAD " + this +": task is ready to run "+(task.startTime - time));
+            //System.out.println("TIMERTHREAD " + this +": task is ready to run " + (task.startTime - time2));
             tasks.remove(task);
+            savedtime = time0;
           }
         }
         catch(InterruptedException ie){
@@ -128,7 +163,9 @@ class TimerThread extends Thread implements Comparator {
         //System.out.println("TIMERTHREAD " + this +": cleaning up task "+task);
         if(task.period != -1 && !task.cancelled){
           //System.out.println("TIMERTHREAD " + this +": putting task back in "+task);
-          task.startTime = task.period + (task.fixed ? task.startTime : time);
+          //System.out.println("TIMERTHREAD " + this + (task.fixed ? " fixed rate scheduling, next = " + (task.period + task.startTime) : " free scheduling, next = " + (task.period + time1)));
+          task.startTime = task.period + (task.fixed ? task.startTime : time1);
+          savedoffset = offset;
           tasks.add(task);
         }
         else {
@@ -143,7 +180,8 @@ class TimerThread extends Thread implements Comparator {
     if(delay < 0){
       throw new IllegalArgumentException("negative delay is not allowed");
     }
-    scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate);
+    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis() - Heartbeat.getTimeOffset()));
+    scheduleAtTime(task, delay + System.currentTimeMillis() - Heartbeat.getTimeOffset(), period, fixedRate);
   }
 
   synchronized void scheduleAtTime(TimerTask task, long time, long period, boolean fixedRate){
@@ -157,6 +195,7 @@ class TimerThread extends Thread implements Comparator {
       throw new IllegalStateException("timer cannot schedule task "+task);
     }
     //System.out.println("Adding task to timer "+task);
+    //System.out.println("Setting " + task + ".startTime to " + time);
     task.startTime = time;
     task.period = period;
     task.fixed = fixedRate;

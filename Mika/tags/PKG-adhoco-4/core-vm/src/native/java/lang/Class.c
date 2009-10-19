@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Class.c,v 1.13 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include "arrays.h"
 #include "checks.h"
@@ -54,7 +55,7 @@
 ** getName() returns the name held in clazz->dotified.
 */
 w_instance Class_getName(JNIEnv *env, w_instance Class) {
-  w_instance Name = newStringInstance(Class2clazz(Class)->dotified);
+  w_instance Name = getStringInstance(Class2clazz(Class)->dotified);
   
   return Name;
 
@@ -179,7 +180,7 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
   w_int   length;
 
   exception = NULL;
-
+  threadMustBeSafe(thread);
   if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
 
     return NULL;
@@ -189,7 +190,9 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
   woempa(7, "getInterfaces of instance of %k, %d interfaces.\n", clazz, clazz->numDirectInterfaces);
 
   length = clazz->numDirectInterfaces;
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
 
   if (Array) {
     for (i = 0; i < (w_int)clazz->numDirectInterfaces; i++) {
@@ -237,12 +240,14 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
 
   calling_clazz = getCallingClazz(thread);
   
-  if (!isAllowedToCall(calling_clazz,clazz->defaultInit, WONKA_FALSE)) {
+  if (!isAllowedToCall(calling_clazz,clazz->defaultInit, clazz)) {
     throwException(thread, clazzIllegalAccessException, "%K is not allowed to call %M", calling_clazz, clazz->defaultInit);
   }
 
-  if (! exceptionThrown(thread)) {
+  if (! exceptionThrown(thread) && mustBeInitialized(clazzFileDescriptor) != CLASS_LOADING_FAILED) {
+    enterUnsafeRegion(thread);
     newInstance = allocInstance(thread, clazz);
+    enterSafeRegion(thread);
   }
 
   if (newInstance) {
@@ -258,6 +263,40 @@ w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
 }
 
 /*
+** For compatibility reasons we refuse to load primitive classes or arrays
+** thereof or void.
+*/
+w_boolean isPrimitiveClassName(w_string name) {
+  if (name == string_boolean || name == string_byte || name == string_short
+   || name == string_c_h_a_r || name == string_int || name == string_long
+   || name == string_float || name == string_double || name == string_void) {
+    return TRUE;
+  }
+  else if (string_length(name) > 0 && string_char(name, 0) == '[') {
+    w_int i;
+    w_int l = string_length(name);
+    for (i = 1; i < l; ++i) {
+      if (string_char(name, i) != '[') {
+        //w_char *namebuff = allocMem(l * sizeof(w_char));
+        w_string element_name;
+        w_boolean result;
+
+        //w_string2chars(name, namebuff);
+        //element_name = unicode2String(namebuff + i, l -i);
+        element_name = w_substring(name, i, l - i);
+        result = isPrimitiveClassName(element_name);
+        deregisterString(element_name);
+        //releaseMem(namebuff);
+
+        return result;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+/*
 ** forName_S() finds a class with the given name, using the classloader which
 ** defined the calling class. The class found will be initialized.
 */
@@ -268,6 +307,7 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   w_string classname;
   w_clazz  calling_clazz;
   w_instance loader;
+  w_instance exception;
 
   if (! Classname) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -275,11 +315,18 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
   }
 
   classname = String2string(Classname);
+  if (isPrimitiveClassName(classname)) {
+    throwException(thread, clazzClassNotFoundException, "Not allowed to find class %w using Class.forName()", classname);
+  }
+
   calling_clazz = getCallingClazz(thread);
   
   loader = clazz2loader(calling_clazz);
+
   clazz = namedClassMustBeLoaded(loader, classname);
-  if (exceptionThrown(thread) || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  exception = exceptionThrown(thread);
+
+  if (exception || mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -296,6 +343,7 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
   w_string classname;
+  w_instance exception;
 
   if (! Classname) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -304,16 +352,21 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
 
   classname = String2string(Classname);
   woempa(1, "called with string %w initialize = %s, classloader %j.\n", classname,initialize?"true":"false", Classloader);
+  if (isPrimitiveClassName(classname)) {
+    throwException(thread, clazzClassNotFoundException, "Not allowed to find class %w using Class.forName()", classname);
+  }
+
 
   clazz = namedClassMustBeLoaded(Classloader, classname);
-  if (! clazz) {
-    return NULL;
+  exception = exceptionThrown(thread);
+
+  if (! clazz && !exception) {
+    throwException(thread, clazzClassNotFoundException, "%w", classname);
+    exception = exceptionThrown(thread);
   } 
 
-  if (initialize) {
-    if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-      return NULL;
-    }
+  if (exception || !clazz || (initialize && mustBeInitialized(clazz) == CLASS_LOADING_FAILED) ){
+    return NULL;
   }
 
   return clazz2Class(clazz);
@@ -336,8 +389,12 @@ Class_get_constructors
   w_method method;
   w_instance Constructor;
   w_instance Array;
-  w_instance exception;
+  w_instance exception = NULL;
   w_clazz   clazzArrayOf_Constructor = getNextDimension(clazzConstructor, NULL);
+
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzConstructor);
+  mustBeInitialized(clazzArrayOf_Constructor);
 
   if (clazz) {
     numMethods = clazz->numInheritableMethods;
@@ -356,8 +413,7 @@ Class_get_constructors
     }
   }
 
-  exception = NULL;
-
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Constructor, numRelevantConstructors);
 
   if (Array) {
@@ -377,88 +433,117 @@ Class_get_constructors
       }
     }
   }
+  enterSafeRegion(thread);
 
   return Array;
 
 }
 
+static w_int addFieldsToFifo(w_clazz current_clazz, w_fifo fields_fifo, w_int mtype) {
+  w_field field;
+  w_int i;
+  w_int relevant;
+  for (i = 0; i < current_clazz->numFields; i++) {
+    field = &current_clazz->own_fields[i];
+    woempa(3, "%02d: field %w is %s, declared in %k\n",i,NM(field),
+              isSet(field->flags, ACC_PUBLIC)?"public":"non-public", field->declaring_clazz);
+    relevant = (mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
+             || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz);
+
+    woempa(3,"field[%d] %w is %srelevant\n",i,NM(field),relevant?"":"ir");
+    if(relevant) {
+      if(putFifo(field, fields_fifo) < 0) {
+        releaseFifo(fields_fifo);
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
 /*
-** get_fields gets the fields (PUBLIC or DECLARED, depending ** on mtype)
+** get_fields gets the fields (PUBLIC or DECLARED, depending on mtype)
 ** of this class, and of its superclasses if mtype is PUBLIC.
 */
-w_instance
-Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
+w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz = Class2clazz(thisClass);
-  w_int relevant;
-  w_size i;
   w_int numRelevantFields;
-  w_field field;
-  w_clazz current_clazz;
-  w_instance Field;
+  w_fifo fields;
   w_instance Array;
-  w_instance exception;
+  w_instance exception = NULL;
   w_clazz   clazzArrayOf_Field = getNextDimension(clazzField, NULL);
+
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzField);
+  mustBeInitialized(clazzArrayOf_Field);
+
+  if (clazz) {
+    if (mustBeSupersLoaded(clazz) == CLASS_LOADING_FAILED) {
+      return NULL;
+    }
+  }
 
   /*
   ** Find the number of appropriate fields first.  
   */
 
-  woempa(1,"looking for %s fields of %k\n", mtype==PUBLIC ? "public" : "declared", clazz);
-  numRelevantFields = 0;
-  current_clazz=clazz;
-  while (current_clazz) {
-    for (i = 0; i < current_clazz->numFields; i++) {
-      field = &current_clazz->own_fields[i];
-      woempa(1,"%02d: field %w is %s, declared in %k\n",i,NM(field),isSet(field->flags, ACC_PUBLIC)?"public":"non-public", field->declaring_clazz);
-      relevant = (mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
-          || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz);
-      woempa(1,"field[%d] %w is %srelevant\n",i,NM(field),relevant?"":"ir");
-      numRelevantFields += relevant;
-    }
-    woempa(1,"found %d suitable fields in %k\n", numRelevantFields,  current_clazz);
-    if (mtype==DECLARED) break;
-    if (isSet(current_clazz->flags,ACC_INTERFACE)) {
-      current_clazz = current_clazz->interfaces[0];
-    }
-    else {
-      current_clazz = getSuper(current_clazz);
-    }
+  woempa(1, "looking for %s fields of %K\n", mtype==PUBLIC ? "public" : "declared", clazz);
+
+  fields = allocFifo(62);
+  if(fields == NULL) {
+    return NULL;
   }
-  
-  exception = NULL;
 
-  Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
+  if(addFieldsToFifo(clazz, fields, mtype)) {
+    return NULL;
+  }
 
-  if (Array) {
-    numRelevantFields = 0;
-    current_clazz=clazz;
-    while (current_clazz) {
-      for (i = 0; i < current_clazz->numFields; i++) {
-        field = &current_clazz->own_fields[i];
-        if ((mtype==PUBLIC && isSet(field->flags, ACC_PUBLIC))
-         || (mtype==DECLARED && current_clazz->own_fields[i].declaring_clazz == current_clazz)
-          ) {
-          Field = allocInstance(JNIEnv2w_thread(env), clazzField);
-          if (Field==NULL) {
-            woempa(9, "Unable to allocate Field\n");
-            break;
-          }
-          setWotsitField(Field, F_Field_wotsit, field);
-          setArrayReferenceField(Array, Field, numRelevantFields);
-          numRelevantFields += 1;
-        }
+  if(mtype == PUBLIC) {
+    if (isSet(clazz->flags,ACC_INTERFACE)) {
+      int j;
+      for (j = 0; j < clazz->numInterfaces; ++j) {
+        if(addFieldsToFifo(clazz->interfaces[j],fields, PUBLIC)) {
+          return NULL;
+        }  
       }
-      if (mtype==DECLARED) break;
-      if (isSet(current_clazz->flags,ACC_INTERFACE)) {
-        current_clazz = current_clazz->interfaces[0];
-      }
-      else {
+    } else {
+      w_clazz current_clazz = getSuper(clazz);
+      while (current_clazz) {
+        if(addFieldsToFifo(current_clazz,fields, PUBLIC)) {
+          return NULL;
+        }  
         current_clazz = getSuper(current_clazz);
       }
     }
   }
+  
+  numRelevantFields = occupancyOfFifo(fields);
+
+  enterUnsafeRegion(thread);
+  Array = allocArrayInstance_1d(thread, clazzArrayOf_Field, numRelevantFields);
+
+  if (Array) {
+    int i;
+
+    for(i = 0; i < numRelevantFields ; i++) {
+      w_field field = (w_field) getFifo(fields);
+      w_instance Field;
+
+      Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+
+      if (Field==NULL) {
+        woempa(9, "Unable to allocate Field\n");
+        break;
+      }
+      setWotsitField(Field, F_Field_wotsit, field);
+      setArrayReferenceField(Array, Field, i);
+    }
+  }
+  enterSafeRegion(thread);
+
+  releaseFifo(fields);
 
   return Array;
 
@@ -490,15 +575,15 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_fifo relevantMethods;
   w_clazz   clazzArrayOf_Method = getNextDimension(clazzMethod, NULL);
 
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazzMethod);
+  mustBeInitialized(clazzArrayOf_Method);
+
   if (clazz) {
     numMethods = clazz->numInheritableMethods;
     if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
       return NULL;
     }
-  }
-
-  if (mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED) {
-    return NULL;
   }
 
   /*
@@ -507,7 +592,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   */
 
   woempa(1, "Class %k type %s\n", clazz, mtype == PUBLIC ? "public" : "declared");
-  relevantMethods = allocFifo((w_size)numMethods);
+  relevantMethods = allocFifo(62);
   if (! relevantMethods) {
     return NULL;
   }
@@ -581,6 +666,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   }
 
   woempa(1,"Class %k has %d relevant methods\n", clazz,numRelevantMethods);
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Method, numRelevantMethods);
 
   if (Array) {
@@ -596,6 +682,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
       setArrayReferenceField(Array, Method, i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseFifo(relevantMethods);
 
@@ -619,6 +706,7 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
   w_size       nargs;
   w_instance  *arg_Classes;
 
+  mustBeInitialized(clazzConstructor);
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
@@ -679,7 +767,9 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
   }
 
   if (constructor) {
+    enterUnsafeRegion(thread);
     Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
+    enterSafeRegion(thread);
     if (Constructor == NULL) {
       woempa(9, "Unable to allocate Constructor\n");
       return NULL;
@@ -734,7 +824,7 @@ w_field seekField (w_clazz clazz, w_string name, int mtype) {
 */
 
   for (i=0; !result && i<clazz->numInterfaces; i++) {
-    woempa(1, " --> trying superinterface %x\n", clazz->interfaces[0]);
+    woempa(1, " --> trying superinterface %x\n", clazz->interfaces[i]);
     result = seekField(clazz->interfaces[i],name,mtype);
   }
 
@@ -761,13 +851,15 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
   w_field    field;
   w_instance Field;
 
+  mustBeInitialized(clazzField);
+
   if (fieldNameString == NULL){
     throwException(thread, clazzNoSuchFieldException, NULL);
     return NULL;
   }
 
   fieldName = String2string(fieldNameString);
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -775,7 +867,9 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
   field = seekField(clazz, fieldName, mtype);
 
   if (field) {
+    enterUnsafeRegion(thread);
     Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+    enterSafeRegion(thread);
     if (!Field) {
       woempa(9, "Unable to allocate Constructor\n");
     }
@@ -806,6 +900,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
   w_size     nargs;
   w_instance *arg_Classes;
 
+  mustBeInitialized(clazzMethod);
 
 #ifdef RUNTIME_CHECKS
   if (!AParameters) {
@@ -832,7 +927,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
     return NULL;
   }
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
@@ -928,7 +1023,9 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
   }
 
   if (method) {
+    enterUnsafeRegion(thread);
     Method = allocInstance(JNIEnv2w_thread(env), clazzMethod);
+    enterSafeRegion(thread);
     if (Method == NULL) {
       woempa(9, "Unable to allocate Method\n");
       return NULL;
@@ -964,7 +1061,20 @@ w_instance Class_getComponentType(JNIEnv *env, w_instance thisClass) {
 ** dreaded ambiguous ACC_SYNCwhatever flag.
 */
 w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
-  w_word flags = Class2clazz(Class)->flags;
+  w_clazz clazz = Class2clazz(Class);
+  w_word flags;
+  int i;
+
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
+    return NULL;
+  }
+  for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
+    if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
+      return clazz->temp.inner_class_info[i].inner_class_access_flags;
+    }
+  }
+
+  flags = Class2clazz(Class)->flags;
 
   woempa(1, "Class %k has modifiers %s %s %s %s %s %s (0x%08x).\n", Class2clazz(Class), isSet(flags,ACC_PUBLIC)?"public":"",isSet(flags,ACC_PRIVATE)?"private":"",isSet(flags,ACC_PROTECTED)?"protected":"",isSet(flags,ACC_ABSTRACT)?"abstract":"",isSet(flags,ACC_FINAL)?"final":"",isSet(flags,ACC_INTERFACE)?"interface":"",flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_ABSTRACT | ACC_FINAL));
 
@@ -973,16 +1083,22 @@ w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
 }
 
 w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
+  w_thread   thread = JNIEnv2w_thread(env);
   w_clazz clazz = Class2clazz(Class);
   int i;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
     if (clazz->temp.inner_class_info[i].inner_class_info_index == clazz->temp.this_index) {
       int j = clazz->temp.inner_class_info[i].outer_class_info_index;
-      w_clazz outer_clazz = getClassConstant(clazz, j);
+      w_clazz outer_clazz = getClassConstant(clazz, j, thread);
+      if (exceptionThrown(thread)) {
+
+        return NULL;
+
+      }
 
       return clazz2Class(outer_clazz);
     }
@@ -998,14 +1114,15 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
   int i;
   int n = 0;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  threadMustBeSafe(thread);
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
   for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
     if (clazz->temp.inner_class_info[i].outer_class_info_index == clazz->temp.this_index) {
       int j = clazz->temp.inner_class_info[i].inner_class_info_index;
 
-      inner_clazz[n++] = getClassConstant(clazz, j);
+      inner_clazz[n++] = getClassConstant(clazz, j, thread);
       if (exceptionThrown(thread)) {
 
         return NULL;
@@ -1014,12 +1131,14 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
     }
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, n);
   if (Array) {
     for (i = 0; i < n; ++i) {
       setArrayReferenceField(Array, clazz2Class(inner_clazz[i]), i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseMem(inner_clazz);
 
@@ -1030,19 +1149,22 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz = Class2clazz(Class);
   w_clazz super = clazz;
-  w_fifo inner_clazz_fifo = allocFifo(511);
+  w_fifo inner_clazz_fifo = allocFifo(510);
   w_instance Array;
   int i;
   int j = 0;
   int n = 0;
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  threadMustBeSafe(thread);
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
+
+
   while (super) {
     for (i = 0; i < super->temp.inner_class_info_count; ++i) {
       if (super->temp.inner_class_info[i].outer_class_info_index == super->temp.this_index) {
-        w_clazz inner_clazz = getClassConstant(super, clazz->temp.inner_class_info[i].inner_class_info_index);
+        w_clazz inner_clazz = getClassConstant(super, super->temp.inner_class_info[i].inner_class_info_index, thread);
 
         if (exceptionThrown(thread)) {
           releaseFifo(inner_clazz_fifo);
@@ -1051,7 +1173,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
 
         }
 
-        if (isSet(inner_clazz->flags, ACC_PUBLIC)) {
+        if (isSet(super->temp.inner_class_info[i].inner_class_access_flags, ACC_PUBLIC)) {
           if (putFifo(inner_clazz, inner_clazz_fifo) < 0) {
             wprintf("No space to store inner class for Class/getClasses()\n");
             throwOutOfMemoryError(thread);
@@ -1074,12 +1196,14 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
     }
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, clazzArrayOf_Class, n);
   if (Array) {
     for (i = 0; i < n; ++i) {
-      setArrayReferenceField(Array, clazz2Class(getFifo(inner_clazz_fifo)), i);
+      setArrayReferenceField(Array, clazz2Class((w_clazz)getFifo(inner_clazz_fifo)), i);
     }
   }
+  enterSafeRegion(thread);
 
   releaseFifo(inner_clazz_fifo);
 

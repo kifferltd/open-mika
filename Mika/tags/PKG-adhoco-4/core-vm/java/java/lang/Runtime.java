@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/*
-** $Id: Runtime.java,v 1.13 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 package java.lang;
 
@@ -37,10 +37,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
 import wonka.vm.GarbageCollector;
+import wonka.vm.NativeLibrary;
 import wonka.vm.NativeProcess;
 
 /**
@@ -49,10 +55,20 @@ import wonka.vm.NativeProcess;
 
 public class Runtime {
 
+  /**
+   ** The amount of time we wait before checking again whether all finalizers have run.
+   */
   private static int FINA_DONNA_PATIENZA = 1000;
 
-  private static boolean verboseVal; // value of the verbose property (if verboseSet)
-  private static boolean verboseSet; // true iff verbose property has been read
+  /**
+   ** Value of the verbose property (if verboseSet is true).
+   */
+  private static boolean verboseVal;
+
+  /**
+   ** true iff verbose property has been read
+   */
+  private static boolean verboseSet;
 
   /**
   ** The single unique instance of Runtime.
@@ -61,11 +77,16 @@ public class Runtime {
   private static Runtime theRuntime;
 
   /**
-  ** The number of instances of FinaDonna created and not yet finalized.
-  ** Sycnchronize on FinaDonna.class when modifying this.
+   ** Mapping from names of libraries which have already been loaded to
+   ** WeakReference's to the corresponding NativeLibrary object.
+   */
+  private static HashMap loadedLibraries = new HashMap();
+
+  /**
+  ** Set of Threads which have called runFinalization and are still waiting.
   */
   
-  static int finalizatora;
+  static HashSet runners = new HashSet();
 
   /**
   ** The Threads which should be started on shutdown.
@@ -84,17 +105,19 @@ public class Runtime {
   */
   
   private class FinaDonna {
+    Thread waitingThread;
 
-    public FinaDonna() {
-      synchronized (FinaDonna.class) {
-        ++finalizatora ;
+    public FinaDonna(Thread thread) {
+      waitingThread = thread;
+      synchronized (runners) {
+        runners.add(thread);
       }
     }
 
     protected void finalize() {
-      synchronized (FinaDonna.class) {
-        --finalizatora ;
-        FinaDonna.class.notifyAll();
+      synchronized (runners) {
+        runners.remove(waitingThread);
+        runners.notifyAll();
       }
     }
   }
@@ -109,7 +132,7 @@ public class Runtime {
 
   private void debug(String s) {
      if (!verboseSet)  {
-        String verboseProperty = System.getProperty("mika.verbose", "");
+        String verboseProperty = System.systemProperties.getProperty("mika.verbose", "");
         verboseVal = (verboseProperty.indexOf("shutdown") >= 0);
         verboseSet = true;
      }
@@ -127,11 +150,8 @@ public class Runtime {
   }
 
   private void permissionCheck(String permission) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission(permission));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkPermission(new RuntimePermission(permission));
       }
@@ -348,8 +368,8 @@ public class Runtime {
   /**
   ** Create an instance of FinaDonna and then throw it away.
   */
-  private void generateFinaDonna() {
-    new FinaDonna();
+  private void generateFinaDonna(Thread t) {
+    new FinaDonna(t);
   }
 
   /**
@@ -362,15 +382,16 @@ public class Runtime {
 
     debug("Runtime: runFinalization() invoked");
     GarbageCollector theGC = GarbageCollector.getInstance();
-    synchronized(FinaDonna.class) {
-      generateFinaDonna();
+    Thread currentThread = Thread.currentThread();
+    synchronized(runners) {
+      generateFinaDonna(currentThread);
       try {
         theGC.kick();
-        FinaDonna.class.wait(FINA_DONNA_PATIENZA);
-        while (finalizatora  > 0) {
+        runners.wait(FINA_DONNA_PATIENZA);
+        while (runners.contains(currentThread)) {
           debug("Runtime: runFinalization() still waiting");
           theGC.kick();
-          FinaDonna.class.wait(FINA_DONNA_PATIENZA);
+          runners.wait(FINA_DONNA_PATIENZA);
         }
       }
       catch (InterruptedException ie) {
@@ -417,9 +438,31 @@ public class Runtime {
   private static native ClassLoader getCallingClassLoader();
   private static native ClassLoader getCallingCallingClassLoader();
   
+  /**
+   ** Clean out any entries in <code>loadedLibraries</code> which have
+   ** become stale because the class loader which created them has become
+   ** unreachable (and hence the NativeLibrary object is also unreachable).
+   */
+  private static void doLoadedLibrariesHousekeeping() {
+    Iterator iter = loadedLibraries.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry entry = (Map.Entry)iter.next();
+      Object value = entry.getValue();
+      try {
+        WeakReference wr = (WeakReference)value;
+        if (wr.get() == null) {
+          iter.remove();
+        }
+      }
+      catch (ClassCastException cce) {
+        // no hassle, it's just a placeholder String
+      }
+    }
+  }
+
   public void loadLibrary(String libname) throws SecurityException, UnsatisfiedLinkError {
 
-    SecurityManager sm = System.getSecurityManager();
+    SecurityManager sm = System.theSecurityManager;
 
     if (sm != null) {
 //      sm.checkLink(new RuntimePermission(libname));
@@ -432,16 +475,41 @@ public class Runtime {
     */
     
     ClassLoader cl = getCallingClassLoader();
-    if(cl == null) {
+    if (cl == null || cl == ClassLoader.systemClassLoader) {
       cl = getCallingCallingClassLoader();
     }
     
     if(cl != null) {
       path = cl.findLibrary(libname);
     }
+
+    String key = path != null ? path : libname;
+
+    synchronized (loadedLibraries) {
+      doLoadedLibrariesHousekeeping();
+      if (loadedLibraries.get(key) == null) {
+        loadedLibraries.put(key, "loading");
+      }
+      else {
+        // HACK HACK HACK
+        // Maybe the existing library is unreachable but we didn't notice,
+        // do GC and try once more before throwing an error.
+        gc();
+        doLoadedLibrariesHousekeeping();
+        if (loadedLibraries.get(key) == null) {
+          loadedLibraries.put(key, "loading");
+        }
+        else {
+          throw new UnsatisfiedLinkError("Library '" + key + "' already loaded");
+        }
+      }
+    }
+
     if(cl != null && path == null) {
       path = cl.findLibrary("lib" + libname + ".so");
     }
+
+    int handle;
 
     if(path != null) {
 
@@ -449,7 +517,7 @@ public class Runtime {
       ** Found it with the classloader.
       */
       
-      loadLibrary0(null, path);
+      handle = loadLibrary0(null, path);
     }
     else {
 
@@ -457,10 +525,23 @@ public class Runtime {
       ** No luck -> get the path from java.library.path and look it up.
       */
       
-      path = System.getProperty("java.library.path", null);
-      loadLibrary0(libname, path);
+      path = System.systemProperties.getProperty("java.library.path", null);
+      handle = loadLibrary0(libname, path);
     }
 
+    if (handle != 0) {
+      NativeLibrary nl = new NativeLibrary(handle);
+      cl.registerLibrary(nl);
+    
+      synchronized (loadedLibraries) {
+        loadedLibraries.put(key, new WeakReference(nl));
+      }
+    }
+    else {
+      synchronized (loadedLibraries) {
+        loadedLibraries.remove(key);
+      }
+    }
   }
     
   /**
@@ -477,7 +558,7 @@ public class Runtime {
     return 1;
   }
 
-  private native void loadLibrary0(String libname, String libpath) throws UnsatisfiedLinkError;
+  private native int loadLibrary0(String libname, String libpath) throws UnsatisfiedLinkError;
 
   public static void runFinalizersOnExit(boolean run) {
     //ignore

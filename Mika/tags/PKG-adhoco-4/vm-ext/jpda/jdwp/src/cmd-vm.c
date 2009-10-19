@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "clazz.h"
@@ -150,7 +154,7 @@ w_boolean matchClassname(w_clazz clazz, w_string match_pattern) {
 static void *getMatchingClasses(w_instance loader) {
   w_hashtable ht = getWotsitField(loader, F_ClassLoader_loaded_classes);
   w_fifo fifo1 = ht_list_values(ht);
-  w_fifo fifo2 = allocFifo(255);
+  w_fifo fifo2 = allocFifo(254);
   w_clazz clazz;
 
   while ((clazz = getFifo(fifo1))) {
@@ -159,10 +163,10 @@ static void *getMatchingClasses(w_instance loader) {
       putFifo(clazz, fifo2);
     }
   }
-  woempa(7, "%j has loaded %d classes matching %w\n", loader, fifo2->numElements, classname);
+  woempa(7, "%j has loaded %d classes matching %w\n", loader, occupancyOfFifo(fifo2), classname);
   releaseFifo(fifo1);
 
-  if (fifo2->numElements == 0) {
+  if (occupancyOfFifo(fifo2) == 0) {
     releaseFifo(fifo2);
     fifo2 = NULL;
   }
@@ -197,15 +201,18 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
   sig = jdwp_UTF82cstring((w_ubyte*)cmd->data, &length);
   sig_string = cstring2String((char*)sig, (w_word)length);
   classname = undescriptifyClassName(sig_string);
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    wprintf("JDWP: signature = %w -> classname = %w\n", sig_string, classname);
+  }
   releaseMem(sig);
   deregisterString(sig_string);
 
   woempa(7, "Searching all class loaders for classes with signature %w\n", classname);
   fifo_of_fifos = forEachClassLoader(getMatchingClasses);
   if (fifo_of_fifos) {
-    woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
+    woempa(7, "Found %d class loaders\n", occupancyOfFifo(fifo_of_fifos));
     deregisterString(classname);
-    clazz_fifo = allocFifo(255);
+    clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
       woempa(7, "Reading fifo %p\n", one_fifo);
       while ((clazz = getFifo(one_fifo))) {
@@ -215,8 +222,8 @@ static void jdwp_vm_classes_by_sig(jdwp_command_packet cmd) {
       woempa(7, "Releasing fifo %p\n", one_fifo);
       releaseFifo(one_fifo);
     }
-    woempa(7, "Found %d classes\n", clazz_fifo->numElements);
-    jdwp_put_u4(&reply_grobag, clazz_fifo->numElements);
+    woempa(7, "Found %d classes\n", occupancyOfFifo(clazz_fifo));
+    jdwp_put_u4(&reply_grobag, occupancyOfFifo(clazz_fifo));
 
     while ((clazz = getFifo(clazz_fifo))) {
       woempa(1, "  %K\n", clazz);
@@ -250,8 +257,8 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
   woempa(7, "Searching all class loaders for all loaded classes\n");
   fifo_of_fifos = forEachClassLoader(getAllLoadedClasses);
   if (fifo_of_fifos) {
-    woempa(7, "Found %d class loaders\n", fifo_of_fifos->numElements);
-    clazz_fifo = allocFifo(255);
+    woempa(7, "Found %d class loaders\n", occupancyOfFifo(fifo_of_fifos));
+    clazz_fifo = allocFifo(254);
     while ((one_fifo = getFifo(fifo_of_fifos))) {
       woempa(7, "Reading fifo %p\n", one_fifo);
       while ((clazz = getFifo(one_fifo))) {
@@ -266,9 +273,9 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
       woempa(7, "Releasing fifo %p\n", one_fifo);
       releaseFifo(one_fifo);
     }
-    woempa(7, "Found %d classes\n", clazz_fifo->numElements);
+    woempa(7, "Found %d classes\n", occupancyOfFifo(clazz_fifo));
 
-    jdwp_put_u4(&reply_grobag, clazz_fifo->numElements);
+    jdwp_put_u4(&reply_grobag, occupancyOfFifo(clazz_fifo));
     woempa(7, "Reading clazz_fifo\n");
     while ((clazz = getFifo(clazz_fifo))) {
       jdwp_put_u1(&reply_grobag, isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class);
@@ -310,7 +317,7 @@ static void jdwp_vm_threads(jdwp_command_packet cmd) {
   */
 
   fifo = ht_list_values(thread_hashtable);
-  length = fifo->numElements - 1;
+  length = occupancyOfFifo(fifo) - 1;
   woempa(7, "We have %d threads (not counting the JDWP thread)\n", length);
 
   /*
@@ -362,6 +369,8 @@ static void jdwp_vm_threadgroups(jdwp_command_packet cmd) {
 **    as it takes).
 */
 
+extern w_size jdwp_global_suspend_count;
+
 static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
   w_fifo fifo = ht_list_values(thread_hashtable);
   w_thread thread;
@@ -370,8 +379,11 @@ static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
     woempa(7, "Clearing suspend count of %t\n", thread);
     thread->flags &= ~WT_THREAD_SUSPEND_COUNT_MASK;
   }
+  while (jdwp_global_suspend_count) {
+    jdwp_internal_resume_all();
+  }
 
-  blocking_all_threads = 0;
+  unsetFlag(blocking_all_threads, BLOCKED_BY_JDWP);
 
   jdwp_state = jdwp_state_initialised;
   jdwp_events_enabled = 0;

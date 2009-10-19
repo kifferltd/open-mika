@@ -1,33 +1,33 @@
 ###########################################################################
-# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+# Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                #
+# All rights reserved.                                                    #
+# Parts copyright (c) 2009 by /k/ Embedded Java Solutions.                #
+# All rights reserved.                                                    #
 #                                                                         #
-# This software is copyrighted by and is the sole property of Acunia N.V. #
-# and its licensors, if any. All rights, title, ownership, or other       #
-# interests in the software remain the property of Acunia N.V. and its    #
-# licensors, if any.                                                      #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of                 #
+#    other contributors may be used to endorse or promote products        #
+#    derived from this software without specific prior written permission.#
 #                                                                         #
-# This software may only be used in accordance with the corresponding     #
-# license agreement. Any unauthorized use, duplication, transmission,     #
-#  distribution or disclosure of this software is expressly forbidden.    #
-#                                                                         #
-# This Copyright notice may not be removed or modified without prior      #
-# written consent of Acunia N.V.                                          #
-#                                                                         #
-# Acunia N.V. reserves the right to modify this software without notice.  #
-#                                                                         #
-#   Acunia N.V.                                                           #
-#   Philips site 5, box 3       info@acunia.com                           #
-#   3001 Leuven                 http://www.acunia.com                     #
-#   Belgium - EUROPE                                                      #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
 ###########################################################################
-
-#
-# $Id: core-classes-c.awk,v 1.4 2006/06/09 09:51:06 cvs Exp $
-# 
-# The Wonka kernel is software copyright by SmartMove NV (1999).
-# Please see the file Copyright for information on it's legal use.
-# 
-#  First output banner, #incudes, and a couple of utility functions
 
 BEGIN {
   print " "
@@ -200,41 +200,64 @@ END {
     }
   }
 
-  print "void collectCoreFixups() {"
-  print "  w_string slashed, dotified;"
+  print "struct {"
+  print "  w_clazz *clazzptr;"
+  print "  const char *classname;"
+  print "  w_fixup fixup1;"
+  print "  w_fixup fixup2;"
+  print "} classmap[] = {"
+  ccount = 0
   for(c = 1; c in clazz; ++c) {
-    thisclazz = clazz[c]
-    gsub("_dollar_", "$", thisclazz);
-    fu = clazz_fixup1[c];
-    if (fu) {
-      string = sprintf("%s%s", path[c], thisclazz);
-      printf "        slashed = cstring2String(\"%s\",%d);\n",string,length(string)
-      printf "        dotified = slashes2dots(slashed);\n"
-      printf "        woempa(1,\"Adding {%%w,%%p} to fixup1_hashtable\\n\",dotified,%s);\n",fu
-      printf "        deregisterString(slashed);\n"
-      printf "        ht_write_no_lock(fixup1_hashtable,(w_word)dotified,(w_word)%s);\n",fu
-    }
-    fu = clazz_fixup2[c];
-    if (fu) {
-      string = sprintf("%s%s", path[c], thisclazz);
-      printf "        slashed = cstring2String(\"%s\",%d);\n",string,length(string)
-      printf "        dotified = slashes2dots(slashed);\n"
-      printf "        woempa(1,\"Adding {%%w,%%p} to fixup2_hashtable\\n\",dotified,%s);\n",fu
-      printf "        deregisterString(slashed);\n"
-      printf "        ht_write_no_lock(fixup2_hashtable,(w_word)dotified,(w_word)%s);\n",fu
-    }
+    basename = clazz[c]
+    thisclazz = basename
+    gsub("_dollar_", "$", basename)
+    fullname = sprintf("%s%s", path[c], basename)
+    fu1 = clazz_fixup1[c];
+    if (!fu1) fu1 = "NULL"
+    fu2 = clazz_fixup2[c];
+    if (!fu2) fu2 = "NULL"
+    printf "  {&clazz%s, \"%s\", %s, %s},\n", thisclazz, fullname, fu1, fu2
+    ++ccount
   }
-  print "}"
+  print "};"
+  print ""
 
-  print  "w_clazz loadOneCoreClass(w_string name) {"
+  print "void collectCoreFixups() {"
+  print "  char *cname;"
+  print "  w_string slashed, dotified;"
+  print "  int i;"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print  "    w_fixup fu = classmap[i].fixup1;"
+  print  "    if (fu) {"
+  print  "      cname = classmap[i].classname;"
+  print  "      slashed = cstring2String(cname, strlen(cname));"
+  print  "      dotified = slashes2dots(slashed);"
+  print  "      deregisterString(slashed);"
+  print  "      ht_write_no_lock(fixup1_hashtable,(w_word)dotified,(w_word)fu);"
+  print  "    }"
+  print  "  }"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print  "    w_fixup fu = classmap[i].fixup2;"
+  print  "    if (fu) {"
+  print  "      cname = classmap[i].classname;"
+  print  "      slashed = cstring2String(cname, strlen(cname));"
+  print  "      dotified = slashes2dots(slashed);"
+  print  "      deregisterString(slashed);"
+  print  "      ht_write_no_lock(fixup2_hashtable,(w_word)dotified,(w_word)fu);"
+  print  "    }"
+  print  "  }"
+  print  "}"
+  print  ""
+
+  print  "w_clazz loadOneCoreClass(char *name) {"
   print  "  w_string dotified;"
   print  "  w_clazz clazz;"
-  print  "  dotified = slashes2dots(name);"
+  print  "  dotified = slashes2dots(cstring2String(name, strlen(name)));"
   print  "  clazz = seekClazzByName(dotified, NULL);"
   print  "  if (clazz == NULL) {"
   print  "    clazz = loadBootstrapClass(dotified);"
   print  "    if (clazz == NULL) {"
-  printf "      woempa(9,\"Unable to find WNI class %%w:\\n\",name);\n"
+  printf "      woempa(9,\"Unable to find WNI class %%s:\\n\",name);\n"
   print  "    }"
   print  "  }"
   print  "  deregisterString(dotified);"
@@ -242,12 +265,10 @@ END {
   print "}"
   print ""
   print "void loadCoreClasses() {"
-
-  for(c = 1; c in clazz; ++c) {
-    string = sprintf("%s%s", path[c], clazz[c]);
-    thisclazz = clazz[c]
-    printf "  clazz%s = loadOneCoreClass(cstring2String(\"%s\", %d));\n", thisclazz, string, length(string);
-  }
-  printf  "\n}\n\n"
+  print "  int i;"
+  printf "  for (i = 0; i < %d; ++i) {\n", ccount
+  print "    *classmap[i].clazzptr = loadOneCoreClass(classmap[i].classname);"
+  print "  }"
+  print "}"
 
 }

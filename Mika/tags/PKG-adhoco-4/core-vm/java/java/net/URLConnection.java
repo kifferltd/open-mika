@@ -1,26 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
 
 package java.net;
 
@@ -28,18 +35,28 @@ import java.io.InputStream;
 import java.io.BufferedInputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 
-import java.util.ResourceBundle;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.MissingResourceException;
+import java.util.NoSuchElementException;
+import java.util.ResourceBundle;
+import java.util.Set;
 import java.security.Permission;
 import java.security.AllPermission;
 
 public abstract class URLConnection {
 
-  private static boolean defaultAllowUserInteraction=false;
-  private static boolean defaultUseCaches=false;
-  private static FileNameMap fileNameMap= new DefaultFileNameMap();
-  private static ContentHandlerFactory factory=null;
+  private static boolean defaultAllowUserInteraction;
+  private static boolean defaultUseCaches;
+  private static FileNameMap fileNameMap = new DefaultFileNameMap();
+  private static ContentHandlerFactory factory;
 
   protected boolean allowUserInteraction=defaultAllowUserInteraction;
   protected boolean connected;
@@ -49,6 +66,8 @@ public abstract class URLConnection {
 
   protected long ifModifiedSince;
   protected URL url;
+
+  private String contentType;
 
   protected URLConnection(URL url){
     	this.url = url;
@@ -60,8 +79,8 @@ public abstract class URLConnection {
 
 //static methods ...
 
-  public static String guessContentTypeFromName(String fname){
-   	return fileNameMap.getContentTypeFor(fname);
+  public static String guessContentTypeFromName(String filename){
+    return getFileNameMap().getContentTypeFor(filename);
   }
 
   public static boolean getDefaultAllowUserInteraction() {
@@ -69,7 +88,11 @@ public abstract class URLConnection {
   }
 
   public static FileNameMap getFileNameMap() {
-  	return fileNameMap;
+    if (fileNameMap == null) {
+      fileNameMap = new DefaultFileNameMap();
+    }
+
+    return fileNameMap;
   }
 
   public static void setContentHandlerFactory(ContentHandlerFactory fac){
@@ -77,10 +100,13 @@ public abstract class URLConnection {
   	 	throw new NullPointerException();
   	}
   	
-  	// ToDo security check ...
-  	
+       SecurityManager sManager = System.getSecurityManager();
+        if (sManager != null) {
+            sManager.checkSetFactory();
+        }
+
   	if (factory != null) {
-  	 	throw new Error();
+  	 	throw new Error("factory already set");
   	}
   	factory = fac;
   }
@@ -92,6 +118,11 @@ public abstract class URLConnection {
   public static void setDefaultRequestProperty(String key, String value){}
 
   public static void setFileNameMap(FileNameMap map){
+        SecurityManager manager = System.getSecurityManager();
+        if (manager != null) {
+            manager.checkSetFactory();
+        }
+
   	if (map == null) { throw new NullPointerException(); }
   	fileNameMap = map;
   }
@@ -155,6 +186,14 @@ public abstract class URLConnection {
   }
 
 /**
+**	default implementation returns empty map
+**	@ remark sublcasses should override this method
+*/
+  public Map getHeaderFields() {
+    return new ImmutableEmptyMap();
+  }
+
+/**
 **	default implementation returns null
 **	@ remark sublcasses should override this method
 */
@@ -180,7 +219,36 @@ public abstract class URLConnection {
 **	@ remark sublcasses should override this method
 */
   public String getRequestProperty(String key){
-   	return null;
+    if (connected) {
+      throw new IllegalStateException();
+    }
+ 
+    return null;
+  }
+
+/**
+**	default implementation returns empty map
+**	@ remark sublcasses should override this method
+*/
+  public Map getRequestProperties(){
+    if (connected) {
+      throw new IllegalStateException();
+    }
+
+    return new ImmutableEmptyMap();
+  }
+
+/**
+ ** Here's a silly one - default impl does nothing and subclasses should 
+ ** override *but* the API specifies some exceptions so we throw them.
+ */
+  public void addRequestProperty(String field, String newValue) {
+    if (connected) {
+      throw new IllegalStateException();
+    }
+    if (field == null) {
+      throw new NullPointerException();
+    }
   }
 
 /**
@@ -199,39 +267,45 @@ public abstract class URLConnection {
 
   public void setAllowUserInteraction(boolean allowuserinteraction) {
    	if (connected) {
-   	 	throw new IllegalAccessError("property cannot be set after connecting");
+   	 	throw new IllegalStateException("property cannot be set after connecting");
    	}
    	allowUserInteraction = allowuserinteraction;
   }
 
+  // MAJOR SUN BREAKAGE
+  // Clearly the method should be static but it ain't. See Sun bug 4851466.
+  // Apache Harmony throws an IllegalAccessException if this instance is
+  // already connected, but this doesn't solve the basic problem that any
+  // code anywhere can call it (probably in the mistaken belief that it
+  // only applies to the current instance). O well ...
   public void setDefaultUseCaches(boolean defaultusecaches){
    	defaultUseCaches = defaultusecaches;
   }
 
   public void setDoInput(boolean doinput){
    	if (connected) {
-   	 	throw new IllegalAccessError("property cannot be set after connecting");
+   	 	throw new IllegalStateException("property cannot be set after connecting");
    	}
    	doInput = doinput;
   }
 
   public void setDoOutput(boolean dooutput){
    	if (connected) {
-   	 	throw new IllegalAccessError("property cannot be set after connecting");
+   	 	throw new IllegalStateException("property cannot be set after connecting");
    	}
    	doOutput = dooutput;
   }
 
   public void setIfModifiedSince(long ifmodifiedsince){
    	if (connected) {
-   	 	throw new IllegalAccessError("property cannot be set after connecting");
+   	 	throw new IllegalStateException("property cannot be set after connecting");
    	}
   	ifModifiedSince = ifmodifiedsince;
   }
 
   public void setUseCaches(boolean usecaches){
    	if (connected) {
-   	 	throw new IllegalAccessError("property cannot be set after connecting");
+   	 	throw new IllegalStateException("property cannot be set after connecting");
    	}
    	useCaches = usecaches;
   }
@@ -243,23 +317,27 @@ public abstract class URLConnection {
   public void setRequestProperty(String key, String value){  }
 
   public String toString(){
-   	return "connecting to "+url.toString()+" using "+this.getClass().getName();
+   	return getClass().getName() + ":" + url.toString();
   }
 
-  public long getHeaderFieldDate(String name, long Default) {
-   	try {
-   		return Long.parseLong(getHeaderField(name));
-   	}
-   	catch(RuntimeException e) { // we expect a NullPointerException or a NumberFormatException
-   		return Default;
-  	}
+  public long getHeaderFieldDate(String name, long dflt) {
+    String date = getHeaderField(name);
+    if (date == null) {
+      return dflt;
+    }
+    try {
+      return Date.parse(date);
+    } catch (Exception e) {
+      return dflt;
+    }
   }
-  public int getHeaderFieldInt(String name, int Default) {
+ 
+  public int getHeaderFieldInt(String name, int dflt) {
    	try {
    		return Integer.parseInt(getHeaderField(name));
    	}
    	catch(RuntimeException e) { // we expect a NullPointerException or a NumberFormatException
-	   	return Default;
+	   	return dflt;
 	  }
   }
 
@@ -275,72 +353,102 @@ public abstract class URLConnection {
   }
 
 
-//  TODO:
-
-/**
-**	the inputstream should support mark reset ...
-**	@remark return null no attempt made to guess !
-*/   	
   public static String guessContentTypeFromStream(InputStream is) throws IOException {
-   	return null;
-  }
+    if (!is.markSupported()) {
+      return null;
+    }
+    // Look ahead up to 64 bytes for the longest encoded header
+    is.mark(64);
+    byte[] bytes = new byte[64];
+    int length = is.read(bytes);
+    is.reset();
+    // TODO: Apache Harmony checks for Unicode BOM here
 
-  public Object getContent() throws IOException {
-  	//step 1. get the contenttype
-    String ct = getContentType();
-    if (ct == null) {
-      ct = guessContentTypeFromName(url.getFile());
-      if (ct == null) {
-        //try {
-          ct = guessContentTypeFromStream(new BufferedInputStream(getInputStream()));
-        //}
-        //catch(IOException ioe) {}
-        if (ct == null) {
-          return null;
-        }
+    if ("PK".equals(new String(bytes, 0, 2))) {
+      return "application/zip";
+    }
+    if ("GIF".equals(new String(bytes, 0, 3))) {
+      return "image/gif";
+    }
+    if ("PNG".equals(new String(bytes, 1, 3))) {
+      return "image/png";
+    }
+    if ("JFIF".equals(new String(bytes, 4, 4))) {
+      return "image/jpeg";
+    }
+    if (bytes[0] == '<') {
+      if ("!DOCTYPE HTML".equalsIgnoreCase(new String(bytes, 1, 13))) {
+        return "text/html";
+      }
+      String foo = new String(bytes, 1, 4).toUpperCase();
+      if ("HTML".equals(foo) || "HEAD".equals(foo) || "BODY".equals(foo)) {
+        return "text/html";
+      }
+      if ("?XML".equalsIgnoreCase(new String(bytes, 1, 4))) {
+        return "application/xml";
       }
     }
-    //step 2. get a handler	to build an Object ...
-    ContentHandler cth;
-    if (factory != null) {
-      cth = factory.createContentHandler(ct);
-      if (cth != null) {
-        return cth.getContent(this);
-      }
-    }
-    //get wonka classes to save the day (or at least try ...)
-    cth = (new com.acunia.wonka.net.DefaultContentHandlerFactory()).createContentHandler(ct);
-    if(cth != null) {
-      return cth.getContent(this);
-    }
-    //too bad..
+
     return null;
   }
 
-  public Object getContent(Class[] classes) throws IOException {
-  	//step 1. get the contenttype
-    String ct = getContentType();
-    if (ct == null) {
-      ct = guessContentTypeFromName(url.getFile());
-      if (ct == null) {
-        try {
-          ct = guessContentTypeFromStream(new BufferedInputStream(getInputStream()));
-        }
-        catch(IOException ioe) {}
-        if (ct == null) {
+  public Object getContent() throws IOException {
+    if (!connected) {
+      connect();
+    }
+
+    contentType = getContentType();
+    if (contentType == null) {
+      contentType = guessContentTypeFromName(url.getFile());
+      if (contentType == null) {
+         contentType = guessContentTypeFromStream(new BufferedInputStream(getInputStream()));
+        if (contentType == null) {
           return null;
         }
       }
     }
-    //step 2. get a handler	to build an Object ...
+
+    return getContentHandler(contentType).getContent(this);
+  }
+ 
+  public Object getContent(Class[] classes) throws IOException {
+    if (!connected) {
+      connect();
+    }
+
+    contentType = getContentType();
+    if (contentType == null) {
+      contentType = guessContentTypeFromName(url.getFile());
+      if (contentType == null) {
+        contentType = guessContentTypeFromStream(new BufferedInputStream(getInputStream()));
+        if (contentType == null) {
+          return null;
+        }
+      }
+    }
+
+    return getContentHandler(contentType).getContent(this, classes);
+  }
+
+  private ContentHandler getContentHandler(String type) throws IOException {
     ContentHandler cth;
     if (factory != null) {
-      cth = factory.createContentHandler(ct);
+      cth = factory.createContentHandler(type);
+      if (!(cth instanceof ContentHandler)) {
+        throw new UnknownServiceException();
+      }
+
       if (cth != null) {
-        return cth.getContent(this, classes);
+        return cth;
       }
     }
     //get wonka classes to save the day (or at least try ...)
+    // TODO: import logic from Apache Harmony implementation?
+    cth = (new wonka.net.DefaultContentHandlerFactory()).createContentHandler(type);
+    if(cth != null) {
+      return cth;
+    }
+    //too bad..
     return null;
   }
 
@@ -351,19 +459,96 @@ public abstract class URLConnection {
 
   	public DefaultFileNameMap() {
 		try {
-			filenameMap = ResourceBundle.getBundle("com.acunia.wonka.net.MimeTypeMap");			 	
+			filenameMap = ResourceBundle.getBundle("wonka.net.MimeTypeMap");			 	
 		}	
 		catch(MissingResourceException mre){}	  	
   	}
   	
   	
-  	public String getContentTypeFor(String fileName){
-  		if (filenameMap != null) {
-  		 	return filenameMap.getString(fileName);
-  		}      	
-  		return null;  	
-        }
+    public String getContentTypeFor(String filename){
+      if (filenameMap != null) {
+        String extension = "html";
+          if (!filename.endsWith("/")) {
+            int lastCharInExtension = filename.lastIndexOf('#');
+            if (lastCharInExtension < 0) {
+              lastCharInExtension = filename.length();
+            }
+            int firstCharInExtension = filename.lastIndexOf('.') + 1;
+            if (firstCharInExtension > filename.lastIndexOf('/')) {
+               extension = filename.substring(firstCharInExtension, lastCharInExtension);
+            }
+            else {
+              extension = "";
+            }
+          }
+
+          try {
+             return filenameMap.getString(filename);
+          }	
+          catch(MissingResourceException mre){}	  	
+        }      	
+      return null;  	
+    }
   }
 
+  private static class ImmutableEmptyMap extends AbstractMap implements
+            Serializable {
+    private static final long serialVersionUID = 6428348081105594320L;
+
+    Set emptySet;
+
+    public boolean containsKey(Object key) {
+      return false;
+    }
+
+    public boolean containsValue(Object value) {
+      return false;
+    }
+
+    public Set entrySet() {
+      return new ImmutableEmptySet();
+    }
+
+    public Object get(Object key) {
+      return null;
+    }
+
+    public Set keySet() {
+      return new ImmutableEmptySet();
+    }
+
+    public Collection values() {
+      return new ImmutableEmptySet();
+    }
+  }
+
+  private static class ImmutableEmptySet extends AbstractSet implements
+            Serializable {
+    private static final long serialVersionUID = 1582296315990362920L;
+
+    public boolean contains(Object object) {
+      return false;
+    }
+
+    public int size() {
+      return 0;
+    }
+
+    public Iterator iterator() {
+      return new Iterator() {
+        public boolean hasNext() {
+          return false;
+        }
+
+        public Object next() {
+          throw new NoSuchElementException();
+        }
+
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
+  }
 
 }

@@ -1,33 +1,36 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
 /*
-** $Id: reflection.c,v 1.11 2006/10/04 14:24:17 cvsroot Exp $
 **
 ** Utility functions for reflection related files.
 **
@@ -490,7 +493,13 @@ w_instance createWrapperInstance(w_thread thread, w_clazz clazz, w_int *slot) {
   }
   
   if (clazz) {
-    return allocInstance(thread, wrapper_clazz);
+    w_instance result;
+
+    enterUnsafeRegion(thread);
+    result = allocInstance(thread, wrapper_clazz);
+    enterSafeRegion(thread);
+
+    return result;
   }
 
   wabort(ABORT_WONKA, "Wrong primitive VM_TYPE %d\n", clazz->type);
@@ -508,6 +517,8 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
   w_instance wrappee = exceptionThrown(thread);
   w_instance wrapper;
 
+  threadMustBeSafe(thread);
+
   if (wrappee) {
     addLocalReference(thread, wrappee);
   // First clear the exception or allocating an instance won't work!
@@ -516,14 +527,15 @@ void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset) 
       // Ouch, we had a problem loading the wrapper class. Better get the hell out ...
       return;
     }
+    enterUnsafeRegion(thread);
     wrapper = allocInstance(thread, wrapper_clazz);
-    if (!wrapper) {
-      return;
+    if (wrapper) {
+      woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
+      setReferenceField_unsafe(wrapper, wrappee, field_offset);
+      throwExceptionInstance(thread, wrapper);
+      removeLocalReference(thread, wrappee);
     }
-    woempa(9, "Wrapping %e in %e\n", wrappee, wrapper);
-    setReferenceField(wrapper, wrappee, field_offset);
-    throwExceptionInstance(thread, wrapper);
-    removeLocalReference(thread, wrappee);
+    enterSafeRegion(thread);
   }
 }
 
@@ -639,9 +651,10 @@ w_frame invoke(JNIEnv *env, w_method method, w_instance This, w_instance Argumen
  * instance could not be created.
  */
 w_instance wrapByteValue(w_thread thread, w_clazz clazz, w_word value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
 
+  wrapper = createWrapperInstance(thread, clazz, &slot);
   if (wrapper) {
 #ifdef PACK_BYTE_FIELDS
     *byteFieldPointer(wrapper, slot) = (char)value;
@@ -659,8 +672,10 @@ w_instance wrapByteValue(w_thread thread, w_clazz clazz, w_word value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapWordValue(w_thread thread, w_clazz clazz, w_word value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     *wordFieldPointer(wrapper, slot) = value;
@@ -674,8 +689,10 @@ w_instance wrapWordValue(w_thread thread, w_clazz clazz, w_word value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapLongValue(w_thread thread, w_clazz clazz, w_long value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     union { w_long l; w_word w[2]; } temp;
@@ -692,8 +709,10 @@ w_instance wrapLongValue(w_thread thread, w_clazz clazz, w_long value) {
  * Returns NULL if the wrapper instance could not be created.
  */
 w_instance wrapDoubleValue(w_thread thread, w_clazz clazz, w_double value) {
-  w_int slot = 0; // (to prevent a compiler warning)
-  w_instance wrapper = createWrapperInstance(thread, clazz, &slot);
+  w_int slot; // = 0; // (to prevent a compiler warning)
+  w_instance wrapper;
+
+  wrapper = createWrapperInstance(thread, clazz, &slot);
 
   if (wrapper) {
     union { w_double d; w_word w[2]; } temp;
@@ -708,12 +727,13 @@ w_instance wrapDoubleValue(w_thread thread, w_clazz clazz, w_double value) {
 w_instance wrapProxyArgs(w_thread thread, w_method current_method, va_list arg_list) {
   w_instance arguments;
   w_int numArgs = 0;
-  w_fifo arg_fifo = allocFifo(255);
+  w_fifo arg_fifo = allocFifo(254);
   w_clazz arg_clazz;
   w_instance param;
   w_int    i;
   w_word   word_value;
 
+  threadMustBeSafe(thread);
   while (current_method->spec.arg_types[numArgs]) {
     woempa(7, "Method %w arg[%d] is %s %k\n", current_method->spec.name, numArgs, clazzIsPrimitive(current_method->spec.arg_types[numArgs]) ? "primitive" : "reference", current_method->spec.arg_types[numArgs]);
     if (mustBeLoaded(&current_method->spec.arg_types[numArgs]) == CLASS_LOADING_FAILED) {
@@ -774,7 +794,9 @@ w_instance wrapProxyArgs(w_thread thread, w_method current_method, va_list arg_l
     ++numArgs;
   }
 
+  enterUnsafeRegion(thread);
   arguments = allocArrayInstance_1d(thread, clazzArrayOf_Object, numArgs);
+  enterSafeRegion(thread);
   if (!arguments) {
     releaseFifo(arg_fifo);
 
@@ -805,7 +827,7 @@ static void wrapProxyException(w_thread thread, w_method current_method) {
   int i;
 
   for (i = 0; i < current_method->numThrows; ++i) {
-    allowed_clazz = getClassConstant(current_method->spec.declaring_clazz, current_method->throws[i]);
+    allowed_clazz = getClassConstant(current_method->spec.declaring_clazz, current_method->throws[i], thread);
     //wprintf("    allowed: %k\n", allowed_clazz);
     if (allowed_clazz && isSuperClass(allowed_clazz, thrown_clazz)) {
       found = TRUE;
@@ -872,7 +894,9 @@ void voidProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   }
 
+  enterUnsafeRegion(thread);
   currentMethod = allocInstance(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 
@@ -953,7 +977,9 @@ w_word singleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   return_type = current_method->spec.return_type;
 
+  enterUnsafeRegion(thread);
   currentMethod = allocInstance(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 
@@ -1056,7 +1082,9 @@ w_long doubleProxyMethodCode(JNIEnv *env, w_instance thisProxy, ...) {
 
   return_type = current_method->spec.return_type;
 
+  enterUnsafeRegion(thread);
   currentMethod = allocInstance(thread, clazzMethod);
+  enterSafeRegion(thread);
   if (!currentMethod) {
     woempa(9, "Unable to allocate Method\n");
 

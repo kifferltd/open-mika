@@ -1,3 +1,32 @@
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- Copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java Solutions.    -->
+<!-- All rights reserved.                                                    -->
+<!--                                                                         -->
+<!-- Redistribution and use in source and binary forms, with or without      -->
+<!-- modification, are permitted provided that the following conditions      -->
+<!-- are met:                                                                -->
+<!-- 1. Redistributions of source code must retain the above copyright       -->
+<!--    notice, this list of conditions and the following disclaimer.        -->
+<!-- 2. Redistributions in binary form must reproduce the above copyright    -->
+<!--    notice, this list of conditions and the following disclaimer in the  -->
+<!--    documentation and/or other materials provided with the distribution. -->
+<!-- 3. Neither the name of /k/ Embedded Java Solutions nor the names of     -->
+<!--    other contributors may be used to endorse or promote products        -->
+<!--    derived from this software without specific prior written permission.-->
+<!--                                                                         -->
+<!-- THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          -->
+<!-- WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    -->
+<!-- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    -->
+<!-- IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  -->
+<!-- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     -->
+<!-- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    -->
+<!-- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         -->
+<!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   -->
+<!-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    -->
+<!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  -->
+<!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
 <project name="Mika build" default="build" basedir="..">
   <!--<property file="${user.home}/.ant.properties"/>-->
   <property name="ant.config.dir" value="${basedir}/Configuration/ant/"/>
@@ -56,6 +85,8 @@
   <target name="source" depends="prepare,check-build-env">
     <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
     <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
     <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
@@ -66,6 +97,8 @@
       <fileset dir="${vm.ext.dir}beans/java"/>
       <fileset dir="${vm.java.dir}"/>
       <fileset dir="${security.dir}"/>
+      <fileset dir="${security.provider.dir}"/>
+      <fileset dir="${security.provider.any.dir}"/>
       <fileset dir="${math.dir}"/>
       <fileset dir="${awt.dir}"/>
       <fileset dir="${jar.dir}"/>
@@ -91,6 +124,8 @@
       <fileset dir="${vm.ext.dir}beans/java" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${vm.java.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${security.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.provider.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.provider.any.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${math.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${awt.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${jar.dir}" excludes="com/**/,gnu/**,wonka/**"/>
@@ -107,10 +142,27 @@
     <property file="${platform.file}"/>
     <fail message="Please specify your UNICODE_SUBSETS config. example: 0 or 999" unless="UNICODE_SUBSETS"/>
 
-    <propertychecker property="SECURITY" values="none|fine|coarse"/>
+    <propertychecker property="SECURITY" values="none|java2"/>
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>
+    <condition property="JAVA2_SECURITY_BUT_NO_JARSIGNING">
+      <and>
+        <equals arg1="${SECURITY}" arg2="java2"/>
+        <equals arg1="${JAR}" arg2="none"/>
+      </and>
+    </condition>
+    <fail message="SECURITY=java2 is not compatible with JAR=none." if="JAVA2_SECURITY_BUT_NO_JARSIGNING"/>
+    <condition property="SECURITY_PROVIDER.MISSING">
+      <and>
+        <equals arg1="${JAR}" arg2="java"/>
+        <or>
+          <not><isset property="SECURITY_PROVIDER"/></not>
+          <equals arg1="${SECURITY_PROVIDER}" arg2="none"/>
+        </or>
+      </and>
+    </condition>
+    <fail message="JAR=java requires a SECURITY_PROVIDER setting, e.g. harmony (not 'none')." if="SECURITY_PROVIDER.MISSING"/>
     <condition property="AWT.DEF.MISSING">
       <and>
         <equals arg1="${AWT}" arg2="rudolph"/>
@@ -123,8 +175,14 @@
   <target name="build-wre">
     <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
     <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+
+    <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
+    <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.dir}:${security.provider.any.dir}"
+                    value="${security.provider.dir}"/>
 
     <!-- special case: if JAR == java ==> include javax.crypto -->
     <propertysetter property="jar.dirs" arg1="${JAR}" arg2="java" elsevalue="${vm.cmp.dir}jar/${JAR}/"
@@ -132,7 +190,7 @@
 
     <javac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
            target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${vm.java.dir}:${security.dir}:${jar.dirs}:${math.dir}:${awt.dir}"/>
+           srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}"/>
 
     <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
            target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
@@ -146,6 +204,11 @@
                target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${basedir}/vm-ext/comm/java/" condition="${JAVAX_COMM}"/>
 
+    <copy todir="${class.dir}">
+      <fileset  dir="${vm.java.dir}">
+        <include name="**/*.properties"/>
+      </fileset>
+    </copy>
     <jar destfile="${release.lib.dir}/wre.jar"
          manifest="${basedir}/core-vm/resource/wre.mf"
          basedir="${class.dir}"/>
@@ -177,7 +240,10 @@
 
   <target name="copy-rudolph-files">
     <copy todir="${release.lib.dir}">
-      <fileset  dir="${rudolph.resource.dir}"/>
+      <fileset  dir="${rudolph.resource.dir}" excludes="font/*complete.pcf">
+        <include name="*"/>
+        <include name="font/*.pcf"/>
+      </fileset>
     </copy>
   </target>
 
@@ -232,6 +298,10 @@
     <flag property="DEBUG" flag="DEBUG.FLAG"/>
     <flag property="STATIC" flag="STATIC.FLAG"/>
     <flag property="AWT_DEF" flag="AWT.FLAGS"/>
+    <exec executable="svnversion" outputproperty="svn.revision">
+      <arg value="."/>
+      <arg value="-n"/>
+    </exec>
 
     <mkdir dir="${log.dir}"/>
     <mkdir dir="${mika.bin.dir}"/>
@@ -239,7 +309,7 @@
     <mkdir dir="${test.release.dir}"/>
 
     <antcall target="run-awk" />
-    <property name="MIKA.VERSION" value="&quot;Developer_version_${ANT.PLATFORM}&quot;"/>
+    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
     <property environment="env"/>
     <jamflags property="jam.flags"/>
     <property name="config.jam.flags" 

@@ -1,29 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: SimpleDateFormat.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
 
 package java.text;
 
@@ -37,8 +41,8 @@ public class SimpleDateFormat extends DateFormat {
 
   private static final long serialVersionUID = 4774881970558875024L;
   private static final DateFormatSymbols DEFAULTSYMBOLS = new DateFormatSymbols();
-  private static final String PATTERNCHARS = "GyMdkHmsSEDFwWahKz";
-  private static final int[] FIELDMAP = { 0, 1, 2, 5, 11, 11, 12, 13, 14, 7, 6, 8, 3, 4, 9, 10, 10 };
+  private static final String PATTERNCHARS = "GyMdkHmsSEDFwWahKzZ";
+  private static final int[] FIELDMAP = { 0, 1, 2, 5, 11, 11, 12, 13, 14, 7, 6, 8, 3, 4, 9, 10, 10, 10 };
 
   //dictated by the serialized form ...
   private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
@@ -72,6 +76,7 @@ public class SimpleDateFormat extends DateFormat {
     }
     calendar = Calendar.getInstance();
     numberFormat = NumberFormat.getInstance();
+    numberFormat.setParseIntegerOnly(true);
     formatData = dfs;
     this.pattern = pattern;
   }
@@ -151,71 +156,97 @@ public class SimpleDateFormat extends DateFormat {
     return pattern.hashCode() ^ 0xaaaaaaaa;
   }
 
-  public Date parse(String str, ParsePosition pos){
+  public Date parse(String str, ParsePosition pos) {
     //System.out.println("parsing '"+str+"' ("+pos.getIndex()+") using "+pattern);
+    calendar.clear();
     TimeZone current = calendar.getTimeZone();
     int size = pattern.length();
     boolean formatting = true;
     int p = pos.getIndex();
     boolean checkDST = false;
-    for(int i = 0 ; i < size ; i++,p++){
-      char ch = pattern.charAt(i);
-      //System.out.println("pattern char = '"+ch+"' at ("+i+") formatting "+formatting);
-      if(ch == '\''){ // lets find quotes ...
-        if((++i) < size && pattern.charAt(i) == ch){
-          if(str.charAt(p) != ch){
-            pos.setIndex(p);
-            pos.setErrorIndex(p);
-            //System.out.println("PARSE ERROR -- MISSING QUOTE");
-            return null;
+    try {
+      for(int i = 0 ; i < size ; i++,p++){
+        char ch = pattern.charAt(i);
+        //System.out.println("pattern char = '"+ch+"' at ("+i+") formatting "+formatting);
+        if(ch == '\''){ // lets find quotes ...
+          if((++i) < size && pattern.charAt(i) == ch){
+            if(str.charAt(p) != ch){
+              pos.setIndex(p);
+              pos.setErrorIndex(p);
+              //System.out.println("PARSE ERROR -- MISSING QUOTE");
+              return null;
+            }
+          }
+          else {
+            i--; formatting = !formatting; p--;
           }
         }
         else {
-          i--; formatting = !formatting; p--;
-        }
-      }
-      else {
-        if(formatting){
-          int field = PATTERNCHARS.indexOf(ch);
-          if(field != -1){
-            pos.setIndex(p);
-            if(field == 17){
-              int nr = 1;
-              for (++i; i < size ; i++){
-                if(pattern.charAt(i) == ch){ nr++; }
-                else{ break; }
+          if(formatting){
+            int field = PATTERNCHARS.indexOf(ch);
+            if(field != -1){
+              pos.setIndex(p);
+              if (field == 17 || field == 18) {
+                // special case: z/Z
+                int nr = 1;
+                for (++i; i < size ; i++){
+                  if(pattern.charAt(i) == ch){ nr++; }
+                  else{ break; }
+                }
+                i--;
+
+                int res = -1;
+                if (str.charAt(p) == '+' || str.charAt(p) == '-') {
+                  String syntheticTZ  = "GMT" + str.substring(p, p + 3) + ":" + str.substring(p + 3);
+                  //System.out.println("using synthetic timezone " + syntheticTZ);
+                  calendar.setTimeZone(TimeZone.getTimeZone(syntheticTZ));
+                  p += 5;
+                  res = 0;
+                }
+                else {
+                  res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+                }
+
+                if(res == -1){
+                  //System.out.println("time zone not found");
+                  return null;
+                }
+                checkDST = (res == 1);
+                continue;
               }
-              i--;
-              int res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
-              if(res == -1){
-                //System.out.println("time zone not found");
-                return null;
+              else {
+                i = readField(ch, i, field, str,pos);
+                //System.out.println("readField stopped at "+i);
+                if(i == -1){
+                  //System.out.println("PARSE ERROR -- READFIELD FAILED");
+                  return null;
+                }
+                p = pos.getIndex()-1;
+                //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str.substring(0,p+1) + "^" + str.substring(p+1));
+                continue;
               }
-              checkDST = (res == 1);
-              continue;
-            }
-            else {
-              i = readField(ch, i, field, str,pos);
-              //System.out.println("readField stopped at "+i);
-              if(i == -1){
-                //System.out.println("PARSE ERROR -- READFIELD FAILED");
-                return null;
-              }
-              p = pos.getIndex()-1;
-              //System.out.println("readField stopped at "+i+"("+pattern.length()+") new position is "+(p+1)+" "+str);
-              continue;
             }
           }
-        }
-        if(str.charAt(p) != ch){
-          pos.setIndex(p);
-          pos.setErrorIndex(p);
-          //System.out.println("PARSE ERROR -- WRONG CHAR ENCOUNTERED");
-          return null;
+          if(str.charAt(p) != ch){
+            pos.setIndex(p);
+            pos.setErrorIndex(p);
+            //System.out.println("PARSE ERROR -- WRONG CHAR ENCOUNTERED");
+            return null;
+          }
         }
       }
+      pos.setIndex(p);
     }
-    pos.setIndex(p);
+    catch (IndexOutOfBoundsException ioobe) {
+      pos.setErrorIndex(p);
+      //System.out.println("PARSE ERROR -- premature end of input at position " + p);
+            return null;
+    }
+    catch (NumberFormatException nfe) {
+      pos.setErrorIndex(p);
+      //System.out.println("PARSE ERROR -- number format error at position " + p);
+      return null;
+    }
     //System.out.println("parsed '"+str+"' to "+calendar.getTime());
     Date time = calendar.getTime();
     if(checkDST && calendar.getTimeZone().inDaylightTime(time)){
@@ -277,6 +308,8 @@ public class SimpleDateFormat extends DateFormat {
     int nr = 1;
     int i = idx+1;
     int pattern_length = pattern.length();
+    int res;
+
     for (; i < pattern_length ; i++){
       if(pattern.charAt(i) == ch){
         nr++;
@@ -300,8 +333,11 @@ public class SimpleDateFormat extends DateFormat {
           }
         }
         else {
-          String[] ms1 = (nr == 3 ? formatData.getShortMonths() : formatData.getMonths());
-          return arrayLookup(ms1, dest, pos,field, idx, true);
+          res = arrayLookup(formatData.getMonths(), dest, pos,field, idx, true);
+          if (res >= 0) {
+            return res;
+          }
+          return arrayLookup(formatData.getShortMonths(), dest, pos,field, idx, true);
         }
         break;
       case 'y':
@@ -345,7 +381,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = nr > 3 ? nr : 3;
         Number num4 =  numberFormat.parse(dest, pos);
         if(num4 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num4.intValue());
           calendar.set(FIELDMAP[field],num4.intValue());
         }
         else {
@@ -357,7 +393,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = 3;
         Number num5 =  numberFormat.parse(dest, pos);
         if(num5 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num5.intValue());
           calendar.set(FIELDMAP[field],num5.intValue());
         }
         else {
@@ -369,7 +405,7 @@ public class SimpleDateFormat extends DateFormat {
         numberFormat.maximumIntegerDigits = nr;
         Number num6 =  numberFormat.parse(dest, pos);
         if(num6 != null){
-          //System.out.println("setting "+FIELDMAP[field]+" to "+num3.intValue());
+          //System.out.println("setting "+FIELDMAP[field]+" to "+num6.intValue());
           calendar.set(FIELDMAP[field],num6.intValue());
         }
         else {
@@ -379,11 +415,9 @@ public class SimpleDateFormat extends DateFormat {
       case 'a':
         return arrayLookup(formatData.getAmPmStrings(), dest, pos, field, idx, true);
       case 'E':
-          if(nr > 3){
-            int res = arrayLookup(formatData.getWeekdays(), dest, pos, field, idx, false);
-            if(res != -1){
-              return res;
-            }
+          res = arrayLookup(formatData.getWeekdays(), dest, pos, field, idx, false);
+          if(res != -1){
+            return res;
           }
           return arrayLookup(formatData.getShortWeekdays(), dest, pos, field, idx, true);
       case 'h':
@@ -421,7 +455,9 @@ public class SimpleDateFormat extends DateFormat {
       int len = strings[i].length();
       //System.out.println("checking '"+source+"'("+start+") for '"+strings[i]);
 
-      if(len > 0 && source.regionMatches(start, strings[i], 0, len)){
+      // [CG 20081204] apparently we need to be case-insensitive here
+      // WAS: if(len > 0 && source.regionMatches(start, strings[i], 0, len)){
+      if(len > 0 && source.length() >= start + len && strings[i].length() >= len && source.substring(start, start + len).equalsIgnoreCase(strings[i].substring(0, len))) {
         calendar.set(FIELDMAP[field], i);
         pos.setIndex(start+len);
         return idx;

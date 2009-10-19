@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ObjectInputStream.c,v 1.5 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 
@@ -42,20 +43,27 @@
 #include "wstrings.h"
 
 void throwInvalidClassException(w_thread thread, w_instance Class, char * message, int l){
-  w_instance ice = allocInstance(thread,clazzInvalidClassException);
+  w_instance ice;
 
+  threadMustBeSafe(thread);
+
+  mustBeInitialized(clazzInvalidClassException);
+
+  enterUnsafeRegion(thread);
+  ice = allocInstance(thread,clazzInvalidClassException);
 
   if(ice){
     w_clazz clazz = Class2clazz(Class);
     w_string string = cstring2String(message, l);
     
     if(string){
-      setReferenceField(ice, newStringInstance(string), F_Throwable_detailMessage);
-      setReferenceField(ice, newStringInstance(clazz->dotified), F_InvalidClassException_classname);
+      setReferenceField_unsafe(ice, getStringInstance(string), F_Throwable_detailMessage);
+      setReferenceField_unsafe(ice, getStringInstance(clazz->dotified), F_InvalidClassException_classname);
       deregisterString(string);
       throwExceptionInstance(thread,ice);
     }
   }
+  enterSafeRegion(thread);
 }
 
 w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_instance Clazz) {
@@ -64,21 +72,20 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
   w_instance newInstance;
 
   if(!Clazz){
-    throwException(thread, clazzNullPointerException, NULL);
+    throwNullPointerException(thread);
+    return NULL;
   }
 
   clazz = Class2clazz(Clazz);
 
-  if (!clazz) {
-    woempa(9, "%k is a primitive class, returning null\n", clazz);
-    return NULL;
-  }
-
+  threadMustBeSafe(thread);
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   newInstance = allocInstance(thread, clazz);
+  enterSafeRegion(thread);
 
   if(!newInstance){
     return NULL;
@@ -156,7 +163,12 @@ w_instance ObjectInputStream_getCallingClassLoader(JNIEnv *env, w_instance this)
 
 w_instance ObjectInputStream_createAndFillByteArray(JNIEnv *env, w_instance this, w_int size){
   w_thread thread = JNIEnv2w_thread(env);
-  w_instance Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+  w_instance Bytes;
+
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  Bytes = allocArrayInstance_1d(thread, atype2clazz[P_byte], size);
+  enterSafeRegion(thread);
 
   if(Bytes){
     w_instance Class = clazz2Class(clazzObjectInputStream);
@@ -318,9 +330,10 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
   w_instance Bytes;
   w_instance Array;
 
+  threadMustBeSafe(thread);
   if(Clazz == NULL){
     woempa(9, "Class is NULL\n");
-    throwException(thread, clazzNullPointerException, NULL);
+    throwNullPointerException(thread);
     return NULL;
   }
 
@@ -328,7 +341,7 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
 
   aclazz = type->nextDimension;
 
-  if(!aclazz){ //remove this check if possible ...
+  if(!aclazz || mustBeInitialized(aclazz) == CLASS_LOADING_FAILED) { //remove this check if possible ...
     woempa(9,"What do you mean the array clazz of %k is not yet defined\n",type);
     throwException(thread, clazzInternalError, "trying to deserialize a primitive Array, but no arrayclass defined");
     return NULL;
@@ -340,7 +353,9 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(thread, aclazz, length);
+  enterSafeRegion(thread);
 
   if(!Array){
     return NULL;

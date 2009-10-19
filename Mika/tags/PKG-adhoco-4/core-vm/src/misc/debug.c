@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5 box 3        info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: debug.c,v 1.13 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include <stdio.h>
@@ -290,12 +291,6 @@ void _woempa(const char *file, const char *function, int line, int level, const 
     (void)x_vsnprintf(woempa_buffer + strlen(woempa_buffer), bufsize - strlen(woempa_buffer), fmt , ap);
     va_end (ap);
    
-#ifdef OS_NONE
-    if(woempa_stderr) {
-      PutString(woempa_buffer);
-      PutString((char *)"\15");
-    }
-#else
 #ifndef ECOS
     if(od) { 
       (void)write(od, woempa_buffer, strlen(woempa_buffer));
@@ -309,7 +304,6 @@ void _woempa(const char *file, const char *function, int line, int level, const 
         fflush(NULL);
       }
     }
-#endif
 
     (void)x_mutex_unlock(&woempaMutex);
 
@@ -322,16 +316,14 @@ void w_dump_info(void);
 void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   x_thread kthread;
   x_status status = xs_success;
-  w_thread thread;
+  w_thread thread = NULL;
   va_list ap;
   w_size bufsize = BUFSIZE;
 
+  blocking_all_threads |= BLOCKED_BY_WABORT;
   if (haveWonkaThreads) {
     status = x_mutex_lock(&woempaMutex, 5);
   }
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
   x_snprintf(woempa_buffer, bufsize, "\n%s: %s %4d: ", abortMessages[scope], function, line);
 
   va_start (ap, fmt);
@@ -339,18 +331,17 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   va_end (ap);
 
   (void)write(1, woempa_buffer, strlen(woempa_buffer));
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
   kthread = x_thread_current();
 /*
 ** Replace with thread_hashtable lookup for now
   thread = (w_thread)kthread->wx_user_data;
 */
-  thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
-  if ((*(w_word*)thread->label)!=(*(w_word*)"thread")){
-    woempa(9,"currentWonkaThread called at %s:%d from non-wonka thread (label = %s)\n", function, line, thread->label);
-    thread = NULL;
+  if (thread_hashtable) {
+    thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
+    if ((*(w_word*)thread->label)!=(*(w_word*)"thread")){
+      woempa(9,"currentWonkaThread called at %s:%d from non-wonka thread (label = %s)\n", function, line, thread->label);
+      thread = NULL;
+    }
   }
 
   w_dump_info();
@@ -364,9 +355,6 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   else {
     PutString((char*)"Unable to identify failing thread, sorry mate...\n");
   }
-#ifdef OS_NONE
-  (void)write(1, (char *)"\15",1);
-#endif
 #endif
 
   if (haveWonkaThreads && status == xs_success) {
@@ -374,12 +362,8 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   }
 
   if (scope > ABORT_INFO) {
-#ifdef OS_NONE
-    (void)x_thread_sleep(x_millis2ticks(5000));
-    x_thread_deletei(x_thread_current());
-#else
     abort();
-#endif
+  blocking_all_threads &= ~BLOCKED_BY_WABORT;
   }
   
 }
@@ -426,12 +410,12 @@ void w_dump_trace(void *xref) {
   else if (thread == sweeping_thread) {
     w_dump("     sweeping heap\n");
   }
+  else if (thread == jitting_thread) {
+    w_dump("     JIT-compiling\n");
+  }
 
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     w_dump("     unsafe\n");
-  }
-  if (isSet(thread->flags, WT_THREAD_BLOCKED_BY_GC)) {
-    w_dump("     blocked by GC\n");
   }
   while (frame) {
     if (frame->method) {
@@ -457,8 +441,10 @@ void w_dump_trace(void *xref) {
   }
 }
 
+#ifndef THREAD_SAFE_FIFOS
 extern x_mutex   finalizer_fifo_mutex;
 extern x_mutex   enqueue_fifo_mutex;
+#endif
 extern x_mutex   string_mutex;
 extern x_monitor reclaim_listener_monitor;
 extern x_monitor gc_monitor;
@@ -478,7 +464,7 @@ void lock_iterator(w_word key, w_word value, void *v1, void *v2) {
   w_instance i = (w_instance)key;
   x_monitor  m = (x_monitor)value;
   if (instance2clazz(i) == clazzClass) {
-    x_snprintf(lock_buffer, 254, "%k", Class2clazz(i));
+    x_snprintf(lock_buffer, 254, "%K", Class2clazz(i));
   }
   else {
     x_snprintf(lock_buffer, 254, "%j", i);
@@ -488,7 +474,10 @@ void lock_iterator(w_word key, w_word value, void *v1, void *v2) {
 
 void w_dump_locks(void) {
   w_dump(" Locks :\n");
+#ifndef THREAD_SAFE_FIFOS
   x_dump_mutex("    Finalizer fifo mutex : ", finalizer_fifo_mutex);
+  x_dump_mutex("      Enqueue fifo mutex : ", enqueue_fifo_mutex);
+#endif
   x_dump_monitor("  Lock hashtable monitor : ", &lock_hashtable->monitor);
   x_dump_monitor("String hashtable monitor : ", &string_hashtable->monitor);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);
@@ -508,25 +497,27 @@ void w_dump_locks(void) {
   if (sweeping_thread) {
     w_dump("       GC sweeping thread : %t\n", sweeping_thread);
   }
-  if (blocking_all_threads) {
-    w_dump("     %s blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : "JDWP");
+  if (blocking_all_threads & ~BLOCKED_BY_WABORT) {
+    w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
   }
   w_dump("\n");
-  w_dump("   Instance locks :\n");
-  ht_iterate(lock_hashtable, lock_iterator, NULL, NULL);
-  w_dump("\n");
+  // [CG 20090130] Can't do this during sweep phase 'coz lock_hashtable will
+  // contain locks for instances which have already been released.
+  //w_dump("   Instance locks (only if owned):\n");
+  //ht_iterate(lock_hashtable, lock_iterator, NULL, NULL);
+  //w_dump("\n");
 }
-
-/* [CG 20040317] Suppressed, as can sometimes deadlock
 
 static int object_size;
 
+#ifdef DUMP_CLASSLOADERS
 static x_boolean classloaders_callback(void * mem, void * arg) {
 
   w_instance   instance;
   w_object     object;
   w_clazz      clazz;
-  w_hashtable  ht;
+  w_hashtable  loaded_classes;
+  w_hashtable  unloaded_classes;
   x_monitor    monitor;
 
   object_size += x_mem_size(mem);
@@ -535,11 +526,13 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
   clazz = object->clazz;
 
   if(isAssignmentCompatible(clazz, clazzClassLoader)) {
-    w_dump("     %j has %d loaded classes, %d unloaded\n", instance, loader2loaded_classes(instance)->occupancy, loader2unloaded_classes(instance)->occupancy);
+    loaded_classes = loader2loaded_classes(instance);
+    unloaded_classes = loader2unloaded_classes(instance);
+    w_dump("     %j has %d loaded classes, %d unloaded;\n", instance, loaded_classes->occupancy, unloaded_classes->occupancy);
+
+    monitor = &loaded_classes->monitor;
+    w_dump("       loaded class monitor is %p\n", monitor);
     
-    ht = loader2loaded_classes(instance);
-    monitor = &ht->monitor;
-  
     if(monitor->owner) {
       w_dump("       loaded_hashtable (0x%08x) locked", monitor);
       if(monitor->owner->xref) {
@@ -548,8 +541,8 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
       w_dump("\n");
     }
     
-    ht = loader2unloaded_classes(instance);
-    monitor = &ht->monitor;
+    monitor = &unloaded_classes->monitor;
+    w_dump("       unloaded class monitor is %p\n", monitor);
     
     if(monitor->owner) {
       w_dump("       unloaded_hashtable (0x%08x) locked", monitor);
@@ -572,18 +565,69 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
     }
   }
 
-  return true;
+  return TRUE;
 }
+#endif
 
+#ifdef DUMP_CLASSES
+static x_boolean classes_callback(void * mem, void * arg) {
+
+  w_instance   instance;
+  w_object     object;
+  w_clazz      clazz;
+  w_clazz      target_clazz;
+  x_monitor    monitor;
+
+  object = chunk2object(mem);
+  instance = object->fields;
+  clazz = object->clazz;
+
+  if (clazz == clazzClass) {
+    target_clazz = Class2clazz(instance);
+    monitor = target_clazz->resolution_monitor;
+    if(monitor->owner) {
+      w_dump("%K resolution_monitor (0x%08x) locked", target_clazz, monitor);
+      if(monitor->owner->xref) {
+        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+      }
+      w_dump("\n");
+    }
+
+    monitor = (x_monitor)ht_read(lock_hashtable, (w_word)instance);
+    
+    if(monitor && monitor->owner) {
+      w_dump("%K Class instance (0x%08x) locked", target_clazz, monitor);
+      if(monitor->owner->xref) {
+        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+      }
+      w_dump("\n");
+    }
+  }
+
+  return TRUE;
+}
+#endif
+
+#ifdef DUMP_CLASSLOADERS
 void w_dump_classloaders(void) {
-  w_dump(" Classloaders :\n");
+  w_dump("   Classloaders :\n");
   x_mem_lock(x_eternal);
   object_size = 0;
   x_mem_scan(x_eternal, OBJECT_TAG, classloaders_callback, NULL);
   x_mem_unlock();
   w_dump("\n");
 }
-*/
+#endif
+
+#ifdef DUMP_CLASSES
+void w_dump_classes(void) {
+  w_dump("   Class locks :\n");
+  x_mem_lock(x_eternal);
+  x_mem_scan(x_eternal, OBJECT_TAG, classes_callback, NULL);
+  x_mem_unlock();
+  w_dump("\n");
+}
+#endif
 
 void w_dump_meminfo(void) {
   w_dump(" Memory :\n");
@@ -600,7 +644,12 @@ void w_dump_info() {
   w_dump("\n");
   w_dump_threads();
   w_dump_locks();
-//  w_dump_classloaders();
+#ifdef DUMP_CLASSES
+  w_dump_classes();
+#endif
+#ifdef DUMP_CLASSLOADERS
+  w_dump_classloaders();
+#endif
   w_dump(" Global References: %d\n\n",globals_hashtable->occupancy);
   w_dump_meminfo();
 }

@@ -1,29 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Math.java,v 1.3 2006/03/29 09:27:14 cvs Exp $
-*/
 
 package java.lang;
 
@@ -83,6 +87,12 @@ package java.lang;
  ** <p><author>Chris Gray, ACUNIA VM Architect, August 21 2001</author>
  */
 public final class Math {
+
+  static {
+    init();
+  }
+
+  private static native void init();
 
   /**
   ** this constructor is added to prevent the compiler from adding a default constructor.
@@ -155,7 +165,7 @@ public final class Math {
   /**
    ** Trying to calculate the exponent of anything bigger than this would be foolish.
   */
-  private static final double logbignum = log(Double.MAX_VALUE);
+  private static final double logbignum = 709.782712893384; // log(Double.MAX_VALUE)
 
   /**
    ** The (pseudo-)random number generator used by random().
@@ -537,10 +547,17 @@ public final class Math {
        return Double.longBitsToDouble(l);
     }
 
-    if (Double.isInfinite(y) && Double.isInfinite(x)) {
+    if (Double.isInfinite(y)) {
+      if (Double.isInfinite(x)) {
 
-      return (y > 0 ? 1.0 : -1.0) * (x > 0 ? quarterpi : Math.PI - quarterpi);
+        return (y > 0 ? 1.0 : -1.0) * (x > 0 ? quarterpi : Math.PI - quarterpi);
 
+      }
+      else {
+
+        return y > 0 ? halfpi : -halfpi;
+
+      }
     }
 
     double temp = atan(y/x);
@@ -1077,23 +1094,7 @@ public final class Math {
     String fractpart;
     String exppart;
 
-// System.out.println("floatValue: input is \""+s+"\"");
-
-/*    while (Character.isWhitespace(s.charAt(index))) {
-      ++index;
-    }
-// System.out.println("floatValue: skipped "+index+" whitespace chars at start");
-
-    while (Character.isWhitespace(s.charAt(length-1))) {
-      --length;
-    }
-// System.out.println("floatValue: skipped "+(s.length()-length)+" whitespace chars at end");
-*/
     try {
-      if("dDfF".indexOf(s.charAt(length-1)) != -1){
-         --length;
-      }
-
       if (s.charAt(index) == '-') {
         negative = true;
         ++index;
@@ -1102,25 +1103,32 @@ public final class Math {
         ++index;
       }
 
-//   System.out.println("floatValue: negative is "+negative+", now at char #"+index);
+      if((3 + index == length) &&s.regionMatches(true, index, "NaN", 0, 3)) {
+        return Float.NaN;
+      }
+      if((8 + index == length) &&s.regionMatches(true, index, "Infinity", 0, 8)) {
+        return negative ? Float.NEGATIVE_INFINITY : Float.POSITIVE_INFINITY;
+      }
+      
+      if("dDfF".indexOf(s.charAt(length-1)) != -1){
+         --length;
+      }
+      
       int point = s.indexOf('.', index);
       int e;
 
       if (point >= 0) {
-//   System.out.println("floatValue: found a decimal point at char#"+point);
         e = s.indexOf('e', point+1);
         if (e < 0) {
           e = s.indexOf('E', point+1);
         }
         wholepart = s.substring(index, point);
         if (e < 0) {
-// System.out.println("floatValue: did not find an e/E");
           fractpart = s.substring(point+1, length);
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           fractpart = s.substring(point+1, e);
           exppart = s.substring(e+1, length);
           if (exppart.charAt(0) == '-') {
@@ -1132,20 +1140,17 @@ public final class Math {
         }
       }
       else {
-// System.out.println("floatValue: did not find a decimal point");
         e = s.indexOf('e', index);
         if (e < 0) {
           e = s.indexOf('E', index);
         }
         if (e < 0) {
-// System.out.println("floatValue: did not find an e/E");
           wholepart = s.substring(index, length);
           fractpart = "";
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           wholepart = s.substring(index, e);
           fractpart = "";
           exppart = s.substring(e+1, length);
@@ -1196,7 +1201,6 @@ public final class Math {
     if (exponent != 0) {
       result *= pow(10.0, expnegative ? -exponent : exponent);
     }
-// System.out.println("floatValue: returning "+(negative ? -result : result));
     return (float)(negative ? -result : result);
   }
 
@@ -1225,22 +1229,7 @@ public final class Math {
 
 
 // System.out.println("doubleValue: input is \""+s+"\"");
-/*
-    while (Character.isWhitespace(s.charAt(index))) {
-      ++index;
-    }
-// System.out.println("doubleValue: skipped "+index+" whitespace chars at start");
-
-    while (Character.isWhitespace(s.charAt(length-1))) {
-      --length;
-    }
-// System.out.println("doubleValue: skipped "+(s.length()-length)+" whitespace chars at end");
-*/
     try {
-      if("dDfF".indexOf(s.charAt(length-1)) != -1){
-         --length;
-      }
-
       if (s.charAt(index) == '-') {
         negative = true;
         ++index;
@@ -1248,25 +1237,33 @@ public final class Math {
       else if (s.charAt(index) == '+') {
         ++index;
       }
-// System.out.println("doubleValue: negative is "+negative+", now at char #"+index);
+
+      if((3 + index == length) &&s.regionMatches(true, index, "NaN", 0, 3)) {
+        return Float.NaN;
+      }
+      if((8 + index == length) &&s.regionMatches(true, index, "Infinity", 0, 8)) {
+        return negative ? Float.NEGATIVE_INFINITY : Float.POSITIVE_INFINITY;
+      }
+      
+      if("dDfF".indexOf(s.charAt(length-1)) != -1){
+        --length;
+     }
+
       int point = s.indexOf('.', index);
       int e;
 
       if (point >= 0) {
-// System.out.println("doubleValue: found a decimal point at char#"+point);
       e = s.indexOf('e', point+1);
         if (e < 0) {
           e = s.indexOf('E', point+1);
         }
         wholepart = s.substring(index,point);
         if (e < 0) {
-// System.out.println("doubleValue: did not find an e/E");
           fractpart = s.substring(point+1, length);
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           fractpart = s.substring(point+1, e);
           exppart = s.substring(e+1, length);
           if (exppart.charAt(0) == '-') {
@@ -1279,20 +1276,17 @@ public final class Math {
         }
       }
       else {
-// System.out.println("doubleValue: did not find a decimal point");
         e = s.indexOf('e', index);
         if (e < 0) {
           e = s.indexOf('E', index);
         }
         if (e < 0) {
-// System.out.println("doubleValue: did not find an e/E");
           wholepart = s.substring(index, length);
           fractpart = "";
           exppart = "0";
           expnegative = false;
         }
         else {
-// System.out.println("floatValue: found an e/E at char#"+e);
           wholepart = s.substring(index, e);
           fractpart = "";
           exppart = s.substring(e+1, length);

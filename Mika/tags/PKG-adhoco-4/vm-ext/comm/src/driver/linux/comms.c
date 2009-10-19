@@ -1,33 +1,33 @@
 /**************************************************************************
-* Copyright (c) 2001, 2003 by Acunia N.V. All rights reserved.            *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2001, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: comms.c,v 1.3 2004/11/18 23:51:52 cvs Exp $
-*/
 
 #include <fcntl.h>
 #include <errno.h>
@@ -51,9 +51,7 @@
 #include "driver_byteserial.h"
 
 /*
-** Currently we have 4 hard-coded comm ports, 3 hard-coded
-** file descriptors, and one wonkaterm.
-** Should be made smarter.
+** Currently we have 8 hard-coded comm ports. Should be made smarter.
 ** For each comm port we have a w_Sio structure, a w_Device,
 ** and two termios buffers; one to store the state when
 ** Wonka was started up (so we can restore it on exit),
@@ -71,11 +69,28 @@ static struct termios sio2_oldtermios;
 static struct termios sio2_newtermios;
 static struct termios sio3_oldtermios;
 static struct termios sio3_newtermios;
+static struct termios sio4_oldtermios;
+static struct termios sio4_newtermios;
+static struct termios sio5_oldtermios;
+static struct termios sio5_newtermios;
+static struct termios sio6_oldtermios;
+static struct termios sio6_newtermios;
+static struct termios sio7_oldtermios;
+static struct termios sio7_newtermios;
+
+#define SIO0_DEFAULT_BITRATE B115200
+#define SIO1_DEFAULT_BITRATE B115200
+#define SIO2_DEFAULT_BITRATE B115200
+#define SIO3_DEFAULT_BITRATE B115200
+#define SIO4_DEFAULT_BITRATE B115200
+#define SIO5_DEFAULT_BITRATE B115200
+#define SIO6_DEFAULT_BITRATE B115200
+#define SIO7_DEFAULT_BITRATE B115200
 
 /*
-** The pathnames for the four serial ports
+** The pathnames for the eight serial ports
 */
-char * pathname[4];
+char * pathname[8];
 
 typedef struct w_Control_Sio {
   struct pollfd pollfd;
@@ -127,7 +142,7 @@ typedef w_Control_Sio *w_control_sio;
 ** Somewhat ad-hoc function to set the path of an sio device
 */
 void sio_set_path(int n, char *s) {
-  if (n >= 0 && n < 4) {
+  if (n >= 0 && n < 8) {
     char *buf = allocMem(strlen(s) + 1);
     strcpy(buf, s);
     pathname[n] = buf;
@@ -183,6 +198,26 @@ w_void sio_initDevice(w_device device) {
             c->devicename = pathname[3];
             c->oldtermios = &sio3_oldtermios;
             c->newtermios = &sio3_newtermios;
+            break;
+    case 4: c->bitrate = SIO4_DEFAULT_BITRATE;
+            c->devicename = pathname[4];
+            c->oldtermios = &sio4_oldtermios;
+            c->newtermios = &sio4_newtermios;
+            break;
+    case 5: c->bitrate = SIO5_DEFAULT_BITRATE;
+            c->devicename = pathname[5];
+            c->oldtermios = &sio5_oldtermios;
+            c->newtermios = &sio5_newtermios;
+            break;
+    case 6: c->bitrate = SIO6_DEFAULT_BITRATE;
+            c->devicename = pathname[6];
+            c->oldtermios = &sio6_oldtermios;
+            c->newtermios = &sio6_newtermios;
+            break;
+    case 7: c->bitrate = SIO7_DEFAULT_BITRATE;
+            c->devicename = pathname[7];
+            c->oldtermios = &sio7_oldtermios;
+            c->newtermios = &sio7_newtermios;
             break;
     default:
             break;
@@ -570,6 +605,8 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
   }
 }
 
+static const w_word oldbitrates[] = { 0, 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400 };
+static const w_word newbitrates[] = { 57600, 115200, 230400, 460800, 500000, 576000, 921600, 1000000, 1115200, 1500000, 2000000, 2500000, 3000000, 3500000, 4000000 };
 
 w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, x_sleep timeout) {
   w_control_sio sio = device->control;
@@ -579,7 +616,8 @@ w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, 
 
   switch (query) {
     case(wdi_get_bitrate):
-      *reply = cfgetospeed(sio->newtermios);
+      temp = cfgetospeed(sio->newtermios);
+      *reply = temp <= 15 ? oldbitrates[temp] : temp > 0010017 ? 0 : temp <= 0010000 ? -1 : newbitrates[temp - 0010001];
       return wds_success;
 
     case(wdi_get_databits):

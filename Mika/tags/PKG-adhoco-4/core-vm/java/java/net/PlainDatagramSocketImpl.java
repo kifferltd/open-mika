@@ -1,27 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
 
 package java.net;
 
@@ -91,7 +97,16 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   /**
    * Join the multicast group.
    */
-  protected synchronized native void join(InetAddress inetaddr) throws IOException;
+  protected void join(InetAddress inetaddr) throws IOException {
+    join(inetaddr, null);
+  }
+ 
+   /**
+   * Join the multicast group.
+   */
+  protected void joinGroup(InetAddress inetaddr, NetworkInterface nw) throws IOException {
+    join(inetaddr, (InetAddress) nw.getInetAddresses().nextElement());
+  }
 
   /**
    * Leave the multicast group.
@@ -118,7 +133,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
     if(opt == SO_TIMEOUT){
    	  return new Integer(timeout);
    	}
-   	return Options(opt, null, sock);
+   	return options(opt, null, sock);
   }
 
   public synchronized void setOption(int opt, Object value) throws SocketException {
@@ -133,7 +148,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
       }
     }
     else {
-      Options(opt, value, sock);
+      options(opt, value, sock);
     }
   }
 
@@ -149,7 +164,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   SO_SNDBUF =0x1001;       --> Integer
   SO_RCVBUF = 0x1002;      --> Integer
 */
-  static Object Options(int opt, Object value, int sock) throws SocketException {
+  static Object options(int opt, Object value, int sock) throws SocketException {
     try {
       int i=0;
       switch (opt) {
@@ -157,6 +172,12 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
           if(value == null){//get
             return InetAddress.createInetAddress(getBindAddress(sock));
           }
+          break;
+        case SO_BROADCAST:
+          if(value == null){//get
+            return new Boolean(optIntOptions(sock, -1, 7) != 0);
+          }
+          optIntOptions(sock, ((Boolean)value).booleanValue() ? 1 : 0, 7); //set
           break;
         case SO_LINGER:
           if(value == null){//get
@@ -187,12 +208,23 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
           i++;
         case SO_RCVBUF:
           i++;
-        case SO_REUSEADDR:
+       case SO_REUSEADDR:
           if(value == null){//get
             return new Integer(optIntOptions(sock, -1, i));
           }
-          optIntOptions(sock, ((Integer)value).intValue(), i); //set
+
+          /*
+           * According to http://java.sun.com/javame/reference/apis/jsr219/java/net/SocketOptions.html
+           * this code should handle being passed a Boolean or a Integer
+           * also should review other SocketOptions and refactor as required.
+           */
+         try {
+           optIntOptions(sock, ((Boolean)value).booleanValue() ? 1 : 0, i); //set
+          } catch (ClassCastException cce) {
+           optIntOptions(sock, 1, i); //set
+          }
           break;
+
         case IP_MULTICAST_IF:
           if(value == null){//get
             return InetAddress.createInetAddress(optMulticastIF(sock, null, true));
@@ -218,5 +250,6 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   private static native int optMulticastIF(int sock, InetAddress value, boolean set) throws SocketException ;
   private static native int optIntOptions(int sock, int value, int opt) throws SocketException ;// value == -1 if get is wanted
   private static native void setSoTimeout(int sock, int t) throws SocketException;
+  private synchronized native void join(InetAddress group, InetAddress local) throws IOException;
 
 }

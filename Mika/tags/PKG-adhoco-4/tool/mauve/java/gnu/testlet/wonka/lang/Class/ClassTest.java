@@ -1,4 +1,4 @@
-/* Copyright (C) 1999, 2000 Hewlett-Packard Company
+/* Copyright (C) 1999, 2000, 2001, 2002 Hewlett-Packard Company
 
    This file is part of Mauve.
 
@@ -18,454 +18,603 @@
    Boston, MA 02111-1307, USA.
 */
 
-// Tags: JLS1.0
-
-
-
-// Edited by Smartmove on Fri Aug 25
-// new Tag:JLS1.2
+// Tags: JDK1.0
 
 package gnu.testlet.wonka.lang.Class;
-// 
-
 import gnu.testlet.Testlet;
 import gnu.testlet.TestHarness;
 
 import java.io.*;
 import java.net.*;
 
-public class ClassTest	 implements Cloneable, java.io.Serializable, Testlet
+public class ClassTest implements Cloneable, java.io.Serializable, Testlet
 {
+  final int ACC_PUBLIC =  0x0001; //Marked or implicitly public in source. 
+  final int ACC_PRIVATE = 0x0002; // Marked private in source. 
+  final int ACC_PROTECTED = 0x0004; // Marked protected in source.
+  final int ACC_STATIC = 0x0008; // Marked or implicitly static in source. 
+  final int ACC_FINAL = 0x0010; // Marked final in source. 
+  final int ACC_INTERFACE = 0x0200; // Was an interface in source. 
+  final int ACC_ABSTRACT = 0x0400; // Marked or implicitly abstract in source.
+  
   protected static TestHarness harness;
+  public void test_toString()
+  {
+    harness.checkPoint("test_toString");
+    harness.check(getClass().toString().equals(getClass().isInterface() ? 
+					       "interface " : "class " + 
+					       getClass().getName()));
+    harness.check((new Object()).getClass().toString().
+		  equals("class java.lang.Object"));
+  }
+  
+  public void test_getName()
+  {
+    harness.checkPoint("test_getName");
+    harness.check((new java.util.Vector()).getClass().getName().
+		  equals("java.util.Vector"));
+    harness.check((new Object[3]).getClass().getName().
+		  equals("[Ljava.lang.Object;")) ;
+    harness.check((new int[6][7][8]).getClass().getName().equals("[[[I"));
 
-	public void test_toString()
+    // Note: the javadoc Class.getName() for JDK 1.3.x, 1.4.0 & 1.4.1 
+    // seems to say that getName() returns a one character code for
+    // primitive types and void, etcetera.  In fact, this is a bug in
+    // the Sun javadoc.  According to Sun's bug database, it is fixed 
+    // in JDK 1.4.2 (Merlin) release.
+    harness.check(Void.TYPE.getName().equals("void"));
+    harness.check(Boolean.TYPE.getName().equals("boolean"));
+    harness.check(Byte.TYPE.getName().equals("byte"));
+    harness.check(Character.TYPE.getName().equals("char"));
+    harness.check(Short.TYPE.getName().equals("short"));
+    harness.check(Integer.TYPE.getName().equals("int"));    
+    harness.check(Long.TYPE.getName().equals("long"));
+    harness.check(Float.TYPE.getName().equals("float"));
+    harness.check(Double.TYPE.getName().equals("double"));
+  }
+  
+  public void test_isInterface()
+  {
+    harness.checkPoint("test_isInterface");
+    harness.check(!(new Object()).getClass().isInterface());
+    harness.check(!getClass().isInterface());
+    try {
+      harness.check(Class.forName("java.lang.Cloneable").isInterface());
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+  }
+  
+  public void test_getSuperclass()
+  {
+    harness.checkPoint("test_getSuperclass (superclass of Boolean is Object)");
+    try {
+      harness.check((new Boolean(true)).getClass().getSuperclass() == 
+		    Class.forName("java.lang.Object"));
+    } catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+
+
+    harness.checkPoint("test_getSuperclass (superclass of java.lang.Boolean.TYPE is null)");
+    try {
+	harness.check( java.lang.Boolean.TYPE.getSuperclass() == null);
+    } catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    
+    harness.checkPoint("test_getSuperclass (superclass of Object is null)");
+    harness.check((new Object()).getClass().getSuperclass() == null);
+    
+    harness.checkPoint("test_getSuperclass (superclass of [[I is Object)");
+    try {	
+      Class clss = Class.forName("[[I");
+      harness.check(clss.getSuperclass() == Class.forName("java.lang.Object"));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    harness.checkPoint("test_getSuperclass (superclass of [D is Object)");
+    try {	
+      Class clss = Class.forName("[D");
+      harness.check(clss.getSuperclass() == Class.forName("java.lang.Object"));
+      harness.debug("superclass of " + clss + " is " + clss.getSuperclass());
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    harness.checkPoint("test_getSuperclass (superclass of Cloneable is null)");
+    try {	
+      Class clss = Class.forName("java.lang.Cloneable");
+      harness.check(clss.getSuperclass() == null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    
+    try {	
+      Class clss = Void.TYPE;
+      harness.check(clss.getSuperclass() == null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    
+    try {	
+      Class clss = Double.TYPE;
+      harness.check(clss.getSuperclass() == null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+  }
+
+    public void test_primitiveTypes()
+    {
+	Class cls;
+
+	harness.checkPoint("test_primitiveTypes java.lang.Boolean.TYPE is primitive");
+	cls = java.lang.Boolean.TYPE;
+	harness.check(cls.isPrimitive() == true);
+
+	harness.checkPoint("test_primitiveTypes java.lang.Double.TYPE is primitive");
+	cls = java.lang.Double.TYPE;
+	harness.check(cls.isPrimitive() == true);
+
+	harness.checkPoint("test_primitiveTypes java.lang.Void.TYPE is primitive");
+	cls = java.lang.Void.TYPE;
+	harness.check(cls.isPrimitive() == true);
+
+	harness.checkPoint("test_primitiveTypes java.lang.Object is not primitive");
+	try {
+	    cls = Class.forName("java.lang.Object");
+	    harness.check(cls.isPrimitive() == false);
+	} catch(Exception e)
+	    {
+		harness.check(false);
+	    }
+
+	harness.checkPoint("test_primitiveTypes java.lang.Integer is not primitive");
+	try {
+	    cls = Class.forName("java.lang.Integer");
+	    harness.check(cls.isPrimitive() == false);
+	} catch(Exception e)
+	    {
+		harness.check(false);
+	    }
+
+	try {
+	    harness.checkPoint("test_primitiveTypes [I is not primitive");
+	    cls = Class.forName("[I");
+	    harness.check(cls.isPrimitive() == false);
+	} catch(Exception e)
+	    {
+		harness.check(false);
+	    }
+    }  
+
+    private class PrivateType {
+	int foo;
+    }
+
+    public void test_Modifiers()
+    {
+	Class cls;
+
+	harness.checkPoint("test_Modifiers java.lang.Boolean.TYPE modifiers");
+	cls = java.lang.Boolean.TYPE;
+	harness.check((cls.getModifiers() & 
+		       (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
+			ACC_FINAL | ACC_INTERFACE)), 
+		      (ACC_PUBLIC | ACC_FINAL));
+
+	harness.checkPoint("test_Modifiers java.lang.Boolean modifiers");
+	try {
+	    cls = Class.forName("java.lang.Boolean");
+	    harness.check((cls.getModifiers() & 
+			   (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
+			    ACC_FINAL | ACC_INTERFACE)),
+			  (ACC_PUBLIC | ACC_FINAL));
+	} catch(Exception e)
+	    {
+		harness.check(false);
+	    }
+
+	harness.checkPoint("test_Modifiers [I modifiers");
+	try {
+	    cls = Class.forName("[I");
+	    harness.check((cls.getModifiers() & 
+			   (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
+			    ACC_FINAL | ACC_INTERFACE)), 
+			  (ACC_PUBLIC | ACC_FINAL));
+      cls = new Object[0].getClass();
+      harness.check((cls.getModifiers() & 
+         (ACC_PUBLIC | ACC_PROTECTED | ACC_PRIVATE | 
+          ACC_FINAL | ACC_INTERFACE)), 
+        (ACC_PUBLIC | ACC_FINAL));
+
+  } catch(Exception e)
+	    {
+		harness.check(false);
+	    }
+
+	harness.checkPoint("test_Modifiers private modifier");
+	PrivateType foo = new PrivateType(); //new Cloneable() { int d; };
+	cls = foo.getClass();
+	harness.check((cls.getModifiers() & (ACC_PRIVATE)), (ACC_PRIVATE));
+
+	harness.checkPoint("test_Modifiers array modifiers");
+	/*	PrivateType[] array = new PrivateType[2];
+	cls = array.getClass();
+	harness.check((cls.getModifiers() & (ACC_PRIVATE)) == (ACC_PRIVATE));
+	harness.check((cls.getModifiers() & (ACC_FINAL)) == (ACC_FINAL));
+	harness.check((cls.getModifiers() & (ACC_INTERFACE)) == 0);
+	*/
+
+	harness.checkPoint("test_Modifiers java.lang.Boolean modifiers");
+	cls = java.lang.Boolean.TYPE;
+	harness.check((cls.getModifiers() & (ACC_PUBLIC | ACC_FINAL)) != 0);
+
+    }  
+
+  public void test_getInterfaces()
+  {
+    harness.checkPoint("test_getInterfaces");
+    Class clss[] = getClass().getInterfaces();
+    
+    Class clclass = null, clclass1 = null;
+    try {
+      clclass = Class.forName("java.lang.Cloneable");
+      clclass1 = Class.forName("java.io.Serializable");
+      harness.check(true);
+    } 
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    
+    harness.check(clss != null && clss.length == 3 && 
+		  clss[0] == clclass && clss[1] == clclass1);
+    if (clss != null && clss.length == 3 &&
+	!(clss[0] == clclass && clss[1] == clclass1)) {
+      for (int i = 0; i < clss.length; i++) {
+	harness.debug ("" + clss[i], false);
+	harness.debug (" ", false);
+      }
+      harness.debug("");
+    }
+
+    try {	
+      Class clsss = Class.forName("[[I");
+      harness.check(clsss.getInterfaces().length, 2);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+    
+    try {	
+      Class clsss = Class.forName("[D");
+      harness.check(clsss.getInterfaces().length, 2);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+  }
+  
+  public void test_newInstance()
+  {
+    harness.checkPoint("test_newInstance");
+    Class clss = getClass();
+    Object obj;
+    
+    try {
+      obj = clss.newInstance();
+      obj = clss.newInstance();
+      obj = clss.newInstance();
+      obj = clss.newInstance();
+      harness.check(true);
+    }
+    catch (Exception e) {
+      harness.fail("Error: newInstance failed");
+      harness.debug(e);
+    }
+    catch (Error e) {
+      harness.fail("Error: newInstance failed with an Error");
+      harness.debug(e);
+    }
+  }
+  
+  
+  public void test_forName()
+  {
+    harness.checkPoint("test_forName");
+    try {
+      Object obj = Class.forName("java.lang.Object");
+      harness.check(obj != null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+
+    // A non-existing class.
+    checkClassNotFoundException("ab.cd.ef");
+
+    // You can't use Class.forName() to get a primitive.
+    checkClassNotFoundException("I");
+    checkClassNotFoundException("int");
+
+    // Some malformed array types.
+    checkClassNotFoundException("[");
+    checkClassNotFoundException("[int");
+    checkClassNotFoundException("[II");
+    checkClassNotFoundException("[L");
+    checkClassNotFoundException("[L;");
+    checkClassNotFoundException("[L[I;");
+    checkClassNotFoundException("[Ljava.lang.Object");
+    checkClassNotFoundException("[Ljava.lang.Objectx");
+    checkClassNotFoundException("[Ljava.lang.Object;x");
+
+    // Using slashes isn't allowed.
+    checkClassNotFoundException("java/lang/Object");
+  }
+
+  private void checkClassNotFoundException(String className)
+  {
+    try {
+      Class c = Class.forName(className);
+      harness.debug("class: " + c);
+      harness.debug("classloader: " + c.getClassLoader());
+      if (c.isArray())
 	{
-		if ( !getClass().toString().equals(getClass().isInterface()? 	"interface " : "class " +getClass().getName()))
-		{
-			harness.fail("Error: toString returned wrong string");
-		}
-		else { harness.check(true);}
-	
-
-		if ( !(new Object()).getClass().toString().equals("class java.lang.Object"))
-		{
-			harness.fail("Error: toString returned wrong string");
-		}
-		else { harness.check(true);}
-// adding extra code
-	
-		Class ci = Integer.TYPE;	
-		harness.check( ci.toString().equals("int"));
-		harness.check( ci.toString().equals(ci.getName())); 
-
-		
-
-
-
+	  Class ct = c.getComponentType();
+	  harness.debug("component type: " + ct);
+	  harness.debug("component type classloader: " + ct.getClassLoader());
 	}
+      harness.check(false,"AAAAAAAAAghhh: "+className);
+    }
+    catch (ClassNotFoundException e) {
+      harness.check(true);
+    }
+    catch (Exception x) {
+      harness.debug(x);
+      harness.check(false);
+    }
+  }
 
-	public void test_getName()
-	{
-	   try 	{ 
-		if ( ! (new java.util.Vector()).getClass().getName().equals("java.util.Vector"))
-			harness.fail("Error: getName returned wrong string - 1");
-		else { harness.check(true);}
+  public void test_getClassloader()
+  {
+    harness.checkPoint("test_getClassloader");
+    try {
+      Class obj2 = Class.forName("gnu.testlet.wonka.lang.Class.ClassTest");
+      ClassLoader ldr1 = obj2.getClassLoader();
+      // For compatibility with (at least) JDK 1.3.1 & JDK 1.4.0 ...
+      harness.check(ldr1 != null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }	
+  }
 
-		if ( ! (new Object[3]).getClass().getName().equals("[Ljava.lang.Object;"))
-			harness.fail("Error: getName returned wrong string - 2");
-		else { harness.check(true);}
+  public void test_ComponentType()
+  {
+    harness.checkPoint("test_ComponentType");
+    try {
+      Class obj1 = Class.forName("java.lang.String");
+      harness.check(obj1.getComponentType() == null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-		if ( ! ( new int[6][7][8]).getClass().getName().equals("[[[I"))
-			harness.fail("Error: getName returned wrong string - 3");
-		else { harness.check(true);}
+    try {
+      Class obj2 = Class.forName("java.lang.Exception");
+      harness.check(obj2.getComponentType() == null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-//adding code	
-		Class ci = Float.TYPE;	
-		harness.check(ci.getName().equals("float"));
-		}
-		catch ( Error e ) 	{ harness.fail("Error: getName failed  - 4"); }
+    try {
+      Class arrclass = Class.forName("[I");
+      harness.check(arrclass.getComponentType() != null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-	}
+    try {
+      Class arrclass = Class.forName("[[[[I");
+      harness.check(arrclass.getComponentType() != null);
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+  }
 
-	public void test_isInterface()
-	{
-		if ( (new Object()).getClass().isInterface())
-			harness.fail("Error: isInterface returned wrong result - 1");
-		else { harness.check(true);}
+  public void test_isMethods()
+  {
+    harness.checkPoint("test_isMethods");
+    try {
+      Class obj1 = Class.forName("java.lang.String");
+      harness.check(obj1.isInstance("babu"));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-		if ( getClass().isInterface())
-			harness.fail("Error: isInterface returned wrong result - 2");
-		else { harness.check(true);}
+    try {
+      Class obj2 = Class.forName("java.lang.Integer");
+      harness.check(obj2.isInstance(new Integer(10)));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-		try 	{
-			if ( !Class.forName("java.lang.Cloneable").isInterface())
-			harness.fail("Error: isInterface returned wrong result - 3");
-			else { harness.check(true);}
-			}
-		catch ( Exception e ){}
-	}
+    try {
+      int arr[] = new int[3];
+      Class arrclass = Class.forName("[I");
+      harness.check(arrclass.isInstance(arr));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-	public void test_getSuperclass()
-	{
-		try 	{
-			if(  (new Boolean(true)).getClass().getSuperclass() != Class.forName("java.lang.Object"))
-				harness.fail("Error: getSuperclass returned wrong values - 1");
-			else { harness.check(true);}
-			}
-		catch ( Exception e ){}
+    try {
+      Class cls1 = Class.forName("java.lang.String");
+      Class supercls = Class.forName("java.lang.Object"); 
+      harness.check(supercls.isAssignableFrom(cls1) &&
+		    !cls1.isAssignableFrom(supercls));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-		if ( (new Object()).getClass().getSuperclass() != null )
-			harness.fail("Error: getSuperclass returned wrong values - 2");
-		else { harness.check(true);}
+    try {  
+      Class cls1 = Class.forName("java.lang.String");
+      Class cls2 = Class.forName("java.lang.String");
+      harness.check(cls2.isAssignableFrom(cls1));
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
 
-		try 	{	
-		   	Class clss = Class.forName("[[I");
-		   	if ( clss.getSuperclass() != Class.forName("java.lang.Object"))
-		   	harness.fail(" Error : getSuperclass  " +" failed - 3 " );
-			else { harness.check(true);}
-
-
-			}
-		catch ( Exception e ){ harness.fail(" Error: getSuperclass failed - 4");
-		}
-
-		try 	{	
-		   	Class clss = Class.forName("[D");
-		   	if ( clss.getSuperclass() != Class.forName("java.lang.Object"))
-		   		harness.fail(" Error : getSuperclass  " +" failed - 5 " );
-			else { harness.check(true); }
-			harness.check(true);
-
-			}
-		catch ( Exception e ){  harness.fail(" Error: getSuperclass failed - 6");
-		}
-// adding code
-			Class ci = Integer.TYPE;	
-			harness.check( (ci.getSuperclass()) == null, "integer class");
-			ci = Void.TYPE;
-			harness.check( (ci.getSuperclass()) == null, "void class");
-							
-		try 	{
-			ci = getClass();
-			harness.check((ci.getSuperclass()) == Class.forName("java.lang.Object"));
-		   	harness.check((Class.forName("java.lang.Cloneable").getSuperclass())== null);
-			}
-		catch ( Exception e ){harness.fail("Debuggin ERROR");}
-
-
-	}
-
-	public void test_getInterfaces()
-	{
-		Class clss[] = getClass().getInterfaces();
-
-		Class clclass = null,clclass1 = null;
-		try 	{
-			clclass = Class.forName("java.lang.Cloneable");
-			clclass1 = Class.forName("java.io.Serializable");
-			}
-		catch ( Exception e ){}
-
-		if ( clss == null )
-			harness.fail("Error: getInterfaces returned wrong values - 1");
-		else
-		{	harness.check(true);
-			if ( clss.length != 3 )
-			harness.fail("Error: getInterfaces returned wrong values - 2");
-			else
-		  	{	harness.check(true);
-				if (!( clss[0] == clclass  && clss[1] == clclass1))
-		      		{
-					harness.fail("Error: getInterfaces returned wrong values - 3");
-					for (int i = 0; i < clss.length; i++)
-			  		{
-			    			harness.debug ("" + clss[i], false);
-			   	 		harness.debug (" ", false);
-			  		}
-					harness.debug ("");
-		      		}
-				else { harness.check(true);}
-			}
-		}
-	
-		try 	{	
-		   	Class clsss = Class.forName("[[I");
-		   	harness.check ( clsss.getInterfaces().length,  2 );
-			}
-		catch ( Exception e ){ harness.fail(" Error: getInterfaces failed - 5");}
-
-		try 	{	
-		   	Class clsss = Class.forName("[D");
-		   	harness.check ( clsss.getInterfaces().length, 2 );
-			}
-		catch ( Exception e ){ harness.fail(" Error: getInterfaces failed - 7");}
-// adding code
-		harness.check(clclass.getInterfaces().length == 0);
-		try 	{
-			clclass = Class.forName("java.lang.Object");
-			harness.check(clclass.getInterfaces().length == 0);
-
-
-			}
-		catch ( Exception e ){}
-
-
-	}
-
-	public void test_newInstance()
-	{
-		Class clss = getClass();
-		Object obj;
-
-		try 	{
-			obj = clss.newInstance();
-			obj = clss.newInstance();
-			obj = clss.newInstance();
-			obj = clss.newInstance();
-			harness.check(true);
-
-			}
-		catch ( Exception e ){harness.fail("Error: newInstance failed ");}
-		catch ( Error e ){harness.fail("Error: newInstance failed "+" with out of memory error " );}
-// adding code
-		try 	{ 
-			Class.class.newInstance();
-			harness.fail("should throw an IllegalAccessException");
-			}
-		catch   (IllegalAccessException iae){ harness.check(true);}
-		catch	(Exception e) { harness.fail("should throw an IllegalAccessException, but got"+e);}
-		try 	{ 
-			Number.class.newInstance();
-			harness.fail("should throw an InstatiationException");
-			}
-		catch   (InstantiationException ie){ harness.check(true);}
-		catch	(Exception e) { harness.fail("should throw an InstatiationException, but got"+e);}
-	}
-
-
-	public void test_forName()
-	{
-		harness.checkPoint("forName");
-		try 	{
-			Object obj = Class.forName("java.lang.Object");
-			harness.check ( obj != null );
-			}
-		catch ( Exception e ){harness.check(false);}
-
-		try 	{
-			Object obj1 = Class.forName("ab.cd.ef");
-			harness.check(false);
-			}
-		catch ( ClassNotFoundException e ){harness.check(true);}
-
-		try 	{	// The docs say that this should fail.
-			Object obj2 = Class.forName("I");
-			harness.check(false);
-			}
-		catch ( ClassNotFoundException e ){harness.check(true);	}		
-	}
-
-        public void test_getClassloader()
-	{
-		try 	{
-                    	Class obj1 = Class.forName("java.lang.String");
-                    	ClassLoader ldr = obj1.getClassLoader();
-                    	if ( ldr != null )
-				harness.fail("Error: test_getClassLoader failed - 1");
-                    	else { harness.check(true);}
-			Class obj2 = Class.forName("gnu.testlet.wonka.lang.Class.ClassTest");
-                    		ClassLoader ldr1 = obj2.getClassLoader();
-					
-                    	if ( ldr1 == null )
-				harness.fail("Error: test_getClassLoader failed - 2");
-	               	else { harness.check(true);}
-			}
-                catch ( Exception e ){	harness.fail("Error: test_getClassLoader failed -3");}	
-	}
-
-        public void test_ComponentType()
-	{
-	        try 	{
-                    	Class obj1 = Class.forName("java.lang.String");
-                    	if ( obj1.getComponentType() != null )
-				harness.fail("Error: test_getComponentType failed - 1");
-                	else { harness.check(true);}
-    			Class obj2 = Class.forName("java.lang.Exception");
-                    	if ( obj2.getComponentType() != null )
-				harness.fail("Error: test_getComponentType failed - 2");
-			else { harness.check(true);}
-    			Class arrclass = Class.forName("[I");
-                    	if ( arrclass.getComponentType() == null )
-				harness.fail("Error: test_getComponentType failed - 3");
-			else 	{ 
-				harness.check(true);
-				harness.check(arrclass.getComponentType().getName().equals("int"));
-				}
-    			arrclass = Class.forName("[[[[I");
-                    	if ( arrclass.getComponentType() == null )
-				harness.fail("Error: test_getComponentType failed - 4");
-			else { harness.check(true);}
-
-			}
-                catch ( Exception e ){	harness.fail("Error: test_getComponentType failed - 6");}	
-		
-	}
-
-        public void test_isMethods()
-        {
-	        try 	{
-                    	Class obj1 = Class.forName("java.lang.String");
-                    	if ( !obj1.isInstance("babu"))
-				harness.fail("Error: test_isMethods failed - 1");
-			else { harness.check(true);}
-
-	                Class obj2 = Class.forName("java.lang.Integer");
-        	        if ( !obj2.isInstance(new Integer(10)))
-				harness.fail("Error: test_isMethods failed - 2");
-			else { harness.check(true);}
-
-	                int arr[]= new int[3];
-		    	Class arrclass = Class.forName("[I");
-                    	if ( !arrclass.isInstance(arr))
-				harness.fail("Error: test_isMethods failed - 3");
-			else 	{ harness.check(true);}
-
-                    	Class cls1 = Class.forName("java.lang.String");
-                    	Class supercls = Class.forName("java.lang.Object"); 
-                    	if ( !supercls.isAssignableFrom( cls1 ))
-				harness.fail("Error: test_isMethods failed - 4");
-			else { harness.check(true);}
-
-        	        if ( cls1.isAssignableFrom( supercls ))
-				harness.fail("Error: test_isMethods failed - 5");
-			else { harness.check(true);}
+    try {          
+      Class arrclass = Class.forName("[I");
+      Class arrclass1 = Class.forName("[[[I");
+      Class arrclass2 = Class.forName("[[D");
 		    
-	                 Class cls2 = Class.forName("java.lang.String");
-        	         if ( !cls2.isAssignableFrom( cls1 ))
-				harness.fail("Error: test_isMethods failed - 6");
-			else { harness.check(true);}
+      harness.check(arrclass.isArray() && arrclass1.isArray() && 
+		    arrclass2.isArray());
+    }
+    catch (Exception e) {
+      harness.debug(e);
+      harness.check(false);
+    }
+  }		
 
-                    
-			arrclass = Class.forName("[I");
-		    	Class arrclass1 = Class.forName("[[[I");
-		    	Class arrclass2 = Class.forName("[[D");
-			
-			harness.check(!(cls1.isArray()));
-				    
-                    	if ( arrclass.isArray() &&arrclass1.isArray() && arrclass2.isArray() )
-                   		{harness.check(true);}
-                   	else
-				harness.fail("Error : test_isMethods failed - 7" );    
-			}
-                catch ( Exception e ){	harness.fail("Error: test_isMethods failed - 6");}	
-// adding code
-		Class ci = Integer.TYPE;
-		Class cit = Integer.TYPE;
-		int i=5;
-		ci = cit;
-		harness.check(!(ci.isInstance(cit)));
-		harness.check(ci.isAssignableFrom(cit));
-		try	{
-			ci = Class.forName("java.io.Serializable");			
-			int[] ia=new int[2];
-			// for (i=0;  i < ia.getClass().getInterfaces().length ; i++){
-			// harness.debug("ia implements "+ia.getClass().getInterfaces()[i]); 
-                        // }
-			harness.check(ci.isInstance(ia),"array implements");
-			harness.check(!(ci.isInstance(null)));
-			Class arrclass = Class.forName("[I");
-			harness.check(ci.isAssignableFrom(arrclass));
-			}
-		catch (Exception e){}
-				
-		
-	}		
-/*
-        public void test_getResource()
-        {  	// this test assume the classpath setting include current directory
- 	  	try 	{
- 	    		FileInputStream is = new FileInputStream("gnu/testlet/wonka/lang/Class/ClassTest.class");
- 	    		URL url = getClass().getResource("/gnu/testlet/wonka/lang/Class/ClassTest.class");
- 	    		if (url == null)
- 	      			harness.fail("Error : test_getResource Failed - 1");
-			else { harness.check(true);}
-
-		    	InputStream uis = url.openStream();
- 	    		byte[] b1 = new byte[100];
- 	    		byte[] b2 = new byte[100];
- 	    		int ret = is.read(b1);
- 	    		if (ret != 100)
- 	      			harness.fail("Error : test_getResource Failed - 2");
-			else { harness.check(true);}
- 	    		ret = uis.read(b2);
-	 	    	if (ret != 100)
- 	      			harness.fail("Error : test_getResource Failed - 3");
-			else { harness.check(true);}
- 	    		for (int i=0; i < 100; i++)	
-				{
-		     		if (b1[i] != b2[i])
-					{
- 					harness.fail("Error : test_getResource Failed - 4");
-					break;
-	 	      			}
-				else { harness.check(true);}
- 	    			}
-
-	 	    	uis = getClass().getResourceAsStream("/gnu/testlet/wonka/lang/Class/ClassTest.class");
- 	    		if (uis == null)
- 	      			harness.fail("Error : test_getResource Failed - 5");
-			else { harness.check(true);}
- 	    		ret = uis.read(b2);
- 	    		if (ret != 100)
- 	      			harness.fail("Error : test_getResource Failed - 6");
-			else { harness.check(true);}
- 	    		for (int i=0; i < 100; i++)
-				{
- 	      			if (b1[i] != b2[i])	
-					{
- 					harness.fail("Error : test_getResource Failed - 7");
- 					break;
- 	      				}
-				else { harness.check(true);}
-				}
-
- 	  	}
-		catch (Throwable e){ harness.fail("Error : test_getResource Failed - 0 Cought an Exception"); }
-		Class ci = Integer.TYPE;
-		harness.check( (ci.getResource("this resource will not be found")) == null);
+  public void test_getResource()
+  {
+    harness.checkPoint("test_getResource");
+    // this test assume the classpath setting include current directory
+    
+    try {
+      FileInputStream is = new FileInputStream("ClassTest.class");
+      URL url = getClass().getResource("ClassTest.class");
+      harness.check(url != null);
+      if (url == null) {
+	// Can't do any more of this test
+	return;
+      }
+      
+      InputStream uis = url.openStream();
+      byte[] b1 = new byte[100];
+      byte[] b2 = new byte[100];
+      int ret = is.read(b1);
+      harness.check(ret == 100);
+      ret = uis.read(b2);
+      harness.check(ret == 100);
+      for (int i = 0; i < 100; i++) {
+	if (b1[i] != b2[i]) {
+	  harness.check(false);
+	  break;
 	}
-*/
-	public void testall()
-	{
-		harness.setclass("java.lang.Class");
-		harness.checkPoint("toString");
-		test_toString();
-		harness.checkPoint("getName");
-		test_getName();
-		harness.checkPoint("isInterface");
-		test_isInterface();
-		harness.checkPoint("getSuperclass");
-		test_getSuperclass();
-		harness.checkPoint("getInterface");
-		test_getInterfaces();
-		harness.checkPoint("newInstance");
-		test_newInstance();
-		test_forName();
-		harness.checkPoint("ComponentType");
-                test_ComponentType();
-		harness.checkPoint("getClassloader");
-                test_getClassloader();
-		harness.checkPoint("isMethods");
-                test_isMethods();
-		harness.checkPoint("getResource");
-//                test_getResource();
-
+	if (i == 99) {
+	  harness.check(true);
 	}
+      }
+      
+      uis = getClass().getResourceAsStream("ClassTest.class");
+      harness.check(uis != null);
+      if (uis == null) {
+	// Can't do any more of this test
+	return;
+      }
+      ret = uis.read(b2);
+      harness.check(ret == 100);
+      for (int i = 0; i < 100; i++) {
+	if (b1[i] != b2[i]) {
+	  harness.check(false);
+	  break;
+	}
+	if (i == 99) {
+	  harness.check(true);
+	}
+      }
+    }
+    catch (IOException ex) {
+      harness.debug(ex);
+      harness.fail("IOException in test_getResource");
+    }
+  }
+
+  public void test_getResourceAsStream()
+  {
+    harness.checkPoint("test_getResourceAsStream");
+    // The bootclassloader does this different from most other CLs, so
+    // add a test for it.
+    InputStream in = Class.class.getResourceAsStream("Class.class");
+    harness.check(in != null, "got "+in+" from "+Class.class.getClassLoader());
+    in = Class.class.getResourceAsStream("/java/lang/Class.class");
+    harness.check(in != null, "got "+in);
+    // and a last extra check to see if we ever get a null
+    in = this.getClass().getResourceAsStream("/java/lang/Class.class");
+    harness.check(in != null, "got "+in+" from "+getClass().getClassLoader());
+    ClassLoader cl = getClass().getClassLoader();
+    while(cl != null) {
+      ClassLoader parent = cl.getParent();
+      System.out.println("ClassTest.test_getResourceAsStream() parent of "+cl+" is "+parent);
+      cl = parent;
+    }
+    in = InputStream.class.getResourceAsStream("Class.class");
+    harness.check(in , null);
+  }
+
+  public void testall()
+  {
+    test_toString();
+    test_getName();
+    test_isInterface();
+    test_getSuperclass();
+    test_primitiveTypes();
+    test_Modifiers();
+    test_getInterfaces();
+    test_newInstance();
+    test_forName();
+    test_ComponentType();
+    test_getClassloader();
+    test_isMethods();
+    // This one doesn't work so well in Mauve.
+    // test_getResource();
+    test_getResourceAsStream();
+
+  }
 
   public void test (TestHarness the_harness)
   {
     harness = the_harness;
-    testall ();
+    testall();
   }
 
 }

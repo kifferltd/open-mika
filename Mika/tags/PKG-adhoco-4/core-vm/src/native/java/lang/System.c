@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips Site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: System.c,v 1.10 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include <unistd.h>
@@ -39,7 +40,6 @@
 #include "exception.h"
 #include "environment.h"
 #include "fastcall.h"
-#include "hashtable.h"
 #include "heap.h"
 #include "loading.h"
 #include "checks.h"
@@ -49,135 +49,21 @@
 #include "threads.h"
 #include "wonkatime.h"
 
-w_hashtable prop_hashtable;
-
 w_long System_static_currentTimeMillis(JNIEnv *env, w_instance classSystem) {
-  return (w_long)getNativeSystemTime();
+  return x_time_now_millis();
 }
 
 void fast_System_static_currentTimeMillis(w_frame frame) {
   // Volatile 'coz gcc might screw up otherwise
   volatile union {w_long l; w_word w[2];} millis;
 
-  millis.l = getNativeSystemTime();
+  millis.l = x_time_now_millis();
   frame->jstack_top[0].s = 0;
   frame->jstack_top[0].c = millis.w[0];
   frame->jstack_top[1].s = 0;
   frame->jstack_top[1].c = millis.w[1];
   frame->jstack_top += 2;
   woempa(1, "returning 0x%08x 0x%08x\n", frame->jstack_top[-2].c, frame->jstack_top[-1].c);
-}
-
-void System_static_initNativeProperties(JNIEnv *env, w_instance classSystem) {
-  char *utf8;
-  w_string s;
-
-  prop_hashtable = ht_create("hashtable:native system properties", 17, ht_stringHash, ht_stringCompare, 0, 0);
-  woempa(1, "Created prop_hashtable\n");
-  s = cstring2String(UNICODE_SUBSETS, strlen(UNICODE_SUBSETS));
-  ht_write(prop_hashtable, (w_word)cstring2String("mika.unicode.subsets", 20), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.unicode.subsets", s);
-
-  utf8 = getInstallationDir();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("java.home", 9), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "java.home", s);
-
-  utf8 = getExtensionDir();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("java.ext.dirs", 13), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "java.ext.dirs", s);
-
-  utf8 = getLibraryPath();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("java.library.path", 13), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "java.library.path", s);
-
-  s = utf2String(VERSION_STRING, strlen(VERSION_STRING));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.version", 12), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.version", s);
-
-  s = utf2String(WONKA_INFO, strlen(WONKA_INFO));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.vm.options", 15), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.vm.options", s);
-
-  s = utf2String(DEFAULT_HEAP_SIZE, strlen(DEFAULT_HEAP_SIZE));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.default.heap.size", 22), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.default.heap.size", s);
-
-  s = utf2String(AWT_INFO, strlen(AWT_INFO));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.awt.options", 16), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.awt.options", s);
-
-#ifdef O4P
-  s = utf2String(O4P_INFO, strlen(O4P_INFO));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.o4p.options", 16), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.o4p.options", s);
-#endif
-
-#ifdef OSWALD
-  s = utf2String(OSWALD_INFO, strlen(OSWALD_INFO));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.oswald.options", 19), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.oswald.options", s);
-#endif
-
-  s = utf2String(BUILD_HOST, strlen(BUILD_HOST));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.build.host", 15), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.build.host", s);
-
-  utf8 = __DATE__ " " __TIME__;
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("mika.build.time", 15), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "mika.build.time", s);
-
-  utf8 = getOSName();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("os.name", 7), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "os.name", s);
-
-  utf8 = getOSVersion();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("os.version", 10), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "os.version", s);
-
-  utf8 = getOSArch();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("os.arch", 7), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "os.arch", s);
-
-  utf8 = getUserName();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("user.name", 9), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "user.name", s);
-
-  utf8 = getUserHome();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("user.home", 9), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "user.home", s);
-
-  utf8 = getUserDir();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("user.dir", 8), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "user.dir", s);
-
-  utf8 = getUserLanguage();
-  s = utf2String(utf8, strlen(utf8));
-  ht_write(prop_hashtable, (w_word)utf2String("user.language", 8), (w_word)s);
-  woempa(1, "Set %s -> %w\n", "user.language", s);
-}
-
-void System_static_termNativeProperties(JNIEnv *env, w_instance classSystem) {
-  ht_destroy(prop_hashtable);
-  prop_hashtable = NULL;
-}
-
-w_instance System_static_getNativeProperty(JNIEnv *env, w_instance classSystem, w_instance nameString) {
-  w_string name = String2string(nameString);
-  w_string result;
-
-  result = (w_string)ht_read(prop_hashtable, (w_word)name);
-
-  return result ? getStringInstance(result) : NULL;
 }
 
 static void do_boolean_arraycopy(w_instance Src, w_int srco, w_instance Dst, w_int dsto, w_int length) {
@@ -684,19 +570,22 @@ w_instance System_getCmdLineProperties(JNIEnv *env, w_instance this) {
   }
 
   if (length > 0) {
-
+    enterUnsafeRegion(thread);
     Array = allocArrayInstance_1d(thread, clazzArrayOf_String, length);
 
     if (Array) {
       for (i = 0; i < length; i++) {
         String = allocInstance(thread, clazzString);
         if (String) {
+          enterSafeRegion(thread);
           string = cstring2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
+          enterUnsafeRegion(thread);
           setWotsitField(String, F_String_wotsit, string);
         } 
-        setArrayReferenceField(Array, String, i);
+        setArrayReferenceField_unsafe(Array, String, i);
       }
     }
+    enterSafeRegion(thread);
   }
 
   return Array;

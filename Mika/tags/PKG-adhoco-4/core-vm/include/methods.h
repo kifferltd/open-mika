@@ -1,32 +1,33 @@
-#ifndef _METHODS_H
-#define _METHODS_H
-
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/*
-** $Id: methods.h,v 1.7 2006/10/04 14:24:14 cvsroot Exp $
-*/
+#ifndef _METHODS_H
+#define _METHODS_H
 
 #include "clazz.h"
 #include "hashtable.h"
@@ -77,7 +78,7 @@ typedef struct w_Exception {
   w_ushort start_pc;   /* Start of code covered by this handler (inclusive) */
   w_ushort end_pc;     /* End of code covered by this handler (exclusive)   */
   w_ushort handler_pc; /* Entry point of the handler                        */
-  w_ushort type_index; /* Type of exeception covered (0 -> all execeptions) */
+  w_ushort type_index; /* Type of exception covered (0 -> all exceptions)   */
 } w_Exception;
 
 /*
@@ -91,7 +92,7 @@ typedef struct w_MethodSpec {
 } w_MethodSpec;
 
 typedef struct w_MethodExec {
-  w_callfun dispatcher;
+  volatile w_callfun dispatcher;
   w_size       arg_i;      /* The number of argument words. !! DONT move !! Assembly depends on it.    */
   w_function   function;   /* if native, the function pointer. !! DONT move !! Assembly depends on it. */
   w_ushort return_i;       /* Number of words returned as result (0, 1, or 2) */
@@ -153,16 +154,24 @@ typedef struct w_Method {
                                           /* Note: a constructor has both   */
                                           /* CONSTRUCTOR and NO_OVERRIDE set*/
 #define METHOD_IS_INTERFACE    0x00080000 /* method of an interface         */
-#define METHOD_IS_COMPILED     0x00200000 /* JITed method                   */
-#define METHOD_UNSAFE_DISPATCH 0x00400000 /* Can be dispatched without      */
+#define METHOD_IS_COMPILED     0x00100000 /* JITed method                   */
+#define METHOD_UNSAFE_DISPATCH 0x00200000 /* Can be dispatched without      */
+#define METHOD_TRIVIAL_CASES   0x0f000000 /* Trivial cases, see below       */
                                           /* leaving unsafeRegion           */
-#define METHOD_IS_MIRANDA      0x01000000 /* abstract method inherited from */
+#define METHOD_IS_MIRANDA      0x10000000 /* abstract method inherited from */
                                           /* a superinterface               */
-#define METHOD_IS_PROXY        0x02000000 /* Automatically-generated method */
+#define METHOD_IS_PROXY        0x20000000 /* Automatically-generated method */
                                           /*  a dynamic Proxy class         */
-#define METHOD_IS_SYNTHETIC    0x04000000 /* method was not in source file  */
+#define METHOD_IS_SYNTHETIC    0x40000000 /* method was not in source file  */
                                           /* (only if neither PROXY nor     */
-                                          /* SYNTHETIC is set)              */
+                                          /* MIRANDA is set)                */
+
+/* We recognise some trivial cases in prepareBytecode() */
+#define METHOD_IS_VRETURN      0x01000000 /* Method consists of 'vreturn' */
+#define METHOD_IS_RETURN_THIS  0x02000000 /* Method just returns 'this' */
+#define METHOD_IS_RETURN_NULL  0x03000000 /* Method just returns null */
+#define METHOD_IS_RETURN_ICONST 0x04000000 /* Method just returns an in constant */
+#define METHOD_CALLS_SUPER     0x05000000 /* Method just calls another non-virtual method */
 
 /*
  * methodIsInterface() returns true iff the method is an interface method.

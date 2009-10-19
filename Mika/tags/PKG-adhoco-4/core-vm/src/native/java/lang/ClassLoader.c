@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded        *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ClassLoader.c,v 1.14 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include "arrays.h"
@@ -46,12 +47,15 @@
 #include "oswald.h"
 #include "wstrings.h"
 #include "ts-mem.h"
+#include "verifier.h"
 #include "vfs.h"
 
 extern Wonka_InitArgs *system_vm_args;
 
 w_instance extensionClassLoader;
+w_instance applicationClassLoader;
 
+#define PACKAGE_HASHTABLE_SIZE           19
 #define CLASSLOADER_HASHTABLE_SIZE       89
 
 static w_boolean checkClassName(w_string slashed) {
@@ -92,7 +96,8 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
   if (clazz == clazzSystemClassLoader) {
     setWotsitField(ClassLoader, F_ClassLoader_loaded_classes, system_loaded_class_hashtable);
     setWotsitField(ClassLoader, F_ClassLoader_unloaded_classes, system_unloaded_class_hashtable);
-    woempa(7, "Created %j by recycling %s and %s)\n", ClassLoader, system_loaded_class_hashtable->label, system_unloaded_class_hashtable->label);
+    setWotsitField(ClassLoader, F_ClassLoader_packages, system_package_hashtable);
+    woempa(7, "Created %j by recycling %s, %s and %s)\n", ClassLoader, system_loaded_class_hashtable->label, system_unloaded_class_hashtable->label, system_package_hashtable->label);
   }
   else {
     woempa(7, "Created new %j\n", ClassLoader);
@@ -118,6 +123,17 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
     }
     setWotsitField(ClassLoader, F_ClassLoader_unloaded_classes, class_hashtable);
     woempa(7, "%j: unloaded_classes in %s\n", ClassLoader, class_hashtable->label);
+    label_buf = allocMem((w_size)(string_length(clazz->dotified) + 38));
+    if (!label_buf) {
+      wabort(ABORT_WONKA, "Unable to allocate label_buf\n");
+    }
+    x_snprintf(label_buf, string_length(clazz->dotified) + 37, "hashtable:%j-packages", ClassLoader);
+    class_hashtable = ht_create(label_buf, PACKAGE_HASHTABLE_SIZE, NULL, NULL, 0, 0);
+    if (!class_hashtable) {
+      wabort(ABORT_WONKA, "Unable to allocate package hashtable\n");
+    }
+    setWotsitField(ClassLoader, F_ClassLoader_packages, class_hashtable);
+    woempa(7, "%j: packages in %s\n", ClassLoader, class_hashtable->label);
   }
 }
 
@@ -135,10 +151,9 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
   w_instance theClass;
   w_BAR bar;
   w_string name;
-  w_clazz thisLoaderClazz = instance2clazz(thisClassLoader);
-  w_boolean trusted;
-  
-  trusted = (thisClassLoader == systemClassLoader) || (thisClassLoader == extensionClassLoader);
+  w_boolean trusted = (instance2clazz(thisClassLoader) == clazzSystemClassLoader);
+  // TODO make configurable, e.g. trust no one or also trust extension classes.
+
   woempa(1,"installing %w from %p (thread %w)\n",String2string(nameString),data,NM(thread));
 
   bar.buffer = data + offset;
@@ -158,7 +173,9 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
     name = NULL;
   }
 
+  enterMonitor(thisClassLoader);
   clazz = createClazz(thread, name, &bar, thisClassLoader, trusted);
+  exitMonitor(thisClassLoader);
  
   if (!clazz && !exceptionThrown(thread)) {
     throwException(thread, clazzClassFormatError, "%w", name);
@@ -204,11 +221,17 @@ w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance This, w_instance 
 
   if (nameString) {
     name = String2string(nameString);
-    woempa(1, "called with string %w.\n", name);
 
     clazz = seekClazzByName(name, This);
 
     if (clazz) {
+      w_int state = getClazzState(clazz);
+      if (state <= CLAZZ_STATE_LOADING || state > CLAZZ_STATE_INITIALIZED) {
+
+        return NULL;
+
+      }
+
       return clazz2Class(clazz);
     } 
   }
@@ -254,38 +277,10 @@ ClassLoader_setSigners
 }
 
 /*
-** Load the named class, and "resolve" it if resolve==true.
-*/
-w_instance ClassLoader_loadClass(JNIEnv *env, w_instance thisClassLoader, w_instance nameString, w_boolean resolve) {
-
-  w_thread thread = JNIEnv2w_thread(env);
-  w_clazz  clazz;
-  w_string name = String2string(nameString);
-
-  woempa(1, "Loading class %w.\n", name);
-  
-  woempa(7, "Loader: %j, name: %w\n", NULL, name);
-  clazz = namedClassMustBeLoaded(NULL, name);
-
-  if (clazz) {
-    clazz2Class(clazz);  
-
-    if (resolve) {
-      mustBeLinked(clazz);
-    }
-
-    woempa(1, "--> clazz at %p.\n", clazz);
-    return exceptionThrown(thread) ? NULL : clazz->Class;
-  }
-
-  return NULL;
-}
-
-/*
 ** Returns the class loader of the class which called ClassLoader.getCallingClassLoader().
 **
 ** This logic is also needed by the java.util.ResourceBundle Class's getBundle(...)
-** it will call this method straigth from java so w_instance pointer will not always be the Class of ClassLoader
+** it will call this method straight from java so w_instance pointer will not always be the Class of ClassLoader
 */
 
 w_instance ClassLoader_getCallingClassLoader(JNIEnv *env, w_instance thisClassLoader) {
@@ -324,7 +319,7 @@ w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
   w_instance Result;
   w_string result;
   result = cstring2String(system_vm_args->classpath, strlen(system_vm_args->classpath));
-  Result = newStringInstance(result);
+  Result = getStringInstance(result);
   deregisterString(result);
 
   return Result;
@@ -333,6 +328,10 @@ w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
 
 void ClassLoader_static_installExtensionClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theExtensionClassLoader) {
   extensionClassLoader = theExtensionClassLoader;
+}
+
+void ClassLoader_static_installApplicationClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theApplicationClassLoader) {
+  applicationClassLoader = theApplicationClassLoader;
 }
 
 void ClassLoader_static_setProxyFlag(JNIEnv *env, w_instance classClassLoader, w_instance theClass) {

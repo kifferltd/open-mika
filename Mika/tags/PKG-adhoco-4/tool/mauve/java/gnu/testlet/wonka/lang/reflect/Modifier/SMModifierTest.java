@@ -271,9 +271,9 @@ public class SMModifierTest implements Testlet
 	{
 		th.checkPoint("toString(int)java.lang.String");
 		th.check(Modifier.toString(2047).equals("public protected private abstract static final transient"+
-			" volatile native synchronized interface"),"checking toString order");
+			" volatile synchronized native interface"),"checking toString order");
 		th.check(Modifier.toString(4095).equals("public protected private abstract static final transient"+
-			" volatile native synchronized interface strict"),"checking toString order");
+			" volatile synchronized native strictfp interface"),"checking toString order");
 		System.out.println(Modifier.toString(4095));
 	}
 

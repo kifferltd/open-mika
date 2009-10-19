@@ -1,36 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Field.c,v 1.4 2006/05/23 14:54:14 cvs Exp $
-** 
-**
-** Implementation of the native methods for java/lang/reflect/Field
-*/
 
 #include <string.h>
 
@@ -57,7 +55,7 @@ w_instance Field_getDeclaringClass(JNIEnv *env, w_instance Field) {
 
 w_instance Field_getName(JNIEnv *env, w_instance Field) {
 
-  return newStringInstance(Field2field(Field)->name);
+  return getStringInstance(Field2field(Field)->name);
 
 }
 
@@ -178,7 +176,7 @@ void get_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance theObj
   calling_instance = getCurrentInstance(thread);
   if (!getBooleanField(thisField, F_AccessibleObject_accessible)
       && !isAllowedToAccess(calling_clazz, field,
-      (w_boolean)(calling_instance ? (calling_instance == theObject) : calling_clazz == instance2clazz(theObject)))) {
+      theObject ? instance2clazz(theObject) : NULL )) {
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else if (!widen(field->value_clazz, from, T_clazz, T_data)) {
@@ -330,7 +328,7 @@ w_double Field_getDouble(JNIEnv *env, w_instance Field, w_instance Object) {
 w_instance Field_get(JNIEnv *env, w_instance Field, w_instance Object) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_field field = Field2field(Field);
+  w_field  field = Field2field(Field);
   w_instance result = NULL;
   void *to;
 
@@ -414,6 +412,23 @@ static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance
     to = field->declaring_clazz->staticFields + field->size_and_slot;
   }
   else {
+    if (!theObject) {
+      woempa(7, "Object == null for non-static field %w of %k\n",NM(field), field->declaring_clazz);
+      throwException(thread, clazzNullPointerException, NULL);
+      return;
+    }
+
+    if (mustBeReferenced(field->declaring_clazz) == CLASS_LOADING_FAILED) {
+
+      return;
+
+    }
+    if (!isSuperClass(field->declaring_clazz,instance2clazz(theObject))) {
+      woempa(7, "%j is not a subclass of %k, does not have field %w\n", theObject, field->declaring_clazz,NM(field));
+      throwException(thread, clazzIllegalArgumentException, "not field of this class");
+      return;
+    }
+
     if (field->size_and_slot < 0) {
       woempa(7, "Field %w is a reference field\n", field->name);
       to = theObject + instance2clazz(theObject)->instanceSize + field->size_and_slot;
@@ -435,10 +450,11 @@ static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance
 #endif
   }
 
-  calling_clazz = getCallingClazz(thread);
-  calling_instance = getCallingInstance(thread);
+  calling_clazz = getCurrentClazz(thread);
+  calling_instance = getCurrentInstance(thread);
   if (!getBooleanField(thisField, F_AccessibleObject_accessible)
-      && !isAllowedToAccess(calling_clazz, field, (w_boolean)(calling_instance && (calling_instance == theObject)))) {
+      && !isAllowedToAccess(calling_clazz, field, theObject ? instance2clazz(theObject) : NULL)) {
+
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else if (!widen(F_clazz, F_data, field->value_clazz, to)) {
@@ -580,7 +596,7 @@ void Field_setDouble(JNIEnv *env, w_instance Field, w_instance Object, w_double 
 void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Value) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_field field = Field2field(Field);
+  w_field  field = Field2field(Field);
   w_word *data = NULL;
   w_clazz clazz;
 
@@ -653,7 +669,7 @@ void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Valu
     }
     else if (isSet(field->flags, ACC_STATIC)) {
       if (mustBeInitialized(field->declaring_clazz) == CLASS_LOADING_FAILED) {
-        setStaticReferenceField(field->declaring_clazz, (w_int)field->size_and_slot, Value);
+        setStaticReferenceField(field->declaring_clazz, (w_int)field->size_and_slot, Value, thread);
       }
     }
     else {

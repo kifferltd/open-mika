@@ -1,26 +1,30 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
-
 
 package java.net;
 
@@ -77,8 +81,10 @@ public abstract class URLStreamHandler {
 /**
 **  The default implementation of parseURL parses an "http-like" URL:
 **  <ul><li>If the first two characters are `//', then everything up to
-**          the next `/' is treated as `host & port'.
-**      <li>If present, `host and port' consist of either host:port or
+**          the next `/' is treated as `credentials, host and port'.
+**      <li>If present, `userinfo, host and port' consists of either 
+**          `userinfo'@`host and port' or just `host and port'.
+**      <li>If present, `host and port' consists of either host:port or
 **          just `host', where `port' is a number and `host' is a string.
 **      <li>Everything after the last `?' is a query string.
 **      <li>The rest is `the path'.
@@ -95,23 +101,29 @@ public abstract class URLStreamHandler {
     int there = end;
 
     try {
-      if (end > start + 2 && spec.regionMatches(start, "//", 0, 2)) {
-        int third_slash = spec.indexOf("/", start + 2);
+      StringBuffer spec_sb = new StringBuffer(spec.substring(start + 2, end));
+      if (spec_sb.length() > 0 && spec.regionMatches(start, "//", 0, 2)) {
+        int third_slash = spec_sb.indexOf("/");
         if (third_slash < 0) {
-          third_slash = end;
+          third_slash = spec_sb.length();
         }
-        String host_and_port = spec.substring(start+2, third_slash);
+        url.setAuthority(spec_sb.substring(0, third_slash));
+        int ape = spec_sb.indexOf("@");
+        if (ape >= 0 && ape < third_slash) {
+          String user_info = spec_sb.substring(0, ape);
+          url.setUserInfo(user_info);
+        }
+        String host_and_port = spec_sb.substring(ape + 1, third_slash);
         int colon = host_and_port.lastIndexOf(':');
         if (colon <= host_and_port.indexOf(']')) {
           url.setHost(host_and_port);
-          url.setPort(getDefaultPort());
         }
         else {
           url.setHost(host_and_port.substring(0, colon));
           url.setPort(Integer.parseInt(host_and_port.substring(colon + 1)));
         }
 
-        here = third_slash;
+        here = start + 2 + third_slash;
       }
 
       int query = spec.lastIndexOf("?");
@@ -127,9 +139,19 @@ public abstract class URLStreamHandler {
   }
 
   protected boolean sameFile(URL url1, URL url2){
+     int port1 = url1.getPort();
+     int port2 = url2.getPort();
+
+     if (port1 == -1) {
+       port1 = getDefaultPort();
+     }
+     if (port2 == -1) {
+       port2 = getDefaultPort();
+     }
+
      return url1.getProtocol().equals(url2.getProtocol())
-         && url1.getPort() == url2.getPort()
          && url1.getHost().equals(url2.getHost())
+         && port1 == port2
          && url1.getFile().equals(url2.getFile());
   }
 
@@ -150,11 +172,7 @@ public abstract class URLStreamHandler {
   protected String toExternalForm(URL url) {
     StringBuffer buf = new StringBuffer(url.getProtocol());
     buf.append("://");
-    buf.append(url.getHost());
-    if (url.getPort() != -1 && url.getPort() != getDefaultPort()) {
-      buf.append(':');
-      buf.append(url.getPort());
-    }
+    buf.append(url.getAuthority());
     //the slash is already in the file ...
     //buf.append('/');
     buf.append(url.getFile());

@@ -1,35 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: instance.c,v 1.20 2006/10/04 14:24:16 cvsroot Exp $
-*/
-
-//#define DEBUG
 
 #include "string.h"
 #include "arrays.h"
@@ -66,7 +65,7 @@ char * print_instance_short(char * buffer, int * remain, void * data, int w, int
   }
 
   temp = buffer;
-  nbytes = x_snprintf(temp, *remain, "%k@%p", instance2clazz(instance), instance);
+  nbytes = x_snprintf(temp, *remain, "%k@%16p", instance2clazz(instance), instance);
   *remain -= nbytes;
 
   return temp + nbytes;
@@ -109,12 +108,17 @@ w_int instance_allocated = 0;
 w_int instance_returned = 0;
 w_object instance_first = NULL;
 
-inline static void registerObject(w_object object, w_thread thread) {
+static void registerObject(w_object object, w_thread thread) {
+
+  if (thread) {
+    threadMustBeUnsafe(thread);
+  }
+
   woempa(1, "Registering %j\n", object->fields);
   instance_use += 1;
   instance_allocated += 1;
   addLocalReference(thread, object->fields);
-  setFlag(object->flags, O_IS_JAVA_INSTANCE);
+  setFlag(object->flags, O_IS_JAVA_INSTANCE | O_BLACK);
 #ifdef USE_OBJECT_HASHTABLE
   if (ht_write(object_hashtable, (w_word)object, (w_word)object)) {
     wabort(ABORT_WONKA, "Sky! Could not add object %p to object hashtable!\n", object);
@@ -132,83 +136,46 @@ inline static void checkClazz(w_clazz clazz) {
   }
 }
 
-/*
- * MAX_RETRIES defines how often a low-priority thread (Java priority 1) will
- * try to satisfy a heap_request by calling gc_request(); higher-priority
- * threads will make less tries, and a thread of priority > 10 will only
- * return TRUE from heap_request if sufficient memory is already available.
- * retry_incr is calculated such that (priority * num_retries * retry_incr)
- * is at least 100.
- */
-#define MAX_RETRIES 10
-static const int retry_incr = 100 / MAX_RETRIES;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+w_instance allocInstanceFromCache(w_clazz clazz) {
+  w_object object;
 
-static w_boolean heap_request(w_thread thread, w_int bytes) {
-
-  w_int   count = 0;
-
-  if (!thread) {
-    woempa(1, "Called with thread==null\n");
-    return TRUE;
+#ifndef THREAD_SAFE_FIFOS
+  x_mutex_lock(clazz->cache_mutex, x_eternal);
+#endif
+  object = getFifo(clazz->cache_fifo);
+  if(object) {
+    woempa(7, "fetched %j from cache_fifo of %k\n", object->fields, clazz);
+    memset(object, 0, clazz->bytes_needed);
   }
-
-  if (thread == gc_thread) {
-    woempa(1, "Called by gc thread.\n");
-    return TRUE;
+  else {
+    woempa(7, "cache miss: %k\n", clazz);
   }
+#ifndef THREAD_SAFE_FIFOS
+  x_mutex_unlock(clazz->cache_mutex);
+#endif
 
-  if (gc_instance == NULL) {
-    woempa(1, "Called before gc exists: gc_instance = %p.\n", gc_instance);
-    return TRUE;
-  }
-
-  while (!expandFifo(instance_allocated - instance_returned + 1, window_fifo)) {
-    printf("No space to expand window_fifo ...\n");
-    gc_reclaim(8192, NULL);
-  }
-
-  if(thread->jpriority > 10) {
-
-    return x_mem_avail() - bytes > min_heap_free;
-
-  }
-
-  gc_reclaim(bytes, NULL);
-
-  if (x_mem_avail() - bytes > min_heap_free) {
-
-    return WONKA_TRUE;
-
-  }
-
-  do {
-    count += retry_incr;
-    if (count > 100) {
-      wprintf("TOO MANY RETRIES\n");
-
-      return WONKA_FALSE;
-
-    }
-    //wprintf("RETRY #%d for %d bytes, %d bytes available (min = %d)\n", count, bytes, x_mem_avail(), min_heap_free);
-    gc_reclaim(bytes, NULL);
-  } while ((x_mem_avail() - bytes) < min_heap_free);
-
-  return WONKA_TRUE;
+  return object;
 }
+#endif
 
 static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz clazz) {
   object->clazz = clazz;
 
+  threadMustBeUnsafe(thread);
+
+/*
 #ifdef JAVA_PROFILE
   profileAllocInstance(thread, clazz);
-#endif 
+#endif
+*/ 
   
   registerObject(object,thread);
 
   return object->fields;
 }
 
-w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
+w_instance allocInstance(w_thread thread, w_clazz clazz) {
   w_object object = NULL;
 
 #ifdef RUNTIME_CHECKS
@@ -221,11 +188,25 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
   }
 #endif
 
+  if (clazz == clazzString) {
+
+    return allocStringInstance(thread);
+
+  }
+
+  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
+
+    return allocThrowableInstance(thread, clazz);
+
+  }
+
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  if (heap_request(thread, (w_int)clazz->bytes_needed)) {
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazz);
+  if (!object) 
+#endif
     object = allocClearedMem(clazz->bytes_needed);
-  }
 
   if (! object) {
     return NULL;
@@ -239,48 +220,28 @@ w_instance allocInstance_initialized(w_thread thread, w_clazz clazz) {
   return allocInstance_common(thread, object, clazz);
 }
 
-w_instance allocInstance(w_thread thread, w_clazz clazz) {
-
-  if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
-
-    return allocThrowableInstance(thread, clazz);
-
-  }
-
-  threadMustBeSafe(thread);
-
-  /*
-  ** The class must be initialized.
-  */
-
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    return NULL;
-  }
-
-  return allocInstance_initialized(thread, clazz);
-}
-
 w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
   w_object object = NULL;
 
 #ifdef RUNTIME_CHECKS
   checkClazz(clazz);
-#endif
 
-  threadMustBeSafe(thread);
-
-  /*
-  ** The class must be initialized.
-  */
-
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+  if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
+   && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
+    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
     return NULL;
   }
+#endif
+
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 
-  object = allocClearedMem(clazz->bytes_needed);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazz);
+  if (!object)
+#endif
+    object = allocClearedMem(clazz->bytes_needed);
 
   if (! object) {
     return NULL;
@@ -298,9 +259,14 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
 w_instance allocStringInstance(w_thread thread) {
 
-  w_object object;
+  w_object object = NULL;
 
-  object = allocClearedMem(clazzString->bytes_needed);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  object = allocInstanceFromCache(clazzString);
+  if (!object)
+#endif
+    object = allocClearedMem(clazzString->bytes_needed);
+
   if (! object) {
     return NULL;
   }
@@ -315,33 +281,15 @@ static w_instance internalAllocArrayInstance(w_thread thread, w_clazz clazz, w_s
 
   checkClazz(clazz);  
 
-  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-
-    return NULL;
-
-  }
-
-  /*
-  ** Calculate the number of bytes we need. Note that checking the requirements with the quota has been
-  ** done allready by the calling function.
-  */
-  
   bytes = sizeof(w_Object) + (size * sizeof(w_word));
 
-  if (heap_request(thread, bytes)) {
-    object = allocClearedMem(bytes);
-    woempa(1, "Allocated a %k at %p, need %d bytes\n", clazz, object->fields, bytes);
-  }
-
+  object = allocClearedMem(bytes);
+  woempa(1, "Allocated a %k at %p, need %d bytes\n", clazz, object->fields, bytes);
   if (object == NULL) {
     return NULL;
   }
 
   return allocInstance_common(thread, object, clazz);
-}
-
-inline static w_size roundBitsToWords(w_int bits) {
-  return ((bits + 31) & ~31) >> 5;
 }
 
 /*
@@ -366,7 +314,7 @@ typedef struct w_Aas {
 */
 
 static void fillParentArray(w_thread thread, w_aas parent) {
-
+  w_boolean unsafe;
   w_int x;
 
   if (parent->next) {
@@ -378,10 +326,12 @@ static void fillParentArray(w_thread thread, w_aas parent) {
       }
       parent->next->Array[F_Array_length] = parent->next->length;
 
-      enterUnsafeRegion(thread);      
+      unsafe = enterUnsafeRegion(thread);      
       setArrayReferenceField_unsafe(parent->Array, parent->next->Array, x);
       popLocalReference(thread->top);
-      enterSafeRegion(thread);
+      if (!unsafe) {
+        enterSafeRegion(thread);
+      }
       fillParentArray(thread, parent->next);
     }
   }
@@ -390,10 +340,15 @@ static void fillParentArray(w_thread thread, w_aas parent) {
 w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
 
   w_instance result;
-
-  threadMustBeSafe(thread);
+  w_long size;
 
   woempa(1, "Allocating an instance of %k (1 dimension, length %d)\n", clazz, length);
+
+  size = ((jlong)clazz->previousDimension->bits) * ((jlong) length);
+  if (size > 0x7fffffff) {
+    throwException(thread, clazzOutOfMemoryError, NULL);
+    return NULL;
+   }
 
   woempa(1, "%k has %d elements of %d bits, size = %d\n", clazz, length, clazz->previousDimension->bits, 1 + roundBitsToWords(clazz->previousDimension->bits * length));
   result = internalAllocArrayInstance(thread, clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * length));
@@ -410,35 +365,38 @@ w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
     
 }
 
-// Not yet used ...
 w_instance reallocArrayInstance_1d(w_thread thread, w_instance oldarray, w_int newlength) {
   w_clazz clazz = instance2clazz(oldarray);
+  w_object oldobject;
+  w_object newobject;
   w_instance newarray = NULL;
   w_size bytes;
 
-  threadMustBeSafe(thread);
+  threadMustBeUnsafe(thread);
 
-  wprintf("Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
-  woempa(1, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
+  woempa(7, "Reallocating an instance of %k (1-d): old length = %d, new length = %d\n", clazz, oldarray[F_Array_length], newlength);
 
   bytes = (1 + roundBitsToWords(clazz->previousDimension->bits * newlength)) * 4;
-  wprintf("New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
-  woempa(1, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
-  newarray = internalAllocArrayInstance(thread, clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * newlength));
+  woempa(7, "New %k has %d elements of %d bits, size = %d bytes\n", clazz, newlength, clazz->previousDimension->bits, bytes);
   bytes += sizeof(w_Object);
 
-  if (heap_request(thread, bytes)) {
-    w_object oldobject = instance2object(oldarray);
-    w_object newobject = reallocMem(oldobject, bytes);
+  oldobject = instance2object(oldarray);
+  newobject = reallocMem(oldobject, bytes);
 
-    if (newobject) {
+  if (newobject) {
+    if (newobject != oldobject) {
+      woempa(7, "New array is different to old\n");
       registerObject(newobject, thread);
       newarray = newobject->fields;
-      newarray[F_Array_length] = newlength;
     }
+    else {
+      woempa(7, "New array is same as old\n");
+      newarray = oldarray;
+    }
+    newarray[F_Array_length] = newlength;
   }
   else {
-    throwOutOfMemoryError(thread);
+    woempa(9, "Unable to allocate new array!\n");
   }
 
   return newarray;
@@ -451,7 +409,7 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   w_clazz current;
   w_instance result;
 
-  threadMustBeSafe(thread);
+  //threadMustBeSafe(thread);
 
   if (dimensions == 1) {
     return allocArrayInstance_1d(thread, clazz, lengths[0]);
@@ -471,9 +429,16 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   current = clazz;
   woempa(1, "Allocating an instance of %k (%d dimensions)\n", clazz, dimensions);
   for (i = 0; i < dimensions; i++) {
+    jlong size = ((jlong)clazz->previousDimension->bits) * ((jlong) lengths[0]);
+    if (size > 0x7fffffff) {
+      throwException(thread, clazzOutOfMemoryError, NULL);
+      x_mem_free(Aas);
+      return NULL;
+    }
     Aas[i].next = (i == dimensions - 1) ? NULL : Aas + i + 1;
     Aas[i].length = lengths[i];
     woempa(1, "Dimension %d has length %d, bits/element is %d\n", i, lengths[i], current->previousDimension->bits);
+
     Aas[i].clazz = current;
     current = current->previousDimension;
   }

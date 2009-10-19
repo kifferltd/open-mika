@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001, 2002 by Acunia N.V. All rights reserved.           *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (C) 2006 by Chris Gray, /k/ Embedded Java       *
-* Solutions. Permission is hereby granted to distribute these             *
-* modifications under the terms of the Wonka Public Licence.              *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Character.c,v 1.6 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include "chars.h"
@@ -61,7 +61,7 @@ w_instance
 Character_static_getCategory
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return newStringInstance(charToCategory(ch));
+  return getStringInstance(charToCategory(ch));
 }
 
 /*
@@ -130,6 +130,8 @@ void fast_Character_forDigit_int_int(w_frame frame) {
 ** Returns the value of 'ch' in base 'radix' (or -1 if none)
 */
 static w_int i_digit(w_char ch, w_int radix) {
+  w_char *deco;
+
   if(radix < MIN_RADIX || radix > MAX_RADIX) {
 
     return -1;
@@ -141,7 +143,17 @@ static w_int i_digit(w_char ch, w_int radix) {
     // Or maybe:
     // w_int dv = charToDigitValue(ch);
 
-    return dv < radix ? dv : -1 ;
+    if (dv < radix) {
+      return dv;
+    }
+
+    /* [CG 20080828] Moved up from down below */
+    deco = charToDecomposition(ch);
+    if (deco && *deco == 1) {
+      return i_digit(deco[1], radix);
+    }
+
+    return -1 ;
 
   }
 
@@ -155,6 +167,13 @@ static w_int i_digit(w_char ch, w_int radix) {
 
     return ch - 'a'+ 10;
   } 
+
+  /* [CG 20080828] Only applicable if isDigit(ch) is true
+  deco = charToDecomposition(ch);
+  if (deco && *deco == 1) {
+    return i_digit(deco[1], radix);
+  }
+  */
 
   return -1;
 
@@ -173,38 +192,32 @@ void fast_Character_digit_char_int(w_frame frame) {
 
 /*
 ** Returns true iff ch is lower-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be lower-case.
 */
 w_boolean
 Character_static_isLowerCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsLower(ch);
+  return charIsLower(ch);
 }
 
 /*
 ** Returns true iff ch is upper-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be upper-case.
 */
 w_boolean
 Character_static_isUpperCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsUpper(ch);
+  return charIsUpper(ch);
 }
 
 /*
 ** Returns true iff ch is title-case according to Java.
-** Note that for some reason characters 2000 to 2FFF are never considered
-** to be title-case.
 */
 w_boolean
 Character_static_isTitleCase
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return (ch < 0x2000 || ch > 0x2fff) && charIsTitle(ch);
+  return charIsTitle(ch);
 }
 
 /*
@@ -277,22 +290,6 @@ Character_static_toTitleCase
 }
 
 /*
-** Return the decimal digit value associated with ch, or -1 if none.
-** Note that function char2digit() implements the JDK 1.1 definition,
-** while charToDigitValue() implements JDK 1.4: there seems to be no
-** difference in practice (based on the results of the Mauve test).
-** We leave the old version in for now, because it uses less static data.
-w_int
-Character_static_digitValue
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
-) {
-  return char2digit(ch);
-// Or maybe:
-// return charToDigitValue(ch);
-}
-*/
-
-/*
 ** Return the numeric value associated with a character, or -1 if it has none,
 ** or -2 if the numeric value is not a nonnegative integer (e.g. it is
 ** negative or fractional).
@@ -324,7 +321,24 @@ w_sbyte
 Character_static_getDirectionality
 ( JNIEnv *env, w_instance ClassCharacter, w_char ch
 ) {
-  return charToDirectionality(ch);
+  // [CG 20070126] Special-case these because what the mauve tests expect
+  // makes more sense than what is in the Unicode database
+  switch(ch) {
+  case 0x0000:
+    return 13; // DIRECTIONALITY_OTHER_NEUTRALS
+
+  case 0x000c:
+    return 10; // DIRECTIONALITY_PARAGRAPH_SEPARATOR
+
+  case 0x00a0:
+    return 12; // DIRECTIONALITY_WHITESPACE
+
+  case 0x2007:
+    return 7;  // DIRECTIONALITY_COMMON_NUMBER_SEPARATOR
+
+  default:
+    return charToDirectionality(ch);
+  }
 }
 
 

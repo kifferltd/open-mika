@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: interpreter.c,v 1.31 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,7 +71,7 @@
 ** If CACHE_TOS is defined, we carry forward the top element of the stack in a
 ** register variable from one opcode to the next (so long as it is single-length).
 ** Disabled for now, because it adds a couple of KB code size but only speeds
-** up execution by about &% - according to Caffeine marks, maybe other
+** up execution by about 1% - according to Caffeine marks, maybe other
 ** benchmarks will give a different result.
 */
 //#define CACHE_TOS
@@ -89,6 +90,8 @@ void trace(w_frame frame);
 
 extern w_int woempa_bytecodecount;
 long long bcc = 0;
+
+extern x_mutex mutex64;
 
 //#define TRIGGER 4800000 // 4782340
 #define TRIGGER 9920900
@@ -211,6 +214,74 @@ static void stackCheck(w_frame frame) {
 #endif /* bar */
 #endif /* DEBUG */
 
+volatile w_thread jitting_thread;
+
+#define JITC_LOCK
+#ifdef JITC_LOCK
+#ifdef RUNTIME_CHECKS
+#define checkOswaldStatus(s) if ((s) != xs_success) wabort(ABORT_WONKA, "x_monitor_xxx() call returned status = %d", (s))
+#else
+#define checkOswaldStatus(s)
+#endif
+
+/*
+** Acquire the JIT compiler lock; like the GC or JDWP lock, this means that
+** no other threads can enter the Unsafe state. Currently used only for
+** bytecode-rewriting purposes within the interpreter itself.
+** This function must always be called in the GC-Unsafe state (so there can
+** be no contention with GC or JDWP).
+*/
+static void acquireJitcLock(w_thread thread) {
+  x_status status;
+
+  woempa(7, "JITC: start locking other threads\n");
+  threadMustBeSafe(thread);
+  if (number_unsafe_threads < 0) {
+    wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
+  }
+  x_monitor_eternal(safe_points_monitor);
+  while(number_unsafe_threads > 0 || blocking_all_threads) {
+    woempa(7, "waiting for %d other threads to reach a safe point\n", number_unsafe_threads - 1);
+
+    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    if (status == xs_interrupted) {
+      x_monitor_eternal(safe_points_monitor);
+    }
+    else {
+      checkOswaldStatus(status);
+    }
+
+  }
+  woempa(7, "JITC: setting blocking_all_threads to BLOCKED_BY_JITC\n");
+  setFlag(blocking_all_threads, BLOCKED_BY_JITC);
+  jitting_thread = currentWonkaThread;
+
+  x_monitor_notify_all(safe_points_monitor);
+  x_monitor_exit(safe_points_monitor);
+}
+
+/*
+** Release the JIT compiler lock.
+*/
+static void releaseJitcLock(w_thread thread) {
+  woempa(7, "JITC: finished locking other threads\n");
+  threadMustBeSafe(thread);
+  woempa(7, "JITC: start unlocking other threads\n");
+  x_monitor_eternal(safe_points_monitor);
+  unsetFlag(blocking_all_threads, BLOCKED_BY_JITC);
+  jitting_thread = NULL;
+  x_monitor_notify_all(safe_points_monitor);
+  x_monitor_exit(safe_points_monitor);
+  woempa(7, "JITC: finished unlocking other threads\n");
+}
+
+#else
+
+#define acquireJitcLock(t)
+#define releaseJitcLock(t)
+
+#endif
+
 /*
  * If OVERLAPPING_FRAMES is defined, the arguments pushed in the calling frame
  * are re-used directly in the called frame, i.e. the calling and called frame
@@ -318,9 +389,9 @@ static void do_drem(w_Slot**);
 #define int_operand              ((signed int)((current[1] << 24) | (current[2] << 16) | (current[3] << 8) | current[4]))
 
 #ifdef DEBUG
-inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) { 
+inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
-//  frame->jstack_top = tos;
+  frame->jstack_top = tos;
   woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
 //  wprintf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
@@ -351,7 +422,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
 ** 3. If step->frame is non-NULL and is not current frame, exit.
 ** 4. If we make it this far, set up step->location and trigger the event.
 */
-static void checkSingleStep1(w_frame frame, w_code current) {
+static void checkSingleStep1(w_frame frame, w_code current, w_slot tos) {
   jdwp_step step = frame->thread->step;
 
   if (!step) {
@@ -397,6 +468,7 @@ static void checkSingleStep1(w_frame frame, w_code current) {
   step->location.pc = current - frame->method->exec.code;
 
   frame->current = current;
+  frame->jstack_top = tos;
   enterSafeRegion(frame->thread);
   jdwp_event_step(frame->thread);
   enterUnsafeRegion(frame->thread);
@@ -418,21 +490,21 @@ static void checkSingleStep2(w_frame frame) {
   }
 }
 #else
-#define checkSingleStep1(frame,current)
+#define checkSingleStep1(frame,current,tos)
 #define checkSingleStep2(frame)
 #endif
 
 #define do_next_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current + 1, tos); \
-  checkSingleStep1(frame, current + 1);     \
+  checkSingleStep1(frame, current + 1, tos);\
   goto * jumps[*(++current)];             \
 }
 
 #define do_this_opcode           {        \
   updateProfileBytecodes(frame);          \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep1(frame, current);       \
+  checkSingleStep1(frame, current, tos);  \
   goto * jumps[*current];                 \
 }
 
@@ -440,7 +512,7 @@ static void checkSingleStep2(w_frame frame) {
   updateProfileBytecodes(frame);          \
   current += (a);                         \
   updateDebugInfo(frame, current, tos);   \
-  checkSingleStep1(frame, current);       \
+  checkSingleStep1(frame, current, tos);  \
   goto * jumps[*current];                 \
 }
 
@@ -449,7 +521,7 @@ static void checkSingleStep2(w_frame frame) {
   if (!(c)) {                             \
     current += 3;                         \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep1(frame, current);     \
+    checkSingleStep1(frame, current, tos);\
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
@@ -458,7 +530,7 @@ static void checkSingleStep2(w_frame frame) {
     }                                     \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
-    checkSingleStep1(frame, current);     \
+    checkSingleStep1(frame, current, tos);\
     goto * jumps[*current];               \
   }                                       \
 }
@@ -509,6 +581,40 @@ void histogram(void) {
 }
 #endif
 
+/*
+ * MAX_RETRIES defines how often a low-priority thread (Java priority 1) will
+ * try to satisfy a enough_free_memory by calling gc_request(); higher-priority
+ * threads will make less tries, and a thread of priority > 10 will only
+ * return TRUE from enough_free_memory if sufficient memory is already available.
+ * retry_incr is calculated such that (priority * num_retries * retry_incr)
+ * is at least 100.
+ */
+#define MAX_RETRIES 10
+static const int retry_incr = 100 / MAX_RETRIES;
+
+static w_boolean enough_free_memory(w_thread thread, w_int bytes) {
+  w_int count = 0;
+  w_boolean unsafe;
+
+  if (thread == gc_thread || gc_instance == NULL || x_mem_avail() - bytes > min_heap_free) {
+    return TRUE;
+  }
+
+  if (thread->jpriority > 10) {
+    return FALSE;
+  }
+
+  unsafe = enterSafeRegion(thread);
+  while (count < 100 && x_mem_avail() - bytes <= min_heap_free) {
+    gc_reclaim(bytes, NULL);
+    count += retry_incr * thread->jpriority;
+  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return count < 100;
+}
+
 inline static void i_callMethod(w_frame caller, w_method method) {
 
 #ifdef JAVA_PROFILE
@@ -526,7 +632,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   }
 #endif
 
-  woempa(1, "CALLING %M, dispatcher is %d\n", method, method->exec.dispatcher);
+  woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
   if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
 #ifdef JAVA_PROFILE
     if(method->exec.dispatcher) {
@@ -587,6 +693,16 @@ extern void fast_Character_isDigit_char(w_frame);
 extern void fast_Character_forDigit_int_int(w_frame);
 extern void fast_Character_digit_char_int(w_frame);
 extern void fast_System_static_currentTimeMillis(w_frame);
+#ifdef NATIVE_MATH
+extern void fast_Math_static_sqrt(w_frame);
+extern void fast_Math_static_sin(w_frame);
+extern void fast_Math_static_cos(w_frame);
+extern void fast_Math_static_tan(w_frame);
+extern void fast_Math_static_asin(w_frame);
+extern void fast_Math_static_atan(w_frame);
+extern void fast_Math_static_log(w_frame);
+extern void fast_Math_static_exp(w_frame);
+#endif
 
 typedef void (*w_fast_method)(w_frame);
 static w_fast_method fast_method_table[] = {
@@ -607,6 +723,16 @@ static w_fast_method fast_method_table[] = {
   fast_Character_forDigit_int_int,
   fast_Character_digit_char_int,
   fast_System_static_currentTimeMillis,
+#ifdef NATIVE_MATH
+  fast_Math_static_sqrt,
+  fast_Math_static_sin,
+  fast_Math_static_cos,
+  fast_Math_static_tan,
+  fast_Math_static_asin,
+  fast_Math_static_atan,
+  fast_Math_static_log,
+  fast_Math_static_exp,
+#endif
 };
 
 void interpret(w_frame caller, w_method method) {
@@ -696,6 +822,17 @@ void interpret(w_frame caller, w_method method) {
   frame->auxstack_top = caller->auxstack_top;
   frame->thread = thread;
   frame->method = method;
+#ifdef TRACE_CLASSLOADERS
+  { 
+    w_instance loader = method->spec.declaring_clazz->loader; 
+    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+      frame->udcl = loader;
+    }
+    else {
+      frame->udcl = caller->udcl;
+    }
+  }
+#endif
 
 #ifndef OVERLAPPING_FRAMES
   stack2locals(frame->jstack_base, caller->jstack_top, method->exec.arg_i);
@@ -712,7 +849,7 @@ void interpret(w_frame caller, w_method method) {
   thread->top = frame;
   tos = (w_Slot*)frame->jstack_top;
   updateDebugInfo(frame, current, tos);
-  checkSingleStep1(frame, current);
+  checkSingleStep1(frame, current, tos);
 
   /*
   ** Note that pc is a signed integer and that values -1 and -2, currently, are used to store Wonka specific
@@ -774,7 +911,8 @@ void interpret(w_frame caller, w_method method) {
 
 #ifdef PACK_BYTE_FIELDS
   i_getfield_byte: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -796,7 +934,8 @@ void interpret(w_frame caller, w_method method) {
 #endif
 
   i_getfield_single: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -817,7 +956,12 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getfield_double: {
-    i = short_operand;
+    w_boolean isVolatile;
+
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    isVolatile = isSet(field->flags, ACC_VOLATILE);
+
+    i = FIELD_OFFSET(field->size_and_slot);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -828,17 +972,26 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
+
     tos[-1].s = stack_notrace;
     tos[-1].c = wordFieldPointer(o, i)[0];
     tos[ 0].s = stack_notrace;
     tos[ 0].c = wordFieldPointer(o, i)[1];
     woempa(1, "getfield %w of %j : got %08x %08x\n", field->name, o, tos[-1].c, tos[0].c);
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
+
     tos += 1;
     add_to_opcode(3);
   }
 
   i_getfield_ref: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = field->size_and_slot;
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
 #else
@@ -852,7 +1005,7 @@ void interpret(w_frame caller, w_method method) {
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[-1].c = o[instance2clazz(o)->instanceSize  - i];
+    tos[-1].c = o[instance2clazz(o)->instanceSize  + i];
     tos[-1].s = stack_trace;
     add_to_opcode(3);
   }
@@ -939,38 +1092,45 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getstatic_single: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
 
     tos[0].s = stack_notrace;
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
 
     add_to_opcode(3);
   }
 
   i_getstatic_double: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     tos[0].s = stack_notrace;
-    tos[0].c = *ptr++;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
     tos[0].s = stack_notrace;
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot + 1];
     ++tos;
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
 
     add_to_opcode(3);
   }
 
   i_getstatic_ref: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
 
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[0].c = *ptr;
+    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     tos[0].s = stack_trace;
     ++tos;
 
@@ -978,7 +1138,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_single: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
     *ptr = tos_cache;
@@ -992,10 +1153,18 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_double: {
-    w_word *ptr = (w_word *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     *ptr++ = tos[-2].c;
     *ptr = tos[-1].c;
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
     tos -= 2;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
@@ -1004,14 +1173,15 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_ref: {
-    w_instance *ptr = (w_instance *)cclazz->values[(unsigned short) short_operand];
+    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
-    *ptr = (w_instance) tos_cache;
+    *ptr = tos_cache;
     --tos;
     tos_cache = tos[-1].c;
 #else
-    *ptr = (w_instance) tos[-1].c;
+    *ptr = tos[-1].c;
     --tos;
 #endif
     add_to_opcode(3);
@@ -1105,20 +1275,22 @@ void interpret(w_frame caller, w_method method) {
   c_fcmpg: i = +1; goto do_fcmp;
 
   do_fcmp: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
 #ifdef CACHE_TOS
-    w_float f0 = tos_cache;
+    float_y.w = tos_cache;
 #else
-    w_float f0 = tos[-1].c;
+    float_y.w = tos[-1].c;
 #endif
-    w_float f1 = tos[-2].c;
+    float_x.w = tos[-2].c;
     --tos;
-    if (wfp_float32_is_NaN(f1) || wfp_float32_is_NaN(f0) ) {
+    if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) ) {
       // do nothing, result will be 'i' on entry
     }
-    else if (wfp_float32_eq(f1, f0)) {
+    else if (wfp_float32_eq(float_x.f, float_y.f)) {
       i = 0;
     }
-    else if (wfp_float32_lt(f1, f0)) {
+    else if (wfp_float32_lt(float_x.f, float_y.f)) {
       i = -1;
     }
     else {
@@ -1200,7 +1372,9 @@ void interpret(w_frame caller, w_method method) {
 
   c_checkcast: {
     frame->jstack_top = tos;
-    clazz = getClassConstant_unsafe(cclazz, (unsigned short) short_operand, thread);
+    enterSafeRegion(thread);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
+    enterUnsafeRegion(thread);
     if (thread->exception) {
       do_the_exception;
     }
@@ -1210,8 +1384,16 @@ void interpret(w_frame caller, w_method method) {
 #else
     o = (w_instance) tos[-1].c;
 #endif
-    if (o && ! isAssignmentCompatible(instance2object(o)->clazz, clazz)) {
-      do_throw_clazz(clazzClassCastException);
+    if (o) {
+      w_boolean compatible;
+
+      // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+      enterSafeRegion(thread);
+      compatible = isAssignmentCompatible(instance2object(o)->clazz, clazz);
+      enterUnsafeRegion(thread);
+      if (!compatible) {
+        do_throw_clazz(clazzClassCastException);
+      }
     }
     add_to_opcode(3);
   }
@@ -1281,7 +1463,8 @@ void interpret(w_frame caller, w_method method) {
   
 #ifdef PACK_BYTE_FIELDS
   i_putfield_byte: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1300,7 +1483,8 @@ void interpret(w_frame caller, w_method method) {
 #endif
 
   i_putfield_single: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1318,15 +1502,26 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putfield_double: {
-    i = short_operand;
+    w_boolean isVolatile;
+
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    isVolatile = isSet(field->flags, ACC_VOLATILE);
+
+    i = FIELD_OFFSET(field->size_and_slot);
     o = (w_instance) tos[-3].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
     wordFieldPointer(o, i)[0] = tos[-2].c;
     wordFieldPointer(o, i)[1] = tos[-1].c;
     woempa(1, "putfield %w of %j : put %08x %08x\n", field->name, o, tos[-2].c, tos[-1].c);
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
     tos -= 3;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
@@ -1335,18 +1530,19 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putfield_ref: {
-    i = short_operand;
+    field = getResolvedFieldConstant(cclazz, short_operand);
+    i = field->size_and_slot;
     o = (w_instance) tos[-2].c;
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
 #ifdef CACHE_TOS
-    setReferenceField_unsafe(o, (w_instance) tos_cache, -i);
+    setReferenceField_unsafe(o, (w_instance) tos_cache, i);
     tos -= 2;
     tos_cache = tos[-1].c;
 #else
-    setReferenceField_unsafe(o, (w_instance) tos[-1].c, -i);
+    setReferenceField_unsafe(o, (w_instance) tos[-1].c, i);
     tos -= 2;
 #endif
     add_to_opcode(3);
@@ -1477,27 +1673,37 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_i2f: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_int32_to_float32(tos_cache);
+    float_x.f = wfp_int32_to_float32((w_int)tos_cache);
 #else
-    tos[-1].c = wfp_int32_to_float32(tos[-1].c);
+    float_x.f = wfp_int32_to_float32((w_int)tos[-1].c);
 #endif
+#ifdef CACHE_TOS
+    tos_cache = 
+#endif
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
-  i_new: {
-    clazz = (w_clazz) cclazz->values[(unsigned short) short_operand];
+  i_new:
+    clazz = getResolvedClassConstant(cclazz, (unsigned short) short_operand);
+    // fall through
 
-    frame->jstack_top = tos;
-    enterSafeRegion(thread);
+  new_common: {
+    if (!enough_free_memory(thread, clazz->bytes_needed)) {
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
+    if (thread->exception) {
+      do_the_exception;
+    }
     o = allocInstance(thread, clazz);
-    enterUnsafeRegion(thread);
     tos[0].s = stack_trace;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
     tos[0].c = (w_word)o;
-    if (!o) {
+    if (thread->exception) {
       do_the_exception;
     }
     tos += 1;
@@ -1516,6 +1722,7 @@ void interpret(w_frame caller, w_method method) {
   check_async_exception: {
     if (thread->exception) {
       frame->jstack_top = tos;
+      frame->current = current;
       current = searchHandler(frame);
       tos = (w_Slot*)frame->jstack_top;
     }
@@ -1526,12 +1733,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fmul: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_mul(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_mul(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_mul(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -1562,8 +1778,16 @@ void interpret(w_frame caller, w_method method) {
 #else
     o = (w_instance) tos[-1].c;
 #endif
-    if (o && ! isAssignmentCompatible(instance2object(o)->clazz, instance2object(a)->clazz->previousDimension)) {
-      do_throw_clazz(clazzArrayStoreException);
+    if (o) {
+      w_boolean compatible;
+
+      // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+      enterSafeRegion(thread);
+      compatible = isAssignmentCompatible(instance2object(o)->clazz, instance2object(a)->clazz->previousDimension);
+      enterUnsafeRegion(thread);
+      if (!compatible) {
+        do_throw_clazz(clazzArrayStoreException);
+      }
     }
     setArrayReferenceField_unsafe(a, o, i);
     tos -= 3;
@@ -1667,6 +1891,7 @@ void interpret(w_frame caller, w_method method) {
   c_monitorexit: {
     w_slot slot;
     w_slot base = frame->auxstack_base;
+    w_boolean found = FALSE;
 
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
@@ -1681,6 +1906,7 @@ void interpret(w_frame caller, w_method method) {
       if (isMonitoredSlot(slot)) {
         woempa(1, "  aux[%d] is a monitored slot : o = %j\n", last_slot(frame->thread) - slot, slot->c);
         if (slot->c == (w_word) o) {
+          found = TRUE;
           m = (x_monitor) slot->s;
           if (x_monitor_exit(m) == xs_not_owner) {
             do_throw_clazz(clazzIllegalMonitorStateException);
@@ -1697,6 +1923,9 @@ void interpret(w_frame caller, w_method method) {
       else {
         woempa(1, "  aux[%d] is not a monitored slot\n", last_slot(frame->thread) - slot);
       }
+    }
+    if (!found) {
+      do_throw_clazz(clazzIllegalMonitorStateException);
     }
     while (frame->auxstack_top < base && frame->auxstack_top[1].s == stack_notrace) {
       frame->auxstack_top += 1;
@@ -1724,6 +1953,7 @@ void interpret(w_frame caller, w_method method) {
 
     if (instance2object(a)->clazz->previousDimension == clazz_boolean) {
       s = instance2Array_byte(a)[i / 8];
+      // TODO: this is not thread-safe!!! FIXME
       s &= 0xff ^ (1 << i % 8);
       instance2Array_byte(a)[i / 8] = s | ((tos[-1].c & 1) << (i % 8));
     }
@@ -1896,7 +2126,11 @@ void interpret(w_frame caller, w_method method) {
     i = (unsigned short) short_operand; 
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
-      w_clazz target_clazz = getClassConstant(cclazz, i);
+      w_clazz target_clazz;
+      frame->jstack_top = tos;
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i, thread);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -1968,7 +2202,11 @@ void interpret(w_frame caller, w_method method) {
     i = (unsigned short) byte_operand;
     tag = &cclazz->tags[i]; 
     if ((*tag & 0xf) == CONSTANT_CLASS) {
-      w_clazz target_clazz = getClassConstant(cclazz, i);
+      w_clazz target_clazz;
+      frame->jstack_top = tos;
+      enterSafeRegion(thread);
+      target_clazz = getClassConstant(cclazz, i, thread);
+      enterUnsafeRegion(thread);
       if (thread->exception) {
         do_the_exception;
       }
@@ -1976,7 +2214,7 @@ void interpret(w_frame caller, w_method method) {
       tos[0].s = stack_trace;
       current[-1] = in_ldc_class;
     }
-    if (*tag == RESOLVED_STRING) {
+    else if (*tag == RESOLVED_STRING) {
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_trace;
       current[-1] = in_ldc_string;
@@ -2401,12 +2639,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fadd: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_add(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_add(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_add(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2441,12 +2688,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fsub: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_sub(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_sub(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_sub(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2592,12 +2848,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fdiv: {
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+#ifdef CACHE_TOS
+    float_y.w = tos_cache;
+#else
+    float_y.w = tos[-1].c;
+#endif
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_div(float_x.f, float_y.f);
     tos -= 1;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_div(tos[-1].c, tos_cache);
-#else
-    tos[-1].c = wfp_float32_div(tos[-1].c, tos[0].c);
+    tos_cache = 
 #endif
+    tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
@@ -2676,11 +2941,17 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_fneg: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    tos_cache = tos[-1].c = wfp_float32_negate(tos_cache);
+    float_x.w = tos_cache;
 #else
-    tos[-1].c = wfp_float32_negate(tos[-1].c);
+    float_x.w = tos[-1].c;
 #endif
+    float_x.f = wfp_float32_negate(float_x.f);
+#ifdef CACHE_TOS
+    tos_cache = 
+#endif
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -2848,9 +3119,9 @@ void interpret(w_frame caller, w_method method) {
     union {w_double d; w_word w[2];} double_x;
     double_x.d = wfp_int32_to_float64
 #ifdef CACHE_TOS
-                                     (tos_cache);
+                                     ((w_int)tos_cache);
 #else
-                                     (tos[-1].c);
+                                     ((w_int)tos[-1].c);
 #endif
     tos[ 0].s = stack_notrace;
     tos += 1;
@@ -2861,21 +3132,18 @@ void interpret(w_frame caller, w_method method) {
 
   c_f2l: {
     union{w_long l; w_word w[2];} long_x;
+    union{w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    if (wfp_float32_is_NaN(tos_cache)) {
-      long_x.l = 0LL;
-    }
-    else {
-      long_x.l = wfp_float32_to_int64_round_to_zero(tos_cache);
-    }
+    float_x.w = tos_cache;
 #else
-    if (wfp_float32_is_NaN(tos[-1].c)) {
+    float_x.w = tos[-1].c;
+#endif
+    if (wfp_float32_is_NaN(float_x.f)) {
       long_x.l = 0LL;
     }
     else {
-      long_x.l = wfp_float32_to_int64_round_to_zero(tos[-1].c);
+      long_x.l = wfp_float32_to_int64_round_to_zero(float_x.f);
     }
-#endif
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = long_x.w[0];
@@ -2885,12 +3153,13 @@ void interpret(w_frame caller, w_method method) {
 
   c_f2d: {
     union {w_double d; w_word w[2];} double_x;
-    double_x.d = wfp_float32_to_float64
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-                                       (tos_cache);
+    float_x.w = tos_cache;
 #else
-                                       (tos[-1].c);
+    float_x.w = tos[-1].c;
 #endif
+    double_x.d = wfp_float32_to_float64(float_x.f);
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = double_x.w[0];
@@ -2900,13 +3169,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_l2f: {
     union {w_long l; w_word w[2];} long_x;
+    union {w_float f; w_word w;} float_x;
     long_x.w[0] = tos[-2].c;
     long_x.w[1] = tos[-1].c;
+    float_x.f = wfp_int64_to_float32(long_x.l);
     tos -= 1;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
-    tos[-1].c = wfp_int64_to_float32(long_x.l);
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -2921,21 +3192,16 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_f2i: {
+    union {w_float f; w_word w;} float_x;
 #ifdef CACHE_TOS
-    if (wfp_float32_is_NaN(tos_cache)) {
-      tos_cache = tos[-1].c = 0;
-    }
-    else {
-      tos_cache = tos[-1].c = wfp_float32_to_int32_round_to_zero(tos_cache);
-    }
+    float_x.w = tos_cache;
 #else
-    if (wfp_float32_is_NaN(tos[-1].c)) {
-      tos[-1].c = 0;
-    }
-    else {
-      tos[-1].c = wfp_float32_to_int32_round_to_zero(tos[-1].c);
-    }
+    float_x.w = tos[-1].c;
 #endif
+#ifdef CACHE_TOS
+    tos_cache =
+#endif
+    tos[-1].c = wfp_float32_is_NaN(float_x.f) ? 0 : wfp_float32_to_int32_round_to_zero(float_x.f);
     do_next_opcode;
   }
 
@@ -2976,13 +3242,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_d2f: {
     union {w_double d; w_word w[2];} double_x;
+    union {w_float f; w_word w;} float_x;
     double_x.w[0] = tos[-2].c;
     double_x.w[1] = tos[-1].c;
+    float_x.f = wfp_float64_to_float32(double_x.d);
     tos -= 1;
 #ifdef CACHE_TOS
     tos_cache = 
 #endif
-    tos[-1].c = wfp_float64_to_float32(double_x.d);
+    tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
@@ -3171,10 +3439,9 @@ void interpret(w_frame caller, w_method method) {
     enterSafeRegion(thread);
     mustBeInitialized(field->declaring_clazz);
     enterUnsafeRegion(thread);
-
-    i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
-    current[1] = (i >> 8) & 0xff;
-    current[2] = i  & 0xff;
+    if (thread->exception) {
+      do_the_exception;
+    }
 
     if (isSet(field->flags, FIELD_IS_LONG)) {
       current[0] = in_getstatic_double;
@@ -3214,10 +3481,9 @@ void interpret(w_frame caller, w_method method) {
     enterSafeRegion(thread);
     mustBeInitialized(field->declaring_clazz);
     enterUnsafeRegion(thread);
-
-    i = addPointerConstantToPool(cclazz, &field->declaring_clazz->staticFields[field->size_and_slot]);
-    current[1] = (i >> 8) & 0xff;
-    current[2] = i  & 0xff;
+    if (thread->exception) {
+      do_the_exception;
+    }
 
     if (isSet(field->flags, FIELD_IS_LONG)) {
       current[0] = in_putstatic_double;
@@ -3253,18 +3519,12 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    i = FIELD_OFFSET(field->size_and_slot);
     if (isSet(field->flags, FIELD_IS_REFERENCE)) {
-      i = -i;
       current[0] = in_getfield_ref;
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
 
       goto i_getfield_ref;
     }
     else {
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
       if (isSet(field->flags, FIELD_IS_LONG)) {
         current[0] = in_getfield_double;
 
@@ -3302,18 +3562,13 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    i = FIELD_OFFSET(field->size_and_slot);
     if (isSet(field->flags, FIELD_IS_REFERENCE)) {
       i = -i;
       current[0] = in_putfield_ref;
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
 
       goto i_putfield_ref;
     }
     else {
-      current[1] = (i >> 8) & 0xff;
-      current[2] = i  & 0xff;
       if (isSet(field->flags, FIELD_IS_LONG)) {
         current[0] = in_putfield_double;
 
@@ -3348,27 +3603,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzIncompatibleClassChangeError);
     }
 
-    /*
-     * Make some trivial methods disappear:
-     * aload_0, areturn -> pop all params but 1 and continue
-     * (getter)
-     */
     if (isSet(x->flags, METHOD_NO_OVERRIDE) && x->exec.code) {
-	    /*
-      if (x->exec.arg_i < 4) {
-        if (x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokevirtual %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = nop;
-          *(++current) = x->exec.arg_i > 1 ? pop : nop;
-          *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokevirtual %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[-2], current[-1], current[0]);
-          tos -= x->exec.arg_i - 1;
-          do_next_opcode;
-          // that's a goto, code below is not executed
-        }
-      }
-      */
-      woempa(1, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
+      woempa(7, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
       *current = in_invokenonvirtual;
 
       goto i_invokenonvirtual;
@@ -3395,8 +3631,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-
-    x = virtualLookup(x, instance2object(objectref)->clazz);
+    clazz = instance2clazz(objectref);
+    x = virtualLookup(x, clazz);
     if (!x) {
       do_the_exception;
     }
@@ -3433,11 +3669,11 @@ void interpret(w_frame caller, w_method method) {
     if ((x->spec.declaring_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER || isSet(x->flags, ACC_PRIVATE) || isSet(x->flags, METHOD_IS_CONSTRUCTOR) || !isSuperClass(x->spec.declaring_clazz, getSuper(frame->method->spec.declaring_clazz))) {
       if (x->exec.arg_i < 4) {
         if (x->exec.code && x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokevirtual %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = nop;
+          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          *current = x->exec.arg_i > 0 ? pop : nop;
           *(++current) = x->exec.arg_i > 1 ? pop : nop;
           *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokevirtual %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
           tos -= x->exec.arg_i - 1;
 #ifdef CACHE_TOS
     tos_cache = tos[-1].c;
@@ -3498,6 +3734,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     if (isSet(x->flags, ACC_ABSTRACT)) {
+      clazz = super;
       do_AbstractMethodError;
     }
 
@@ -3615,6 +3852,8 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     if (!actual_method || isSet(actual_method->flags, ACC_ABSTRACT)) {
+      x = interf_method;
+      clazz = actual_clazz;
       do_AbstractMethodError;
     }
     if (isSet(actual_method->flags, ACC_STATIC)) {
@@ -3640,7 +3879,7 @@ void interpret(w_frame caller, w_method method) {
   c_new: {
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
 
     if (clazz) {
       mustBeInitialized(clazz);
@@ -3653,14 +3892,16 @@ void interpret(w_frame caller, w_method method) {
     if (thread->exception) {
       do_the_exception;
     }
-    
+
     *current = in_new;
     
-    goto i_new;
+    goto new_common;
   }
 
 
   c_newarray: {
+    w_size bytes;
+    //w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3672,14 +3913,21 @@ void interpret(w_frame caller, w_method method) {
     }
 
     clazz = atype2clazz[*(current + 1)];
+    bytes = (F_Array_data + roundBitsToWords(clazz->previousDimension->bits * s)) * sizeof(w_word);
+    if (!enough_free_memory(thread, bytes)) {
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
     mustBeInitialized(clazz);
+    enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
     woempa(1, "Allocating array of %d %k\n", s, clazz->previousDimension);
     a = allocArrayInstance_1d(thread, clazz, (w_int)s);
 
-    enterUnsafeRegion(thread);
     if (!a) {
       do_the_exception;
     }
@@ -3692,6 +3940,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_anewarray: {
+    w_size bytes;
+    w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3700,14 +3950,23 @@ void interpret(w_frame caller, w_method method) {
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
     }
+    bytes = (F_Array_data + s) * sizeof(w_word);
+    if (!enough_free_memory(thread, bytes)) {
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
 
     if (clazz) {
       clazz = getNextDimension(clazz, clazz2loader(frame->method->spec.declaring_clazz));
-      mustBeInitialized(clazz);
+      if (clazz) {
+        mustBeInitialized(clazz);
+      }
+    }
+    else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
     }
 
     enterUnsafeRegion(thread);
@@ -3715,10 +3974,8 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    enterSafeRegion(thread);
     woempa(1, "Allocating array of %d %k\n", s, clazz->previousDimension);
     a = allocArrayInstance_1d(thread, clazz, s);
-    enterUnsafeRegion(thread);
     if (!a) {
       do_the_exception;
     }
@@ -3732,6 +3989,17 @@ void interpret(w_frame caller, w_method method) {
 
   c_athrow: {
     woempa(1, "athrow(%e)\n", tos[-1].c);
+/*
+    { // [CG 20071130] Check we don't have any monitors left - see JVMS 8.13
+      w_slot base = frame->auxstack_base;
+      w_slot slot = frame->auxstack_top;
+      for (slot = slot + 1; base - slot >= 0; ++slot) {
+        if (isMonitoredSlot(slot)) {
+          do_throw_clazz(clazzIllegalMonitorStateException);
+        }
+      }
+    }
+*/
 #ifdef CACHE_TOS
     if (tos_cache == 0) {
       do_throw_clazz(clazzNullPointerException);
@@ -3749,11 +4017,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_instanceof: {
     frame->jstack_top = tos;
-    clazz = getClassConstant_unsafe(cclazz, (unsigned short) short_operand, thread);
+    enterSafeRegion(thread);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
+    enterUnsafeRegion(thread);
     if (thread->exception) {
       do_the_exception;
     }
     tos[-1].s = stack_notrace;
+    // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+    enterSafeRegion(thread);
 #ifdef CACHE_TOS
     o = (w_instance) tos_cache;
     tos_cache = tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
@@ -3761,6 +4033,7 @@ void interpret(w_frame caller, w_method method) {
     o = (w_instance) tos[-1].c;
     tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
 #endif
+    enterUnsafeRegion(thread);
     add_to_opcode(3);
   }
 
@@ -3836,6 +4109,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_multianewarray: {
     w_int * dimensions;
+    w_boolean enough;
 
     frame->jstack_top = tos;
     s = (unsigned int) (unsigned char) *(current + 3);
@@ -3854,21 +4128,42 @@ void interpret(w_frame caller, w_method method) {
 
     frame->jstack_top = tos;
     enterSafeRegion(thread);
-    clazz = getClassConstant(cclazz, (unsigned short) short_operand);
+    clazz = getClassConstant(cclazz, (unsigned short) short_operand, thread);
     if (clazz) {
       mustBeInitialized(clazz);
     }
+    else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
     enterUnsafeRegion(thread);
+    if (thread->exception) {
+      do_the_exception;
+    }
+
+    {
+      w_size bytes;
+      w_clazz element_clazz;
+
+      bytes = 1;
+      element_clazz = clazz->previousDimension;
+      for (i = 0; i < s - 1; ++i) {
+        bytes *= F_Array_data + dimensions[i];
+        element_clazz = element_clazz->previousDimension;
+      }
+      bytes *= (F_Array_data + roundBitsToWords(element_clazz->bits * dimensions[s - 1])) * sizeof(w_word);
+      enough = enough_free_memory(thread, bytes);
+    }
+    if (!enough) {
+      releaseMem(dimensions);
+      do_throw_clazz(clazzOutOfMemoryError);
+    }
     if (thread->exception) {
       releaseMem(dimensions);
       do_the_exception;
     }
 
-    enterSafeRegion(thread);
     a = allocArrayInstance(thread, clazz, s, dimensions);
-    enterUnsafeRegion(thread);
     releaseMem(dimensions);
-    
     if (!a) {
       do_the_exception;
     }
@@ -3929,42 +4224,49 @@ void interpret(w_frame caller, w_method method) {
   ** c_AbstractMethodError: allocates an AbstractMethodError with a message
   ** describing the offending method, records the current opcode in the frame,
   ** and jumps to c_find_handler
-  ** c_clazz2exception: allocates the exeception instance given by clazz 'c' and falls through to c_exception
-  **       c_exception: (opcode at -1) records the current opcode in the frame, falls through to c_find_handler
-  **    c_find_handler: tries to find a handler, handler returns correct code pointer or code pointer for 'c_no_handler'
-  **      c_no_handler: (opcode at -2) is called when there is no handler and returns
   */
 
   c_AbstractMethodError: 
     {
       // Assuming that frame->jstack_top is up to date
       enterSafeRegion(thread);
-      throwException(thread, clazzAbstractMethodError, "%M", x);
+      throwException(thread, clazzAbstractMethodError, "%M in %K", x, clazz);
       enterUnsafeRegion(thread);
       frame->current = current;
       frame->jstack_top = tos;
     }
     goto c_find_handler;
 
+  /*
+  ** c_clazz2exception: allocates the exeception instance given by clazz 'c' and falls through to c_exception
+  */
   c_clazz2exception: {
     threadMustBeUnsafe(thread);
     if (!thread->exception) {
       frame->jstack_top = tos;
-      enterSafeRegion(thread);
-      mustBeInitialized(clazz);
+#ifdef RUNTIME_CHECKS
+      if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED) {
+        wabort(ABORT_WONKA, "'s Blood! Throwing uninitialized %k\n", clazz);
+      }
+#endif
       thread->exception = allocThrowableInstance(thread, clazz);
-      enterUnsafeRegion(thread);
       if (thread->exception) {
         removeLocalReference(thread, thread->exception);
       }
     }
   }
   
+  /*
+  **       c_exception: (opcode at -1) records the current opcode in the frame, falls through to c_find_handler
+  */
   c_exception: {
     throwExceptionInstance(thread, thread->exception);
     frame->current = current;
   }
   
+  /*
+  **    c_find_handler: tries to find a handler, handler returns correct code pointer or code pointer for 'c_no_handler'
+  */
   c_find_handler: {
     frame->jstack_top = tos;
     current = searchHandler(frame);
@@ -3975,12 +4277,24 @@ void interpret(w_frame caller, w_method method) {
     do_next_opcode;
   }
 
+  /*
+  **      c_no_handler: (opcode at -2) is called when there is no handler and returns
+  */
   c_no_handler: {
     frame->auxstack_top = frame->auxstack_base;
     goto c_common_return;
   }
 
   c_common_return:
+    { // [CG 20071114] Check we don't have any monitors left - see JVMS 8.13
+      w_slot base = frame->auxstack_base;
+      w_slot slot = frame->auxstack_top;
+      for (slot = slot + 1; base - slot >= 0; ++slot) {
+        if (isMonitoredSlot(slot)) {
+          do_throw_clazz(clazzIllegalMonitorStateException);
+        }
+      }
+    }
     thread->top = caller;
     checkSingleStep2(frame);
     if (from_unsafe) {
@@ -3994,38 +4308,42 @@ void interpret(w_frame caller, w_method method) {
 }
 
 void do_frem(w_Slot **tosptr) {
+  union {w_float f; w_word w;} float_x;
+  union {w_float f; w_word w;} float_y;
+  union {w_float f; w_word w;} result;
 
-  w_float result;
+  float_y.w = (*tosptr)[-1].c;
+  float_x.w = (*tosptr)[-2].c;
 
-  if (wfp_float32_is_NaN((*tosptr)[-2].c) || wfp_float32_is_NaN((*tosptr)[-1].c) || wfp_float32_eq((*tosptr)[-1].c , F_ZERO) || wfp_float32_is_Infinite((*tosptr)[-2].c)) {
-    result = F_NAN;
+  if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) || wfp_float32_eq(float_y.f , F_ZERO) || wfp_float32_is_Infinite(float_x.f)) {
+    result.f = F_NAN;
   }
   else {
-    if (wfp_float32_eq((*tosptr)[-2].c , F_ZERO) || wfp_float32_is_Infinite((*tosptr)[-1].c)) {
-      result = (*tosptr)[-2].c;
+    if (wfp_float32_eq(float_x.f , F_ZERO) || wfp_float32_is_Infinite(float_y.f)) {
+      result.f = float_x.f;
     }
     else   {
-      result = wfp_float32_mul(wfp_float32_abs((*tosptr)[-1].c), F_FLOAT_MAX_VALUE);
-      if (wfp_float32_lt(result, wfp_float32_abs((*tosptr)[-2].c))) {
+      result.f = wfp_float32_mul(wfp_float32_abs(float_y.f), F_FLOAT_MAX_VALUE);
+      if (wfp_float32_lt(result.f, wfp_float32_abs(float_x.f))) {
         woempa(1, "fmod: division would overflow, returning zero as remainder.\n");
-        if (wfp_float32_is_negative((*tosptr)[-2].c)) {
-          result = F_MINUS_ZERO;
+        if (wfp_float32_is_negative(float_x.f)) {
+          result.f = F_MINUS_ZERO;
         }
         else {
-          result = F_ZERO;
+          result.f = F_ZERO;
         }
       }
       else {
-        result = wfp_float32_div((*tosptr)[-2].c, (*tosptr)[-1].c);
-        result = wfp_int32_to_float32(wfp_float32_to_int32_round_to_zero(result));
-        result = wfp_float32_mul((*tosptr)[-1].c, result);
-        result = wfp_float32_sub((*tosptr)[-2].c, result);
+        result.f = wfp_float32_div(float_x.f, float_y.f);
+        result.f = wfp_int32_to_float32(wfp_float32_to_int32_round_to_zero(result.f));
+        result.f = wfp_float32_mul(float_y.f, result.f);
+        result.f = wfp_float32_sub(float_x.f, result.f);
       }
     }
   }
 
   (*tosptr) -= 1;
-  (*tosptr)[-1].c = result;
+  (*tosptr)[-1].c = result.w;
 
 }
 
@@ -4114,6 +4432,7 @@ static w_code searchHandler(w_frame frame) {
   w_instance pending;
   w_code nohandler = frame->method->exec.code - 3;
 
+  threadMustBeUnsafe(thread);
   /*
   ** Store the pending exception locally and clear the thread exception, since
   ** resolving the class constant could result in loading/initializing etc. and
@@ -4124,24 +4443,28 @@ static w_code searchHandler(w_frame frame) {
   */
   
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+    wprintf("Thrown: Seeking handler for %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   woempa(7, "Seeking handler for %k in %t, current frame is running %M\n", instance2clazz(thread->exception), thread, frame->method);
   threadMustBeUnsafe(thread);
   auxs = (w_slot)frame->auxstack_top;
   pending = thread->exception;
-  thread->exception = NULL;
   pushLocalReference(frame, pending);
+  thread->exception = NULL;
 
   for (i = 0; i <  frame->method->exec.numExceptions; i++) {
       ex = &frame->method->exec.exceptions[i];
       if (ex->type_index) {
-        cc = getClassConstant_unsafe(frame->method->spec.declaring_clazz, ex->type_index, thread);
+        enterSafeRegion(thread);
+        cc = getClassConstant(frame->method->spec.declaring_clazz, ex->type_index, thread);
+        enterUnsafeRegion(thread);
+/* [CG 20080206] This can never be executed surely?
         if (thread->exception) {
           pending = thread->exception;
           pushLocalReference(frame, pending);
           break;
         }
+*/
       }
       else {
         cc = NULL;
@@ -4149,7 +4472,7 @@ static w_code searchHandler(w_frame frame) {
       if (pc >= ex->start_pc && pc < ex->end_pc) {
         if (cc == NULL || isSuperClass(cc, instance2object(pending)->clazz)) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-            wprintf("Thrown: Catching %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+            wprintf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
           }
           woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
           woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
@@ -4175,7 +4498,7 @@ static w_code searchHandler(w_frame frame) {
   setReferenceField_unsafe(thread->Thread, pending, F_Thread_thrown);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: Propagating %k '%w' in %M, thread %t\n", instance2clazz(thread->exception), String2string((w_instance)thread->exception[F_Throwable_detailMessage]), frame->method, thread);
+    wprintf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   frame->auxstack_top = auxs;
 
@@ -4224,6 +4547,17 @@ w_frame pushFrame(w_thread thread, w_method method) {
     frame->method = method;
     frame->current = method->exec.code;
     frame->flags = isSet(method->flags, ACC_NATIVE) ? FRAME_NATIVE : 0;
+#ifdef TRACE_CLASSLOADERS
+  { 
+    w_instance loader = method->spec.declaring_clazz->loader; 
+    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+      frame->udcl = loader;
+    }
+    else {
+      frame->udcl = thread->top->udcl;
+    }
+  }
+#endif
 
     thread->top = frame;
     woempa(1, "%t jstack_base = jstack_top = %p, auxstack_base = auxstack_top = %p\n", frame->jstack_top, frame->auxstack_top);
@@ -4239,12 +4573,8 @@ w_frame activateFrame(w_thread thread, w_method method, w_word flags, w_int narg
   w_frame frame = pushFrame(thread, method);
   w_int i = 0;
 
+  threadMustBeSafe(thread);
   if (frame) {
-#ifdef RUNTIME_CHECKS
-    if (threadIsUnsafe(thread)) {
-      wabort(ABORT_WONKA, "Thread %t is unsafe when calling %M from %M!\n", thread, method, frame->previous->method);
-    }
-#endif
     va_start(args, nargs);
     while (i < nargs) {
       frame->jstack_top[0].c = va_arg(args, w_word);

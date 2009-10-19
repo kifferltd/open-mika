@@ -20,6 +20,7 @@
 
 package gnu.testlet;
 
+import java.io.File;
 import java.io.Reader;
 import java.io.InputStream;
 
@@ -29,6 +30,22 @@ public abstract class TestHarness
   public abstract void check (boolean result);
   public abstract void check (boolean result,String message);
 
+  public void check(boolean result, boolean expect, String message) {
+    boolean ok = result == expect;
+    check(ok,message);
+    if(!ok) {
+      debug("got "+result+"but wanted "+expect+" (message = "+message);
+    }
+  }
+  
+  public void check(boolean result, boolean expect) {
+    boolean ok = result == expect;
+    check(ok);
+    if(!ok) {
+      debug("got "+result+"but wanted "+expect+" (no message)");
+    }
+  }
+  
   public void check (Object result, Object expected)
     {
       boolean ok = (result == null
@@ -120,6 +137,9 @@ public abstract class TestHarness
   public abstract InputStream getResourceStream (String name) 
     throws ResourceNotFoundException;
 
+  public abstract File getResourceFile (String name) 
+    throws ResourceNotFoundException;
+
   // Provide a directory name for writing temporary files.
   public abstract String getTempDirectory ();
 
@@ -138,4 +158,9 @@ public abstract class TestHarness
   public abstract void debug (String message, boolean newline);
   public abstract void debug (Throwable ex);
   public abstract void debug (Object[] o, String desc);
+  public String getSourceDirectory() {
+    File f = new File("./src");
+    f.mkdir();
+    return f.getAbsolutePath();
+  }
 }

@@ -1,40 +1,47 @@
-#ifndef _THREADS_H
-#define _THREADS_H
-
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika copyright (c) 2004, 2005, 2006 by Chris Gray,    *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-/*
-** $Id: threads.h,v 1.28 2006/10/04 14:24:14 cvsroot Exp $
-*/
+#ifndef _THREADS_H
+#define _THREADS_H
 
 #include "jni.h"
 #include "oswald.h"
 #include "wonka.h"
+
+// If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
+// user-defined class loader in each frame.
+#ifdef DEBUG
+#define TRACE_CLASSLOADERS
+#endif
 
 extern w_size numThreads;
 extern w_thread W_Thread_system;
@@ -107,8 +114,8 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 
 #define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
 #define WT_THREAD_INTERRUPTED         0x00000004 /* the thread has been interrupted */
+#define WT_THREAD_GC_PENDING          0x00000008 /* the thread should perform GC as soon as it becomes safe. */
 #define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
-#define WT_THREAD_BLOCKED_BY_GC       0x00002000 /* the thread is forbidden any activity which conflicts with GC. */
 #define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
 #define WT_THREAD_SUSPEND_COUNT_SHIFT 16
 
@@ -140,6 +147,9 @@ typedef struct w_Frame {
   w_thread        thread;              // points to current wonka thread
   volatile w_code current;             // The opcode pointer at method call or exception; pc = frame->current - frame->method_.exec.code
   volatile w_instance * map;           // A pointer to an array of references (stack map)
+#ifdef TRACE_CLASSLOADERS
+  w_instance      udcl;                // Nearest user-defined class loader or NULL
+#endif
 } w_Frame;
 
 /*
@@ -238,6 +248,7 @@ typedef struct w_Thread {
   volatile w_instance exception;      // currently pending exception when not NULL, is also in thread->Thread[F_Thread_thrown]
   volatile w_instance Thread;        // corresponding instance of java.lang.Thread
   w_instance protected;              // instance which we wish to protect from GC (e.g. reference returned by a method)
+  w_size     to_be_reclaimed;        // amount of memory we should try to reclaim next time we are GC-safe
 
   /*
   ** The native part of a Wonka thread, it's kernel thread, the stack and it's size.
@@ -265,8 +276,6 @@ typedef struct w_Thread {
   volatile w_Slot  slots[SLOTS_PER_THREAD]; // Reserve space for the slots
 } w_Thread;
 
-#define thread2ThreadGroup(t) getReferenceField((t)->Thread, F_Thread_parent)
-
 /*
  * Pointer to the last slot (auxstack_base of the root frame).
  */
@@ -282,9 +291,10 @@ typedef enum {
   wt_waiting      =  10,
   wt_sleeping     =  12,
   wt_ended        =  14,
-  wt_unstarted    =  15,   /* The states [15 - 17] are Wonka thread specific states. */
-  wt_dying        =  16,
-  wt_dead         =  17,
+  wt_unstarted    =  15,   /* The states [15 - 18] are Wonka thread specific states. */
+  wt_starting     =  16,
+  wt_dying        =  17,
+  wt_dead         =  18,
 } wt_state;
 
 inline static wt_state threadState(w_thread thread) {
@@ -398,14 +408,18 @@ extern x_monitor safe_points_monitor;
 extern volatile w_int number_unsafe_threads;
 
 /**
- Set to BLOCKED_BY_GC if no thread may enter an unsafe state, BLOCKED_BY_JDWP
- if JDWP is suspending all threads
+ Set to BLOCKED_BY_GC if no thread may enter an unsafe state, BLOCKED_BY_JITC
+ if the JIT compiler or other function is rewriting bytecode, JDWP if JDWP is
+ suspending all threads
 */
 extern volatile w_int blocking_all_threads;
 #define BLOCKED_BY_GC   1
 #define BLOCKED_BY_JDWP 2
+#define BLOCKED_BY_JITC 4
+#define BLOCKED_BY_WABORT 0x80
 
 extern volatile w_thread marking_thread;
+extern volatile w_thread jitting_thread;
 
 // Time to wait for ownership of HC state to change.
 #define GC_STATUS_WAIT_TICKS x_eternal
@@ -422,7 +436,7 @@ void _gcSafePoint(w_thread thread, char *file, int line);
 
 inline static void gcSafePoint(w_thread thread) {
   if (blocking_all_threads) {
-    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by %s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? "GC" : "JDWP");
+    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by%s%s%s%s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? " GC" : "", blocking_all_threads & BLOCKED_BY_JDWP ? " JDWP" : "", blocking_all_threads & BLOCKED_BY_JITC ? " JITC" : "" , blocking_all_threads & BLOCKED_BY_WABORT ? " WABORT" : "");
     if (thread == marking_thread) {
       woempa(7, "gcSafePoint(): %s:%d (%s): %t is marking thread, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
     }
@@ -504,8 +518,8 @@ w_method  findRunMethod(w_clazz);
 
 char *threadDescription(w_thread);
 
-void addThreadToGroup(w_thread thread, w_instance ThreadGroup);
-void removeThreadFromGroup(w_thread thread, w_instance ThreadGroup);
+void addThreadCount(w_thread thread);
+void removeThreadCount(w_thread thread);
 
 #define STACK_PRESET                        0xaa
 

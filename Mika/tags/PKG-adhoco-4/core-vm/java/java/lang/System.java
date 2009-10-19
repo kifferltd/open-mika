@@ -1,29 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: System.java,v 1.13 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 package java.lang;
 
@@ -40,14 +45,18 @@ public final class System {
   public final static PrintStream out;
   public final static PrintStream err;
 
-  private static SecurityManager theSecurityManager;
-  private static Runtime theRuntime;
-  private static Properties systemProperties;
-  private static boolean initialized;
+  static SecurityManager theSecurityManager;
+  static Runtime theRuntime;
+  static Properties systemProperties;
+  static boolean initialized;
 
   static {
+    in = new wonka.io.StandardInputStream();
+    // We make 'out' non-autoflush and 'err' autoflush, by analogy with Posix.
+    out = new PrintStream(new wonka.io.StandardOutputStream(), false);
+    err = new PrintStream(new wonka.io.ErrorOutputStream(), true);
     theRuntime = Runtime.getRuntime();
-    systemProperties = new Properties(createDefaultProperties());
+    systemProperties = new Properties(new DefaultProperties());
 
     try {
       InputStream syspropstream = ClassLoader.getSystemResourceAsStream("system.properties");
@@ -69,44 +78,24 @@ public final class System {
     catch (IOException e) {}
 
     parseCmdLineProperties();
-    InputStream sin = null;
-    try {
-      sin = new wonka.io.StandardInputStream();
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    in = sin;
-    PrintStream sout = null;
-    try {
-      boolean  system_out_autoflush = Boolean.valueOf(getProperty("mika.out.autoflush", "true")).booleanValue();
-      sout = new PrintStream(new wonka.io.StandardOutputStream(), system_out_autoflush);
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    out = sout;
-    PrintStream serr = null;
-    try {
-      boolean  system_err_autoflush = Boolean.valueOf(getProperty("mika.err.autoflush", "true")).booleanValue();
-      serr = new PrintStream(new wonka.io.ErrorOutputStream(), system_err_autoflush);
-    } catch(Throwable t){
-      t.printStackTrace();      
-    }
-    err = serr;
+
     try {    
       //FORCE SOME CALLS things that are postponed until the system properties were set up correctly
       ClassLoader.get_defaultProtectionDomain();
       ClassLoader.createApplicationClassLoader();
 
       //SETUP DEFAULT LOCALE
-      java.util.Locale.setDefault(new java.util.Locale(getProperty("user.language", "en"), getProperty("user.country", "")));
+      java.util.Locale.setDefault(new java.util.Locale(systemProperties.getProperty("user.language", "en"), systemProperties.getProperty("user.country", "")));
       
-      String theManager = getProperty("java.security.manager");
+/*
+      String theManager = systemProperties.getProperty("java.security.manager");
       if("".equals(theManager) || "default".equals(theManager)) {
         theSecurityManager = new SecurityManager();
       }
-      else {
-        // TODO: Use the given class..
+      else if (theManager != null) {
+        theSecurityManager = (SecurityManager)Class.forName(theManager, true, ClassLoader.getSystemClassLoader()).newInstance0();
       }
+*/
       
       initialized = true;
     }
@@ -150,92 +139,6 @@ public final class System {
     }
   }
 
-  private static Properties createDefaultProperties() {
-    Properties systemDefaultProperties = new Properties();
-
-/*
-** The 1.4.2 API states that the following should always be defined:
-** java.version
-** java.vendor
-** java.vendor.url
-** java.home
-** java.vm.specification.version
-** java.vm.specification.vendor
-** java.vm.specification.name
-** java.vm.version
-** java.vm.vendor
-** java.vm.name
-** java.specification.version
-** java.specification.vendor
-** java.specification.name
-** java.class.version
-** java.class.path
-** java.library.path +
-** java.io.tmpdir +
-** java.compiler +
-** java.ext.dirs
-** os.name
-** os.arch
-** os.version
-** file.separator
-** path.separator
-** line.separator
-** user.name
-** user.home
-** user.dir
-** + = new in 1.4
-**
-** We support all of these as best we can, except java.vm.specification.*
-** and java.specification.* (for legal reasons).
-*/
-    systemDefaultProperties.put("java.vm.version","1.3");
-    systemDefaultProperties.put("java.vendor","/k/ Embedded Java Solutions");
-    systemDefaultProperties.put("java.vendor.url","http://www.acunia.com");
-    systemDefaultProperties.put("java.vm.vendor", "/k/ Embedded Java Solutions");
-    systemDefaultProperties.put("java.vm.name", "Mika");
-    systemDefaultProperties.put("java.class.version","46.0");
-// java.class.path will be updated later in the boot process
-    systemDefaultProperties.put("java.class.path","");
-    systemDefaultProperties.put("file.separator","/");
-  /*
-  ** N.B. file.encoding should be one of the six mandatory encodings,
-  ** in canonical form.
-  */
-    systemDefaultProperties.put("file.encoding","8859_1");
-    systemDefaultProperties.put("path.separator",":");
-    systemDefaultProperties.put("line.separator","\n");
-// user.language may be overriden by a native property
-    systemDefaultProperties.put("user.language","en");
-
-    initNativeProperties();
-    String[] native_property_names = {
-      // Standard properties
-      "java.home", "java.library.path", "java.ext.dirs", "os.name", "os.arch", "os.version", "user.name", "user.home", "user.dir, user.language",
-      // Mika properties
-      "mika.version", "mika.vm.options", "mika.default.heap.size", "mika.o4p.options", "mika.oswald.options", "mika.awt.options", "mika.build.host", "mika.build.time"
-    };
-    String name;
-    String val;
-    for (int i = 0; i < native_property_names.length; ++i) {
-      name = native_property_names[i];
-      val = getNativeProperty(name);
-      if (val != null) {
-        systemDefaultProperties.put(name, val);
-      }
-    }
-
-  /*
-  ** Mika-specific properties
-  */
-    val = getNativeProperty("mika.unicode.subsets");
-    if (val != null) {
-      systemDefaultProperties.put("mika.unicode.subsets", val);
-    }
-    termNativeProperties();
-
-    return systemDefaultProperties;
-  }
-
   public static String getenv(String name) {
     return getProperty(name);
   }
@@ -244,26 +147,6 @@ public final class System {
     Runtime.runFinalizersOnExit(run);
   }
   
-  /**
-   ** Initialise the internal table of native properties.
-   ** Must be called before any call to getNativeProperty().
-   */
-  private static native void initNativeProperties();
-
-  /**
-   ** Release the internal table of native properties.
-   ** Should be called after all calls to getNativeProperty() have been made.
-   */
-  private static native void termNativeProperties();
-
-  /**
-   ** Get a system property which is determined by the OS, build parameters,
-   ** or whatever.
-   ** @param name The name of the system property.
-   ** @result The value of the system property, or null if name is not known.
-   */
-  private static native String getNativeProperty(String name);
-
   public static void setIn(InputStream newIn) {
     if (in!=null) {
       try {
@@ -310,10 +193,15 @@ public final class System {
     throws SecurityException
   { 
     if (theSecurityManager!=null) {
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER
-       || wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
         java.security.AccessController.checkPermission(new RuntimePermission("setSecurityManager"));
       }
+    }
+    try {
+      // Preload and initialize Policy implementation classes
+      // otherwise we could go recursive
+      java.security.Policy.getPolicy();
+    } catch (Exception e) {
     }
     theSecurityManager = sm;
   }
@@ -321,10 +209,7 @@ public final class System {
   public static native long currentTimeMillis();
 
   private static void propertyCheck(String propname) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission(propname, "read"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPropertyAccess(propname);
       }
@@ -332,10 +217,7 @@ public final class System {
   }
 
   private static void propertiesCheck() {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission("*", "read,write"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPropertiesAccess();
       }
@@ -363,19 +245,11 @@ public final class System {
     throws SecurityException
   {
     propertyCheck(key);
-
-    try {
-
-      return systemProperties.getProperty(key);
-
+    if(key.equals("")) {
+      throw new IllegalArgumentException();
     }
-    catch (NullPointerException npe) {
-
-      return null;
-
-    }
+    return systemProperties.getProperty(key);
   }
-
     
   public static String getProperty(String key, String defaults)
     throws SecurityException
@@ -397,10 +271,7 @@ public final class System {
   public static String setProperty(String key, String defaults)
     throws SecurityException
   {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new PropertyPermission(key, "write"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       if (theSecurityManager != null) {
         theSecurityManager.checkPermission(new PropertyPermission(key, "write"));
       }

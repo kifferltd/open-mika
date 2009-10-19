@@ -1,37 +1,36 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved. Parts copyright (c) 2004, 2005, 2009 by /k/ Embedded Java     *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika(TM) Copyright (c) 2004, 2005 by Chris Gray,      *
-* /k/ Embedded Java Solutions, Antwerp, Belgium. All rights reserved.     *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
 
 #ifndef _O4P_H
 #define _O4P_H
-
-/*
-** $Id: o4p.h,v 1.10 2006/10/04 14:24:20 cvsroot Exp $
-*/
 
 #include "wonka.h"
 
@@ -214,22 +213,33 @@ typedef struct x_Thread {
   void *                o4p_thread_argument;    /* The argument to be passed to that function */
   x_thread              o4p_thread_next;        /* Next thread in our linked list */
 
-  x_queue               queueing_on;
-  x_monitor             waiting_on;
-  w_int                 waiting_with;
+  volatile x_queue      queueing_on;
+  volatile x_monitor    waiting_on;
+  volatile w_int        waiting_with;
 #ifndef HAVE_TIMEDWAIT
-  w_int                 sleep_ticks;           /* Number of ticks for which to sleep */
-#endif
+  volatile w_int        sleep_ticks;           /* Number of ticks for which to sleep */
   pthread_cond_t       *sleeping_on_cond;  /* Condition variable on which to broadcast when timer expires */
   pthread_mutex_t      *sleeping_on_mutex; /* Mutex which should be owned when doing so */
+#endif
   volatile int          flags;
-
-  x_thread              next;
-  x_thread              previous;
 
   void *                xref;                   /* May be used to point to user thread control block */
   x_report              report;
+#ifdef JAVA_PROFILE
+  w_long     time_delta;
+#endif
 } x_Thread;
+
+#ifdef JAVA_PROFILE
+
+#include <sys/time.h>
+
+static inline x_long x_systime_get(void) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+#endif
 
 #define O4P_ENV_STATUS_INIT     0
 #define O4P_ENV_STATUS_NORMAL   1
@@ -317,42 +327,8 @@ typedef struct o4p_Memory_Chunk {
 
 x_size x_ticks2usecs(x_size ticks);
 
-#ifdef HAVE_TIMEDWAIT
 extern void x_now_plus_ticks(x_size ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
-#endif
-
-// HACK for some buggy linuces
-extern long previous_seconds;
-extern long previous_microseconds;
-
-static inline int x_gettimeofday(struct timeval *tv, struct timezone *tz) {
-  int retcode;
-
-  while (1) {
-    usleep(0);
-    retcode = gettimeofday(tv, NULL);
-    if (retcode < 0) {
-      perror("mika : gettimeofday");
-
-      return retcode;
-
-    }
-    if (tv->tv_sec > previous_seconds) {
-      previous_seconds = tv->tv_sec;
-      previous_microseconds = tv->tv_usec;
-      break;
-    }
-    else if (tv->tv_sec == previous_seconds && tv->tv_usec >= previous_microseconds) {
-      previous_microseconds = tv->tv_usec;
-      break;
-    }
-
-//    printf("Time went backwards: %ld%03ld < %ld%03ld\n", tv->tv_sec, tv->tv_usec / 1000, previous_seconds, previous_microseconds / 1000);
-  }
-
-  return 0;
-}
 
 void _o4p_abort(char *file, int line, int type, char *message, int rc);
 

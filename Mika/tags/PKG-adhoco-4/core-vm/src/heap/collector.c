@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika copyright (c) 2004, 2005, 2006 by Chris Gray,    *
- /k/ Embedded Java Solutions. All rights reserved.                        *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: collector.c,v 1.35 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #define PRINTRATE 10
 
@@ -80,8 +81,11 @@
 ** CATCH_FLYING_PIGS. Defining PIGS_MIGHT_FLY can be a temporary work-around
 ** when objects are apparently getting reclaimed prematurely, but you should
 ** perform tests using CATCH_FLYING_PIGS to get to the root of the problem.
+**
+** Note: don't define PIGS_MIGHT_FLY here, define it in wonka.h (because other
+** files such as strings.h also need to know about it).
 */
-//#define PIGS_MIGHT_FLY
+
 //#define CATCH_FLYING_PIGS
 
 #ifndef PIGS_MIGHT_FLY
@@ -98,6 +102,9 @@ static void _flying_pig_check(char *func, char *file, int line, w_object object)
   if (isSet(object->flags, O_GARBAGE)) {
     w_instance instance = object->fields;
 
+#ifdef DEBUG
+    wprintf("Object allocated at %s line %d\n", block2chunk(object)->file, block2chunk(object)->line);
+#endif
     if (object->clazz == clazzString) {
       wabort(ABORT_WONKA, "Flying pig %j (`%w')! in %s at %s:%d\n", instance, instance[F_String_wotsit], func, file, line);
     }
@@ -129,10 +136,8 @@ static void reportInstanceStat(void) {
 }
 #endif
 
-#ifndef GC_SAFE_POINTS_USE_NO_MONITORS
 x_Monitor safe_points_Monitor;
 x_monitor safe_points_monitor = &safe_points_Monitor;
-#endif
 volatile w_int number_unsafe_threads;
 
 /*
@@ -197,7 +202,7 @@ extern void jdwp_set_garbage(w_instance);
 */
 
 w_fifo window_fifo;
-#define WINDOW_FIFO_LEAF_SIZE   1023
+#define WINDOW_FIFO_LEAF_SIZE   1022
 
 /*
 ** FIFO used to mark all strongly reachable instances.  We give this one
@@ -205,7 +210,7 @@ w_fifo window_fifo;
 */
 
 static w_fifo strongly_reachable_fifo;
-#define STRONG_FIFO_LEAF_SIZE 1023
+#define STRONG_FIFO_LEAF_SIZE 1022
 
 /*
 ** FIFOs used to mark instances which are reachable only via reference types. 
@@ -214,7 +219,7 @@ static w_fifo strongly_reachable_fifo;
 
 static w_fifo phantom_reachable_fifo;
 static w_fifo finalize_reachable_fifo;
-#define OTHER_FIFO_LEAF_SIZE 63
+#define OTHER_FIFO_LEAF_SIZE 62
 
 /*
 ** FIFO used to hold instances of Reference on which enqueue() should be called.. 
@@ -234,8 +239,10 @@ w_fifo finalizer_fifo;
 ** Mutex used to protect the finalizer fifo from conflicting accesses.
 */
 
+#ifndef THREAD_SAFE_FIFOS
 static x_Mutex finalizer_fifo_Mutex;
 x_mutex finalizer_fifo_mutex;
+#endif
 
 /*
 ** List of all existing reference objects (instances of java.lang.ref.Reference).
@@ -243,6 +250,24 @@ x_mutex finalizer_fifo_mutex;
 
 w_fifo reference_fifo;
 #define REFERENCE_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
+
+/*
+** List of String instances which need to be released.
+** We accumulate this during the sweep phase and only at the end do we actually
+** release the instance and deregister the w_string;
+** this way we only need to grab the string hashtable monitor once.
+*/
+w_fifo dead_string_fifo;
+#define DEAD_STRING_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
+
+/*
+** List of objects which have been released and which had a monitor allocated.
+** We accumulate this during the sweep phase and only at the end do we actually
+** remove the entry in lock_hashtable, delete the monitor and free the memory;
+** this way we only need to grab the lock hashtable monitor once.
+*/
+w_fifo dead_lock_fifo;
+#define DEAD_LOCK_FIFO_LEAF_SIZE   OTHER_FIFO_LEAF_SIZE
 
 /*
 ** List of w_clazz structures which need to be released. We accumulate this
@@ -264,6 +289,8 @@ w_fifo dead_clazz_fifo;
   : ((f) == enqueue_fifo) ? "enqueue_fifo" \
   : ((f) == finalizer_fifo) ? "finalizer_fifo" \
   : ((f) == reference_fifo) ? "reference_fifo" \
+  : ((f) == dead_string_fifo) ? "dead_string_fifo" \
+  : ((f) == dead_lock_fifo) ? "dead_lock_fifo" \
   : ((f) == dead_clazz_fifo) ? "dead_clazz_fifo" \
   : "unknown fifo" )
 
@@ -286,6 +313,36 @@ w_instance gc_instance;
 x_monitor gc_monitor;
 
 /*
+** (Almost) all accesses to gc_monitor are wrapped to check the status.
+*/
+#define PRINT_MONITOR_STATUS(l,f,s) printf("collect.c line %d: %s returned %d\n", (l), (f), (s))
+
+#define GC_MONITOR_ETERNAL gc_monitor_eternal(__LINE__);
+static void gc_monitor_eternal(int line) { 
+  x_status s = x_monitor_eternal(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_eternal", s);
+}
+
+#define GC_MONITOR_WAIT(t) gc_monitor_wait(t,__LINE__);
+static void gc_monitor_wait(x_sleep t, int line) {
+  x_status s = x_monitor_wait(gc_monitor, t);
+  if (s == xs_interrupted) GC_MONITOR_ETERNAL
+  else if (s) PRINT_MONITOR_STATUS(line, "x_monitor_wait", s);
+}
+
+#define GC_MONITOR_NOTIFY gc_monitor_notify(__LINE__);
+static void gc_monitor_notify(int line) {
+  x_status s = x_monitor_notify_all(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_notify_all", s);
+}
+
+#define GC_MONITOR_EXIT gc_monitor_exit(__LINE__);
+static void gc_monitor_exit(int line) {
+  x_status s = x_monitor_exit(gc_monitor);
+  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_exit", s);
+}
+
+/*
 ** Pointer to an instance variable of gc_instance which is bumped up when
 ** GC is administered a 'kick' (e.g. when Runtime.gc() is called) and then
 ** decremented down to zero during subsequest GC passes.
@@ -306,7 +363,7 @@ static w_int memory_total;
 ** It is calculated at the start of each GC cycle.
 */
 
-static w_int memory_load_factor;
+w_int memory_load_factor;
 
 /*
 ** 'killing_soft_references' is set true if either memory is tight or
@@ -326,18 +383,24 @@ extern void ReferenceQueue_destructor(w_instance);
 static void Class_destructor(w_instance theClass) {
   w_clazz clazz = getWotsitField(theClass, F_Class_wotsit);
 
+  if (!clazz) {
+    return;
+  }
+
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
     wprintf("Unloading %K\n", clazz);
   }
 
   clearWotsitField(theClass, F_Class_wotsit);
-  putFifo(clazz, dead_clazz_fifo);
+  woempa(7, "Adding %K to dead_clazz_fifo\n", clazz);
+  if (putFifo(clazz, dead_clazz_fifo) < 0) {
+    wprintf("Failed to put %K on dead_clazz_fifo\n", clazz);
+  };
 }
 
 /*
-** Release the memory held by a w_UnloadedClazz in a class loader's unload
-** class hashtable. We shouldn't really need to do this - by the time the
-** class loader is collected the table should be empty. Strange ...
+** Release the memory held by a w_UnloadedClazz in a class loader's unloaded
+** class hashtable.
 */
 static void trashUnloadedClasses(w_word key, w_word value, void *dummy1, void*dummy2) {
   w_clazz clazz = (w_clazz)key;
@@ -346,11 +409,27 @@ static void trashUnloadedClasses(w_word key, w_word value, void *dummy1, void*du
   releaseMem(clazz);
 }
 
+/*
+** Release the memory held by a w_Package structs in a class loader's package
+** hashtable.
+*/
+static void trashPackages(w_word key, w_word value, void *dummy1, void*dummy2) {
+  w_package package = (w_package)value;
+
+  woempa(7, "trashing %w in %j\n", package->name, package->loader);
+  if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+    wprintf("Removing package %w from %j\n", package->name, package->loader);
+  }
+  destroyPackage(package);
+}
+
 static void ClassLoader_destructor(w_instance theClassLoader) {
   w_hashtable class_hashtable;
 
   woempa(9, "Destroying ClassLoader instance %j\n", theClassLoader);
-  wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+  if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+    wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+  }
   class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
   if (class_hashtable) {
     clearWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
@@ -364,6 +443,17 @@ static void ClassLoader_destructor(w_instance theClassLoader) {
     woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, theClassLoader);
     if (class_hashtable->occupancy) {
       ht_iterate(class_hashtable, trashUnloadedClasses, NULL, NULL);
+    }
+    releaseMem(class_hashtable->label);
+    ht_destroy(class_hashtable);
+  }
+
+  class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_packages);
+  if (class_hashtable) {
+    clearWotsitField(theClassLoader, F_ClassLoader_packages);
+    woempa(7, "Releasing hashtable %s for %j\n", class_hashtable->label, theClassLoader);
+    if (class_hashtable->occupancy) {
+      ht_iterate(class_hashtable, trashPackages, NULL, NULL);
     }
     releaseMem(class_hashtable->label);
     ht_destroy(class_hashtable);
@@ -388,86 +478,7 @@ static w_boolean checkStrongRefs(w_object);
 ** The value returned is the size of the instance in bytes (the amount of 
 ** memory freed is generally more than this).
 */
-static w_int releaseInstance(w_object object) {
-  w_clazz clazz;
-  w_size  bytes = 0;
-
-  if (object == NULL) {
-    wabort(ABORT_WONKA, "Releasing NULL object !!\n");
-  }
-  
-  if (isSet(object->flags, O_HAS_LOCK)) {
-    releaseMonitor(object->fields);
-  }
-
-  clazz = object->clazz;
-//  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)object->fields, object, clazz, printFlags(object->flags));
-
-  if (object->clazz == clazzString) {
-    w_string string = getWotsitField(object->fields, F_String_wotsit);
-    if (string) {
-      ht_lock(string_hashtable);
-      if (checkStrongRefs(object)) {
-        uninternString(object->fields);
-        clearWotsitField(object->fields, F_String_wotsit);
-        deregisterString(string);
-      }
-      else {
-        ht_unlock(string_hashtable);
-        woempa(9, "Not collecting %j %w because it is strongly reachable\n", object->fields,string); 
-        return 0;
-      }
-      ht_unlock(string_hashtable);
-    }
-  }
-  else if (object->clazz == clazzClass) {
-#ifdef COLLECT_CLASSES_AND_LOADERS
-    Class_destructor(object->fields);
-#else
-// [CG 20040330] This could help get rid of "dead" class's static vars?
-//    wprintf("%K is now garbage\n", Class2clazz(object->fields));
-//    setClazzState(Class2clazz(object->fields), CLAZZ_STATE_GARBAGE);
-    return 0;
-#endif
-  }
-  else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-#ifdef COLLECT_CLASSES_AND_LOADERS
-    ClassLoader_destructor(object->fields);
-#else
-    return 0;
-#endif
-  }
-  else if (isSet(clazz->flags, CLAZZ_IS_THREAD)) {
-    Thread_destructor(object->fields);
-  }
-  else if (isSet(object->clazz->flags, CLAZZ_IS_THROWABLE)) {
-    Throwable_destructor(object->fields);
-  } else if(clazz == clazzReferenceQueue) {
-    ReferenceQueue_destructor(object->fields);
-  }
-
-  if (clazz->previousDimension) {
-    bytes = (clazz->previousDimension->bits * instance2Array_length(object->fields) + 7) / 8;
-    bytes = (bytes + 7) & ~7;
-    bytes = bytes + sizeof(w_int) + sizeof(w_Object);
-    woempa(1, "%j has %d elements of %d bits each = %d bytes\n", object->fields, instance2Array_length(object->fields), clazz->previousDimension->bits, bytes);
-  }
-  else {
-    bytes = clazz->bytes_needed;
-    woempa(1, "%j = %d bytes\n", object->fields, bytes);
-  }
-
-#ifdef USE_OBJECT_HASHTABLE
-  if (!ht_erase(object_hashtable, (w_word)object)) {
-    wabort(ABORT_WONKA, "Sky! Could not erase object %p from object hashtable!\n", object);
-  }
-  woempa(1, "Removed object %j from object_hashtable, now contains %d objects\n", object->fields, object_hashtable->occupancy);
-#endif
-
-#ifdef JDWP
-  jdwp_set_garbage(object->fields);
-#endif
-
+static void reallyReallyReleaseInstance(w_object object) {
 #ifdef USE_DISCARD_COLLECT
   discardMem(object);
 #else
@@ -479,8 +490,127 @@ static w_int releaseInstance(w_object object) {
 #ifdef JAVA_PROFILE
   clazz->instances--;
 #endif 
+}
+
+static w_int reallyReleaseInstance(w_object object) {
+  w_size  bytes = 0;
+  w_clazz clazz = object->clazz;
+  w_instance instance = object->fields;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  w_boolean done = FALSE;
+  static int fudge;
+#endif
+
+  if (isSet(object->flags, O_HAS_LOCK)) {
+    if (putFifo(instance, dead_lock_fifo) < 0) {
+      wabort(ABORT_WONKA, "Failed to put %j on dead_lock_fifo\n", instance);
+    };
+    unsetFlag(object->flags, O_HAS_LOCK);
+  }
+
+  if (clazz->previousDimension) {
+    bytes = (clazz->previousDimension->bits * instance2Array_length(instance) + 7) / 8;
+    bytes = (bytes + 7) & ~7;
+    bytes = bytes + sizeof(w_int) + sizeof(w_Object);
+    woempa(1, "%j has %d elements of %d bits each = %d bytes\n", instance, instance2Array_length(instance), clazz->previousDimension->bits, bytes);
+  }
+  else {
+    bytes = clazz->bytes_needed;
+    woempa(1, "%j = %d bytes\n", instance, bytes);
+  }
+
+#ifdef USE_OBJECT_HASHTABLE
+  if (!ht_erase(object_hashtable, (w_word)object)) {
+    wabort(ABORT_WONKA, "Sky! Could not erase object %p from object hashtable!\n", object);
+  }
+  woempa(1, "Removed %j from object_hashtable, now contains %d objects\n", instance, object_hashtable->occupancy);
+#endif
+
+#ifdef JDWP
+  jdwp_set_garbage(object->fields);
+#endif
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (!clazz->previousDimension && (!memory_load_factor || (++fudge % memory_load_factor) == 0)) {
+#ifndef THREAD_SAFE_FIFOS
+    x_mutex_lock(clazz->cache_mutex, x_eternal);
+#endif
+    woempa(7, "putting %j to cache_fifo of %k\n", object->fields, clazz);
+    done = putFifo(object, clazz->cache_fifo) >= 0;
+#ifndef THREAD_SAFE_FIFOS
+    x_mutex_unlock(clazz->cache_mutex);
+#endif
+  }
+
+  if (done) {
+    setFlag(object->flags, O_CACHED);
+  }
+  else {
+#endif
+    reallyReallyReleaseInstance(object);
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  }
+#endif
 
   return bytes;
+}
+
+static w_int releaseInstance(w_object object) {
+  w_clazz clazz;
+  w_instance instance;
+
+  if (object == NULL) {
+    wabort(ABORT_WONKA, "Releasing NULL object !!\n");
+  }
+  
+  clazz = object->clazz;
+  instance = object->fields;
+
+  if (isSet(object->flags, O_HAS_LOCK)) {
+    w_thread owner_thread = monitorOwner(instance);
+    if (owner_thread) {
+      woempa(9, "Hold on a moment - monitor of %j still owned by %t\n", instance, owner_thread);
+      return 0;
+    }
+  }
+
+//  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)instance, object, clazz, printFlags(object->flags));
+
+  if (clazz == clazzString && getWotsitField(instance, F_String_wotsit)) {
+    woempa(3, "Deferring sweeping of %j (%w)\n", instance, instance[F_String_wotsit]);
+    if (putFifo(instance, dead_string_fifo) < 0) {
+      wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
+    };
+
+    return 0;
+  }
+  else if (clazz == clazzClass) {
+#ifdef COLLECT_CLASSES_AND_LOADERS
+    Class_destructor(instance);
+#else
+// [CG 20040330] This could help get rid of "dead" class's static vars?
+//    wprintf("%K is now garbage\n", Class2clazz(instance));
+//    setClazzState(Class2clazz(instance), CLAZZ_STATE_GARBAGE);
+    return 0;
+#endif
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER | CLAZZ_IS_UDCL)) {
+#ifdef COLLECT_CLASSES_AND_LOADERS
+    ClassLoader_destructor(instance);
+#else
+    return 0;
+#endif
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_THREAD)) {
+    Thread_destructor(instance);
+  }
+  else if (isSet(clazz->flags, CLAZZ_IS_THROWABLE)) {
+    Throwable_destructor(instance);
+  } else if(clazz == clazzReferenceQueue) {
+    ReferenceQueue_destructor(instance);
+  }
+
+  return reallyReleaseInstance(object);
 }
 
 /*
@@ -488,7 +618,7 @@ static w_int releaseInstance(w_object object) {
 ** is at least as high-order as the single 1 bit in flag2.
 ** N.B. flag2 must be a power of 2!
 */
-static inline w_boolean impliesMark(w_word flag1, w_word flag2) {
+static w_boolean impliesMark(w_word flag1, w_word flag2) {
   return flag1 > (flag2 - 1);
 }
 
@@ -500,7 +630,7 @@ static inline w_boolean impliesMark(w_word flag1, w_word flag2) {
 ** Note that we rely on the fact that the flags in question appear in
 ** the object flags word contiguously and in the order shown above.
 */
-static inline w_boolean isMarked(w_object o, w_word flag) {
+static w_boolean isMarked(w_object o, w_word flag) {
   return ((flag != O_FINALIZE_BLACK) ? impliesMark(o->flags & (O_BLACK | O_PHANTOM_BLACK), flag) : (w_boolean)isSet(o->flags, O_BLACK | O_FINALIZE_BLACK));
 }
 
@@ -510,7 +640,7 @@ static inline w_boolean isMarked(w_object o, w_word flag) {
 ** Try to add a given instance to a given fifo. Return 1 if successful,
 ** -1 if failed (because fifo is already full and could not be extended).
 */
-static inline w_int tryPutFifo(w_instance instance, w_fifo fifo) {
+static w_int tryPutFifo(w_instance instance, w_fifo fifo) {
   if (!instance) {
     wabort(ABORT_WONKA, "Attempt to enqueue null instance!\n");
   }
@@ -524,6 +654,7 @@ static inline w_int tryPutFifo(w_instance instance, w_fifo fifo) {
   woempa(1, "Pushing %j onto fifo %p\n", instance, fifo);
   if (putFifo(instance, fifo) < 0) {
     woempa(9, "Shiver my timbers! Couldn't push instance %j onto fifo %p\n", instance, fifo);
+    wabort(ABORT_WONKA, "Could not push %j onto fifo %p!\n", instance, fifo);
 
     return -1;
 
@@ -587,7 +718,6 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
 ** Mark a class (possibly an unloaded class) which is reachable via the
 ** current class. For unloaded classes we just mark the classloader,
 ** for loaded classes we mark the Class instance. 'child' must not be NULL.
-*/
 static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word flag) {
   if (child == parent) {
 
@@ -610,6 +740,7 @@ static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word f
 
   return 0;
 }
+*/
 
 /*
 ** If a Class is reachable (because instances exist, or because it is
@@ -625,19 +756,8 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
-  child_instance = clazz->loader;
-  if (!child_instance) {
-    child_instance = systemClassLoader;
-  }
-
-  if (child_instance) {
-    retcode = markInstance(child_instance, fifo, flag);
-    if (retcode < 0) {
-
-      return retcode;
-
-    }
-    queued += retcode;
+  if (getClazzState(clazz) < CLAZZ_STATE_LOADED) {
+    return 0;
   }
 
   child_instance = clazz2Class(clazz);
@@ -663,7 +783,9 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   }
 
   if (clazz->references) {
-    w_int n = sizeOfWordset(&clazz->references);
+    w_int n;
+
+    n = sizeOfWordset(&clazz->references);
 
     for (i = 0; i < n; ++i) {
       woempa(1, "(GC) %K references %K\n", clazz, elementOfWordset(&clazz->references, i));
@@ -988,16 +1110,18 @@ w_int markThrowableReachable(w_object object, w_fifo fifo, w_word flag) {
   w_int retcode;
 
   while (record) {
-    woempa(7, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
-    retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
-    if (retcode < 0) {
+    if (record->method) {
+      woempa(3, "%j record at position %d (%m:%d) refers to class %k, marking the latter\n", object->fields, record->position, record->method, record->pc, record->method->spec.declaring_clazz);
+      retcode = markClazzReachable(record->method->spec.declaring_clazz, fifo, flag);
+      if (retcode < 0) {
 
-      return retcode;
+        return retcode;
 
+      }
+
+      queued += retcode;
+      record = record->position ? record + 1 : NULL;
     }
-
-    queued += retcode;
-    record = record->position ? record + 1 : NULL;
   }
 
   return queued;
@@ -1078,13 +1202,16 @@ w_int markChildren(w_object o, w_fifo fifo, w_word flag);
 
 static void finalizeReference(w_instance instance) {
 
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_lock(finalizer_fifo_mutex, x_eternal);
+#endif
   if (tryPutFifo(instance, finalizer_fifo) >= 0) {
     setFlag(instance2flags(instance), O_FINALIZING);
     unsetFlag(instance2flags(instance), O_FINALIZABLE);
   }
+#ifndef THREAD_SAFE_FIFOS
   x_mutex_unlock(finalizer_fifo_mutex);
-  
+#endif
 }
 
 /*
@@ -1100,7 +1227,9 @@ static void finalizeReference(w_instance instance) {
 */
 
 void enqueuedReference(void* reference) {
-  putFifo(reference, enqueue_fifo);
+  if (putFifo(reference, enqueue_fifo) < 0) {
+    wabort(ABORT_WONKA, "Could not push %j onto enqueue_fifo!\n", reference);
+  }
 }
 
 w_int markFifo(w_fifo fifo, w_word flag) {
@@ -1113,7 +1242,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      queued = 0;
 
-  woempa(1, "Marking FIFO %p, flag is 0x%02x, contains %d elements\n", fifo, flag, fifo->numElements);
+  woempa(1, "Marking FIFO %p, flag is 0x%02x, contains %d elements\n", fifo, flag, occupancyOfFifo(fifo));
 
   while ((parent_instance = getFifo(fifo))) {
     parent_object = instance2object(parent_instance);
@@ -1143,7 +1272,27 @@ w_int markFifo(w_fifo fifo, w_word flag) {
 #endif
 
     /*
-    ** If this is an instance of java.lang.Class, we have extra work to do.
+    ** Mark the Thread which owns this instance's lock, if any.
+    */
+    if (isSet(parent_object->flags, O_HAS_LOCK)) {
+      w_thread owner_thread = monitorOwner(parent_instance);
+      if (owner_thread) {
+        woempa(1, "Lock on %j is owned by %t\n", parent_instance, owner_thread);
+        if (owner_thread->Thread) {
+          woempa(1, "Marking %j reachable\n", owner_thread->Thread);
+          retcode = markThreadReachable(instance2object(owner_thread->Thread), strongly_reachable_fifo, O_BLACK);
+          if (retcode < 0) {
+
+            return retcode;
+
+          }
+          queued += retcode;
+        }
+      }
+    }
+
+    /*
+    ** If this is an instance of java.lang.Class, we have a lot of work to do.
     */
     if (parent_object->clazz == clazzClass && (clazz = getWotsitField(parent_instance, F_Class_wotsit))) {
       woempa(1,"(GC) Object %p is instance of %k\n",parent_object,parent_object->clazz);
@@ -1214,7 +1363,7 @@ w_int markFifo(w_fifo fifo, w_word flag) {
       if(isSet(parent_object->flags, O_ENQUEUEABLE)) {
         retcode = tryPutFifo(parent_instance, reference_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", reference_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to reference_fifo (%d items), PANIC\n", occupancyOfFifo(reference_fifo));
         }
       }
 
@@ -1344,6 +1493,12 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
   w_int retcode = 0;
   w_object object = (w_object)key;
 
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (isSet(object->flags, O_CACHED)) {
+    return TRUE;
+  }
+#endif
+
   unsetFlag(object->flags, O_BLACK | O_NEAR_BLACK);
 
   if (!object->clazz) {
@@ -1363,7 +1518,7 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
         setFlag(child_object->flags, O_FINALIZE_BLACK);
         retcode = tryPutFifo(child_instance, finalize_reachable_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", finalize_reachable_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", occupancyOfFifo(finalize_reachable_fifo));
         }
       }
     }
@@ -1372,7 +1527,7 @@ void preparation_iteration(w_word key, w_word value, void * arg1, void *arg2) {
   setFlag(object->flags, O_WINDOW);
   retcode = tryPutFifo(object->fields, window_fifo);
   if (retcode < 0) {
-    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", window_fifo->numElements);
+    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", occupancyOfFifo(window_fifo));
   }
 }
 #else
@@ -1380,6 +1535,12 @@ w_boolean preparation_iteration(void * mem, void * arg) {
   w_int retcode = 0;
   w_object object = chunk2object(mem);
 
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (isSet(object->flags, O_CACHED)) {
+    return TRUE;
+  }
+#endif
+
   unsetFlag(object->flags, O_BLACK | O_NEAR_BLACK);
 
   if (!object->clazz) {
@@ -1399,7 +1560,7 @@ w_boolean preparation_iteration(void * mem, void * arg) {
         setFlag(child_object->flags, O_FINALIZE_BLACK);
         retcode = tryPutFifo(child_instance, finalize_reachable_fifo);
         if (retcode < 0) {
-          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", finalize_reachable_fifo->numElements);
+          wabort(ABORT_WONKA, "Couldn't add to finalize_reachable_fifo (%d items), PANIC\n", occupancyOfFifo(finalize_reachable_fifo));
         }
       }
     }
@@ -1408,7 +1569,7 @@ w_boolean preparation_iteration(void * mem, void * arg) {
   setFlag(object->flags, O_WINDOW);
   retcode = tryPutFifo(object->fields, window_fifo);
   if (retcode < 0) {
-    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", window_fifo->numElements);
+    wabort(ABORT_WONKA, "Couldn't add to window_fifo (%d items), PANIC\n", occupancyOfFifo(window_fifo));
   }
   
   return TRUE;
@@ -1419,13 +1580,10 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 static void prepreparation(w_thread thread) {
   x_status status;
 
-  woempa(7, "%t: start locking other threads\n", marking_thread);
+  woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  blocking_all_threads = BLOCKED_BY_GC;
-#else
   x_monitor_eternal(safe_points_monitor);
 #ifdef JDWP
   while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
@@ -1436,8 +1594,8 @@ static void prepreparation(w_thread thread) {
     }
   }
 #endif
-  woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", marking_thread);
-  blocking_all_threads = BLOCKED_BY_GC;
+  woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
+  setFlag(blocking_all_threads, BLOCKED_BY_GC);
   while (number_unsafe_threads > 0) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
@@ -1447,7 +1605,6 @@ static void prepreparation(w_thread thread) {
   }
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-#endif
   woempa(7, "%t: finished locking other threads\n", marking_thread);
 #ifdef TRACE_MEM_ALLOC
   _heapCheck("collector.c", 1571);
@@ -1459,16 +1616,13 @@ static void postmark(w_thread thread) {
   x_thread_priority_set(thread->kthread, thread->kpriority);
 
   woempa(7, "%t: start unlocking other threads\n", marking_thread);
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  blocking_all_threads = 0;
-#else
   x_monitor_eternal(safe_points_monitor);
   woempa(2, "postmark: %t setting blocking_all_threads to 0\n", marking_thread);
-  blocking_all_threads = 0;
+  unsetFlag(blocking_all_threads, BLOCKED_BY_GC);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-#endif
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
+  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
 
 w_int preparationPhase(void) {
@@ -1552,11 +1706,20 @@ static void miniSweepReferences(void) {
 
 static w_size gc_start_ticks;
 
+static void thread_iteration(w_word key, w_word value, void * arg1, void *arg2) {
+  w_thread thread = (w_thread)value;
+  w_instance Thread = thread->Thread;
+
+  if (Thread && thread->state != wt_dead && thread->state != wt_unstarted) {
+    markInstance(Thread, strongly_reachable_fifo, O_BLACK);
+  }
+}
+
 /*
  * In the Mark phase, we first mark all the (transient) `roots':
  *  - system thread group (and hence all threads)
  *  - system class hashtable (static fields of system classes)
- *  - global references hashtable (includes current local references)
+ *  - global references hashtable
  * For every item we mark, we append all references it contains to
  * the appropriate fifo (strong, weak, or phantom).  Therefore
  * by the end of this phase we have marked all items in the window
@@ -1577,8 +1740,7 @@ w_int markPhase(void) {
   w_int      retcode;
   w_int      marked = 0;
 
-  //printf("Entering mark phase, ticks = %d\n", x_time_get() - gc_start_ticks);
-  woempa(7, "(GC) Marking globals/locals hashtable.\n");
+  woempa(7, "(GC) Marking globals hashtable.\n");
   temp_fifo = ht_list_keys(globals_hashtable);
   if (!temp_fifo) {
     woempa(7, "ht_list_keys(globals_hashtable) returned NULL, quitting markPhase\n");
@@ -1597,8 +1759,12 @@ w_int markPhase(void) {
   }
   releaseFifo(temp_fifo);
 
+  woempa(7, "(GC) Marking thread hashtable.\n");
+  ht_iterate(thread_hashtable, thread_iteration, NULL, NULL);
+
   do {
     //if (times_round++) printf("Loop %d, ticks = %ud\n", times_round, x_time_get() - gc_start_ticks);
+    // TODO: do we still need this if we are marking thread_hashtable?
     woempa(7, "(GC) Marking system ThreadGroup.\n");
     retcode = markInstance(I_ThreadGroup_system, strongly_reachable_fifo, O_BLACK);
     if (retcode < 0) {
@@ -1641,9 +1807,9 @@ w_int markPhase(void) {
     marked += retcode;
 
   } while (
-           strongly_reachable_fifo->numElements || 
-           finalize_reachable_fifo->numElements || 
-           phantom_reachable_fifo->numElements);
+           !isEmptyFifo(strongly_reachable_fifo) || 
+           !isEmptyFifo(finalize_reachable_fifo) || 
+           !isEmptyFifo(phantom_reachable_fifo));
 
   miniSweepReferences();
 
@@ -1657,19 +1823,26 @@ w_int markPhase(void) {
  * collected, WONKA_FALSE otherwise. An object is eligible for GC if _all_
  * these tests return WONKA_TRUE.
  *
- * When these tests are called, the window_mutex_fifo is always locked.
- *
  * "Strong" references are the conventional kind (e.g. a field or an array 
  * member).
  */
 static w_boolean checkStrongRefs(w_object object) {
 
-  if (isSet(object->flags, O_BLACK)) {
+  if (isSet(object->flags, O_BLACK )) {
     woempa(1, "Not collecting %j because it is strongly reachable\n", object->fields);
 
     return WONKA_FALSE;
 
   }
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  if (isSet(object->flags, O_CACHED)) {
+    woempa(1, "Not collecting %j because it is in a cache\n", object->fields);
+
+    return WONKA_FALSE;
+
+  }
+#endif
 
 #ifdef JDWP
   if (isSet(object->flags, O_JDWP_BLACK)) {
@@ -1739,12 +1912,181 @@ static w_boolean checkPhantomRefs(w_object object) {
 }
 
 /*
+** Release all the String instances in the dead_string_fifo.
+*/
+static w_int collect_dead_strings(void) {
+  w_instance instance;
+  w_int bytes = 0;
+
+  ht_lock(string_hashtable);
+  while ((instance = getFifo(dead_string_fifo))) {
+    w_string string = getWotsitField(instance, F_String_wotsit);
+    if (string) {
+      if (checkStrongRefs(instance2object(instance))) {
+        uninternString(sweeping_thread, instance);
+        clearWotsitField(instance, F_String_wotsit);
+        deregisterString(string);
+        bytes += reallyReleaseInstance(instance2object(instance));
+      }
+    }
+  }
+  ht_unlock(string_hashtable);
+
+  return bytes;
+}
+
+extern w_hashtable lock_hashtable;
+
+/*
+** Release all the locks in the dead_lock_fifo.
+*/
+static w_int collect_dead_locks(void) {
+  w_instance locked_instance;
+  w_int count = 0;
+
+  ht_lock(lock_hashtable);
+  while ((locked_instance = getFifo(dead_lock_fifo))) {
+    x_monitor mon = (x_monitor) ht_erase_no_lock(lock_hashtable, (w_word)locked_instance);
+    if (mon) {
+      x_monitor_delete(mon);
+      releaseMem(mon);
+    }
+#ifdef RUNTIME_CHECKS
+    else {
+      wabort(ABORT_WONKA, "No monitor corresponding to %p\n", locked_instance);
+    }
+#endif
+    ++count;
+  }
+  ht_unlock(lock_hashtable);
+
+  return count * sizeof(x_Monitor);
+}
+
+/*
+** Array used to sort the dead classes which must be collected.
+*/
+static w_clazz *dead_clazz_array;
+
+/*
+** Hashtable used to aid in the sorting.
+*/
+static w_hashtable dead_clazz_hashtable;
+
+/*
+** Swap function for the sort.
+*/
+static void dead_clazz_swap(int i, int j) {
+  w_clazz this_clazz = dead_clazz_array[i];
+  w_clazz other_clazz = dead_clazz_array[j];
+
+  dead_clazz_array[i] = other_clazz;
+  dead_clazz_array[j] = this_clazz;
+  ht_write(dead_clazz_hashtable, (w_word)this_clazz, (w_word)j);
+  ht_write(dead_clazz_hashtable, (w_word)other_clazz, (w_word)i);
+}
+
+/*
+** Collect all the classes on dead_clazz_fifo.
+** First we sort them such that a subclass always precedes its superclass and
+** an implementation always precedes the interface - it's safer that way.
+*/
+static w_int collect_dead_clazzes(void) {
+  w_int bytes_freed = 0;
+  w_int i = 0;
+  w_int j;
+  w_int k;
+  w_int n = occupancyOfFifo(dead_clazz_fifo);
+  w_clazz this_clazz;
+  w_clazz other_clazz;
+
+  dead_clazz_array = allocMem(n * sizeof(w_clazz));
+  dead_clazz_hashtable = ht_create("hashtable:dead classes", n * 2 + 7, NULL, NULL, 0, 0xffffffff);
+  while ((this_clazz = getFifo(dead_clazz_fifo))) {
+    ht_write(dead_clazz_hashtable, (w_word)this_clazz, i);
+    dead_clazz_array[i++] = this_clazz;
+  }
+
+  for (i = 1; i < n; ++i) {
+    w_int clazz_state;
+    this_clazz = dead_clazz_array[i];
+    clazz_state = getClazzState(this_clazz);
+    if (clazz_state < CLAZZ_STATE_LOADED || clazz_state == CLAZZ_STATE_BROKEN) {
+      continue;
+    }
+
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+    if (this_clazz->cache_fifo) {
+      w_object cached;
+#ifndef THREAD_SAFE_FIFOS
+      x_mutex_lock(this_clazz->cache_mutex, x_eternal);
+#endif
+      while((cached = getFifo(this_clazz->cache_fifo))) {
+        reallyReallyReleaseInstance(cached);
+      }
+      releaseFifo(this_clazz->cache_fifo);
+#ifndef THREAD_SAFE_FIFOS
+      x_mutex_unlock(this_clazz->cache_mutex);
+      x_mutex_delete(this_clazz->cache_mutex);
+      releaseMem(this_clazz->cache_mutex);
+#endif
+    }
+#endif
+
+    for (k = 0; k < this_clazz->numSuperClasses; ++k) {
+      other_clazz = this_clazz->supers[k];
+      j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+
+    for (k = 0; k < this_clazz->numDirectInterfaces; ++k) {
+      other_clazz = this_clazz->interfaces[k];
+      j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+      if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+
+    other_clazz = this_clazz->previousDimension;
+    if (other_clazz) {
+       j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
+        if (j >= 0 && j < i) {
+wprintf("swap %d <-> %d\n", i, j);
+        dead_clazz_swap(i, j);
+        i = j;
+      }
+    }
+  }
+
+  for (i = 0; i < n; ++i) {
+    this_clazz = dead_clazz_array[i];
+    woempa(7, "Burying dead %K\n", this_clazz);
+    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
+      wprintf("GC: dead %K\n", this_clazz);
+    }
+    if (this_clazz->previousDimension) {
+      this_clazz->previousDimension->nextDimension = NULL;
+    }
+    bytes_freed += destroyClazz(this_clazz);
+  }
+  ht_destroy(dead_clazz_hashtable);
+  releaseMem(dead_clazz_array);
+
+  return bytes_freed;
+}
+
+/*
 ** Sweep the window_fifo until either at least `target' bytes are freed
 ** or the fifo is exhausted.  Caller must own gc_monitor.
 */
 
 w_size sweep(w_int target) {
-  w_clazz    clazz;
   w_instance instance;
   w_object   object;
   w_int      object_size;
@@ -1767,17 +2109,12 @@ w_size sweep(w_int target) {
     instance = getFifo(window_fifo);
     woempa(1, "instance %p\n", instance);
     if (!instance) {
-      if (window_fifo->numElements) {
+      if (!isEmptyFifo(window_fifo)) {
         woempa(9, "Hole in window fifo!\n");
-        wprintf("Hole in window fifo!\n");
         continue;
       }
 
       woempa(7, "Exhausted window_fifo after collecting %d bytes in %d objects.\n", bytes_freed, objects_freed);
-      while ((clazz = getFifo(dead_clazz_fifo))) {
-        woempa(7, "Cleaning up dead class %w\n", clazz->dotified);
-        bytes_freed += destroyClazz(clazz);
-      }
 
       break;
 
@@ -1816,16 +2153,26 @@ w_size sweep(w_int target) {
         if (isSet(object->clazz->flags, CLAZZ_IS_THREAD)) {
           w_thread thread = getWotsitField(object->fields, F_Thread_wotsit);
 
-          if (thread && thread->state != wt_dead && thread->state != wt_unstarted) {
-            woempa(9, "Hold on a moment - thread '%w' is still running...\n", NM(thread));
-            do_collect = 0;
+          if (thread) {
+            if (thread->state != wt_dead && thread->state != wt_unstarted) {
+              woempa(9, "Hold on a moment - thread '%t' is still running...\n", thread);
+              do_collect = 0;
+            }
+#ifndef OSWALD
+// For OSWALD we need to do something else, TBD
+            else if (thread->kthread && thread->kthread->waiting_on) {
+              woempa(9, "Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
+              do_collect = 0;
+            }
+#endif
           }
         }
         else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
-          w_hashtable hashtable = getWotsitField(object->fields, F_ClassLoader_loaded_classes);
-
-          if (hashtable && hashtable->occupancy) {
-            woempa(9, "Hold on a moment - loaded class hashtable of %j still holds %d classes\n", object->fields, hashtable->occupancy);
+          w_int ndef = numberOfDefinedClasses(object->fields);
+          if (ndef) {
+#ifdef DEBUG
+            woempa(9, "Hold on a moment - loaded class hashtable of %j still holds %d classes defined by this loader\n", object->fields, ndef);
+#endif
             do_collect = 0;
           }
         }
@@ -1853,6 +2200,15 @@ w_size sweep(w_int target) {
     }
 #endif
   }
+      if (!isEmptyFifo(dead_string_fifo)) {
+        bytes_freed += collect_dead_strings();
+      }
+      if (!isEmptyFifo(dead_lock_fifo)) {
+        bytes_freed += collect_dead_locks();
+      }
+      if (!isEmptyFifo(dead_clazz_fifo)) {
+        bytes_freed += collect_dead_clazzes();
+      }
 
   woempa(7, "(GC) Collected %i bytes from %d objects out of %d.\n", bytes_freed, objects_freed, objects_examined);
 
@@ -1881,7 +2237,7 @@ w_wordset reclaim_listener_list = NULL;
 x_Monitor reclaim_listener_Monitor;
 x_monitor reclaim_listener_monitor = NULL;
 
-static inline int enter_reclaim_listener_monitor(void) {
+static int enter_reclaim_listener_monitor(void) {
   x_status status = x_monitor_eternal(reclaim_listener_monitor);
 
   if (status == xs_no_instance) {
@@ -1897,7 +2253,7 @@ static inline int enter_reclaim_listener_monitor(void) {
   return TRUE;
 }
 
-static inline void exit_reclaim_listener_monitor(void) {
+static void exit_reclaim_listener_monitor(void) {
   x_status status = x_monitor_exit(reclaim_listener_monitor);
 
   if (status != xs_success) {
@@ -1962,11 +2318,11 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
 #ifdef DISTRIBUTED_GC
   w_size   i;
-  w_size   n;
   w_int   reclaimed_this_cycle;
   w_int   remaining = 0;
   w_int   initial = 0;
   w_thread thread = currentWonkaThread;
+  w_int weighted = requested * (memory_load_factor + 1);
 
   if (requested < 0) {
     woempa(1, "requested < 0, ignoring\n");
@@ -1985,37 +2341,6 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   }
 
-  if (thread == marking_thread) {
-    woempa(1, "Already marking heap\n");
-    //if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    //  wprintf("GC: thread %t is the marking thread, skipping gc_reclaim()\n", thread);
-    //}
-
-    return 0;
-
-  }
-  
-  if (thread == sweeping_thread) {
-    woempa(1, "Already sweeping heap\n");
-    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t is the sweeping thread, skipping gc_reclaim()\n", thread);
-    }
-
-    return 0;
-
-  }
-  
-#ifdef JDWP
-  if (thread == jdwp_thread) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t is the JDWP thread, skipping gc_reclaim()\n", thread);
-    }
-
-    return 0;
-
-  }
-#endif
-  
   if (isSet(blocking_all_threads, BLOCKED_BY_GC)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
       wprintf("GC: cowardly refusal by thread %t to start a rival garbage collection cycle\n", thread);
@@ -2032,25 +2357,29 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   }
 #endif
   
-  threadMustBeSafe(thread);
-
-  reclaim_accumulator += requested * (memory_load_factor + 1);
+  reclaim_accumulator += weighted;
   remaining = initial = reclaim_accumulator;
 
-  if (reclaim_accumulator > reclaim_threshold) {
+  if (x_mem_avail() - requested <= min_heap_free || reclaim_accumulator > reclaim_threshold) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC) && sizeOfWordset(&reclaim_listener_list) && gc_phase != GC_PHASE_UNREADY) {
       wprintf("GC: thread %t trying to reclaim %d bytes\n", thread, remaining);
     }
 
-    if (enter_reclaim_listener_monitor()) {
-      i = 0;
+    if (thread 
+     && thread != marking_thread && thread != sweeping_thread 
+#ifdef JDWP
+     && thread != jdwp_thread 
+#endif
+     && threadIsSafe(thread) && enter_reclaim_listener_monitor()
+       ) {
       reclaimed_this_cycle = 0;
-      n = sizeOfWordset(&reclaim_listener_list);
-      while (remaining > 0 && i < n) {
+      for (i= 0; remaining > 0 && i < sizeOfWordset(&reclaim_listener_list); ++i) {
         w_reclaim_callback callback = (w_reclaim_callback)elementOfWordset(&reclaim_listener_list, i);
+        exit_reclaim_listener_monitor();
         reclaimed_this_cycle += callback(remaining * (memory_load_factor + 1), caller);
-        n = sizeOfWordset(&reclaim_listener_list);
-        ++i;
+        if (!enter_reclaim_listener_monitor()) {
+          break;
+        }
       }
       exit_reclaim_listener_monitor();
       remaining = remaining - reclaimed_this_cycle;
@@ -2059,10 +2388,20 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
       }
       reclaim_accumulator = 0;
     }
-    else {
+    else if (thread) {
       if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-        wprintf("GC: thread %t found the reclaim_accumulator busy, backing off\n", thread);
+        wprintf("GC: thread %t postponing request for %d bytes because %s\n", thread, requested,
+          thread == marking_thread ? " is marking_thread" :
+          thread == sweeping_thread ? " is sweeping_thread" :
+#ifdef JDWP
+          thread == jdwp_thread ? " is JDWP thread" :
+#endif
+          !threadIsSafe(thread) ? " is not GC safe" :
+          " enter_reclaim_listener_monitor() failed");
       }
+      setFlag(thread->flags, WT_THREAD_GC_PENDING);
+      thread->to_be_reclaimed += weighted;
+      reclaim_accumulator -= weighted;
     }
   }
 
@@ -2102,7 +2441,7 @@ w_size internal_reclaim_callback(w_int requested, w_instance instance) {
   else {
     reclaimed += gc_request(requested);
     woempa(1, "Called with requested = %d, instance = %p : reclaimed %d\n", requested, instance, reclaimed);
-    x_monitor_exit(gc_monitor);
+    GC_MONITOR_EXIT
   }
 
   return reclaimed;
@@ -2124,23 +2463,28 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   memory_total = x_mem_total() - min_heap_free;
   memory_load_factor = 1;
   reclaim_threshold = memory_total / 3;
+#ifndef THREAD_SAFE_FIFOS
   finalizer_fifo_mutex = &finalizer_fifo_Mutex;
   x_mutex_create(finalizer_fifo_mutex);
-  window_fifo = allocFifo(WINDOW_FIFO_LEAF_SIZE);
+#endif
+  window_fifo = allocThreadSafeFifo(WINDOW_FIFO_LEAF_SIZE);
   expandFifo(16384, window_fifo);
   strongly_reachable_fifo = allocFifo(STRONG_FIFO_LEAF_SIZE);
   expandFifo(16384, strongly_reachable_fifo);
   phantom_reachable_fifo = allocFifo(OTHER_FIFO_LEAF_SIZE);
   finalize_reachable_fifo = allocFifo(OTHER_FIFO_LEAF_SIZE);
   enqueue_fifo = allocFifo(ENQUEUE_FIFO_LEAF_SIZE);
-  finalizer_fifo = allocFifo(FINALIZER_FIFO_LEAF_SIZE);
+  finalizer_fifo = allocThreadSafeFifo(FINALIZER_FIFO_LEAF_SIZE);
   reference_fifo = allocFifo(REFERENCE_FIFO_LEAF_SIZE);
+  dead_string_fifo = allocFifo(DEAD_STRING_FIFO_LEAF_SIZE);
+  dead_lock_fifo = allocFifo(DEAD_LOCK_FIFO_LEAF_SIZE);
   dead_clazz_fifo = allocFifo(DEAD_CLAZZ_FIFO_LEAF_SIZE);
   gc_instance = theGarbageCollector;
   woempa(7,"         window_fifo at %p\n", window_fifo);
   woempa(7,"      finalizer_fifo at %p\n", finalizer_fifo);
   woempa(7,"        enqueue_fifo at %p\n", enqueue_fifo);
   woempa(7,"      reference_fifo at %p\n", reference_fifo);
+  woempa(7,"      dead_lock_fifo at %p\n", dead_lock_fifo);
   woempa(7,"     dead_clazz_fifo at %p\n", dead_clazz_fifo);
   woempa(7, "I_ThreadGroup_system = %j.\n", I_ThreadGroup_system);
   woempa(7, "     W_Thread_system = %p.\n", W_Thread_system);
@@ -2157,7 +2501,6 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
 
 
 void gc_collect(w_instance theGarbageCollector) {
-  x_status status;
   w_thread   this_thread = currentWonkaThread;
   w_int gc_pass_count = getIntegerField(theGarbageCollector, F_GarbageCollector_passes);
   w_int done = 0;
@@ -2171,7 +2514,7 @@ void gc_collect(w_instance theGarbageCollector) {
     wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
   }
 #ifdef TRACE_MEM_ALLOC
-  if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
+  //if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
 #endif
 
   while (done < 2) {
@@ -2198,7 +2541,7 @@ void gc_collect(w_instance theGarbageCollector) {
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           postmark(this_thread);
 
           break;
@@ -2218,12 +2561,9 @@ void gc_collect(w_instance theGarbageCollector) {
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
 	  }
 
           break;
@@ -2236,7 +2576,7 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         done += 1;
         /* fall through */
 
@@ -2247,12 +2587,9 @@ void gc_collect(w_instance theGarbageCollector) {
           }
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
 	  }
 
           break;
@@ -2277,7 +2614,7 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         gc_phase = GC_PHASE_COMPLETE;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         done *= 2;
         if (done) {
           woempa(7, "Thread %t: Have performed a complete cycle\n", this_thread);
@@ -2285,10 +2622,7 @@ void gc_collect(w_instance theGarbageCollector) {
         else {
           woempa(7, "Thread %t: Have not performed a complete cycle\n", this_thread);
 	  if (GC_COMPLETE_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_COMPLETE_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_COMPLETE_WAIT)
           }
 	}
         break;
@@ -2296,10 +2630,7 @@ void gc_collect(w_instance theGarbageCollector) {
       default: // GC_PHASE_PREPARE/MARK
         woempa(7, "Thread %w: Phase = PREPARE/MARK, waiting\n", this_thread->name);
 	if (GC_OTHER_MARK_WAIT) {
-          status = x_monitor_wait(gc_monitor, GC_OTHER_MARK_WAIT);
-          if (status == xs_interrupted) {
-            x_monitor_eternal(gc_monitor);
-          }
+          GC_MONITOR_WAIT(GC_OTHER_MARK_WAIT)
 	}
     }
   }
@@ -2311,7 +2642,6 @@ void gc_collect(w_instance theGarbageCollector) {
 }
 
 w_int gc_request(w_int requested) {
-  x_status status;
   w_thread   this_thread = currentWonkaThread;
   w_int released = 0;
   w_int remaining = requested;
@@ -2320,9 +2650,10 @@ w_int gc_request(w_int requested) {
   w_int retcode;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", instance_use, instance_allocated, instance_returned);
-    wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
+    wprintf("GC: %t starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", this_thread, instance_use, instance_allocated, instance_returned);
+    wprintf("GC: %d bytes available out of %d, memory load factor = %d, requested = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, remaining, killing_soft_references ? "" : "not ");
   }
+
   while (tries > 0 && remaining > 0) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
       wprintf("GC: tries remaining = %d, looking to collect %d bytes, GC phase = %s.\n", tries, remaining, gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
@@ -2340,10 +2671,7 @@ w_int gc_request(w_int requested) {
             wprintf("GC: thread %t found heap was being marked by %t, waiting for %d ticks\n", this_thread, marking_thread, GC_OTHER_MARK_WAIT);
           }
 	  if (GC_OTHER_MARK_WAIT) {
-            status = x_monitor_wait(gc_monitor, GC_OTHER_MARK_WAIT);
-            if (status == xs_interrupted) {
-              x_monitor_eternal(gc_monitor);
-            }
+            GC_MONITOR_WAIT(GC_OTHER_MARK_WAIT)
           }
 	}
         break;
@@ -2380,7 +2708,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
         }
         tries -= 1;
 
@@ -2403,7 +2731,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           postmark(this_thread);
           tries = 0;
 
@@ -2423,7 +2751,7 @@ w_int gc_request(w_int requested) {
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
-          x_monitor_notify_all(gc_monitor);
+          GC_MONITOR_NOTIFY
           tries = 0;
 
           break;
@@ -2435,7 +2763,7 @@ w_int gc_request(w_int requested) {
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
-        x_monitor_notify_all(gc_monitor);
+        GC_MONITOR_NOTIFY
         break;
 
       default: 

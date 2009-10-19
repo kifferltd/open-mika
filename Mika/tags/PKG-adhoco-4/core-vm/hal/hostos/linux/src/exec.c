@@ -1,33 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2005 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: exec.c,v 1.8 2006/10/04 14:24:14 cvsroot Exp $
-*/
 
 #include <signal.h>
 #include <errno.h>
@@ -76,7 +76,7 @@ char* cloneCommandLinePath(void) {
 
 char *host_getCommandPath() {
   pid_t pid = getpid();
-  char buffer[64];
+  char buffer[128];
   int result;
   char* path;
   int size = 256;
@@ -234,6 +234,10 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
         }
       }
 
+      if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+        wprintf("Execute command: host_exec: child executing\n");
+      }
+
       if(index(cmd[0], '/')) {
         execve(cmd[0], (char **)cmd, (char **)newenv);
       }
@@ -272,6 +276,9 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
   wpid->pid = pid;
   *retpid = pid;
   woempa(7, "child process has pid %d and fd = %d,%d,%d...\n",pid,wpid->fd_in,wpid->fd_out,wpid->fd_err);
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    wprintf("Execute command: host_exec: child process has pid %d and fd = %d,%d,%d...\n",pid,wpid->fd_in,wpid->fd_out,wpid->fd_err);
+  }
 
   /*
   * vfork CAN suspend program execution until _exit or execve is called.
@@ -281,6 +288,9 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
   if(wpid->retval == EXECUTION_ERROR) {
     int result;
     woempa(9, "Execution of child process %d failed...\n",pid);
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: host_exec: child process %d failed.\n",pid);
+    }
     result = waitpid(pid, NULL, 0);
     if(result != pid) {
       woempa(9, "waitpid on child process %d returned %d\n",pid);
@@ -319,14 +329,23 @@ w_int host_wait_for_all(w_int* retval) {
   pid = waitpid(-1, &status, WNOHANG);
 
   if (pid == -1) {
-    woempa(7, "[GRU] waitpid(-1,&status, 0) returned %d (%s %d)\n",pid, strerror(errno), errno); 
+    woempa(7, "[GRU] waitpid(-1,&status, 0) returned -1 (%d, %s)\n", errno, strerror(errno)); 
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: host_wait_for_all: waitpid() returned -1 (%d, %s).\n", errno, strerror(errno));
+    }
   }
 
   if(pid > 0) {
     if(WIFEXITED(status)) {
       *retval = WEXITSTATUS(status);
+      if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+        wprintf("Execute command: host_wait_for_all: child return value = %d.\n",*retval);
+      }
     } else {
       *retval = EXECUTION_ENDED;
+      if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+        wprintf("Execute command: host_wait_for_all: child execution ended, return value lost.\n");
+      }
     }
     woempa(9,"[GRU] waitpid(-1,&status, 0) returned %d (status = %d, retval = %d)\n",pid, status, *retval); 
   }

@@ -33,6 +33,7 @@ SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
 
 Library $(WONKA_LIB) : cmd-arrayref.c cmd-arraytype.c cmd-classloaderref.c cmd-classobjref.c cmd-classtype.c cmd-event.c ;
 Library $(WONKA_LIB) : cmd-eventreq.c cmd-field.c cmd-interfacetype.c cmd-method.c cmd-objref.c cmd-reftype.c cmd-stack.c ;
-Library $(WONKA_LIB) : cmd-stringref.c cmd-threadgrpref.c cmd-threadref.c cmd-vm.c cmd-wonka.c jdwp-dispatcher.c ;
+Library $(WONKA_LIB) : cmd-stringref.c cmd-threadgrpref.c cmd-threadref.c cmd-vm.c cmd-wonka.c ;
+Library $(WONKA_LIB) : jdwp-dispatcher.c jdwp-dt_socket.c ;
 Library $(WONKA_LIB) : jdwp-eventhandler.c jdwp-debug.c jdwp-protocol.c jdwp-utils.c ;
 

@@ -100,7 +100,7 @@ public class SMPropertiesTest implements Testlet
           e.printStackTrace();	
 	}
 	
-	System.out.println("defProps ='"+defProps+"'");
+	//System.out.println("defProps ='"+defProps+"'");
    	buffer =new String("!comment\n   \nname=no\n#morecomments\ndog=no_cat\ntest\ndate=today\nlongvalue=I'mtryingtogiveavaluelongerthen40characters\n40chars=thisvalueshouldcontainexactly40charcters").getBytes();
     bin = new ByteArrayInputStream(buffer);   	
 //        int i = bin.available();
@@ -199,7 +199,14 @@ public class SMPropertiesTest implements Testlet
         }
     catch (NullPointerException ne) { th.check(true); }
 
-    p.list(psout);
+    try {
+      p.list(psout);
+    }
+    catch (Throwable t) {
+      th.fail("no exception should be thrown");
+    }
+    /*
+    [CG 20070522] the spec doesn't define how the output should look.
     byte ba[] = bout.toByteArray();
     Vector v = new Vector();
     Enumeration ek = p.keys();
@@ -223,6 +230,7 @@ public class SMPropertiesTest implements Testlet
     v.removeElement(s);
     count++;
     }
+    */
 
     try { p.list((PrintStream)null);
         th.fail("should throw NullPointerException -- 2");
@@ -238,7 +246,14 @@ public class SMPropertiesTest implements Testlet
         th.fail("should throw NullPointerException -- 1");
         }
     catch (NullPointerException ne) { th.check(true); }
-    p.list(pwout);
+    try {
+      p.list(pwout);
+    }
+    catch (Throwable t) {
+      th.fail("no exception should be thrown");
+    }
+    /*
+    [CG 20070522] the spec doesn't define how the output should look.
     ba = bout.toByteArray();
     v = new Vector();
     ek = p.keys();
@@ -260,6 +275,7 @@ public class SMPropertiesTest implements Testlet
     v.removeElement(s);
     count++;
     }
+    */
 
     try { p.list((PrintStream)null);
         th.fail("should throw NullPointerException -- 2");
@@ -474,7 +490,7 @@ public class SMPropertiesTest implements Testlet
     ByteArrayOutputStream bas = new ByteArrayOutputStream();
     try {
       p.store(bas, null);
-      p.store(System.out, null);
+      //p.store(System.out, null);
       Properties p2 = new Properties();
       p2.load(new ByteArrayInputStream(bas.toByteArray()));
       //th.debug("p2 = '"+p2+"'");
@@ -554,15 +570,17 @@ public class SMPropertiesTest implements Testlet
 */
   public void test_loadextra(){
     th.checkPoint("load(java.io.InputStream)void");
+    // [CG 20070522] added new tests for backslash at end of comment line
     Properties p = new Properties();
-    buffer =new String("   !comment\n \t  \nname = no\r    #morec\tomm\\\nents\r\n  dog=no\\\\cat   \nburps    :\ntest=\ndate today\n\n\nlong\\\nvalue=trying  \\\nto\n4:vier\nvier     :4\nA\u0061=B\u0062").getBytes();
+    buffer =new String("   !comment\n \t  \nname = no\r    #comment ending with backslash-cr-lf\\\r\nfollowing=no comment\n!\tcomment = ending with backslash-lf\\\ndog=no\\\\cat   \nburps    :\ntest=\ndate today\n\n\nlong\\\nvalue=trying  \\\nto\n4:vier\nvier     :4\nA\u0061=B\u0062").getBytes();
     bin = new ByteArrayInputStream(buffer); 
-    th.debug("p ='"+p+"'");  	
+    //th.debug("p ='"+p+"'");  	
     try {p.load(bin);} catch (Exception e) {}
-    th.debug("p ='"+p+"'");  	   
+    //th.debug("p ='"+p+"'");  	   
     Enumeration e = p.keys();
     Vector v = new Vector();
     v.add("name=no");
+    v.add("following=no comment");
     v.add("dog=no\\cat   ");
     v.add("burps=");
     v.add("test=");

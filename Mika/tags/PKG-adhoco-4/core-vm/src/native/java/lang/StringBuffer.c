@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: StringBuffer.c,v 1.18 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include "arrays.h"
@@ -97,16 +98,19 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
   w_int oldsize = instance2Array_length(oldbuffer);
   w_instance newbuffer;
 
+  threadMustBeSafe(thread);
   woempa(1, "%j: minimum capacity is %d, current is %d\n", StringBuffer, minimum, oldsize);
 
   if (minimum > oldsize) {
     woempa(1,"Current buffer has length %d, new buffer will have length %d\n", oldsize, (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
+    enterUnsafeRegion(thread);
     newbuffer = allocArrayInstance_1d(thread, atype2clazz[P_char], (minimum > 2 * oldsize) ? minimum : 2 * oldsize + 2);
     if (newbuffer) {
       copyChars(instance2Array_char(newbuffer), instance2Array_char(oldbuffer), getIntegerField(StringBuffer, F_StringBuffer_count));
-      setReferenceField(StringBuffer, newbuffer, F_StringBuffer_value);
+      setReferenceField_unsafe(StringBuffer, newbuffer, F_StringBuffer_value);
       removeLocalReference(thread, newbuffer);
     }
+    enterSafeRegion(thread);
   }
 }
 
@@ -115,7 +119,7 @@ void StringBuffer_ensureCapacity(JNIEnv *env, w_instance StringBuffer, w_int min
 }
 
 void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_instance String) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_string string;
   w_int length;
   w_instance buffer;
@@ -125,7 +129,9 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     string = String2string(String);
     length = string_length(string) + 16;
     woempa(1, "Allocating array of char[%d]\n", length);
+    enterUnsafeRegion(thread);
     buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    enterSafeRegion(thread);
     if (!buffer) {
 
       return;
@@ -149,7 +155,9 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     string = NULL;
     length = 16;
     woempa(1, "Allocating array of char[%d]\n", length);
+    enterUnsafeRegion(thread);
     buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    enterSafeRegion(thread);
     if (!buffer) {
 
       return;
@@ -285,7 +293,7 @@ w_instance StringBuffer_substring(JNIEnv *env, w_instance StringBuffer, w_int st
     if (!string) {
       wabort(ABORT_WONKA, "Unable to create string\n");
     }
-    result = newStringInstance(string);
+    result = getStringInstance(string);
     // string is now registered twice, when once would be enough
     deregisterString(string);
   }
@@ -303,7 +311,7 @@ static w_instance i_StringBuffer_toString(w_instance thisStringBuffer) {
   if (!string) {
     wabort(ABORT_WONKA, "Unable to create string\n");
   }
-  String = newStringInstance(string);
+  String = getStringInstance(string);
   // string is now registered twice, when once would be enough
   deregisterString(string);
 
@@ -320,7 +328,7 @@ void fast_StringBuffer_toString(w_frame frame) {
   w_instance theString;
   w_thread   thread = frame->thread;
 
-    enterSafeRegion(thread);
+  enterSafeRegion(thread);
   if (objectref) {
     theString = i_StringBuffer_toString(objectref);
     enterUnsafeRegion(thread);
@@ -332,7 +340,7 @@ void fast_StringBuffer_toString(w_frame frame) {
   }
   else {
     throwException(thread, clazzNullPointerException, NULL);
-  enterUnsafeRegion(thread);
+    enterUnsafeRegion(thread);
   }
 }
 

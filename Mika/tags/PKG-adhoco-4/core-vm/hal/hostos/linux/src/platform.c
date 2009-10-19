@@ -1,29 +1,30 @@
 /**************************************************************************
-* Copyright (c) 2001, 2003 by Acunia N.V. All rights reserved.            *
+* Copyright (c) 2001, 2003 by Punch Telematix. All rights reserved.       *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
-
-/*
-** $Id: platform.c,v 1.5 2005/11/03 11:19:49 cvs Exp $
-*/
 
 #include "oswald.h"
 #include "wonka.h"
@@ -40,6 +41,8 @@ static struct sigaction int_action;
 static struct sigaction int_oldaction;
 static struct sigaction quit_action;
 static struct sigaction quit_oldaction;
+static struct sigaction usr1_action;
+static struct sigaction usr1_oldaction;
 #ifdef O4P
 static struct sigaction segv_action;
 static struct sigaction segv_oldaction;
@@ -70,7 +73,7 @@ static void quit_handler(int signum) {
 #ifdef O4P
 static void segv_handler(int signum, siginfo_t * sis, void * arg) {
   printf("\n\r\n*** SEGMENTATION FAULT ***\n\r\n");
-  printf("signo = %d code = %d addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_addr);
+  printf("signo = %d code = %d%s addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_code == SEGV_MAPERR ? " (SEGV_MAPERR)" : sis->si_code == SEGV_ACCERR ? " (SEGV_ACCERR)" : "", sis->si_addr);
   w_dump_info();
   abort();
 }
@@ -135,6 +138,15 @@ void install_term_handler(void) {
   }
   else {
     woempa(7, "Old quit handler was %p\n", quit_oldaction.sa_handler);
+  }
+
+  usr1_action.sa_handler = SIG_IGN;
+  sigemptyset(&usr1_action.sa_mask);
+  usr1_action.sa_flags = 0;
+  result = sigaction(SIGUSR1, &usr1_action, &usr1_oldaction);
+  if (result == -1) {
+    printf("Registering the usr1 handler failed, return code = %d.\n", result);
+    abort();
   }
 
 #ifdef O4P

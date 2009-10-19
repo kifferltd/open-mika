@@ -1,15 +1,32 @@
-#############################################################################
-# Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. #
-# All rights reserved.  The contents of this file may not be copied or      #
-# distributed in any form without express written consent of the author.    #
-#############################################################################
+###########################################################################
+# Copyright (C) 2009 by /k/ Embedded Java Solutions. All rights reserved. #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions#
+#    nor the names of other contributors may be used to endorse or promote#
+#    products derived from this software without specific prior written   #
+#    permission.                                                          #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER #
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   #
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     #
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      #
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  #
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    #
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      #
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            #
+###########################################################################
 
-#
-# $Id: math-classes-c.awk,v 1.2 2006/06/09 09:51:06 cvs Exp $
-# 
-# The Wonka kernel is software copyright by SmartMove NV (1999).
-# Please see the file Copyright for information on it's legal use.
-# 
 #  First output banner, #incudes, and a couple of utility functions
 
 BEGIN {
@@ -31,8 +48,6 @@ BEGIN {
   print "#include \"threads.h\""
   print "#include \"loading.h\""
   print "#include \"math-classes.h\""
-  print " "
-  print "extern w_instance extensionClassLoader;"
   print " "
 
 }
@@ -218,7 +233,7 @@ END {
   print  "  dotified = slashes2dots(name);"
   print  "  clazz = seekClazzByName(dotified, NULL);"
   print  "  if (clazz == NULL) {"
-  print  "    clazz = loadNonBootstrapClass(extensionClassLoader, dotified);"
+  print  "    clazz = loadBootstrapClass(dotified);"
   print  "    if (clazz == NULL) {"
   printf "      woempa(9,\"Unable to find WNI class %%w:\\n\",name);\n"
   print  "    }"
@@ -230,9 +245,11 @@ END {
   print "void loadMathClasses() {"
 
   for(c = 1; c in clazz; ++c) {
-    string = sprintf("%s%s", path[c], clazz[c]);
-    thisclazz = clazz[c]
-    printf "  clazz%s = loadOneMathClass(cstring2String(\"%s\", %d));\n", thisclazz, string, length(string);
+    basename = clazz[c];
+    thisclazz = basename;
+    gsub("_dollar_", "$", basename);
+    fullname = sprintf("%s%s", path[c], basename);
+    printf "  clazz%s = loadOneMathClass(cstring2String(\"%s\", %d));\n", thisclazz, fullname, length(fullname);
   }
   printf  "\n}\n\n"
 

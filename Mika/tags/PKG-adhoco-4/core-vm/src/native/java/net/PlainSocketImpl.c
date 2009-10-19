@@ -1,29 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2007, 2008, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/**
- * $Id: PlainSocketImpl.c,v 1.7 2006/10/04 14:24:16 cvsroot Exp $
- */
 
 #include <string.h>
 #include <errno.h>
@@ -243,6 +248,9 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
   
 }
 
+static sigusr_handler(int sig) {
+}
+
 w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -305,7 +313,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
     printf("Traffic: read on id %d: length %d\n", sock, res);
     for (i = 0; i < res; ++i) {
       c = instance2Array_byte(byteArray)[off + i];
-      printf("%c", c > 32 && c < 255 ? c : '.');
+      printf("%c", c >= 32 && c < 255 && (c < 127 || c >= 160) ? c : '.');
     }
     printf("\n");
   }
@@ -353,10 +361,10 @@ void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArr
   res = w_send(sock, instance2Array_byte(byteArray) + off, (w_word)length, MSG_NOSIGNAL);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_TRAFFIC)) {
-    printf("Traffic: read on id %d: length %d\n", sock, res);
+    printf("Traffic: write on id %d: length %d\n", sock, res);
     for (i = 0; i < res; ++i) {
       c = instance2Array_byte(byteArray)[off + i];
-      printf("%c", c > 32 && c < 255 ? c : '.');
+      printf("%c", c >= 32 && c < 255 && (c < 127 || c >= 160) ? c : '.');
     }
     printf("\n");
   }
@@ -369,6 +377,27 @@ void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArr
     throwException(JNIEnv2w_thread(env), clazzIOException, "send errno %d '%s'", errno, strerror(errno));
   }
 
+}
+
+// TODO: test if this actually works ...
+void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int udata) {
+  w_int sock = (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit);
+  w_byte bdata = (w_byte)udata;
+  w_int res;
+
+  res = w_send(sock, &bdata, 1, MSG_NOSIGNAL | MSG_OOB);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_TRAFFIC)) {
+    printf("Traffic: write OOB on id %d: %d\n", sock, bdata);
+  }
+
+  if (res == -1) {
+    woempa(9,"got error while sending OOB from SocketImpl %p --> error = %i\n", thisImpl, w_errno(sock));
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: id = %d OOB write failed: %s\n", sock, strerror(errno));
+    }
+    throwException(JNIEnv2w_thread(env), clazzIOException, "send OOB errno %d '%s'", errno, strerror(errno));
+  }
 }
 
 void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
@@ -686,65 +715,107 @@ static void setOption(w_thread thread, w_instance this, int level, int option, v
   }
 }
 
-void PlainSocketImpl_setKeepAlive(JNIEnv* env , w_instance ThisImpl, w_instance Boolean) {
+w_int PlainSocketImpl_getRcvBuf(JNIEnv* env , w_instance thisImpl) {
+  return getOption(JNIEnv2w_thread(env), thisImpl, SOL_SOCKET, SO_RCVBUF);
+}
+
+void PlainSocketImpl_setRcvBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
   w_thread thread = JNIEnv2w_thread(env);
-  int value;
 
-  if (Boolean == NULL) {
-    throwException(thread, clazzNullPointerException, "");
-    return;
-  }
-
-  value = getBooleanField(Boolean, F_Boolean_value);
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting keepalive to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), value);
+    printf("Socket: id = %d setting rcvbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
   }
 
-  setOption(thread, ThisImpl, SOL_SOCKET, SO_KEEPALIVE, &value, sizeof(int));
+  setOption(thread, thisImpl, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
 }
 
-w_boolean PlainSocketImpl_getKeepAlive(JNIEnv* env , w_instance ThisImpl){
-  w_thread thread = JNIEnv2w_thread(env);
-
-  return !!getOption(thread, ThisImpl, SOL_SOCKET, SO_KEEPALIVE);
+w_int PlainSocketImpl_getSndBuf(JNIEnv* env , w_instance thisImpl) {
+  return getOption(JNIEnv2w_thread(env), thisImpl, SOL_SOCKET, SO_SNDBUF);
 }
 
-void PlainSocketImpl_setNoDelay(JNIEnv* env , w_instance ThisImpl, w_instance Boolean) {
+void PlainSocketImpl_setSndBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
   w_thread thread = JNIEnv2w_thread(env);
-  int value;
 
-  if (Boolean == NULL) {
-    throwException(thread, clazzNullPointerException, "");
-    return;
-  }
-
-  value = getBooleanField(Boolean, F_Boolean_value);
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting nodelay to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), value);
+    printf("Socket: id = %d setting sndbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
   }
 
-  setOption(thread, ThisImpl, IPPROTO_TCP, TCP_NODELAY, &value, sizeof(int));
+  setOption(thread, thisImpl, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
 }
 
-w_boolean PlainSocketImpl_getNoDelay(JNIEnv* env , w_instance ThisImpl){
- w_thread thread = JNIEnv2w_thread(env);
-
-  return !!getOption(thread, ThisImpl, IPPROTO_TCP, TCP_NODELAY);
+w_int PlainSocketImpl_getIpTos(JNIEnv* env , w_instance thisImpl) {
+  return getOption(JNIEnv2w_thread(env), thisImpl, IPPROTO_IP, IP_TOS);
 }
 
-void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_instance Integer) {
+void PlainSocketImpl_setIpTos(JNIEnv* env , w_instance thisImpl, w_int tos) {
   w_thread thread = JNIEnv2w_thread(env);
-  int value;
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d setting IP TOS to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), tos);
+  }
+
+  setOption(thread, thisImpl, IPPROTO_IP, IP_TOS, &tos, sizeof(int));
+}
+
+void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
+  w_thread thread = JNIEnv2w_thread(env);
+  struct linger longer;
+
+  if (ling < 0) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: id = %d disabling linger\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit));
+    }
+
+    longer.l_onoff = 0;
+    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(struct linger));
+  }
+  else {
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: id = %d setting linger to %d seconds\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), ling);
+    }
+
+    longer.l_onoff = 1;
+    longer.l_linger = ling;
+    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(struct linger));
+  }
+}
+
+void PlainSocketImpl_setKeepAlive(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d setting keepalive to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+  }
+
+  setOption(thread, ThisImpl, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(int));
+}
+
+void PlainSocketImpl_setNoDelay(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d setting nodelay to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+  }
+
+  setOption(thread, ThisImpl, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(int));
+}
+
+void PlainSocketImpl_setOOBInline(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d setting OOBInline to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+  }
+
+  setOption(thread, ThisImpl, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(int));
+}
+
+void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int millis) {
+  w_thread thread = JNIEnv2w_thread(env);
   struct timeval tv;
 
-  if (Integer == NULL) {
-    throwException(thread, clazzNullPointerException, "");
-    return;
-  }
-
-  value = getIntegerField(Integer, F_Integer_value);
-  tv.tv_sec = value / 1000;
-  tv.tv_usec = (value % 1000) * 1000;
+  tv.tv_sec = millis / 1000;
+  tv.tv_usec = (millis % 1000) * 1000;
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting timeout to %d secs %d usecs\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), (int)tv.tv_sec, (int)tv.tv_usec);
   }
@@ -752,5 +823,12 @@ void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_instance 
   setOption(thread, ThisImpl, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 }
 
+void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance aThread) {
+  w_thread wt = w_threadFromThreadInstance(aThread);
+  x_thread xt = wt->kthread;
+  if (xt) {
+    x_thread_signal(xt, x_signal_1);
+  }
+}
 
 

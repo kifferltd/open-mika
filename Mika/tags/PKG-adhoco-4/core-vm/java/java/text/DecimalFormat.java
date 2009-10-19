@@ -351,7 +351,7 @@ public class DecimalFormat extends NumberFormat {
         }
         else {
           //parse Fraction ...
-          if(p < len && str.charAt(p) == symbols.getDecimalSeparator()){
+          if(p < len && str.charAt(p) == symbols.getDecimalSeparator() & !isParseIntegerOnly()){
             int start = ++p;
             buf.append('.');
             int count = 0;

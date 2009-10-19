@@ -76,19 +76,57 @@ typedef long long           wfp_sbits64;
 #define D_NAN			       (0x7ff8000000000000LL)
 #define D_NANJIKES		       (0xfff8000000000000LL)
 
-#define D_MINUS_ONE		       (0xbff0000000000000LL)
 #define D_ZERO                         (0x0000000000000000LL)
-#define D_MINUS_ZERO                   (0x8000000000000000LL)
 #define D_ONE                          (0x3ff0000000000000LL)
 #define D_TWO                          (0x4000000000000000LL)
+#define D_THREE                        (0x4008000000000000LL)
+#define D_FOUR                         (0x4010000000000000LL)
+#define D_FIVE                         (0x4014000000000000LL)
+#define D_SIX                          (0x4018000000000000LL)
+#define D_SEVEN                        (0x401c000000000000LL)
+#define D_EIGHT                        (0x4020000000000000LL)
+#define D_NINE                         (0x4022000000000000LL)
+#define D_TEN                          (0x4024000000000000LL)
+#define D_ELEVEN                       (0x4026000000000000LL)
+#define D_TWELVE                       (0x4028000000000000LL)
+
+
+#define D_MINUS_ZERO                   (0x8000000000000000LL)
+#define D_MINUS_ONE		       (0xbff0000000000000LL)
+#define D_MINUS_FOUR                   (0xc010000000000000LL)
+
 #define D_ZERO_POINT_FIVE              (0x3fe0000000000000LL)
 #define D_ZERO_POINT_TWO_FIVE          (0x3fd0000000000000LL)
-#define D_ONE_TO_THE_POWER_EIGHT       (0x4197d78400000000LL)
 #define D_ZERO_POINT_ONE               (0x000000009999999aLL)
+#define D_MINUS_ZERO_POINT_FIVE        (0xbfe0000000000000LL)
+
+#define D_ONE_OVER_3                   (0x3fd5555555555555LL)
+#define D_ONE_OVER_5                   (0x3fc999999999999aLL)
+#define D_ONE_OVER_7                   (0x3fc2492492492492LL)
+#define D_ONE_OVER_9                   (0x3fbc71c71c71c71cLL)
+#define D_ONE_OVER_11                  (0x3fb745d1745d1746LL)
+#define D_ONE_OVER_13                  (0x3fb3b13b13b13b14LL)
+#define D_ONE_OVER_15                  (0x3fb1111111111111LL)
+#define D_ONE_OVER_17                  (0x3fae1e1e1e1e1e1eLL)
+#define D_ONE_OVER_19                  (0x3faaf286bca1af28LL)
+#define D_ONE_OVER_21                  (0x3fa8618618618618LL)
+
+#define D_LN_2                         (0x3fe62e42fefa39efLL)
+
+#define D_PI                           (0x400921fb54442d18LL)
+#define D_TWO_PI                       (0x401921fb54442d18LL)
+#define D_HALF_PI                      (0x3ff921fb54442d18LL)
+#define D_QUARTER_PI                   (0x3fe921fb54442d18LL)
+#define D_MINUS_HALF_PI                (0xbff921fb54442d18LL)
+
+#define D_ONE_TO_THE_POWER_EIGHT       (0x4197d78400000000LL)
 #define D_LONG_MIN_VALUE               (0xc3e0000000000000LL)
 #define D_LONG_MAX_VALUE               (0x43e0000000000000LL)
 #define D_DOUBLE_MAX_VALUE             (0x7fefffffffffffffLL)
 #define D_DOUBLE_MIN_VALUE             (0x0000000000000001LL)
+#define D_TINY                         (0x1ff0000000000000LL)
+#define D_MINUS_TINY                   (0x9ff0000000000000LL)
+#define D_LOG_BIG_NUM                  (0x40862e42fefa39efLL)
 
 #define D_ZERO_MSW                     (0x00000000)
 #define D_ZERO_LSW                     (0x00000000)
@@ -237,6 +275,16 @@ wfp_float64 wfp_float64_div( wfp_float64, wfp_float64 );
 
 wfp_float32 wfp_float32_abs( wfp_float32 );
 wfp_float64 wfp_float64_abs( wfp_float64 );
+#ifdef NATIVE_MATH
+wfp_float64 wfp_float64_sqrt( wfp_float64 );
+wfp_float64 wfp_float64_sin( wfp_float64 );
+wfp_float64 wfp_float64_cos( wfp_float64 );
+wfp_float64 wfp_float64_tan( wfp_float64 );
+wfp_float64 wfp_float64_asin( wfp_float64 );
+wfp_float64 wfp_float64_atan( wfp_float64 );
+wfp_float64 wfp_float64_log( wfp_float64 );
+wfp_float64 wfp_float64_exp( wfp_float64 );
+#endif
 
 #define wfp_float64_signBit( float64_val ) ( (float64_val) & 0x8000000000000000LL )
 

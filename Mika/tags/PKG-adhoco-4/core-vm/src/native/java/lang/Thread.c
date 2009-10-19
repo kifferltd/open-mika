@@ -1,34 +1,35 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Mika(TM) modifications Copyright (C) 2004 Chris Gray, /k/ Embedded Java *
-* Solutions.  All rights reserved.                                        *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
-/*
-** $Id: Thread.c,v 1.24 2006/10/04 14:24:16 cvsroot Exp $
-*/
 #include <string.h>
 
 #include "core-classes.h"
@@ -60,8 +61,6 @@ w_instance Thread_currentThread(JNIEnv *env, w_instance ThreadClass) {
 }
 
 static w_int seqnum = 0;
-
-void bogus(void) {}
 
 static void threadEntry(void * athread) {
 
@@ -99,12 +98,11 @@ static void threadEntry(void * athread) {
   thread->state = wt_ready;
   callMethod(thread->top, run_method);
   thread->top = & thread->rootFrame;
-  if (exceptionThrown(thread)) {
-    bogus();
-    wabort(ABORT_WONKA, "Uncaught exception in %t: %e\n", thread, exceptionThrown(thread));
+  if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
+    wprintf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
   }
-  removeThreadFromGroup(thread, thread2ThreadGroup(thread));
-  deleteGlobalReference(thread->Thread);
+
+  removeThreadCount(thread);
   thread->state = wt_dying;
 #ifdef JDWP
   jdwp_event_thread_end(thread);
@@ -130,6 +128,8 @@ static void threadEntry(void * athread) {
   if (gc_is_running) {
     x_monitor_exit(gc_monitor);
   }
+  enterSafeRegion(thread);
+  deleteGlobalReference(thread->Thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
    wprintf("Finish %t: pid was %d\n", thread, getpid());
@@ -166,7 +166,6 @@ void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGr
   if (!nameString) {
     buffer = allocMem(THREAD_NAME_BUFFER_SIZE * sizeof(w_byte));
     if (!buffer) {
-      wabort(ABORT_WONKA, "Unable to allocate memory for thread name buffer - aborting constructor\n");
 
       return;
 
@@ -183,8 +182,7 @@ void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGr
 
   woempa(1, "Creating thread '%w' for group %j, is%s the system group.\n", name, parentThreadGroup, parentThreadGroup == I_ThreadGroup_system ? "" : " not");
   newthread = createThread(currentthread, thisThread, parentThreadGroup, name, stacksize);
-  if (!newthread || !name) {
-    wabort(ABORT_WONKA, "Out of memory when allocating thread %w - aborting constructor\n", name);
+  if (!newthread) {
 
     return;
 
@@ -198,10 +196,13 @@ void Thread_destructor(w_instance thisThread) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
 
-  woempa(7, "Destroying %t\n", thread);
-  if (thread && isNotSet(thread->flags, WT_THREAD_IS_NATIVE) && (wt_unstarted != thread->state)) {
-    terminateThread(thread);
-    clearWotsitField(thisThread, F_Thread_wotsit);
+  if (thread) {
+    thread->Thread = NULL;
+    woempa(7, "Destroying %t\n", thread);
+    if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
+      terminateThread(thread);
+      clearWotsitField(thisThread, F_Thread_wotsit);
+    }
   }
 
 }
@@ -210,7 +211,7 @@ w_instance Thread_getName(JNIEnv *env, w_instance thisThread) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
 
-  return newStringInstance(thread->name);
+  return getStringInstance(thread->name);
 
 }
 
@@ -228,6 +229,7 @@ void Thread_setName0(JNIEnv *env, w_instance thisThread, w_instance nameString) 
 }
 
 w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
+  w_thread current_thread = JNIEnv2w_thread(env);
   w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
   w_thread oldthread;
   x_status status;
@@ -248,23 +250,18 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   }
 #endif
 
-
-  /*
-  ** Don't futz with the thread_hashtable etc. while prepare/mark is in progress
-  */
-  if (gc_is_running) {
-    monitor_status = x_monitor_eternal(gc_monitor);
-    if (monitor_status != xs_success) {
-      wabort(ABORT_WONKA, "Unable to enter gc_monitor!\n");
-    }
-    while (gc_phase == GC_PHASE_PREPARE || gc_phase == GC_PHASE_MARK) {
-      monitor_status = x_monitor_wait(gc_monitor, 10);
-      if (monitor_status == xs_interrupted) {
-        monitor_status = x_monitor_eternal(gc_monitor);
-      }
-    }
+#ifdef RUNTIME_CHECKS
+  if (!this_thread) {
+    wabort(ABORT_WONKA, "Whoa. Trying to start a Thread whose wotsit is NULL");
   }
+  if (!this_thread->kthread) {
+    wabort(ABORT_WONKA, "Steady on old boy. Trying to start a thread whose kthread is NULL");
+  }
+  threadMustBeSafe(current_thread);
+#endif
 
+  this_thread->state = wt_starting;
+  enterUnsafeRegion(current_thread);
   oldthread = (w_thread)ht_write(thread_hashtable, (w_word)this_thread->kthread, (w_word)this_thread);
 
   if (oldthread) {
@@ -273,14 +270,12 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
 
   x_thread_create(this_thread->kthread, threadEntry, this_thread, this_thread->kstack, this_thread->ksize, this_thread->kpriority, TF_SUSPENDED);
   this_thread->kthread->report = running_thread_report;
-  if (gc_is_running) {
-    x_monitor_exit(gc_monitor);
-  }
 
   woempa(7, "Starting Java Thread %t.\n", this_thread);
 
   newGlobalReference(thisThread);
-  addThreadToGroup(this_thread, thread2ThreadGroup(this_thread));
+  addThreadCount(this_thread);
+  enterSafeRegion(current_thread);
   status = x_thread_resume(this_thread->kthread);
   if (status == xs_success) {
     if(jpda_hooks) {
@@ -311,10 +306,6 @@ void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable) {
     jdwp_event_thread_end(thread);
   }
   
-  /*
-  ** [CG 20040102] This too ...
-  */
-
   x_thread_wakeup(thread->kthread);
   if (threadState(thread) == wt_waiting) {
     x_thread_stop_waiting(thread->kthread);
@@ -352,14 +343,6 @@ void Thread_setPriority0(JNIEnv *env, w_instance thisThread, w_int newPriority) 
   if (threadIsActive(thread)) {
    x_thread_priority_set(thread->kthread, thread->kpriority);
   }
-}
-
-w_boolean Thread_isDaemon(JNIEnv *env, w_instance thisThread) {
-
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-
-  return thread->isDaemon;
-
 }
 
 void Thread_setDaemon0(JNIEnv *env, w_instance thisThread, w_boolean on) {
@@ -434,48 +417,71 @@ void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
 
 }
 
+static w_boolean checkForInterrupt(w_thread thread) {
+  if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+    unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
+    throwException(thread, clazzInterruptedException, NULL);
+    woempa(6, "THROWING an InterruptedException\n");
+
+    return TRUE;
+
+  }
+
+  return FALSE;
+}
+
+#define ONE_MINUTE_MICROS 60000000LL
+#define ONE_MINUTE_TICKS (x_usecs2ticks(60000000))
+
 void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
 
   w_thread thread = getWotsitField(Thread, F_Thread_wotsit);
-  w_size snooze = 0;
+  volatile w_long micros = 0;
 
   if (millis < 0 || nanos < 0 || nanos >= 1000000) {
     throwException(thread, clazzIllegalArgumentException, NULL);
     return;
   }
 
-  if (millis) {
-    snooze = (w_word)((w_int)millis * 1000) + (nanos / 1000) ;
-  }
-  else if (nanos) {
-    snooze = 1000;
-  }
-  else {
-    snooze = x_eternal;
-  }
+  micros = millis ? (millis * 1000) + (nanos / 1000) : 1000 ;
+  
   woempa(1, "thread will go to sleep!!! %t\n", thread);
 
-  if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+  if (checkForInterrupt(thread)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
       wprintf("Thread.sleep(): %t has been interrupted before sleep()\n", thread);
     }
-    unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
-    throwException(thread, clazzInterruptedException, NULL);
-    woempa(6, "THROWING an InterruptedException\n");
+
     return;
 
   }
-  else {
-    thread->state = wt_sleeping;
-    x_thread_sleep(x_usecs2ticks(snooze));
-    woempa(6, "thread woke up!!! %t\n", thread);
 
-    if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
+  thread->state = wt_sleeping;
+  /* [CG 20070509]
+  ** This isn't ideal, because the time taken to go around the loop is
+  ** additional to the sleep time, so we could build up a cumulative
+  ** excess of somnolence. However I don't think it's worth it to try
+  ** to read the system clock and perform arithmetic on it.
+  ** All of this because x_sleep is 32 bits instead of 64 ...
+  */
+  while (micros > ONE_MINUTE_MICROS) {
+    x_thread_sleep(ONE_MINUTE_TICKS);
+    micros -= ONE_MINUTE_MICROS;
+    if (checkForInterrupt(thread)) {
       if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
         wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
       }
-      unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
-      throwException(thread, clazzInterruptedException, NULL);
+      thread->state = wt_ready;
+
+      return;
+    }
+  }
+
+  x_thread_sleep(x_usecs2ticks(micros));
+  thread->state = wt_ready;
+  if (checkForInterrupt(thread)) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
     }
   }
 }

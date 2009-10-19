@@ -95,9 +95,9 @@ public class ClassTest implements Cloneable, java.io.Serializable, Testlet {
       Class[] ifs = clsss.getInterfaces();
       th.check(ifs.length == 2 ,
         "Length is >>>" + ifs.length + "<<<");
-        for (int i = 0; i < ifs.length; i++) {
-         th.debug(i + " >>>" + ifs[i].toString() + "<<<");
-        }
+        //for (int i = 0; i < ifs.length; i++) {
+        // th.debug(i + " >>>" + ifs[i].toString() + "<<<");
+        //}
     }
     catch ( Exception e ) {
       th.fail("should not throw an Exception -- 6");

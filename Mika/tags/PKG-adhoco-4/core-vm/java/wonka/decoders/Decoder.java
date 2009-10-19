@@ -1,24 +1,29 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 /*
@@ -31,13 +36,19 @@ import java.io.*;
 
 public abstract class Decoder {
 
+  static final int UNDEFINED = 0;
+  static final int BIGEND    = 1;
+  static final int LITTLEEND = 2;
+  
+  
+  private static final int HT_SIZE = 47;
   private static final String[] names;
   private static final Object[] decoders;
   public static final Decoder DEFAULT;
 
   static {
-    decoders = new Object[37];
-    names = new String[37];
+    decoders = new Object[HT_SIZE];
+    names = new String[HT_SIZE];
 
     String s = "ASCIIDecoder";
     put("ASCII", s);
@@ -52,10 +63,16 @@ public abstract class Decoder {
     put("UTF16", s);
     put("UTF-16", s);
 
+    put("UNICODEBIGUNMARKED", "UTF16BeDecoder");
     put("UTF-16BE", "UTF16BeDecoder");
 
+    put("UNICODELITTLEUNMARKED", "UTF16LeDecoder");
     put("UTF-16LE", "UTF16LeDecoder");
 
+    put("UNICODELITTLE","UnicodeLittleDecoder");
+    put("UNICODEBIG","UnicodeBigDecoder");
+    put("UNICODE","UnicodeDecoder");
+    
     Decoder d = new Latin1Decoder();
     DEFAULT = d;
     put("ISO8859_1", d);
@@ -63,7 +80,9 @@ public abstract class Decoder {
     put("ISO8859-1", d);
     put("ISO-8859-1", d);
     put("ISO-8859-15", d);
-    put("ISO_8859-1", d);
+    put("ISO_8859-1", d);    
+    put("ISO8859-15", d);
+    put("ISO8859_15", d);
     put("ISO_8859-1:1978", d);
     put("ISO_8859-1:1987", d);
     put("ISO-IR-100", d);
@@ -90,12 +109,12 @@ public abstract class Decoder {
 
   public static Decoder get(String key) throws UnsupportedEncodingException {
     String coding = key.toUpperCase();
-    int hash = coding.hashCode() % 37;
+    int hash = coding.hashCode() % HT_SIZE;
     String[] k = names;
     String k2;
 
     do {
-      if(hash < 0) hash += 37;
+      if(hash < 0) hash += HT_SIZE;
 
       k2 = k[hash];
 
@@ -113,7 +132,7 @@ public abstract class Decoder {
             decoders[hash] = d;
             return d.getInstance();
           }
-          catch(Exception e){
+          catch(Exception e){            
             throw new UnsupportedEncodingException("Unable to initiate encoder for "+key);
           }
         }
@@ -123,12 +142,12 @@ public abstract class Decoder {
   }
 
   private static void put(String key, Object newvalue) throws NullPointerException {
-    int hash = key.hashCode() % 37;
+    int hash = key.hashCode() % HT_SIZE;
     String[] k = names;
     String k2;
 
     do {
-      if(hash < 0) hash += 37;
+      if(hash < 0) hash += HT_SIZE;
       k2 = k[hash];
 
       if(k2 == null) {

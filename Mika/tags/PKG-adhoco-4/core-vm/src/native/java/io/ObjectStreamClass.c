@@ -1,38 +1,38 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips Site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ObjectStreamClass.c,v 1.6 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 
 #include "core-classes.h"
-#include "jni.h"
 #include "checks.h"
 #include "clazz.h"
 #include "arrays.h"
@@ -51,16 +51,21 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
   w_clazz clazz;
   w_instance newOSC = NULL;
 
+  if (mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED) {
+    return NULL;
+  }
+
   if(Class == NULL){
-    throwException(thread, clazzNullPointerException, NULL);
+    throwNullPointerException(thread);
     return NULL;
   }
 
   clazz = Class2clazz(Class);
-
   if(isAssignmentCompatible(clazz, clazzSerializable)){
     w_int flags;
+    enterUnsafeRegion(thread);
     newOSC = allocInstance(thread, clazzObjectStreamClass);
+    enterSafeRegion(thread);
 
     if(newOSC == NULL){
       return NULL;
@@ -77,7 +82,11 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
 
       if(jmid != NULL){
         if(jmid->spec.declaring_clazz == clazz) {
-          w_instance Method = allocInstance(thread, clazzMethod);
+          w_instance Method;
+
+          enterUnsafeRegion(thread);
+          Method = allocInstance(thread, clazzMethod);
+          enterSafeRegion(thread);
 
           if(Method){
             w_method method =  (w_method) jmid;
@@ -143,7 +152,11 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
       //setup writeReplace
       jmethodID jmid = (*env)->GetMethodID(env, Class, "writeReplace", "()Ljava/lang/Object;");
       if(jmid != NULL) {
-        jobject method = allocInstance(thread, clazzMethod);
+        jobject method; 
+
+        enterUnsafeRegion(thread);
+        method = allocInstance(thread, clazzMethod);
+        enterSafeRegion(thread);
         if(method){
           setWotsitField(method, F_Method_wotsit, jmid);
           setReferenceField(newOSC, method, F_ObjectStreamClass_writeReplace);
@@ -175,6 +188,12 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
   w_thread thread = JNIEnv2w_thread(env);
   w_int flags = getIntegerField(thisOSC, F_ObjectStreamClass_flags);
   w_clazz clazz;
+
+  if (mustBeInitialized(clazzField) == CLASS_LOADING_FAILED
+   || mustBeInitialized(clazzMethod) == CLASS_LOADING_FAILED
+    ) {
+    return;
+  }
 
   if(Class == NULL){
     throwException(thread, clazzClassNotFoundException, NULL);
@@ -252,7 +271,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
     //setup readResolve
     jmethodID jmid = (*env)->GetMethodID(env, Class, "readResolve", "()Ljava/lang/Object;");
     if(jmid != NULL) {
-      jobject method = allocInstance(thread, clazzMethod);
+      jobject method; 
+
+      enterUnsafeRegion(thread);
+      method = allocInstance(thread, clazzMethod);
+      enterSafeRegion(thread);
       if(method){
         setWotsitField(method, F_Method_wotsit, jmid);
         setReferenceField(thisOSC, method, F_ObjectStreamClass_readResolve);
@@ -273,7 +296,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
 
     if(jmid != NULL){
       if(jmid->spec.declaring_clazz == clazz) {
-        w_instance Method = allocInstance(thread, clazzMethod);
+        w_instance Method; 
+
+        enterUnsafeRegion(thread);
+        Method = allocInstance(thread, clazzMethod);
+        enterSafeRegion(thread);
 
         if(Method){
           w_method method =  (w_method) jmid;
@@ -321,7 +348,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
       w_word j;
 
       if(!OsField){
-        throwException(thread, clazzNullPointerException, NULL);
+        throwNullPointerException(thread);
         woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d] is NULL\n",i);
         return;
       }
@@ -329,7 +356,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
       Name = getReferenceField(OsField, F_ObjectStreamField_name);
 
       if(!Name){
-        throwException(thread, clazzNullPointerException, NULL);
+        throwNullPointerException(thread);
         woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d].name is NULL\n",i);
         return;
       }
@@ -339,7 +366,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
       Type = getReferenceField(OsField, F_ObjectStreamField_typeString);
 
       if(!Type){
-        throwException(thread, clazzNullPointerException, NULL);
+        throwNullPointerException(thread);
         woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d].type is NULL\n",i);
         return;
       }
@@ -350,7 +377,11 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
         w_field osfield = flds+j;
 
         if(osfield->name == name && osfield->value_clazz->dotified == type){
-          w_instance newField = allocInstance(thread, clazzField);
+          w_instance newField;
+
+          enterUnsafeRegion(thread);
+          newField = allocInstance(thread, clazzField);
+          enterSafeRegion(thread);
 
           if(newField){
             setWotsitField(newField, F_Field_wotsit, osfield);
@@ -375,8 +406,15 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
   w_instance OSFIELDS = NULL;
   w_clazz clazz;
 
+  threadMustBeSafe(thread);
+  if (mustBeInitialized(clazzField) == CLASS_LOADING_FAILED
+   || mustBeInitialized(clazzObjectStreamField) == CLASS_LOADING_FAILED
+    ) {
+    return NULL;
+  }
+
   if(Class == NULL){
-    throwException(thread, clazzNullPointerException, NULL);
+    throwNullPointerException(thread);
     woempa(IO_LEVEL, "Throwing NullPointerException Class is NULL\n");
     return NULL;
   }
@@ -389,7 +427,11 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
 
 
     if(jid != NULL){
-      w_instance Field = allocInstance(thread, clazzField);
+      w_instance Field;
+
+      enterUnsafeRegion(thread);
+      Field = allocInstance(thread, clazzField);
+      enterSafeRegion(thread);
 
       if(Field){
         w_field field = (w_field)jid;
@@ -416,7 +458,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               w_word j;
 
               if(!OsField){
-                throwException(thread, clazzNullPointerException, NULL);
+                throwNullPointerException(thread);
                 woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d] is NULL\n",i);
                 return NULL;
               }
@@ -424,7 +466,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               Name = getReferenceField(OsField, F_ObjectStreamField_name);
 
               if(!Name){
-                throwException(thread, clazzNullPointerException, NULL);
+                throwNullPointerException(thread);
                 woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d].name is NULL\n",i);
                 return NULL;
               }
@@ -434,7 +476,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               Type = getReferenceField(OsField, F_ObjectStreamField_type);
 
               if(!Type){
-                throwException(thread, clazzNullPointerException, NULL);
+                throwNullPointerException(thread);
                 woempa(IO_LEVEL, "Throwing NullPointerException ObjectStreamField[%d].type is NULL\n",i);
                 return NULL;
               }
@@ -445,7 +487,11 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
                 w_field osfield = flds+j;
 
                 if(osfield->name == name && osfield->value_clazz == type){
-                  w_instance newField = allocInstance(thread, clazzField);
+                  w_instance newField;
+
+                  enterUnsafeRegion(thread);
+                  newField = allocInstance(thread, clazzField);
+                  enterSafeRegion(thread);
 
                   if(newField){
                     setWotsitField(newField, F_Field_wotsit, osfield);
@@ -502,16 +548,24 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
         w_clazz array_osfclazz = getNextDimension(clazzObjectStreamField, NULL);
         w_clazz array_fclazz = getNextDimension(clazzField, NULL);
 
-        if(array_fclazz && array_osfclazz){
+        if(array_fclazz && array_osfclazz && mustBeInitialized(array_fclazz) != CLASS_LOADING_FAILED && mustBeInitialized(array_osfclazz) != CLASS_LOADING_FAILED) {
+          enterUnsafeRegion(thread);
           OSFIELDS = allocArrayInstance_1d(thread, array_osfclazz, count);
+          enterSafeRegion(thread);
 
           if(OSFIELDS){
             for(i = 0 ; i < count ; i++){
-              w_instance OSField = allocInstance(thread, clazzObjectStreamField);
-              w_instance newField = allocInstance(thread, clazzField);
+              w_instance OSField;
+              w_instance newField;
               w_field field = prf[i];
-              w_instance String = newStringInstance(field->name);
+              w_instance String;
               w_instance FldClass;
+
+              enterUnsafeRegion(thread);
+              OSField = allocInstance(thread, clazzObjectStreamField);
+              newField = allocInstance(thread, clazzField);
+              enterSafeRegion(thread);
+              String = getStringInstance(field->name);
 
               if (!OSField || !newField || !String) {
                 woempa(9, "Unable to allocate OSField and newField\n");

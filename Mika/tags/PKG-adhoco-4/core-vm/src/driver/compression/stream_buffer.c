@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "deflate_internals.h"
@@ -64,7 +68,7 @@ w_void getNewBlock(w_deflate_control l) {
   // dont block if no-more-input
   if (l->nomoreinput) {
     woempa(1, "Try to receive new block NONBLOCKING.\n");
-    s = x_queue_receive(l->q_in, (w_void **)&qe, x_no_wait);
+    s = x_queue_receive(&l->q_in, (w_void **)&qe, x_no_wait);
     // TODO, moet dit
     l->need_more_input = 0;
   }
@@ -74,13 +78,13 @@ w_void getNewBlock(w_deflate_control l) {
     // TODO : This is not a very SUPERDELUXE implementation, should actually ask oswald 
     // if thread is waiting on the queue-event
     l->need_more_input = 1;
-    s = x_queue_receive(l->q_in, (w_void **)&qe, x_eternal);
+    s = x_queue_receive(&l->q_in, (w_void **)&qe, x_eternal);
     l->need_more_input = 0;
   }
 
   switch (s) {
     case xs_success:
-      if (qe == NULL || l->reset) {
+      if (qe == NULL || l->resets_completed != l->resets_requested) {
         woempa(7, "Got new BOGUS block.\n");
         // if reset or bogus message return ENDS
         l->par_in = NULL;
@@ -170,7 +174,7 @@ w_void errorFlush(w_deflate_control bs) {
   qe->data = NULL;
   qe->size = 0;
 
-  s = x_queue_send(bs->q_out, qe, x_millis2ticks(5000));			// wait for a pretty long time, but not for ever, because space should come available
+  s = x_queue_send(&bs->q_out, qe, x_millis2ticks(5000));			// wait for a pretty long time, but not for ever, because space should come available
 
   switch (s) {
     case xs_success:
@@ -228,7 +232,7 @@ w_void bekkenFlush(w_deflate_control bs) {
     w_memcpy(qe->data, bs->output_bekken + 33 * 1024 + bs->offset_bek_out - bs->size_bek_out, (unsigned)(bs->size_bek_out - bs->offset_bek_out));
     w_memcpy(qe->data + (bs->size_bek_out - bs->offset_bek_out), bs->output_bekken, (unsigned)bs->offset_bek_out);
   }
-  s = x_queue_send(bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
+  s = x_queue_send(&bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
 
   switch (s) {
     case xs_success:
@@ -252,7 +256,7 @@ w_void bekkenFlush(w_deflate_control bs) {
   qe->errnum = WUNZIP_ENDS;
   qe->data = NULL;
   qe->size = 0;
-  s = x_queue_send(bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
+  s = x_queue_send(&bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
 
   switch (s) {
     case xs_success:
@@ -300,7 +304,7 @@ w_void bekkenSendBlock(w_deflate_control bs) {
     w_memcpy(qe->data + (33 * 1024 - bs->offset_bek_out), bs->output_bekken, (unsigned)(bs->offset_bek_out - 32 * 1024));
   }
 
-  s = x_queue_send(bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
+  s = x_queue_send(&bs->q_out, qe, x_millis2ticks(5000000));			// wait for a pretty long time, but not for ever, because space should come available
 
   switch (s) {
     case xs_success:

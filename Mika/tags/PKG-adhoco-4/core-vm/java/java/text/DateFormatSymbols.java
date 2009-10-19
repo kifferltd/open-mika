@@ -1,29 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: DateFormatSymbols.java,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-*/
 
 package java.text;
 
@@ -66,7 +70,7 @@ public class DateFormatSymbols implements Cloneable,Serializable {
   }
 
   public DateFormatSymbols(Locale loc){
-    ResourceBundle resource = ResourceBundle.getBundle("com.acunia.resource.DateFormatSymbolBundle",loc);
+    ResourceBundle resource = ResourceBundle.getBundle("wonka.resource.DateFormatSymbolBundle",loc);
 
     ampms = (String[])resource.getObject("ampms");
     eras = (String[])resource.getObject("eras");
@@ -198,29 +202,62 @@ public class DateFormatSymbols implements Cloneable,Serializable {
     return zone.getDisplayName(zone.inDaylightTime(cal.getTime()),(longString ? TimeZone.LONG : TimeZone.SHORT));
   }
 
-  int parseTimeZoneString(Calendar cal, boolean longString, String dest, ParsePosition pos){
-    int val = 1;
-    val += longString ? 0 : 1;
+  int parseTimeZoneString(Calendar cal, boolean longString, String dest, ParsePosition pos) {
+    int val = longString ? 1 : 2;
     int val2 = val + 2;
     int start = pos.getIndex();
-    for(int i = 0 ; i < zoneStrings.length ; i++){
-      if(dest.regionMatches(start,zoneStrings[i][val],0,zoneStrings[i][val].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][val].length());
-        return 1;
+    int matchlen = 0;
+    String candidate;
+    int candlen;
+    TimeZone tz;
+    int result = -1;
+
+    for (int i = 0 ; i < zoneStrings.length ; i++) {
+      candidate = zoneStrings[i][val];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        //System.out.println("Case 1: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
+        cal.setTimeZone(tz);
+        result = 1;
       }
-      if(dest.regionMatches(start,zoneStrings[i][val2],0,zoneStrings[i][val2].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][val2].length());
-        return 0;
+
+      candidate = zoneStrings[i][val2];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+        //System.out.println("Case 2: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
+        cal.setTimeZone(tz);
+        result = 0;
       }
-      if(dest.regionMatches(start,zoneStrings[i][0],0,zoneStrings[i][0].length())){
-        cal.setTimeZone(TimeZone.getTimeZone(zoneStrings[i][0]));
-        pos.setIndex(start+zoneStrings[i][0].length());
-        return 0;
+
+      candidate = zoneStrings[i][0];
+      candlen = candidate.length();
+      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+        matchlen = candlen;
+        tz = TimeZone.getTimeZone(candidate);
+        //System.out.println("Case 3: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
+        cal.setTimeZone(tz);
+        result = 0;
       }
     }
-    return -1;
+
+    //System.out.println("recognised " + dest.substring(start, start + matchlen) + " in " + dest);
+    if (dest.substring(start, start + matchlen).equals("GMT") && dest.length() >= start + 9) {
+      char sign = dest.charAt(start + 3);
+      if (sign == '+' || sign == '-') {
+        matchlen = 9;
+        tz = TimeZone.getTimeZone(dest.substring(start, start + 9));
+        cal.setTimeZone(tz);
+        result = 0;
+      }
+    }
+    pos.setIndex(start + matchlen);
+    //System.out.println(" => timezone = " + cal.getTimeZone());
+
+    return result;
   }
 }
 

@@ -1,35 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
+* Embedded Java Solutions. All rights reserved.                           *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Constructor.c,v 1.5 2006/10/04 14:24:16 cvsroot Exp $
-*
-** Implementation of the native methods for java/lang/reflect/Constructor
-*/
 
 #include "checks.h"
 #include "clazz.h"
@@ -58,7 +57,7 @@ w_instance Constructor_getDeclaringClass(JNIEnv *env, w_instance thisConstructor
 w_instance Constructor_getName(JNIEnv *env, w_instance thisConstructor) {
   w_method method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   
-  return newStringInstance(method->spec.declaring_clazz->dotified);
+  return getStringInstance(method->spec.declaring_clazz->dotified);
   
 }
 
@@ -80,6 +79,7 @@ w_instance Constructor_getParameterTypes(JNIEnv *env, w_instance thisConstructor
   w_int i;
   w_int length;
   
+  threadMustBeSafe(thread);
   if (method->spec.arg_types) {
     for (numParameters = 0; method->spec.arg_types[numParameters]; ++numParameters);
   }
@@ -87,7 +87,9 @@ w_instance Constructor_getParameterTypes(JNIEnv *env, w_instance thisConstructor
     numParameters = 0;
   }
   length = numParameters;
+  enterUnsafeRegion(thread);
   Parameters = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
   
   if (Parameters) {
     for (i = 0; i < numParameters; i++) {
@@ -116,6 +118,7 @@ w_instance Constructor_getExceptionTypes(JNIEnv *env, w_instance thisConstructor
   w_int i;
   w_int length;
 
+  threadMustBeSafe(thread);
   method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   mustBeLinked(method->spec.declaring_clazz);
   if (exceptionThrown(thread)) {
@@ -126,11 +129,18 @@ w_instance Constructor_getExceptionTypes(JNIEnv *env, w_instance thisConstructor
   numthrows = method->numThrows;
   length = numthrows;
 
+  enterUnsafeRegion(thread);
   Exceptions = allocArrayInstance_1d(thread, clazzArrayOf_Class, length);
+  enterSafeRegion(thread);
 
   if (Exceptions) {
     for (i = 0; i < numthrows; i++) {
-      exception = getClassConstant(method->spec.declaring_clazz, method->throws[i]);
+      exception = getClassConstant(method->spec.declaring_clazz, method->throws[i], thread);
+      if (exceptionThrown(thread)) {
+
+        return NULL;
+
+      }
       if (mustBeReferenced(exception) == CLASS_LOADING_FAILED) {
         return NULL;
       }
@@ -160,7 +170,8 @@ w_instance Constructor_newInstance0(JNIEnv *env, w_instance thisConstructor, w_i
 
   init = getWotsitField(thisConstructor, F_Constructor_wotsit);
 
-  if (!getBooleanField(thisConstructor, F_AccessibleObject_accessible) && !isAllowedToCall(calling_clazz, init, WONKA_FALSE)) {
+  if (!getBooleanField(thisConstructor, F_AccessibleObject_accessible) && 
+      !isAllowedToCall(calling_clazz, init, init->spec.declaring_clazz)) {
     throwException(thread, clazzIllegalAccessException, NULL);
   }
   else {
@@ -169,7 +180,9 @@ w_instance Constructor_newInstance0(JNIEnv *env, w_instance thisConstructor, w_i
       return NULL;
 
     }
+    enterUnsafeRegion(thread);
     new = allocInstance(thread, init->spec.declaring_clazz);
+    enterSafeRegion(thread);
     if (new) {
       frame = invoke(env, init, new, Arguments);
       if (exceptionThrown(thread)) {

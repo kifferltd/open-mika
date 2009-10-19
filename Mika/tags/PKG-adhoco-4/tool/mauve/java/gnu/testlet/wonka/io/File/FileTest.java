@@ -1,24 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 package gnu.testlet.wonka.io.File; //complete the package name ...
@@ -77,7 +85,7 @@ public class FileTest implements Testlet
     harness.checkPoint("null constructors: File(null) =>exception");
     try
     {
-      File testfile1=new File(null);
+      File testfile1=new File((String)null);
       harness.fail(" constructor < File(null) > should throw NullPointerException");
     }
     catch(NullPointerException e)
@@ -1202,8 +1210,7 @@ the same applies to File("/","title.txt") and File(new File("/"),"title.txt"),
       harness.check(target1,mirror1,"same files same url's");
       harness.check(target1.getFile(),mirror1.getFile(),"same files same url.getFile()");
       harness.check(target1.toString(),mirror1.toString(),"same files same url.toString()");
-      //harness.check(target1.sameFile(mirror1),"same files : ULR.sameFile() is true");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
+      harness.check(target1.sameFile(mirror1),"same files : ULR.sameFile() is true");
 
       harness.checkPoint("url tests for absolute files constructed with absolute dir/dir string");
       URL target2 = doURLTests(new File(canonicalfile,testfilestring));
@@ -1212,13 +1219,11 @@ the same applies to File("/","title.txt") and File(new File("/"),"title.txt"),
       harness.check(target1,target2,"same files/different constructors, same url's");
       harness.check(target1.getFile(),target2.getFile(),"same files same url.getFile()");
       harness.check(target1.toString(),target2.toString(),"same files same url.toString()");
-//      harness.check(target1.sameFile(target2),"equivalent absolute and relative files : ULR.sameFile() is true");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
+      harness.check(target1.sameFile(target2),"equivalent absolute and relative files : ULR.sameFile() is true");
       harness.check(target1,target3,"same files/different constructors, same url's");
       harness.check(target1.getFile(),target3.getFile(),"same files same url.getFile()");
       harness.check(target1.toString(),target3.toString(),"same files same url.toString()");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
-//      harness.check(target1.sameFile(target3),"equivalent absolute and relative files : ULR.sameFile() is true");
+      harness.check(target1.sameFile(target3),"equivalent absolute and relative files : ULR.sameFile() is true");
 
 
       harness.checkPoint("url tests for relative file");
@@ -1227,8 +1232,7 @@ the same applies to File("/","title.txt") and File(new File("/"),"title.txt"),
       harness.check(target1,target4,"absolute and relative files, same url's");
       harness.check(target1.getFile(),target4.getFile(),"same files same url.getFile()");
       harness.check(target1.toString(),target4.toString(),"same files same url.toString()");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
-//      harness.check(target1.sameFile(target4),"equivalent absolute and relative files : ULR.sameFile() is true");
+      harness.check(target1.sameFile(target4),"equivalent absolute and relative files : ULR.sameFile() is true");
 
 
       harness.checkPoint("url tests for absolute and relative dirs");
@@ -1242,18 +1246,21 @@ the same applies to File("/","title.txt") and File(new File("/"),"title.txt"),
       harness.check(targetdir1,targetdir2,"same files/different constructors, same url's");
       harness.check(targetdir1.getFile(),targetdir2.getFile(),"same files same url.getFile()");
       harness.check(targetdir1.toString(),targetdir2.toString(),"same files same url.toString()");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
-//      harness.check(targetdir1.sameFile(targetdir2),"equivalent absolute and relative files : ULR.sameFile() is true");
+      harness.check(targetdir1.sameFile(targetdir2),"equivalent absolute and relative files : ULR.sameFile() is true");
 
-      harness.checkPoint("Special case: URL(File['']) not recognised as dir");
-      URL targetdir3 = doURLTests(currentdir, /*isdir*/false);
-      harness.check(!(targetdir3.toString()).endsWith("/"),"directory<''> not recognised as dir: should not end with '/')");
+  /*
+  ** [CG 20090419] Changed from 'not recognised' to 'recognised' because
+  ** otherwise Sun JDK also fails this test. Must have been a bug in some
+  ** old version of RI that we were trying to match ..
+  */
+      harness.checkPoint("Special case: URL(File['']) recognised as dir");
+      URL targetdir3 = doURLTests(currentdir, true);
+      harness.check((targetdir3.toString()).endsWith("/"),"directory<''> not recognised as dir: should not end with '/')");
 
-      harness.check(!(targetdir1.equals(targetdir3)),"equivalent path but not regarded as dir");
-      harness.check(!((targetdir1.getFile()).equals(targetdir3.getFile()) ),"File('').grtFile not regarded as dir");
-      harness.check(targetdir1.toString(),targetdir3.toString()+"/","File('').toString() not regarded as dir");
-      harness.fail("URL.sameFile() not yet defined for Wonka");
-//      harness.check(!(targetdir1.sameFile(targetdir3)),"ULR.sameFile() File('').toString() not regarded as dir");
+      harness.check((targetdir1.equals(targetdir3)),"equivalent path and also regarded as dir");
+      harness.check(((targetdir1.getFile()).equals(targetdir3.getFile()) ),"File('').grtFile regarded as dir");
+      harness.check(targetdir1.toString(),targetdir3.toString(),"File('').toString() regarded as dir");
+      harness.check((targetdir1.sameFile(targetdir3)),"ULR.sameFile() File('').toString() regarded as dir");
 
       harness.checkPoint("Special case: file explicitly created as dir => URL explicitly recognised as dir");
       File explicit = new File("newdir");

@@ -184,6 +184,10 @@ if $(JAVA_PROFILE) = true {
   CCFLAGS += -DJAVA_PROFILE ;
 }
 
+if $(TRACE_MEM_ALLOC) = true {
+  CCFLAGS += -DTRACE_MEM_ALLOC ;
+}
+
 if $(METHOD_DEBUG) = true {
   CCFLAGS += -DMETHOD_DEBUG ;
 }
@@ -234,6 +238,11 @@ if $(CCLASSPATH) {
 
 if $(STATIC) = true {
   LINKFLAGS += -static ;
+}
+
+
+if $(BYTECODE_VERIFIER) = true {
+  CCFLAGS += -DUSE_BYTECODE_VERIFIER ; 
 }
 
 # 
@@ -309,7 +318,7 @@ if $(DEBUG) = true {
     OPTIM += -Os ;
   }
 
-#  CCFLAGS += -ggdb ;
+  CCFLAGS += -ggdb ;
 }
 
 if $(GDB_SYMBOLS) = true {
@@ -450,6 +459,7 @@ switch $(FILESYSTEM) {
 switch $(FLOATING_POINT) {
   case native : {
     CCFLAGS += -DNATIVE_FP ;
+    LINKFLAGS += -lm ;
   }
 
   case hauser : {
@@ -510,6 +520,15 @@ switch $(FILESYSTEM) {
   }
 }
 
+switch $(JDWP) {
+  case true : {
+    WONKA_INFO += "with JDWP enabled;" ;
+  }
+  case false : {
+    WONKA_INFO += "no JDWP;" ;
+  }
+}
+
 switch $(NETWORK) {
   case none : {
     WONKA_INFO += "no network;" ;
@@ -521,10 +540,18 @@ switch $(NETWORK) {
 
 switch $(SECURITY) {
   case fine : {
-    WONKA_INFO += "fine-grained (Java2) security;" ;
+    ECHO "Warning: SECURITY=fine is deprecated, using SECURITY=java2" ;
+    SECURITY = java2 ;
   }
   case coarse : {
-    WONKA_INFO += "coarse-grained (Java 1.1) security;" ;
+    ECHO "Warning: SECURITY=coarse is deprecated, using SECURITY=java2" ;
+    SECURITY = java2 ;
+  }
+}
+
+switch $(SECURITY) {
+  case java2 : {
+    WONKA_INFO += "fine-grained (Java2) security;" ;
   }
   case none : {
     WONKA_INFO += "no security;" ;
@@ -627,6 +654,12 @@ if $(SCHEDULER) = o4p {
   }
   else {
     O4P_INFO = "using usleep(3) for internal timing loop;" ;
+  }
+  if $(HAVE_TIMEDWAIT) = true {
+    O4P_INFO += "using pthread_cond_timedwait;" ;
+  }
+  else {
+    O4P_INFO += "not using pthread_cond_timedwait;" ;
   }
   if $(HOST_TIMER_GRANULARITY) {
     O4P_INFO += "host timer granularity = $(HOST_TIMER_GRANULARITY) usec;" ;

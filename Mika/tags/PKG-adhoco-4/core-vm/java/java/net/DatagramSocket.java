@@ -1,24 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007, 2009 by /k/ Embedded Java Solutions.          *
+* All rights reserved.                                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 package java.net;
@@ -45,10 +53,7 @@ public class DatagramSocket {
   }
 
   static void multicastCheck(InetAddress addr) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(addr.getHostAddress(),"accept,connect"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkMulticast(addr);
@@ -59,21 +64,18 @@ public class DatagramSocket {
   /**
   ** Special Constructor to create MulticastSockets ...
   */
-  DatagramSocket(boolean Multicast){}
+  DatagramSocket(boolean Multicast){
+  }
 
+  public DatagramSocket(SocketAddress saddr) throws SocketException {
+    this(saddr == null ? 0 : ((InetSocketAddress)saddr).port, saddr == null ? null : ((InetSocketAddress)saddr).addr);
+  }
 
   public DatagramSocket() throws SocketException, SecurityException {
   	this(0,null);
   }
 
   public DatagramSocket(int port) throws SocketException, SecurityException {
-  	this(port, null);
-  }
-
-  public DatagramSocket(int port, InetAddress laddr) throws SocketException, SecurityException {
-    if (laddr == null) {
-      laddr = InetAddress.allZeroAddress;
-    }
     if(port < 0 || port > 65535) {
       throw new IllegalArgumentException();
     }
@@ -82,7 +84,7 @@ public class DatagramSocket {
       dsocket = theFactory.createDatagramSocketImpl();
     }
     else {
-      String s = "java.net."+GetSystemProperty.IMPL_PREFIX+"DatagramSocketImpl";
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
       try {	
         dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
       }
@@ -92,8 +94,74 @@ public class DatagramSocket {
     }
   	
     dsocket.create();
-    dsocket.bind(port,laddr);  	
+    dsocket.bind(port, InetAddress.allZeroAddress);  	
   }
+
+  public DatagramSocket(int port, InetAddress laddr) throws SocketException, SecurityException {
+    if(port < 0 || port > 65535) {
+      throw new IllegalArgumentException();
+    }
+    InetAddress.listenCheck(port);
+    if(theFactory != null){
+      dsocket = theFactory.createDatagramSocketImpl();
+    }
+    else {
+      String s = GetSystemProperty.DATAGRAM_SOCKET_IMPL;
+      try {	
+        dsocket = (DatagramSocketImpl) Class.forName(s).newInstance();
+      }
+      catch(Exception e) {
+        dsocket = new PlainDatagramSocketImpl();
+      }
+    }
+  	
+    dsocket.create();
+    dsocket.bind(port, laddr == null ? InetAddress.allZeroAddress : laddr);  	
+  }
+
+  public void setReuseAddress (boolean on) throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    dsocket.setOption(SocketOptions.SO_REUSEADDR, new Boolean(on));
+  }
+
+  public void setTrafficClass (int tc) throws SocketException {
+    throw new SocketException("not yet implemented");
+  }
+
+  public void bind(SocketAddress bindAddr) throws SocketException {
+    if(dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    
+    if (remoteAddress != null) {
+      throw new SocketException("Datagram socket is already connected");
+    }
+
+    if (bindAddr == null) {
+      // TODO: we should bind to an ephemeral port and a valid local address
+      throw new SocketException("Bind datagram socket to null address not yet implemented");
+    }
+    else {
+      try {
+        InetSocketAddress isa = (InetSocketAddress)bindAddr;
+        InetAddress address = isa.getAddress();
+        int port = isa.getPort();
+        if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+          SecurityManager sm = System.getSecurityManager();
+          if (sm != null) {
+            sm.checkListen(port);
+          }
+        }
+        dsocket.bind(port, address);
+      }
+      catch (ClassCastException cce) {
+        throw new IllegalArgumentException();
+      }
+    }
+  }
+
 
   /**
    * * Connects the datagramsocket to a remote address. * Connecting a socket
@@ -118,6 +186,23 @@ public class DatagramSocket {
   }
 
   /**
+   * * Connects the datagramsocket to a remote address. * Connecting a socket
+   * will bypass security checks if you send packets to the connected socket. *
+   * All other destination are not allowed ...
+   */
+  public void connect(SocketAddress sa) throws SecurityException {
+    InetSocketAddress isa;
+    try {
+      isa = (InetSocketAddress)sa;
+    }
+    catch (ClassCastException cce) {
+      throw new IllegalArgumentException();
+    }
+
+    connect(isa.getAddress(), isa.getPort());
+  }
+
+  /**
   ** Disconnects the socket. This does nothing if the socket is not connected.
   **
   */
@@ -126,11 +211,49 @@ public class DatagramSocket {
   	remoteport = -1;
   }
 
+  public boolean getBroadcast() throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    return ((Boolean) dsocket.getOption(SocketOptions.SO_BROADCAST)).booleanValue();
+  }
+
+  public void setBroadcast(boolean on) throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    dsocket.setOption(SocketOptions.SO_BROADCAST, new Boolean(on));
+  }
+
   /**
   ** The address to which this socket is connected or  null if not connected.
   */
   public InetAddress getInetAddress() {
     return remoteAddress;
+  }
+
+  /**
+  ** The local address to which this socket is bound or  null if not bound.
+  */
+  public SocketAddress getLocalSocketAddress() {
+    InetAddress localAddress = getLocalAddress();
+    if (localAddress == null) {
+      return null;
+    }
+    int localport = getLocalPort();
+
+    return new InetSocketAddress(localAddress, localport);
+  }
+
+  /**
+  ** The remote address to which this socket is connected or  null if not connected.
+  */
+  public SocketAddress getRemoteSocketAddress() {
+    if (remoteAddress == null) {
+      return null;
+    }
+
+    return new InetSocketAddress(remoteAddress, remoteport);
   }
 
   /**
@@ -248,6 +371,11 @@ public class DatagramSocket {
     return ((Integer) dsocket.getOption(SocketOptions.SO_TIMEOUT)).intValue();
   }
 
+  public int getTrafficCless() {
+    // TODO ...
+    return 0;
+  }
+
   /**
   ** This method tries to set the 'send' buffersize.  There is no guarantee this call will have
   ** an effect on the native socket ...
@@ -296,16 +424,32 @@ public class DatagramSocket {
   	return ((Integer) dsocket.getOption(SocketOptions.SO_RCVBUF)).intValue();
   }
 
+  public boolean getReuseAddress() throws SocketException {
+    if (dsocket == null) {
+      throw new SocketException("DatagramSocket is closed");
+    }
+    return ((Boolean) dsocket.getOption(SocketOptions.SO_REUSEADDR)).booleanValue();
+  }
+
   /**
   ** closes this socket.
   */
   public void close() {
+    disconnect();
   	if (dsocket != null) {
       dsocket.close();
       dsocket = null;
     }
   }
   
+  public boolean isBound() {
+    return getLocalAddress() != null;
+  }
+
+  public boolean isConnected() {
+    return remoteAddress != null;
+  }
+
   public boolean isClosed() {
     return dsocket == null;
   }

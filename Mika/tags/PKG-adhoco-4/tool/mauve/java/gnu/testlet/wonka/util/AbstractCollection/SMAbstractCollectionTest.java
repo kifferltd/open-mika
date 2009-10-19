@@ -314,7 +314,7 @@ public class SMAbstractCollectionTest implements Testlet
     th.check( s.indexOf("rules") != -1 , "checking representations");
     th.check( s.indexOf("cars") != -1 , "checking representations");
     th.check( s.indexOf("null") != -1 , "checking representations");
-    th.debug(s);
+    //th.debug(s);
   }
 
 

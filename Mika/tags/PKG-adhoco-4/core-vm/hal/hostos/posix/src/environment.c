@@ -1,13 +1,31 @@
 /**************************************************************************
+* Copyright (c) 2009 by /k/ Embedded Java Solutions. All rights reserved. *
 *                                                                         *
-* Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          *
-* All rights reserved.                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written            *
+*    permission.                                                          *
 *                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS     *
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,     *
+* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT    *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR      *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,       *
+* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
 **************************************************************************/
-
-/*
-** $Id: environment.c,v 1.4 2006/10/04 14:24:14 cvsroot Exp $
-*/
 
 #include <sys/utsname.h>
 #include "argument.h"
@@ -17,54 +35,10 @@ extern char *command_line_path;
 extern char *fsroot;
 
 static struct utsname uname_buffer;
-static int uname_called = WONKA_FALSE;
+static int uname_called = FALSE;
 
 char *getInstallationDir(void) {
-  w_int len = strlen(command_line_path);
-  w_int skip = 0;
-  w_int offset = 0;
-  w_int m;
-  char *bytes;
-
-  if(len == 0 || command_line_path[0] == '/') {
-    bytes = allocMem(len+1);
-    memcpy(bytes, command_line_path, len);
-  } else {
-	  m = 32 + len;
-	  bytes = allocClearedMem(m);
-	  while (!getcwd(bytes, m - 2 - len)) {
-	    m *= 2;
-	    bytes = reallocMem(bytes, m);
-	    memset(bytes, 0, m);
-	  }
-	  woempa(1, "cwd is '%s', command_line_path is %s\n", bytes, command_line_path);
-	 
-	  offset = strlen(bytes);
-	 
-	  if (len > 1 && command_line_path[0] == '.' && command_line_path[1] == '/') {
-	   skip = 2;
-	  }
-	  else if (len > 2 && command_line_path[0] == '.' && command_line_path[1] == '.' && command_line_path[2] == '/') {
-	    skip = 3;
-	    while (bytes[--offset] != '/');
-	  }
-	 
-	  woempa(1, "offset is %d, skip is %d\n", offset, skip);
-	  bytes[offset] = '/';
-	  memcpy(bytes + offset + 1, command_line_path + skip, len - skip);
-	  len = offset + len - skip;
-  }
-
-  bytes[len] = 0;
-  // We report one level up from command_line_path
-  woempa(1, "command_line_path is '%s' (%d chars)\n", bytes, len);
-  while (len && bytes[--len] != '/') {
-    woempa(1, "byte[%d] is not '/', decrementing length\n", len);
-  }
-  bytes[len] = 0;
-  woempa(1, "returning %s\n", bytes);
-
-  return bytes;
+  return fsroot;
 }
 
 char *getExtensionDir(void) {
@@ -97,6 +71,7 @@ char *getExtensionDir(void) {
 char *getOSName(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
   return uname_buffer.sysname;
@@ -105,14 +80,16 @@ char *getOSName(void) {
 char *getOSVersion(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
-  return uname_buffer.version;
+  return uname_buffer.release;
 }
 
 char *getOSArch(void) {
   if (!uname_called) {
     uname(&uname_buffer);
+    uname_called = TRUE;
   }
 
   return uname_buffer.machine;

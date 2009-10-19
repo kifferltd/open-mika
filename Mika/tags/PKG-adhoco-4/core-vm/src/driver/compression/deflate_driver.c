@@ -1,28 +1,33 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2008, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "oswald.h"
@@ -36,7 +41,7 @@ static w_void unzip_initDevice(w_device device) {
 
   // do not initialise the mother device
   if(device->familyMember != 0 && device->familyMember != 20) {
-    device->control = allocMem(sizeof(w_Deflate_Control));
+    device->control = allocClearedMem(sizeof(w_Deflate_Control));
     if(!device->control) {
       wprintf("Unable to allocate memory for deflate controller\n");
       return;
@@ -44,179 +49,64 @@ static w_void unzip_initDevice(w_device device) {
     
     unzip = (w_deflate_control)device->control;
   
-    unzip->mutx = allocMem(sizeof(x_Mutex));
-    if(!unzip->mutx) {
-      wprintf("Unable to allocate memory for deflater mutex\n");
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-    
-    unzip->output_bekken = allocMem(32 * 1024 + 1024);
-    if(!unzip->output_bekken) {
-      wprintf("Unable to allocate memory for deflater output buffer\n");
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-    
-    unzip->input_bekken = allocMem(32 * 1024 + 512);
-    if(!unzip->input_bekken) {
-      wprintf("Unable to allocate memory for deflater input buffer\n");
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-
-    unzip->ready = allocMem(sizeof(x_Monitor));
-    if(!unzip->ready) {
-      wprintf("Unable to allocate memory for deflater monitor\n");
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-
-    unzip->qmem_in = allocMem(4 * 512);
-    if(!unzip->qmem_in) {
-      wprintf("Unable to allocate memory for deflater input queue storage\n");
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-    
-    unzip->qmem_out = allocMem(4 * 512);
-    if(!unzip->qmem_out) {
-      wprintf("Unable to allocate memory for deflater output queue storage\n");
-      releaseMem(unzip->qmem_in);
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-  
-    unzip->q_in = allocMem(sizeof(x_Queue));
-    if(!unzip->q_in) {
-      wprintf("Unable to allocate memory for deflater input queue\n");
-      releaseMem(unzip->qmem_out);
-      releaseMem(unzip->qmem_in);
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-  
-    unzip->q_out = allocMem(sizeof(x_Queue));
-    if(!unzip->q_out) {
-      wprintf("Unable to allocate memory for deflater output queue\n");
-      releaseMem(unzip->q_in);
-      releaseMem(unzip->qmem_out);
-      releaseMem(unzip->qmem_in);
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-
-    unzip->thread = allocClearedMem(sizeof(x_Thread));
-    if(!unzip->thread) {
-      wprintf("Unable to allocate memory for deflater thread\n");
-      releaseMem(unzip->q_out);
-      releaseMem(unzip->q_in);
-      releaseMem(unzip->qmem_out);
-      releaseMem(unzip->qmem_in);
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
-      releaseMem(device->control);
-      device->control = NULL;
-      return;
-    }
-
 #ifdef O4P
     unzip->stack = NULL;
 #else
     unzip->stack = allocClearedMem_with_retries(driver_stack_size, 3);
     if(!unzip->stack) {
       wprintf("Unable to allocate memory for deflater stack\n");
-      releaseMem(unzip->thread);
-      releaseMem(unzip->q_out);
-      releaseMem(unzip->q_in);
-      releaseMem(unzip->qmem_out);
-      releaseMem(unzip->qmem_in);
-      releaseMem(unzip->ready);
-      releaseMem(unzip->input_bekken);
-      releaseMem(unzip->output_bekken);
-      releaseMem(unzip->mutx);
       releaseMem(device->control);
       device->control = NULL;
       return;
     }
 #endif
 
-    x_mutex_create(unzip->mutx);
+    x_mutex_create(&unzip->mutx);
 
-    unzip->offset_in = unzip->offset_out = unzip->offset_bek_out = 0;
-    unzip->lookahead_bek_in = unzip->offset_bek_in = unzip->size_bek_out = 0;
+    // not needed if we allocClearedMem
+    //unzip->offset_in = unzip->offset_out = unzip->offset_bek_out = 0;
+    //unzip->lookahead_bek_in = unzip->offset_bek_in = unzip->size_bek_out = 0;
     unzip->i_bits = 0x01;
     unzip->o_bits = 0;
     unzip->o_mask = 0x1;
-    unzip->par_out = unzip->par_in = NULL;
+    //unzip->par_out = unzip->par_in = NULL;
 
     unzip->compression_level = 9;
     unzip->no_auto = 0;
     unzip->need_more_input = 1;             // we are starting up, so we need input
-    unzip->processed_size = 0;
+    //unzip->processed_size = 0;
 
-    unzip->reset = 0;
-    unzip->stop = 0;
-    unzip->state = 0;
+    //unzip->resets_requested = 0;
+    //unzip->resets_completed = 0;
+    //unzip->stop = 0;
+    unzip->state = COMPRESSION_THREAD_UNSTARTED;
 
-    x_monitor_create(unzip->ready);
+    x_monitor_create(&unzip->ready);
 
-    unzip->dictionary = 0;
+    //unzip->dictionary = 0;
 
     // for the zipper
-    unzip->nomoreinput = 0;
+    //unzip->nomoreinput = 0;
 
-    x_queue_create(unzip->q_in, unzip->qmem_in, 512);
-    woempa(1, "Created q_in at %p\n", unzip->q_in);
-    x_queue_create(unzip->q_out, unzip->qmem_out, 512);
-    woempa(1, "Created q_out at %p\n", unzip->q_out);
+    x_queue_create(&unzip->q_in, &unzip->qmem_in, 512);
+    woempa(1, "Created q_in at %p\n", &unzip->q_in);
+    x_queue_create(&unzip->q_out, &unzip->qmem_out, 512);
+    woempa(1, "Created q_out at %p\n", &unzip->q_out);
 
 
-    x_monitor_eternal(unzip->ready);
+    x_monitor_eternal(&unzip->ready);
     // Start thread with the current prio of the current thread, this to provide nice round-robinning
     if(device->familyMember < 200) {
-      status = x_thread_create(unzip->thread, zzzinflate, unzip, unzip->stack, driver_stack_size, 20, TF_START);
+      status = x_thread_create(&unzip->thread, zzzinflate, unzip, unzip->stack, driver_stack_size, 20, TF_START);
     }
     else {
-      status = x_thread_create(unzip->thread, zzzdeflate, unzip, unzip->stack, driver_stack_size, 20, TF_START);
+      status = x_thread_create(&unzip->thread, zzzdeflate, unzip, unzip->stack, driver_stack_size, 20, TF_START);
     }
     if (status != xs_success) {
       wabort(ABORT_WONKA, "Hooooola, unable to start deflating thread: status = '%s'\n", x_status2char(status));
     }
-    x_monitor_wait(unzip->ready, x_eternal);
-    x_monitor_exit(unzip->ready);
+    x_monitor_wait(&unzip->ready, x_eternal);
+    x_monitor_exit(&unzip->ready);
   }
 }
 
@@ -234,81 +124,66 @@ static w_void unzip_termDevice(w_device device) {
 
     // trying to enter monitor
     woempa(INF_WOEMP_LEV_1, "Entering\n");
-    s = x_monitor_eternal(unzip->ready);
-    if (s == xs_success) {
-      // messaging to reset and stop
-      unzip->reset = 1;
-      unzip->stop = 1;
+    s = x_monitor_eternal(&unzip->ready);
+    if (s != xs_success) {
+      wabort(ABORT_WONKA, "entering unzip->ready, error %d in monitor\n", s);
+    }
 
-      // set end of input
-      unzip->nomoreinput = 1;
+    unzip->resets_requested = unzip->resets_completed + 1;
+    unzip->stop = 1;
+    unzip->nomoreinput = 1;
 
-      woempa(INF_WOEMP_LEV_1, "Sending on q_in %p\n", unzip->q_in);
-      // send a bogus message to make shure blocking thread gets revived, but don't try to hard, it could be possible that the queue is full
-      s = x_queue_send(unzip->q_in, NULL, x_millis2ticks(500));
-      switch (s) {
-        case xs_success:
-          break;
-        default:
-          wabort(ABORT_WONKA, "Couldn't send bogus message, error in monitor\n");
+    woempa(INF_WOEMP_LEV_1, "Sending on q_in %p\n", &unzip->q_in);
+    // send a bogus message to make sure blocking thread gets revived, but 
+    // don't try to hard, it could be possible that the queue is full
+    s = x_queue_send(&unzip->q_in, NULL, x_millis2ticks(500));
+    switch (s) {
+      case xs_success:
+        break;
+      default:
+        wabort(ABORT_WONKA, "Couldn't send bogus message, error %d in monitor\n", s);
+    }
+
+    woempa(INF_WOEMP_LEV_1, "Notifying\n");
+    // notify the thread we changed something
+    x_monitor_notify_all(&unzip->ready);
+
+    woempa(INF_WOEMP_LEV_1, "Waiting\n");
+    // wait till thread notifies us
+    while (unzip->state == COMPRESSION_THREAD_RUNNING) {
+      s = x_monitor_wait(&unzip->ready, COMPRESSION_WAIT_TICKS);
+      if (s == xs_interrupted) {
+        s = x_monitor_eternal(&unzip->ready);
+        if (s != xs_success) {
+           wabort(ABORT_WONKA, "re-entering unzip->ready, error %d in monitor\n", s);
+        }
       }
-
-      woempa(INF_WOEMP_LEV_1, "Notifying\n");
-      // notify the thread we changed something
-      x_monitor_notify_all(unzip->ready);
-
-      woempa(INF_WOEMP_LEV_1, "Waiting\n");
-      // wait till thread notifies us
-      if(unzip->state == 1) {
-        s = x_monitor_wait(unzip->ready, x_eternal);
-        if (s == xs_success || s == xs_no_instance) {
-          x_monitor_exit(unzip->ready);
-        }
-        else if (s != xs_interrupted) {
-          x_monitor_exit(unzip->ready);
-
-          wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
-        }
-        x_monitor_exit(unzip->ready);
+      else if (s != xs_success && s != xs_no_instance) {
+        wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
       }
     }
-    else {
-      wabort(ABORT_WONKA, "entering unzip->ready, error in monitor\n");
-    }
+    x_monitor_exit(&unzip->ready);
     woempa(INF_WOEMP_LEV_1, "Exit\n");
 
-    status = x_thread_join(unzip->thread, &join_result, 100);
-    if (status != xs_success && status != xs_no_instance) {
+    status = x_thread_join(&unzip->thread, &join_result, 100);
+    if (status != xs_success /* && status != xs_no_instance */) {
       wabort(ABORT_WONKA, "Hooooola, unable to join deflating thread: status = '%s'\n", x_status2char(status));
     }
 
-    status = x_thread_delete(unzip->thread);
+    status = x_thread_delete(&unzip->thread);
     if (status != xs_success) {
-      wabort(ABORT_WONKA, "Hooooola, unable to stop deflating thread: status = '%s'\n", x_status2char(status));
+      wabort(ABORT_WONKA, "Hooooola, unable to delete deflating thread: status = '%s'\n", x_status2char(status));
     }
     if (unzip->stack) {
       releaseMem(unzip->stack);
     }
-    releaseMem(unzip->thread);
 
-    woempa(1, "Deleting q_in at %p\n", unzip->q_in);
-    x_queue_delete(unzip->q_in);
-    releaseMem(unzip->qmem_in);
-    releaseMem(unzip->q_in);
-
-    woempa(1, "Deleting q_out at %p\n", unzip->q_out);
-    x_queue_delete(unzip->q_out);
-    releaseMem(unzip->qmem_out);
-    releaseMem(unzip->q_out);
-
-    x_mutex_delete(unzip->mutx);
-    releaseMem(unzip->mutx);
-
-    releaseMem(unzip->output_bekken);
-    releaseMem(unzip->input_bekken);
-
-    x_monitor_delete(unzip->ready);
-    releaseMem(unzip->ready);
+    woempa(1, "Deleting q_in at %p\n", &unzip->q_in);
+    x_queue_delete(&unzip->q_in);
+    woempa(1, "Deleting q_out at %p\n", &unzip->q_out);
+    x_queue_delete(&unzip->q_out);
+    x_mutex_delete(&unzip->mutx);
+    x_monitor_delete(&unzip->ready);
 
     releaseMem(unzip);
   }
@@ -417,8 +292,8 @@ static w_driver_status unzip_write(w_device device, w_ubyte *bytes, w_int length
   qe->size = length;
   qe->errnum = WUNZIP_OK;
 
-  woempa(7, "Sending on q_in at %p\n", l->q_in);
-  s = x_queue_send(l->q_in, qe, timeout);
+  woempa(7, "Sending on q_in at %p\n", &l->q_in);
+  s = x_queue_send(&l->q_in, qe, timeout);
 // this is unsafe, but we might need something like this (if the other thread 
 // is waiting on the queue, already setting need_more_input = 0)
 //  l->need_more_input = 0;
@@ -453,7 +328,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
   }
 
   // Get lock
-  switch (x_mutex_lock(l->mutx, timeout)) {
+  switch (x_mutex_lock(&l->mutx, timeout)) {
     case xs_success:
       break;
     default:
@@ -478,7 +353,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
 
         woempa(INF_WOEMP_LEV_1, "returning ENDS\n");
 
-        x_mutex_unlock(l->mutx);
+        x_mutex_unlock(&l->mutx);
         return wds_data_exhausted;    
       }
 
@@ -487,7 +362,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
 
         woempa(INF_WOEMP_LEV_1, "returning full block\n");
 
-        x_mutex_unlock(l->mutx);
+        x_mutex_unlock(&l->mutx);
         return wds_success;
       }
       
@@ -514,13 +389,13 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
         woempa(INF_WOEMP_LEV_1, "returning block. size %i\n", offset);
 
         // buffer is now full, so move out
-        x_mutex_unlock(l->mutx);
+        x_mutex_unlock(&l->mutx);
         return wds_success;
       }
     }
     else {
       // no data, get some
-      s = x_queue_receive(l->q_out, (w_void **)&qe, timeout);
+      s = x_queue_receive(&l->q_out, (w_void **)&qe, timeout);
 
       // TODO : decrease timeout if we had to wait
 
@@ -532,7 +407,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
             woempa(7, "AIAIAI, not good, allocation failure somewhere.\n");
             wprintf("AIAIAI, not good, allocation failure somewhere.\n");
 
-            x_mutex_unlock(l->mutx);
+            x_mutex_unlock(&l->mutx);
 	    wprintf("read null queue element\n");
             return wds_internal_error;
           } 
@@ -558,7 +433,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
                   woempa(INF_WOEMP_LEV_1, "returning block and remembring ENDS. size %i\n", offset);
 
                   releaseMem(qe);
-                  x_mutex_unlock(l->mutx);
+                  x_mutex_unlock(&l->mutx);
                   return wds_success;
                 }
                 else {
@@ -568,7 +443,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
                   woempa(INF_WOEMP_LEV_1, "returning ENDS\n");
 
                   releaseMem(qe);
-                  x_mutex_unlock(l->mutx);
+                  x_mutex_unlock(&l->mutx);
                   return wds_data_exhausted;    
                 }
               case WUNZIP_ERROR:
@@ -580,7 +455,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
 
                 releaseMem(qe);
                 // Release lock
-                x_mutex_unlock(l->mutx);
+                x_mutex_unlock(&l->mutx);
 	        wprintf("Unzipper returned error code %d\n", qe->errnum);
                 return wds_internal_error;
             }
@@ -596,14 +471,14 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
 
             woempa(INF_WOEMP_LEV_1, "returning block. size %i\n", offset);
 
-            x_mutex_unlock(l->mutx);
+            x_mutex_unlock(&l->mutx);
             return wds_success;
           }
           else {
 
             woempa(INF_WOEMP_LEV_1, "returning no_instance\n");
 
-            x_mutex_unlock(l->mutx);
+            x_mutex_unlock(&l->mutx);
             return wds_no_instance;    
           }
         default:
@@ -615,7 +490,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
           *lread = 0;
 
           // Release lock (no error checking necessary)
-          x_mutex_unlock(l->mutx);
+          x_mutex_unlock(&l->mutx);
 	  wprintf("Error receiving from queue\n");
           return wds_internal_error;    
       }  
@@ -623,7 +498,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
   }
 
   // Release lock (no error checking necessary) -- Redundant code, only for safety
-  x_mutex_unlock(l->mutx);
+  x_mutex_unlock(&l->mutx);
 	  wprintf("Should not get here\n");
   return wds_internal_error;    
 }
@@ -636,6 +511,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
   x_status s;
   w_deflate_control zip = (w_deflate_control)device->control;
   w_deflate_queueelem qe;
+  w_short reset_count;
 
   if(!device->control) {
 	  wprintf("Null deflate control\n");
@@ -665,8 +541,8 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         qe->size = 0;
         qe->errnum = WUNZIP_ENDS;
 
-        woempa(7, "Sending on zip->q_in = %p, timeout = %d\n", zip->q_in, timeout);
-        s = x_queue_send(zip->q_in, qe, timeout);
+        woempa(7, "Sending on zip->q_in = %p, timeout = %d\n", &zip->q_in, timeout);
+        s = x_queue_send(&zip->q_in, qe, timeout);
         woempa(7, "s = %p\n", s);
         switch (s) {
           case xs_success:
@@ -696,14 +572,15 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
       woempa(7, "wdi_reset\n");
       // here same as in termDevice, only don't stop
       woempa(INF_WOEMP_LEV_1, "Entering\n");
-      s = x_monitor_eternal(zip->ready);
+      s = x_monitor_eternal(&zip->ready);
       if (s == xs_success) {
-        zip->reset = 1;
+        reset_count = zip->resets_requested + 1;
+        zip->resets_requested = reset_count;
 
         zip->nomoreinput = 1;
 
-        woempa(INF_WOEMP_LEV_1, "Sending on q_in at %p\n", zip->q_in);
-        s = x_queue_send(zip->q_in, NULL, timeout);
+        woempa(INF_WOEMP_LEV_1, "Sending on q_in at %p\n", &zip->q_in);
+        s = x_queue_send(&zip->q_in, NULL, timeout);
         switch (s) {
           case xs_success:
             break;
@@ -713,31 +590,34 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         }
 
         woempa(INF_WOEMP_LEV_1, "Notifying\n");
-        x_monitor_notify_all(zip->ready);
+        x_monitor_notify_all(&zip->ready);
 
         woempa(INF_WOEMP_LEV_1, "Waiting\n");
 
-        if(zip->state == 1) {
-          s = x_monitor_wait(zip->ready, x_eternal);
-          if (s == xs_success || s == xs_no_instance) {
-            woempa(INF_WOEMP_LEV_1, "Exit OK\n");
-            x_monitor_exit(zip->ready);
-            return wds_success;
-          }
-          else if (s == xs_interrupted) {
+        /*
+        ** If the the deflater thread is running, we give it a chance
+        ** to process the reset and notify us that it has done so.
+        ** We know that the reset has completed when resets_completed == reset_Count.
+        */
+        while (zip->state == COMPRESSION_THREAD_RUNNING && zip->resets_completed != reset_count) {
+          s = x_monitor_wait(&zip->ready, COMPRESSION_WAIT_TICKS);
+          if (s == xs_interrupted) {
             wprintf("x_monitor_wait returned xs_interrupted\n");
             return wds_internal_error;
           }
-          else {
+          else if (s != xs_success && s != xs_no_instance) {
             woempa(INF_WOEMP_LEV_1, "Exit ERROR\n");
-            x_monitor_exit(zip->ready);
+            x_monitor_exit(&zip->ready);
             wprintf("x_monitor_wait returned error code %d\n", s);
             return wds_internal_error;
           }
         }
+        woempa(INF_WOEMP_LEV_1, "Exit OK\n");
+        x_monitor_exit(&zip->ready);
+        return wds_success;
       }
       else {
-        wprintf("Unable to send queue element\n");
+        wprintf("Unable to enter zip->ready\n");
         return wds_internal_error;
       }
 

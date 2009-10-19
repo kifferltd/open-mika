@@ -371,9 +371,16 @@ public void test_setAccessible() {
       catch (IllegalAccessException e) { th.check(false);}	
       try{
  	flds2[4].getInt(this);
- 	th.fail("access on superclass in other package -- 9");
+ 	th.check(true, "access on superclass in other package -- 9a");
       }
-      catch (IllegalAccessException e) { th.check(true,"IllegalAccessException was wanted");}	
+      catch (IllegalAccessException e) { th.fail("IllegalAccessException was not wanted");}	
+
+      try{
+        flds2[4].getInt(null);
+        th.check(false, "access on superclass in other package -- 9b");
+      }
+      catch (IllegalAccessException e) { th.check(true,"IllegalAccessException was not wanted");} 
+
       try{
  	flds2[4].getInt(hc2);
  	th.fail("access on superclass in other package -- 10");
@@ -512,9 +519,15 @@ public void test_setAccessible() {
     catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
     try {
             mtds2[4].invoke(null,o);
-            th.fail("access on superclass in other package -- 9");
+            th.fail("access on superclass in other package -- 9a");
     } catch (IllegalAccessException e) { th.check(true);}
     catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
+    try {
+      mtds2[4].invoke(this,o);
+      th.check(true, "access on superclass in other package -- 9b");
+    } catch (IllegalAccessException e) { th.check(false,"access on superclass in other package -- 9b");}
+    catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
+    
     try {
             mtds2[4].setAccessible(true);
             th.check( mtds2[4].invoke(null,o), null , "access on class in same package -- 10");
@@ -762,10 +775,15 @@ public void test_setAccessible() {
      }
      catch (IllegalAccessException e) { th.check(false);}	
      try{
-	flds2[4].getInt(object);
-	th.fail("access on superclass in other package -- 9");
+       flds2[4].getInt(object);
+       th.check(true, "access on superclass in other package -- 9a");
      }
-     catch (IllegalAccessException e) { th.check(true,"IllegalAccessException was wanted");}	
+     catch (IllegalAccessException e) { th.fail("IllegalAccessException was wanted");}	
+     try{
+      flds2[4].getInt(null);
+      th.fail("access on superclass in other package -- 9b");
+          }
+          catch (IllegalAccessException e) { th.check(true, "IllegalAccessException was wanted");} 
      try{
 	flds2[4].getInt(hc2);
 	th.fail("access on superclass in other package -- 10");
@@ -905,9 +923,15 @@ public void test_setAccessible() {
         catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
         try {
                 mtds2[4].invoke(null,o);
-                th.fail("access on superclass in other package -- 9");
+                th.fail("access on superclass in other package -- 9a");
         } catch (IllegalAccessException e) { th.check(true);}
         catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
+        try {
+          mtds2[4].invoke(object,o);
+          th.check(true,"access on superclass in other package -- 9b");
+  } catch (IllegalAccessException e) { th.check(false,"access on superclass in other package -- 9b");}
+  catch(InvocationTargetException i) { th.check(false,"unwanted InvocationTargetException");}
+
         try {
                 mtds2[4].setAccessible(true);
                 th.check( mtds2[4].invoke(null,o), null , "access on class in same package -- 10");

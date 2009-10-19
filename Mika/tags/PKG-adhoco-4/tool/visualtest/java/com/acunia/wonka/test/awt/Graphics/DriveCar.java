@@ -46,9 +46,7 @@ public class DriveCar extends VisualTestImpl {
     Place(int width, int height, Color background) {
       this.setSize(width, height);
       this.setBackground(background);
-      String path = System.getProperty("vte.test.path", "{}/test/image");
-      carImage = Toolkit.getDefaultToolkit().getImage(path + "/car-image.png");
-      //carImage = Toolkit.getDefaultToolkit().createImage(this.getClass().getResource(path+"/car-image.png"));
+      carImage = Toolkit.getDefaultToolkit().createImage(this.getClass().getResource("/car-image.png"));
     }
 
 

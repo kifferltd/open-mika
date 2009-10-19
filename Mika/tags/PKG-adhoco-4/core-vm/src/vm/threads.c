@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2002, 2003 by Acunia N.V. All rights reserved.*
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Mika(TM) modifications Copyright (C) 2004, 2006 Chris Gray,             *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: threads.c,v 1.33 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <string.h>
 
@@ -137,7 +138,6 @@ w_int priority_j2k(w_int java_prio, w_int trim) {
 
 w_thread createThread(w_thread parentthread, w_instance Thread, w_instance parentThreadGroup, w_string name, w_size stacksize) {
 
-  w_instance Name;
   w_thread newthread;
   
   newthread = allocClearedMem(sizeof(w_Thread));
@@ -180,14 +180,8 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   newthread->top->jstack_top += 1;
   newthread->state = wt_unstarted;
   setWotsitField(Thread, F_Thread_wotsit,  newthread);
-  Name = newStringInstance(name);
-  if (Name) {
-    setReferenceField(Thread, Name, F_Thread_name);
-  }
-  removeLocalReference(parentthread, Name);
-
+  
   return newthread;
-
 }
 
 void terminateThread(w_thread thread) {
@@ -216,7 +210,9 @@ void terminateThread(w_thread thread) {
   }
 
   woempa(1,"Cleaning up %t\n", thread);
-  status = x_thread_delete(thread->kthread);
+  if (thread->state != wt_unstarted) {
+    status = x_thread_delete(thread->kthread);
+  }
   if (status == xs_success) {
     woempa(1,"Cleaned up %t\n", thread);
 
@@ -252,36 +248,18 @@ void terminateThread(w_thread thread) {
 
 }
 
-void addThreadToGroup(w_thread thread, w_instance parentThreadGroup) {
-#ifdef RUNTIME_CHECKS
-  w_thread calling_thread = currentWonkaThread;
-
-  threadMustBeSafe(calling_thread);
-#endif
-
-  /*
-  ** Do the accounting of the thread use
-  */
-
+void addThreadCount(w_thread thread) {
   if (!thread->isDaemon) {
     nondaemon_thread_count += 1;
     woempa(7, "Adding non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
   }
-  ++parentThreadGroup[F_ThreadGroup_totalCount];
 }
 
-void removeThreadFromGroup(w_thread thread, w_instance parentThreadGroup) {
-#ifdef RUNTIME_CHECKS
-  w_thread calling_thread = currentWonkaThread;
-
-  threadMustBeSafe(calling_thread);
-#endif
-
+void removeThreadCount(w_thread thread) {
   if (!thread->isDaemon) {
     --nondaemon_thread_count;
-    woempa(1, "Removed non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
+    woempa(1,"Removed non-daemon thread %w, total now %d\n", thread->name, nondaemon_thread_count);
   }
-  --parentThreadGroup[F_ThreadGroup_totalCount];
 }
 
 /*
@@ -385,9 +363,8 @@ void startInitialThreads(void* data) {
 #endif
   mustBeInitialized(clazzString);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
-  setReferenceField(I_ThreadGroup_system, newStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
+  setReferenceField(I_ThreadGroup_system, getStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
-  setReferenceField(I_Thread_sysInit, newStringInstance(string_sysThread), F_Thread_name);
   setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
 
 /*
@@ -400,14 +377,13 @@ void startInitialThreads(void* data) {
   if (command_line_argument_count > 0) {
     dims = command_line_argument_count;
     woempa(7,"Allocating array of %d String[s]\n",dims);
+    enterUnsafeRegion(W_Thread_sysInit);
     arglist = allocArrayInstance_1d(W_Thread_sysInit, clazzArrayOf_String, dims);
-    // CG 20040114 removeLocalReference(W_Thread_sysInit, arglist);
-
+    enterSafeRegion(W_Thread_sysInit);
     for (i = 0; i < command_line_argument_count; i++) {
       woempa(7, "Getting string instance of '%s', thread is '%t'\n", command_line_arguments[i], currentWonkaThread);
-      String = newStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
+      String = getStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
       setArrayReferenceField(arglist, String, i);
-      // CG 20040114 removeLocalReference(W_Thread_sysInit, String);
       woempa(9,"args[%d] = \"%w\" bytecodecount = %d\n",i,String2string(instance2Array_instance(arglist)[i]), woempa_bytecodecount);
     }
   }
@@ -421,7 +397,7 @@ void startInitialThreads(void* data) {
     wabort(ABORT_WONKA, "Bootstrapping failed: %e", bootstrap_exception);
   }
 
-  addThreadToGroup(W_Thread_sysInit, I_ThreadGroup_system);
+  addThreadCount(W_Thread_sysInit);
   system_init_thread_started = TRUE;
 
 /*
@@ -463,7 +439,7 @@ void startInitialThreads(void* data) {
 
   setBooleanField(I_Thread_sysInit, F_Thread_stopped, TRUE);
   W_Thread_sysInit->top = & W_Thread_sysInit->rootFrame;
-  removeThreadFromGroup(W_Thread_sysInit, thread2ThreadGroup(W_Thread_sysInit));
+  removeThreadCount(W_Thread_sysInit);
   W_Thread_sysInit->state = wt_dying;
   unsafe = enterUnsafeRegion(W_Thread_sysInit);
   ht_erase(thread_hashtable,(w_word)W_Thread_sysInit->kthread);
@@ -476,9 +452,14 @@ void startInitialThreads(void* data) {
 #endif
 }
 
+static x_Mutex Mutex64;
+x_mutex mutex64;
+
 void startKernel() {
   nondaemon_thread_count = 0;
 
+  mustBeInitialized(clazzThreadGroup);
+  mustBeInitialized(clazzThread);
   thread_hashtable = ht_create((char*)"hashtable:threads", THREAD_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "Created thread_hashtable at %p\n",thread_hashtable);
 #ifdef USE_OBJECT_HASHTABLE
@@ -506,8 +487,13 @@ void startKernel() {
   W_Thread_sysInit->jpriority = USER_PRIORITY;
   W_Thread_sysInit->Thread = I_Thread_sysInit;
 
-  setUpRootFrame(W_Thread_sysInit);
+  mutex64 = &Mutex64;
 
+  x_mutex_create(mutex64);
+
+  mustBeInitialized(clazzClass);
+  mustBeInitialized(clazzExceptionInInitializerError);
+  mustBeInitialized(clazzAbstractMethodError);
   class_ThreadGroup = clazz2Class(clazzThreadGroup);
 #ifndef GC_SAFE_POINTS_USE_NO_MONITORS
   x_monitor_create(safe_points_monitor);
@@ -628,7 +614,15 @@ char * threadDescription(w_thread t) {
 
 }
 
+#ifdef RUNTIME_CHECKS
+#define checkOswaldStatus(s) if ((s) != xs_success) wabort(ABORT_WONKA, "x_monitor_xxx() call returned status = %d", (s))
+#else
+#define checkOswaldStatus(s)
+#endif
+
 w_boolean enterUnsafeRegion(const w_thread thread) {
+  x_status status;
+
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterUnsafeRegion: %t has flag already set\n", thread);
 
@@ -654,29 +648,32 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   }
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  status = x_monitor_eternal(safe_points_monitor);
   if (thread != marking_thread) {
     while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-      x_status status;
-
       woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
       status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
       if (status == xs_interrupted) {
-        x_monitor_eternal(safe_points_monitor);
-       }
+        status = x_monitor_eternal(safe_points_monitor);
+      }
+      checkOswaldStatus(status);
     }
   }
   ++ number_unsafe_threads;
   woempa(2, "enterUnsafeRegion: %t incremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
 
   return FALSE;
 }
 
 w_boolean enterSafeRegion(const w_thread thread) {
+  x_status status;
+
   if (isNotSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
     woempa(2, "enterSafeRegion: %t has flag unset\n", thread);
 
@@ -694,13 +691,22 @@ w_boolean enterSafeRegion(const w_thread thread) {
   -- number_unsafe_threads;
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  status = x_monitor_eternal(safe_points_monitor);
+  checkOswaldStatus(status);
   -- number_unsafe_threads;
   woempa(2, "enterSafeRegion: %t decremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
+
+  if (isSet(thread->flags, WT_THREAD_GC_PENDING)) {
+    unsetFlag(thread->flags, WT_THREAD_GC_PENDING);
+    gc_reclaim(thread->to_be_reclaimed, NULL);
+    thread->to_be_reclaimed = 0;
+  }
 
   return TRUE;
 }
@@ -728,7 +734,8 @@ void _gcSafePoint(w_thread thread
     }
     setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
 #else
-  x_monitor_eternal(safe_points_monitor);
+  x_status status = x_monitor_eternal(safe_points_monitor);
+  checkOswaldStatus(status);
 #ifdef RUNTIME_CHECKS
   if (number_unsafe_threads <= 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d in _gcSafePoint()!\n", number_unsafe_threads);
@@ -737,21 +744,31 @@ void _gcSafePoint(w_thread thread
   -- number_unsafe_threads;
   woempa(7, "gcSafePoint -> enterSafeRegion: %t decremented number_unsafe_threads to %d in %s:%d\n", thread, number_unsafe_threads, file, line);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_notify_all(safe_points_monitor);
+  status = x_monitor_notify_all(safe_points_monitor);
+  checkOswaldStatus(status);
+
+  if (thread->to_be_reclaimed) {
+    x_monitor_exit(safe_points_monitor);
+    checkOswaldStatus(status);
+    gc_reclaim(thread->to_be_reclaimed, NULL);
+    thread->to_be_reclaimed = 0;
+    status = x_monitor_eternal(safe_points_monitor);
+    checkOswaldStatus(status);
+  }
 
   while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-    x_status status;
-
-    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
+    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-     }
+      status = x_monitor_eternal(safe_points_monitor);
+    }
+    checkOswaldStatus(status);
   }
   ++ number_unsafe_threads;
   woempa(7, "gcSafePoint -> enterUnsafeRegion: %t incremented number_unsafe_threads to %d in %s:%d\n", thread, number_unsafe_threads, file, line);
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  x_monitor_exit(safe_points_monitor);
+  status = x_monitor_exit(safe_points_monitor);
+  checkOswaldStatus(status);
 #endif
 }
 

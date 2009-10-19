@@ -37,7 +37,7 @@ SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
 Library $(WONKA_LIB) : Boolean.c Byte.c Character.c Class.c ClassLoader.c Double.c ;
 Library $(WONKA_LIB) : Float.c Integer.c Long.c Object.c Runtime.c SecurityManager.c ;
 Library $(WONKA_LIB) : Short.c String.c StringBuffer.c System.c Thread.c ThreadGroup.c Throwable.c Void.c ;
-Library $(WONKA_LIB) : Math.c ;
+Library $(WONKA_LIB) : Math.c NativeProperties.c ;
 
 SubInclude WONKA_TOP core-vm src native java lang reflect ;
 SubInclude WONKA_TOP core-vm src native java lang ref ;

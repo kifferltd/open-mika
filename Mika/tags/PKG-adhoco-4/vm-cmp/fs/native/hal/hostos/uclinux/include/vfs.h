@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2003, 2004, 2007 by Chris Gray, /k/ Embedded Java   *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (C) 2003, 2004 by /k/ Chris Gray, /k/ Embedded  *
-* Java Solutions.  All rights reserved.                                   *
-
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #ifndef VFS_INCLUDE
@@ -89,40 +93,40 @@ static inline void init_vfs(void) {
 ** non-blocking.
 */
 
-#define vfs_open(path, a...)       open(path, ##a)
-#define vfs_creat(path, a...)      creat(path, ##a)
-#define vfs_read(a...)             read(##a)
-#define vfs_write(a...)            write(##a)
+#define vfs_open(path, a...)       open(path, a)
+#define vfs_creat(path, a...)      creat(path, a)
+#define vfs_read(a...)             read(a)
+#define vfs_write(a...)            write(a)
 
-#define vfs_fopen(path, a...)      fopen(path, ##a)
-#define vfs_fdopen(a...)           fdopen(##a)
-#define vfs_fclose(a...)           fclose(##a)
+#define vfs_fopen(path, a...)      fopen(path, a)
+#define vfs_fdopen(a...)           fdopen(a)
+#define vfs_fclose(a...)           fclose(a)
 
-#define vfs_fseek(a...)            fseek(##a)
-#define vfs_ftell(a...)            ftell(##a)
-#define vfs_rewind(a...)           rewind(##a)
-#define vfs_fgetpos(a...)          fgetpos(##a)
-#define vfs_fsetpos(a...)          fsetpos(##a)
+#define vfs_fseek(a...)            fseek(a)
+#define vfs_ftell(a...)            ftell(a)
+#define vfs_rewind(a...)           rewind(a)
+#define vfs_fgetpos(a...)          fgetpos(a)
+#define vfs_fsetpos(a...)          fsetpos(a)
 
-#define vfs_fread(a...)            fread(##a)
-#define vfs_fwrite(a...)           fwrite(##a)
+#define vfs_fread(a...)            fread(a)
+#define vfs_fwrite(a...)           fwrite(a)
 
-#define vfs_fopen(path, a...)      fopen(path, ##a)
-#define vfs_fdopen(a...)           fdopen(##a)
-#define vfs_fclose(a...)           fclose(##a)
+#define vfs_fopen(path, a...)      fopen(path, a)
+#define vfs_fdopen(a...)           fdopen(a)
+#define vfs_fclose(a...)           fclose(a)
 
-#define vfs_feof(a...)             feof(##a)
-#define vfs_ferror(a...)           ferror(##a)
-#define vfs_clearerr(a...)         clearerr(##a)
+#define vfs_feof(a...)             feof(a)
+#define vfs_ferror(a...)           ferror(a)
+#define vfs_clearerr(a...)         clearerr(a)
 
-#define vfs_fgetc(a...)            fgetc(##a)
-#define vfs_getc(a...)             getc(##a)
-#define vfs_fgets(a...)            fgets(##a)
-#define vfs_fputc(a...)            fputc(##a)
-#define vfs_fputs(a...)            fputs(##a)
-#define vfs_putc(a...)             putc(##a)
+#define vfs_fgetc(a...)            fgetc(a)
+#define vfs_getc(a...)             getc(a)
+#define vfs_fgets(a...)            fgets(a)
+#define vfs_fputc(a...)            fputc(a)
+#define vfs_fputs(a...)            fputs(a)
+#define vfs_putc(a...)             putc(a)
 
-#define vfs_fflush(a...)           fflush(##a)
+#define vfs_fflush(a...)           fflush(a)
 
 #define vfs_FILE                   FILE
 
@@ -141,18 +145,19 @@ static inline void init_vfs(void) {
 #define vfs_closedir(a)            closedir(a)
 #define vfs_readdir(a)             readdir(a)
 #define vfs_rewinddir(a)           rewinddir(a)
-#define vfs_telldir(a...)          telldir(##a)
-#define vfs_seekdir(a...)          seekdir(##a)
-#define vfs_alphasort(a...)        alphasort(##a)
+#define vfs_telldir(a...)          telldir(a)
+#define vfs_seekdir(a...)          seekdir(a)
+#define vfs_alphasort(a...)        alphasort(a)
 
-#define vfs_fstat(a...)            fstat(##a)
-#define vfs_stat(path, a...)       stat(path, ##a)
+#define vfs_fstat(a...)            fstat(a)
+#define vfs_stat(path, a...)       stat(path, a)
+#define vfs_truncate(path,len)    truncate(path, len)
 
-#define vfs_mkdir(path, a...)      mkdir(path, ##a)
+#define vfs_mkdir(path, a...)      mkdir(path, a)
 #define vfs_rmdir(path)            rmdir(path)
 #define vfs_unlink(path)           unlink(path)
-#define vfs_chmod(path, a...)      chmod(path, ##a)
-#define vfs_fchmod(a...)           fchmod(##a)
+#define vfs_chmod(path, a...)      chmod(path, a)
+#define vfs_fchmod(a...)           fchmod(a)
 
 #define vfs_rename(a, b)           rename(a, b)
 

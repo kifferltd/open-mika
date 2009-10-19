@@ -1,148 +1,270 @@
-/**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-**************************************************************************/
-
-
-/**
- * $Id: InflaterInputStream.java,v 1.5 2006/10/04 14:24:15 cvsroot Exp $
+/* 
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
+/*
+ * Imported by CG 20080603 based on Apache Harmony ("enhanced") revision 768128.
+ */
+
 package java.util.zip;
 
+import java.io.EOFException;
 import java.io.FilterInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
-**	basic InputStream which use the Inflater. <br>	
-**	<br>
-** 	read class documentation in the {@link Inflater} class	
-*/
+ * This class provides an implementation of {@code FilterInputStream} that
+ * uncompresses data that was compressed using the <i>DEFLATE</i> algorithm
+ * (see <a href="http://www.gzip.org/algorithm.txt">specification</a>).
+ * Basically it wraps the {@code Inflater} class and takes care of the
+ * buffering.
+ * 
+ * @see Inflater
+ * @see DeflaterOutputStream
+ */
 public class InflaterInputStream extends FilterInputStream {
-		
-	protected byte [] buf;
-	protected int len;
-	protected Inflater inf;
 
-	private boolean closed = false;
-			
-	public InflaterInputStream(InputStream in) {
-	 	this(in, new Inflater(), 512);
-	}
-	public InflaterInputStream(InputStream in, Inflater infl) {	
-	 	this(in, infl ,512);
-	}
-	public InflaterInputStream(InputStream in, Inflater  infl, int bufsize) {
-		super(in);
-	 	if (infl == null) {	 	
-			throw new NullPointerException();
-		}
-		inf = infl;
-		buf = new byte[bufsize];
-	}
-	
-	protected void fill() throws IOException{
-		len = in.read(buf, 0, buf.length);
-	}	
-	
-	public int available() throws IOException{
-	 	return (closed ? 0 : 1);
-	}
-	public void close() throws IOException {
-		if (!closed) {
-			closed = true;			
-			in.close();	
-                        inf.end();  	
-		}
-	}
-	
-	public int read() throws IOException {
-   	byte [] b = new byte[1];
-   	int ret = read(b,0,1);
-   	if (ret != -1) {
-   		ret = 0x0ff & (char)b[0];
-   	}
-   	return ret;			
-	}	
-  public int read(byte [] buffer, int offset, int length) throws IOException {
-    if(offset < 0 || len < 0 || offset > buffer.length - length) {
-      throw new ArrayIndexOutOfBoundsException();
+    /**
+     * The inflater used for this stream.
+     */
+    protected Inflater inf;
+
+    /**
+     * The input buffer used for decompression.
+     */
+    protected byte[] buf;
+
+    /**
+     * The length of the buffer.
+     */
+    protected int len;
+
+    boolean closed;
+
+    boolean eof;
+
+    static final int BUF_SIZE = 512;
+
+    /**
+     * This is the most basic constructor. You only need to pass the {@code
+     * InputStream} from which the compressed data is to be read from. Default
+     * settings for the {@code Inflater} and internal buffer are be used. In
+     * particular the Inflater expects a ZLIB header from the input stream.
+     * 
+     * @param is
+     *            the {@code InputStream} to read data from.
+     */
+    public InflaterInputStream(InputStream is) {
+        this(is, new Inflater(), BUF_SIZE);
     }
-    int rd = 0;
-    int ret;
-    while (length > 0) {
-      try {
-        ret = inf.inflate(buffer, offset, length);
-      }
-      catch(DataFormatException dfe) {
-        throw new ZipException("stream is corrupted");
-      }
-      if(ret == 0){
+
+    /**
+     * This constructor lets you pass a specifically initialized Inflater,
+     * for example one that expects no ZLIB header.
+     * 
+     * @param is
+     *            the {@code InputStream} to read data from.
+     * @param inf
+     *            the specific {@code Inflater} for uncompressing data.
+     */
+    public InflaterInputStream(InputStream is, Inflater inf) {
+        this(is, inf, BUF_SIZE);
+    }
+
+    /**
+     * This constructor lets you specify both the {@code Inflater} as well as
+     * the internal buffer size to be used.
+     * 
+     * @param is
+     *            the {@code InputStream} to read data from.
+     * @param inf
+     *            the specific {@code Inflater} for uncompressing data.
+     * @param bsize
+     *            the size to be used for the internal buffer.
+     */
+    public InflaterInputStream(InputStream is, Inflater inf, int bsize) {
+        super(is);
+        if (is == null || inf == null) {
+            throw new NullPointerException();
+        }
+        if (bsize <= 0) {
+            throw new IllegalArgumentException();
+        }
+        this.inf = inf;
+        buf = new byte[bsize];
+    }
+
+    /**
+     * Reads a single byte of decompressed data.
+     * 
+     * @return the byte read.
+     * @throws IOException
+     *             if an error occurs reading the byte.
+     */
+    public int read() throws IOException {
+        byte[] b = new byte[1];
+        if (read(b, 0, 1) == -1) {
+            return -1;
+        }
+        return b[0] & 0xff;
+    }
+
+    /**
+     * Reads up to {@code nbytes} of decompressed data and stores it in
+     * {@code buffer} starting at {@code off}.
+     * 
+     * @param buffer
+     *            the buffer to write data to.
+     * @param off
+     *            offset in buffer to start writing.
+     * @param nbytes
+     *            number of bytes to read.
+     * @return Number of uncompressed bytes read
+     * @throws IOException
+     *             if an IOException occurs.
+     */
+    public int read(byte[] buffer, int off, int nbytes) throws IOException {
+        if (closed) {
+            throw new IOException("stream is closed");
+        }
+
+        if (null == buffer) {
+            throw new NullPointerException();
+        }
+
+        if (off < 0 || nbytes < 0 || off + nbytes > buffer.length) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        if (nbytes == 0) {
+            return 0;
+        }
+
         if (inf.finished()) {
-          if(rd == 0) {
-            rd--;
-          }
-          break;                	 		                		
+            eof = true;
+            return -1;
         }
-        if (inf.needsInput()) {
-          len = in.read(buf,0,buf.length);
-          if(len == -1) {
-            if(rd == 0) {
-              rd--;
-            }
-            break;
-          }
-          inf.setInput(buf,0,len);            	 	
+
+        // avoid int overflow, check null buffer
+        if (off <= buffer.length && nbytes >= 0 && off >= 0
+                && buffer.length - off >= nbytes) {
+            do {
+                if (inf.needsInput()) {
+                    fill();
+                }
+                int result;
+                try {
+                    result = inf.inflate(buffer, off, nbytes);
+                } catch (DataFormatException e) {
+                    if (len == -1) {
+                        throw new EOFException();
+                    }
+                    throw (IOException) (new IOException().initCause(e));
+                }
+                if (result > 0) {
+                    return result;
+                } else if (inf.finished()) {
+                    eof = true;
+                    return -1;
+                } else if (inf.needsDictionary()) {
+                    return -1;
+                } else if (len == -1) {
+                    throw new EOFException();
+                    // If result == 0, fill() and try again
+                }
+            } while (true);
         }
-        else {
-          if (inf.needsDictionary()) {
-            rd = -1;
-          }
-          break;
-        }
-      }
-      length -= ret;
-      offset += ret;
-      rd += ret;	
+        throw new ArrayIndexOutOfBoundsException();
     }
-    return rd;
-	}
-	
-	public long skip(long n) throws IOException {
-	 	long skipped = 0L;
-	 	if (n > 0L) {	 	
-		 	int count = (n > 1024 ? 1024 : (int)n);;
-		 	byte [] buffer = new byte[count];
-		 	int rd;
-		 	while (n > 0L) {
-		 		rd = read(buffer, 0, (count > n ? (int)n : count));
-				if (rd != -1) {
-				 	skipped += rd;
-					n -= rd;			 	
-				}
-				else {
-				 	break;
-				}	 		
-	 		}
-	 	}
-	 	return skipped;
-	}
+
+    /**
+     * Fills the input buffer with data to be decompressed.
+     *
+     * @throws IOException
+     *             if an {@code IOException} occurs.
+     */
+    protected void fill() throws IOException {
+        if (closed) {
+            throw new IOException("stream is closed");
+        }
+        if ((len = in.read(buf)) > 0) {
+            inf.setInput(buf, 0, len);
+        }
+    }
+
+    /**
+     * Skips up to n bytes of uncompressed data.
+     * 
+     * @param nbytes
+     *            the number of bytes to skip.
+     * @return the number of uncompressed bytes skipped.
+     * @throws IOException
+     *             if an error occurs skipping.
+     */
+    public long skip(long nbytes) throws IOException {
+        if (nbytes >= 0) {
+            long count = 0, rem = 0;
+            while (count < nbytes) {
+                int x = read(buf, 0,
+                        (rem = nbytes - count) > buf.length ? buf.length
+                                : (int) rem);
+                if (x == -1) {
+                    eof = true;
+                    return count;
+                }
+                count += x;
+            }
+            return count;
+        }
+        throw new IllegalArgumentException();
+    }
+
+    /**
+     * Returns whether data can be read from this stream.
+     * 
+     * @return 0 if this stream has been closed, 1 otherwise.
+     * @throws IOException
+     *             If an error occurs.
+     */
+    public int available() throws IOException {
+        if (closed) {
+            throw new IOException("stream is closed");
+        }
+        if (eof) {
+            return 0;
+        }
+        return 1;
+    }
+
+    /**
+     * Closes the input stream.
+     * 
+     * @throws IOException
+     *             If an error occurs closing the input stream.
+     */
+    public void close() throws IOException {
+        if (!closed) {
+            inf.end();
+            closed = true;
+            eof = true;
+            super.close();
+            // [CG 20090603] help GC to clean up
+            in = null;
+        }
+    }
+
 }

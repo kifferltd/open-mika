@@ -1,36 +1,44 @@
 /**************************************************************************
-* Copyright (c) 2002, 2003 by Acunia N.V. All rights reserved.            *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2005 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2002, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
+ 
+#ifdef USE_NANOSLEEP
+#include <time.h>
+#else
+#include <sys/time.h>
+#endif
 
-/*
-** $Id: Heartbeat.c,v 1.4 2005/09/30 14:49:13 cvs Exp $
-*/
 #include "clazz.h"
 #include "core-classes.h"
 #include "threads.h"
+#include "wstrings.h"
 
 #ifdef UPTIME_LIMIT
 #include <stdio.h>
@@ -40,6 +48,15 @@ static w_int  time_remaining;
 static x_time next_warning;
 #endif
 
+static w_boolean detect_deadlocks;
+
+static w_fifo deadlock_fifo;
+static w_int fifo_length;
+static w_thread *chain;
+static w_int chain_length;
+static w_thread *checked;
+static w_int checked_length;
+
 #ifdef ACADEMIC_LICENCE
 #include <stdio.h>
 #endif
@@ -47,7 +64,8 @@ static x_time next_warning;
 extern int wonka_killed;
 extern x_thread heartbeat_thread;
 
-void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat) {
+void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat, w_boolean detectDeadlocks) {
+
 #ifdef UPTIME_LIMIT
   stop_time = x_millis2ticks(UPTIME_LIMIT * 1000);
   time_remaining = UPTIME_LIMIT;
@@ -64,12 +82,118 @@ void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat) {
   printf ("\\------------------------------------------------------------/\n");
   printf ("\n");
 #endif
+
+  detect_deadlocks = detectDeadlocks;
 }
 
 w_int Heartbeat_numberNonDaemonThreads(JNIEnv *env, w_instance theClass) {
   
   return nondaemon_thread_count;
 }
+
+static void printDeadlock(w_thread t0, w_thread t2) {
+  w_thread t;
+  w_int i;
+
+  wprintf("- - - DEADLOCK DETECTED - - -\n");
+  for (i = 0; i < chain_length; ++i) {
+    t = chain[i];
+    wprintf("  %t is competing for monitor %p\n", t, t->kthread->waiting_on);
+    t = t->kthread->waiting_on->owner->xref;
+    wprintf("    which is owned by %t\n", t);
+  }
+  wprintf("- - - - - - - - - - - - - - -\n");
+}
+
+static void addToList(w_thread t, w_thread *list, w_int *length) {
+  w_int i;
+
+  for (i = 0; i < *length; ++i) {
+    if (list[i] == t) {
+      return;
+    }
+  }
+
+  woempa(7, "Adding %t to chain at position[%d]\n", t, *length);
+  list[*length] = t;
+  ++*length;
+}
+
+static w_boolean isPresent(w_thread t, w_thread *list, w_int length) {
+  w_int i;
+
+  for (i = 0; i < length; ++i) {
+    if (list[i] == t) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+static void checkForDeadlock(w_thread t0) {
+  w_thread t1 = t0;
+  w_int i;
+  w_int count = 0;
+
+  chain_length = 0;
+  if (!isPresent(t0, checked, checked_length)) {
+    woempa(7, "checking %t for deadlocks\n", t0);
+    addToList(t0, checked, &checked_length);
+    // upper bound is there just to prevent infinite looping
+    for (i = 0; i < fifo_length * 2; ++i) {
+      x_thread xt = t1->kthread;
+      addToList(t1, chain, &chain_length);
+      if (isSet(xt->flags, TF_COMPETING)) {
+        x_monitor waiting_on = xt->waiting_on;
+        if (waiting_on) {
+          woempa(7, "  %t is competing for monitor %p\n", t1, waiting_on);
+           x_thread owner = waiting_on->owner;
+          if (owner) {
+            w_thread t2 = owner->xref;
+            woempa(7, "    which is owned by %t\n", t2);
+            if (t2 && t2 != t1 && isPresent(t2, chain, chain_length)) {
+              // Only trigger if we get around the loop twice - this is to
+              // prevent false positives due to the graph changing during
+              // the scan
+              ++count;
+              woempa(7, "%t already in chain - count = %d\n", t2, count);
+              if (count >= chain_length) {
+                printDeadlock(t0, t2);
+                if (detect_deadlocks) {
+                  wabort(ABORT_WONKA, "Deadlock detected involving threads %t, %t", t1, t2);
+                }
+                break;
+              }
+            }
+            else {
+              count = 0;
+            }
+              t1 = t2;
+          }
+          else {
+            woempa(7, "    which has no owner\n");
+            break;
+          }
+        }
+        else {
+          woempa(7, "  funny, %t is flagged TF_COMPETING but waiting_on == NULL\n", t1);
+          break;
+        }
+      }
+      else {
+        woempa(7, "  %t is not competing for any monitor\n", t1);
+        addToList(t1, checked, &checked_length);
+        break;
+      }
+    }
+  }
+  else {
+    woempa(7, "not checking %t for deadlocks, is already checked\n", t0);
+woempa(7, "blocking_all_threads = %d\n", blocking_all_threads);
+  }
+}
+
 
 extern int dumping_info;
 
@@ -102,6 +226,26 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
   }
 #endif
 
+  if (detect_deadlocks) {
+    w_thread t;
+
+    deadlock_fifo = ht_list_values(thread_hashtable);
+    fifo_length = occupancyOfFifo(deadlock_fifo);
+    woempa(7, "Allocating %d words each for chain, checked\n", fifo_length);
+    chain = allocMem(fifo_length * sizeof(w_thread));
+    checked = allocMem(fifo_length * sizeof(w_thread));
+    checked_length = 0;
+    while ((t = getFifo(deadlock_fifo))) {
+      checkForDeadlock(t);
+    }
+    releaseMem(chain);
+    releaseMem(checked);
+    releaseFifo(deadlock_fifo);
+    woempa(7, "Released chain, checked\n");
+    chain = NULL;
+    checked = NULL;
+  }
+
   // Reset the dumping_info flag with a one-cycle delay (is hack).
   switch(dumping_info) {
     case 1: 
@@ -116,5 +260,47 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
 
 w_void Heartbeat_setThread(JNIEnv *env, w_instance thisObject, w_instance thread) {
   heartbeat_thread = ((w_thread)getWotsitField(thread, F_Thread_wotsit))->kthread;
+}
+
+#ifdef USE_NANOSLEEP
+static struct timespec ts;
+#endif
+static struct timeval before;
+static struct timeval now;
+static w_boolean inited;
+
+// Volatile 'coz gcc might screw up otherwise
+volatile w_long system_time_offset;
+
+void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+  long micros = millis * 1000;
+  w_long diff;
+
+#ifdef USE_NANOSLEEP
+  if (!inited) {
+    ts.tv_sec = 0;
+    ts.tv_nsec = micros * 1000;
+  }
+  nanosleep(&ts, NULL);
+#else
+  usleep(micros);
+#endif
+
+  if (!inited) {
+    gettimeofday(&now, NULL);
+    inited = TRUE;
+  }
+  else {
+    before = now;
+    gettimeofday(&now, NULL);
+    diff = ((w_long)now.tv_usec - (w_long)before.tv_usec) / 1000LL + ((w_long)now.tv_sec - (w_long)before.tv_sec) * 1000LL;
+    if (diff < 0 || diff > 2 * millis) {
+      system_time_offset += diff - millis;
+    }
+  }
+}
+
+w_long Heartbeat_static_getTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
+   return system_time_offset;
 }
 

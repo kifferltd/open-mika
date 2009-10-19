@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, bus 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2003, 2004, 2005, 2006 by Chris Gray,       *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: jni.c,v 1.20 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <string.h>
 #include <stdio.h>
@@ -80,6 +81,41 @@ typedef union JNITypes {
   w_word    w0;
   w_word    w[2];
 } JNITypes;
+
+static jclass class_NativeThread;
+static jmethodID jmethodID_underscore;
+static jclass class_Runtime;
+static jmethodID jmethodID_loadLibrary0;
+
+static jmethodID get_underscore_jmethodID(JNIEnv *env) {
+  if (!class_NativeThread) {
+    class_NativeThread = clazz2Class(clazzNativeThread);
+  }
+
+  if (!jmethodID_underscore) {
+    jmethodID_underscore = (*env)->GetMethodID(env, class_NativeThread, "_", "()V");
+    if (!jmethodID_underscore) {
+      wabort(ABORT_WONKA, "Unable to locate method NativeThread._\n");
+    }
+  }
+
+  return jmethodID_underscore;
+}
+
+static jmethodID get_loadLibrary0_jmethodID(JNIEnv *env) {
+  if (!class_Runtime) {
+    class_Runtime = clazz2Class(clazzRuntime);
+  }
+
+  if (!jmethodID_loadLibrary0) {
+    jmethodID_loadLibrary0 = (*env)->GetMethodID(env, class_Runtime, "loadLibrary0", "(Ljava/lang/String;Ljava/lang/String;)I");
+    if (!jmethodID_loadLibrary0) {
+      wabort(ABORT_WONKA, "Unable to locate method Runtime._\n");
+    }
+  }
+
+  return jmethodID_loadLibrary0;
+}
 
 /*
 ** Write a C array of booleans (stored one per byte) into a Java array instance.
@@ -437,7 +473,7 @@ static w_dword run_64_method(w_thread thread, w_frame frame, w_method method) {
 }
 
 jint GetVersion(JNIEnv *env) {
-  return 0x00010002;
+  return JNI_VERSION_1_2;
 }
 
 jclass DefineClass(JNIEnv *env, const char *name, jobject loader, const jbyte *buf, jsize buflen) {
@@ -520,6 +556,7 @@ void FatalError(JNIEnv *env, const char *message) {
   wabort(ABORT_WONKA, "FatalError: %s\n",message);
 }
 
+
     
 jclass FindClass(JNIEnv *env, const char *Name) {
 
@@ -530,19 +567,27 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   w_instance loader;
   w_clazz clazz;
   jclass result;
+  w_instance exception;
 
   if (!name) {
     wabort(ABORT_WONKA, "Unable to create name\n");
   }
-  if (caller) {
+
+  if (caller && caller == get_loadLibrary0_jmethodID(env)) {
+    // This looks like a lot of "previous->", but we need to skip 2 frames
+    // for the JNI call to loadLibrary0 plus the frame of loadLibrary ... 
+    caller = thread->top->previous->previous->previous->method;
+    woempa(1, "(JNI) Searching for class '%s'; caller is Runtime.loadLibrary0() so using previous frame %M\n", Name, caller);
+  }
+
+  if (caller && caller != get_underscore_jmethodID(env)) {
     woempa(1, "(JNI) Searching for class '%s', called from %M\n", Name, caller);
     loader = clazz2loader(caller->spec.declaring_clazz);
-    woempa(1, "(JNI) Using class loader %p of %k.\n", loader, instance2clazz(loader));
+    woempa(1, "(JNI) Using class loader %j of %m.\n", loader, caller);
   }
   else {
-    // [CG 20040315] WAS: NULL, should really be application class loader
-    loader = systemClassLoader;
-    woempa(1, "(JNI) Searching for class '%s', thread %t has no stack frame so using bootstrap class loader\n", Name, thread);
+    loader = applicationClassLoader ? applicationClassLoader : systemClassLoader;
+    woempa(1, "(JNI) Searching for class '%s', thread %t has no stack frame so using %j\n", Name, thread, loader);
   }
 
   dotified = undescriptifyClassName(name);
@@ -552,14 +597,24 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   clazz = namedClassMustBeLoaded(loader, dotified);
   deregisterString(dotified);
 
-  if (exceptionThrown(thread)) {
+  exception = exceptionThrown(thread);
+  if (exception) {
     woempa(1, "(JNI) exception %j\n", exceptionThrown(thread));
+    if(isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
+
     return NULL;
   }
 
   mustBeLinked(clazz);
 
-  if (exceptionThrown(thread)) {
+  exception = exceptionThrown(thread);
+  if (exception) {
+    if(isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+      wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+    }
+
     result = NULL;
   }
   else {
@@ -572,6 +627,46 @@ jclass FindClass(JNIEnv *env, const char *Name) {
   
   return result;
 
+}
+
+jfieldID FromReflectedField(JNIEnv *env, jobject fieldobj) {
+  return getWotsitField(fieldobj, F_Field_wotsit);
+}
+
+jmethodID FromReflectedMethod(JNIEnv *env, jobject methodobj) {
+  return getWotsitField(methodobj, F_Method_wotsit);
+}
+
+jobject ToReflectedField(JNIEnv *env, jclass cls, jfieldID fid, jboolean isStatic) {
+  w_thread   thread = JNIEnv2w_thread(env);
+  w_clazz    clazz = Class2clazz(cls);
+  w_instance aField;
+
+  mustBeInitialized(clazzField);
+
+  enterUnsafeRegion(thread);
+  aField = allocInstance(JNIEnv2w_thread(env), clazzField);
+  enterSafeRegion(thread);
+  if (aField) {
+    setWotsitField(aField, F_Field_wotsit, fid);
+  }
+  return aField;
+}
+
+jobject ToReflectedMethod(JNIEnv *env, jclass cls, jmethodID mid, jboolean isStatic) {
+  w_thread   thread = JNIEnv2w_thread(env);
+  w_clazz    clazz = Class2clazz(cls);
+  w_instance aMethod;
+
+  mustBeInitialized(clazzMethod);
+
+  enterUnsafeRegion(thread);
+  aMethod = allocInstance(JNIEnv2w_thread(env), clazzMethod);
+  enterSafeRegion(thread);
+  if (aMethod) {
+    setWotsitField(aMethod, F_Method_wotsit, mid);
+  }
+  return aMethod;
 }
 
 jclass GetSuperclass(JNIEnv *env, jclass class) {
@@ -595,21 +690,27 @@ jint ThrowNew(JNIEnv *env, jclass class, const char *message) {
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz  = Class2clazz(class);
   w_string string = cstring2String(message, strlen(message));
-  w_instance Throwable = allocInstance(thread, clazz);
+  w_instance Throwable;
   w_instance Message;
 
   if (!string) {
     wabort(ABORT_WONKA, "Unable to create string\n");
   }
+  if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
+    wabort(ABORT_WONKA, "Unable to initalize %k\n", clazz);
+  }
+  enterUnsafeRegion(thread);
+  Throwable = allocInstance(thread, clazz);
   if (!Throwable) {
     wabort(ABORT_WONKA, "Unable to create Throwable\n");
   }
+  enterSafeRegion(thread);
   Message = newStringInstance(string);
   if (Message) {
     setReferenceField(Throwable, Message, F_Throwable_detailMessage);
     throwExceptionInstance(thread, Throwable);
+    removeLocalReference(thread, Message);
   }
-  removeLocalReference(thread, Message);
 
   return 0;
 
@@ -625,6 +726,19 @@ jobject NewGlobalRef(JNIEnv *env, jobject obj) {
     enterSafeRegion(thread);
   }
   return obj;
+}
+
+/* [CG 20090427]
+** This is not really correct and may cause memory leaks. But doing it
+** correctly is hard - either we wrap the ref in an object of some special
+** class and we check EVERY incoming jobject to see ifi it needs unwrapping,
+** or we completely change all jobject's to be indirect references through
+** one of several tables (local ref, global ref, weak global ref).
+** Weak global refs are pretty funky anyway if you ask me: can become
+** equivalent to NULL at any time ...
+*/
+jweak NewWeakGlobalRef(JNIEnv *env, jobject obj) {
+  return NewGlobalRef(env, obj);
 }
 
 jobject NewLocalRef(JNIEnv *env, jobject obj) {
@@ -649,12 +763,42 @@ void DeleteGlobalRef(JNIEnv *env, jobject obj) {
 
 }
 
+/* [CG 20090427] - see comment re: NewWeakGlobalRef above
+*/
+void DeleteWeakGlobalRef(JNIEnv *env, jweak ref) {
+  DeleteGlobalRef(env, ref);
+}
+
 void DeleteLocalRef(JNIEnv *env, jobject instance) {
   w_thread thread = JNIEnv2w_thread(env);
 
   woempa(1, "deleting local reference to instance %p of %k\n", instance, instance2clazz((w_instance)instance));
   removeLocalReference(thread, instance);
 
+}
+
+jint EnsureLocalCapacity(JNIEnv *env, jint cap) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (thread->top->auxstack_top - thread->top->jstack_top < cap) {
+    throwException(thread, clazzOutOfMemoryError, NULL);
+    return -1;
+  }
+
+  return 0;
+
+}
+
+/* [CG 20090427]
+** Not really correct, can cause memory leaks.
+** TODO: decouple local ref frames from call frames so this can work correctly.
+*/
+jint PushLocalFrame(JNIEnv *env, jint cap) {
+  return 0; // 0 = OK, <0 = error
+}
+
+jobject PopLocalFrame(JNIEnv *env, jobject result) {
+  return result;
 }
 
 jboolean IsSameObject(JNIEnv *env, jobject ref1, jobject ref2) {
@@ -668,7 +812,9 @@ jobject AllocObject(JNIEnv *env, jclass class) {
   w_instance new = NULL;
 
   if (mustBeInitialized(clazz) != CLASS_LOADING_FAILED) {
+    enterUnsafeRegion(thread);
     new = allocInstance(thread, clazz);
+    enterSafeRegion(thread);
   }
 
   return new;
@@ -687,7 +833,9 @@ jobject NewObject(JNIEnv *env, jclass class, jmethodID methodID, ...) {
     return NULL;
   }
   
+  enterUnsafeRegion(thread);
   new = allocInstance(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -721,7 +869,9 @@ jobject NewObjectV(JNIEnv *env, jclass class, jmethodID methodID, va_list args) 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
     return NULL;
   }
+  enterUnsafeRegion(thread);
   new = allocInstance(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -754,7 +904,9 @@ jobject NewObjectA(JNIEnv *env, jclass class, jmethodID methodID, jvalue *args) 
     return NULL;
   }
 
+  enterUnsafeRegion(thread);
   new = allocInstance(thread, clazz);
+  enterSafeRegion(thread);
 
   if (new) {
     frame = pushFrame(thread, methodID);
@@ -2356,7 +2508,7 @@ w_void SetStatic64Field(JNIEnv *env, jclass class, jfieldID fieldID, jlong value
 }
 
 w_void SetStaticObjectField(JNIEnv *env, jclass class, jfieldID fieldID, jobject value) {
-  setStaticReferenceField(fieldID->declaring_clazz, fieldID->size_and_slot, value);
+  setStaticReferenceField(fieldID->declaring_clazz, fieldID->size_and_slot, value, JNIEnv2w_thread(env));
 }
 
 w_void SetStaticBooleanField(JNIEnv *env, jclass class, jfieldID fieldID, jboolean value) {
@@ -2531,6 +2683,29 @@ const jbyte * GetStringUTFChars(JNIEnv *env, jstring String, jboolean *isCopy) {
 
 }
 
+void GetStringRegion(JNIEnv *env, jstring String, jsize start, jsize len, jchar * buf) {
+
+  w_string string = String2string(String);
+  jchar *  bufptr = (jchar*)buf;
+  jsize    i;
+  w_thread thread = JNIEnv2w_thread(env);
+  
+  if (start > (jsize) string_length(string)) {
+    throwException(thread, clazzStringIndexOutOfBoundsException, "start %d > String %d chars.\n", start, string_length(string));
+    return;
+  }
+  
+  if (len > (jsize) string_length(string) - start) {
+    throwException(thread, clazzStringIndexOutOfBoundsException, "start %d + len %d > String %d chars.\n", start, len, string_length(string));
+    return;
+  }
+
+  for (i = 0; i < len; i++) {
+    *bufptr++ = string_char(string, start + i);
+  }
+
+}
+
 void GetStringUTFRegion(JNIEnv *env, jstring String, jsize start, jsize len, char * buf) {
 
   w_string string = String2string(String);
@@ -2585,34 +2760,29 @@ jarray NewObjectArray(JNIEnv *env, jsize length, jclass elementType, jobject ini
   w_instance Array;
   w_int i;
   w_clazz elementClazz = Class2clazz(elementType);
+  w_instance loader = clazz2loader(elementClazz);
   w_clazz arrayClazz;
   w_int alength;
-  // [CG 20040315] We should probably default to the application class loader
-  w_method caller = thread->top->method;
-  w_instance loader;
 
-  if (caller) {
-    woempa(1, "(JNI) Asked to construct an array of %d '%s', called from %M\n", length, elementType, caller);
-    loader = clazz2loader(caller->spec.declaring_clazz);
-    woempa(1, "(JNI) Using class loader %p of %k.\n", loader, instance2clazz(loader));
-  }
-  else {
-    loader = systemClassLoader;
-    woempa(1, "(JNI) Asked to construct an array of %d '%s', thread %t has no stack frame so using bootstrap class loader\n", length, elementType, thread);
-  }
+  woempa(1, "(JNI) Asked to construct an array of %d %k's, all set to 0x%08x\n", length, elementClazz, initval);
+  woempa(1, "(JNI) Using class loader %j\n", loader);
 
 
-  woempa(1, "Asked to construct an array of %d %k's, all set to 0x%08x\n", length, elementClazz, initval);
-
+  threadMustBeSafe(thread);
   arrayClazz = getNextDimension(elementClazz, loader);
-
+  if (exceptionThrown(thread)) {
+    return NULL;
+  }
+  mustBeInitialized(arrayClazz);
   if (exceptionThrown(thread)) {
     return NULL;
   }
 
   woempa(1, "New array will be of class %k\n", arrayClazz);
   alength = length;
+  enterUnsafeRegion(thread);
   Array = allocArrayInstance_1d(JNIEnv2w_thread(env), arrayClazz, alength);
+  enterSafeRegion(thread);
   woempa(1, "New array is %j\n", Array);
 
   if (Array) {
@@ -2644,8 +2814,17 @@ void SetObjectArrayElement(JNIEnv *env, jobjectArray Array, jsize aindex, jobjec
 }
 
 static w_instance newTypeArray(w_thread thread, w_clazz clazz, w_int length) {
+  w_instance Array;
 
-  w_instance Array = allocArrayInstance_1d(thread, clazz, length);
+  threadMustBeSafe(thread);
+  mustBeInitialized(clazz);
+  if (exceptionThrown(thread)) {
+    return NULL;
+  }
+
+  enterUnsafeRegion(thread);
+  Array = allocArrayInstance_1d(thread, clazz, length);
+  enterSafeRegion(thread);
 
   woempa(1, "(JNI) Length %d, type %k, Array = %p.\n", length, clazz, Array);
  
@@ -2757,28 +2936,6 @@ jlong *GetLongArrayElements(JNIEnv *env, jlongArray array, jboolean *isCopy) {
 }
 
 jfloat *GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) {
-  /* Old code:
-  w_instance array_instance = array;
-  w_size length = instance2Array_length(array_instance);
-  jfloat  *buffer = (jfloat*)allocMem(length*sizeof(jfloat));
-  jfloat  *dest = buffer;
-  w_float *srce = instance2Array_float(array_instance);
-  w_size i;
-  
-  if (!buffer) {
-    wabort(ABORT_WONKA, "Unable to alloc space for buffer\n");
-  }
-  woempa(1,"(JNI) copy %d float's (%d bytes) from %p to %p\n",length,(w_size)(length*sizeof(w_float)),array_instance+F_Array_data,buffer);
-  for (i=0;i<length;++i) {
-    *dest++ = *srce++;
-  }
-  
-  if (isCopy) {
-    *isCopy = WONKA_TRUE;
-  }
-  
-  return buffer;
-  */
   if (isCopy) {
     *isCopy = WONKA_FALSE;
   }
@@ -2787,28 +2944,6 @@ jfloat *GetFloatArrayElements(JNIEnv *env, jfloatArray array, jboolean *isCopy) 
 }
 
 jdouble *GetDoubleArrayElements(JNIEnv *env, jdoubleArray array, jboolean *isCopy) {
-  /* Old code:
-  w_instance array_instance = array;
-  w_size length = instance2Array_length(array_instance);
-  jdouble *buffer = (jdouble*)allocMem(length*sizeof(jdouble));
-  jdouble  *dest = buffer;
-  w_double *srce = instance2Array_double(array_instance);
-  w_size i;
-
-  if (!buffer) {
-    wabort(ABORT_WONKA, "Unable to alloc space for buffer\n");
-  }
-  woempa(1,"(JNI) copy %d double's (%d bytes) from %p to %p\n",length,(w_size)(length*sizeof(w_double)),array_instance+F_Array_data,buffer);
-  for (i=0;i<length;++i) {
-    *dest++ = *srce++;
-  }
-  
-  if (isCopy) {
-    *isCopy = WONKA_TRUE;
-  }
-  
-  return buffer;
-  */
   if (isCopy) {
     *isCopy = WONKA_FALSE;
   }
@@ -3003,7 +3138,7 @@ void  ReleasePrimitiveArrayCritical(JNIEnv *env, jarray array, void *carray, jin
       releaseMem(carray);
     }
   }
-  enterUnsafeRegion(thread);
+  enterSafeRegion(thread);
 }
 
 /*
@@ -3080,33 +3215,62 @@ jint JNI_CreateJavaVM(JavaVM **p_VM, JNIEnv **p_env, void *vm_args) {
 
 }
 
+jint GetJavaVM( JNIEnv *env,  JavaVM** vm) {
+  mrWonka = &w_JNIInvokeInterface;
+  *vm = &mrWonka;
+  
+  return 0;
+}
+
+
 jint DestroyJavaVM(JavaVM *vm) {
   woempa(9,"Sorry, you can't do that.\n");
   return -1;
 }
 
+extern pthread_key_t x_thread_key;
+
 /*
 ** In order to visit the Wonka Factory, you must be in possesion of valid
 ** "pieces of identity".  This function will furnish you with them.
-**
-** Note: not every field of the w_Thread structure is filled in here.
-** Maybe we need to do more?
 */
 
 jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
+#ifdef O4P
   w_size     i;
   w_instance Thread;
-  w_instance name;
   w_thread   thread;
   w_method   method = NULL;
   Wonka_AttachArgs *wonka_args = thr_args;
   char *cname = (char*)"Native Thread";
   w_MethodSpec spec;
+  x_thread kthread = x_thread_current();
 
-  if (thread_hashtable == NULL) {
+  if (!thread_hashtable) {
     woempa(9, "Attempt to attach before VM is properly initialised\n");
     return -1;
   }
+
+  /*
+  ** If x_thread_current() returned null there is no x_thread corresponding
+  ** to the native thread, we need to create one.
+  */
+  if (!kthread) {
+    kthread = allocClearedMem(sizeof(x_Thread));
+    x_thread_attach_current(kthread);
+  }
+
+  thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
+
+  /*
+  ** If the thread is already in thread_hashtable then we have nothing to do.
+  */
+  if (thread) {
+    *p_env = w_thread2JNIEnv(thread);
+
+    return 0;
+  }
+
 
   if (wonka_args && wonka_args->name) {
     cname = wonka_args->name;
@@ -3117,7 +3281,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   if (!thread) {
     woempa(9, "Unable to allocate w_Thread\n");
 
-    return -1;
+    return -2;
   }
 
   setUpRootFrame(thread);
@@ -3128,8 +3292,8 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->jpriority = 5; 
   thread->isDaemon = WONKA_FALSE;
   thread->flags = WT_THREAD_IS_NATIVE;
-  thread->kthread = allocClearedMem(sizeof(x_Thread));
-  thread->kthread = x_thread_current();
+  thread->kthread = kthread;
+  pthread_setspecific(x_thread_key, kthread);
   thread->kthread->xref = thread;
   thread->kpriority = x_thread_priority_get(thread->kthread);
   thread->ksize = 65536; // BOGUS - TODO: what to put here?
@@ -3138,35 +3302,18 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   ht_write(thread_hashtable, (w_word)thread->kthread, (w_word)thread);
   if (mustBeInitialized(clazzNativeThread) == CLASS_LOADING_FAILED) {
 
-    return -1;
+    return -3;
 
   }
 
+  enterUnsafeRegion(thread);
   Thread = allocInstance(NULL, clazzNativeThread);
+  enterSafeRegion(thread);
   setReferenceField(Thread, I_ThreadGroup_system, F_Thread_parent);
-  name = newStringInstance(thread->name);
-  setReferenceField(Thread, name, F_Thread_name);
-  removeLocalReference(thread, name);
   setWotsitField(Thread, F_Thread_wotsit,  thread);
   thread->Thread = Thread;
   woempa(7, "Native thread %p now has instance of %j.\n", thread, Thread);
-
-  spec.declaring_clazz = clazzNativeThread;
-  spec.name = cstring2String("_", 1);
-  spec.arg_types = NULL;
-  spec.return_type = clazz_void;
-
-  woempa(1, "Seek %w in %K\n", spec.name, clazzNativeThread);
-  for (i = 0; i < clazzNativeThread->numDeclaredMethods; ++i) {
-    w_method m = &clazzNativeThread->own_methods[i];
-
-    woempa(1, "Candidate: %w\n", m->spec.name);
-    if (methodMatchesSpec(m, &spec) && isNotSet(m->flags, ACC_STATIC)) {
-      method = m;
-      break;
-    }
-  }
-  deregisterString(spec.name);
+  method = get_underscore_jmethodID(w_thread2JNIEnv(thread));
 
   if (method == NULL) {
     wabort(ABORT_WONKA,"Uh oh: class %k doesn't have a _()V method.  Game over.\n", clazzNativeThread);
@@ -3178,13 +3325,18 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->top->method = method;
 
   woempa(7, "Adding %t to %j\n", thread, I_ThreadGroup_system);
-  addThreadToGroup(thread, I_ThreadGroup_system);
+  addThreadCount(thread);
   newGlobalReference(thread->Thread);
 
   *p_env = w_thread2JNIEnv(thread);
 
   return 0;
 
+#else
+  woempa(9, "AttachCurrentThread currently only implemented for O4P");
+
+  return -255;
+#endif
 }
 
 /*
@@ -3193,21 +3345,24 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 **
 ** TODO: figure out how to release all monitors held by a thread which
 ** is dumb enough to call this function from inside a monitor. 8-0
+** TODO: merge as much code as possible with Thread_destructor, i.e.
+** let GC do the cleaning up.
 */
 
 jint DetachCurrentThread(JavaVM *vm) {
+#ifdef O4P
   w_thread thread = currentWonkaThread;
 
   if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
-    woempa(9, "Attemting to detach non-native thread %t\n", thread);
-    return -1;
+    woempa(9, "Attempting to detach non-native thread %t\n", thread);
+    return 0;
   }
 
   unsetFlag(thread->flags, WT_THREAD_IS_NATIVE);
 
   if (thread->Thread) {
-    woempa(7, "Removing %t from %j\n", thread, thread2ThreadGroup(thread));
-    removeThreadFromGroup(thread, thread2ThreadGroup(thread));
+    woempa(7, "Removing %t. It's no longer a native thread.\n", thread);
+    removeThreadCount(thread);
     deleteGlobalReference(thread->Thread);
     clearWotsitField(thread->Thread, F_Thread_wotsit);
     thread->Thread = NULL;
@@ -3215,6 +3370,8 @@ jint DetachCurrentThread(JavaVM *vm) {
   ht_erase(thread_hashtable,(w_word)thread->kthread);
 
   if (thread->kthread) {
+    pthread_setspecific(x_thread_key, 0);
+    x_thread_detach(thread->kthread);
     releaseMem(thread->kthread);
   }  
   if (thread->kstack) {
@@ -3227,6 +3384,30 @@ jint DetachCurrentThread(JavaVM *vm) {
   releaseMem(thread);
 
   return 0;
+
+#else
+  woempa(9, "DettachCurrentThread currently only implemented for O4P");
+
+  return -255;
+#endif
+}
+
+
+jint GetEnv(JavaVM *vm, void **env, jint version) {
+  x_thread kthread = x_thread_current();
+
+  if(kthread) {
+    w_thread thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
+
+    if (thread != NULL) {
+      *env =  w_thread2JNIEnv(thread); 
+      return JNI_OK;
+    }
+  }
+
+  *env = NULL;
+  return JNI_EDETACHED;
+  
 }
 
 
@@ -3241,14 +3422,14 @@ const struct JNINativeInterface w_JNINativeInterface = {
   DefineClass,
   FindClass,
 
-  NULL,
-  NULL,
-  NULL,
+  FromReflectedMethod,
+  FromReflectedField,
+  ToReflectedMethod,
   
   GetSuperclass,                        /* 10 */
   IsAssignableFrom,
   
-  NULL,
+  ToReflectedField,
 
   Throw,
   ThrowNew,
@@ -3257,8 +3438,8 @@ const struct JNINativeInterface w_JNINativeInterface = {
   ExceptionClear,
   FatalError,
   
-  NULL,
-  NULL,                                 /* 20 */
+  PushLocalFrame,
+  PopLocalFrame,                        /* 20 */
   
   NewGlobalRef,
   DeleteGlobalRef,
@@ -3266,7 +3447,7 @@ const struct JNINativeInterface w_JNINativeInterface = {
   IsSameObject,
   
   NewLocalRef,
-  NULL,
+  EnsureLocalCapacity,
   
   AllocObject,
   NewObject,
@@ -3482,15 +3663,15 @@ const struct JNINativeInterface w_JNINativeInterface = {
   MonitorEnter,
   MonitorExit,
 
-  NULL, //reserved219,
-  NULL, //GetStringRegion,              /* 220 */
+  GetJavaVM,
+  GetStringRegion,           /* 220 */
   GetStringUTFRegion,
   GetPrimitiveArrayCritical,
   ReleasePrimitiveArrayCritical,
   GetStringCritical,
   ReleaseStringCritical,
-  NULL, //NewWeakGlobalRef,
-  NULL, //reserved227,
+  NewWeakGlobalRef,
+  DeleteWeakGlobalRef,
   ExceptionCheck,
 
 };
@@ -3502,5 +3683,7 @@ const struct JNIInvokeInterface w_JNIInvokeInterface = {
   DestroyJavaVM,
   AttachCurrentThread,
   DetachCurrentThread,
+  GetEnv,
+  NULL,
 };
 

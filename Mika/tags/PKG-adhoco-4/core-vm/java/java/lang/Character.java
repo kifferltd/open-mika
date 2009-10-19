@@ -205,38 +205,31 @@ public final class Character implements java.io.Serializable,Comparable {
 
   /**
    ** Consult native code tables to see if the char is a lower-case letter
-   ** (has no lower-case equivalent in  UnicodeData.txt and either has an
-   ** upper-case equivalent or has `SMALL LETTER' or `SMALL LIGATURE' in its name).
+   ** (category Ll).
    */
   public native static boolean isLowerCase(char ch);
 
   /**
    ** Consult native code tables to see if the char is an upper-case letter
-   ** (has no upper-case equivalent in  UnicodeData.txt and either has an
-   ** lower-case equivalent or has `CAPITAL LETTER' or `CAPITAL LIGATURE' 
-   ** in its name).
+   ** (category Lu).
    */
   public native static boolean isUpperCase(char ch);
 
   /**
    ** Consult native code tables to see if the char is a title-case letter
-   ** (has both lower-case and upper-case equivalents in UnicodeData.txt).
+   ** (category Lt).
    */
   public native static boolean isTitleCase(char ch);
 
   /**
-   ** Consult native code tables to see if the char is a letter (is not
-   ** in the range 2000-2FFF, and either is one of the three letter cases 
-   ** above, or has a general category code in UnicodeData.txt beginning 
-   ** with `L', or is in the range 0100-1FFF and is not a Digit, see below).
+   ** Consult native code tables to see if the char is a letter (general
+   ** category code beginning with `L').
    */
   public native static boolean isLetter(char ch);
 
   /**
-   ** Consult native code tables to see if the char is a digit (is not
-   ** in the range 2000-2FFF, and either has `DIGIT' in its name or
-   ** general category code `Nd' in UnicodeData.txt, depending on which
-   ** version of the spec you are reading).
+   ** Consult native code tables to see if the char is a digit (general
+   ** category code `Nd').
    */
   public native static boolean isDigit(char ch);
 
@@ -289,8 +282,6 @@ public final class Character implements java.io.Serializable,Comparable {
   public native static char toUpperCase(char ch);
 
   public native static char toTitleCase(char ch);
-
-  //private static native int digitValue(char ch);
 
   private static native int numericValue(char ch);
 

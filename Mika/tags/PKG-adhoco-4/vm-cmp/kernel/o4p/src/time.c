@@ -1,35 +1,36 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika(TM) Copyright (c) 2004, 2005, 2006 by Chris Gray,*
-* /k/ Embedded Java Solutions, Antwerp, Belgium. All rights reserved.     *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
+#include "oswald.h"
 
-/*
-** $Id: time.c,v 1.18 2006/10/04 14:24:20 cvsroot Exp $
-*/    
- 
 #ifdef USE_NANOSLEEP
 #include <time.h>
 #else
@@ -44,10 +45,6 @@
 #include "oswald.h"
 
 x_size usecs_per_tick;
-
-// Used for "time runs backwards" hack
-long previous_seconds;
-long previous_microseconds;
 
 #ifndef HAVE_TIMEDWAIT
 /*
@@ -77,7 +74,7 @@ void timer_entry_function(void* ptr) {
   int i;
   int number_sleeping_threads;
   int missed_ticks = 0;
-  w_fifo fire_fifo = allocFifo(31);
+  w_fifo fire_fifo = allocFifo(30);
   x_thread thread;
 #ifdef USE_NANOSLEEP
   struct timespec ts;
@@ -196,6 +193,18 @@ void x_setup_timers(x_size millis) {
 void x_setup_timers(x_size millis) {
   usecs_per_tick = millis * 1000;
 }
+#endif
+
+x_long x_time_now_millis() {
+  struct timeval tv;
+  x_long result;
+
+  gettimeofday(&tv, NULL);
+  result = (x_long)tv.tv_sec * 1000;
+  result += ((x_long)tv.tv_usec + 500) / 1000;
+
+  return result;
+}
 
 void x_now_plus_ticks(x_size ticks, struct timespec *ts)
 {
@@ -207,7 +216,7 @@ void x_now_plus_ticks(x_size ticks, struct timespec *ts)
   sec = usec / 1000000;
   usec %= 1000000;
 
-  x_gettimeofday(&now, NULL);
+  gettimeofday(&now, NULL);
   ts->tv_sec = now.tv_sec + sec;
   ts->tv_nsec = (now.tv_usec + usec) * 1000;
 
@@ -220,12 +229,10 @@ void x_now_plus_ticks(x_size ticks, struct timespec *ts)
 x_boolean x_deadline_passed(struct timespec *ts) {
   struct timeval now;
 
-  x_gettimeofday(&now, NULL);
+  gettimeofday(&now, NULL);
 
   return (ts->tv_sec < now.tv_sec)  || ((ts->tv_sec == now.tv_sec) && (ts->tv_nsec <= now.tv_usec));
 }
-
-#endif
 
 x_sleep x_time_get() {
   return o4pe->timer_ticks;

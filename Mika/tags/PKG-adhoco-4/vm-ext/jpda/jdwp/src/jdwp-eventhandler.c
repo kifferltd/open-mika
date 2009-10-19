@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2006, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "clazz.h"
@@ -165,12 +169,17 @@ jdwp_event jdwp_event_alloc(w_int event_kind, w_int suspend_policy) {
 */
 
 void jdwp_dealloc_event(jdwp_event event) {
-  jdwp_event_modifier modifier = event->modifiers;
+  jdwp_event_modifier first_modifier = event->modifiers;
+  jdwp_event_modifier modifier = first_modifier;
   jdwp_event_modifier next;
 
   while (modifier) {
     next = modifier->next;
+    /* TODO: Some modifiers have extra allocated memory. Deal with it. */
     releaseMem(modifier);
+    if (first_modifier == next) {
+      break;
+    }
     modifier = next;
   }
 
@@ -280,6 +289,47 @@ jdwp_breakpoint jdwp_breakpoint_get(w_code code) {
   return breakpoint;
 }
 
+static const char *event_kind2name(int event_kind) {
+  switch (event_kind) {
+    case 1:
+      return "SINGLE_STEP";
+    case 2:
+      return "BREAKPOINT";
+    case 3:
+      return "FRAME_POP";
+    case 4:
+      return "EXCEPTION";
+    case 5:
+      return "USER_DEFINED";
+    case 6:
+      return "THREAD_START";
+    case 7:
+      return "THREAD_END";
+    case 8:
+      return "CLASS_PREPARE";
+    case 9:
+      return "CLASS_UNLOAD";
+    case 10:
+      return "CLASS_LOAD";
+    case 20:
+      return "FIELD_ACCESS";
+    case 21:
+      return "FIELD_MODIFICATION";
+    case 30:
+      return "EXCEPTION_CATCH";
+    case 40:
+      return "METHOD_ENTRY";
+    case 41:
+      return "METHOD_EXIT";
+    case 90:
+      return "VM_INIT";
+    case 99:
+      return "VM_DEATH";
+    default:
+      return "???";
+  }
+}
+
 
 /*
 ** Send an event to the debugger.
@@ -301,6 +351,9 @@ w_void jdwp_send_event(jdwp_event event, w_grobag *data) {
   **   ...    ...              Event specific data.
   */
   woempa(7, "Sending composite event: suspend policy = %d, 1 event, kind %d, requestID %d\n", event->suspend_policy, event->event_kind, event->eventID);
+  if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
+    wprintf("JDWP: Sending composite event: suspend policy= %d, 1 event of kind %d (%s),  request id = %d\n", event->suspend_policy, event->event_kind, event_kind2name(event->event_kind), event->eventID);
+  }
 
   // suspend policy
   jdwp_put_u1(&command_grobag, event->suspend_policy);
@@ -557,10 +610,10 @@ extern w_boolean matchClassname(w_clazz clazz, w_string match_pattern);
 w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int catch_pc) {
   jdwp_event events = jdwp_events_by_kind[jdwp_evt_exception];
   jdwp_event_modifier  modifier;
-  w_clazz clazz = instance2clazz(throwable);
-  w_Exr * records = getWotsitField(throwable, F_Throwable_records);
-  w_method throw_method = records->method;
-  w_int throw_pc = records->pc;
+  w_clazz clazz;
+  w_Exr * records;
+  w_method throw_method;
+  w_int throw_pc;
   // TODO: is it possible that records == NULL?
   w_int go_ahead;
   w_thread thread = currentWonkaThread;
@@ -572,6 +625,11 @@ w_void jdwp_event_exception(w_instance throwable, w_method catch_method, w_int c
   */
 
   if(!jdwp_events_enabled) return;
+
+  clazz = instance2clazz(throwable);
+  records = getWotsitField(throwable, F_Throwable_records);
+  throw_pc = records->pc;
+  throw_method = records->method;
 
   while (isSet(throw_method->flags, ACC_NATIVE)) {
     ++records;
@@ -1205,15 +1263,15 @@ void jdwp_internal_suspend_all(void) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
   x_monitor_eternal(safe_points_monitor);
-  while(isSet(blocking_all_threads, BLOCKED_BY_GC)) {
-    woempa(7, "GC is blocking all threads, not possible to suspend VM yet.\n");
+  while(isSet(blocking_all_threads, BLOCKED_BY_GC | BLOCKED_BY_JITC)) {
+    woempa(7, "GC/JITC is blocking all threads, not possible to suspend VM yet.\n");
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
     if (status == xs_interrupted) {
       x_monitor_eternal(safe_points_monitor);
     }
   }
   woempa(2, "JDWP: setting blocking_all_threads to BLOCKED_BY_JDWP\n");
-  blocking_all_threads = BLOCKED_BY_JDWP;
+  setFlag(blocking_all_threads, BLOCKED_BY_JDWP);
 
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
@@ -1227,7 +1285,7 @@ void jdwp_internal_resume_all(void) {
   else {
     woempa(7, "JDWP: count = %d, start unlocking other threads\n", jdwp_global_suspend_count);
     x_monitor_eternal(safe_points_monitor);
-    blocking_all_threads = 0;
+    unsetFlag(blocking_all_threads, BLOCKED_BY_JDWP);
     x_monitor_notify_all(safe_points_monitor);
     x_monitor_exit(safe_points_monitor);
     woempa(7, "JDWP: finished unlocking other threads\n");

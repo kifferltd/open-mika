@@ -1,714 +1,666 @@
-/* StreamTokenizer.java -- parses streams of characters into tokens
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Free Software Foundation
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-This file is part of GNU Classpath.
-
-GNU Classpath is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
- 
-GNU Classpath is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Classpath; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-02110-1301 USA.
-
-Linking this library statically or dynamically with other modules is
-making a combined work based on this library.  Thus, the terms and
-conditions of the GNU General Public License cover the whole
-combination.
-
-As a special exception, the copyright holders of this library give you
-permission to link this library with independent modules to produce an
-executable, regardless of the license terms of these independent
-modules, and to copy and distribute the resulting executable under
-terms of your choice, provided that you also meet, for each linked
-independent module, the terms and conditions of the license of that
-module.  An independent module is a module which is not derived from
-or based on this library.  If you modify this library, you may extend
-this exception to your version of the library, but you are not
-obligated to do so.  If you do not wish to do so, delete this
-exception statement from your version. */
+/*
+ * Imported from Apache Harmony CG 20080703, based on revision 627408.
+ */
 
 package java.io;
 
 /**
- * This class parses streams of characters into tokens.  There are a
- * million-zillion flags that can be set to control the parsing, as 
- * described under the various method headings.
- *
- * @author Warren Levy (warrenl@cygnus.com)
- * @date October 25, 1998.  
+ * StreamTokenizer takes a stream and a set of tokens and parses them one at a
+ * time. The different types of tokens that can be found are numbers,
+ * identifiers, quoted strings, and different comment styles.
  */
-/* Written using "Java Class Libraries", 2nd edition, ISBN 0-201-31002-3
- * "The Java Language Specification", ISBN 0-201-63451-1
- * plus online API docs for JDK 1.2 beta from http://www.javasoft.com.
- * Status:  Believed complete and correct.
- */
- 
-public class StreamTokenizer
-{
-  /** A constant indicating that the end of the stream has been read. */
-  public static final int TT_EOF = -1;
+public class StreamTokenizer {
+    /**
+     * Contains a number if the current token is a number (<code>ttype</code>
+     * is <code>TT_NUMBER</code>)
+     */
+    public double nval;
 
-  /** A constant indicating that the end of the line has been read. */
-  public static final int TT_EOL = '\n';
+    /**
+     * Contains a string if the current token is a word (<code>ttype</code>
+     * is <code>TT_WORD</code>)
+     */
+    public String sval;
 
-  /** A constant indicating that a number token has been read. */
-  public static final int TT_NUMBER = -2;
+    /**
+     * After calling <code>nextToken</code>, the field <code>ttype</code>
+     * contains the type of token that has been read. When a single character is
+     * read, it's integer value is used. For a quoted string, the value is the
+     * quoted character. If not one of those, then it is one of the following:
+     * <UL>
+     * <LI> <code>TT_WORD</code> - the token is a word.</LI>
+     * <LI> <code>TT_NUMBER</code> - the token is a number.</LI>
+     * <LI> <code>TT_EOL</code> - the end of line has been reached. Depends on
+     * whether <code>eolIsSignificant</code> is <code>true</code>.</LI>
+     * <LI> <code>TT_EOF</code> - the end of the stream has been reached.</LI>
+     * </UL>
+     */
 
-  /** A constant indicating that a word token has been read. */
-  public static final int TT_WORD = -3;
+    /**
+     * The constant representing end of stream.
+     */
+    public static final int TT_EOF = -1;
 
-  /** A constant indicating that no tokens have been read yet. */
-  private static final int TT_NONE = -4;
+    /**
+     * The constant representing end of line.
+     */
+    public static final int TT_EOL = '\n';
 
-  /**
-   * Contains the type of the token read resulting from a call to nextToken
-   * The rules are as follows:
-   * <ul>
-   * <li>For a token consisting of a single ordinary character, this is the 
-   *     value of that character.</li>
-   * <li>For a quoted string, this is the value of the quote character</li>
-   * <li>For a word, this is TT_WORD</li>
-   * <li>For a number, this is TT_NUMBER</li>
-   * <li>For the end of the line, this is TT_EOL</li>
-   * <li>For the end of the stream, this is TT_EOF</li>
-   * </ul>
-   */
-  public int ttype = TT_NONE;
+    /**
+     * The constant representing a number token.
+     */
+    public static final int TT_NUMBER = -2;
 
-  /** The String associated with word and string tokens. */
-  public String sval;
+    /**
+     * The constant representing a word token.
+     */
+    public static final int TT_WORD = -3;
 
-  /** The numeric value associated with number tokens. */
-  public double nval;
+    /**
+     * Internal representation of unknown state.
+     */
+    private static final int TT_UNKNOWN = -4;
 
-  /* Indicates whether end-of-line is recognized as a token. */
-  private boolean eolSignificant = false;
+    /**
+     * The token type
+     */
+    public int ttype = TT_UNKNOWN;
 
-  /* Indicates whether word tokens are automatically made lower case. */
-  private boolean lowerCase = false;
+    /**
+     * Internal character meanings, 0 implies TOKEN_ORDINARY
+     */
+    private byte tokenTypes[] = new byte[256];
 
-  /* Indicates whether C++ style comments are recognized and skipped. */
-  private boolean slashSlash = false;
+    private static final byte TOKEN_COMMENT = 1;
 
-  /* Indicates whether C style comments are recognized and skipped. */
-  private boolean slashStar = false;
+    private static final byte TOKEN_QUOTE = 2;
 
-  /* Attribute tables of each byte from 0x00 to 0xFF. */
-  private boolean[] whitespace = new boolean[256];
-  private boolean[] alphabetic = new boolean[256];
-  private boolean[] numeric = new boolean[256];
-  private boolean[] quote = new boolean[256];
-  private boolean[] comment = new boolean[256];
+    private static final byte TOKEN_WHITE = 4;
 
-  /* The Reader associated with this class. */
-  private PushbackReader in;
+    private static final byte TOKEN_WORD = 8;
 
-  /* Indicates if a token has been pushed back. */
-  private boolean pushedBack = false;
+    private static final byte TOKEN_DIGIT = 16;
 
-  /* Contains the current line number of the reader. */
-  private int lineNumber = 1;
+    private int lineNumber = 1;
 
-  /**
-   * This method reads bytes from an <code>InputStream</code> and tokenizes
-   * them.  For details on how this method operates by default, see
-   * <code>StreamTokenizer(Reader)</code>.
-   *
-   * @param is The <code>InputStream</code> to read from
-   *
-   * @deprecated Since JDK 1.1.
-   */
-  public StreamTokenizer(InputStream is)
-  {
-    this(new InputStreamReader(is));
-  }
+    private boolean forceLowercase;
 
-  /**
-   * This method initializes a new <code>StreamTokenizer</code> to read 
-   * characters from a <code>Reader</code> and parse them.  The char values
-   * have their hight bits masked so that the value is treated a character
-   * in the range of 0x0000 to 0x00FF.
-   * <p>
-   * This constructor sets up the parsing table to parse the stream in the
-   * following manner:
-   * <ul>
-   * <li>The values 'A' through 'Z', 'a' through 'z' and 0xA0 through 0xFF
-   *     are initialized as alphabetic</li>
-   * <li>The values 0x00 through 0x20 are initialized as whitespace</li>
-   * <li>The values '\'' and '"' are initialized as quote characters</li>
-   * <li>'/' is a comment character</li>
-   * <li>Numbers will be parsed</li>
-   * <li>EOL is not treated as significant</li>
-   * <li>C  and C++ (//) comments are not recognized</li>
-   * </ul>
-   *
-   * @param r The <code>Reader</code> to read chars from
-   */
-  public StreamTokenizer(Reader r)
-  {
-    in = new PushbackReader(r);
+    private boolean isEOLSignificant;
 
-    whitespaceChars(0x00, 0x20);
-    wordChars('A', 'Z');
-    wordChars('a', 'z');
-    wordChars(0xA0, 0xFF);
-    commentChar('/');
-    quoteChar('\'');
-    quoteChar('"');
-    parseNumbers();
-  }
+    private boolean slashStarComments;
 
-  /**
-   * This method sets the comment attribute on the specified
-   * character.  Other attributes for the character are cleared.
-   *
-   * @param ch The character to set the comment attribute for, passed as an int
-   */
-  public void commentChar(int ch)
-  {
-    if (ch >= 0 && ch <= 255)
-      {
-	comment[ch] = true;
-	whitespace[ch] = false;
-	alphabetic[ch] = false;
-	numeric[ch] = false;
-	quote[ch] = false;
-      }
-  }
+    private boolean slashSlashComments;
 
-  /**
-   * This method sets a flag that indicates whether or not the end of line
-   * sequence terminates and is a token.  The defaults to <code>false</code>
-   *
-   * @param flag <code>true</code> if EOF is significant, <code>false</code>
-   *             otherwise
-   */
-  public void eolIsSignificant(boolean flag)
-  {
-    eolSignificant = flag;
-  }
+    private boolean pushBackToken;
 
-  /**
-   * This method returns the current line number.  Note that if the 
-   * <code>pushBack()</code> method is called, it has no effect on the
-   * line number returned by this method.
-   *
-   * @return The current line number
-   */
-  public int lineno()
-  {
-    return lineNumber;
-  }
+    private boolean lastCr;
 
-  /**
-   * This method sets a flag that indicates whether or not alphabetic
-   * tokens that are returned should be converted to lower case.
-   * 
-   * @param flag <code>true</code> to convert to lower case,
-   *             <code>false</code> otherwise
-   */
-  public void lowerCaseMode(boolean flag)
-  {
-    lowerCase = flag;
-  }
+    /* One of these will have the stream */
+    private InputStream inStream;
 
-  private boolean isWhitespace(int ch)
-  {
-    return (ch >= 0 && ch <= 255 && whitespace[ch]);
-  }
+    private Reader inReader;
 
-  private boolean isAlphabetic(int ch)
-  {
-    return ((ch > 255) || (ch >= 0 && alphabetic[ch]));
-  }
+    private int peekChar = -2;
 
-  private boolean isNumeric(int ch)
-  {
-    return (ch >= 0 && ch <= 255 && numeric[ch]);
-  }
+    /**
+     * Private constructor to initialize the default values according to the
+     * specification.
+     */
+    private StreamTokenizer() {
+        /*
+         * Initialize the default state per specification. All byte values 'A'
+         * through 'Z', 'a' through 'z', and '\u00A0' through '\u00FF' are
+         * considered to be alphabetic.
+         */
+        wordChars('A', 'Z');
+        wordChars('a', 'z');
+        wordChars(160, 255);
+        /**
+         * All byte values '\u0000' through '\u0020' are considered to be white
+         * space.
+         */
+        whitespaceChars(0, 32);
+        /**
+         * '/' is a comment character. Single quote '\'' and double quote '"'
+         * are string quote characters.
+         */
+        commentChar('/');
+        quoteChar('"');
+        quoteChar('\'');
+        /**
+         * Numbers are parsed.
+         */
+        parseNumbers();
+        /**
+         * Ends of lines are treated as white space, not as separate tokens.
+         * C-style and C++-style comments are not recognized. These are the
+         * defaults and are not needed in constructor.
+         */
+    }
 
-  private boolean isQuote(int ch)
-  {
-    return (ch >= 0 && ch <= 255 && quote[ch]);
-  }
+    /**
+     * Construct a new StreamTokenizer on the InputStream is. This usage of this
+     * method should be replaced with the constructor which takes a Reader.
+     * 
+     * @param is
+     *            The InputStream to parse tokens on.
+     * 
+     * @deprecated Use StreamTokenizer(Reader)
+     */
+    public StreamTokenizer(InputStream is) {
+        this();
+        if (is == null) {
+            throw new NullPointerException();
+        }
+        inStream = is;
+    }
 
-  private boolean isComment(int ch)
-  {
-    return (ch >= 0 && ch <= 255 && comment[ch]);
-  }
+    /**
+     * Construct a new StreamTokenizer on the Reader <code>r</code>.
+     * Initialize the default state per specification.
+     * <UL>
+     * <LI>All byte values 'A' through 'Z', 'a' through 'z', and '&#92;u00A0'
+     * through '&#92;u00FF' are considered to be alphabetic.</LI>
+     * <LI>All byte values '&#92;u0000' through '&#92;u0020' are considered to
+     * be white space. '/' is a comment character.</LI>
+     * <LI>Single quote '\'' and double quote '"' are string quote characters.</LI>
+     * <LI>Numbers are parsed.</LI>
+     * <LI>Ends of lines are considered to be white space rather than separate
+     * tokens.</LI>
+     * <LI>C-style and C++-style comments are not recognized.</LI>
+     * </UL>
+     * These are the defaults and are not needed in constructor.
+     * 
+     * @param r
+     *            The InputStream to parse tokens on.
+     */
+    public StreamTokenizer(Reader r) {
+        this();
+        if (r == null) {
+            throw new NullPointerException();
+        }
+        inReader = r;
+    }
 
-  /**
-   * This method reads the next token from the stream.  It sets the 
-   * <code>ttype</code> variable to the appropriate token type and 
-   * returns it.  It also can set <code>sval</code> or <code>nval</code>
-   * as described below.  The parsing strategy is as follows:
-   * <ul>
-   * <li>Skip any whitespace characters.</li>
-   * <li>If a numeric character is encountered, attempt to parse a numeric
-   * value.  Leading '-' characters indicate a numeric only if followed by
-   * another non-'-' numeric.  The value of the numeric token is terminated
-   * by either the first non-numeric encountered, or the second occurrence of
-   * '-' or '.'.  The token type returned is TT_NUMBER and <code>nval</code>
-   * is set to the value parsed.</li>
-   * <li>If an alphabetic character is parsed, all subsequent characters
-   * are read until the first non-alphabetic or non-numeric character is
-   * encountered.  The token type returned is TT_WORD and the value parsed
-   * is stored in <code>sval</code>.  If lower case mode is set, the token
-   * stored in <code>sval</code> is converted to lower case.  The end of line
-   * sequence terminates a word only if EOL signficance has been turned on.
-   * The start of a comment also terminates a word.  Any character with a 
-   * non-alphabetic and non-numeric attribute (such as white space, a quote,
-   * or a commet) are treated as non-alphabetic and terminate the word.</li>
-   * <li>If a comment character is parsed, then all remaining characters on
-   * the current line are skipped and another token is parsed.  Any EOL or
-   * EOF's encountered are not discarded, but rather terminate the comment.</li>
-   * <li>If a quote character is parsed, then all characters up to the 
-   * second occurrence of the same quote character are parsed into a
-   * <code>String</code>.  This <code>String</code> is stored as
-   * <code>sval</code>, but is not converted to lower case, even if lower case
-   * mode is enabled.  The token type returned is the value of the quote
-   * character encountered.  Any escape sequences
-   * (\b (backspace), \t (HTAB), \n (linefeed), \f (form feed), \r
-   * (carriage return), \" (double quote), \' (single quote), \\
-   * (backslash), \XXX (octal esacpe)) are converted to the appropriate
-   * char values.  Invalid esacape sequences are left in untranslated.  
-   * Unicode characters like ('\ u0000') are not recognized. </li>
-   * <li>If the C++ comment sequence "//" is encountered, and the parser
-   * is configured to handle that sequence, then the remainder of the line
-   * is skipped and another token is read exactly as if a character with
-   * the comment attribute was encountered.</li>
-   * <li>If the C comment sequence "/*" is encountered, and the parser
-   * is configured to handle that sequence, then all characters up to and
-   * including the comment terminator sequence are discarded and another
-   * token is parsed.</li>
-   * <li>If all cases above are not met, then the character is an ordinary
-   * character that is parsed as a token by itself.  The char encountered
-   * is returned as the token type.</li>
-   * </ul>
-   *
-   * @return The token type
-   * @exception IOException If an I/O error occurs
-   */
-  public int nextToken() throws IOException
-  {
-    if (pushedBack)
-      {
-	pushedBack = false;
-	if (ttype != TT_NONE)
-	  return ttype;
-      }
+    /**
+     * Set the character <code>ch</code> to be regarded as a comment
+     * character.
+     * 
+     * @param ch
+     *            The character to be considered a comment character.
+     */
+    public void commentChar(int ch) {
+        if (0 <= ch && ch < tokenTypes.length) {
+            tokenTypes[ch] = TOKEN_COMMENT;
+        }
+    }
 
-    sval = null;
-    int ch;
+    /**
+     * Set a boolean indicating whether or not end of line is significant and
+     * should be returned as <code>TT_EOF</code> in <code>ttype</code>.
+     * 
+     * @param flag
+     *            <code>true</code> if EOL is significant, <code>false</code>
+     *            otherwise.
+     */
+    public void eolIsSignificant(boolean flag) {
+        isEOLSignificant = flag;
+    }
 
-    // Skip whitespace.  Deal with EOL along the way.
-    while (isWhitespace(ch = in.read()))
-      if (ch == '\n' || ch == '\r')
-	{
-	  lineNumber++;
+    /**
+     * Answer the current line number.
+     * 
+     * @return the current line number.
+     */
+    public int lineno() {
+        return lineNumber;
+    }
 
-	  // Throw away \n if in combination with \r.
-	  if (ch == '\r' && (ch = in.read()) != '\n')
-	    {
-	      if (ch != TT_EOF)
-		in.unread(ch);
-	    }
-	  if (eolSignificant)
-	    return (ttype = TT_EOL);
-	}
+    /**
+     * Set a boolean indicating whether or not tokens should be uppercased when
+     * present in <code>sval</code>.
+     * 
+     * @param flag
+     *            <code>true</code> if <code>sval</code> should be forced
+     *            uppercase, <code>false</code> otherwise.
+     */
+    public void lowerCaseMode(boolean flag) {
+        forceLowercase = flag;
+    }
 
-    if (ch == '/')
-      if ((ch = in.read()) == '/' && slashSlash)
-	{
-	  while ((ch = in.read()) != '\n' && ch != '\r' && ch != TT_EOF)
-	    ;
-	  if (ch != TT_EOF)
-	    in.unread(ch);
-	  return nextToken(); // Recursive, but not too deep in normal cases
-	}
-      else if (ch == '*' && slashStar) 
-	{
-	  while (true)
-	    {
-	      ch = in.read();
-	      if (ch == '*')
-		{
-		  if ((ch = in.read()) == '/')
-		    break;
-		  else if (ch != TT_EOF)
-		    in.unread(ch);
-		}
-	      else if (ch == '\n' || ch == '\r')
-		{
-		  lineNumber++;
-		  if (ch == '\r' && (ch = in.read()) != '\n')
-		    {
-		      if (ch != TT_EOF)
-			in.unread(ch);
-		    }
-		}
-	      else if (ch == TT_EOF)
-		{
-		  break;
-		}
-	    }
-	  return nextToken(); // Recursive, but not too deep in normal cases
-	}
-      else
-	{
-	  if (ch != TT_EOF)
-	    in.unread(ch);
-	  ch = '/';
-	}
+    /**
+     * Answer the next token type.
+     * 
+     * @return The next token to be parsed.
+     * 
+     * @throws IOException
+     *             If an IO error occurs while getting the token
+     */
+    public int nextToken() throws IOException {
+        if (pushBackToken) {
+            pushBackToken = false;
+            if (ttype != TT_UNKNOWN) {
+                return ttype;
+            }
+        }
+        sval = null; // Always reset sval to null
+        int currentChar = peekChar == -2 ? read() : peekChar;
 
-    if (ch == TT_EOF)
-      ttype = TT_EOF;
-    else if (isNumeric(ch))
-      {
-	boolean isNegative = false;
-	if (ch == '-')
-	  {
-	    // Read ahead to see if this is an ordinary '-' rather than numeric.
-	    ch = in.read();
-	    if (isNumeric(ch) && ch != '-')
-	      {
-		isNegative = true;
-	      }
-	    else
-	      {
-		if (ch != TT_EOF)
-		  in.unread(ch);
-		return (ttype = '-');
-	      }
-	  }
+        if (lastCr && currentChar == '\n') {
+            lastCr = false;
+            currentChar = read();
+        }
+        if (currentChar == -1) {
+            return (ttype = TT_EOF);
+        }
 
-	StringBuffer tokbuf = new StringBuffer();
-	tokbuf.append((char) ch);
+        byte currentType = currentChar > 255 ? TOKEN_WORD
+                : tokenTypes[currentChar];
+        while ((currentType & TOKEN_WHITE) != 0) {
+            /**
+             * Skip over white space until we hit a new line or a real token
+             */
+            if (currentChar == '\r') {
+                lineNumber++;
+                if (isEOLSignificant) {
+                    lastCr = true;
+                    peekChar = -2;
+                    return (ttype = TT_EOL);
+                }
+                if ((currentChar = read()) == '\n') {
+                    currentChar = read();
+                }
+            } else if (currentChar == '\n') {
+                lineNumber++;
+                if (isEOLSignificant) {
+                    peekChar = -2;
+                    return (ttype = TT_EOL);
+                }
+                currentChar = read();
+            } else {
+                // Advance over this white space character and try again.
+                currentChar = read();
+            }
+            if (currentChar == -1) {
+                return (ttype = TT_EOF);
+            }
+            currentType = currentChar > 255 ? TOKEN_WORD
+                    : tokenTypes[currentChar];
+        }
 
-	int decCount = 0;
-	while (isNumeric(ch = in.read()) && ch != '-')
-	  if (ch == '.' && decCount++ > 0)
-	    break;
-	  else
-	    tokbuf.append((char) ch);
+        /**
+         * Check for digits before checking for words since digits can be
+         * contained within words.
+         */
+        if ((currentType & TOKEN_DIGIT) != 0) {
+            StringBuffer digits = new StringBuffer(20);
+            boolean haveDecimal = false, checkJustNegative = currentChar == '-';
+            while (true) {
+                if (currentChar == '.') {
+                    haveDecimal = true;
+                }
+                digits.append((char) currentChar);
+                currentChar = read();
+                if ((currentChar < '0' || currentChar > '9')
+                        && (haveDecimal || currentChar != '.')) {
+                    break;
+                }
+            }
+            peekChar = currentChar;
+            if (checkJustNegative && digits.length() == 1) {
+                // Didn't get any other digits other than '-'
+                return (ttype = '-');
+            }
+            try {
+                nval = Double.valueOf(digits.toString()).doubleValue();
+            } catch (NumberFormatException e) {
+                // Unsure what to do, will write test.
+                nval = 0;
+            }
+            return (ttype = TT_NUMBER);
+        }
+        // Check for words
+        if ((currentType & TOKEN_WORD) != 0) {
+            StringBuffer word = new StringBuffer(20);
+            while (true) {
+                word.append((char) currentChar);
+                currentChar = read();
+                if (currentChar == -1
+                        || (currentChar < 256 && (tokenTypes[currentChar] & (TOKEN_WORD | TOKEN_DIGIT)) == 0)) {
+                    break;
+                }
+            }
+            peekChar = currentChar;
+            sval = forceLowercase ? word.toString().toLowerCase() : word
+                    .toString();
+            return (ttype = TT_WORD);
+        }
+        // Check for quoted character
+        if (currentType == TOKEN_QUOTE) {
+            int matchQuote = currentChar;
+            StringBuffer quoteString = new StringBuffer();
+            int peekOne = read();
+            while (peekOne >= 0 && peekOne != matchQuote && peekOne != '\r'
+                    && peekOne != '\n') {
+                boolean readPeek = true;
+                if (peekOne == '\\') {
+                    int c1 = read();
+                    // Check for quoted octal IE: \377
+                    if (c1 <= '7' && c1 >= '0') {
+                        int digitValue = c1 - '0';
+                        c1 = read();
+                        if (c1 > '7' || c1 < '0') {
+                            readPeek = false;
+                        } else {
+                            digitValue = digitValue * 8 + (c1 - '0');
+                            c1 = read();
+                            // limit the digit value to a byte
+                            if (digitValue > 037 || c1 > '7' || c1 < '0') {
+                                readPeek = false;
+                            } else {
+                                digitValue = digitValue * 8 + (c1 - '0');
+                            }
+                        }
+                        if (!readPeek) {
+                            // We've consumed one to many
+                            quoteString.append((char) digitValue);
+                            peekOne = c1;
+                        } else {
+                            peekOne = digitValue;
+                        }
+                    } else {
+                        switch (c1) {
+                            case 'a':
+                                peekOne = 0x7;
+                                break;
+                            case 'b':
+                                peekOne = 0x8;
+                                break;
+                            case 'f':
+                                peekOne = 0xc;
+                                break;
+                            case 'n':
+                                peekOne = 0xA;
+                                break;
+                            case 'r':
+                                peekOne = 0xD;
+                                break;
+                            case 't':
+                                peekOne = 0x9;
+                                break;
+                            case 'v':
+                                peekOne = 0xB;
+                                break;
+                            default:
+                                peekOne = c1;
+                        }
+                    }
+                }
+                if (readPeek) {
+                    quoteString.append((char) peekOne);
+                    peekOne = read();
+                }
+            }
+            if (peekOne == matchQuote) {
+                peekOne = read();
+            }
+            peekChar = peekOne;
+            ttype = matchQuote;
+            sval = quoteString.toString();
+            return ttype;
+        }
+        // Do comments, both "//" and "/*stuff*/"
+        if (currentChar == '/' && (slashSlashComments || slashStarComments)) {
+            if ((currentChar = read()) == '*' && slashStarComments) {
+                int peekOne = read();
+                while (true) {
+                    currentChar = peekOne;
+                    peekOne = read();
+                    if (currentChar == -1) {
+                        peekChar = -1;
+                        return (ttype = TT_EOF);
+                    }
+                    if (currentChar == '\r') {
+                        if (peekOne == '\n') {
+                            peekOne = read();
+                        }
+                        lineNumber++;
+                    } else if (currentChar == '\n') {
+                        lineNumber++;
+                    } else if (currentChar == '*' && peekOne == '/') {
+                        peekChar = read();
+                        return nextToken();
+                    }
+                }
+            } else if (currentChar == '/' && slashSlashComments) {
+                // Skip to EOF or new line then return the next token
+                while ((currentChar = read()) >= 0 && currentChar != '\r'
+                        && currentChar != '\n') {
+                    // Intentionally empty
+                }
+                peekChar = currentChar;
+                return nextToken();
+            } else if (currentType != TOKEN_COMMENT) {
+                // Was just a slash by itself
+                peekChar = currentChar;
+                return (ttype = '/');
+            }
+        }
+        // Check for comment character
+        if (currentType == TOKEN_COMMENT) {
+            // Skip to EOF or new line then return the next token
+            while ((currentChar = read()) >= 0 && currentChar != '\r'
+                    && currentChar != '\n') {
+                // Intentionally empty
+            }
+            peekChar = currentChar;
+            return nextToken();
+        }
 
-	if (ch != TT_EOF)
-	  in.unread(ch);
-	ttype = TT_NUMBER;
-	try
-	  {
-	    nval = Double.valueOf(tokbuf.toString()).doubleValue();
-	  }
-	catch (NumberFormatException _)
-	  {
-	    nval = 0.0;
-	  }
-	if (isNegative)
-	  nval = -nval;
-      }
-    else if (isAlphabetic(ch))
-      {
-	StringBuffer tokbuf = new StringBuffer();
-	tokbuf.append((char) ch);
-	while (isAlphabetic(ch = in.read()) || isNumeric(ch))
-	  tokbuf.append((char) ch);
-	if (ch != TT_EOF)
-	  in.unread(ch);
-	ttype = TT_WORD;
-	sval = tokbuf.toString();
-	if (lowerCase)
-	  sval = sval.toLowerCase();
-      }
-    else if (isComment(ch))
-      {
-	while ((ch = in.read()) != '\n' && ch != '\r' && ch != TT_EOF)
-	  ;
-	if (ch != TT_EOF)
-	  in.unread(ch);
-	return nextToken();	// Recursive, but not too deep in normal cases.
-      }
-    else if (isQuote(ch))
-      {
-	ttype = ch;
-	StringBuffer tokbuf = new StringBuffer();
-	while ((ch = in.read()) != ttype && ch != '\n' && ch != '\r' &&
-	       ch != TT_EOF)
-	  {
-	    if (ch == '\\')
-	      switch (ch = in.read())
-		{
-		  case 'a':	ch = 0x7;
-		    break;
-		  case 'b':	ch = '\b';
-		    break;
-		  case 'f':	ch = 0xC;
-		    break;
-		  case 'n':	ch = '\n';
-		    break;
-		  case 'r':	ch = '\r';
-		    break;
-		  case 't':	ch = '\t';
-		    break;
-		  case 'v':	ch = 0xB;
-		    break;
-		  case '\n':    ch = '\n';
-		    break;
-                  case '\r':    ch = '\r';
-		    break;
-		  case '\"':
-		  case '\'':
-		  case '\\':
-		    break;
-		  default:
-		    int ch1, nextch;
-		    if ((nextch = ch1 = ch) >= '0' && ch <= '7')
-		      {
-		        ch -= '0';
-		        if ((nextch = in.read()) >= '0' && nextch <= '7')
-			  {
-			    ch = ch * 8 + nextch - '0';
-			    if ((nextch = in.read()) >= '0' && nextch <= '7' &&
-				ch1 >= '0' && ch1 <= '3')
-			      {
-				ch = ch * 8 + nextch - '0';
-				nextch = in.read();
-			      }
-			  }
-		      }
+        peekChar = read();
+        return (ttype = currentChar);
+    }
 
-		    if (nextch != TT_EOF)
-		      in.unread(nextch);
-		}
+    /**
+     * Set the character <code>ch</code> to be regarded as an ordinary
+     * character.
+     * 
+     * @param ch
+     *            The character to be considered an ordinary comment character.
+     */
+    public void ordinaryChar(int ch) {
+        if (0 <= ch && ch < tokenTypes.length) {
+            tokenTypes[ch] = 0;
+        }
+    }
 
-	    tokbuf.append((char) ch);
-	  }
+    /**
+     * Set the characters ranging from <code>low</code> to <code>hi</code>
+     * to be regarded as ordinary characters.
+     * 
+     * @param low
+     *            The starting range for ordinary characters.
+     * @param hi
+     *            The ending range for ordinary characters.
+     */
+    public void ordinaryChars(int low, int hi) {
+        if (low < 0) {
+            low = 0;
+        }
+        if (hi > tokenTypes.length) {
+            hi = tokenTypes.length - 1;
+        }
+        for (int i = low; i <= hi; i++) {
+            tokenTypes[i] = 0;
+        }
+    }
 
-	// Throw away matching quote char.
-	if (ch != ttype && ch != TT_EOF)
-	  in.unread(ch);
+    /**
+     * Indicate that numbers should be parsed.
+     */
+    public void parseNumbers() {
+        for (int i = '0'; i <= '9'; i++) {
+            tokenTypes[i] |= TOKEN_DIGIT;
+        }
+        tokenTypes['.'] |= TOKEN_DIGIT;
+        tokenTypes['-'] |= TOKEN_DIGIT;
+    }
 
-	sval = tokbuf.toString();
-      }
-    else
-      {
-	ttype = ch;
-      }
+    /**
+     * Indicate that the current token should be pushed back and returned the
+     * next time <code>nextToken()</code> is called.
+     */
+    public void pushBack() {
+        pushBackToken = true;
+    }
 
-    return ttype;
-  }
+    /**
+     * Set the character <code>ch</code> to be regarded as a quote character.
+     * 
+     * @param ch
+     *            The character to be considered a quote comment character.
+     */
+    public void quoteChar(int ch) {
+        if (0 <= ch && ch < tokenTypes.length) {
+            tokenTypes[ch] = TOKEN_QUOTE;
+        }
+    }
 
-  private void resetChar(int ch)
-  {
-    whitespace[ch] = alphabetic[ch] = numeric[ch] = quote[ch] = comment[ch] =
-      false;
-  }
+    private int read() throws IOException {
+        // Call the read for the appropriate stream
+        if (inStream == null) {
+            return inReader.read();
+        }
+        return inStream.read();
+    }
 
-  /**
-   * This method makes the specified character an ordinary character.  This
-   * means that none of the attributes (whitespace, alphabetic, numeric,
-   * quote, or comment) will be set on this character.  This character will
-   * parse as its own token.
-   *
-   * @param ch The character to make ordinary, passed as an int
-   */
-  public void ordinaryChar(int ch)
-  {
-    if (ch >= 0 && ch <= 255)
-      resetChar(ch);
-  }
+    /**
+     * Reset all characters so that they are ordinary.
+     */
+    public void resetSyntax() {
+        for (int i = 0; i < 256; i++) {
+            tokenTypes[i] = 0;
+        }
+    }
 
-  /**
-   * This method makes all the characters in the specified range, range
-   * terminators included, ordinary.  This means the none of the attributes
-   * (whitespace, alphabetic, numeric, quote, or comment) will be set on
-   * any of the characters in the range.  This makes each character in this
-   * range parse as its own token.
-   *
-   * @param low The low end of the range of values to set the whitespace
-   * attribute for
-   * @param hi The high end of the range of values to set the whitespace
-   * attribute for
-   */
-  public void ordinaryChars(int low, int hi)
-  {
-    if (low < 0)
-      low = 0;
-    if (hi > 255)
-      hi = 255;
-    for (int i = low; i <= hi; i++)
-      resetChar(i);
-  }
+    /**
+     * Set a boolean indicating whether or not slash slash comments should be
+     * recognized. The comment ends at a new line.
+     * 
+     * @param flag
+     *            <code>true</code> if <code>//</code> should be recognized
+     *            as the start of a comment, <code>false</code> otherwise.
+     */
+    public void slashSlashComments(boolean flag) {
+        slashSlashComments = flag;
+    }
 
-  /**
-   * This method sets the numeric attribute on the characters '0' - '9' and
-   * the characters '.' and '-'.
-   * When this method is used, the result of giving other attributes
-   * (whitespace, quote, or comment) to the numeric characters may
-   * vary depending on the implementation. For example, if
-   * parseNumbers() and then whitespaceChars('1', '1') are called,
-   * this implementation reads "121" as 2, while some other implementation
-   * will read it as 21.
-   */
-  public void parseNumbers()
-  {
-    for (int i = 0; i <= 9; i++)
-      numeric['0' + i] = true;
+    /**
+     * Set a boolean indicating whether or not slash star comments should be
+     * recognized. Slash-star comments cannot be nested and end when a
+     * star-slash combination is found.
+     * 
+     * @param flag
+     *            <code>true</code> if <code>/*</code> should be recognized
+     *            as the start of a comment, <code>false</code> otherwise.
+     */
+    public void slashStarComments(boolean flag) {
+        slashStarComments = flag;
+    }
 
-    numeric['.'] = true;
-    numeric['-'] = true;
-  }
+    /**
+     * Answer the state of this tokenizer in a readable format.
+     * 
+     * @return The current state of this tokenizer.
+     */
+    public String toString() {
+        // Values determined through experimentation
+        StringBuffer result = new StringBuffer();
+        result.append("Token["); //$NON-NLS-1$
+        switch (ttype) {
+            case TT_EOF:
+                result.append("EOF"); //$NON-NLS-1$
+                break;
+            case TT_EOL:
+                result.append("EOL"); //$NON-NLS-1$
+                break;
+            case TT_NUMBER:
+                result.append("n="); //$NON-NLS-1$
+                result.append(nval);
+                break;
+            case TT_WORD:
+                result.append(sval);
+                break;
+            default:
+                if (ttype == TT_UNKNOWN || tokenTypes[ttype] == TOKEN_QUOTE) {
+                    result.append(sval);
+                } else {
+                    result.append('\'');
+                    result.append((char) ttype);
+                    result.append('\'');
+                }
+        }
+        result.append("], line "); //$NON-NLS-1$
+        result.append(lineNumber);
+        return result.toString();
+    }
 
-  /**
-   * Puts the current token back into the StreamTokenizer so
-   * <code>nextToken</code> will return the same value on the next call.
-   * May cause the lineno method to return an incorrect value
-   * if lineno is called before the next call to nextToken.
-   */
-  public void pushBack()
-  {
-    pushedBack = true;
-  }
+    /**
+     * Set the characters ranging from <code>low</code> to <code>hi</code>
+     * to be regarded as whitespace characters.
+     * 
+     * @param low
+     *            The starting range for whitespace characters.
+     * @param hi
+     *            The ending range for whitespace characters.
+     */
+    public void whitespaceChars(int low, int hi) {
+        if (low < 0) {
+            low = 0;
+        }
+        if (hi > tokenTypes.length) {
+            hi = tokenTypes.length - 1;
+        }
+        for (int i = low; i <= hi; i++) {
+            tokenTypes[i] = TOKEN_WHITE;
+        }
+    }
 
-  /**
-   * This method sets the quote attribute on the specified character.
-   * Other attributes for the character are cleared.
-   *
-   * @param ch The character to set the quote attribute for, passed as an int.
-   */
-  public void quoteChar(int ch)
-  {
-    if (ch >= 0 && ch <= 255)
-      {
-	quote[ch] = true;
-	comment[ch] = false;
-	whitespace[ch] = false;
-	alphabetic[ch] = false;
-	numeric[ch] = false;
-      }
-  }
-
-  /**
-   * This method removes all attributes (whitespace, alphabetic, numeric,
-   * quote, and comment) from all characters.  It is equivalent to calling
-   * <code>ordinaryChars(0x00, 0xFF)</code>.
-   *
-   * @see #ordinaryChars(int, int)
-   */
-  public void resetSyntax()
-  {
-    ordinaryChars(0x00, 0xFF);
-  }
-
-  /**
-   * This method sets a flag that indicates whether or not "C++" language style
-   * comments ("//" comments through EOL ) are handled by the parser.
-   * If this is <code>true</code> commented out sequences are skipped and
-   * ignored by the parser.  This defaults to <code>false</code>.
-   *
-   * @param flag <code>true</code> to recognized and handle "C++" style
-   *             comments, <code>false</code> otherwise
-   */
-  public void slashSlashComments(boolean flag)
-  {
-    slashSlash = flag;
-  }
-
-  /**
-   * This method sets a flag that indicates whether or not "C" language style
-   * comments (with nesting not allowed) are handled by the parser.
-   * If this is <code>true</code> commented out sequences are skipped and
-   * ignored by the parser.  This defaults to <code>false</code>.
-   *
-   * @param flag <code>true</code> to recognized and handle "C" style comments,
-   *             <code>false</code> otherwise
-   */
-  public void slashStarComments(boolean flag)
-  {
-    slashStar = flag;
-  }
-
-  /**
-   * This method returns the current token value as a <code>String</code> in
-   * the form "Token[x], line n", where 'n' is the current line numbers and
-   * 'x' is determined as follows.
-   * <p>
-   * <ul>
-   * <li>If no token has been read, then 'x' is "NOTHING" and 'n' is 0</li>
-   * <li>If <code>ttype</code> is TT_EOF, then 'x' is "EOF"</li>
-   * <li>If <code>ttype</code> is TT_EOL, then 'x' is "EOL"</li>
-   * <li>If <code>ttype</code> is TT_WORD, then 'x' is <code>sval</code></li>
-   * <li>If <code>ttype</code> is TT_NUMBER, then 'x' is "n=strnval" where
-   * 'strnval' is <code>String.valueOf(nval)</code>.</li>
-   * <li>If <code>ttype</code> is a quote character, then 'x' is
-   * <code>sval</code></li>
-   * <li>For all other cases, 'x' is <code>ttype</code></li>
-   * </ul>
-   */
-  public String toString()
-  {
-    String tempstr;
-    if (ttype == TT_EOF)
-      tempstr = "EOF";
-    else if (ttype == TT_EOL)
-      tempstr = "EOL";
-    else if (ttype == TT_WORD)
-      tempstr = sval;
-    else if (ttype == TT_NUMBER)
-      tempstr = "n=" + nval;
-    else if (ttype == TT_NONE)
-      tempstr = "NOTHING";
-    else // must be an ordinary char.
-      tempstr = "\'" + (char) ttype + "\'";
-
-    return "Token[" + tempstr + "], line " + lineno();
-  }
-
-  /**
-   * This method sets the whitespace attribute for all characters in the
-   * specified range, range terminators included.
-   *
-   * @param low The low end of the range of values to set the whitespace
-   * attribute for
-   * @param hi The high end of the range of values to set the whitespace
-   * attribute for
-   */
-  public void whitespaceChars(int low, int hi)
-  {
-    if (low < 0)
-      low = 0;
-    if (hi > 255)
-      hi = 255;
-    for (int i = low; i <= hi; i++)
-      {
-	resetChar(i);
-	whitespace[i] = true;
-      }
-  }
-
-  /**
-   * This method sets the alphabetic attribute for all characters in the
-   * specified range, range terminators included.
-   *
-   * @param low The low end of the range of values to set the alphabetic
-   * attribute for
-   * @param hi The high end of the range of values to set the alphabetic
-   * attribute for
-   */
-  public void wordChars(int low, int hi)
-  {
-    if (low < 0)
-      low = 0;
-    if (hi > 255)
-      hi = 255;
-    for (int i = low; i <= hi; i++)
-      alphabetic[i] = true;
-  }
+    /**
+     * Set the characters ranging from <code>low</code> to <code>hi</code>
+     * to be regarded as word characters.
+     * 
+     * @param low
+     *            The starting range for word characters.
+     * @param hi
+     *            The ending range for word characters.
+     */
+    public void wordChars(int low, int hi) {
+        if (low < 0) {
+            low = 0;
+        }
+        if (hi > tokenTypes.length) {
+            hi = tokenTypes.length - 1;
+        }
+        for (int i = low; i <= hi; i++) {
+            tokenTypes[i] |= TOKEN_WORD;
+        }
+    }
 }

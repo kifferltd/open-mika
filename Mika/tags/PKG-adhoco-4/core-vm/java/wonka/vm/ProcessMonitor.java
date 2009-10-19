@@ -1,5 +1,5 @@
 /**
- * Copyright  (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.
+ * Copyright  (c) 2006, 2008 by Chris Gray, /k/ Embedded Java Solutions.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,13 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
- * $Id: ProcessMonitor.java,v 1.2 2006/10/04 14:24:15 cvsroot Exp $
  */
 package wonka.vm;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 
 /**
  * ProcessMonitor:
@@ -51,12 +51,21 @@ public class ProcessMonitor implements Runnable {
    * @see java.lang.Runnable#run()
    */
   public void run() {
+    Runtime theRuntime = Runtime.getRuntime();
     try {
       do {
-        synchronized(this) {
-          while (!queue.isEmpty()) {
-            //System.out.println("ProcessMonitor.run() Starting new process "+System.currentTimeMillis());
-            startProcess((NativeProcess) queue.removeFirst());
+        while (!queue.isEmpty()) {
+          synchronized(this) {
+            NativeProcess np = null;
+            try {
+              np = (NativeProcess)queue.removeFirst();
+            }
+            catch (NoSuchElementException nsee) {
+            }
+            if (np != null) {
+              //System.out.println("ProcessMonitor.run() Starting new process " + np);
+              startProcess(np);
+            }
           }
         }
 
@@ -76,9 +85,15 @@ public class ProcessMonitor implements Runnable {
             } else {
               info.finish(returnvalue);              
             }
+            if (theRuntime.freeMemory() < theRuntime.totalMemory() / 3) {
+              theRuntime.runFinalization();
+            }
           } else if (queue.isEmpty()){
-            thread = null;
-            break;                     
+            wait(10000);
+            if (queue.isEmpty()){
+              thread = null;
+              break;                     
+            }
           }
         }        
       } while(true);
@@ -87,7 +102,7 @@ public class ProcessMonitor implements Runnable {
       t.printStackTrace();      
       thread = null;
     }
-    Runtime.getRuntime().runFinalization();
+    theRuntime.runFinalization();
     //System.out.println("ProcessMonitor.run() processes = "+processes);
   }
 
@@ -107,23 +122,27 @@ public class ProcessMonitor implements Runnable {
     try {
       ProcessInfo info = nativeExec(process.cmdarray, process.envp, process.path);
       if (info == null) {
-        process.returnvalue = NativeProcess.ERROR;
+        setProcessReturnValue(process, NativeProcess.ERROR);
       } else {
         info.setNativeProcess(process);
         Integer pid = new Integer(info.id);
         //System.out.println("ProcessMonitor.monitorProcess("+pid+") add to processes");
         processes.put(pid,info);  
-        process.returnvalue = NativeProcess.STILL_RUNNING;
+        setProcessReturnValue(process, NativeProcess.STILL_RUNNING);
       }
     } catch (Throwable e) {
-      process.returnvalue = NativeProcess.ERROR;
-      process.excecption = e;
-    }
-    synchronized(process) {
-      process.notifyAll();
+      process.exception = e;
+      setProcessReturnValue(process, NativeProcess.ERROR);
     }
   }
   
+  private void setProcessReturnValue(NativeProcess process, int retval) {
+    synchronized(process) {
+      process.returnvalue = retval;
+      process.notifyAll();
+    }
+  }
+
   private  native ProcessInfo nativeExec(String[] cmdarray,
            String[] envp, String string) throws IOException;
 

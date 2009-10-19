@@ -1,35 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2006, 2007, 2008 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips Site 5, box 3       info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Array.c,v 1.5 2006/10/04 14:24:16 cvsroot Exp $
-** 
-** Implementation of the native methods for java/lang/reflect/Array
-*/
 
 #include <string.h>
 
@@ -112,7 +111,10 @@ w_instance Array_static_get(JNIEnv *env, w_instance Class, w_instance Array, w_i
         wabort(ABORT_WONKA, "Illegal primitive type 0x%02x\n");
     }
 
+    mustBeInitialized(wrapper_clazz);
+    enterUnsafeRegion(thread);
     wrapped = allocInstance(thread, wrapper_clazz);
+    enterSafeRegion(thread);
     if (wrapped) {
       switch (component_clazz->type & 0x0f) {
         case VM_TYPE_BOOLEAN:
@@ -187,14 +189,15 @@ w_int Array_static_getLength(JNIEnv *env, w_instance Class, w_instance Array) {
   
 }
 
-/* WAS :
 w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_instance Component, w_int length) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_int dimensions;
   w_instance Array = NULL;
   w_clazz component_clazz = Class2clazz(Component);
   w_clazz array_clazz;
+  w_instance initiating_loader = clazz2loader(getCallingClazz(thread)); 
+  
+  threadMustBeSafe(thread);
 
   if (length < 0) {
     throwException(thread, clazzNegativeArraySizeException, NULL);
@@ -208,56 +211,23 @@ w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_inst
     return NULL;
 
   }
-
-  woempa(9, "Creating instance of 1 dimension and component '%k'.\n", component_clazz);
-
-  dimensions = length;
-  array_clazz = getNextDimension(component_clazz);
-  if (array_clazz) {
-    if (!exceptionThrown(thread)) {
-      mustBeLinked(array_clazz);
-    }
-    if (! exceptionThrown(thread)) {
-      Array = allocArrayInstance_1d(thread, array_clazz, dimensions);
-    }
-  }
-
-  return Array;
-  
-}
-*/
-
-w_instance Array_static_newInstance_single(JNIEnv *env, w_instance Class, w_instance Component, w_int length) {
-
-  w_thread thread = JNIEnv2w_thread(env);
-  w_instance Array = NULL;
-  w_clazz component_clazz = Class2clazz(Component);
-  w_clazz array_clazz;
-  w_instance initiating_loader = clazz2loader(getCallingClazz(thread));
-  
-
-  if (length < 0) {
-    throwException(thread, clazzNegativeArraySizeException, NULL);
-
+  else if(component_clazz == clazz_void) {
+    throwException(thread, clazzIllegalArgumentException, NULL);
     return NULL;
-
-  }
-  else if (!Component) {
-    throwException(thread, clazzNullPointerException, NULL);
-
-    return NULL;
-
   }
 
   woempa(9, "Creating instance of 1 dimension and component '%k'.\n", component_clazz);
 
   array_clazz = getNextDimension(component_clazz, initiating_loader);
   if (array_clazz) {
+    mustBeInitialized(array_clazz);
     if (!exceptionThrown(thread)) {
       mustBeLinked(array_clazz);
     }
     if (! exceptionThrown(thread)) {
+      enterUnsafeRegion(thread);
       Array = allocArrayInstance_1d(thread, array_clazz, length);
+      enterSafeRegion(thread);
     }
   }
 
@@ -275,12 +245,12 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
 
-  woempa(9, "Creating instance of %d dimension(s) and component '%k'.\n", instance2Array_length(Dimensions), Class2clazz(Component));
+  threadMustBeSafe(thread);
   if (!Component || !Dimensions) {
     throwException(thread, clazzNullPointerException, NULL);
   }  
   else {
-
+    woempa(9, "Creating instance of %d dimension(s) and component '%k'.\n", instance2Array_length(Dimensions), Class2clazz(Component));
     /*
     ** Check and copy our Dimensions elements...
     */
@@ -288,8 +258,15 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
     ndims = instance2Array_length(Dimensions);
     if (ndims < 1 || ndims > 255) {
       throwException(thread, clazzIllegalArgumentException, "illegal number of dimensions");
-    }
+    } 
     else {
+      clazz = Class2clazz(Component);
+    
+      if (clazz == clazz_void) {
+        throwException(thread, clazzIllegalArgumentException, NULL);
+        return NULL;
+      }
+
 
       /*
       ** Create an array of w_int for the length of each dimension...
@@ -297,7 +274,7 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
 
       dimensions = allocMem(ndims * sizeof(w_word));
       if (!dimensions) {
-        wabort(ABORT_WONKA, "Unable to allocate space for dimensions\n");
+         return NULL;
       }
       lengths = instance2Array_int(Dimensions);
       for (i = 0; i < ndims; i++) {
@@ -316,15 +293,14 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
       if (exceptionThrown(thread) == NULL) {
         w_instance initiating_loader = clazz2loader(getCallingClazz(thread));
   
-        clazz = Class2clazz(Component);
         woempa(7, "Component class = %k\n", clazz);
         for (i = 0; i < ndims; i++) {
           clazz = getNextDimension(clazz, initiating_loader);
           if (exceptionThrown(thread)) {
             break;
           }
-          woempa(7, "Resolving class %k\n", clazz);
-          mustBeLinked(clazz);
+          woempa(7, "Initializing class %k\n", clazz);
+          mustBeInitialized(clazz);
           if (exceptionThrown(thread)) {
             break;
           }
@@ -333,7 +309,9 @@ w_instance Array_static_newInstance_multi(JNIEnv *env, w_instance Class, w_insta
 
         if (! exceptionThrown(thread)) {
           woempa(7, "Allocating %k\n", clazz);
+          enterUnsafeRegion(thread);
           Array = allocArrayInstance(thread, clazz, ndims, dimensions);
+          enterSafeRegion(thread);
         }
       }
       releaseMem(dimensions);

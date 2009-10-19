@@ -1,42 +1,51 @@
+/**************************************************************************
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+**************************************************************************/
+
 #ifndef _CLAZZ_H
 #define _CLAZZ_H
 
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
-**************************************************************************/
-
-/*
-** $Id: clazz.h,v 1.15 2006/10/04 14:24:14 cvsroot Exp $
-*/
-
+#include "package.h"
 #include "wonka.h"
 #include "hashtable.h"
 #include "oswald.h"
 #include "threads.h"
 #include "wordset.h"
+
+/*
+** If CLASSES_HAVE_INSTANCE_CACHE is defined each class will have a cache
+** of instances which have become unreachable and can be recycled.
+** Not currently usable: it justs wastes memory and runs slower, not faster. :-(
+*/
+//#define CLASSES_HAVE_INSTANCE_CACHE
 
 typedef struct w_InnerClassInfo {
   w_ushort inner_class_info_index;
@@ -70,6 +79,7 @@ typedef struct w_Clazz {
   x_monitor  resolution_monitor; /* used to protect resolution of constants */
   w_thread   resolution_thread;  /* thread which is busy with this class    */
                                  /* (unstable class states only)            */
+  w_package  package;    /* runtime package of which this class is a member */
 
 /* Information available in states CLAZZ_STATE_SUPERS_LOADED and higher */
 /* (see also the 'temp' annex below)                                    */
@@ -146,6 +156,12 @@ typedef struct w_Clazz {
     w_ushort *interface_index;
     w_InnerClassInfo *inner_class_info;
   } temp;
+#ifdef CLASSES_HAVE_INSTANCE_CACHE
+  w_fifo cache_fifo;
+#ifndef THREAD_SAFE_FIFOS
+  x_mutex cache_mutex;
+#endif
+#endif
 } w_Clazz;
 
 /*
@@ -179,16 +195,17 @@ typedef struct w_UnloadedClazz {
 **
 ** +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ** | | | | | | | | | | | | | state |       ACC_xxxxx flags         |
-** +-+^+^+^+-+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-**    | | |   | | | | | |
-**    | | |   | | | | | +--- CLAZZ_IS_TRUSTED 
-**    | | |   | | | | +----- CLAZZ_IS_SCRAMBLED
-**    | | |   | | | +------- CLAZZ_IS_PRIMITIVE
-**    | | |   | | +--------- CLAZZ_IS_PROXY
-**    | | |   | +----------- CLAZZ_IS_THROWABLE
-**    | | |   +------------- CLAZZ_IS_THREAD
-**    | | +----------------- CLAZZ_IS_REFERENCE
-**    | +------------------- CLAZZ_IS_CLASSLOADER
+** +-+^+^+^+^+^+^+^+^+^+^+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+**    | | | | | | | | | |
+**    | | | | | | | | | +--- CLAZZ_IS_TRUSTED 
+**    | | | | | | | | +----- CLAZZ_IS_SCRAMBLED
+**    | | | | | | | +------- CLAZZ_IS_PRIMITIVE
+**    | | | | | | +--------- CLAZZ_IS_PROXY
+**    | | | | | +----------- CLAZZ_IS_THROWABLE
+**    | | | | +------------- CLAZZ_IS_THREAD
+**    | | | +--------------- CLAZZ_IS_REFERENCE
+**    | | +----------------- CLAZZ_IS_CLASSLOADER
+**    | +------------------- CLAZZ_IS_UDCL
 **    +--------------------- CLAZZ_HAS_FINALIZER
 */
 #define CLAZZ_STATE_MASK        0x000f0000
@@ -230,18 +247,20 @@ typedef struct w_UnloadedClazz {
 ** or void.  The flags CLAZZ_IS_THROWABLE, CLAZZ_IS_THREAD, CLAZZ_IS_THREADGROUP,
 ** CLAZZ_IS_REFERENCE, CLAZZ_IS_CLASSLOADER indicate that the class is (a
 ** subclass of) java.lang.Throwable, java.lang.Thread, java.lang.ThreadGroup,
-** java.lang.ref.Reference, or java.lang.ClassLoader respectively.  These
+** java.lang.ref.Reference, or java.lang.ClassLoader respectively; 
+** CLAZZ_IS_UDCL indicates that the class is a user-defined class loader. These
 ** flags are inherited by all subclasses of this clazz.
 */
 #define CLAZZ_IS_PRIMITIVE      0x00800000
 #define CLAZZ_IS_PROXY          0x01000000
 #define CLAZZ_IS_THROWABLE      0x02000000
 #define CLAZZ_IS_THREAD         0x04000000
-#define CLAZZ_IS_REFERENCE      0x10000000
-#define CLAZZ_IS_CLASSLOADER    0x20000000
+#define CLAZZ_IS_REFERENCE      0x08000000
+#define CLAZZ_IS_CLASSLOADER    0x10000000
+#define CLAZZ_IS_UDCL           0x20000000
 #define CLAZZ_HAS_FINALIZER     0x40000000
 
-#define CLAZZ_HERITABLE_FLAGS  (CLAZZ_IS_REFERENCE | CLAZZ_IS_THROWABLE | CLAZZ_IS_THREAD | CLAZZ_IS_CLASSLOADER)
+#define CLAZZ_HERITABLE_FLAGS  (CLAZZ_IS_REFERENCE | CLAZZ_IS_THROWABLE | CLAZZ_IS_THREAD | CLAZZ_IS_CLASSLOADER | CLAZZ_IS_UDCL)
 
 /*
 ** The "type" byte.  These definitions are congruent with JIFF.
@@ -297,13 +316,16 @@ typedef struct w_UnloadedClazz {
  ** (createSingleArrayClazzFromDesc has its own code to do
  ** the equivalent thing).
  */
-w_instance attachClassInstance(w_clazz);
+w_instance attachClassInstance(w_clazz, w_thread thread);
 
 /*
 ** clazz2Class returns the w_instance of Class associated with this w_clazz.
-** If the Class instance does not already exist it will be created.
 */
+#ifdef RUNTIME_CHECKS
 w_instance clazz2Class(w_clazz);
+#else
+#define clazz2Class(c) ((c)->Class)
+#endif
 
 /*
 ** Get the class loader of this class: the initiating class loader if class
@@ -333,6 +355,8 @@ extern w_hashtable system_loaded_class_hashtable;
 
 extern w_hashtable system_unloaded_class_hashtable;
 
+extern w_hashtable system_package_hashtable;
+
 /*
 ** Get a copy of a reference field of a class
 */
@@ -341,17 +365,37 @@ w_instance getStaticReferenceField(w_clazz clazz, w_int slot);
 /*
 ** Set a reference field of a class.
 */
-void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child);
+void setStaticReferenceField(w_clazz clazz, w_int slot, w_instance child, w_thread thread);
 
 /*
 ** Set a reference field of a class, when the context is known to be 'unsafe'.
 */
-void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child);
+void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child, w_thread thread);
+
+/**
+ * Allocate memory for a w_Clazz, without initialising it.
+ */
+w_clazz allocClazz(void);
 
 w_clazz createClazz(w_thread, w_string name, w_bar source, w_instance loader, w_boolean trusted);
 void startClasses(void);
 
-void registerClazz(w_thread thread, w_clazz clazz, w_instance loader);
+/**
+** Register clazz 'clazz' with the loaded_classes_hashtable of 'loader'.
+** If an entry already exists in state CLAZZ_STATE_LOADING, we copy the
+** contents of 'clazz' over the existing entry, release the memory of
+** 'clazz', and return the existing entry as result. Otherwise the
+** result returned is 'clazz'.
+** A typical calling pattern is
+**   ...
+**   clazz = allocClazz();
+**   ...
+**   clazz = registerClazz(thread, clazz, loader);
+**   ...
+**
+** The caller must own the instance lock on 'loader'.
+*/
+w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader);
 
 /*
 ** Destroy a w_clazz structure, cleaning up all its ramifications.

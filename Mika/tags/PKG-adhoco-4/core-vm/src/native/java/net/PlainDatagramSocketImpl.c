@@ -1,30 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2007, 2008, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/**
- * $Id: PlainDatagramSocketImpl.c,v 1.3 2006/03/21 08:54:34 cvs Exp $
- */
 
 #include <string.h>
 #include <errno.h>
@@ -52,7 +56,6 @@ w_int PlainDatagramSocketImpl_clear(w_instance ThisImpl) {
   if (getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
     res = w_socketclose(sock);
     if (res == -1) {
-      //woempa(9, "ERROR while closing socket %p (desc = %i) %s\n", ThisImpl, sock, w_strerror((int)w_errno(sock)));
     }
     setWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit, minus1);
     setBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open, WONKA_FALSE);
@@ -91,18 +94,26 @@ void PlainDatagramSocketImpl_finalize(JNIEnv* env , w_instance ThisImpl) {
 }
 
 void PlainDatagramSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_int sock;
 
   if(getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)){
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already created");
+    throwException(thread, clazzIOException, "socket is already created");
   }
   else {
     sock = w_socket (PF_INET, SOCK_DGRAM, 0);
 
+    int yes = 1;
+    if (setsockopt(sock,SOL_SOCKET, SO_BROADCAST, &yes, sizeof(int))) {
+      throwException(thread, clazzIOException, "failed to create a socket: %s",strerror(errno));
+      woempa(9,"Error occured while making datagramsocket able to send broadcast messages '%i'\n",errno);
+      close(sock);
+      sock = -1;
+    }
+
     setWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit, sock);	
     if (sock == -1) {
-      throwException(JNIEnv2w_thread(env), clazzIOException, "failed to create a socket: %s",strerror(errno));
+      throwException(thread, clazzIOException, "failed to create a socket: %s",strerror(errno));
       woempa(9, "Error Not able to create a socket for %p\n", ThisImpl);
     }
     else {
@@ -133,7 +144,6 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
     res = w_bind (sock, (struct sockaddr*)&sa, sizeof (struct sockaddr_in));
 
     if (res == -1) {
-      //woempa(9,"ERROR = %s\n", w_strerror((int)w_errno(sock)));
       throwException(JNIEnv2w_thread(env), clazzBindException, "bind failed: %s",strerror(errno));
       return;
     }
@@ -142,7 +152,6 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
       socklen_t namelen = sizeof(sa);
       res = w_getsockname(sock , (struct sockaddr*)&sa , &namelen);
       if (res == -1){
-        //woempa(9,"ERROR in bind (getsockname) = %s\n", w_strerror((int)w_errno(sock))); 	
         throwException(JNIEnv2w_thread(env), clazzBindException, "bind failed: %s",strerror(errno));
       }
       else {
@@ -178,7 +187,6 @@ w_int PlainDatagramSocketImpl_peek(JNIEnv* env , w_instance ThisImpl, w_instance
     woempa (6, "socketfd = %d, peek result = %d\n", sock, port);
 
     if (port == -1) {
-      //woempa(9,"ERROR = %s\n", w_strerror((int)w_errno(sock)));
       throwException(JNIEnv2w_thread(env), clazzConnectException, "connect failed: %s",strerror(errno));
       return port;
     }
@@ -227,7 +235,6 @@ int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_instanc
      	
       if (result == -1) {
         if (len) { 		     		
-          //woempa(9, "ERROR in receive = %s\n", w_strerror((int)w_errno(sock)));
           throwException(JNIEnv2w_thread(env), clazzIOException, NULL);
         }
      	else {
@@ -273,7 +280,6 @@ void PlainDatagramSocketImpl_send(JNIEnv* env , w_instance ThisImpl, w_instance 
 
       result = w_sendto(sock, buffer, getIntegerField(packet, F_DatagramPacket_length), MSG_NOSIGNAL, (struct sockaddr*)&sa, sizeof (struct sockaddr_in),ThisImpl);
       if (result == -1){
-        //woempa(9,"ERROR in sendto = %s\n", w_strerror((int)w_errno(sock)));
         throwException(JNIEnv2w_thread(env), clazzIOException, "send failed: %s",strerror(errno));
       }
     }
@@ -296,7 +302,6 @@ void PlainDatagramSocketImpl_setTimeToLive(JNIEnv* env, w_instance ThisImpl, w_i
   else {
     unsigned char val = (unsigned char) value;
     if  (w_setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &val, sizeof(val))) {
-      //woempa(9,"ERROR in setTimeToLive = %s\n", w_strerror((int)w_errno(sock)));		
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   } 	
@@ -316,7 +321,6 @@ w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
     socklen_t len = sizeof(val);
 
     if (w_getsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &val, &len)) {
-      //woempa(9,"ERROR in getTimeToLive = %s\n", w_strerror((int)w_errno(sock)));			
       throwException(JNIEnv2w_thread(env), clazzIOException, "getsocket option failed: $s",strerror(errno));
     }
     else {
@@ -328,7 +332,7 @@ w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
   
 }
 
-void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int action) {
+void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int action, w_instance localAddr) {
 
   if (!address) {
     throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
@@ -342,11 +346,12 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
     }  	  	  	
     else {
       struct ip_mreq groupaddr;
+      memset(&groupaddr, 0, sizeof(struct ip_mreq));
       groupaddr.imr_multiaddr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-      groupaddr.imr_interface.s_addr = htonl(INADDR_ANY);
+      groupaddr.imr_interface.s_addr = htonl(localAddr == NULL ? 
+           INADDR_ANY : getIntegerField(localAddr, F_InetAddress_address));
 
      if (w_setsockopt(sock, IPPROTO_IP, action, &groupaddr, sizeof(groupaddr)) == -1) {
-       //woempa(9,"ERROR in join/leave = %s\n", w_strerror((int)w_errno(sock)));
        throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s", strerror(errno));
      }
    } 	
@@ -354,12 +359,13 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
 
 }
 
-void PlainDatagramSocketImpl_join(JNIEnv* env, w_instance ThisImpl, w_instance address) {
-  groupRequest(env, ThisImpl, address, IP_ADD_MEMBERSHIP);
+void PlainDatagramSocketImpl_join(JNIEnv* env, w_instance ThisImpl, w_instance address, w_instance localAddr) {
+  groupRequest(env, ThisImpl, address, IP_ADD_MEMBERSHIP, localAddr);
 }
 
 void PlainDatagramSocketImpl_leave(JNIEnv* env, w_instance ThisImpl, w_instance address) {
-  groupRequest(env, ThisImpl, address, IP_DROP_MEMBERSHIP);
+  //TODO ...
+  groupRequest(env, ThisImpl, address, IP_DROP_MEMBERSHIP, NULL);
 }
 
 w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, w_int sock) {
@@ -369,7 +375,6 @@ w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, 
   w_int res = w_getsockname(sock, (struct sockaddr *)&sa, &namelen);	
  	
   if (res == -1) {
-    //woempa(9,"ERROR in optBindAddress = %s\n", w_strerror((int)w_errno(sock))); 	
     throwException(JNIEnv2w_thread(env), clazzSocketException, "get socket name failed: %s",strerror(errno));
   }
   else {
@@ -387,7 +392,6 @@ w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int
 
   if (value == -1) { //get
     if (w_getsockopt(sock, SOL_SOCKET, SO_LINGER, &lg, &len)) {
-      //woempa(9,"ERROR in optLinger = %s\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option linger failed: %s",strerror(errno));
       return 0;
     }
@@ -402,7 +406,6 @@ w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int
     lg.l_onoff = value;
 
     if (w_setsockopt(sock, SOL_SOCKET, SO_LINGER, &lg, len)) {
-      //woempa(9,"ERROR in optLinger = %s\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option linger failed: %s",strerror(errno));
     }
   }
@@ -418,7 +421,6 @@ w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, 
 
   if (get == WONKA_TRUE) { //get
     if (w_getsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &val, &len)) {
-      //woempa(9,"ERROR in optNoDelay = %s\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
@@ -428,7 +430,6 @@ w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, 
   else { //set
     val = (value == WONKA_TRUE ? 1 : 0);
     if (w_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &val, len)) {
-      //woempa(9,"ERROR in optNoDelay = %s(set fails ...)\n", w_strerror((int)w_errno(sock))); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }
@@ -443,8 +444,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
   socklen_t len = sizeof(sa);
  	
   if (get == WONKA_TRUE) { //get
-    if (w_getsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &sa, &len)) {
-      //woempa(9,"ERROR in optMulticastIF = %s\n", w_strerror((int)w_errno(sock))); 	
+    if (w_getsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, &len)) {
       throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
@@ -455,8 +455,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
     sa.sin_family = (w_short)getIntegerField(address, F_InetAddress_family);
     sa.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
 
-    if  (w_setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &sa, len)) {
-      //woempa(9,"ERROR in optMulticastIF = %s\n", w_strerror((int)w_errno(sock))); 	
+    if  (w_setsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, len)) {
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }
@@ -467,6 +466,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
 
 w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_int sock, w_int value, w_int opt) {
 
+// TODO: on Windows and Solaris len may sometimes be 1! Move this whole function to a hal/hostos directory.
   socklen_t len = sizeof(w_int);
 
   switch(opt) {
@@ -479,6 +479,9 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
     case 2:
       opt = SO_SNDBUF;
       break;
+    case 7:
+      opt = SO_BROADCAST;
+      break;
     default:
       woempa(9, "ERROR in optIntOptions: unknown options %d\n", opt);
       throwException(JNIEnv2w_thread(env), clazzSocketException, "invalid socket option");
@@ -487,7 +490,6 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
 
   if (value == -1) { // get
     if (w_getsockopt(sock, SOL_SOCKET, opt, &value, &len)) {
-      //woempa(9,"ERROR (get) in optIntOptions = %s (%d,%d)\n", w_strerror((int)w_errno(sock)), opt, sock); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
@@ -496,7 +498,6 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
   }
   else { // set
     if (w_setsockopt(sock, SOL_SOCKET, opt, &value, len)) {
-      //woempa(9,"ERROR (set) in optIntOptions = %s(%d,%d)\n", w_strerror((int)w_errno(sock)), opt, sock); 	
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }

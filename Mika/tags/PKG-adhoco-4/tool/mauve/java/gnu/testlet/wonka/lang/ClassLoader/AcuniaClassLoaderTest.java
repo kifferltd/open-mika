@@ -305,31 +305,31 @@ public class AcuniaClassLoaderTest implements Testlet
     try {
      	Class c = cl.findClass("Mis");
      	c.newInstance();
-     	th.fail("should throw a NoClassDefFoundError");	
+     	th.fail("should throw a ClassNotFoundException");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class, "Mis: "+t);
+     	th.check(t.getClass(), ClassNotFoundException.class, "Mis: "+t);
     }
     try {
      	Class c = cl.findClass("MisClass");
      	c.newInstance();
-     	th.fail("should throw a NoClassDefFoundError");	
+     	th.fail("should throw a ClassNotFoundException");	
     }catch (Throwable t){
         //t.printStackTrace();
-     	th.check(t.getClass(), NoClassDefFoundError.class, "MisClass: "+t);
+     	th.check(t.getClass(), ClassNotFoundException.class, "MisClass: "+t);
     }
     try {
      	cl.findClass("BadFormat1");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
-        //t.printStackTrace();
+        t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {
      	cl.findClass("BadFormat2");
      	th.fail("should throw a ClassFormatError");	
     }catch (Throwable t){
-        //t.printStackTrace();
+        t.printStackTrace();
      	th.check(t.getClass(), ClassFormatError.class);
     }
     try {
@@ -360,7 +360,8 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw an IncompatibleClassChangeError - 1");	
     }catch (Throwable t){
       //t.printStackTrace();
-     	th.check(t instanceof IllegalAccessError);
+     	th.check(t instanceof IllegalAccessError, "got "+t.getClass()+
+          " =?= IllegalAccessError");
     }
     try {
      	Class c = cl.findClass("Acces");//, true, cl);
@@ -368,7 +369,7 @@ public class AcuniaClassLoaderTest implements Testlet
      	th.fail("should throw an IncompatibleClassChangeError - 2");	
     }catch (Throwable t){
       //t.printStackTrace();
-     	th.check(t instanceof IllegalAccessError);
+      th.check(t instanceof IllegalAccessError || t instanceof SecurityException,"Access -2-");
     }
     try {
      	Class c = cl.findClass("NoSuchField");//, true, cl);

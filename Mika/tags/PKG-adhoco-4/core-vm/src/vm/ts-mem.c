@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: ts-mem.c,v 1.11 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include "heap.h"
 #include "ts-mem.h"
@@ -43,6 +44,20 @@
 #define ALLOCMEM_RETRIES 10
 #define ALLOCMEM_SLEEP    5
 
+/**
+ ** alloc_barrier acts to slow down a thread which is allocating memory while
+ ** another thread is sweeping the heap.
+ */
+static void alloc_barrier(w_thread thread) {
+  if (gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
+    int p = thread ? thread->jpriority : 5;
+    if (p < 10) {
+      woempa(7, "sleeping for (%d + %d + 1) * %d = %d ticks\n", *gc_kicks_pointer, memory_load_factor, 5 - p / 2, (*gc_kicks_pointer + memory_load_factor + 1) * (5 - p / 2));
+      x_thread_sleep((*gc_kicks_pointer + memory_load_factor + 1) * (5 - p / 2));
+    }
+  }
+}
+
 /*
 ** Allocate cleared (zeroed) memory.
 */
@@ -50,29 +65,42 @@ void * _allocClearedMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
 
 #ifdef ALLOCMEM_RETRIES
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count-- && !chunk) {
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       if (ALLOCMEM_SLEEP) {
         x_thread_sleep(ALLOCMEM_SLEEP);
       }
-      //wprintf("allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
+      woempa(7, "allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
+      if (chunk || --count <= 0) {
+        break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
+      }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!chunk) {
     wprintf("Failed to allocate %d bytes\n", rsize);
 
@@ -94,29 +122,39 @@ void * _allocMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
 
 #ifdef ALLOCMEM_RETRIES
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count-- && !chunk) {
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
-      //wprintf("allocMem_realm(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
+      woempa(7, "allocMem_realm(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
+      if (chunk || --count <= 0) {
+        break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
+      }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!chunk) {
     wprintf("Failed to allocate %d bytes\n", rsize);
 
@@ -136,13 +174,13 @@ void * _reallocMem(void * block, w_size newsize) {
   w_size  oldsize;
   w_chunk newchunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   oldchunk = block2chunk(block);
   oldsize = x_mem_size(oldchunk);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(newsize - oldsize, NULL);
-  }
+  gc_reclaim(newsize - oldsize, NULL);
 
+  alloc_barrier(thread);
   newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
   
 
@@ -150,21 +188,28 @@ void * _reallocMem(void * block, w_size newsize) {
   if (!newchunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
-      //wprintf("reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
+      woempa(7, "reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(newsize - oldsize, NULL);
       newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
-      if (newchunk) {
+      if (newchunk || --count <= 0) {
         break;
+      }
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
 #endif
 
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   if (!newchunk) {
     wprintf("Failed to reallocate %d bytes\n", newsize);
 
@@ -180,11 +225,13 @@ void * _reallocMem(void * block, w_size newsize) {
 }
 
 void _releaseMem(void * block) {
+  w_chunk chunk;
+  if (!block) {
+    wabort(ABORT_WONKA, "Bah. releaseMem(NULL)?");
+  }
 
-  w_chunk chunk = block2chunk(block);
-
+  chunk = block2chunk(block);
   x_mem_free(chunk);
-
 }
 
 void _discardMem(void * block) {
@@ -331,6 +378,7 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
   checks += 1;
   
   if (checks % check_limit == 0) {
+    x_mem_lock(x_eternal);
     woempa(7, "Performing heap check for alloc/releaseMem at %s:%d, count = %d\n", file, line, checks);
     wa->count = 0;
     wa->bytes = 0;
@@ -341,6 +389,7 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
     x_mem_walk(x_eternal, checkWalk, wa);
     walks += 1;
     errors += wa->errors;
+    x_mem_unlock();
     woempa(9, "%s.%d (alloc/release %p): Walked %d anon %d tagged chunks, %d MB anon %d Mb tagged, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->all_count - wa->count, wa->count, (wa->all_bytes - wa->bytes) / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
     if (wa->errors) {
       wabort(ABORT_WONKA, "Found bad chunk. Stopping...\n");
@@ -412,8 +461,10 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
 
@@ -421,18 +472,23 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "allocClearedMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
       chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
-      if (chunk) {
+      if (chunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -441,6 +497,9 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   if (chunk == NULL) {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes\n", rsize);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -453,9 +512,9 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-//  if (chunk == (w_chunk)0x30377090 || chunk == (w_chunk) 0x30483240) {
-//    wprintf("allocated weird chunk %w at %s:%d\n", chunk, file, line);
-//  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
 
   return chunk->data;
 
@@ -465,14 +524,12 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-
-  if (rsize > 163840) printf("Request for %d bytes at %s.%d\n", rsize, file, line);
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(rsize, NULL);
-  }
+  gc_reclaim(rsize, NULL);
 
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
 
@@ -480,18 +537,23 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "allocMem(%d) : RETRY %d\n", rsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
       chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
-      if (chunk) {
+      if (chunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -500,6 +562,9 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   if (chunk == NULL) {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes for %s:%d\n", rsize, file, line);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -512,9 +577,9 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-//  if (chunk == (w_chunk)0x30377090 || chunk == (w_chunk) 0x30483240) {
-//    wprintf("allocated weird chunk %w at %s:%d\n", chunk, file, line);
-//  }
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
   
   return chunk->data;
 
@@ -525,6 +590,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   w_chunk newchunk;
   w_size  oldsize;
   w_thread thread = currentWonkaThread;
+  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Reallocating block %p, new size = %d\n", file, line, block, newsize);
   oldchunk = checkChunk(block, 1, file, line);
@@ -535,35 +601,35 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   }
 
-  //if (oldchunk == (w_chunk)0x30377090 || oldchunk == (w_chunk) 0x30483240) {
-  //  wprintf("reallocating weird chunk %w at %s:%d\n", oldchunk, file, line);
-  //}
-
   oldsize = x_mem_size(oldchunk);
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, newsize, sizeof(w_Chunk) + newsize);
-  if (thread && threadIsSafe(thread)) {
-    gc_reclaim(newsize - oldsize, NULL);
-  }
+  gc_reclaim(newsize - oldsize, NULL);
 
+  alloc_barrier(thread);
   x_mem_lock(x_eternal);
   newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
 
 #ifdef ALLOCMEM_RETRIES
-  if (!newchunk && thread && threadIsSafe(thread) && thread != marking_thread) {
+  if (!newchunk && thread && thread != marking_thread) {
     w_int count = ALLOCMEM_RETRIES;
 
-    while (count--) {
-      x_mem_unlock();
-      if (ALLOCMEM_SLEEP) {
-        x_thread_sleep(ALLOCMEM_SLEEP);
-      }
+    x_mem_unlock();
+    if (ALLOCMEM_SLEEP) {
+      x_thread_sleep(ALLOCMEM_SLEEP);
+    }
+    unsafe = enterSafeRegion(thread);
+    while (TRUE) {
       woempa(7, "reallocMem(%d) : RETRY %d\n", newsize, ALLOCMEM_RETRIES - count);
       *gc_kicks_pointer = 3;
       gc_reclaim(newsize - oldsize, NULL);
       x_mem_lock(x_eternal);
       newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
-      if (newchunk) {
+      if (newchunk || --count <= 0) {
         break;
+      }
+      x_mem_unlock();
+      if (ALLOCMEM_SLEEP) {
+        x_thread_sleep(ALLOCMEM_SLEEP);
       }
     }
   }
@@ -573,6 +639,9 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   if (!newchunk) {
     x_mem_unlock();
     printf("Failed to reallocate %d bytes for %s:%d\n", newsize, file, line);
+    if (unsafe) {
+      enterUnsafeRegion(thread);
+    }
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -582,13 +651,13 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   }
 
-  // if (newchunk == (w_chunk)0x30377090 || newchunk == (w_chunk) 0x30483240) {
-  //   wprintf("reallocating weird chunk %w at %s:%d\n", newchunk, file, line);
-  // }
   woempa(1,"%s.%d: Reallocated %d bytes at %p\n", file, line, newsize, newchunk);
   prepareChunk(newchunk, newsize, file, line);  
   x_mem_unlock();
   checkChunk(newchunk->data, 1, file, line);
+  if (unsafe) {
+    enterUnsafeRegion(thread);
+  }
 
   return newchunk->data;
 }
@@ -733,6 +802,7 @@ static x_boolean cr_walk(void * block, void * arg) {
   }
 
   chunk = block;
+  woempa(7, "Scanning block %08p\n", block);
   
   wa->count += 1;
   wa->bytes += chunk->size;
@@ -747,12 +817,12 @@ static x_boolean cr_walk(void * block, void * arg) {
 
   ex = cr_find(cr);
   if (ex) {
-    woempa(1, "found match at %p\n", ex);
+    woempa(7, "found match at %p (%s:%d)\n", ex, cr->file, cr->line);
     ex->hits += 1;
     ex->total += chunk->size;
   }
   else {
-    woempa(1, "found no match, adding new entry\n");
+    woempa(7, "found no match, adding new entry for %s:%d\n", cr->file, cr->line);
     cr_add(cr);
     num_cr += 1;
 

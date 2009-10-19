@@ -1,24 +1,29 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 
@@ -42,28 +47,36 @@ import java.util.ListIterator;
 **	it will get them directly from in ...
 */
 public class ZipInputStream extends InflaterInputStream implements ZipConstants {
-				
-	private boolean closed;
+         
+  private boolean closed;
   private CRC32 crc = new CRC32();
   private LinkedList entries = new LinkedList();
-        	
-	private ZipEntry currentEntry;
-	private boolean entryOpen;
+          
+  private ZipEntry currentEntry;
+  private boolean entryOpen;
   private boolean preset;
   private boolean inflating;
   private boolean inCentDir;
-	private boolean allowDataDescriptor;
-	private long dataCount;
-	private int used;
+  private boolean allowDataDescriptor;
+  private long dataCount;
+  private int used;
   private boolean zipFileStream;
   private ZipStreamInfo zipStreamInfo;
-        	
-	public ZipInputStream(InputStream in) {
-	 	super(in, new Inflater(true));
+          
+  public ZipInputStream(InputStream in) {
+    super(in, new Inflater(true));
     if (in instanceof ZipByteArrayInputStream) {
-      setupZipFileStream(); 
+      setupZipByteArrayStream(); 
     }    
-	}
+    else if (in.markSupported()) {
+      try {
+        setupZipMarkableStream(); 
+      }
+      catch (IOException ioe) {
+        ioe.printStackTrace();
+      }
+    }    
+  }
 	
   protected ZipEntry createZipEntry(String zname) {
 		return new ZipEntry(zname);
@@ -449,7 +462,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
    ** Functions used for shortcutting ZipFile stream. 
    **/
   
-  private void setupZipFileStream() {
+  private void setupZipByteArrayStream() {
     byte[] bytes = ((ZipByteArrayInputStream)in).getBytes();
     int size = bytes.length;
     byte CDS3 = endCenDirS[3];
@@ -467,7 +480,58 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
         }
       }
     }
-    //System.out.println("ZipInputStream.setupZipFileStream(): No valid zipfile found");
+    //System.out.println("ZipInputStream.setupZipByteArrayStream(): No valid zipfile found");
+  }
+  
+  private void setupZipMarkableStream() throws IOException {
+    in.mark(Integer.MAX_VALUE);
+    LinkedList buffers = new LinkedList();
+    int bufsiz = 100000;
+    int totlen = 0;
+    byte CDS3 = endCenDirS[3];
+    while (true) {
+      try {
+        byte[] buf = new byte[bufsiz];
+        int l = in.read(buf);
+        if (l < 0) {
+          break;
+        }
+        if (l < bufsiz) {
+          byte[] newbuf = new byte[l];
+          System.arraycopy(buf, 0, newbuf, 0, l);
+          buf = newbuf;
+        }
+        buffers.add(buf);
+        totlen += l;
+      }
+      catch (IOException ioe) {
+        break;
+      }
+    }
+    int nbufs = buffers.size();
+    int count = 0;
+    buf = new byte[totlen];
+    while (count < totlen) {
+      byte[] nextbuf = (byte[])buffers.removeFirst();
+      System.arraycopy(nextbuf, 0, buf, count, nextbuf.length);
+      count += nextbuf.length;
+    }
+    int p = buf.length - 1;
+    while (--p >= 0) {
+      if (p >= 3 && buf[p] == CDS3) {
+      //this might be the last byte of the signature!
+        if (buf[p-1] == endCenDirS[2] && buf[p-2] == endCenDirS[1] && buf[p-3] == endCenDirS[0]) {
+          //we have found a signature ...
+          if(readEntries(buf, buf.length, p+1)){
+            zipFileStream = true;
+            break;
+          }
+        }
+      }
+    }
+
+    in.reset();
+    in.mark(0);
   }
   
   private boolean readEntries(byte [] bytes, int size, int pos) {
@@ -521,7 +585,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
     if (hlp != 0 && hlp != 8) {
       throw new ZipException("unknown store/zip method " + hlp);
     }
-    ze.method = hlp;
+    ze.compressionMethod = hlp;
     pos += 2;
     ze.time = ZipFile.getDate(b, pos);
     pos += 4;
@@ -570,7 +634,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
     if (!entryOpen) {
       //TODO add integrety checks for zipfile.
       //checkEntry();
-      if (currentEntry.method != 0) {
+      if (currentEntry.compressionMethod != 0) {
         inf.reset();
         inf.setInput(zipStreamInfo.data, (int)currentEntry.pointer
             , (int)currentEntry.compressedSize);
@@ -580,7 +644,7 @@ public class ZipInputStream extends InflaterInputStream implements ZipConstants 
       entryOpen = true;
       this.len = buf.length;
     }
-    if (currentEntry.method == 0) {
+    if (currentEntry.compressionMethod == 0) {
       int have = zipStreamInfo.have;
       if (have <= 0) {
         return -1;

@@ -1,35 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications for Mika(TM) Copyright (c) 2004, 2005 by Chris Gray,      *
-* /k/ Embedded Java Solutions, Antwerp, Belgium. All rights reserved.     *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
-/*
-** $Id: thread.c,v 1.12 2006/10/04 14:24:20 cvsroot Exp $
-*/    
- 
 #include "oswald.h"
 
 int num_x_threads = 0;
@@ -241,25 +240,6 @@ extern w_boolean join_sleeping_threads(x_thread);
 extern void leave_sleeping_threads(x_thread);
 #endif
 
-void terminate_function(void *thread_ptr) {
-  x_thread thread = (x_thread)thread_ptr;
-
-  if (thread->sleeping_on_cond) {
-    pthread_cond_broadcast(thread->sleeping_on_cond);
-  }
-  thread->state = xt_ended;
-
-  if (thread->xref) {
-    loempa(7,"Mika thread %t terminated\n", thread->xref);
-  }
-  else {
-    loempa(7,"Native thread %p terminated\n", thread);
-  }
-#ifndef HAVE_TIMEDWAIT
-  leave_sleeping_threads(thread);
-#endif
-}
-
 void *start_routine(void *thread_ptr) {
   x_thread thread;
 
@@ -275,7 +255,6 @@ void *start_routine(void *thread_ptr) {
 
   thread->state = xt_ready;
 
-  pthread_cleanup_push(terminate_function, thread);
   if (thread->xref) {
     loempa(7,"Mika thread %t started\n", thread->xref);
   }
@@ -289,9 +268,18 @@ void *start_routine(void *thread_ptr) {
   else {
     loempa(7,"Native thread %p returned normally\n", thread);
   }
-  pthread_cleanup_pop(1);
 
-  return thread_ptr;
+#ifndef HAVE_TIMEDWAIT
+  if (thread->sleeping_on_cond) {
+    pthread_cond_broadcast(thread->sleeping_on_cond);
+  }
+#endif
+  thread->state = xt_ended;
+#ifndef HAVE_TIMEDWAIT
+  leave_sleeping_threads(thread);
+#endif
+
+  return NULL;
   
 }
 
@@ -350,7 +338,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->waiting_on = NULL;
    thread->waiting_with = 0;
    thread->flags = 0;
-   x_list_init(thread);
 
    /*
    ** Set scheduling and priority
@@ -451,6 +438,60 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
 
 /*
  * Prototype:
+ *   x_status x_thread_attach_current(x_thread thread_ptr);
+ * Description:
+ *   This service fills in a x_Thread structure corresponding to the
+ *   currently executing pthread.
+ */
+
+x_status x_thread_attach_current(x_thread thread) {
+   loempa(2, "x_thread_attach_current\n");
+   if (thread == NULL) {
+     loempa(9, "Thread is null\n");
+     return xs_bad_argument;
+   }
+
+   loempa(2, "x_thread_attach_current: setting up x_thread\n");
+   pthread_mutex_init(&thread->sleep_timer, NULL);
+   pthread_cond_init(&thread->sleep_cond, NULL);
+   thread->o4p_thread_function = NULL;
+   // not needed?
+   // pthread_attr_init(&thread->attributes);
+
+   thread->pid = getpid();
+   thread->waiting_on = NULL;
+   thread->waiting_with = 0;
+   thread->flags = 0;
+   thread->state = xt_ready;
+   thread->o4p_thread_argument = NULL;
+   threadRegister(thread);
+
+   return xs_success;
+}
+
+/*
+ * Prototype:
+ *   x_status x_thread_detach(x_thread thread_ptr);
+ * Description:
+ *   This service cleans up in a x_Thread structure corresponding to  a pthread
+ */
+
+x_status x_thread_detach(x_thread thread) {
+   loempa(2, "x_thread_detach\n");
+   if (thread == NULL) {
+     loempa(9, "Thread is null\n");
+     return xs_bad_argument;
+   }
+
+   pthread_mutex_destroy(&thread->sleep_timer);
+   pthread_cond_destroy(&thread->sleep_cond);
+   threadUnregister(thread);
+
+   return xs_success;
+}
+
+/*
+ * Prototype:
  *   x_status x_thread_delete(x_thread thread_ptr);
  * Description:
  *   Deletes the specified application thread.  Since the specified
@@ -524,12 +565,17 @@ x_status x_thread_resume(x_thread thread) {
     loempa(2, "Starting new born thread.\n");
     thread->state = xt_ready;
     status = pthread_create(&thread->o4p_pthread, &thread->attributes, start_routine, (void *)thread);
+    if (status == ENOMEM) {
+       return xs_no_mem;
+    }
+    else if (status != 0) {
+      return xs_no_instance;
+    }
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
+    // Don't check return code for this one, if it fails it's not a big deal.
+    // (For example it can fail because the thread already terminated).
     pthread_setschedparam(thread->o4p_pthread, thread->o4p_thread_schedPolicy, &thread->o4p_thread_sched);
 #endif
-    if (status != 0) {
-      o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_create()", status);
-    }
   }
   else {
     thread->state = xt_ready;
@@ -559,8 +605,10 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
     return xs_success;
   }
 
+#ifndef HAVE_TIMEDWAIT
   thread->sleeping_on_cond = &thread->sleep_cond;
   thread->sleeping_on_mutex = &thread->sleep_timer;
+#endif
   thread->state = xt_sleeping;
 
   pthread_mutex_lock(&thread->sleep_timer);
@@ -579,8 +627,10 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
 #endif
   pthread_mutex_unlock(&thread->sleep_timer);
 
+#ifndef HAVE_TIMEDWAIT
   thread->sleeping_on_cond = NULL;
   thread->sleeping_on_mutex = NULL;
+#endif
   unsetFlag(thread->flags, TF_TIMEOUT);
 
   thread->state = xt_ready;
@@ -611,13 +661,22 @@ x_status x_thread_suspend(x_thread thread) {
 x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
   x_status status = xs_unknown;
   x_thread joiner = x_thread_current();
-  struct timeval end;
   struct timespec one_tick_ts;
+#ifdef HAVE_TIMEDWAIT
+  struct timeval end;
+#endif
 
-  
-  joiner->state = xt_joining;
+  if (!joinee->state) {
+    return xs_success;
+  }
+
   one_tick_ts.tv_sec = 0;
   one_tick_ts.tv_nsec = 1000 * x_ticks2usecs(1);
+#ifndef HAVE_TIMEDWAIT
+  joiner->sleep_ticks = timeout;
+#endif
+  
+  joiner->state = xt_joining;
 
   if (timeout == x_eternal) {
      while (1) {
@@ -629,7 +688,9 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
      }
   }
   else {
+#ifdef HAVE_TIMEDWAIT
      x_now_plus_ticks(timeout, &end);
+#endif
 
      do {
        if (joinee->state >= xt_ended) {
@@ -637,7 +698,11 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
        }
 
        nanosleep(&one_tick_ts, NULL);
+#ifdef HAVE_TIMEDWAIT
      } while (!x_deadline_passed(&end));
+#else
+     } while (--joiner->sleep_ticks >= 0);
+#endif
   }
 
   joiner->state = xt_ready;
@@ -687,3 +752,21 @@ x_status x_thread_stop_waiting(x_thread thread) {
 
   return xs_no_instance;
 }
+
+x_status x_thread_signal(x_thread thread, w_int signum) {
+  pthread_t pt = thread->o4p_pthread;
+  int rc;
+
+  rc = pthread_kill(pt, signum);
+  switch (rc) {
+    case 0:
+      return xs_success;
+
+    case ESRCH:
+      return xs_no_instance;
+
+    default:
+     return xs_bad_argument;
+  }
+}
+

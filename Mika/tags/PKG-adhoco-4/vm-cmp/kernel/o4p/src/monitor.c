@@ -1,36 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-*                                                                         *
-* Modifications for Mika(TM) Copyright (c) 2004, 2005, 2006 by Chris Gray,*
-* /k/ Embedded Java Solutions, Antwerp, Belgium. All rights reserved.     *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
-/*
-** $Id: monitor.c,v 1.8 2006/10/04 14:24:20 cvsroot Exp $
-*/    
- 
 #ifdef LINUX
 #include <sys/time.h>
 #endif
@@ -44,11 +42,8 @@
 x_status x_monitor_create(x_monitor monitor) {
   loempa(2, "Creating a monitor at %p\n", monitor);
 
-  monitor->owner = NULL;
-  monitor->count = 0;
+  memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
-  monitor->interrupted = NULL;
-
   pthread_mutex_init(&monitor->mon_mutex, NULL);
   pthread_cond_init(&monitor->mon_cond, NULL);
 
@@ -78,6 +73,11 @@ x_status x_monitor_delete(x_monitor monitor) {
   loempa(2, "Deleting the monitor at %p\n", monitor);
   monitor->magic = 0;
   if (monitor->owner)  {
+    // [CG 20081214] Let's try this - ideally a monitor should never be 
+    // released while it has an owner.
+    wabort(ABORT_WONKA, "monitor %p owned by thread %p is being released", monitor, monitor->owner);
+    // Then we don't need this loop (which might never terminate)
+    /*
     // Let all the other waiters finish.
     while (monitor->n_waiting != 0) {
       pthread_cond_broadcast(&monitor->mon_cond);
@@ -86,6 +86,7 @@ x_status x_monitor_delete(x_monitor monitor) {
 
     monitor->owner = NULL;
     pthread_mutex_unlock(&monitor->mon_mutex);
+    */
   }
   pthread_mutex_destroy(&monitor->mon_mutex);
   pthread_cond_destroy(&monitor->mon_cond);
@@ -102,43 +103,17 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
   x_thread current = x_thread_current();
   int retcode; 
 
-  retcode = pthread_mutex_trylock(&monitor->mon_mutex);
-  if (retcode == 0) {
-    // The monitor was free and we just acquired it.
-    monitor->owner = current;
-    monitor->count = 1;
-    loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
+  if (monitor->owner == current) {
+    monitor->count += 1;
+    loempa(2, "Thread %p already owns monitor %p, count now %d\n", current, monitor, monitor->count);
 
     return xs_success;
   }
 
-  if (retcode == EBUSY) {
-    // There are two ways for the monitor to be busy - either we are the
-    // owner, or someone else is.
-    if (monitor->owner == current) {
-      monitor->count += 1;
-      loempa(2, "Thread %p already owns monitor %p, count now %d\n", current, monitor, monitor->count);
-
-      return xs_success;
-    }
-
-    // OK, it's someone else.
-    if (timeout == x_no_wait) {
-
-      loempa(2, "Thread %p tried to obtain monitor %p, mutex was busy\n", current, monitor);
-      return xs_no_instance;
-    }
-
-    current->waiting_on = monitor;
-    setFlag(current->flags, TF_COMPETING);
-    if (timeout == x_eternal) {
-      retcode = pthread_mutex_lock(&monitor->mon_mutex);
-      if (retcode !=0 ) {
-        o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_lock()", retcode);
-      }
-
-      current->waiting_on = NULL;
-      unsetFlag(current->flags, TF_COMPETING);
+  if (timeout == x_no_wait) {
+    retcode = pthread_mutex_trylock(&monitor->mon_mutex);
+    if (retcode == 0) {
+      // The monitor was free and we just acquired it.
       monitor->owner = current;
       monitor->count = 1;
       loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
@@ -146,11 +121,33 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       return xs_success;
     }
 
-    wabort(ABORT_WONKA, "x_monitor_enter: finite timeout not supported.\n", retcode);
+    if (retcode == EBUSY) {
+      return xs_no_instance;
+    }
 
+    o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_trylock()", retcode);
+
+    return -1; // (unreachable)
   }
 
-  o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_trylock()", retcode);
+  if (timeout == x_eternal) {
+    current->waiting_on = monitor;
+    setFlag(current->flags, TF_COMPETING);
+    retcode = pthread_mutex_lock(&monitor->mon_mutex);
+    if (retcode !=0 ) {
+      o4p_abort(O4P_ABORT_PTHREAD_RETCODE, "pthread_mutex_lock()", retcode);
+    }
+
+    monitor->owner = current;
+    monitor->count = 1;
+    current->waiting_on = NULL;
+    unsetFlag(current->flags, TF_COMPETING);
+    loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
+
+    return xs_success;
+  }
+
+  wabort(ABORT_WONKA, "x_monitor_enter: finite timeout not supported.\n", retcode);
 
   return -1; // (unreachable)
 }
@@ -185,23 +182,21 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 
   monitor->n_waiting++;
 
+#ifndef HAVE_TIMEDWAIT
+  current->sleeping_on_cond = &monitor->mon_cond;
+  current->sleeping_on_mutex = &monitor->mon_mutex;
+#endif
   if (timeout == x_eternal) {
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     retcode = pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
   }
   else {
 #ifdef HAVE_TIMEDWAIT
     struct timespec ts;
     x_now_plus_ticks(timeout, &ts);
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     retcode = pthread_cond_timedwait(&monitor->mon_cond, &monitor->mon_mutex, &ts);
 #else // pthreads lib has no pthread_cond_timed_wait(), fake it
     loempa(2, "Setting thread %p sleep_ticks to %d\n", current, timeout);
     current->sleep_ticks = timeout;
-    current->sleeping_on_cond = &monitor->mon_cond;
-    current->sleeping_on_mutex = &monitor->mon_mutex;
     join_sleeping_threads(current);
     retcode = pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
     leave_sleeping_threads(current);
@@ -209,8 +204,10 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 #endif
   }
 
+#ifndef HAVE_TIMEDWAIT
   current->sleeping_on_cond = NULL;
   current->sleeping_on_mutex = NULL;
+#endif
   loempa(2, "Thread %p has returned from pthread_cond_*wait, ret=%d\n", current, retcode);
   if (retcode == 0 || retcode == EAGAIN || retcode == ETIMEDOUT) {
 
@@ -228,7 +225,6 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
       loempa(1, "%p (%t) is in ((x_monitor)%p)->interrupted, removing it and setting status to xs_interrupted\n", current, current->xref, monitor);
       while(removeFromWordset((w_wordset*)&monitor->interrupted, (w_word)current));
 
-      pthread_cond_broadcast(&monitor->mon_cond);
       pthread_mutex_unlock(&monitor->mon_mutex);
 
       loempa(2, "Thread %p has been interrupted", current);
@@ -331,17 +327,14 @@ x_status x_monitor_stop_waiting(x_monitor monitor, x_thread thread) {
     loempa(2, "Thread %p will stop thread %p from waiting on monitor %p\n", x_thread_current(), thread, monitor);
 
     // take control of the monitor by locking the mutex.
-    pthread_mutex_lock(&monitor->mon_mutex);
+    x_monitor_enter(monitor, x_eternal);
 
     loempa(1, "adding %p (%t) to ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
     addToWordset((w_wordset*)&monitor->interrupted, (w_word)thread);
 
-    while (isInWordset((w_wordset*)&monitor->interrupted, (w_word)thread)) {
-        loempa(1, "%p (%t) is still in ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
-        pthread_cond_broadcast(&monitor->mon_cond);
-        pthread_cond_wait(&monitor->mon_cond, &monitor->mon_mutex);
-    }
-    pthread_mutex_unlock(&monitor->mon_mutex);
+    loempa(1, "%p (%t) is still in ((x_monitor)%p)->interrupted\n", thread, thread->xref, monitor);
+    pthread_cond_broadcast(&monitor->mon_cond);
+    x_monitor_exit(monitor);
     loempa(2, "Done calling pthread_cond_broadcast\n");
 
     return xs_success;

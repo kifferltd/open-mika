@@ -104,7 +104,7 @@ w_instance ReferenceQueue_remove(JNIEnv *env, w_instance this) {
     ref = ReferenceQueue_poll(env,this);
     if(ref == NULL) {
      x_monitor_eternal(lock);
-      if(fifo->numElements == 0) {
+      if(isEmptyFifo(fifo)) {
         x_status status = x_monitor_wait(lock, x_eternal);
         if(status == xs_interrupted) {
           throwException(thread, clazzInterruptedException, NULL);
@@ -140,9 +140,11 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
     if(ref) {
       return ref;
     } else {
-      w_long now = getNativeSystemTime();
+      w_long now = x_time_now_millis();
+      w_long diff;
+
       x_monitor_eternal(lock);
-      if(fifo->numElements == 0) {
+      if(isEmptyFifo(fifo)) {
        x_status status; 
        if(waittime <= 0) {
           x_monitor_exit(lock);
@@ -157,14 +159,14 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
         }
       }
       x_monitor_exit(lock);
-      now = getNativeSystemTime() - now;
-      waittime -= now;
+      diff = x_time_now_millis() - now;
+      waittime -= diff;
     }
   }
 }
 
 void ReferenceQueue_create(JNIEnv *env, w_instance this) {
-  w_fifo fifo = allocFifo(63);
+  w_fifo fifo = allocFifo(62);
   x_monitor lock =  allocMem(sizeof(x_Monitor));
 
   if(fifo && lock) {

@@ -1,42 +1,40 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-
 /*
-** $Id: InetAddress.java,v 1.6 2006/05/25 08:55:16 cvs Exp $ 
-*/
-
-/*
-** 
-** For a discussion of the positive address cache built into InetAddress, see
-** <a href="http://www.limewire.org/pipermail/codepatch/2004-February/000310.html>
-** http://www.limewire.org/pipermail/codepatch/2004-February/000310.html</a>.
-** 
-** Wonka's behaviour is as follows:
+** Mika caches DNS lookup results as follows:
 ** <ul><li>If the <b>security</b> property <tt>inetaddress.cache.ttl</tt> 
 **         is defined, we use this as the cache entry lifetime (in seconds).
 **     <li>Failing that, if the <b>system</b> property
-**         <tt>wonka.inetaddress.cache.ttl</tt> property is defined,
+**         <tt>mika.inetaddress.cache.ttl</tt> property is defined,
 **         we use this instead.
 **     <li>Otherwise the cache entry lifetime defaults to 86400 seconds
 **         (24 hours), in keeping with general DNS practice.
@@ -49,6 +47,7 @@ package java.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.StringTokenizer;
 import java.util.Hashtable;
@@ -62,6 +61,11 @@ public class InetAddress implements Serializable {
   static final int TYPE_IPV6 = 10;
 
   private static InetAddress ownAddress;
+
+  /**
+   ** Lifetime of positive_cache entries, in milliseconds (0 means infinity).
+   */
+  static int positive_cache_ttl = GetSecurityProperty.INETADDRESS_CACHE_TTL;
 
   /**
    ** A subclass of Hashtable used to implement the positive cache.
@@ -125,7 +129,7 @@ public class InetAddress implements Serializable {
     }
 
     public String toString() {
-      return "IAddrCacheEntry with address " + addr + ", expiry time " + new java.util.Date(expiryTime).toString();
+      return "IAddrCacheEntry with address " + addr + ", expiry time " + new Date(expiryTime).toString();
     }
   }
 
@@ -134,18 +138,13 @@ public class InetAddress implements Serializable {
    */
   static final IAddrPositiveCache positive_cache = new IAddrPositiveCache();
 
-  /**
-   ** Lifetime of positive_cache entries, in milliseconds (0 means infinity).
-   */
-  static long positive_cache_ttl;
-
-  static final InetAddress loopbackAddress  = new Inet4Address(0x7f000001,"localhost","127.0.0.1");
-  static final InetAddress allZeroAddress  = new Inet4Address(0,"0.0.0.0","0.0.0.0");
+  static final InetAddress loopbackAddress  = new Inet4Address(0x7f000001,"localhost","127.0.0.1", 0);
+  static final InetAddress allZeroAddress  = new Inet4Address(0,"0.0.0.0","0.0.0.0", 0);
 
 
   static {
     try {
-      ownAddress = new Inet4Address(getLocalName());
+      ownAddress = new Inet4Address(getLocalName(), 0);
     }
     catch (UnknownHostException uhe) {
       //just to make sure ownAddress will not be null ...
@@ -155,7 +154,7 @@ public class InetAddress implements Serializable {
     IAddrCacheEntry iace1= new IAddrCacheEntry(loopbackAddress, Long.MAX_VALUE);
     IAddrCacheEntry iace2= new IAddrCacheEntry(ownAddress, Long.MAX_VALUE);
 
-    positive_cache.put("loopback", iace1);
+    positive_cache.put("localhost", iace1);
     positive_cache.put("127.0.0.1", iace1);
     positive_cache.put(getLocalName(), iace2);
     positive_cache.put(ownAddress.getHostAddress(), iace2);
@@ -187,7 +186,7 @@ public class InetAddress implements Serializable {
               int octet4 = Integer.parseInt(addr.substring(thirdpoint + 1));
 	      if (octet1 >= 0 && octet1 < 256 && octet2 >= 0 && octet2 < 256 && octet3 >= 0 && octet3 < 256 && octet4 >= 0 && octet4 < 256) {
 	        intaddr = ((octet1 * 256 + octet2) * 256 + octet3) * 256 + octet4;
-                positive_cache.put(name, new IAddrCacheEntry(new Inet4Address(intaddr, name, addr), Long.MAX_VALUE));
+                positive_cache.put(name, new IAddrCacheEntry(new Inet4Address(intaddr, name, addr, 0), Long.MAX_VALUE));
 	      }
 	      else {
                 System.err.println("Error in mika.hosts: octet out of range in ip address: " + addr);
@@ -211,10 +210,7 @@ public class InetAddress implements Serializable {
 ** Since all Socket classes use InetAddress this does NOT unneeded class loading ...
 */
   static void permissionCheck(String host) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(host, "resolve"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkConnect(host, -1);
@@ -223,10 +219,7 @@ public class InetAddress implements Serializable {
   }
 
   static void factoryCheck() {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission("setFactory"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkSetFactory();
@@ -235,15 +228,7 @@ public class InetAddress implements Serializable {
   }
 
   static void listenCheck(int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (port == 0) {
-        java.security.AccessController.checkPermission(new SocketPermission("localhost:1024-","listen"));
-      }
-      else {
-        java.security.AccessController.checkPermission(new SocketPermission("localhost:"+port,"listen"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkListen(port);
@@ -252,10 +237,7 @@ public class InetAddress implements Serializable {
   }
 
   static void acceptCheck(String host, int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new SocketPermission(host+":"+port,"accept"));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkAccept(host, port);
@@ -264,15 +246,7 @@ public class InetAddress implements Serializable {
   }
 
   static void connectCheck(String host, int port) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (port == -1) {
-        java.security.AccessController.checkPermission(new SocketPermission(host,"resolve"));
-      }
-      else {
-        java.security.AccessController.checkPermission(new SocketPermission(host+":"+port,"connect"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.getSecurityManager();
       if (sm != null) {
         sm.checkConnect(host, port);
@@ -280,66 +254,31 @@ public class InetAddress implements Serializable {
     }
   }
 
-
-  //dictated by serialized form ...
+  /**
+   ** Address family, as dictated by serialized form.
+   */
   int family;
+
+  /**
+   ** IP address in integer form, as dictated by serialized form.
+   */
   int address;
+
+  /**
+   ** Host name, as dictated by serialized form.
+   */
   String hostName;
 
-  //since all InetAddresses get cached and the address is used as a key we might as well cache it.
-  transient String addressCache;
+  /**
+   ** Dotted-string form of 'address'.
+   */
+  transient String ipAddressString;
 
   /**
-  ** creates an empty InetAddress used by peek
+  ** Creates an empty InetAddress used by peek. For all other purposes
+  ** a constructor of Inet4Address or Inet6Address is used.
   */
   InetAddress(){}
-
-  InetAddress(int ip, String name, String ipname, int type){
-    address = ip;
-    family = type;
-    hostName = name;
-    addressCache = ipname;
-    IAddrCacheEntry iace = new IAddrCacheEntry(this);
-    synchronized(positive_cache){
-      positive_cache.put(name, iace);
-      positive_cache.put(ipname, iace);
-    }
-  }
-
-  /**
-  ** calling this constructor will add the address to the addressCache !
-  */
-  InetAddress(String name) throws UnknownHostException {
-    int char0 = name.charAt(0);
-    if(char0 >= '0' && char0 <= '9'){
-      StringTokenizer s = new StringTokenizer(name,".");
-      if(s.countTokens() == 4){
-        try {
-          for(int i = 0 ; i < 4 ; i++){
-            int octet = Integer.parseInt(s.nextToken());
-            if(octet < 0 || octet > 255){
-              throw new UnknownHostException();
-            }
-            address = octet + (address<<8);
-          }
-        }
-        catch(NumberFormatException nfe){
-          throw new UnknownHostException();
-        }
-      }
-      family = TYPE_IPV4;
-      synchronized(positive_cache){
-        positive_cache.put(name,  new IAddrCacheEntry(this));
-      }
-    }
-    else {
-      createInetAddress(name);
-      synchronized(positive_cache){
-        positive_cache.put(this.getHostName(),  new IAddrCacheEntry(this));
-        positive_cache.put(this.getHostAddress(),  new IAddrCacheEntry(this));
-      }
-    }
-  }
 
   /**
    * Compares this object against the specified object
@@ -416,7 +355,7 @@ public class InetAddress implements Serializable {
       return new Inet6Address(host);
     }
     else {
-      return new Inet4Address(host);
+      return new Inet4Address(host, positive_cache_ttl);
     }
   }
 
@@ -424,10 +363,10 @@ public class InetAddress implements Serializable {
    * Returns IP address 'xxx.xxx.xxx.xxx'
    */
   public String getHostAddress() {
-    if(addressCache == null){
-      addressCache = intToIPString(address);
+    if(ipAddressString == null){
+      ipAddressString = intToIPString(address);
     }
-    return addressCache;
+    return ipAddressString;
   }
 
   private static String intToIPString(int address){
@@ -455,10 +394,10 @@ public class InetAddress implements Serializable {
 
     if(ia == null){
       try {
-        return new Inet4Address(ipname);
+        return new Inet4Address(ipname, positive_cache_ttl);
       } catch(UnknownHostException uhe){
         //this exception cannot be thrown on a 'real' IP-string, but to be sure ...
-        return new Inet4Address(ip,ipname,ipname);
+        return new Inet4Address(ip,ipname,ipname, 0);
       }
     }
     return ia;
@@ -470,8 +409,8 @@ public class InetAddress implements Serializable {
    */
   public String getHostName() {
     if(hostName == null){
-      if(getHostAddress() != null && lookupName()) {
-        hostName = addressCache;
+      if(getHostAddress() != null && lookupName(this)) {
+        hostName = ipAddressString;
       }
       else {
         positive_cache.put(hostName, new IAddrCacheEntry(this));
@@ -516,7 +455,16 @@ public class InetAddress implements Serializable {
    * InetAddress -> String conversion
    */
   public String toString () {
-    return getHostName() + "/" + getHostAddress();
+    String name = "";
+
+    if (hostName != null) {
+      name = hostName;
+    }
+    else if (ipAddressString != null && !ipAddressString.equals(intToIPString(address))) {
+      name = ipAddressString;
+    }
+
+    return name + "/" + getHostAddress();
   }
 /*
   public boolean isIPv6 () {
@@ -525,9 +473,9 @@ public class InetAddress implements Serializable {
 */
 
   /**
-  ** should only be called when addressCache is not null
+  ** should only be called when ipAddressString is not null
   */
-  private native boolean lookupName();
+  private static synchronized native boolean lookupName(InetAddress ia);
 
   /**
   ** will find an IP address for the name

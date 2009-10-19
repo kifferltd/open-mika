@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Runtime.c,v 1.10 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include "core-classes.h"
 #include "hashtable.h"
@@ -87,7 +88,9 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
           while(tableEntry < METHOD_CALL_TABLE_SIZE) {
             data = ((w_profileMethodCallData *)method->exec.callData)[tableEntry];
             while(data) {
-              external_time += (data->child->exec.runtime * data->count / data->child->exec.runs);
+              if (data->child->exec.runs) {
+                external_time += (data->child->exec.runtime * data->count / data->child->exec.runs);
+              }
               data = data->next;
             }
             tableEntry++;
@@ -151,10 +154,17 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
           while(tableEntry < METHOD_CALL_TABLE_SIZE) {
             data = ((w_profileMethodCallData *)method->exec.callData)[tableEntry];
             while(data) {
-              w_dump("TD%03dc: %10d (%8d %11lld) -> %11lld %w.%m\n", cl, data-count, 
+              if (data->child->exec.runs) {
+                w_dump("TD%03dc: %10d (%8d %11lld) -> %11lld %w.%m\n", cl, data->count, 
                   data->child->exec.runs, data->child->exec.runtime,
                   (data->child->exec.runtime * data->count / data->child->exec.runs),
                   data->child->spec.declaring_clazz->dotified, data->child);
+              }
+              else {
+                w_dump("TD%03dc: %10d (%8d ???????????) -> %11lld %w.%m\n", cl, data->count, 
+                  data->child->exec.runs, data->child->exec.runtime,
+                  data->child->spec.declaring_clazz->dotified, data->child);
+              }
               data = data->next;
             }
             tableEntry++;
@@ -182,7 +192,7 @@ static x_boolean statistics_timings_callback(void * mem, void * arg) {
     releaseFifo(fifo);
   }
 
-  return true;
+  return TRUE;
 }
 
 static void statistics_timings(void) {
@@ -223,7 +233,7 @@ static x_boolean statistics_instances_callback(void * mem, void * arg) {
     releaseFifo(fifo);
   } 
 
-  return true;
+  return TRUE;
 }
 
 static void statistics_instances(void) {
@@ -239,9 +249,35 @@ static void statistics_instances(void) {
 }
 
 #endif
+/*
+** Iterator called from Runtime.exit0(); for every object which is an instance
+** of PlainSocketImpl or PlainDatagramSocketImpl, call close() on its file
+** descriptor. This logic could be applied to other classes with "externalities"
+** also.
+*/
+static w_boolean shutdown_iteration(void * mem, void * arg) {
+  w_object object = chunk2object(mem);
+  w_int fd;
+
+  if(isSuperClass(clazzPlainSocketImpl, object->clazz)) {
+    fd = (w_int)getWotsitField(object->fields, F_PlainSocketImpl_wotsit);
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+  else if(isSuperClass(clazzPlainDatagramSocketImpl, object->clazz)) {
+    fd = (w_int)getWotsitField(object->fields, F_PlainDatagramSocketImpl_wotsit);
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+
+  return TRUE;
+}
 
 void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 
+  x_mem_scan(x_eternal, OBJECT_TAG, shutdown_iteration, NULL);
 #ifdef JAVA_PROFILE
   statistics_timings();
   statistics_instances();
@@ -260,9 +296,9 @@ void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 #endif
 }
 
-typedef void (*w_loadlib)(w_thread,w_instance);
+//typedef void (*w_loadlib)(w_thread,w_instance);
 
-extern int woempa_stderr;
+//extern int woempa_stderr;
 
 /*
  * If libnameString is null:
@@ -271,13 +307,14 @@ extern int woempa_stderr;
  * If libnameString is non-null:
  *   libpathString = complete path to the library, e.g. /Mika/fsroot/fwdir/libfoo.so .
  */
-void Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
+w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
 
   w_thread   thread = JNIEnv2w_thread(env);
   w_string   libname = NULL;
   w_string   libpath = NULL;
   w_ubyte *  name = NULL;
   w_ubyte *  path = NULL;
+  void *     handle;
   w_int      i;
   
   if(libnameString) {
@@ -301,21 +338,18 @@ void Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libna
   }
 
   woempa(7, "Calling loadModule ...\n");
-  if (loadModule(name, path)) {
-    woempa(7, "Successfully loaded library %w from %w\n", libname, libpath);
+  handle = loadModule(name, path);
+  if (handle) {
+    woempa(7, "Successfully loaded library %w from %w: handle = %p\n", libname, libpath, handle);
   }
   else {
-    if (loading_problem) {
-      throwException(thread, clazzUnsatisfiedLinkError, "Error '%s' when loading library: name = '%w', path = '%w'", loading_problem, libname, libpath);
-      loading_problem = NULL;
-    }
-    else {
-      throwException(thread, clazzUnsatisfiedLinkError, "Error (no message) when loading library: name = '%w', path = '%w'", libname, libpath);
-    }
+    throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: name = '%w', path = '%w'", libname, libpath);
   }
 
   if(name) releaseMem(name);
   if(path) releaseMem(path);
+
+  return (w_int)handle;
 }
 
 w_long

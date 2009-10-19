@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, bus 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/*
-** $Id: strings.c,v 1.16 2006/06/01 13:22:19 cvs Exp $
-*/
 
 #include <string.h>
 #include <stdio.h>
@@ -54,14 +54,6 @@
  */ 
 w_hashtable string_hashtable;
 
-/*
- * Hashtable which maps interned w_strings onto their canonical instances,
- * i.e. key = w_string, value = w_instance.
- */
-w_hashtable interned_string_hashtable;
-
-//x_mutex string_mutex;
-
 /// The empty string
 w_string string_empty;
 
@@ -86,9 +78,7 @@ static inline w_string allocString(w_size length, w_boolean is_latin1) {
     return NULL;
   }
   string->refcount = 0;
-  /* [CG 20050616] No more string->instance
-  string->instance = NULL;
-  */
+  string->interned = NULL;
   string->length_and_flags = length + (is_latin1 ? STRING_IS_LATIN1 : 0);
 
   return string;
@@ -119,6 +109,28 @@ w_size w_string2chars(w_string source, w_char *destination) {
 
   return length;
 
+}
+
+/*
+** Extract a substring of a w_string, as a registered w_string.
+** Note that no bounds checking is performed by this function!
+** Can return NULL if insufficient memory is available.
+*/
+w_string w_substring(w_string s, w_int offset, w_int length) {
+  w_size l = string_length(s);
+  w_char *buf = allocMem(l * sizeof(w_char));
+  w_string result = NULL;
+
+  if (!buf) {
+    return NULL;
+  }
+
+  w_string2chars(s, buf);
+  result = unicode2String(buf + offset, length);
+
+  releaseMem(buf);
+
+  return result;
 }
 
 /*
@@ -713,6 +725,7 @@ w_string registerString(w_string string) {
  
   w_string result;
 
+  threadMustBeSafe(currentWonkaThread);
   woempa(1, "Registering %w at %p\n", string, string);
   ht_lock(string_hashtable);
   result = (w_string)ht_read_no_lock(string_hashtable, (w_word)string);
@@ -751,6 +764,7 @@ void _deregisterString(w_string string, const char *file, int line) {
 #else
 void deregisterString(w_string string) {
 #endif
+  threadMustBeSafe(currentWonkaThread);
   woempa(1, "Deregistering %w\n", string);
   ht_lock(string_hashtable);
   if (--string->refcount == 0) {
@@ -765,35 +779,35 @@ void deregisterString(w_string string) {
 }
 
 /*
-** If the w_string referenced by theString is not in internal_string_hashtable,
-** add it and return theString. If it is already present, return the existing
-** canonical String. The caller of this function must own the lock on string_hashtable(!).
+** If the w_string referenced by theString has no canonical instance, record
+** 'theString' as the cononical instance and return it as the result. If the
+** w_string already has a canonical instance, return the canonical instance.
+** The caller of this function must own the lock on string_hashtable(!).
 */
-w_instance internString(w_instance theString) {
+w_instance internString(w_thread thread, w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
+  w_instance existing = getCanonicalStringInstance(thread, s);
   if (existing) {
 
     return existing;
 
   }
 
-  ht_write_no_lock(interned_string_hashtable, (w_word)s, (w_word)theString);
+  s->interned = theString;
 
   return theString;
 }
 
 /*
 ** If theString is the canonical entry for the w_string it references, remove
-** its entry from interned_string_hashtable. The caller of this function must
+** the reference to it as canonical instance. The caller of this function must
 ** own the lock on string_hashtable(!).
 */
-void uninternString(w_instance theString) {
+void uninternString(w_thread thread, w_instance theString) {
   w_string s = String2string(theString);
-  w_instance existing = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)s);
   
-  if (existing == theString) {
-    ht_erase_no_lock(interned_string_hashtable, (w_word)s);
+  if (s && s->interned == theString) {
+    s->interned = NULL;
   }
 }
 
@@ -927,19 +941,6 @@ void startStrings() {
 
   string_hashtable = ht_create((char *)"hashtable:strings", STRING_HASHTABLE_SIZE, ht_stringHash, ht_stringCompare, 0, 0);
   woempa(7, "created string_hashtable at %p\n", string_hashtable);
-
-  /*
-  ** Allocate the hashtable in which interned strings will be stored.
-  */
-
-  interned_string_hashtable = ht_create((char *)"hashtable:internees", INTERNED_STRING_HASHTABLE_SIZE, NULL, NULL, 0, 0);
-  woempa(7, "created interned_string_hashtable at %p\n", interned_string_hashtable);
-
-  /*
-  ** Create the mutex used to prevent race problems
-  string_mutex = (x_mutex)allocMem(sizeof(x_Mutex));
-  x_mutex_create(string_mutex);
-  */
 
   /*
   ** Set up the special strings
@@ -1102,13 +1103,15 @@ w_instance newStringInstance(w_string s) {
 
   w_instance instance;
   w_thread thread = currentWonkaThread;
-  threadMustBeSafe(thread);
 
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
   instance = allocStringInstance(thread);
+  enterSafeRegion(thread);
   if (instance) {
     w_string r = registerString(s);
     setWotsitField(instance, F_String_wotsit, r);
-    woempa(1, "allocated instance %p of String for '%w'\n", instance, s);
+    woempa(1, "allocated instance %p of String for '%w'\n", instance, r);
   }
   else {
     woempa(9, "Unable to allocate instance of String for '%w'\n", s);
@@ -1120,7 +1123,7 @@ w_instance newStringInstance(w_string s) {
 
 w_instance getStringInstance(w_string s) {
   w_thread thread = currentWonkaThread;
-  w_string r = registerString(s);
+  w_string r;
   w_instance new_instance;
   w_instance canonical;
   w_word *flagsptr;
@@ -1131,25 +1134,9 @@ w_instance getStringInstance(w_string s) {
   ** - w_string r will not be reclaimed, because it is registered to us
   */
   threadMustBeSafe(thread);
-
-  /*
-  ** We lock the string_hashtable while looking for a canonical instance;
-  ** this ensures that the logic in collector.c to reclaim canonical instances
-  ** either runs before this (so we will not find one) or runs after it (and
-  ** it will see our O_BLACK flag and not reclaim the instance).
-  */
+  r = registerString(s);
   ht_lock(string_hashtable);
-  canonical = (w_instance)ht_read_no_lock(interned_string_hashtable, (w_word)r);
-  if (canonical) {
-    enterUnsafeRegion(thread);
-    addLocalReference(thread, canonical);
-    flagsptr = instance2flagsptr(canonical);
-#ifdef PIGS_MIGHT_FLY
-    unsetFlag(*flagsptr, O_GARBAGE);
-#endif
-    setFlag(*flagsptr, O_BLACK);
-    enterSafeRegion(thread);
-  }
+  canonical = getCanonicalStringInstance(thread, s);
   ht_unlock(string_hashtable);
 
   /*
@@ -1167,7 +1154,10 @@ w_instance getStringInstance(w_string s) {
   ** OK, no canonical instance up to now so we create a new one. It's safe 
   ** from being GC'd, because allocInstance() creates a local reference to it.
   */
+  enterUnsafeRegion(thread);
   new_instance = allocStringInstance(thread);
+  enterSafeRegion(thread);
+
   if (!new_instance) {
     deregisterString(r);
 
@@ -1176,14 +1166,8 @@ w_instance getStringInstance(w_string s) {
   }
 
   ht_lock(string_hashtable);
-  setWotsitField(new_instance, F_String_wotsit, r);
-  canonical = (w_instance)ht_write_no_lock(interned_string_hashtable, r, new_instance);
-  /*
-  ** If we just overwrote a canonical instance, back everything out (and
-  ** allow new_instance to be reclaimed by GC).
-  */
-  if (canonical) {
-    ht_write_no_lock(interned_string_hashtable, r, canonical);
+  if (r->interned) {
+    canonical = r->interned;
     deregisterString(r);
     ht_unlock(string_hashtable);
     removeLocalReference(thread, new_instance);
@@ -1191,10 +1175,14 @@ w_instance getStringInstance(w_string s) {
     return canonical;
 
   }
+  else {
+    r->interned = new_instance;
+  }
 
   /*
   ** Otherwise, everything's just fine.
   */
+  setWotsitField(new_instance, F_String_wotsit, r);
   ht_unlock(string_hashtable);
 
   return new_instance;

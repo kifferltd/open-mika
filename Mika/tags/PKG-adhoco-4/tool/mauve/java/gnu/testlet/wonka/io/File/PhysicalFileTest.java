@@ -837,7 +837,7 @@ public class PhysicalFileTest implements Testlet
 * File object with same cannoical path refer to same physical file
 * we make different File objects referring to the sane physical files and check the construction/deletion
 * of the file througgh one of this file objects mirrored to the other
-* /
+*/
 	private void testCreateTempFile()
   {
     File currentdir = null;
@@ -962,21 +962,19 @@ public class PhysicalFileTest implements Testlet
     }
 
   }
-*/
 
 /****************************************************************************************************************************************/
 /**
 * Help function: check the temp file data: general file existance tests, start and stop substrings of file string, length of mid string
 * file identifier
 */
-/*
   private void checkTempFile(File tempfile, String fullprefix, String suffix)
   {
         String filepath = tempfile.getPath();
         harness.checkPoint("Checking temp file <"+filepath+">");
 
         //basic physical file properties
-        checkBasicExisting(tempfile ,/*isDirectory =*  /false);
+        checkBasicExisting(tempfile ,/*isDirectory =*/false);
 
         // prefix and suffix
         harness.check(filepath.startsWith(fullprefix),"<"+filepath+"> should start with prefix <"+fullprefix+">");
@@ -1020,7 +1018,6 @@ public class PhysicalFileTest implements Testlet
      harness.fail(ex.toString());
     }
   }
-*/
 
 
 /****************************************************************************************************************************************/
@@ -1570,8 +1567,7 @@ public class PhysicalFileTest implements Testlet
 		testDeleting(/*absolute*/false);                              // Deleting files, empty subdirs, non-empty subdirs(relative path)
 		testRenameFile(/*absolute*/true);                             // renaming files(absolute path)
 		testRenameFile(/*absolute*/false);                            // renaming files(relative path)
-      harness.fail("File.createTempFile() not yet defined for Wonka");
-//		testCreateTempFile();                                         // creating files using CreateTempFile()
+		testCreateTempFile();                                         // creating files using CreateTempFile()
 		testListContents(/*hasnullfilter*/false,/*absolute*/true);    // list() and ListFiles()              (absolute path)
 		testListContents(/*hasnullfilter*/false,/*absolute*/false);   // list() and ListFiles()              (relative path)
 		testListContents(/*hasnullfilter*/true,/*absolute*/true);     // list/ListFiles(filter = null) (absolute path)

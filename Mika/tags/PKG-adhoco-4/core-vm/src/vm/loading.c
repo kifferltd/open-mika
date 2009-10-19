@@ -1,45 +1,48 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, bus 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2003, 2004, 2005, 2006 by Chris Gray,       *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: loading.c,v 1.20 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <string.h>
 
 #include "argument.h"
 #include "bar.h"
 #include "clazz.h"
+#include "checks.h"
 #include "descriptor.h"
 #include "exception.h"
 #include "interpreter.h"
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
+#include "reflection.h"
 #include "ts-mem.h"
 #include "wstrings.h"
 #include "wonka.h"
@@ -181,13 +184,11 @@ w_boolean sameClazz(w_clazz clazz1, w_clazz clazz2) {
 ** unload a class and we need to untangle its references to other classes.
 */
 w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
-/* [CG 20061201] see above
   if (*clazzptr1 == *clazzptr2) {
 
     return WONKA_TRUE;
 
   }
-*/
 
   if ((*clazzptr1)->dotified != (*clazzptr2)->dotified) {
 
@@ -195,13 +196,11 @@ w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
 
   }
 
-/* [CG 20061201] see above
-  if ((getClazzState(*clazzptr1) == CLAZZ_STATE_UNLOADED) && (getClazzState(*clazzptr2) == CLAZZ_STATE_UNLOADED) && (*clazzptr1)->loader == (*clazzptr2)->loader) {
+  if ((getClazzState(*clazzptr1) < CLAZZ_STATE_LOADED) && (getClazzState(*clazzptr2) < CLAZZ_STATE_LOADED) && (*clazzptr1)->loader == (*clazzptr2)->loader) {
 
     return WONKA_TRUE;
 
   }
-*/
 
   if (mustBeLoaded(clazzptr1) == CLASS_LOADING_FAILED) {
     woempa(7, "Failed to load %K\n", *clazzptr1);
@@ -307,9 +306,10 @@ void deregisterUnloadedClazz(w_clazz clazz) {
 w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   w_clazz result = NULL;
 
-  result = (w_clazz)ht_read_no_lock(loader2loaded_classes(initiating_loader), (w_word)name);
+  result = (w_clazz)ht_read(loader2loaded_classes(initiating_loader), (w_word)name);
+  woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
-  if (!result) {
+  if (!result || getClazzState(result) < CLAZZ_STATE_LOADED) {
     result = allocMem(sizeof(w_UnloadedClazz));
     if (!result) {
       wabort(ABORT_WONKA, "Unable to allocate new UnloadedClazz\n");
@@ -321,6 +321,7 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
     result->loader   = initiating_loader;
 
     result = registerUnloadedClazz(result);
+    woempa(1, "returning unloaded class %p\n", result);
   }
 
   return result;
@@ -332,7 +333,8 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
 ** If class was not loaded and loading succeeds, updates *clazzptr
 ** and returns CLASS_LOADING_SUCCEEDED.
 ** If If class was not loaded and loading failed, returns
-** CLASS_LOADING_FAILED. An exception will be pending on the current thread.
+** CLASS_LOADING_FAILED. A NoClassDefFoundError or other Error will be pending 
+** on the current thread.
 */
 w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_thread  thread = currentWonkaThread;
@@ -341,6 +343,8 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_int     state = getClazzState(current);
   x_monitor monitor;
   x_status  status;
+
+  threadMustBeSafe(thread);
 
   if (state == CLAZZ_STATE_UNLOADED) {
     w_clazz loaded;
@@ -353,6 +357,15 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     }
     loaded = namedClassMustBeLoaded(current->loader, current->dotified);
     if (!loaded) {
+      w_instance exception = exceptionThrown(thread);
+
+      if (!exception) {
+        throwException(thread, clazzNoClassDefFoundError, "%w", current->dotified);
+      }
+      else if (isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
+        wrapException(thread,clazzNoClassDefFoundError, F_Throwable_cause);
+      }
+
       result = CLASS_LOADING_FAILED;
     }
     else {
@@ -363,13 +376,11 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     }
   }
   else if (state < CLAZZ_STATE_LOADED) {
-    threadMustBeSafe(thread);
-
     monitor = current->resolution_monitor;
 
     x_monitor_eternal(monitor);
     while(state < CLAZZ_STATE_LOADED) {
-      woempa(1, "Another thread (%t) is loading %k (%p), %t waiting\n", current->resolution_thread, current, current, thread);
+      woempa(1, "Another thread is loading %k (%p), %t waiting\n", current, current, thread);
       status = x_monitor_wait(monitor, CLASS_STATE_WAIT_TICKS);
       if (status == xs_interrupted) {
         x_monitor_eternal(monitor);
@@ -380,31 +391,35 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   }
 
   if (current && getClazzState(current) == CLAZZ_STATE_BROKEN) {
+    throwException(thread, clazzNoClassDefFoundError, "%w", current->failure_message);
     result = CLASS_LOADING_FAILED;
   }
 
   return result;
 }
 
-/*
-static void printBootstrapClass(w_word key, w_word value) {
+static void loaded_class_iterator(w_word key, w_word value) {
   w_string name = (w_string) key;
-  wprintf("  %w\n", name);
+  w_clazz clazz = (w_clazz)value;
+  if (!clazz->loader) {
+    clazz->loader = systemClassLoader;
+  }
 }
-*/
 
+/*
+** Fix system_loaded_class_hashtable so that every class which currently
+** has its loader set to null points to systemClassLoader instead.
+*/
+static void patchLoadedClasses() {
+  ht_every(system_loaded_class_hashtable, loaded_class_iterator);
+}
+  
 /*
 ** Set the systemClassLoader global variable. From now on the System
 ** Class Loader must be used for all system classes.
 */
 void setSystemClassLoader(w_instance scl) {
-//  w_int n;
   x_monitor_eternal(&system_loaded_class_hashtable->monitor);
-/*
-  wprintf("Bootstrap classes:\n");
-  n = ht_every(system_loaded_class_hashtable, printBootstrapClass);
-  wprintf("Total of %d bootstrap classes\n\n", n);
-*/
   if (systemClassLoader) {
     woempa(9, "Ahoy there! Someone tried to install SystemClassLoader twice ...\n");
   }
@@ -412,19 +427,22 @@ void setSystemClassLoader(w_instance scl) {
     woempa(7, "*** SystemClassLoader created, instance is %p ***\n", scl);
     systemClassLoader = scl;
     newGlobalReference(scl);
-    //releaseZipFile(bootzipfile);
+    patchLoadedClasses();
+    patchPackages();
   }
   x_monitor_exit(&system_loaded_class_hashtable->monitor);
 }
 
+#ifdef JDWP
 /*
 ** Execute a given function for every ClassLoader registered with the system.
-** Uses the static Vector refsToClassLoaders, which contains weak references
+** Uses the static Vector JDWP.refsToClassLoaders, which contains weak references
 ** to class loaders. Returns a w_fifo which contains an entry for each class
 ** loader processed, or NULL if no ClassLoader was found.
+** Note: only used by JDWP, and the Vector is only maintained if JDWP is enabled.
 */
 w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
-  w_instance refsToClassLoaders = getStaticReferenceField(clazzClassLoader, F_ClassLoader_refsToClassLoaders);
+  w_instance refsToClassLoaders = getStaticReferenceField(clazzJDWP, F_JDWP_refsToClassLoaders);
   w_instance elementData;
   w_instance *weakrefs;
   w_int elementCount;
@@ -434,7 +452,7 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
   if (refsToClassLoaders && (elementData = getReferenceField(refsToClassLoaders, F_Vector_elementData))) {
     weakrefs = instance2Array_instance(elementData);
     elementCount = getIntegerField(refsToClassLoaders, F_Vector_elementCount);
-    outer_fifo = allocFifo(63);
+    outer_fifo = allocFifo(62);
 
     for (i = 0; i < elementCount; ++i) {
       w_instance ref = *weakrefs++;
@@ -452,6 +470,7 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
 
   return outer_fifo;
 }
+#endif
 
 /*
 ** Create the w_Clazz structure for a given primitive type, given its name
@@ -462,16 +481,10 @@ static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
   w_clazz clazz = allocClazz();
 
   clazz->dotified = registerString(name);
-  clazz->flags = CLAZZ_IS_PRIMITIVE | (CLAZZ_STATE_LOADED << CLAZZ_STATE_SHIFT);
+  clazz->flags = CLAZZ_IS_PRIMITIVE | ACC_FINAL | ACC_PUBLIC | (CLAZZ_STATE_LOADED << CLAZZ_STATE_SHIFT);
   clazz->loader = NULL;
   clazz->type = type;
   clazz->bits = bits;
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz->resolution_monitor\n");
-  }
-  x_monitor_create(clazz->resolution_monitor);
-
   woempa(1, "Created clazz_%w @ %p\n", name, clazz);
 
   return clazz;
@@ -525,21 +538,45 @@ static void identify_special_methods(void) {
   }
 }
 
+/**
+ ** Code to attach Class instances to all classes after class Class has been
+ ** loaded. Function attachClassInstance() assumes that the component class
+ ** of an array class already has its Class object attached, so we make
+ ** multiple passes over system_loaded_class_hashtable; the first one deals
+ ** with all non-array classes, the next with one-dimensional array classes,
+ ** etc.. (In practice we don't have any array classes with more than one
+ ** dimension when attach_class_instances is called).
+ */
+static w_int maxdims;
+
+static w_int skipped;
+
 static w_boolean attach_class_iteration(void * name, void * cl) {
   w_clazz clazz = cl;
 
-  if (clazz->Class) {
-    attachClassInstance(clazz);
+  if (clazz->dims > maxdims) {
+    ++skipped;
   }
+  else if (!clazz->Class) {
+    attachClassInstance(clazz, NULL);
+  }
+
+  return TRUE;
 }
 
 static void attach_class_instances(void) {
-  ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+  maxdims = 0;
+  skipped = system_loaded_class_hashtable->occupancy;
+  while (skipped) {
+    skipped = 0;
+    ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+    ++maxdims;
+  }
 }
 
 /*
 ** Search colon-separated list bcp and extract the first string which ends
-** in `.jar' or `.zip'.  Skip over leading '/' if present.
+** in `.jar' or `.zip'.
 ** The string is returned in allocMem'd memory, bcp is not modified.
 */
 static char *getFirstJarFileName(char *bcp) {
@@ -549,13 +586,10 @@ static char *getFirstJarFileName(char *bcp) {
     w_int i = 0;
     w_int j = 0;
     w_int l = strlen(bcp);
-    woempa(7, "bootclasspath is %s\n", bcp);
+    woempa(7, "bootclasspath is %s, length is %d\n", bcp, l);
     while (bcp[i]) {
-      if (bcp[i] == '/') {
-        ++i;
-      }
       for (j = i; j < l && bcp[j] != ':'; ++j);
-      woempa(7, "Element ends at bcp[%d]\n", j);
+      woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
       if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
         woempa(7, "Element ends in `jar', so we use bcp[%d..%d]\n", i, j - 1);
 
@@ -686,6 +720,9 @@ void startLoading(void) {
   system_unloaded_class_hashtable = ht_create((char*)"hashtable:system-unloaded-classes", 97, clazz_hashcode, clazz_comparator, 0, 0);
   woempa(7,"created system_unloaded_class_hashtable at %p\n",system_unloaded_class_hashtable);
 
+  system_package_hashtable = ht_create((char*)"hashtable:system-packages", 17, NULL, NULL, 0, 0);
+  woempa(7,"created system_package_hashtable at %p\n",system_package_hashtable);
+
   collectCoreFixups();
 
   /*
@@ -749,7 +786,7 @@ void startLoading(void) {
   ****/
 
   woempa(7,"Step 3: create array pseudo-class\n");
-  clazz_Array =createClazzArray();
+  clazz_Array = createClazzArray();
   mustBeReferenced(clazz_Array);
 
  /****
@@ -829,8 +866,6 @@ void startLoading(void) {
   preparePrimitive(clazz_long, string_long, P_long);
   preparePrimitive(clazz_void, string_void, P_void);
 
-  attach_class_instances();
-
   /*
   ** For some strange reason, SUN seems to fix the SUIDs for arrays of primitives. 
   ** So we set the cached SUID for the primitive array clazzes to the one given by 'serialver'.
@@ -887,8 +922,29 @@ void startLoading(void) {
   primitive2wrapper[P_long] = clazzLong;
   primitive2wrapperSlot[P_long] = F_Long_value;
 
-//  createOutOfMemoryErrorCache();
+  mustBeInitialized(clazzClass);
+  // All the classes which are used in do_throw_clazz(c) (interpreter.c)
+  // must be pre-initialized.
   mustBeInitialized(clazzInvocationTargetException);
+  mustBeInitialized(clazzNullPointerException);
+  mustBeInitialized(clazzOutOfMemoryError);
+  mustBeInitialized(clazzArithmeticException);
+  mustBeInitialized(clazzArrayIndexOutOfBoundsException);
+  mustBeInitialized(clazzArrayStoreException);
+  mustBeInitialized(clazzClassCastException);
+  mustBeInitialized(clazzIllegalAccessError);
+  mustBeInitialized(clazzIllegalMonitorStateException);
+  mustBeInitialized(clazzIncompatibleClassChangeError);
+  mustBeInitialized(clazzInternalError);
+  mustBeInitialized(clazzLinkageError);
+  mustBeInitialized(clazzNegativeArraySizeException);
+  mustBeInitialized(clazzNoSuchMethodException);
+  //
+  mustBeInitialized(clazzArrayOf_Object);
+  mustBeInitialized(clazzArrayOf_String);
+  mustBeInitialized(clazzArrayOf_Class);
+
+  attach_class_instances();
 
   woempa(7, "Forced class loading complete, loaded %d classes.\n",system_loaded_class_hashtable->occupancy);
 
@@ -960,20 +1016,25 @@ w_string undescriptifyClassName(w_string string) {
 
 w_clazz seekClazzByName(w_string classname, w_instance initiating_loader) {
   w_hashtable hashtable = loader2loaded_classes(initiating_loader);
+  w_clazz result;
 
   woempa(1, "Seeking class '%w' in %s.\n", classname, hashtable->label);
-  return (w_clazz)ht_read_no_lock(hashtable, (w_word)classname);
+  result = (w_clazz)ht_read(hashtable, (w_word)classname); 
+ 
+  return result;
 }
 
 /*
 ** Create the array clazz with one more dimension than the given clazz.
 */
 w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
-
+  w_thread thread = currentWonkaThread;
   w_clazz array_clazz;
   w_char  *name_buffer;
   w_string temp_name;
   w_string desc_name;
+
+  threadMustBeSafe(thread);
 
   /*
   ** We make a clone of clazz_Array. We don't need to increment
@@ -1016,6 +1077,7 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   array_clazz->type = (array_clazz->dims > 1 ? VM_TYPE_MULTI : VM_TYPE_MONO) + VM_TYPE_REF + (base_clazz->type & 0x0f);
   array_clazz->loader = base_clazz->loader;
   array_clazz->bits = 32;
+  array_clazz->package = base_clazz->package;
 
   name_buffer[0] = '[';
   w_string2chars(temp_name, name_buffer + 1);
@@ -1042,14 +1104,23 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
     base_clazz->nextDimension = array_clazz;
   }
 
+  if (thread) {
+     enterUnsafeRegion(thread);
+  }
+
+  if (clazzClass && clazzClass->Class) {
+    attachClassInstance(array_clazz, thread);
+  }
   setClazzState(array_clazz, CLAZZ_STATE_LINKED);
-  registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 
   woempa(1, "Array clazz %k at %p defined by %j (%w), initiated by %j (%w).\n", array_clazz,array_clazz,array_clazz->loader, loader2name(array_clazz->loader), initiating_loader, loader2name(initiating_loader));
-  setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);//setup the clazz flags: Arrays are public final abstract
+  setFlag(array_clazz->flags, ACC_ABSTRACT | ACC_PUBLIC | ACC_FINAL);
 
-  return array_clazz;
+  if (thread) {
+    enterSafeRegion(thread);
+  }
 
+  return registerClazz(currentWonkaThread, array_clazz, initiating_loader);
 }
 
 /*
@@ -1058,8 +1129,6 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 ** If base_clazz is NULL then we return NULL.
 */
 w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
-
-//  w_instance defining_loader;
   w_clazz array_clazz;
 
   if (!base_clazz) {
@@ -1068,8 +1137,11 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 
   }
 
-//  defining_loader = base_clazz->loader ? base_clazz->loader : systemClassLoader;
+  threadMustBeSafe(currentWonkaThread);
 
+  if (initiating_loader) {
+    enterMonitor(initiating_loader);
+  }
   array_clazz = base_clazz->nextDimension;
   if (!array_clazz) {
     woempa(1, "Clazz %k doesn't yet have a nextDimension, creating it\n", base_clazz);
@@ -1077,6 +1149,9 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   }
   else {
     woempa(1, "Clazz %k already has nextDimension %k\n", base_clazz, array_clazz);
+  }
+  if (initiating_loader) {
+    exitMonitor(initiating_loader);
   }
 
   return array_clazz;
@@ -1148,17 +1223,17 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   }
   w_memcpy(result, clazz_Array, sizeof(w_Clazz));
 
+  setFlag(result->flags, ACC_FINAL | ACC_PUBLIC);
   result->loader = NULL;
   result->bits = 32;
   result->Class = NULL;
-//  attachClassInstance(result);
+//  attachClassInstance(result, thread);
   result->dotified = desc_string;
 
   result->previousDimension = primitive2clazz[pi];
   result->dims = 1;
 
   setClazzState(result, CLAZZ_STATE_LINKED);
-  registerClazz(NULL, result, NULL);
 
   woempa(1, "Created array clazz %k, dimensions %d.\n", result, result->dims);
 
@@ -1168,9 +1243,9 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
     element_clazz->nextDimension = result;
   }
 
-  return result;
-
+  return registerClazz(NULL, result, NULL);
 }
+
 
 /*
 ** If the class with the given name (in "dotted" form) is not loaded,
@@ -1192,7 +1267,8 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
 
   if (current == NULL) {
     w_char * namebuff = allocMem(string_length(name) * sizeof(w_char));
-    w_string prevname;
+    w_string prevname = NULL;
+    w_int length;
 
     if (!namebuff) {
       wabort(ABORT_WONKA, "Unable to allocate namebuff\n");
@@ -1203,53 +1279,63 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
     }
 
     w_string2chars(name, namebuff);
-    switch (namebuff[1]) {
-    case 'Z':
-      prevname = registerString(string_boolean);
-      break;
+    length = string_length(name);
 
-    case 'C':
-      prevname = registerString(string_c_h_a_r);
-      break;
+    if(length == 2) { 
+      switch (namebuff[1]) {
+      case 'Z':
+        prevname = registerString(string_boolean);
+        break;
 
-    case 'F':
-      prevname = registerString(string_float);
-      break;
+      case 'C':
+        prevname = registerString(string_c_h_a_r);
+        break;
 
-    case 'D':
-      prevname = registerString(string_double);
-      break;
+      case 'F':
+        prevname = registerString(string_float);
+        break;
 
-    case 'B':
-      prevname = registerString(string_byte);
-      break;
+      case 'D':
+        prevname = registerString(string_double);
+        break;
 
-    case 'S':
-      prevname = registerString(string_short);
-      break;
+      case 'B':
+        prevname = registerString(string_byte);
+        break;
 
-    case 'I':
-      prevname = registerString(string_int);
-      break;
+      case 'S':
+        prevname = registerString(string_short);
+        break;
 
-    case 'J':
-      prevname = registerString(string_long);
-      break;
+      case 'I':
+        prevname = registerString(string_int);
+        break;
 
-    case 'L':
-      prevname = unicode2String(namebuff + 2, string_length(name) - 3);
-      if (!prevname) {
-        wabort(ABORT_WONKA, "Unable to convert prevname to w_string\n");
+      case 'J':
+        prevname = registerString(string_long);
+        break;
+      default:
+        break;
       }
-      break;
-
-    default:
-      prevname = unicode2String(namebuff + 1, string_length(name) - 1);
-      if (!prevname) {
-        wabort(ABORT_WONKA, "Unable to convert prevname to w_string\n");
+    }  
+    if(prevname == NULL && length > 1) {    
+      char* result;
+      if (length > 3 && namebuff[1] == 'L' && namebuff[2] != '[' && namebuff[length-1] == ';') {
+        prevname = unicode2String(namebuff + 2, length - 3);
+      } else {
+        prevname = unicode2String(namebuff + 1, length - 1);
       }
     }
     releaseMem(namebuff);
+    if(prevname == NULL) {    
+      if (initiating_loader) {
+        // wprintf("releasing lock for %j\n", initiating_loader);
+        exitMonitor(initiating_loader);
+      }
+      throwException(thread, clazzClassNotFoundException, "%j could not load %w", initiating_loader, name);
+      return NULL;
+    }
+
     current = namedClassMustBeLoaded(initiating_loader, prevname);
     deregisterString(prevname);
     current = getNextDimension(current, initiating_loader);
@@ -1298,6 +1384,14 @@ w_boolean namedClassIsSystemClass(w_string name) {
   if (((int)string_length(name) > (ch - name->contents.bytes) + 5 && strncmp(ch, "java.", 5) == 0)
     ||
       ((int)string_length(name) > (ch - name->contents.bytes) + 6 && strncmp(ch, "wonka.", 6) == 0)
+    || strncmp(ch, "boolean", string_length(name)) == 0
+    || strncmp(ch, "byte", string_length(name)) == 0
+    || strncmp(ch, "short", string_length(name)) == 0
+    || strncmp(ch, "int", string_length(name)) == 0
+    || strncmp(ch, "long", string_length(name)) == 0
+    || strncmp(ch, "float", string_length(name)) == 0
+    || strncmp(ch, "double", string_length(name)) == 0
+    || strncmp(ch, "char", string_length(name)) == 0
   ) {
     woempa(1, "'%w' is a system class\n", name);
 
@@ -1313,7 +1407,6 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
 
   w_thread    thread = currentWonkaThread;
   w_instance  effectiveLoader = classLoader;
-  w_clazz     effectiveLoader_clazz;
   w_clazz     current;
 
   woempa(1, "Class %w must be loaded.\n", name);
@@ -1325,17 +1418,16 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
     woempa(1, "System class loader not defined, so use bootstrap class loader\n");
   }
   else if (!classLoader) {
-    woempa(1, "System class loader exists (%w), so use it instead of bootstrap class loader to load %w\n", loader2name(systemClassLoader), name);
+    woempa(1, "System class loader exists, so use it instead of bootstrap class loader to load %w\n", name);
     effectiveLoader = systemClassLoader;
   }
-  else if (!classLoader || namedClassIsSystemClass(name)) {
-    woempa(1, "Class %w is a system class, so use system class loader (%w) instead of %j (%w)\n", name, loader2name(systemClassLoader), classLoader, loader2name(classLoader));
+  else if (namedClassIsSystemClass(name)) {
+    woempa(1, "Class %w is a system class, so use system class loader instead of %j\n", name, classLoader);
     effectiveLoader = systemClassLoader;
   }
   else {
-    woempa(1, "Class %w is not a system class, so use %j (%w)\n", name, classLoader, loader2name(classLoader));
+    woempa(1, "Class %w is not a system class, so use %j\n", name, classLoader);
   }
-  effectiveLoader_clazz = instance2clazz(effectiveLoader);
 
   if (effectiveLoader) {
     // wprintf("requesting lock for %j\n", effectiveLoader);
@@ -1345,6 +1437,7 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
 
   current = seekClazzByName(name, effectiveLoader);
 
+  woempa(1, "seekClazzByName result = %p\n", current);
   if (current == NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       wprintf("Load %w: initiating class loader is %j in thread %t\n", name, classLoader, thread);
@@ -1354,7 +1447,25 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
       current = loadBootstrapClass(name);
     }
     else {
+      w_clazz placeholder = allocMem(sizeof(w_UnloadedClazz));
+
+      placeholder->dotified = registerString(name);
+      placeholder->loader = effectiveLoader;
+      setClazzState(placeholder, CLAZZ_STATE_LOADING);
+      registerClazz(thread, placeholder, effectiveLoader);
+      exitMonitor(effectiveLoader);
+
       current = loadNonBootstrapClass(effectiveLoader, name);
+
+      enterMonitor(effectiveLoader);
+      if (current) { 
+        registerClazz(thread, current, effectiveLoader);
+      }
+      else if (seekClazzByName(name, effectiveLoader) == placeholder) {
+        deregisterClazz(placeholder, effectiveLoader); 
+        deregisterString(placeholder->dotified);
+        releaseMem(placeholder); 
+      }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       if (!current) {
@@ -1367,13 +1478,6 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
         wprintf("Load %w: defining class loader is %j\n", name, current->loader);
       }
     }
-  }
-
-  if (current) {
-    registerClazz(thread, current, effectiveLoader);
-  }
-  else {
-    woempa(9, "Did not find clazz %w\n", name);
   }
 
   if (effectiveLoader) {
@@ -1401,9 +1505,9 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   w_instance exception;
 
   method = virtualLookup(loadClass_method, initiating_loader_clazz);
-  woempa(1, "Trying to load class %w using %m of %j (%w)\n", name, method, initiating_loader, loader2name(initiating_loader));
+  woempa(7, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
 
-  Name = newStringInstance(name);
+  Name = getStringInstance(name);
   if (!Name) {
     woempa(9, "Unable to get String instance of '%w'\n", name);
 
@@ -1418,26 +1522,26 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   deactivateFrame(frame, theClass);
   removeLocalReference(thread, Name);
 
-  if (exception) {
-    if (instance2clazz(exceptionThrown(thread)) == clazzClassNotFoundException) {
-      woempa(7, "Asked %j to load %w, and it threw %e. Clearing the exception and returning NULL\n", initiating_loader,name, exceptionThrown(thread));
-      clearException(thread);
-      exception = NULL;
-    }
-    else {
-      woempa(9, "Oh. I asked %j to load %w, and it threw %e!\n", initiating_loader,name, exceptionThrown(thread));
-    }
-
-    return NULL;
+  if (exception && theClass) {
+    woempa(9, "Odd. I asked %j to load %w, and it gave me back %j but also threw %e\n", initiating_loader, name, theClass, exception);
+    theClass = NULL;
   }
 
   if (theClass == NULL) {
-    woempa(9, "Ah. I asked %j to load %w, and it returned NULL!\n", initiating_loader,name);
-    throwException(thread, clazzClassNotFoundException, "loadNonBootstrapClass: %w", name);
+    woempa(7, "Ah. I asked %j to load %w, and it returned NULL.\n", initiating_loader,name);
+    if (exception) {
+      woempa(7, "Exception thrown = %e\n", exception);
+    }
+    else {
+      woempa(7, "No exception throw, throwing ClassNotFoundException\n");
+      throwException(thread, clazzClassNotFoundException, "loadNonBootstrapClass: %w", name);
+    }
+
     return NULL;
   }
 
   clazz = Class2clazz(theClass);
+  woempa(7, "clazz = %K (%p)\n", clazz, clazz);
 
   if (clazz->dotified != name) {
     woempa(9,"Scandal! I asked %j to load %w, and the bounder loaded %k!\n", initiating_loader, name, clazz);
@@ -1445,9 +1549,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
     return NULL;
   }
 
-  registerClazz(thread, clazz, initiating_loader);
-
-  woempa(1, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
+  woempa(7, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
 
   return clazz;
 
@@ -1503,14 +1605,14 @@ w_boolean getBootstrapFile(char *filename, w_BAR *barptr) {
 
   }
 
-  woempa(7, "Zip file entry '%s' at %p\n", filename, ze);
+  woempa(1, "Zip file entry '%s' at %p\n", filename, ze);
   if (!uncompressZipEntry(ze)) {
 
     return FALSE;
 
   }
 
-  woempa(7, "Uncompressed data at %p, length is %d bytes\n", ze->u_data, ze->u_size);
+  woempa(1, "Uncompressed data at %p, length is %d bytes\n", ze->u_data, ze->u_size);
   barptr->buffer = ze->u_data;
   barptr->length = ze->u_size;
   barptr->current = 0;
@@ -1567,7 +1669,7 @@ w_clazz loadBootstrapClass(w_string name) {
     *dollar = 36;
     memcpy(dollar + 1, dollar + 8, (filename + length) - dollar - 7);
   }
-  woempa(7, "Need a file called '%s'\n", filename);
+  woempa(1, "Need a file called '%s'\n", filename);
   if (!getBootstrapFile(filename, &bar)) {
     wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap jar file '%s'\n", filename, bootzipname);
   }
@@ -1580,5 +1682,27 @@ w_clazz loadBootstrapClass(w_string name) {
   deleteBootstrapFile(filename);
 
   return clazz;
+}
+
+static void definedClassesIteration(w_word key, w_word value, void *arg1, void *arg2) {
+  w_clazz clazz = (w_clazz)value;
+  w_instance parent_loader = arg1;
+  w_int *countptr = arg2;
+
+  if (clazz->loader == parent_loader) {
+    w_int clazz_state = getClazzState(clazz);
+
+    if (clazz_state >= CLAZZ_STATE_LOADED && clazz_state != CLAZZ_STATE_BROKEN) {
+      ++(*countptr);
+    }
+  }
+}
+
+w_int numberOfDefinedClasses(w_instance loader) {
+  w_int n = 0;
+
+  ht_iterate(loader2loaded_classes(loader), definedClassesIteration, loader, &n);
+
+  return n;
 }
 

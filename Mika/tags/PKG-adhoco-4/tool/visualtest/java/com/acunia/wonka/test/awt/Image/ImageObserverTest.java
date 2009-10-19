@@ -166,8 +166,7 @@ public class ImageObserverTest extends VisualTestImpl implements ActionListener,
       imagename = filename;
     }
 */
-    String path = System.getProperty("vte.image.path", "{}/test/image");
-    imagename = path + "/lena1.png";
+    imagename = "/lena1.png";
     image = null;
 
     show();
@@ -179,7 +178,7 @@ public class ImageObserverTest extends VisualTestImpl implements ActionListener,
     Object source = evt.getSource();
     if(source == load){
        // (re)load image from file
-      image=Toolkit.getDefaultToolkit().getImage(imagename);
+      image=Toolkit.getDefaultToolkit().getImage(this.getClass().getResource(imagename));
       canvas.setImage(image);
       printData("reloaded image <"+imagename+">");
     }

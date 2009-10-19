@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2005 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: NativeProcess.c,v 1.5 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include "wonka.h"
 #include "core-classes.h"
@@ -117,6 +118,10 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
     return NULL;
   }
 
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    wprintf("Execute command:");
+  }
+
   for(i = 0; i < cmdlength; i++) {
     w_instance instance = instance2Array_instance(cmdArray)[i];
     if(instance == NULL) {
@@ -130,8 +135,14 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
       cmdlength = i;
       goto clean_up;
     }
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf(" %s", cmd[i]);
+    }
   }
   cmd[cmdlength] = 0;
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    wprintf("\n");
+  }
 
   if(strlen(cmd[0]) == 0) {
     throwException(thread,clazzIllegalArgumentException,"empty command");
@@ -144,6 +155,10 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   */
 
   if(envArray != NULL) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: environment\n");
+    }
+
     envlength = instance2Array_length(envArray);
     env = allocMem((envlength + 1) * sizeof(char*));
 
@@ -164,6 +179,9 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
         envlength = i;
         goto clean_up;
       }
+      if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+        wprintf("  %s\n", env[i]);
+      }
     }
     env[envlength] = 0;
   }
@@ -177,6 +195,9 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
     path = convertPath(string);
     if(path == NULL) {
       goto clean_up;
+    }
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: working directory = %s\n", path);
     }
   }
 
@@ -194,12 +215,17 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   ** Instantiate a Process object.
   */
 
+  mustBeInitialized(clazzProcessInfo);
+  enterUnsafeRegion(thread);
   process = allocInstance(thread, clazzProcessInfo);
+  enterSafeRegion(thread);
 
   if (process) {
-    //pushLocalReference(thread->top, process);
-    setIntegerField(process, F_ProcessInfo_wotsit, (w_int) wpid);
+    setWotsitField(process, F_ProcessInfo_wotsit, wpid);
     setIntegerField(process, F_ProcessInfo_id, pid);
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: created %j with wotsit %p, pid %d\n", process, wpid, pid);
+    }
   } else {
     host_destroy(wpid);
     host_close(wpid);
@@ -230,7 +256,7 @@ w_int ProcessInputStream_read(JNIEnv *env, w_instance thisInstance) {
     return -1;
   }
 
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
 
   result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
       host_read_in(pid,&buffer,1) : host_read_err(pid,&buffer,1);
@@ -260,7 +286,7 @@ w_int ProcessInputStream_read_Array(JNIEnv *env, w_instance thisInstance, w_inst
   }
   else if(length > 0) {
     char* buffer = (char*) instance2Array_byte(Array) + offset;
-    pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    pid = getWotsitField(info, F_ProcessInfo_wotsit);
 
     result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
       host_read_in(pid, buffer, length) : host_read_err(pid, buffer, length);
@@ -281,7 +307,7 @@ w_int ProcessInputStream_available(JNIEnv *env, w_instance thisInstance) {
     throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
     return -1;
   }
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
   result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
      host_available_in(pid) : host_available_err(pid);
   if(result == EXECUTION_ERROR) {
@@ -299,7 +325,7 @@ w_void ProcessOutputStream_write(JNIEnv *env, w_instance thisInstance, w_int byt
     throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
     return;
   }
-  pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+  pid = getWotsitField(info, F_ProcessInfo_wotsit);
   if(host_write(pid, &buffer, 1) == EXECUTION_ERROR) {
     throwException(JNIEnv2w_thread(env),clazzIOException,"I/O error !");
   }
@@ -308,7 +334,7 @@ w_void ProcessOutputStream_write(JNIEnv *env, w_instance thisInstance, w_int byt
 w_void ProcessOutputStream_close(JNIEnv *env, w_instance thisInstance) {
   w_instance info = getReferenceField(thisInstance, F_ProcessOutputStream_info);
   if(info) {
-    w_void* pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    w_void* pid = getWotsitField(info, F_ProcessInfo_wotsit);
     host_close_out(pid); 
   }
 }
@@ -331,7 +357,7 @@ w_void ProcessOutputStream_write_Array(JNIEnv *env, w_instance thisInstance,
   }
   else if(length > 0) {
     w_ubyte* buffer = (w_ubyte*) instance2Array_byte(Array) + offset;
-    w_void* pid = (w_void*) getIntegerField(info, F_ProcessInfo_wotsit);
+    w_void* pid = getWotsitField(info, F_ProcessInfo_wotsit);
     if(host_write(pid, buffer, length) == EXECUTION_ERROR) {
       throwException(thread,clazzIOException,"I/O error !");
     }
@@ -342,33 +368,49 @@ w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
   w_int retval;
   w_int pid = host_wait_for_all(&retval);
 
+  if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+    if (pid > 0) {
+      wprintf("Execute command: %j host_wait_for_all returned pid %d, retval %d\n", thisInstance, pid, retval);
+    }
+    else {
+      wprintf("Execute command: %j host_wait_for_all returned pid %d\n", thisInstance, pid);
+    }
+  }
   setIntegerField(thisInstance, F_ProcessMonitor_returnvalue, retval);
   return pid;
 }
 
 w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
-  w_void* pid = (w_void*)getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+  w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: cleaning up %j (wotsit %p)\n", thisInstance, pid);
+    }
+    clearWotsitField(thisInstance, F_ProcessInfo_wotsit);
     host_close(pid);
-    //w_dump("cleaning up %p\n",thisInstance);
-    setIntegerField(thisInstance, F_ProcessInfo_wotsit, 0);
   }
 }
 
 w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
-   w_void* pid = (w_void*) getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL && (getBooleanField(thisInstance, F_ProcessInfo_destroyed)== WONKA_FALSE)) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: destroying %j (wotsit %p)\n", thisInstance, pid);
+    }
     host_destroy(pid);
     setBooleanField(thisInstance, F_ProcessInfo_destroyed, WONKA_TRUE);
   }
 }
 
 w_void ProcessInfo_setReturnValue (JNIEnv *env, w_instance thisInstance, w_int retval) {
-   w_void* pid = (w_void*) getIntegerField(thisInstance, F_ProcessInfo_wotsit);
+   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
+      wprintf("Execute command: %j returned %d\n", thisInstance, retval);
+    }
     host_setreturnvalue(pid, retval);
   }
 }

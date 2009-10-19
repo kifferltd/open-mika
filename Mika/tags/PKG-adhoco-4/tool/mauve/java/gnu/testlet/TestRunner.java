@@ -25,6 +25,7 @@
 
 package gnu.testlet;
 import java.io.*;
+import java.security.*;
 
 public class TestRunner
     extends TestHarness 
@@ -120,6 +121,7 @@ public class TestRunner
     {
       // string to class
       Class k = Class.forName (name);
+      System.out.println("TestRunner.runtest()"+k);
       // class name to object
       Object o = k.newInstance();
       //object to testlet
@@ -133,9 +135,10 @@ public class TestRunner
       verbose("error : " + ex.toString());
       //print error debug
       debug (ex);
-      if(debug){
+      //if(debug){
         ex.printStackTrace();
-      }
+      //}
+
       // one more test done and failed
       ++failures;
       ++total;
@@ -309,19 +312,24 @@ public int getTestsFailed() {
         if (s == null) throw new ResourceNotFoundException();
 
        return s;
-/* Was:
-     try
-    {
-       return
-         new FileInputStream (realName );
-//         new FileInputStream (getSourceDirectory () + File.separator  + realName );
-    }
-     catch (FileNotFoundException ex)
-    {
-       throw new ResourceNotFoundException (ex.getLocalizedMessage ());
-    }
-*/
    }
+
+  public File getResourceFile(String name) throws ResourceNotFoundException
+  {
+    // The following code assumes File.separator is a single character.
+    if (File.separator.length() > 1)
+      throw new Error("File.separator length is greater than 1");
+    String realName = name.replace('#', File.separator.charAt(0));
+    File f = new File(getSourceDirectory() + File.separator + realName);
+    if (!f.exists())
+      {
+        throw new ResourceNotFoundException("cannot find mauve resource file"
+                                            + ": " + getSourceDirectory()
+                                            + File.separator + realName);
+      }
+    return f;
+  }
+
 
   public Reader getResourceReader (InputStream istream)
     throws ResourceNotFoundException
@@ -448,12 +456,19 @@ public int getTestsFailed() {
 
   public String getSourceDirectory ()
   {
-    return new String("");
+    return "./";
   }
 
   public String getTempDirectory ()
   {
-    return new String("");
+    final File tempdir = new File("/tmp/mauve");
+    AccessController.doPrivileged(new PrivilegedAction() {
+      public Object run() {
+        tempdir.mkdir();
+        return null; // nothing to return
+      }
+    });
+    return "/tmp/mauve/";
   }
 
 

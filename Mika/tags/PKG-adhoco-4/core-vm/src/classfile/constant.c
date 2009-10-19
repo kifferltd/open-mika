@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions. All rights reserved.                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-
-/*
-** $Id: constant.c,v 1.19 2006/10/04 14:24:15 cvsroot Exp $
-*/
 
 #include <string.h>
 #include <stdio.h>
@@ -47,59 +48,32 @@
 #include "heap.h"
 #include "wordset.h"
 
+#ifdef RUNTIME_CHECKS
+static void check_constant_index(w_clazz clazz, w_int i) {
+  if (i <=0 || i > clazz->numConstants) {
+    wabort(ABORT_WONKA, "Nom d'un chien! Trying to resolve constant[%d] of %k, which has %d constants\n", i, clazz, clazz->numConstants);
+  }
+}
+#else
+#define check_constant_index(clazz,i)
+#endif
+
 /*
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must be GC safe!
  */
-w_clazz getClassConstant(w_clazz clazz, w_int i) {
-  int tag = clazz->tags[i];
+w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-#ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (tag == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
-#endif
-
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
-      throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
+      throwExceptionInstance(thread, (w_instance)clazz->values[i]);
       return NULL;
     }
     
     resolveClassConstant(clazz, i);
-    tag = clazz->tags[i];
-  }
-
-  return (w_clazz)clazz->values[i];
-}
-
-/**
- * Same as getClassConstant, but the calling thread is GC-unsafe on entry and exit.
- * Since this function may call enterSafeRegion, the thread's GC affairs must
- * already be in order before calling this function.
- */
-w_clazz getClassConstant_unsafe(w_clazz clazz, w_int i, w_thread thread) {
-  int tag = clazz->tags[i];
-
-#ifdef RUNTIME_CHECKS
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
-#endif
-
-  while (tag < RESOLVED_CONSTANT) {
-    if (tag == COULD_NOT_RESOLVE) {
-      throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
-
-      return NULL;
-    }
-    
-    enterSafeRegion(thread);
-    resolveClassConstant(clazz, i);
-    enterUnsafeRegion(thread);
-    tag = clazz->tags[i];
   }
 
   return (w_clazz)clazz->values[i];
@@ -110,17 +84,14 @@ w_clazz getClassConstant_unsafe(w_clazz clazz, w_int i, w_thread thread) {
  * The calling thread must GC safe!
  */
 w_field getFieldConstant(w_clazz clazz, w_int i) {
-  int tag = clazz->tags[i];
-
 #ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
+  w_thread thread = currentWonkaThread;
 #endif
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -128,7 +99,6 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
     }
     
     resolveFieldConstant(clazz, i);
-    tag = clazz->tags[i];
   }
 
   return (w_field)clazz->values[i];
@@ -139,17 +109,14 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getMethodConstant(w_clazz clazz, w_int i) {
-  int tag = clazz->tags[i];
-
 #ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
+  w_thread thread = currentWonkaThread;
 #endif
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -157,7 +124,6 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
     }
     
     resolveMethodConstant(clazz, i);
-    tag = clazz->tags[i];
   }
 
   return (w_method)clazz->values[i];
@@ -168,17 +134,14 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
  * The calling thread must GC safe!
  */
 w_method getIMethodConstant(w_clazz clazz, w_int i) {
-  int tag = clazz->tags[i];
-
 #ifdef RUNTIME_CHECKS
-  if (currentWonkaThread) threadMustBeSafe(currentWonkaThread);
-
-  if (clazz->tags[i] == CONSTANT_DELETED) {
-    wabort(ABORT_WONKA, "Attempt to use deleted constant[%d] of %K\n", i, clazz);
-  }
+  w_thread thread = currentWonkaThread;
 #endif
+  int tag;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
 
-  while (tag < RESOLVED_CONSTANT) {
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
     if (tag == COULD_NOT_RESOLVE) {
       throwExceptionInstance(currentWonkaThread, (w_instance)clazz->values[i]);
 
@@ -197,97 +160,8 @@ w_method getIMethodConstant(w_clazz clazz, w_int i) {
 */
 
 w_string resolveUtf8Constant(w_clazz clazz, w_int i) {
+  check_constant_index(clazz, i);
   return registerString((w_string)clazz->values[i]);
-}
-
-/*
-** Check whether any constant still refers to the specified UTF8 constant.
-** If not, deregister the string (later we may also compact the values array).
-*/
-void checkUTF8References(w_clazz clazz, w_int idx) {
-  w_size i;
-
-  woempa(1, "We just deleted a reference to constant[%d] of %k, which holds the string `%w'.\n", idx, clazz, clazz->values[idx]);
-  for (i = 0; i < clazz->temp.inner_class_info_count; ++i) {
-    if (clazz->temp.inner_class_info[i].inner_class_info_index == idx || clazz->temp.inner_class_info[i].outer_class_info_index == idx || clazz->temp.inner_class_info[i].inner_name_index == idx) {
-      woempa(7, "Inner class[%d] needs this UTF8 constant, so we keep it\n", i
-);
-
-      return;
-    }
-  }
-
-  for (i = 1; i < clazz->numConstants; ++i) {
-
-    switch (clazz->tags[i]) {
-    case CONSTANT_CLASS:
-      if ((w_int)clazz->values[i] == idx) {
-        woempa(1, "Unresolved Class constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    case CONSTANT_STRING:
-      if ((w_int)clazz->values[i] == idx) {
-        woempa(1, "Unresolved String constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    case CONSTANT_NAME_AND_TYPE:
-      {
-        u4 nat = clazz->values[i];
-        if ((w_int)Name_and_Type_get_name_index(nat) == idx || (w_int)Name_and_Type_get_type_index(nat) == idx) {
-          woempa(1, "Name&type constant[%d] needs this UTF8 constant, so we keep it\n", i);
-
-          return;
-
-        }
-      }
-      break;
-
-    default:
-      break;
-    }
-  }
-  woempa(1, "Nobody needs this UTF8 constant, so we scrap it\n");
-  clazz->tags[idx] = CONSTANT_DELETED;
-  deregisterString((w_string)clazz->values[idx]);
-}
-
-/*
-** Check whether any constant still refers to the specified Name&Type constant.
-** If not, delete the constant (later we may also compact the values array).
-*/
-static void checkNatReferences(w_clazz clazz, w_int idx) {
-  u4 nat = clazz->values[idx];
-  w_size i;
-
-  for (i = 1; i < clazz->numConstants; ++i) {
-    u4 m = clazz->values[i];
-
-    switch (clazz->tags[i]) {
-    case CONSTANT_FIELD:
-    case CONSTANT_METHOD:
-    case CONSTANT_IMETHOD:
-      if (Member_get_nat_index(m) == idx) {
-        woempa(1, "Unresolved member constant[%d] needs this Name&Type constant, so we keep it\n", i);
-
-        return;
-      }
-      break;
-
-    default:
-      break;
-    }
-  }
-
-  woempa(1, "Nobody needs this Name&Type constant, so we scrap it\n");
-  clazz->tags[idx] = CONSTANT_DELETED;
-  checkUTF8References(clazz, Name_and_Type_get_name_index(nat));
-  checkUTF8References(clazz, Name_and_Type_get_type_index(nat));
 }
 
 /*
@@ -322,6 +196,7 @@ w_int addUTF8ConstantToPool(w_clazz clazz, w_string string) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -330,6 +205,7 @@ w_int addUTF8ConstantToPool(w_clazz clazz, w_string string) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = CONSTANT_UTF8;
@@ -362,6 +238,7 @@ w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     switch (clazz->tags[i]) {
     case CONSTANT_DELETED:
@@ -371,6 +248,7 @@ w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = CONSTANT_CLASS;
@@ -400,6 +278,7 @@ w_int addNatConstantToPool(w_clazz clazz, w_string name, w_string type) {
     }
   }
     
+/. [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     switch (clazz->tags[i]) {
     case CONSTANT_DELETED:
@@ -411,6 +290,7 @@ w_int addNatConstantToPool(w_clazz clazz, w_string name, w_string type) {
       return i;
     }
   }
+./
 
   i = clazz->numConstants++;
   clazz->tags = reallocMem((void*)clazz->tags, clazz->numConstants);
@@ -441,6 +321,7 @@ w_int addResolvedFieldConstantToPool(w_clazz clazz, w_field field) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -449,6 +330,7 @@ w_int addResolvedFieldConstantToPool(w_clazz clazz, w_field field) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = RESOLVED_FIELD;
@@ -470,6 +352,7 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
     }
   }
     
+/* [CG 20071014] Constants are no longer being deleted
   for (i = 1; i < clazz->numConstants; ++i) {
     if (clazz->tags[i] == CONSTANT_DELETED) {
       woempa(1, "Slot[%d] is free, recycling it\n", i);
@@ -478,6 +361,7 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
       return i;
     }
   }
+*/
 
   i = expandConstantPool(clazz);
   clazz->tags[i] = DIRECT_POINTER;
@@ -485,14 +369,25 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
   return i;
 }
 
+/*
+** If ref_clazz is not already referenced by this_clazz (e.g. via 
+** clazz->supers or clazz->interfaces, or of course via clazz->references), 
+** add it to clazz->references. The calling thread must own 
+** clazz->resolution_monitor.
+*/
 static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
   w_int i;
+  w_thread thread;
 
-  if (ref_clazz->loader == NULL || ref_clazz->loader == systemClassLoader) {
+  if (isSystemClassLoader(ref_clazz->loader)) {
     woempa(1, "%K is a system class, doing nowt\n", ref_clazz);
 
     return;
 
+  }
+
+  if (isInWordset(&this_clazz->references, (w_word)ref_clazz)) {
+    woempa(1, "%K is already referenced by %K, doing nowt\n", ref_clazz, this_clazz);
   }
 
   if (ref_clazz == this_clazz) {
@@ -520,10 +415,14 @@ static void addClassReference(w_clazz this_clazz, w_clazz ref_clazz) {
     }
   }
 
-  woempa(1, "%K references %K\n", ref_clazz, this_clazz);
+  thread = currentWonkaThread;
+  threadMustBeSafe(thread);
+  enterUnsafeRegion(thread);
+  woempa(7, "%K references %K\n", ref_clazz, this_clazz);
   if (!addToWordset(&this_clazz->references, (w_word)ref_clazz)) {
     wabort(ABORT_WONKA, "Could not add entry to clazz->references\n");
   }
+  enterSafeRegion(thread);
 }
 
 /*
@@ -545,12 +444,9 @@ void resolveStringConstant(w_clazz clazz, w_int i) {
       wabort(ABORT_WONKA, "Unable to get String instance for String constant\n");
     }
     woempa(1, "Resolved String constant[%d] of %k to `%w'\n", i, clazz, s);
-    checkUTF8References(clazz, utf8index);
-    enterUnsafeRegion(thread);
     *v = (w_word)theString;
     *c = RESOLVED_STRING;
     removeLocalReference(thread, theString);
-    enterSafeRegion(thread);
   }
   x_monitor_exit(clazz->resolution_monitor);
 }
@@ -611,7 +507,8 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
     wabort(ABORT_WONKA, "Unable to dotify name\n");
   }
 
-  if (loader && loader != systemClassLoader && isInternalClass(dotified)) {
+  if (!isSystemClassLoader(loader) && isInternalClass(dotified)) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwException(thread, clazzLinkageError, "%w may only be loaded by a system class", dotified);
     
     *v = (w_word)exceptionThrown(thread);
@@ -619,6 +516,7 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
 
     deregisterString(dotified);
     deregisterString(slashed);
+    x_monitor_eternal(clazz->resolution_monitor);
 
     return;
 
@@ -633,13 +531,12 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
   deregisterString(slashed);
 
   if (target_clazz) {
-    addClassReference(clazz, target_clazz);
     mustBeSupersLoaded(target_clazz);
 
+    addClassReference(clazz, target_clazz);
     x_monitor_eternal(clazz->resolution_monitor);
     *v = (w_word)target_clazz;
     *c = RESOLVED_CLASS;
-    checkUTF8References(clazz, utf8index);
     x_monitor_notify_all(clazz->resolution_monitor);
 
     return;
@@ -670,10 +567,14 @@ void waitForClassConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
+/*
+*/
 void resolveClassConstant(w_clazz clazz, w_int i) {
 
   w_ConstantType *c = &clazz->tags[i];
@@ -694,7 +595,9 @@ void resolveClassConstant(w_clazz clazz, w_int i) {
     /* do nothing */
   }
   else if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
   else {
     woempa(9, "Wrong tag %d for a Class constant\n", *c);
@@ -762,7 +665,8 @@ static w_field seekFieldInClass(w_string name, w_string descriptor, w_clazz valu
 }
 
 /*
-** Resolve a Field constant.
+** Resolve a Field constant. Can result in the thread being temporarily
+** declared GC-safe, so the stack must be in order.
 */
 static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
 
@@ -779,11 +683,14 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   w_size     start;
   w_size     end;
   w_clazz    value_clazz;
+  w_boolean  class_loading_result;
 
+  *c = RESOLVING_FIELD;
   x_monitor_exit(clazz->resolution_monitor);
   member = *v;
   woempa(1, "Resolving field constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
+  x_monitor_eternal(clazz->resolution_monitor);
   if (!search_clazz) {
     woempa(9, "  failed to load the class referenced by field constant[%d] of %K!\n", v - clazz->values, clazz);
     *v = (w_word)exceptionThrown(thread);
@@ -796,19 +703,21 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
   woempa(1, "Name & Type = '0x%08x'\n", nat);
   name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));
   desc_string = resolveUtf8Constant(clazz, Name_and_Type_get_type_index(nat));
+  x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Searching for %w %w\n", desc_string, name);
   start = 0;
   end = string_length(desc_string);
   value_clazz = parseDescriptor(desc_string, &start, end, clazz->loader);
-  if (mustBeLoaded(&value_clazz) == CLASS_LOADING_FAILED) {
+
+  class_loading_result = mustBeLoaded(&value_clazz);
+  if (class_loading_result == CLASS_LOADING_FAILED) {
     woempa(9, "  failed to load %K, the type of field %w of %K!\n", value_clazz, name, search_clazz);
+    x_monitor_eternal(clazz->resolution_monitor);
     *v = (w_word)exceptionThrown(thread);
     *c = COULD_NOT_RESOLVE;
     return;
 
   }
-
-  *c = RESOLVING_FIELD;
 
   if (search_clazz && !(thread && exceptionThrown(thread))) {
     mustBeReferenced(search_clazz);
@@ -850,7 +759,6 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
       x_monitor_eternal(clazz->resolution_monitor);
       *v = (w_word)field;
       *c = RESOLVED_FIELD;
-      checkNatReferences(clazz, nat_index);
       x_monitor_notify_all(clazz->resolution_monitor);
 
       return;
@@ -880,10 +788,15 @@ void waitForFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
+/**
+ ** Resolve a Field constant.
+ */
 void resolveFieldConstant(w_clazz clazz, w_int i) {
   w_ConstantType *c;
   w_ConstantValue *v;
@@ -905,7 +818,9 @@ void resolveFieldConstant(w_clazz clazz, w_int i) {
     /* do nothing */
   }
   else if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
   else {
     woempa(9, "Wrong tag %d for a Field constant\n", *c);
@@ -928,7 +843,7 @@ static w_method seekMethodInClass(w_string name, w_string desc_string, w_MethodS
   for (i = 0; i < search_clazz->numDeclaredMethods; ++i) {
     m = &search_clazz->own_methods[i];
 
-    woempa(1, "Candidate: %w%w\n", m->spec.name, m->spec.name);
+    woempa(1, "Candidate: %w%w\n", m->spec.name, m->desc);
     woempa(1, "Is %spublic, %sprivate, %sprotected, %ssame package, %sancestor\n", isSet(m->flags, ACC_PUBLIC) ? "" : "not ", isSet(m->flags, ACC_PRIVATE) ? "" : "not ", isSet(m->flags, ACC_PROTECTED) ? "" : "not ", same_package ? " " : "not ", ancestor ? " " : "not ");
     if (m->spec.name == name && m->desc == desc_string) {
       woempa(1, "=> name matches, descriptor matches ...\n");
@@ -972,7 +887,7 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
   *c += RESOLVING_CONSTANT;
   x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Resolving method constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
 
   if (search_clazz) {
     woempa(1, "Method was declared in class %k.\n", search_clazz);
@@ -1011,23 +926,23 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
     if (!thread || !exceptionThrown(thread)) {
       woempa(1, "found method %w%w in class %k.\n", name, desc_string, search_clazz);
 
-      if (method->spec.arg_types) {
-        for (j = 0; method->spec.arg_types[j]; ++j) {
-          woempa(1, "%M argument[%d] type %K must be loaded\n", method, j, method->spec.arg_types[j]);
-          addClassReference(clazz, method->spec.arg_types[j]);
+      if (!thread || !exceptionThrown(thread)) {
+        if (method->spec.arg_types) {
+          for (j = 0; method->spec.arg_types[j]; ++j) {
+            woempa(1, "%M argument[%d] type %K must be loaded\n", method, j, method->spec.arg_types[j]);
+            addClassReference(clazz, method->spec.arg_types[j]);
+          }
         }
-      }
 
-      if (!thread || !exceptionThrown(thread)) {
-        woempa(1, "%M return type %K must be loaded\n", method, method->spec.return_type);
-        addClassReference(clazz, method->spec.return_type);
-      }
+        if (!thread || !exceptionThrown(thread)) {
+          woempa(1, "%M return type %K must be loaded\n", method, method->spec.return_type);
+          addClassReference(clazz, method->spec.return_type);
+        }
 
-      if (!thread || !exceptionThrown(thread)) {
         x_monitor_eternal(clazz->resolution_monitor);
+
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
-        checkNatReferences(clazz, Member_get_nat_index(member));
         x_monitor_notify_all(clazz->resolution_monitor);
         return;
       }
@@ -1057,7 +972,9 @@ void waitForMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v)
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
@@ -1081,7 +998,9 @@ void resolveMethodConstant(w_clazz clazz, w_int i) {
       waitForMethodConstant(clazz, c, v);
     }
     else if (*c == COULD_NOT_RESOLVE) {
+      x_monitor_exit(clazz->resolution_monitor);
       throwExceptionInstance(thread, (w_instance)*v);
+      x_monitor_eternal(clazz->resolution_monitor);
     }
     else {
       woempa(9, "Wrong tag %d for a Method constant\n", *c);
@@ -1120,7 +1039,7 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
   *c += RESOLVING_CONSTANT;
   x_monitor_exit(clazz->resolution_monitor);
   woempa(1, "Resolving imethod constant [%d] '0x%08x' from %k\n", v - clazz->values, member, clazz);
-  search_clazz = getClassConstant(clazz, Member_get_class_index(member));
+  search_clazz = getClassConstant(clazz, Member_get_class_index(member), thread);
   nat = clazz->values[Member_get_nat_index(member)];
   woempa(1, "Name & Type = '0x%08x'\n", nat);
   name = resolveUtf8Constant(clazz, Name_and_Type_get_name_index(nat));
@@ -1186,21 +1105,21 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
     if (!thread || !exceptionThrown(thread)) {
       woempa(1, "found interface method %w%w in class %k.\n", name, desc_string, search_clazz);
 
-      if (method->spec.arg_types) {
-        for (j = 0; method->spec.arg_types[j]; ++j) {
-          addClassReference(clazz, method->spec.arg_types[j]);
+      if (!thread || !exceptionThrown(thread)) {
+        if (method->spec.arg_types) {
+          for (j = 0; method->spec.arg_types[j]; ++j) {
+            addClassReference(clazz, method->spec.arg_types[j]);
+          }
         }
-      }
 
-      if (!thread || !exceptionThrown(thread)) {
-        addClassReference(clazz, method->spec.return_type);
-      }
+        if (!thread || !exceptionThrown(thread)) {
+          addClassReference(clazz, method->spec.return_type);
+        }
 
-      if (!thread || !exceptionThrown(thread)) {
         x_monitor_eternal(clazz->resolution_monitor);
+
         *c += RESOLVED_CONSTANT - RESOLVING_CONSTANT;
         *v = (w_word)method;
-        checkNatReferences(clazz, Member_get_nat_index(member));
         x_monitor_notify_all(clazz->resolution_monitor);
         return;
       }
@@ -1230,7 +1149,9 @@ void waitForIMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v
   }
 
   if (*c == COULD_NOT_RESOLVE) {
+    x_monitor_exit(clazz->resolution_monitor);
     throwExceptionInstance(thread, (w_instance)*v);
+    x_monitor_eternal(clazz->resolution_monitor);
   }
 }
 
@@ -1254,7 +1175,9 @@ void resolveIMethodConstant(w_clazz clazz, w_int i) {
       waitForIMethodConstant(clazz, c, v);
     }
     else if (*c == COULD_NOT_RESOLVE) {
+      x_monitor_exit(clazz->resolution_monitor);
       throwExceptionInstance(thread, (w_instance)*v);
+      x_monitor_eternal(clazz->resolution_monitor);
     }
     else {
       woempa(9, "Wrong tag %d for an IMethod constant\n", *c);
@@ -1281,49 +1204,34 @@ void dissolveConstant(w_clazz clazz, int idx) {
 ** The resulting w_string is registered, so remember to deregister it afterwards.
 */
 static w_string getClassConstantName(w_clazz clazz, w_int idx) {
+  w_string result = NULL;
+  threadMustBeSafe(currentWonkaThread);
 
-  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+  x_monitor_eternal(clazz->resolution_monitor);
+  while (clazz->tags[idx] == RESOLVING_CLASS) {
+    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+      x_monitor_eternal(clazz->resolution_monitor);
+    }
+  }
+
+  if (clazz->tags[idx] == CONSTANT_CLASS) {
+    w_int name_index = clazz->values[idx];
+    w_string name = resolveUtf8Constant(clazz, name_index);
+
+    result = name;
+
+  }
+  else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
     w_clazz c = (w_clazz)clazz->values[idx];
 
-    woempa(1, "Already resolved constant\n");
-
-    return dots2slashes(c->dotified);
+    result = dots2slashes(c->dotified);
 
   }
-  else {
-    x_monitor_eternal(clazz->resolution_monitor);
-    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
-      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-        x_monitor_eternal(clazz->resolution_monitor);
-      }
-    }
+  // else we return NULL (e.g. COULD_NOT_RESOLVE)
 
-    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
-      w_int name_index = clazz->values[idx];
+  x_monitor_exit(clazz->resolution_monitor);
 
-      woempa(1, "Unresolved constant\n");
-
-      x_monitor_exit(clazz->resolution_monitor);
-
-      return resolveUtf8Constant(clazz, name_index);
-
-    }
-    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
-      w_clazz c = (w_clazz)clazz->values[idx];
-
-      x_monitor_exit(clazz->resolution_monitor);
-
-      woempa(1, "Newly resolved constant\n");
-
-      return dots2slashes(c->dotified);
-
-
-    }
-    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
-    x_monitor_exit(clazz->resolution_monitor);
-
-    return NULL;
-  }
+  return result;
 }
 
 /*
@@ -1382,69 +1290,64 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
 ** them afterwards.
 */
 w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring_clazz_ptr, w_string *member_name_ptr, w_string *member_type_ptr) {
+  w_boolean result = FALSE;
 
-  if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+  threadMustBeSafe(currentWonkaThread);
 
-    return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+  x_monitor_eternal(clazz->resolution_monitor);
 
-  }
-  else {
-    x_monitor_eternal(clazz->resolution_monitor);
-    while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
-      if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-        x_monitor_eternal(clazz->resolution_monitor);
-      }
+  while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
+    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
+      x_monitor_eternal(clazz->resolution_monitor);
     }
+  }
 
-    if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT) {
-      w_word member = clazz->values[idx];
+  if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT && clazz->tags[idx] != COULD_NOT_RESOLVE) {
+    w_word member = clazz->values[idx];
 
-      woempa(1, "Unresolved constant\n");
-      if (declaring_clazz_ptr) {
-        w_int cls_idx = Member_get_class_index(member);
-        w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
+    woempa(1, "Unresolved constant\n");
+    if (declaring_clazz_ptr) {
+      w_int cls_idx = Member_get_class_index(member);
+      w_string declaring_clazz_name = getClassConstantName(clazz, cls_idx);
 
-        if (declaring_clazz_name) {
-          *declaring_clazz_ptr = declaring_clazz_name;
-        }
-        else {
-          x_monitor_exit(clazz->resolution_monitor);
-
-          return FALSE;
-        }
+      if (declaring_clazz_name) {
         woempa(1, "  declaring class index = %d, name = %w\n", cls_idx, *declaring_clazz_ptr);
+        *declaring_clazz_ptr = declaring_clazz_name;
       }
-      if (member_name_ptr || member_type_ptr) {
-        w_int nat_idx = Member_get_nat_index(member);
-        w_word nat = clazz->values[nat_idx];
-        w_int name_idx = Name_and_Type_get_name_index(nat);
-        w_int type_idx = Name_and_Type_get_type_index(nat);
+      else {
+        x_monitor_exit(clazz->resolution_monitor);
 
-        woempa(1, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
-        if (member_name_ptr) {
-          *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
-          woempa(1, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
-        }
-        if (member_type_ptr) {
-          *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
-          woempa(1, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
-        }
+        return FALSE;
       }
-      x_monitor_exit(clazz->resolution_monitor);
-
-      return TRUE;
     }
-    else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
-      x_monitor_exit(clazz->resolution_monitor);
+    if (member_name_ptr || member_type_ptr) {
+      w_int nat_idx = Member_get_nat_index(member);
+      w_word nat = clazz->values[nat_idx];
+      w_int name_idx = Name_and_Type_get_name_index(nat);
+      w_int type_idx = Name_and_Type_get_type_index(nat);
 
-      return internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
-
+      woempa(1, "  nat index = %d, nat = 0x%08x\n", nat_idx, nat);
+      if (member_name_ptr) {
+        *member_name_ptr = resolveUtf8Constant(clazz, name_idx);
+        woempa(1, "  name index = %d, name = %w\n", name_idx, *member_name_ptr);
+      }
+      if (member_type_ptr) {
+        *member_type_ptr = resolveUtf8Constant(clazz, type_idx);
+        woempa(1, "  type index = %d, type = %w\n", type_idx, *member_type_ptr);
+      }
     }
-    // else we return FALSE (e.g. COULD_NOT_RESOLVE)
-    x_monitor_exit(clazz->resolution_monitor);
-
-    return FALSE;
+    result = TRUE;
   }
+  else if (CONSTANT_STATE(clazz->tags[idx]) == RESOLVED_CONSTANT) {
+
+    result = internal_getMemberConstantStrings(clazz, idx, declaring_clazz_ptr, member_name_ptr, member_type_ptr);
+
+  }
+  // else we return FALSE (e.g. COULD_NOT_RESOLVE)
+
+  x_monitor_exit(clazz->resolution_monitor);
+
+  return result;
 }
 
 #ifdef DEBUG
@@ -1562,9 +1465,11 @@ void dumpPools(int fd, w_clazz clazz) {
         }
         break;
 
+/* [CG 20071014] Constants are no longer being deleted
       case CONSTANT_DELETED:
         woempa(1,"%4d Constant was no longer needed, has been cleaned up\n", i);
         break;
+*/
 
       case COULD_NOT_RESOLVE:
         woempa(1,"%4d Failed to resolve constant: threw %k\n", i, instance2clazz((w_instance)clazz->values[i]));

@@ -412,12 +412,13 @@ public class SingleTestRunner
 
   public String getSourceDirectory ()
   {
-  	return new String("");
+  	return "./";
   }
 
   public String getTempDirectory ()
   {
-    return new String("");
+    new File("/tmp/mauve").mkdirs();
+    return "/tmp/mauve/";
   }
 
 
@@ -462,6 +463,10 @@ public class SingleTestRunner
     runner.setOutputFile(outfile);
     runner.runtest(testfile);
     runner.done();
+  }
+
+  public java.io.File getResourceFile(String name) throws gnu.testlet.ResourceNotFoundException {
+   throw new gnu.testlet.ResourceNotFoundException();
   }
 }
 

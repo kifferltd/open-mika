@@ -1,1297 +1,965 @@
-/**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-
-/**
- * $Id: BigInteger.java,v 1.9 2006/06/20 11:45:04 cvs Exp $
+/*
+ * Imported from Apache Harmony CG 20060208, based on revision 575306.
+ * I have reverted the TLS stuff to hard-coded strings.
  */
 
 package java.math;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Random;
-import java.util.Arrays;
+import java.io.Serializable;
 
-public class BigInteger extends Number implements Comparable {
+public class BigInteger extends Number implements Comparable, Serializable {
 
-  private static Random theRandom = new Random();
-/*
-  private static void debug(byte[] val, String message){
-    System.out.print("DEBUGGING BYTE[]: ");
-    for (int i = 0 ; i < val.length ; i++){
-      System.out.print(val[i]+", ");
-    }
-    System.out.println(message);
-  }
-*/
-  private static final long serialVersionUID = -8287574255936472291L;
+    private static final long serialVersionUID = -8287574255936472291L;
 
-  // represents the BigInteger '0'
-  public static final BigInteger ZERO = new BigInteger(new byte[0],0);
-  // represents the BigInteger '1'
-  public static final BigInteger ONE = new BigInteger(1L);
-  // represents the BigInteger '-1'
-  static final BigInteger bigNegOne = new BigInteger(-1L);
-  static final BigInteger TWO = new BigInteger(2L);
-  static final BigInteger THREE = new BigInteger(3L);
-  static final BigInteger FIVE = new BigInteger(5L);
-  static final BigInteger SEVEN = new BigInteger(7L);
+    /* Fields used for the internal representation. */
 
-  private static final char[] DIGIT_CHARS = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h',
-                                             'i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'};
+    /** The magnitude of this in the little-endian representation. */
+    transient int digits[];
 
-  /**
-  ** this constant is used when creating a BigInteger from a string. It contains the number of digits can be grouped together
-  ** without causing Long.parseLong to throw a NumberFormatException (due to large number).
-  */
-  private static final int[] DIGITS_PER_LONG = { -1, -1, 62, 39, 31, 27, 24, 22, 20, 19, 18, 18, 17, 17, 16, 16, 15, 15, 15,
-                                                 14, 14, 14, 14, 13, 13, 13, 13, 13, 13, 12, 12, 12, 12, 12, 12, 12, 12 };
+    /** The length of this in measured in ints. Can be less than digits.length(). */
+    transient int numberLength;
 
-  /**
-  ** this constant is used when creating a BigInteger from a string. It contains the factors which are used to
-  ** to multiply the results of Long.parseLong.
-  */
-  private static final long[] MULTIPLIERS = { -1, -1, 4611686018427387904L, 4052555153018976267L, 4611686018427387904L,
-                               7450580596923828125L, 4738381338321616896L, 3909821048582988049L, 1152921504606846976L,
-                               1350851717672992089L, 1000000000000000000L, 5559917313492231481L, 2218611106740436992L,
-                               8650415919381337933L, 2177953337809371136L, 6568408355712890625L, 1152921504606846976L,
-                               2862423051509815793L, 6746640616477458432L,  799006685782884121L, 1638400000000000000L,
-                               3243919932521508681L, 6221821273427820544L,  504036361936467383L,  876488338465357824L,
-                               1490116119384765625L, 2481152873203736576L, 4052555153018976267L, 6502111422497947648L,
-                                353814783205469041L,  531441000000000000L,  787662783788549761L, 1152921504606846976L,
-                               1667889514952984961L, 2386420683693101056L, 3379220508056640625L, 4738381338321616896L};
+    /** The sign of this. */
+    transient int sign;
 
-  /**
-  ** this field is introduced to cache the negate() operation
-  */
-  private transient BigInteger negateCache;
-  private transient byte[] valueCache;//null if not cached ... this field is setup native
+    public static final BigInteger ONE = new BigInteger(1, 1);
 
-  /**
-  ** dictated by serialized form
-  */
-  byte [] magnitude;
-  private int signum;
-  private int lowestSetBit=-2;
-  private int firstNonzeroByteNum=-2;
-  private int bitCount=-1;
-  private int bitLength=-1;
+    /*
+    ** [CG 20080209] Only part of public API since 1.5
+    ** Needed by Multiplication, so we make it package-visible.
+    */
+    static final BigInteger TEN = new BigInteger(1, 10);
 
-  private BigInteger(byte[] magn, int sign){
-   	magnitude = magn;
-   	signum = sign;	
-  }
+    public static final BigInteger ZERO = new BigInteger(0, 0);
 
-  private BigInteger(byte [] magn, boolean clone){
-  	initWithByteArray(magn,clone);
-  }
+    /** The {@code BigInteger} constant -1. */
+    static final BigInteger MINUS_ONE = new BigInteger(-1, 1);
 
-  BigInteger(long l){
-    byte [] bytes = longToBytes(l);
-  	initWithByteArray(bytes,false);
-  }
+    /** The {@code BigInteger} constant 0 used for comparison. */
+    static final int EQUALS = 0;
 
-  public BigInteger(String val) throws NumberFormatException {
-  	this(val,10);
-  }
+    /** The {@code BigInteger} constant 1 used for comparison. */
+    static final int GREATER = 1;
 
-  public BigInteger(String val, int rdx) throws NumberFormatException {
-    int len = val.length();
-    if(len == 0){
-      throw new NumberFormatException("invalid string (empty string)");
-    }
-    boolean negative = false;
-    val = val.toLowerCase();
-    char ch = val.charAt(0);
-    if(ch == '-'){
-      val = val.substring(1);
-      len--;
-      negative = true;
-    }
-    else if(ch == '+'){
-      val = val.substring(1);
-      len--;
-    }
+    /** The {@code BigInteger} constant -1 used for comparison. */
+    static final int LESS = -1;
 
-    signum = 1;
-    if(rdx < Character.MIN_RADIX || rdx > Character.MAX_RADIX){
-      rdx = 10;
-    }
+    /** All the {@ BigInteger} numbers in the range [0,10] are cached. */
+    static final BigInteger[] SMALL_VALUES = { ZERO, ONE, new BigInteger(1, 2),
+            new BigInteger(1, 3), new BigInteger(1, 4), new BigInteger(1, 5),
+            new BigInteger(1, 6), new BigInteger(1, 7), new BigInteger(1, 8),
+            new BigInteger(1, 9), TEN };
 
-    int digits = DIGITS_PER_LONG[rdx];
-    int rem = len % digits;
-    int groups = len / digits;
-    int index = 0;
+    private transient int firstNonzeroDigit = -2;
 
-    if(rem != 0){
-      magnitude = longToBytes(Long.parseLong(val.substring(0,rem),rdx));
-      index = rem;
-    }
-    else if(groups != 0){
-      magnitude = longToBytes(Long.parseLong(val.substring(0,digits),rdx));
-      index = digits;
-      groups--;
-    }
-    else{
-      throw new NumberFormatException("invalid string (only sign character)");
-    }
-    if(groups > 0){
-      byte[] multiplier = longToBytes(MULTIPLIERS[rdx]);
-      for(int i=0; i < groups; i++){
-        int end = index + digits;
-        byte[] bytes = new byte[magnitude.length+8];
-        javaMultiply(multiplier,bytes);
-        magnitude = bytes;
-        addLong(Long.parseLong(val.substring(index,end),rdx));
-        index = end;
-      }
-    }
-    //magnitude contains now the byte pattern off the specified number (with disregard to the sign)
-    //step 1 make it a normelized BigInteger.
-    normelizeMagnitude(false);
-    //if signum == -1;
-    if(negative && signum == 1){
-	    negateCache = new BigInteger(magnitude,1);
-	    negateCache.negateCache = this;
-	    magnitude = nativeNegateBytes();
-	    signum = -1;
-    }
-  }
+    /* Serialized Fields */
 
-  public BigInteger(byte[] bval)throws NumberFormatException{
-  	initWithByteArray(bval,true);
-  }
+    private int signum;
 
-  public BigInteger(int sign, byte[] bval) throws NumberFormatException {
-   	if (sign > 1 || sign < -1) {
-   	 	throw new NumberFormatException("wrong sign specified :"+sign);
-   	}
-   	signum = sign;
-   	if (sign == 0) {
-	   	magnitude = new byte [0];
-	  }
-	  else {
-	    magnitude = bval;
-	    normelizeMagnitude(true);
-	    if (sign == -1){
-	      negateCache = new BigInteger(magnitude,1);
-	      magnitude = nativeNegateBytes();
-	      negateCache.negateCache = this;
-	    }
-	  }
-  }
+    private byte[] magnitude;
 
-  public BigInteger(int numbits, Random rdm) throws IllegalArgumentException {
-  	if (numbits < 0){
-  	 	throw new IllegalArgumentException("got negative number of bits :"+numbits);
-  	}
-  	magnitude = new byte[(numbits-1)/8+1];
-  	rdm.nextBytes(magnitude);
-  	magnitude[0] = (byte)(0xff>>(8-(numbits%8)) &  ((char)magnitude[0]));
-    if (magnitude.length == 1 && magnitude[0] == 0){
-      magnitude = new byte[0];
-    }
-    else{
-      signum = 1;
-    }
-  }
+    private transient int hashCode = 0;
 
-  public BigInteger(int bitLength, int cert, Random rnd) throws IllegalArgumentException {
-   	if (bitLength < 2){
-   	 	throw new IllegalArgumentException("bitLength should be 2 or greater: "+bitLength);
-   	}
-   	   	
-   	BigInteger bi = new BigInteger(bitLength, rnd);
-    int l = bi.magnitude.length;
-    if(l > 0){
-      int msb = (0xff & (char)bi.magnitude[0]);
-      bi.magnitude[0] = (byte) (msb |  0xc0>>(7-((bitLength-1)%8)));
-      bi.magnitude[l-1] = (byte) (0x01 | (char)bi.magnitude[l-1]);
-    }
-   	
-   	for (;!bi.isProbablePrime(cert) ;){
-   		bi = new BigInteger(bitLength, rnd);	 	
-   	
-   	  l = bi.magnitude.length;
-      if(l > 0){
-        int msb = (0xff & (char)bi.magnitude[0]);
-        bi.magnitude[0] = (byte) (msb |  0xc0>>(7-((bitLength-1)%8)));
-        bi.magnitude[l-1] = (byte) (0x01 | (char)bi.magnitude[l-1]);
-      }
-   	}
-   	this.signum = 1;
-   	this.magnitude = bi.magnitude;
-  }
+    /* Public Constructors */
 
-  public BigInteger abs(){
-   	if (signum < 0){
-   	 	return negate();
-   	}
-   	return this;//since it doesn't change there is no need to create a new Object;
-  }
-
-  public BigInteger and(BigInteger bi){
-  	if (signum == 0 || bi.signum == 0){
-  	 	return ZERO;
-  	}
-  	byte[] bmax = magnitude.length < bi.magnitude.length ? bi.magnitude : magnitude;
-  	byte[] bmin = magnitude == bmax ? bi.magnitude : magnitude;
-  	byte [] bytes = new byte[bmax.length+1];
-  	bytes[0] = (byte)((signum == -1 ? -1 : 0)&(bi.signum == -1 ? -1 : 0));
-  	int sign = bi.magnitude.length > magnitude.length ? signum : bi.signum;
-  	sign = (sign == -1 ? -1 : 0);
-  	int dif = bmax.length-bmin.length;
-  	for (int j=0 ; j < dif ; j++){
-      bytes[j+1] = (byte)(sign & (char)(bmax[j]));
-  	}	
-  	for (int i=0,j=dif ; i < bmin.length ; i++,j++){
-  	 	bytes[j+1] = (byte)((char)(bmax[j]&bmin[i]));
-  	}
-  	return new BigInteger(bytes,false);	
-  }
-
-  public BigInteger andNot(BigInteger bi){
-   	return and(bi.not());
-  }
-
-  public int bitLength(){
-    if (bitLength == -1){
-      int l = magnitude.length * 8;
-      if (magnitude.length > 0){// inspect the Most significant byte   	
-      	int hlp = 8;
-     	int res = (signum == 1 ? 0 : -1);
-      	int bits = magnitude[0];
-      	while(bits != res && hlp > 1) {
-          hlp--;
-          bits = bits>>>1;
+    public BigInteger(int numBits, Random rnd) {
+        if (numBits < 0) {
+            throw new IllegalArgumentException("numBits must be non-negative");
         }
-      	l -= hlp;	
-      }
-      bitLength = l;
+        if (numBits == 0) {
+            sign = 0;
+            numberLength = 1;
+            digits = new int[] { 0 };
+        } else {
+            sign = 1;
+            numberLength = (numBits + 31) >> 5;
+            digits = new int[numberLength];
+            for (int i = 0; i < numberLength; i++) {
+                digits[i] = rnd.nextInt();
+            }
+            // Using only the necessary bits
+            digits[numberLength - 1] >>>= (-numBits) & 31;
+            cutOffLeadingZeroes();
+        }
     }
-    return bitLength;
-  }
 
-  public BigInteger clearBit(int n) throws ArithmeticException{
-   	if (n < 0) {
-   	  throw new ArithmeticException("cannot clear bit "+n+" (negative value)");
-   	}
-   	if(signum == 0){
-   	 	return ZERO;
-   	}
-   	byte [] bytes;
-   	if (n >= 8*magnitude.length-1){
-   	 	bytes = createByteArray(n);
-   	}
-   	else{
-   	 	bytes = (byte[])magnitude.clone();
-   	}
-   	int bt = bytes.length - 1 - (n / 8);
-   	n = n % 8;
-   	int mask = 0xff7f;
-  	for ( ; n < 7 ; n++){
-  	 	mask = mask>>1;
-  	} 	
-  	bytes[bt] = (byte)(((char)bytes[bt]) & mask);
-  	return new BigInteger(bytes,false);
-  }
-
-  public int compareTo (Object o) {
-  	return compareTo((BigInteger)o);
-  }
-
-  public int compareTo(BigInteger bi){
-   	//compare signum
-   	if (signum != bi.signum || signum == 0){
-  		// signum != bi.signum or both are 0
-  		return (signum == 0 ? (-bi.signum) : signum);
-   	} //compare magnitude ...
-   	if (magnitude.length != bi.magnitude.length){
-      return (magnitude.length > bi.magnitude.length ? 1 : -1) * signum;
-   	}
-   	for (int i=0 ; i < magnitude.length ; i++){
-    	if(magnitude[i] != bi.magnitude[i]){        
-    	  return ((0xff & (char)(magnitude[i])) > (0xff & (char)(bi.magnitude[i]))? 1 : -1); 	 	 	   	     	
-    	}
-   	}
-   	return 0;
-  }
-
-  public boolean equals(Object val){
-   	if (!(val instanceof BigInteger)){
-   	 	return false;
-   	}
-   	BigInteger bi = (BigInteger)val;
-   	return  (signum == bi.signum) &&
-   		(Arrays.equals(magnitude, bi.magnitude));  	
-  }
-
-  public BigInteger flipBit(int n) throws ArithmeticException {
-   	if (n < 0) {
-   	  throw new ArithmeticException("cannot flip bit "+n+" (negative value)");
-   	}
-   	byte [] bytes;
-   	if (n >= 8*magnitude.length-1){
-   	 	bytes = createByteArray(n);
-   	}
-   	else{
-   	 	bytes = (byte[])magnitude.clone();
-   	}
-   	int bt = bytes.length - 1 - (n / 8);
-   	n = n % 8;
-   	int mask = 0x100;
-  	for ( ; n < 7 ; n++){
-  	 	mask = mask>>1;
-  	} 	
-  	bytes[bt] = (byte)(((char)bytes[bt]) ^ mask);
-	  return new BigInteger(bytes,false);
-  }
-
-  public int getLowestSetBit(){
-  	if (lowestSetBit == -2){
-  		if (signum == 0){
-  		 	lowestSetBit = -1;	
-  		}else{
-  		  for (int i=magnitude.length-1 ; i >= 0 ; i--){
-    			if(magnitude[i] != 0){
-    			   int bt = magnitude[i]>>1;
-    			   int res = 7; 			
-    			   for (int j=0 ; j < 7 ; j++){
-               if(bt == 0){
-                res = j;
-               	break;
-               }  	
-    			   }
-    			   lowestSetBit = res + (magnitude.length - 1 - i) * 8;
-    			   break;
-    			}	 	
-  		  } 		
-  		}	 	
-  	}
-  	return lowestSetBit;
-  }
-
-  public int hashCode(){
-  	int hash = 0;
-  	for (int i=0 ; i < magnitude.length ; i++){
-  	 	hash ^= 59793 * magnitude[i];
-  	} 	
-  	return hash * signum;
-  }
-
-  public BigInteger max(BigInteger val){
-    return compareTo(val) == 1 ? this : val;
-  }
-
-  public BigInteger min(BigInteger val){
-    return compareTo(val) == -1 ? this : val;
-  }
-
-  public BigInteger negate(){
-    if (negateCache == null){
-      if (signum == 0){
-        negateCache = this;
-      }else {
-        negateCache = new BigInteger(nativeNegateBytes(),-signum);
-        negateCache.negateCache = this;	
-      }
+    public BigInteger(int bitLength, int certainty, Random rnd) {
+        if (bitLength < 2) {
+            throw new ArithmeticException("bitLength < 2");
+        }
+        BigInteger me = Primality.consBigInteger(bitLength, certainty, rnd);
+        sign = me.sign;
+        numberLength = me.numberLength;
+        digits = me.digits;
     }
-    return negateCache;
-  }
 
-  public BigInteger not(){
-  	byte [] bytes = new byte[magnitude.length+1];
-  	bytes[0] = (byte)(signum == -1 ? 0 : -1);
-  	System.arraycopy(magnitude,0,bytes,1,magnitude.length);
-  	for (int i=1 ; i < bytes.length ; i++){
-  	 	bytes[i] = (byte)(0xff ^ (char)(bytes[i]));
-  	}   	
-  	return new BigInteger(bytes,false);
-  }
-
-  public BigInteger or(BigInteger bi){
-  	if (bi.signum == 0) {
-  	 	return this;
-  	}
-  	if (signum == 0) {
-  	 	return bi;
-  	}
-  	byte[] bmax = magnitude.length < bi.magnitude.length ? bi.magnitude : magnitude;
-  	byte[] bmin = magnitude == bmax ? bi.magnitude : magnitude;
-  	byte [] bytes = new byte[bmax.length+1];
-  	bytes[0] = (byte)((signum == -1 ? -1 : 0)|(bi.signum == -1 ? -1 : 0));
-  	int sign = bi.magnitude.length > magnitude.length ? signum : bi.signum;
-  	sign = (sign == -1 ? -1 : 0);
-  	int dif = bmax.length-bmin.length;
-  	for (int j=0 ; j < dif ; j++){
-      bytes[j+1] = (byte)(sign | (char)(bmax[j]));
-  	}	
-  	for (int i=0,j=dif ; i < bmin.length ; i++,j++){
-  	 	bytes[j+1] = (byte)((char)(bmax[j] | bmin[i]));
-  	}
-  	return new BigInteger(bytes,false);	
-  }
-
-  public BigInteger setBit(int n){
-   	if (n < 0) {
- 	   	throw new ArithmeticException("cannot set bit "+n+" (negative value)");
-   	}
-   	byte [] bytes;
-   	if (n >= 8*magnitude.length-1){
-   	 	bytes = createByteArray(n);
-   	}
-   	else{
-   	 	bytes = (byte[])magnitude.clone();
-   	}
-   	int bt = bytes.length - 1 - (n / 8);
-   	n = n % 8;
-   	int mask = 0x80;
-  	for ( ; n < 7 ; n++){
-  	 	mask = mask>>1;
-  	} 	
-  	bytes[bt] = (byte)(((char)bytes[bt]) | mask);
-	  return new BigInteger(bytes,false);
-  }
-
-  public BigInteger shiftLeft(int n){
-   	if (n <= 0){
-   	 	return shiftRight(-n);
-   	} 	
-   	int bt = (n / 8);
-   	n = n % 8;
-   	byte [] bytes;
-   	if (n != 0){ //shift bits ...
- 	   	bytes = new byte[magnitude.length + 1 + bt];
-   		System.arraycopy(magnitude,0,bytes,1,magnitude.length);
-   		if (signum == -1) {
-   		 	bytes[0] = (byte)0xff;
-   		}
-   		bt = 0;
- 	   	for (int i=bytes.length-1 ; i > -1 ; i--){
- 	   	 	bt |= (0xff & ((char)bytes[i]))<<8;   	   	 	
- 	   	 	bt  = bt>>(8-n);
- 	   	 	bytes[i] = (byte)bt;
- 	   	 	bt  = bt>>(n);   	   	 	
- 	   	}
-   	}
-   	else{
-   	  bytes = new byte[magnitude.length + bt];
-   		System.arraycopy(magnitude,0,bytes,0,magnitude.length);   	
-   	}   		
-		return new BigInteger(bytes,false);
-  }
-
-  public BigInteger shiftRight(int n){
-  	if(n ==	0){
-  	 	return this;
-  	}     	
-   	if (n < 0) {
-   	  return shiftLeft(-n);
-   	}
-   	int bt = (n / 8);
-   	if (bt >= magnitude.length){
-   	 	return (signum == -1 ? bigNegOne : ZERO );
-   	}
-   	byte [] bytes = new byte[magnitude.length - bt];
-   	System.arraycopy(magnitude,0,bytes,0,magnitude.length - bt);
-   	n = n % 8;
-   	if (n != 0){ //shift bits ...
- 	   	bt = (signum == -1 ? 0x0ff00 : 0);
- 	   	for (int i=0 ; i < bytes.length ; i++){
- 	   	 	bt |= (0xff & ((char)bytes[i]));
- 	   	 	bytes[i] = (byte)(bt>>n);
- 	   	 	bt  = bt<<(8);   	   	 	
- 	   	}
-   	}
-  	return new BigInteger(bytes,false);
-  }
-
-  public boolean testBit(int n){
-   	if (n < 0) {
-   	  throw new ArithmeticException("cannot test bit "+n+" (negative value)");
-   	}
-   	if (n >= 8*magnitude.length){
-   		return (signum == -1);
-   	}
-   	int bt = magnitude.length - 1 - (n / 8);
-   	n = n % 8;
-   	int mask = 0x80;
-  	for ( ; n < 7 ; n++){
-  	 	mask = mask>>1;
-  	} 	
-  	return (((char)magnitude[bt]) & mask)!= 0;
-  }
-
-  public byte[] toByteArray(){
-  	if (signum == 0){
-  	 	return new byte[1];
-  	}
-  	if ((magnitude[0] >= 0 && signum == 1)||(magnitude[0] < 0 && signum == -1)){
-  	 	byte [] b = new byte[magnitude.length];
-  	 	System.arraycopy(magnitude,0,b,0,magnitude.length);
-  	 	return b;
-  	}
-   	return (byte[])magnitude.clone();
-  }
-
-  public static BigInteger valueOf(long val){
-  	if (val == 0){
-  	 	return ZERO;
-  	}
-  	if (val == 1){
-  	 	return ONE;
-  	}
-  	if (val == 2){
-  	 	return TWO;
-  	}
-  	if (val == -1){
-  	 	return bigNegOne;
-  	}
-  	return new BigInteger(val);
-
-  }
-
-  public BigInteger xor(BigInteger bi){
-  	if (bi.signum == 0) {
-  	 	return this;
-  	}
-  	if (signum == 0) {
-  	 	return bi;
-  	}
-  	byte[] bmax = magnitude.length < bi.magnitude.length ? bi.magnitude : magnitude;
-  	byte[] bmin = magnitude == bmax ? bi.magnitude : magnitude;
-  	byte [] bytes = new byte[bmax.length+1];
-  	bytes[0] = (byte)((signum == -1 ? -1 : 0)^(bi.signum == -1 ? -1 : 0));
-  	int sign = bi.magnitude.length > magnitude.length ? signum : bi.signum;
-  	sign = (sign == -1 ? -1 : 0);
-  	int dif = bmax.length-bmin.length;
-  	for (int j=0 ; j < dif ; j++){
-      bytes[j+1] = (byte)(sign ^ (char)(bmax[j]));
-  	}	
-  	for (int i=0,j=dif ; i < bmin.length ; i++,j++){
-  	 	bytes[j+1] = (byte)((char)(bmax[j]^bmin[i]));
-  	}
-   	return new BigInteger(bytes,false);	
-  }
-
-  public int signum(){
-   	return signum;
-  } 	
-
-  public double doubleValue() {
-    //lets transform this BigInteger to String. make the string a double format ...
-    StringBuffer buf = new StringBuffer(this.toString(10));
-    int offset = signum == -1 ? 1 : 0;
-    int length = buf.length() - offset;
-    if(length > 17){
-      buf.setLength(17+offset);
+    public BigInteger(String val) {
+        this(val, 10);
     }
-    buf.insert(offset + 1, '.');
-    buf.append('E');
-    buf.append(length-1);
-    try {
-      return Double.parseDouble(buf.toString());
-    }
-    catch (NumberFormatException nfe){
-      return (signum == -1 ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY);
-    }
-  }
 
-  public float floatValue() {
-  	return (float)doubleValue();
-  }
-
-  public int intValue() {
-    int start = (magnitude.length - 4) > 0 ? (magnitude.length - 4) : 0;
-  	int result = (signum == -1 ? -1 : 0);
-  	for ( ; start < magnitude.length ; start++){
-  		result = (0xffffff00 & (result<<8)) | (0xff & ((char)magnitude[start]));	 	
-  	}
-  	return result;
-  }
-
-  public long longValue() {
-    int start = (magnitude.length -8) > 0 ? (magnitude.length -8) : 0;
-  	long result = (signum == -1 ? -1 : 0);
-  	for ( ; start < magnitude.length ; start++){
-  		result = (0xffffffffffffff00L & (result<<8)) | (0xff & ((char)magnitude[start]));	 	
-  	}
-  	return result;
-  }
-
-/**
-** based on the Miller-Rabin algorithm.
-** a^(n-1) = 1 (mod n), where 0 < a < n. if the result is not 1 then is not a prime ...
-** the chance that n is a prime after k succesfull steps is 1 - 0.5^k
-**
-** if this is not a really large number we might consider another aproach ...
-**
-**  ??? TODO ??? do we need these extra steps ...
-**
-** Choose a random number, p, to test. Calculate b, where b is the number of times 2 divides p-1.
-** Then calculate m, such that p = 1 + 2b*m.
-**
-** 1. Choose a random number, a, such that a is less than p.
-**
-** 2. Set j = 0, and set z = am mod p.
-**
-** 3. If z = 1, or if z = p - 1, then p passes the test and may be prime.
-**
-** 4. If j > 0 and z = 1, then p is not prime.
-**
-** 5. Set j = j +1. If j < b and z � z2 mod p go back to step 4. If z = p - 1, then p passes the test and may be prime.
-**
-** 6. If j = b and z � p -1, then p is not prime.
-**
-** The odds of a composite passing decreases faster with this test than with previous ones.
-** Three-quarters of the possible values of a are guaranteed to be witnesses. This means that
-** a composite number will slip through t tests no more than 1/4t of the time, where t is the
-** number of iterations. Actually, these numbers are very pessimistic. For most random
-** numbers, something like 99.9 percent of the possible a values are witnesses.
-*/
-
-  public boolean isProbablePrime(int cert){
-    //step 1: reject all multiple of 2 except 2 itself.
-    BigInteger thisAbs = this.abs();
-    if(!testBit(0)){
-      return thisAbs.equals(TWO);
+    public BigInteger(String val, int radix) {
+        if (val == null) {
+            throw new NullPointerException();
+        }
+        if ((radix < Character.MIN_RADIX) || (radix > Character.MAX_RADIX)) {
+            throw new NumberFormatException("Radix out of range");
+        }
+        if (val.length() == 0) {
+            throw new NumberFormatException("Zero length BigInteger");
+        }
+        setFromString(this, val, radix);
     }
-    //step 2: eliminate some trivial cases and reduce the chance to generate '0' or '1' as random value
-    if(thisAbs.equals(ONE)){
-      return false;
+
+    public BigInteger(int signum, byte[] magnitude) {
+        if (magnitude == null) {
+            throw new NullPointerException();
+        }
+        if ((signum < -1) || (signum > 1)) {
+            throw new NumberFormatException("Invalid signum value");
+        }
+        if (signum == 0) {
+            // [CG 20080208] WAS: for (byte element : magnitude) {
+            for (int i = 0; i < magnitude.length; ++i) {
+                byte element = magnitude[i];
+                if (element != 0) {
+                    throw new NumberFormatException("signum-magnitude mismatch"); 
+                }
+            }
+        }
+        if (magnitude.length == 0) {
+            sign = 0;
+            numberLength = 1;
+            digits = new int[] { 0 };
+        } else {
+            sign = signum;
+            putBytesPositiveToIntegers(magnitude);
+            cutOffLeadingZeroes();
+        }
     }
-    if(THREE.equals(thisAbs) || FIVE.equals(thisAbs) || SEVEN.equals(thisAbs)){
-      return true;
+
+    public BigInteger(byte[] val) {
+        if (val.length == 0) {
+            throw new NumberFormatException("Zero length BigInteger");
+        }
+        if (val[0] < 0) {
+            sign = -1;
+            putBytesNegativeToIntegers(val);
+        } else {
+            sign = 1;
+            putBytesPositiveToIntegers(val);
+        }
+        cutOffLeadingZeroes();
     }
-    //step 3: Miller-Rabin.
-    int length = (thisAbs.bitLength()-1);
-    BigInteger thisM1 = thisAbs.subtract(ONE);
-    for(int i = 0 ; i < cert ; i++){
-      BigInteger random = new BigInteger(length, theRandom);
-      while(random.signum == 0 || random.equals(ONE)){
-        random = new BigInteger(length, theRandom);
-      }
-      if(!ONE.equals(random.modPow(thisM1, thisAbs))){
+
+    /* Package Constructors */
+
+    /**
+     * Constructs a number which array is of size 1.
+     * 
+     * @param sign
+     *            the sign of the number
+     * @param value
+     *            the only one digit of array
+     */
+    BigInteger(int sign, int value) {
+        this.sign = sign;
+        numberLength = 1;
+        digits = new int[] { value };
+    }
+
+    /**
+     * Constructs a number without to create new space. This construct should be
+     * used only if the three fields of representation are known.
+     * 
+     * @param sign
+     *            the sign of the number
+     * @param numberLength
+     *            the length of the internal array
+     * @param digits
+     *            a reference of some array created before
+     */
+    BigInteger(int sign, int numberLength, int[] digits) {
+        this.sign = sign;
+        this.numberLength = numberLength;
+        this.digits = digits;
+    }
+
+    /**
+     * Creates a new {@code BigInteger} whose value is equal to the specified
+     * {@code long}.
+     * 
+     * @param sign
+     *            the sign of the number
+     * @param val
+     *            the value of the new {@code BigInteger}.
+     */
+    BigInteger(int sign, long val) {
+        // PRE: (val >= 0) && (sign >= -1) && (sign <= 1)
+        this.sign = sign;
+        if ((val & 0xFFFFFFFF00000000L) == 0) {
+            // It fits in one 'int'
+            numberLength = 1;
+            digits = new int[] { (int) val };
+        } else {
+            numberLength = 2;
+            digits = new int[] { (int) val, (int) (val >> 32) };
+        }
+    }
+
+    /**
+     * Creates a new {@code BigInteger} with the given sign and magnitude. This
+     * constructor does not create a copy, so any changes to the reference will
+     * affect the new number.
+     * 
+     * @param signum
+     *            The sign of the number represented by {@code digits}
+     * @param digits
+     *            The magnitude of the number
+     */
+    BigInteger(int signum, int digits[]) {
+        if (digits.length == 0) {
+            sign = 0;
+            numberLength = 1;
+            this.digits = new int[] { 0 };
+        } else {
+            sign = signum;
+            numberLength = digits.length;
+            this.digits = digits;
+            cutOffLeadingZeroes();
+        }
+    }
+
+    public static BigInteger valueOf(long val) {
+        if (val < 0) {
+            if (val != -1) {
+                return new BigInteger(-1, -val);
+            }
+            return MINUS_ONE;
+        } else if (val <= 10) {
+            return SMALL_VALUES[(int) val];
+        } else {// (val > 10)
+            return new BigInteger(1, val);
+        }
+    }
+
+    public byte[] toByteArray() {
+        if (this.sign == 0) {
+            return new byte[] { 0 };
+        }
+        BigInteger temp = this;
+        int bitLen = bitLength();
+        int iThis = getFirstNonzeroDigit();
+        int bytesLen = (bitLen >> 3) + 1;
+        /*
+         * Puts the little-endian int array representing the magnitude of this
+         * BigInteger into the big-endian byte array.
+         */
+        byte[] bytes = new byte[bytesLen];
+        int firstByteNumber = 0;
+        int highBytes;
+        int digitIndex = 0;
+        int bytesInInteger = 4;
+        int digit;
+        int hB;
+
+        if (bytesLen - (numberLength << 2) == 1) {
+            bytes[0] = (byte) ((sign < 0) ? -1 : 0);
+            highBytes = 4;
+            firstByteNumber++;
+        } else {
+            hB = bytesLen & 3;
+            highBytes = (hB == 0) ? 4 : hB;
+        }
+
+        digitIndex = iThis;
+        bytesLen -= iThis << 2;
+
+        if (sign < 0) {
+            digit = -temp.digits[digitIndex];
+            digitIndex++;
+            if (digitIndex == numberLength) {
+                bytesInInteger = highBytes;
+            }
+            for (int i = 0; i < bytesInInteger; i++, digit >>= 8) {
+                bytes[--bytesLen] = (byte) digit;
+            }
+            while (bytesLen > firstByteNumber) {
+                digit = ~temp.digits[digitIndex];
+                digitIndex++;
+                if (digitIndex == numberLength) {
+                    bytesInInteger = highBytes;
+                }
+                for (int i = 0; i < bytesInInteger; i++, digit >>= 8) {
+                    bytes[--bytesLen] = (byte) digit;
+                }
+            }
+        } else {
+            while (bytesLen > firstByteNumber) {
+                digit = temp.digits[digitIndex];
+                digitIndex++;
+                if (digitIndex == numberLength) {
+                    bytesInInteger = highBytes;
+                }
+                for (int i = 0; i < bytesInInteger; i++, digit >>= 8) {
+                    bytes[--bytesLen] = (byte) digit;
+                }
+            }
+        }
+        return bytes;
+    }
+
+    /** @see BigInteger#BigInteger(String, int) */
+    private static void setFromString(BigInteger bi, String val, int radix) {
+        int sign;
+        int[] digits;
+        int numberLength;
+        int stringLength = val.length();
+        int startChar;
+        int endChar = stringLength;
+
+        if (val.charAt(0) == '-') {
+            sign = -1;
+            startChar = 1;
+            stringLength--;
+        } else {
+            sign = 1;
+            startChar = 0;
+        }
+        /*
+         * We use the following algorithm: split a string into portions of n
+         * characters and convert each portion to an integer according to the
+         * radix. Then convert an exp(radix, n) based number to binary using the
+         * multiplication method. See D. Knuth, The Art of Computer Programming,
+         * vol. 2.
+         */
+
+        int charsPerInt = Conversion.digitFitInInt[radix];
+        int bigRadixDigitsLength = stringLength / charsPerInt;
+        int topChars = stringLength % charsPerInt;
+
+        if (topChars != 0) {
+            bigRadixDigitsLength++;
+        }
+        digits = new int[bigRadixDigitsLength];
+        // Get the maximal power of radix that fits in int
+        int bigRadix = Conversion.bigRadices[radix - 2];
+        // Parse an input string and accumulate the BigInteger's magnitude
+        int digitIndex = 0; // index of digits array
+        int substrEnd = startChar + ((topChars == 0) ? charsPerInt : topChars);
+        int newDigit;
+
+        for (int substrStart = startChar; substrStart < endChar; substrStart = substrEnd, substrEnd = substrStart
+                + charsPerInt) {
+            int bigRadixDigit = Integer.parseInt(val.substring(substrStart,
+                    substrEnd), radix);
+            newDigit = Multiplication.multiplyByInt(digits, digitIndex,
+                    bigRadix);
+            newDigit += Elementary
+                    .inplaceAdd(digits, digitIndex, bigRadixDigit);
+            digits[digitIndex++] = newDigit;
+        }
+        numberLength = digitIndex;
+        bi.sign = sign;
+        bi.numberLength = numberLength;
+        bi.digits = digits;
+        bi.cutOffLeadingZeroes();
+    }
+
+    public BigInteger abs() {
+        return ((sign < 0) ? new BigInteger(1, numberLength, digits) : this);
+    }
+
+    public BigInteger negate() {
+        return ((sign == 0) ? this
+                : new BigInteger(-sign, numberLength, digits));
+    }
+
+    public BigInteger add(BigInteger val) {
+        return Elementary.add(this, val);
+    }
+
+    public BigInteger subtract(BigInteger val) {
+        return Elementary.subtract(this, val);
+    }
+
+    public int signum() {
+        return sign;
+    }
+
+    public BigInteger shiftRight(int n) {
+        if ((n == 0) || (sign == 0)) {
+            return this;
+        }
+        return ((n > 0) ? BitLevel.shiftRight(this, n) : BitLevel.shiftLeft(
+                this, -n));
+    }
+
+    public BigInteger shiftLeft(int n) {
+        if ((n == 0) || (sign == 0)) {
+            return this;
+        }
+        return ((n > 0) ? BitLevel.shiftLeft(this, n) : BitLevel.shiftRight(
+                this, -n));
+    }
+
+    public int bitLength() {
+        return BitLevel.bitLength(this);
+    }
+
+    public boolean testBit(int n) {
+        if (n == 0) {
+            return ((digits[0] & 1) != 0);
+        }
+        if (n < 0) {
+            throw new ArithmeticException("Negative bit address");
+        }
+        int intCount = n >> 5;
+        if (intCount >= numberLength) {
+            return (sign < 0);
+        }
+        int digit = digits[intCount];
+        n = (1 << (n & 31)); // int with 1 set to the needed position
+        if (sign < 0) {
+            int firstNonZeroDigit = getFirstNonzeroDigit();
+            if (intCount < firstNonZeroDigit) {
+                return false;
+            } else if (firstNonZeroDigit == intCount) {
+                digit = -digit;
+            } else {
+                digit = ~digit;
+            }
+        }
+        return ((digit & n) != 0);
+    }
+
+    public BigInteger setBit(int n) {
+        if (!testBit(n)) {
+            return BitLevel.flipBit(this, n);
+        }
+        return this;
+    }
+
+    public BigInteger clearBit(int n) {
+        if (testBit(n)) {
+            return BitLevel.flipBit(this, n);
+        }
+        return this;
+    }
+
+    public BigInteger flipBit(int n) {
+        if (n < 0) {
+            throw new ArithmeticException("Negative bit address");
+        }
+        return BitLevel.flipBit(this, n);
+    }
+
+    public int getLowestSetBit() {
+        if (sign == 0) {
+            return -1;
+        }
+        // (sign != 0) implies that exists some non zero digit
+        int i = getFirstNonzeroDigit();
+        return ((i << 5) + Utils.numberOfTrailingZeros(digits[i]));
+    }
+
+    public int bitCount() {
+        return BitLevel.bitCount(this);
+    }
+
+    public BigInteger not() {
+        return Logical.not(this);
+    }
+
+    public BigInteger and(BigInteger val) {
+        return Logical.and(this, val);
+    }
+
+    public BigInteger or(BigInteger val) {
+        return Logical.or(this, val);
+    }
+
+    public BigInteger xor(BigInteger val) {
+        return Logical.xor(this, val);
+    }
+
+    public BigInteger andNot(BigInteger val) {
+        return Logical.andNot(this, val);
+    }
+
+    public int intValue() {
+        return (sign * digits[0]);
+    }
+
+    public long longValue() {
+        long value = (numberLength > 1) ? (((long) digits[1]) << 32)
+                | (digits[0] & 0xFFFFFFFFL) : (digits[0] & 0xFFFFFFFFL);
+        return (sign * value);
+    }
+
+    public float floatValue() {
+        return (float) doubleValue();
+    }
+
+    public double doubleValue() {
+        return Conversion.bigInteger2Double(this);
+    }
+
+    public int compareTo(Object o) throws ClassCastException {
+        BigInteger val = (BigInteger)o;
+
+        return compareTo(val);
+    }
+
+    public int compareTo(BigInteger val) {
+        if (sign > val.sign) {
+            return GREATER;
+        }
+        if (sign < val.sign) {
+            return LESS;
+        }
+        if (numberLength > val.numberLength) {
+            return sign;
+        }
+        if (numberLength < val.numberLength) {
+            return -val.sign;
+        }
+        // Equal sign and equal numberLength
+        return (sign * Elementary.compareArrays(digits, val.digits,
+                numberLength));
+    }
+
+    public BigInteger min(BigInteger val) {
+        return ((this.compareTo(val) == LESS) ? this : val);
+    }
+
+    public BigInteger max(BigInteger val) {
+        return ((this.compareTo(val) == GREATER) ? this : val);
+    }
+
+    public int hashCode() {
+        if (hashCode != 0) {
+            return hashCode;
+        }
+        for (int i = 0; i < digits.length; i++) {
+            hashCode = (hashCode * 33 + (digits[i] & 0xffffffff));
+        }
+        hashCode = hashCode * sign;
+        return hashCode;
+    }
+
+    public boolean equals(Object x) {
+        if (this == x) {
+            return true;
+        }
+        if (x instanceof BigInteger) {
+            BigInteger x1 = (BigInteger) x;
+            return sign == x1.sign && numberLength == x1.numberLength
+                    && equalsArrays(x1.digits);
+        }
         return false;
-      }
     }
-    return true;
-  }	
 
-  public int bitCount(){
-    if(bitCount == -1){
-      if(signum == 0){
-        bitCount = 0;
-      }
-      else if(signum == 1){
-        int count = 0;
-        for(int i = 0 ; i < magnitude.length ; i++){
-          int b = (char)magnitude[i];
-          for(int j = 0 ; j < 8 ; j++){
-            count += (b & 0x01);
-            b = b>>1;
-          }
+    boolean equalsArrays(final int[] b) {
+        int i;
+        for (i = numberLength - 1; (i >= 0) && (digits[i] == b[i]); i--) {
+            // Empty
         }
-      }
-      else {
-        int count = 0;
-        for(int i = 0 ; i < magnitude.length ; i++){
-          int b = (char)magnitude[i];
-          for(int j = 0 ; j < 8 ; j++){
-            count +=  1 - (b & 0x01);
-            b = b>>1;
-          }
-        }
-      }
-    }
-    return bitCount;
-  }
-
-  public native BigInteger add(BigInteger bi);
-  
-  public BigInteger subtract(BigInteger bi) {
-      BigInteger result = nativeSubtract(bi);
-      if (result.compareTo(BigInteger.ZERO) != 0) {
-         result.addLeadingByte();
-      }
-      return result;
-  }
- 
-  private native BigInteger nativeSubtract(BigInteger bi);
-  
-  public BigInteger multiply(BigInteger bi) {
-      BigInteger result = nativeMultiply(bi);
-      if (result.compareTo(BigInteger.ZERO) != 0) {
-         result.addLeadingByte();
-      }
-      return result;
-  }
-
-  private native BigInteger nativeMultiply(BigInteger val);
-  
-  public native BigInteger divide(BigInteger bi);
-  
-  public BigInteger mod(BigInteger bi) {
-      BigInteger result = nativeMod(bi);
-      if (result.compareTo(BigInteger.ZERO) != 0) {
-         result.addLeadingByte();
-      }
-      return result;
-  }
-
-  private native BigInteger nativeMod(BigInteger bi);
-
-  public native BigInteger remainder(BigInteger bi);
-
-  public BigInteger[] divideAndRemainder(BigInteger bi){
-    if(bi.signum == 0){
-      throw new ArithmeticException("cannot divide by '0'");
+        return i < 0;
     }
 
-  	BigInteger [] big = new BigInteger[2];
-    //check Trivial cases to avoid Object duplication
-    if(signum == 0){
-      big[0] = this;
-      big[1] = this;
-      return big;
+    public String toString() {
+        return Conversion.toDecimalScaledString(this, 0);
     }
 
-    if(bi.magnitude.length == 1){
-      int num = bi.magnitude[0];
-      if(num == 1){
-        big[0] = this;
-        big[1] = ZERO;
-        return big;
-      }
-      else if(num == -1){
-        big[0] = this.negate();
-        big[1] = ZERO;
-        return big;
-      }
+    public String toString(int radix) {
+        return Conversion.bigInteger2String(this, radix);
     }
 
-    if(magnitude.length < bi.magnitude.length){
-        big[0] = ZERO;
-        big[1] = this;
-    }
-    else {
-      big[0] = divide(bi);
-      big[1] = remainder(bi);
-    }
-	  return big;
-  }
-
-  public BigInteger gcd(BigInteger bi){
-    if(bi.signum == 0 || signum == 0){
-      return (bi.signum == signum ? ZERO : ONE);
-    }
-    BigInteger valG = this.abs();
-    BigInteger valL = bi.abs();
-    BigInteger mod;
-    if(valG.compareTo(valL) == -1){
-       mod = valL;
-       valL = valG;
-       valG = mod;
-    }
-    while(true){
-      mod = valG.mod(valL);
-      if (mod.signum == 0){
-        return valL;
-      }
-      valG = valL;
-      valL = mod;
-    }
-  }
-
-/**
-** the modInverse is calculted by using the 'Extended Euclid's algorithm'.
-** vectors[0] = u  (u will have the result inside).
-** vectors[1] = v
-** with this * u1 + bi * u2 = u3 = gcd(this,bi).
-** v stores temporary results and this * v1 + bi * v2 = v3
-*/
-  public BigInteger modInverse(BigInteger bi){
-    if(bi.signum != 1){
-      throw new ArithmeticException();
-    }
-    BigInteger[][] vectors = new BigInteger[2][3];
-    vectors[0][0] = ONE;
-    vectors[0][1] = ZERO;
-    vectors[0][2] = this.abs();
-    vectors[1][0] = ZERO;
-    vectors[1][1] = ONE;
-    vectors[1][2] = bi;
-
-    while(vectors[1][2].signum == 1){
-      BigInteger q  = vectors[0][2].divide(vectors[1][2]);
-      BigInteger t0 = vectors[0][0].subtract(vectors[1][0].multiply(q));
-      BigInteger t1 = vectors[0][1].subtract(vectors[1][1].multiply(q));
-      BigInteger t2 = vectors[0][2].subtract(vectors[1][2].multiply(q));
-      vectors[0][0] = vectors[1][0];
-      vectors[0][1] = vectors[1][1];
-      vectors[0][2] = vectors[1][2];
-      vectors[1][0] = t0;
-      vectors[1][1] = t1;
-      vectors[1][2] = t2;
-    }
-    if(!ONE.equals(vectors[0][2])){
-      throw new ArithmeticException("modInverse cannot be found");
-    }
-    if(signum == -1){
-      vectors[0][0] = vectors[0][0].negate();
-    }
-    return  vectors[0][0].mod(bi);
-  }
-
-/*
-  public BigInteger modPow(BigInteger exp, BigInteger mod){
-    
-    if(exp.signum == -1){
-      return this.modInverse(mod);
-    }
-    return this.pow(exp,mod).mod(mod);
-            
-  }
-*/
-  
-  public BigInteger modPow(BigInteger exponent, BigInteger m) {
-    if (m.signum != 1) {
-      throw new ArithmeticException();
-    }
-    if(exponent.signum == -1){
-      return this.modInverse(m);
-    }
-    int[] zVal = null;
-    int[] yAccum = null;
-    int[] yVal;
-
-    int[] mmag = BigIntegerJava.makeMagnitude(m);
-    int length = mmag.length;
-    // Montgomery exponentiation is only possible if the modulus is odd,
-    // but AFAIK, this is always the case for crypto algo's
-    boolean useMonty = ((mmag[length - 1] & 1) == 1);
-    long mQ = 0;
-    if (useMonty) {
-      mQ = BigIntegerJava.getMQuote(m);
-
-      // tmp = this * R mod m
-      zVal = BigIntegerJava.makeMagnitude(this.shiftLeft(32 * length).mod(m));
-
-      useMonty = (zVal.length == length);
-
-      if (useMonty) {
-        yAccum = new int[length + 1];
-      }
-    }
-
-    if (!useMonty) {
-      int[] mag = BigIntegerJava.makeMagnitude(this);
-      if (mag.length <= length) {
-
-        zVal = new int[length];
-        System.arraycopy(mag, 0, zVal, zVal.length - mag.length, mag.length);
-      } else {
-        //
-        // in normal practice we'll never see this...
-        //
-        int[] tmp = BigIntegerJava.makeMagnitude(this.remainder(m));
-        zVal = new int[length];
-
-        System.arraycopy(tmp, 0, zVal, zVal.length - tmp.length,
-            tmp.length);
-      }
-
-      yAccum = new int[length * 2];
-    }
-
-    yVal = new int[length];
-
-    //
-    // from LSW to MSW
-    //
-    int[] exp = BigIntegerJava.makeMagnitude(exponent);
-    for (int i = 0; i < exp.length; i++) {
-      int v = exp[i];
-      int bits = 0;
-
-      if (i == 0) {
-        while (v > 0) {
-          v <<= 1;
-          bits++;
+    public BigInteger gcd(BigInteger val) {
+        BigInteger val1 = this.abs();
+        BigInteger val2 = val.abs();
+        // To avoid a possible division by zero
+        if (val1.signum() == 0) {
+            return val2;
+        } else if (val2.signum() == 0) {
+            return val1;
         }
 
-        //
-        // first time in initialise y
-        //
-        System.arraycopy(zVal, 0, yVal, 0, zVal.length);
+        // Optimization for small operands
+        // (op2.bitLength() < 64) and (op1.bitLength() < 64)
+        if (((val1.numberLength == 1) || ((val1.numberLength == 2) && (val1.digits[1] > 0)))
+                && (val2.numberLength == 1 || (val2.numberLength == 2 && val2.digits[1] > 0))) {
+            return BigInteger.valueOf(Division.gcdBinary(val1.longValue(), val2
+                    .longValue()));
+        }
 
-        v <<= 1;
-        bits++;
-      }
+        return Division.gcdBinary(val1.copy(), val2.copy());
 
-      while (v != 0) {
-        if (useMonty) {
-          // Montgomery square algo doesn't exist, and a normal
-          // square followed by a Montgomery reduction proved to
-          // be almost as heavy as a Montgomery mulitply.
-          BigIntegerJava.multiplyMonty(yAccum, yVal, yVal, mmag, mQ);
+    }
+
+    public BigInteger multiply(BigInteger val) {
+        // This let us to throw NullPointerException when val == null
+        if (val.sign == 0) {
+            return ZERO;
+        }
+        if (sign == 0) {
+            return ZERO;
+        }
+        return Multiplication.multiply(this, val);
+    }
+
+    public BigInteger pow(int exp) {
+        if (exp < 0) {
+            throw new ArithmeticException("Negative exponent");
+        }
+        if (exp == 0) {
+            return ONE;
+        } else if (exp == 1 || equals(ONE) || equals(ZERO)) {
+            return this;
+        }
+
+        // if even take out 2^x factor which we can
+        // calculate by shifting.
+        if (!testBit(0)) {
+            int x = 1;
+            BigInteger factor = BigInteger.ONE.shiftLeft(exp);
+            while (!testBit(x)) {
+                factor = factor.shiftLeft(exp);
+                x++;
+            }
+            return factor.multiply(this.shiftRight(x).pow(exp));
+        }
+        return Multiplication.pow(this, exp);
+    }
+
+    public BigInteger[] divideAndRemainder(BigInteger divisor) {
+        int divisorSign = divisor.sign;
+        if (divisorSign == 0) {
+            throw new ArithmeticException("BigInteger divide by zero");
+        }
+        int divisorLen = divisor.numberLength;
+        int[] divisorDigits = divisor.digits;
+        if (divisorLen == 1) {
+            return Division.divideAndRemainderByInteger(this, divisorDigits[0],
+                    divisorSign);
+        }
+        // res[0] is a quotient and res[1] is a remainder:
+        int[] thisDigits = digits;
+        int thisLen = numberLength;
+        int cmp = (thisLen != divisorLen) ? ((thisLen > divisorLen) ? 1 : -1)
+                : Elementary.compareArrays(thisDigits, divisorDigits, thisLen);
+        if (cmp < 0) {
+            return new BigInteger[] { ZERO, this };
+        }
+        int thisSign = sign;
+        int quotientLength = thisLen - divisorLen + 1;
+        int remainderLength = divisorLen;
+        int quotientSign = ((thisSign == divisorSign) ? 1 : -1);
+        int quotientDigits[] = new int[quotientLength];
+        int remainderDigits[] = Division.divide(quotientDigits, quotientLength,
+                thisDigits, thisLen, divisorDigits, divisorLen);
+        BigInteger result0 = new BigInteger(quotientSign, quotientLength,
+                quotientDigits);
+        BigInteger result1 = new BigInteger(thisSign, remainderLength,
+                remainderDigits);
+        result0.cutOffLeadingZeroes();
+        result1.cutOffLeadingZeroes();
+        return new BigInteger[] { result0, result1 };
+    }
+
+    public BigInteger divide(BigInteger divisor) {
+        if (divisor.sign == 0) {
+            throw new ArithmeticException("BigInteger divide by zero");
+        }
+        int divisorSign = divisor.sign;
+        if (divisor.isOne()) {
+            return ((divisor.sign > 0) ? this : this.negate());
+        }
+        int thisSign = sign;
+        int thisLen = numberLength;
+        int divisorLen = divisor.numberLength;
+        if (thisLen + divisorLen == 2) {
+            long val = (digits[0] & 0xFFFFFFFFL)
+                    / (divisor.digits[0] & 0xFFFFFFFFL);
+            if (thisSign != divisorSign) {
+                val = -val;
+            }
+            return valueOf(val);
+        }
+        int cmp = ((thisLen != divisorLen) ? ((thisLen > divisorLen) ? 1 : -1)
+                : Elementary.compareArrays(digits, divisor.digits, thisLen));
+        if (cmp == EQUALS) {
+            return ((thisSign == divisorSign) ? ONE : MINUS_ONE);
+        }
+        if (cmp == LESS) {
+            return ZERO;
+        }
+        int resLength = thisLen - divisorLen + 1;
+        int resDigits[] = new int[resLength];
+        int resSign = ((thisSign == divisorSign) ? 1 : -1);
+        if (divisorLen == 1) {
+            Division.divideArrayByInt(resDigits, digits, thisLen,
+                    divisor.digits[0]);
         } else {
-          BigIntegerJava.square(yAccum, yVal);
-          BigIntegerJava.remainder(yAccum, mmag);
-          System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-              yVal.length);
-          BigIntegerJava.zero(yAccum);
+            Division.divide(resDigits, resLength, digits, thisLen,
+                    divisor.digits, divisorLen);
         }
-        bits++;
+        BigInteger result = new BigInteger(resSign, resLength, resDigits);
+        result.cutOffLeadingZeroes();
+        return result;
+    }
 
-        if (v < 0) {
-          if (useMonty) {
-            BigIntegerJava.multiplyMonty(yAccum, yVal, zVal, mmag, mQ);
-          } else {
-            BigIntegerJava.multiply(yAccum, yVal, zVal);
-            BigIntegerJava.remainder(yAccum, mmag);
-            System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-                yVal.length);
-            BigIntegerJava.zero(yAccum);
-          }
+    public BigInteger remainder(BigInteger divisor) {
+        if (divisor.sign == 0) {
+            throw new ArithmeticException("BigInteger divide by zero");
         }
-
-        v <<= 1;
-      }
-
-      while (bits < 32) {
-        if (useMonty) {
-          BigIntegerJava.multiplyMonty(yAccum, yVal, yVal, mmag, mQ);
+        int thisLen = numberLength;
+        int divisorLen = divisor.numberLength;
+        if (((thisLen != divisorLen) ? ((thisLen > divisorLen) ? 1 : -1)
+                : Elementary.compareArrays(digits, divisor.digits, thisLen)) == LESS) {
+            return this;
+        }
+        int resLength = divisorLen;
+        int resDigits[] = new int[resLength];
+        if (resLength == 1) {
+            resDigits[0] = Division.remainderArrayByInt(digits, thisLen,
+                    divisor.digits[0]);
         } else {
-          BigIntegerJava.square(yAccum, yVal);
-          BigIntegerJava.remainder(yAccum, mmag);
-          System.arraycopy(yAccum, yAccum.length - yVal.length, yVal, 0,
-              yVal.length);
-          BigIntegerJava.zero(yAccum);
+            int qLen = thisLen - divisorLen + 1;
+            resDigits = Division.divide(null, qLen, digits, thisLen,
+                    divisor.digits, divisorLen);
         }
-        bits++;
-      }
+        BigInteger result = new BigInteger(sign, resLength, resDigits);
+        result.cutOffLeadingZeroes();
+        return result;
     }
 
-    if (useMonty) {
-      // Return y * R^(-1) mod m by doing y * 1 * R^(-1) mod m
-      BigIntegerJava.zero(zVal);
-      zVal[zVal.length - 1] = 1;
-      BigIntegerJava.multiplyMonty(yAccum, yVal, zVal, mmag, mQ);
+    public BigInteger modInverse(BigInteger m) {
+        if (m.sign <= 0) {
+            throw new ArithmeticException("BigInteger: modulus not positive");
+        }
+        // If both are even, no inverse exists
+        if (!(testBit(0) || m.testBit(0))) {
+            throw new ArithmeticException("BigInteger not invertible");
+        }
+        if (m.isOne()) {
+            return ZERO;
+        }
+
+        // From now on: (m > 1)
+        BigInteger res = Division.modInverseMontgomery(abs().mod(m), m);
+        if (res.sign == 0) {
+            throw new ArithmeticException("BigInteger not invertible");
+        }
+
+        res = ((sign < 0) ? m.subtract(res) : res);
+        return res;
+
     }
 
-    return new BigInteger(1, toByteArray(yVal));
-  }
-    
-  private static byte[] toByteArray(int[] val) {
-    int length = val.length;
-    byte[] bytes = new byte[length*4];
-    for(int i=0, j=0 ; i < length ; i++) {
-      int word = val[i];
-      bytes[j++] = (byte)(word>>24); 
-      bytes[j++] = (byte)(word>>16); 
-      bytes[j++] = (byte)(word>>8); 
-      bytes[j++] = (byte) word;       
-    }
-    return bytes;
-  }
-    
-  public BigInteger pow(int exp){
-    if(exp < 0){
-      throw new ArithmeticException("exponent cannot be negative "+exp);
-    }
-    if(exp == 0){
-      return ONE;
+    public BigInteger modPow(BigInteger exponent, BigInteger m) {
+        if (m.sign <= 0) {
+            throw new ArithmeticException("BigInteger: modulus not positive");
+        }
+        BigInteger base = this;
+
+        if (m.isOne() | (exponent.sign > 0 & base.sign == 0)) {
+            return BigInteger.ZERO;
+        }
+        if (base.sign == 0 && exponent.sign == 0) {
+            return BigInteger.ONE;
+        }
+        if (exponent.sign < 0) {
+            base = modInverse(m);
+            exponent = exponent.negate();
+        }
+        // From now on: (m > 0) and (exponent >= 0)
+        BigInteger res = (m.testBit(0)) ? Division.oddModPow(base.abs(),
+                exponent, m) : Division.evenModPow(base.abs(), exponent, m);
+        if ((base.sign < 0) && exponent.testBit(0)) {
+            // -b^e mod m == ((-1 mod m) * (b^e mod m)) mod m
+            res = m.subtract(BigInteger.ONE).multiply(res).mod(m);
+        }
+        // else exponent is even, so base^exp is positive
+        return res;
     }
 
-    if(exp == 1){
-      return this;
+    public BigInteger mod(BigInteger m) {
+        if (m.sign <= 0) {
+            throw new ArithmeticException("BigInteger: modulus not positive");
+        }
+        BigInteger rem = remainder(m);
+        return ((rem.sign < 0) ? rem.add(m) : rem);
     }
 
-    if(magnitude.length == 1){
-      int num = magnitude[0];
-      if(num == 1){
-        return this;
-      }
-      if(num == -1){
-        return ((exp%2) == 1 ? this : ONE);
-      }
-    }
-    BigInteger result = this;
-
-    //first locate the highest set bit ...
-    int bit;
-    for (bit = 1; bit <= exp; bit <<= 1);
-    bit>>=2;
-    //now lets calculate the 'this' to the power exp ...
-    while(bit > 0){
-      result = result.multiply(result);
-      if((exp & bit) != 0){
-        result = this.multiply(result);
-      }
-      bit>>=1;
-    }
-    return result;
-  }
-/*
-  private BigInteger pow(BigInteger exp, BigInteger m){
-    if(exp.signum == -1){
-      throw new ArithmeticException("exponent cannot be negative "+exp);
-    }
-    if(exp.signum == 0){
-      return ONE;
+    public boolean isProbablePrime(int certainty) {
+        return Primality.isProbablePrime(abs(), certainty);
     }
 
-    if(magnitude.length == 1){
-      int num = magnitude[0];
-      if(num == 1){
-        return this;
-      }
-      if(num == -1){
-        return ((exp.magnitude[exp.magnitude.length-1] & 0x01) == 1 ?this : ONE);
-      }
+/* [CG 20080209] New in 1.5
+    public BigInteger nextProbablePrime() {
+        if (sign < 0) {
+            throw new ArithmeticException("start < 0: " + this);
+        }
+        return Primality.nextProbablePrime(this);
     }
-
-    if(exp.magnitude.length == 1 && exp.magnitude[0]== 1){
-      return this;
-    }
-
-    BigInteger result = this;
-
-    //first locate the highest set bit ...
-    int bit = exp.bitLength() - 2;
-    //now lets calculate the 'this' to the power exp ...
-    while(bit >= 0){
-      result = result.multiply(result).mod(m);
-      if(exp.testBit(bit)){
-        result = this.multiply(result).mod(m);
-      }
-      bit--;
-    }
-    return result;
-  }
 */
-  public String toString(){
-    return toString(10);
-  }
 
-  public String toString(int rdx){
-  	if (signum == 0) {
-  	 	return "0";
-  	}
-  	if (signum == -1){
-  	 	return '-'+negate().toString(rdx);
-  	}	
-  	
-  	if(rdx < Character.MIN_RADIX || rdx > Character.MAX_RADIX){
-  	  rdx = 10;
-  	}
-
-  	StringBuffer b = new StringBuffer();
-  	byte[] bytes = (byte[])magnitude.clone();
-  	int start = 0;
-  	do {
-    	b.insert(0,DIGIT_CHARS[oneByteDivision(rdx, bytes, start)]);
-  	  start += (bytes[start] == 0 ? 1 : 0); 	  	
-  	}	while(start < bytes.length);
-  	return b.toString();
-  }
-
-// private convenience methods
-
-  //private native static void arraycopy(byte[] src, int off, byte[] dst, int offdef, int length);
-
-  /**
-  ** this could be done native (and is now ) but in java ...
-  ** this needed for String --> BigInteger
-  */
-  private void javaMultiply(byte[] val, byte[] bytes){
-    int pos = bytes.length;
-
-    for(int i = val.length -1 ; i >= 0 ; i--){
-      int carry = 0;
-      int valByte = 0xff & (char)val[i];
-      for(int j = magnitude.length -1 ; j >= 0 ; j--){
-        int index = pos + j - magnitude.length;
-        carry = (carry>>8);
-        carry += valByte * (0xff & (char)magnitude[j]);
-        carry += (0xff & (char)bytes[index]);
-        bytes[index] = (byte)carry;
-      }
-      pos--;
-      bytes[pos - magnitude.length] = (byte)(carry>>8);
+    public static BigInteger probablePrime(int bitLength, Random rnd) {
+        return new BigInteger(bitLength, 100, rnd);
     }
-  }
 
-  private byte[] longToBytes(long l){
-    byte[] bytes = new byte[8];
+    /* Private Methods */
 
-    for (int i=7 ; i > -1 ; i--){
-     	bytes[i] = (byte)l;
-     	l = l>>>8;
+    /** Decreases {@code numberLength} if there are zero high elements. */
+    final void cutOffLeadingZeroes() {
+        while ((numberLength > 0) && (digits[--numberLength] == 0)) {
+            // Empty
+        }
+        if (digits[numberLength++] == 0) {
+            sign = 0;
+        }
     }
-    return bytes;
-  }
 
-  /**
-  ** normelizes the magnitude (will strip all leading zero bytes)
-  ** this functions threats the bytes in magnitude as if the belonged to a positive
-  ** BigInteger. If clone is true the magnitude is replaced in any case.
-  */
-  private void normelizeMagnitude(boolean clone){
-    int l = magnitude.length;
-    int i=0;
+    /** Tests if {@code this.abs()} is equals to {@code ONE} */
+    boolean isOne() {
+        return ((numberLength == 1) && (digits[0] == 1));
+    }
 
-  	while (i<l){
-  		if(magnitude[i] != 0){
-  		  break;
-  		}
-  		i++;
-  	}
-    if (i != 0 || clone){
-      if(i == l){
-        signum = 0;
-        magnitude = ZERO.magnitude;
-      }
-      else{
-        byte[] bytes = new byte[l-i];
-        System.arraycopy(magnitude,i,bytes,0,l-i);
-        magnitude = bytes;
-        addLeadingByte();
-      }
+    /**
+     * Puts a big-endian byte array into a little-endian int array.
+     */
+    private void putBytesPositiveToIntegers(byte[] byteValues) {
+        int bytesLen = byteValues.length;
+        int highBytes = bytesLen & 3;
+        numberLength = (bytesLen >> 2) + ((highBytes == 0) ? 0 : 1);
+        digits = new int[numberLength];
+        int i = 0;
+        // Put bytes to the int array starting from the end of the byte array
+        while (bytesLen > highBytes) {
+            digits[i++] = (byteValues[--bytesLen] & 0xFF)
+                    | (byteValues[--bytesLen] & 0xFF) << 8
+                    | (byteValues[--bytesLen] & 0xFF) << 16
+                    | (byteValues[--bytesLen] & 0xFF) << 24;
+        }
+        // Put the first bytes in the highest element of the int array
+        for (int j = 0; j < bytesLen; j++) {
+            digits[i] = (digits[i] << 8) | (byteValues[j] & 0xFF);
+        }
     }
-  }
-  
-  // if sign positive and magnitude[0] starts with 1
-  // add a zero byte
-  // if sign negative and magnitude[0] starts with 0
-  // add 0xff byte
-  private void addLeadingByte() {
-    if (signum == 1) {
-      if (magnitude[0]>>>7 > 0) {
-         byte[] bytes = new byte[magnitude.length+1];
-         bytes[0] = 0;
-         System.arraycopy(magnitude,0,bytes,1,magnitude.length);
-         magnitude = bytes;
-      }
-    }
-    else if (signum == -1) {
-      if (magnitude[0]>>>7 == 0) {
-         byte[] bytes = new byte[magnitude.length+1];
-         bytes[0] = -1;
-         System.arraycopy(magnitude,0,bytes,1,magnitude.length);
-         magnitude = bytes;
-      }
-    }
-  }
 
-  private void addLong(long l){
-    int carry=0;
-    int i = magnitude.length-1;
+    /**
+     * Puts a big-endian byte array into a little-endian applying two
+     * complement.
+     */
+    private void putBytesNegativeToIntegers(byte[] byteValues) {
+        int bytesLen = byteValues.length;
+        int highBytes = bytesLen & 3;
+        numberLength = (bytesLen >> 2) + ((highBytes == 0) ? 0 : 1);
+        digits = new int[numberLength];
+        int i = 0;
+        // Setting the sign
+        digits[numberLength - 1] = -1;
+        // Put bytes to the int array starting from the end of the byte array
+        while (bytesLen > highBytes) {
+            digits[i] = (byteValues[--bytesLen] & 0xFF)
+                    | (byteValues[--bytesLen] & 0xFF) << 8
+                    | (byteValues[--bytesLen] & 0xFF) << 16
+                    | (byteValues[--bytesLen] & 0xFF) << 24;
+            if (digits[i] != 0) {
+                digits[i] = -digits[i];
+                firstNonzeroDigit = i;
+                i++;
+                while (bytesLen > highBytes) {
+                    digits[i] = (byteValues[--bytesLen] & 0xFF)
+                            | (byteValues[--bytesLen] & 0xFF) << 8
+                            | (byteValues[--bytesLen] & 0xFF) << 16
+                            | (byteValues[--bytesLen] & 0xFF) << 24;
+                    digits[i] = ~digits[i];
+                    i++;
+                }
+                break;
+            }
+            i++;
+        }
+        if (highBytes != 0) {
+            // Put the first bytes in the highest element of the int array
+            if (firstNonzeroDigit != -2) {
+                for (int j = 0; j < bytesLen; j++) {
+                    digits[i] = (digits[i] << 8) | (byteValues[j] & 0xFF);
+                }
+                digits[i] = ~digits[i];
+            } else {
+                for (int j = 0; j < bytesLen; j++) {
+                    digits[i] = (digits[i] << 8) | (byteValues[j] & 0xFF);
+                }
+                digits[i] = -digits[i];
+            }
+        }
+    }
 
-    for (int j=0 ; j < 8 ; i--,j++){
-      int overflow = (0xff & ((int)l)) + (0xff & (char)magnitude[i]) + carry;
-      carry = (0x0100 & overflow)>>8;
-      magnitude[i] = (byte) overflow;
-      l = (l>>8);
+    int getFirstNonzeroDigit() {
+        if (firstNonzeroDigit == -2) {
+            int i;
+            if (this.sign == 0) {
+                i = -1;
+            } else {
+                for (i = 0; digits[i] == 0; i++) {
+                    // Empty
+                }
+            }
+            firstNonzeroDigit = i;
+        }
+        return firstNonzeroDigit;
+    }
 
+    /*
+     * Returns a copy of the current instance to achieve immutability
+     */
+    BigInteger copy() {
+        int[] copyDigits = new int[numberLength];
+        System.arraycopy(digits, 0, copyDigits, 0, numberLength);
+        return new BigInteger(sign, numberLength, copyDigits);
     }
-    for ( ; i >= 0 && carry > 0; i--){
-      int overflow = (0x0ff & (char)magnitude[i]) + carry;
-      carry = (0x0100 & overflow)>>8;
-      magnitude[i] = (byte) overflow;
-    }
-  }
 
-  /**
-  ** divide by a one byte value (used int toString())
-  ** b should be positive ...
-  ** bytes contains the dividend and should have a length > 0.
-  ** the start parameter is added so we can reuss the byte array 'bytes' in the toString method
-  */
-  private int oneByteDivision(int b, byte[] bytes, int start){
-    int remain = (0xff & (char) bytes[start]);
-    if(remain >= b){
-      remain = 0;
+    private void readObject(ObjectInputStream in) throws IOException,
+            ClassNotFoundException {
+        in.defaultReadObject();
+        sign = signum;
+        putBytesPositiveToIntegers(magnitude);
+        cutOffLeadingZeroes();
     }
-    else {
-      bytes[start++] = (byte)0;
-    }
-    for(int i = start; i < bytes.length ; i++){
-      remain = ((0xff & (char)bytes[i]) | (remain<<8) );
-      bytes[i] = (byte)(remain/b);
-      remain = remain % b;
-    }
-    return remain;
-  }
 
-  /** only call this method to create a larger byte[] than magnitude */
-  private byte[] createByteArray(int nrOfBits){
-   	int bts = (nrOfBits+1)/8 + 1;	
-    byte [] bytes = new byte [bts];
-    System.arraycopy(magnitude,0, bytes,bts-magnitude.length,magnitude.length);
-    if (signum == -1){
-    	bts -= magnitude.length;
-     	for (int i=0 ; i < bts ; i++){
-     	 	bytes[i] = (byte)(0xff);
-     	}
+    private void writeObject(ObjectOutputStream out) throws IOException {
+        signum = signum();
+        magnitude = abs().toByteArray();
+        out.defaultWriteObject();
     }
-    return bytes;
-  }
 
-  private void initWithByteArray(byte [] bval, boolean clone){
-    int l = bval.length;
-    if (l == 0){
-     	throw new NumberFormatException("byte array has length null");
+    void unCache() {
+        firstNonzeroDigit = -2;
     }
-    int i=0;
-    if(bval[0] < 0){
-    	signum = -1;	
-     	while (i<l-1){
-     		if(bval[i] != -1){
-     		  	break;
-     		}
-     		i++;
-     	}
-    }
-    else {
-    	while (i<l){
-    		if(bval[i] != 0){
-    		  	break;
-    		}
-    		i++;
-    	}
-    	signum =  (i==l ? 0 : 1);		 	
-    }
-    if (clone || i!=0){
-      magnitude = new byte[l-i];
-      System.arraycopy(bval,i,magnitude,0,l-i);
-    }
-    else {
-      magnitude = bval;
-    }		
-    // add zero byte if needed
-    addLeadingByte();    
-  }
 
-  private native byte[] nativeNegateBytes();
 }
+

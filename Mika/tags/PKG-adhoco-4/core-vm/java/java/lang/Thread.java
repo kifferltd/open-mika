@@ -1,33 +1,33 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by     *
+* Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Mika(TM) modifications Copyright (C) 2004, 2005 Chris Gray,             *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Thread.java,v 1.10 2006/03/29 09:27:14 cvs Exp $
-*/
 
 package java.lang;
 
@@ -35,6 +35,12 @@ import java.util.Iterator;
 import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
+
+  private static int nameCounter;
+  
+  private synchronized static String createName() {    
+    return "Thread-"+nameCounter++;
+  }
 
   /*
   ** Note: this class is initialized "by hand" before the VM is fully
@@ -48,12 +54,7 @@ public class Thread implements Runnable {
   public final static int MAX_PRIORITY  = 10;
   public final static int NORM_PRIORITY =  5;
 
-  /**
-   ** name       is the name of this Thread.
-   */
-  private String name;
-
-  /**
+   /**
    ** Dummy object used to synchronise accesses to 'started' and 'stopped'.
    ** Note: we don't allocate this here or in the constructors 'coz the
    ** system init thread gets created by native code, and allocating
@@ -103,14 +104,12 @@ public class Thread implements Runnable {
    ** thrown     used to store a pending exception 
    *  used in native code: do not remove !!!
    */
-  private Throwable thrown; 
+  private Throwable thrown;
+  private boolean isDaemon; 
 
   private static void permissionCheck(String permission) {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      java.security.AccessController.checkPermission(new RuntimePermission(permission));
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkPermission(new RuntimePermission(permission));
       }
@@ -124,38 +123,41 @@ public class Thread implements Runnable {
    **       parent group as specified, or if this is null then 
    **       sm.getThreadGroup() or parent of current thread.
    */
-  public Thread(ThreadGroup group, Runnable runObject, String name) 
+  public Thread(ThreadGroup group, Runnable runObject, String myname) 
     throws SecurityException  {
-    ThreadGroup parent;
-    SecurityManager sm = System.getSecurityManager();
+    ThreadGroup myparent;
+    SecurityManager sm = System.theSecurityManager;
 
+    if(myname == null) {
+      throw new NullPointerException();
+    }
+    
     if (group == null) {
       if (sm == null) {
-        parent = Thread.currentThread().getThreadGroup();
+        myparent = Thread.currentThread().getThreadGroup();
       }
       else {
-        parent = sm.getThreadGroup();
+        myparent = sm.getThreadGroup();
       }
     }
-    else parent = group;
+    else myparent = group;
 
-    this.parent = parent;
+    this.parent = myparent;
 
-    if (parent.isDestroyed()) {
+    if (myparent.isDestroyed()) {
       throw new IllegalThreadStateException();
     }
 
     if (sm != null) {
-      sm.checkAccess(parent);
+      sm.checkAccess(myparent);
     }
 
-    this.runObject = runObject;
+    this.runObject = runObject != null ? runObject : this;
 
     inheritThreadLocals(Thread.currentThread());
     context_classloader = currentThread() == null ? null : currentThread().getContextClassLoader();
 
-    create(parent, name, runObject);
-    this.name = name;
+    create(myparent, myname, runObject);
   }
 
   /**
@@ -186,7 +188,7 @@ public class Thread implements Runnable {
     throws SecurityException,
     IllegalThreadStateException 
   {
-    this(group,runObject,(String)null);
+    this(group,runObject,createName());
   }
 
   /**
@@ -194,7 +196,7 @@ public class Thread implements Runnable {
    **   --> Thread(ThreadGroup,Runnable,String) with null ThreadGroup, String
    */
   public Thread(Runnable runObject) {
-    this((ThreadGroup)null,runObject,(String)null);
+    this((ThreadGroup)null,runObject,createName());
   }
 
   /**
@@ -208,36 +210,7 @@ public class Thread implements Runnable {
     throws SecurityException,
     IllegalThreadStateException 
   {
-    ThreadGroup parent;
-    SecurityManager sm = System.getSecurityManager();
-
-    if (group == null) {
-      if (sm == null) {
-        parent = Thread.currentThread().getThreadGroup();
-      }
-      else {
-        parent = sm.getThreadGroup();
-      }
-    }
-    else parent = group;
-
-    this.parent = parent;
-
-    if (parent.isDestroyed()) {
-      throw new IllegalThreadStateException();
-    }
-
-    if (sm != null) {
-      sm.checkAccess(parent);
-    }
-
-    this.runObject = this;
-
-    inheritThreadLocals(Thread.currentThread());
-    context_classloader = currentThread() == null ? null : currentThread().getContextClassLoader();
-
-    create(parent, name, null);
-    this.name = name;
+    this(group, null, name);
   }
 
   /**
@@ -246,14 +219,14 @@ public class Thread implements Runnable {
    ** or parent of current thread.
    */
   public Thread(String name) {
-    this((ThreadGroup)null,name);
+    this((ThreadGroup)null,null,name);
   }
 
   /**
    ** Thread constructor with no arguments --> Thread(String) with null argument
    */
   public Thread() {
-    this((ThreadGroup)null,(String)null);
+    this((ThreadGroup)null,null, createName());
   }
 
   /**
@@ -287,13 +260,8 @@ public class Thread implements Runnable {
   public final void checkAccess() 
     throws SecurityException
   {
-    if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-      if (parent.getParent() == null) {
-        java.security.AccessController.checkPermission(new RuntimePermission("modifyThread"));
-      }
-    }
-    else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
-      SecurityManager sm = System.getSecurityManager();
+    if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      SecurityManager sm = System.theSecurityManager;
       if (sm != null) {
         sm.checkAccess(this);
       }
@@ -307,10 +275,7 @@ public class Thread implements Runnable {
   public native int countStackFrames();
 
   /**
-   ** _run() is the method which is used to define the initial frame
-   ** when create() is called.  When a thread is started using start(),
-   ** the result is to execute run() and then (when _run() terminates)
-   ** to send a termination request to the ThreadGroup manager.
+   * _run() is the method which is used to define the initial stack frame. 
    */
   void _run() {
     parent.registerThread(this);
@@ -318,20 +283,22 @@ public class Thread implements Runnable {
       runObject.run();
     } catch (Throwable t) {
       if (t instanceof ThreadDeath) {
+      } else {
+        parent.uncaughtException(this, t);
       }
-      else {
-        parent.uncaughtException(this,t);
+    } finally {
+      parent.deregisterThread(this);
+      parent = null;
+      synchronized (this) {
+        // [CG 20080131]
+        // Emulate behaviour of Sun's VM, in which returning from run() seems
+        // to cause a wait() on the Thread to complete.
+        notifyAll();
       }
-    }
-    parent.deregisterThread(this);
-    synchronized(this) {
-      if (state_lock == null) {
-        state_lock = new Object();
+      synchronized (state_lock) {
+        stopped = true;
+        state_lock.notifyAll();
       }
-    }
-    synchronized (state_lock) {
-      stopped = true;
-      state_lock.notifyAll();
     }
   }
 
@@ -363,7 +330,8 @@ public class Thread implements Runnable {
    ** and parent ThreadGroup.
    */
   public String toString() {
-    return "Thread[" + name + "," + getPriority() + "," + parent.getName() +"]";
+    return "Thread[" + getName() + "," + getPriority() + "," + 
+    (parent != null ? parent.getName() : null) +"]";
   }
 
   /**
@@ -501,9 +469,8 @@ public class Thread implements Runnable {
   {
     checkAccess();
 
-    this.name = name;
     if(name==null) {
-      setName0("");
+      throw new NullPointerException();
     } else {
       setName0(name);
     }
@@ -550,7 +517,9 @@ public class Thread implements Runnable {
   /**
    ** isDaemon() returns the status of the Thread's daemon flag.
    */
-  public final native boolean isDaemon();
+  public final boolean isDaemon() {
+    return isDaemon;
+  }
 
   /**
    ** setDaemon0() sets the status of the Thread's daemon flag.
@@ -559,76 +528,45 @@ public class Thread implements Runnable {
   private final native void setDaemon0(boolean on);
 
   /**
-   ** setDaemon() first calls checkAccess() and then invokes setDaemon0()
-   ** - unless the thread is currently active, in which case 
-   ** IllegalThreadStateException is thrown.
+   * * setDaemon() first calls checkAccess() and then invokes setDaemon0() * -
+   * unless the thread is currently active, in which case *
+   * IllegalThreadStateException is thrown.
    */
-  public final void setDaemon(boolean on)
-    throws SecurityException, IllegalThreadStateException
-  {
+  public final void setDaemon(boolean on) throws SecurityException,
+      IllegalThreadStateException {
     checkAccess();
 
-    if(isAlive()) throw new IllegalThreadStateException(this+"");
-
-    setDaemon0(on);
-  }
-
-  /**
-   ** isAlive() returns true iff the thread is "alive" (alive, oh-oh).
-   */
-  public final boolean isAlive() {
-    synchronized(this) {
+    synchronized (this) {
       if (state_lock == null) {
         state_lock = new Object();
       }
     }
     synchronized (state_lock) {
-      return started && !stopped;
+      if (!stopped) {        
+        if (started) {
+          throw new IllegalThreadStateException(this.toString());
+        } else {
+          setDaemon0(on);
+        }
+      }
+      isDaemon = on;
     }
   }
 
+  /**
+   * * isAlive() returns true iff the thread is "alive" (alive, oh-oh).
+   */
+  public final boolean isAlive() {
+    return started && !stopped;
+  }
 
   /**
    ** join() blocks the calling thread until this Thread has terminated
-   ** (see the implementation of _run()).  A thread should not try to
-   ** join() itself!
+   ** (see the implementation of _run()). 
+   ** [CG 20080901] Used to Return immediately if a thread tried to join
+   ** itself, but this is not mandated by JSR210.
    */
   public final void join() throws InterruptedException {
-    //join(0,0);
-    join_eternal();
-  }
-
-  /**
-   ** join(millis) blocks the calling thread until either this Thread has 
-   ** terminated or the stated number of milliseconds elapse.
-   */
-  public final void join(long millis) throws InterruptedException {
-    //join(millis,0);
-    if (millis == 0) {
-      join_eternal();
-    }
-    else {
-      join_millis(millis);
-    }
-  }
-
-  /**
-   ** join(millis,nanos) blocks the calling thread until either this Thread 
-   ** has terminated or the stated time elapses.
-   */
-  public final void join(long millis, int nanos) throws InterruptedException {
-    if (millis == 0 && nanos == 0) {
-      join_eternal();
-    }
-    else if (millis < 0 || nanos < 0) {
-      throw new IllegalArgumentException();
-    }
-    else {
-     join_millis(millis + ((nanos + 500000) / 1000000));
-    }
-  }
-
-  private final void join_eternal() throws InterruptedException {
     synchronized(this) {
       if (state_lock == null) {
         state_lock = new Object();
@@ -644,28 +582,48 @@ public class Thread implements Runnable {
     }
   }
 
-  private final void join_millis(long millis) throws InterruptedException {
-    long now = System.currentTimeMillis();
-    long then = now + millis;
-    synchronized(this) {
-      if (state_lock == null) {
-        state_lock = new Object();
+  /**
+   ** join(millis) blocks the calling thread until either this Thread has 
+   ** terminated or the stated number of milliseconds elapse.
+   */
+  public final void join(long millis) throws InterruptedException {
+    join(millis,0);
+  }
+
+  /**
+   ** join(millis,nanos) blocks the calling thread until either this Thread *
+   ** has terminated or the stated time elapses.
+   ** [CG 20080901] Used to Return immediately if a thread tried to join
+   ** itself, but this is not mandated by JSR210.
+   */
+  public final void join(long millis, int nanos) throws InterruptedException {
+    if (millis == 0 && nanos == 0) {
+      join();
+    } else if (millis < 0 || nanos < 0 || nanos >= 1000000) {
+      throw new IllegalArgumentException();
+    } else {
+      long now = System.currentTimeMillis();
+      long then = now + millis + 1;
+      synchronized (this) {
+        if (state_lock == null) {
+          state_lock = new Object();
+        }
       }
-    }
-    if (interrupted()) {
-      throw new InterruptedException();
-    }
-    synchronized (state_lock) {
-      while (started && !stopped) {
-        state_lock.wait(then - now);
-        now = System.currentTimeMillis();
+      if (interrupted()) {
+        throw new InterruptedException();
+      }
+      synchronized (state_lock) {
+        while ((started && !stopped) && (then > now)) {
+          state_lock.wait(then - now, nanos);
+          now = System.currentTimeMillis();
+        }
       }
     }
   }
 
   /**
-   ** interrupt() causes the interrupt status flag to be set, and any current
-   ** wait() or sleep() to be aborted.
+   * * interrupt() causes the interrupt status flag to be set, and any current *
+   * wait() or sleep() to be aborted.
    */
   public native synchronized void interrupt();
 
@@ -737,6 +695,7 @@ public class Thread implements Runnable {
       try {
         InheritableThreadLocal ihl = (InheritableThreadLocal)(i.next());
         threadLocals.put(ihl,ihl.childValue(t.threadLocals.get(ihl)));
+        ihl.threads.put(this,null);
       }
       catch (ClassCastException x) {}
     }
@@ -784,10 +743,6 @@ public class Thread implements Runnable {
     ClassLoader caller = ClassLoader.getCallingClassLoader();
     if (caller != null && !caller.isDelegationAncestor(context_classloader)) {
       permissionCheck("getClassLoader");
-    }
-
-    if (context_classloader == null) {
-      context_classloader = ClassLoader.getSystemClassLoader();
     }
 
     return context_classloader;

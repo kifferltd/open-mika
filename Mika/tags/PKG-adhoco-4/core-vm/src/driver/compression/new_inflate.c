@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "new_deflate_internals.h"
@@ -280,10 +284,13 @@ w_bits new_readSingleBit(w_inflate_control bs) {
 
   bit = (bs->i_bits & 0x01);
 
+//woempa(7, "%d\n", bs->i_bits);
   bs->i_bits >>= 1;
   if (! bs->i_bits) {
+//woempa(7, "%d\n", bs->offset_in);
     if (bs->offset_in == 0 || bs->offset_in >= bs->par_in->size) {
       new_getNewBlock(bs);
+//woempa(7, "%p\n", bs->par_in);
 
       if (bs->par_in == NULL) return 0;
 
@@ -299,6 +306,7 @@ w_bits new_readSingleBit(w_inflate_control bs) {
     bs->processed_size += 1;
   }
 
+//woempa(7, "%d\n", bit);
   return bit;
 }
 
@@ -360,7 +368,7 @@ static w_int new_writeWindowBytes(w_inflate_control bs, w_int length, w_int dist
   if (off < 0) off = 33*1024 + off;
   
   for (j = 0; j < length; j++) {
-    obyte = bs->output_bekken[off];
+    obyte = (*bs).output_bekken[off];
     if (new_writeLiteralByte(bs, obyte)) {
       return 1;
     }
@@ -378,7 +386,7 @@ w_int new_inflateBlock(w_inflate_control bs, w_zdict dict) {
   w_hnode node;
   w_int status = 0;
 
-  while (!bs->reset) {
+  while (bs->resets_completed == bs->resets_requested) {
     node = new_decode(dict->lengths_literals, bs);
     j = node->symbol;
 
@@ -564,7 +572,7 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
     codeLength[i] = 0;
   }
   i = 0;
-  while (i < n && !in->reset) {
+  while (i < n && in->resets_completed == in->resets_requested) {
     node = new_decode(tmptable, in);
     j = node->symbol;
     if (j < 16) {
@@ -771,19 +779,6 @@ w_zdict new_buildFixedDictionary(void) {
 w_inflate_control allocInflateControl(void) {
   w_inflate_control control = allocClearedMem(sizeof(w_Inflate_Control));
   if(control) {
-    control->output_bekken = allocMem(32 * 1024 + 1024);
-    control->input_bekken = allocMem(32 * 1024 + 512);
-    if(control->output_bekken == NULL  || control->input_bekken == NULL) {
-      if(control->output_bekken) {
-        releaseMem(control->output_bekken);
-      }
-      if(control->input_bekken) {
-        releaseMem(control->input_bekken);
-      }
-      releaseMem(control);
-      return NULL;
-    }
-
     control->i_bits = 0x01;
     control->o_mask = 0x1;
     control->compression_level = 9;
@@ -801,12 +796,6 @@ void deleteQueueElement(w_deflate_queueelem element) {
 
 void releaseInflateControl(w_inflate_control control) {
   w_deflate_queueelem element;
-  if(control->output_bekken) {
-    releaseMem(control->output_bekken);
-  }
-  if(control->input_bekken) {
-    releaseMem(control->input_bekken);
-  }
 
   element = control->first_link_in;
   while(element != NULL) {
@@ -835,17 +824,20 @@ void releaseInflateControl(w_inflate_control control) {
 void inflate_control_setInput(w_inflate_control control, w_ubyte* bytes, w_int size, int clonedata) {
   w_deflate_queueelem element;
 
+  woempa(7, "data = %p size = %d clonedata = %d\n", bytes, size, clonedata);
   if(size <= 0) {
     return;
   }
 
   element = allocMem(sizeof(w_Deflate_QueueElem));
+  woempa(7, "queue element = %p\n", element);
   if(element) {
     element->next = NULL;
     element->size = size;
     element->release = clonedata;
     if(clonedata) {
       w_ubyte* data = allocMem(sizeof(w_ubyte)*size);
+      woempa(7, "cloning, copy = %p\n", data);
       if(data) {
         memcpy(data,bytes,sizeof(w_ubyte)*size);
         element->data = data;
@@ -857,8 +849,10 @@ void inflate_control_setInput(w_inflate_control control, w_ubyte* bytes, w_int s
       element->data = bytes;
     }
     if(control->last_link_in) {
+      woempa(7, "set %p->last_link_in->next to %p\n", control, element);
       control->last_link_in->next = element;
     } else {
+      woempa(7, "set %p->first_link_in to %p\n", control, element);
       control->first_link_in = element;
     }
     control->last_link_in = element;
@@ -876,13 +870,16 @@ int inflate_control_inflate(w_inflate_control l) {
   w_int err = 0;
 
   do {
+woempa(7, "l->i_bits = %d\n", l->i_bits);
     lastblock = new_readSingleBit(l);
     if (l->par_in == NULL) {
+      woempa(7, "A no more input: baling out\n");
       goto hastalavista;
     }
 
     type = new_readBits(l, 2);
     if (l->par_in == NULL) {
+      woempa(7, "B no more input: baling out\n");
       goto hastalavista;
     }
 
@@ -897,10 +894,11 @@ int inflate_control_inflate(w_inflate_control l) {
         check |= (new_readLiteralByte(l) << 8);
 
         if (l->par_in == NULL) {
+          woempa(7, "C no more input: baling out\n");
           goto hastalavista;
         }
 
-        woempa(5,"--> block %d is of the 'stored' type. %d bytes (0x%04x == 0x%04x)\n", num, size, size & 0x0000ffff, ~check & 0x0000ffff);
+        woempa(7,"--> block %d is of the 'stored' type. %d bytes (0x%04x == 0x%04x)\n", num, size, size & 0x0000ffff, ~check & 0x0000ffff);
         if ((size & 0x0000ffff) != (~check & 0x0000ffff)) {
           woempa(9,"Wrong block check 0x%04x != 0x%04x.\n", size & 0x0000ffff, ~check & 0x0000ffff);
           err = 1;
@@ -922,7 +920,7 @@ int inflate_control_inflate(w_inflate_control l) {
             wabort(ABORT_WONKA, "Unable to build fixed dictionary\n");
           }
         }
-        woempa(5,"--> block %d is of the 'fixed huffman code' type.\n", num);
+        woempa(7,"--> block %d is of the 'fixed huffman code' type.\n", num);
         if (new_inflateBlock(l, fixed_dict)) {
           woempa(9,"inflateFoo\n");
           err = 1;
@@ -931,7 +929,7 @@ int inflate_control_inflate(w_inflate_control l) {
         break;
 
       case 2:
-        woempa(5,"--> block %d is of the 'dynamic huffman code' type.\n", num);
+        woempa(7,"--> block %d is of the 'dynamic huffman code' type.\n", num);
         dict = new_buildDynamicDictionary(l);
         if (! dict) {
           woempa(9,"dictFoo\n");
@@ -959,6 +957,7 @@ hastalavista:
 
   if (!err) {
     if(l->size_bek_out > 0) {
+      woempa(7, "flushing %d output bytes\n", l->size_bek_out);
       new_bekkenFlush(l);
     }
   }
@@ -979,31 +978,45 @@ hastalavista:
 
 int inflate_control_getbytes_from_queue(w_inflate_control control, w_ubyte* bytes, w_int len) {
   int result = 0;
+  int need = len;
   w_deflate_queueelem element = control->first_link_out;
-  woempa(5,"filling array. want %d bytes\n",len);
-  while(element != NULL) {
+  woempa(7,"filling array. want %d bytes: first element = %p\n", len, element);
+  while(element && need) {
     int have = element->size - element->index;
-    int need = len - result;
-    woempa(5,"size = %d, index = %d, release = %d, len = %d, result = %d\n",element->size, element->index,
+
+    woempa(7,"size = %d, index = %d, release = %d, len = %d, result = %d\n",element->size, element->index,
       element->release, len, result);
     if(have <= need) {
-      w_deflate_queueelem deleteMe = element;
-      woempa(5,"memcpy 1 (%p,%p,%d)\n",bytes+result,element->data+element->index, have);
+      woempa(7, "I have no more than I need, so I copy all I have\n");
+      woempa(7,"memcpy 1 (%p,%p,%d)\n",bytes+result,element->data+element->index, have);
       memcpy(bytes+result,element->data+element->index, have);
-      element = element->next;
-      deleteQueueElement(deleteMe);
       result += have;
-    } else {
-      woempa(5,"memcpy 2 (%p,%p,%d)\n",bytes+result,element->data+element->index, need);
+      need -= have;
+      have = 0;
+    } else if (need) {
+      woempa(7, "I have more than I need, so I copy all I need\n");
+      woempa(7,"memcpy 2 (%p,%p,%d)\n",bytes+result,element->data+element->index, need);
       memcpy(bytes+result,element->data+element->index, need);
       element->index += need;
       result = len;
+      have -= need;
+      need = 0;
+    }
+
+    if (need && !have) {
+      w_deflate_queueelem deleteMe = element;
+      woempa(7, "I have nothing so I take the next element from the queue\n");
+      element = element->next;
+      deleteQueueElement(deleteMe);
+      woempa(7,"still need %d bytes: next element = %p\n", need, element);
     }
   }
   control->first_link_out = element;
-  if(element == NULL) {
+  woempa(7, "set %p->first_link_out to %p\n", control, element);
+  if(!element) {
+    woempa(7, "set %p->last_link_out to %p\n", control, element);
     control->last_link_out = NULL;
   }
-  woempa(5,"Done filling array. got %d bytes\n",result);
+  woempa(7,"Done filling array. got %d bytes\n",result);
   return result;
 }

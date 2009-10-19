@@ -68,12 +68,10 @@ public class mojo implements Testlet
 	    writer.close ();
 	    result = out.toByteArray ();
 
-	    System.out.println("result.length = " + result.length + ", expected " + encoded.length);
 	    harness.check (result.length, encoded.length);
 	    flag = true;
 	    for (i = 0; i < encoded.length && i < result.length; i++) {
 		if (encoded [i] != result [i]) {
-			System.out.println("result[" + i + "] = " + result[i] + ", expected " + encoded[i]);
 		    harness.debug ("failing index = " + i);
 		    flag = false;
 		}

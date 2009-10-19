@@ -1,28 +1,29 @@
 ###########################################################################
-# Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 #
+# Copyright (c) 2001 by Punch Telematix. All rights reserved.             #
 #                                                                         #
-# This software is copyrighted by and is the sole property of Acunia N.V. #
-# and its licensors, if any. All rights, title, ownership, or other       #
-# interests in the software remain the property of Acunia N.V. and its    #
-# licensors, if any.                                                      #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of                 #
+#    other contributors may be used to endorse or promote products        #
+#    derived from this software without specific prior written permission.#
 #                                                                         #
-# This software may only be used in accordance with the corresponding     #
-# license agreement. Any unauthorized use, duplication, transmission,     #
-#  distribution or disclosure of this software is expressly forbidden.    #
-#                                                                         #
-# This Copyright notice may not be removed or modified without prior      #
-# written consent of Acunia N.V.                                          #
-#                                                                         #
-# Acunia N.V. reserves the right to modify this software without notice.  #
-#                                                                         #
-#   Acunia N.V.                                                           #
-#   Vanden Tymplestraat 35      info@acunia.com                           #
-#   3000 Leuven                 http://www.acunia.com                     #
-#   Belgium - EUROPE                                                      #
-#                                                                         #
-# Modifications copyright (c) 2005, 2006 by Chris Gray, /k/ Embedded Java #
-# Solutions. All rights reserved.                                         #
-#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
 ###########################################################################
 
 #! /usr/bin/awk -f
@@ -814,9 +815,9 @@ function supported(codenum) {
 function appendtolist(list,new) {
   itemlen=length(new)+3
   itemsperline=int(80/itemlen)
-  if(list=="") return "\t" new
-  else if(int((length(list)+itemlen)/80) > int(length(list)/80)) return list",\n\t"new
-  else return list",  "new
+  if(list=="") return "\t" comment new
+  else if(int((length(list)+itemlen)/80) > int(length(list)/80)) return list",\n\t" comment new
+  else return list",  " comment new
 }
 
 # Optional information provided if 'debug' is defined
@@ -857,6 +858,7 @@ function buildtableentry(n,class,subclass) {
 
 BEGIN {
   FS=";"
+  debug = 1
 
   subset_name[  1] = "BASIC LATIN                            "
   subset_name[  2] = "LATIN-1 SUPPLEMENT                     "
@@ -1126,14 +1128,6 @@ BEGIN {
 
   if(stopblock) blockname=""
 
-# Some hacks apparently required by the Java spec (but not by ISO 10646).
-
-  if(code=="0100") forceLetterOrDigit=1
-  else if(code=="2000") {
-                        forceLetterOrDigit=0
-  }
-  else if(code=="3000") forbidLetterOrDigit=0
-
 # Get the digit and/or numerical values and the combining class, if nonzero. 
 # Build lists in ascending order of character code.
 
@@ -1190,102 +1184,99 @@ BEGIN {
 
   class=class_undefined; subclass=0;
 
-# Let's collect some useful evidence from the unicode name of the character.
-
-  smallName=index(name,"SMALL LETTER") || index(name,"SMALL LIGATURE");
-  capsName=index(name,"CAPITAL LETTER") || index(name,"CAPITAL LIGATURE");
-  digitName=index(name,"DIGIT");
-
-# More useful evidence from the general category code of the character.
+# Evidence from the general category code of the character.
 
   letterCat = index(category,"L") == 1;
-  digitCat = index(category,"Nd") == 1;
-  formatCat = index(category,"Cf") == 1;
   spaceCat = index(category,"Z") == 1;
 
 # Even the decomposition field can be of interest ..
   nobreakDecomp = index($decompfield,"<noBreak>") == 1;
 
 # This is where the classification proper begins.
+# -----------------------------------------------
 
-# If no lower-case equivalent, but has upper-case equivalent or has a small-
-# sounding name, classify as "lower-case letter".  The subclass indicates
-# how the upper-case equivalent is to be derived:
-#   0   don't bother, there ain't none
-#   n,0<n<F
-#       subtract delta[n]
-#   F   look it up in a table wot we will output later
-
-  if(!lce && (uce || smallName)) {
+# If category is "Ll", classify as "lower-case letter".
+  if (category == "Ll") {
     class=class_lowercase
-    for(d in delta) if(sprintf("%04X",number-delta[d])==uce) subclass=d
-
-    if(subclass==0 && uce) {
-      subclass=15;
-      ucespecial=appendtolist(ucespecial,"{0x"code",0x"uce"}")
-    }
   }
 
-# If no upper-case equivalent, but has lower-case equivalent or has a large-
-# sounding name, classify as "upper-case letter".  The subclass indicates
-# how the lower-case equivalent is to be derived:
-#   0   don't bother, there ain't none
-#   n,0<n<F
-#       add delta[n]
-#   F   look it up in a table what we will output later
-
-  else if(!uce && (lce || capsName)) {
+# If category is "Lu", classify as "upper-case letter".
+  else if (category == "Lu") {
     class=class_uppercase
-    for(d in delta) if(sprintf("%04X",number+delta[d])==lce) subclass=d
-
-    if(subclass==0 && lce) {
-      subclass=15;
-      lcespecial=appendtolist(lcespecial,"{0x"code",0x"lce"}")
-    }
   }
 
-# If both lower- and  upper-case equivalents exist, this must be "title case".
-# Converting to lower- or upper-case is always a table lookup job.
-
-  else if(uce && lce) {
+# If category is "Lt", classify as "title-case letter".
+  else if (category == "Lt") {
     class=class_titlecase;
-    subclass=15;
-    lcespecial=appendtolist(lcespecial,"{0x"code",0x"lce"}")
-    ucespecial=appendtolist(ucespecial,"{0x"code",0x"uce"}")
+    if (!uce) uce = code
   }
 
-# In JDK 1.2 and 1.3, a digit is a digit if it has "DIGIT" in its name.
-# In JDK 1.4 it's a digit if its general category is "Nd".
-# 1.2/1.3:
-  else if (digitName) {
-# 1.4:
-# else if(digitCat) {
+# If category is "Nd", classify as "digit".
+  else if (category == "Nd") {
 	class=class_digit;
         subclass=digitval
   }
 
-  else if (formatCat) {
+# If category is "Cf", classify as "format".
+  else if (category == "Cf") {
 	class=class_format;
   }
 
+# Implement the Java rules for classification as "whitespace"
   else if ((number >= 9 && number <=13) || (number >= 28 && number <= 31) || (spaceCat && !nobreakDecomp)) {
         class=class_whitespace;
   }
 
-# Anything not yet classified is either a "miscellaneous letter" or "other".
+# Anything defined and not yet classified is either a "miscellaneous letter" or "other".
 
   if(class==class_undefined && name) {
-    if(letterCat || forceLetterOrDigit ) {
+    if(letterCat) {
         class=class_other_letter;
     } else class=class_miscellaneous;
   }
 
-# If a title-case equivalent is specified and it is different to the
-# upper case, add it to our little collection.
-
-  if(tce && tce!=uce) {
-      tcespecial=appendtolist(tcespecial,"{0x"code",0x"tce"}")
+# If a lower-case equivalent is specified, either set the subclass to an index
+# into upper_to_lower_delta[] or, if no suitable index exists, add this code
+# and its lower-case equivalent to to_lower_case[] and set subclass to 15.
+  if (lce) {
+    if (letterCat) {
+      for (d in delta) {
+        if (sprintf("%04X",number+delta[d])==lce) subclass = d
+      }
     }
+
+    if (!subclass) {
+      subclass = 15;
+      lcespecial = appendtolist(lcespecial,"{0x"code",0x"lce"}")
+    }
+  }
+
+# If a upper-case equivalent is specified, either set the subclass to an index
+# into upper_to_lower_delta[] or, if no suitable index exists, add this code
+# and its upper-case equivalent to to_upper_case[] and set subclass to 15.
+  if (uce) {
+    if (letterCat) {
+      for (d in delta) {
+        if (sprintf("%04X",number-delta[d])==uce) subclass = d
+      }
+    }
+
+    if (!subclass) {
+      subclass = 15;
+      ucespecial = appendtolist(ucespecial,"{0x"code",0x"uce"}")
+    }
+  }
+
+# If a title-case equivalent is specified and it is different to the upper-case
+# equivalent, add this code and its title-case equivalent to to_title_case[]
+# and set subclass to 15.
+
+  if (tce && tce!=uce) {
+    subclass = 15;
+    tcespecial = appendtolist(tcespecial,"{0x"code",0x"tce"}")
+  }
+
+# OK, now we are ready to add the entry to the character class table.
 
   if(debug) debugoutput(number,name,class,subclass,uce,lce,tce);
 
@@ -1316,6 +1307,7 @@ BEGIN {
     thisdecomp = thisdecomp "};"
     decomplist = decomplist "\n" thisdecomp
     decopairlist=appendtolist(decopairlist,"{0x"code", decomp_"code"}")
+    ++numdecopairs
   }
 
 # Proceed with the next character
@@ -1633,7 +1625,7 @@ END{
   printf ", {0x2000, 0x206f, 32} // GENERAL PUNCTUATION\n"
   ++numblocks
   printf ", {0x2070, 0x209f, 33} // SUPERSCRIPTS AND SUBSCRIPTS\n"
-  ++numblock
+  ++numblocks
   printf ", {0x20a0, 0x20cf, 34} // CURRENCY SYMBOLS\n"
   ++numblocks
   if (subsets[35] || subsets[999]) {
@@ -1885,8 +1877,8 @@ END{
   print  ""
   print  "w_char* charToDecomposition(w_char ch) {"
   print  "  w_int min = 0;"
-  print  "  w_int max = " numdigitvalues - 1 ";"
-  print  "  w_int try = " numdigitvalues " / 2;"
+  print  "  w_int max = " numdecopairs - 1 ";"
+  print  "  w_int try = " numdecopairs " / 2;"
   print  "  w_int next;"
   print  "  while (try != min && try != max) {"
   print  "  if (decomposition[try].from > ch) {"
@@ -2005,12 +1997,12 @@ END{
   print  "  }"
   print  ""
   print  "  if (to_category[try].from == ch) {"
-  print  "    woempa(7, \"Looking for %04X, found it (category %d) at %d\\n\", ch, to_category[try].to, try);"
-  print  "    woempa(7, \"Returning ``%w''\\n\", category_name[to_category[try].to]);"
+  print  "    woempa(1, \"Looking for %04X, found it (category %d) at %d\\n\", ch, to_category[try].to, try);"
+  print  "    woempa(1, \"Returning ``%w''\\n\", category_name[to_category[try].to]);"
   print  "  }"
   print  "  else {"
-  print  "    woempa(7, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_category[min].from, to_category[min].to, min);"
-  print  "    woempa(7, \"Returning ``%w''\\n\", category_name[to_category[min].to]);"
+  print  "    woempa(1, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_category[min].from, to_category[min].to, min);"
+  print  "    woempa(1, \"Returning ``%w''\\n\", category_name[to_category[min].to]);"
   print  "  }"
   print  ""
   print  "  return category_name[to_category[to_category[try].from == ch ? try : min].to];"
@@ -2038,12 +2030,12 @@ END{
   print  "  }"
   print  ""
   print  "  while (try != min && try != max) {"
-  print  "  if (to_directionality[try].from > ch) {"
+  print  "    if (to_directionality[try].from > ch) {"
   print  "      next = (try + min) / 2;"
   print  "      max = try;"
   print  "      try = next;"
   print  "    }"
-  print  "  else if (to_directionality[try].from < ch) {"
+  print  "    else if (to_directionality[try].from < ch) {"
   print  "      next = (try + max + 1) / 2;"
   print  "      min = try;"
   print  "      try = next;"
@@ -2054,12 +2046,12 @@ END{
   print  "  }"
   print  ""
   print  "  if (to_directionality[try].from == ch) {"
-  print  "    woempa(7, \"Looking for %04X, found it (directionality %d) at %d\\n\", ch, to_directionality[try].to, try);"
-  print  "    woempa(7, \"Returning %d\\n\", to_directionality[try].to);"
+  print  "    woempa(1, \"Looking for %04X, found it (directionality %d) at %d\\n\", ch, to_directionality[try].to, try);"
+  print  "    woempa(1, \"Returning %d\\n\", to_directionality[try].to);"
   print  "  }"
   print  "  else {"
-  print  "    woempa(7, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_directionality[min].from, to_category[min].to, min);"
-  print  "    woempa(7, \"Returning %d\\n\", category_name[to_directionality[min].to]);"
+  print  "    woempa(1, \"Looking for %04X, found %04X (%d) at %d\\n\", ch, to_directionality[min].from, to_directionality[min].to, min);"
+  print  "    woempa(1, \"Returning %d\\n\", to_directionality[min].to);"
   print  "  }"
   print  ""
   print  "  return to_directionality[to_directionality[try].from == ch ? try : min].to;"
@@ -2117,17 +2109,17 @@ END{
 
 # Finally the three tables of special case conversions.
 
-  ucespecialt=appendtolist(ucespecialt,"{0,0}")
+  ucespecial=appendtolist(ucespecial,"{0,0}")
   printf "const w_char_conversion to_upper_case[] = {\n\t"
   printf ucespecial
   printf "\n};\n"
 
-  lcespecialt=appendtolist(lcespecialt,"{0,0}")
+  lcespecial=appendtolist(lcespecial,"{0,0}")
   printf "const w_char_conversion to_lower_case[] = {\n\t"
   printf lcespecial
   printf "\n};\n"
 
-  tcespecialt=appendtolist(tcespecialt,"{0,0}")
+  tcespecial=appendtolist(tcespecial,"{0,0}")
   printf "const w_char_conversion to_title_case[] = {\n\t"
   printf tcespecial
   printf "\n};\n"

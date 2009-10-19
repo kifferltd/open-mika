@@ -1,26 +1,33 @@
 #ifndef _DEFLATE_INTERNALS_H
 #define _DEFLATE_INTERNALS_H
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Solutions. All rights reserved.                                         *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 #include <string.h>
@@ -46,25 +53,26 @@ typedef struct w_Deflate_QueueElem {
 typedef w_Deflate_QueueElem *w_deflate_queueelem;
 
 typedef struct w_Deflate_Control {
-  x_queue q_in, q_out;
-  w_void *qmem_in, *qmem_out;                   // need to remember this to free it at release
+  x_Queue q_in, q_out;
+  w_ubyte qmem_in[4 * 512];
+  w_ubyte qmem_out[4 * 512];
 
   w_deflate_queueelem par_in, par_out;          // partial
   w_int offset_in, offset_out;                  // read offset in data block for partial reads
-  x_mutex mutx;                                 // enkel lock nodig voor par_out, omdat par_in enkel 
+  x_Mutex mutx;                                 // enkel lock nodig voor par_out, omdat par_in enkel 
 						// door inflate thread gebruikt wordt
   w_bits i_bits;                                // input op bitniveau
   w_bits o_bits, o_mask;                        // output op bitniveau
 
-  w_ubyte *output_bekken;                       // 32k sliding window en 1024 bytes block voor in queue te steken
+  w_ubyte output_bekken[32 * 1024 + 1024];      // 32k sliding window en 1024 bytes block voor in queue te steken
   w_int offset_bek_out, size_bek_out;
 
-  w_ubyte *input_bekken;                        // 32k sliding window met 512 bytes lookahead gebruikt door 
+  w_ubyte input_bekken[32 * 1024 + 512];        // 32k sliding window met 512 bytes lookahead gebruikt door 
                                                 // de zipper
   w_int offset_bek_in, lookahead_bek_in;
 
   w_ubyte *stack;
-  x_thread thread;
+  x_Thread thread;
 
   w_int nomoreinput;
   w_short *zip_hash_table;                      // the actual hashtable
@@ -72,19 +80,32 @@ typedef struct w_Deflate_Control {
   w_int zip_hash_first;                         // index to first available hash entry in block
 
   w_int compression_level;
-  w_int no_auto;
-  w_int need_more_input;
   w_int processed_size;
 
-  x_monitor ready;				// needed for proper reset and stop
-  w_int reset;
-  w_int stop;
+  x_Monitor ready;				// needed for proper reset and stop
+  volatile w_ubyte no_auto;
+  volatile w_ubyte need_more_input;
+  volatile w_ubyte stop;
+  volatile w_short resets_requested;
+  volatile w_short resets_completed;
 
-  w_int state;
+  volatile w_int state;
 
   w_int dictionary;
 } w_Deflate_Control;
 typedef w_Deflate_Control *w_deflate_control;
+
+/*
+** Possible values for the 'state' field of w_DeflateControl.
+*/
+#define COMPRESSION_THREAD_UNSTARTED 0
+#define COMPRESSION_THREAD_RUNNING   1
+#define COMPRESSION_THREAD_STOPPED   2
+
+/*
+** Time to wait for the inflate/deflate thread to complete.
+*/
+#define COMPRESSION_WAIT_TICKS x_millis2ticks(1000)
 
 #define END_BLOCK                                256     /* The end of a block code                                                 */
 #define LENGTH_CODES                              29     /* The number of length codes, not taking into account the END_BLOCK code. */
@@ -156,7 +177,7 @@ w_void unzip_freeQueue(void *);
 static w_int writeLiteralByte(w_deflate_control bs, w_word obyte) {
   obyte = (w_byte)(obyte & 0x000000ff);
   
-  bs->output_bekken[bs->offset_bek_out] = (w_byte)obyte;
+  (*bs).output_bekken[bs->offset_bek_out] = (w_byte)obyte;
   bs->offset_bek_out += 1;
   bs->size_bek_out += 1;
 

@@ -1,40 +1,37 @@
-#ifndef _LOADING_H
-#define _LOADING_H
-
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
-/*
-** $Id: loading.h,v 1.5 2006/10/04 14:24:14 cvsroot Exp $ 
-** 
-** The Wonka kernel is software copyright by SmartMove NV (1999).
-** Please see the file Copyright for information on its legal use.
-** 
-*/
+#ifndef _LOADING_H
+#define _LOADING_H
 
 #include "clazz.h"
 #include "core-classes.h"
@@ -126,11 +123,19 @@ extern w_hashtable fixup2_hashtable;
 /*
 ** Given an instance 'l' of java.lang.ClassLoader, return a pointer to the 
 ** w_Hashtable which holds a pointer to a w_UnloadedClazz structure for each
-** class which has been marked as loadable by theis loader but has not yet
+** class which has been marked as loadable by this loader but has not yet
 ** been loaded.
 ** If 'l' is null, system_unloaded_class_hashtable is returned.
 */
 #define loader2unloaded_classes(l) ((l) ? getWotsitField((l), F_ClassLoader_unloaded_classes) :system_unloaded_class_hashtable)
+
+/*
+** Given an instance 'l' of java.lang.ClassLoader, return a pointer to the 
+** w_Hashtable which holds a pointer to a w_Package structure for each
+** package for which at least one class which has been loaded by this loader.
+** If 'l' is null, system_package_hashtable is returned.
+*/
+#define loader2packages(l) ((l) ? getWotsitField((l), F_ClassLoader_packages) :system_package_hashtable)
 
 /*
 ** Possible outcomes for mustBeXxxx calls: no action was needed, action was
@@ -180,6 +185,25 @@ extern w_hashtable2k interface_hashtable;
 ** Must only be set once, using setSystemClassLoader()!
 */
 extern w_instance systemClassLoader;
+
+/*
+** Test to see if the argument is either null or the system class loader.
+** Note that the test also succeeds if the SystemClassLoader has not been
+** installed and the argument is null (i.e. during the bootstrap phase).
+*/
+#define isSystemClassLoader(l) (!(l) || (l) == systemClassLoader)
+
+/*
+** The unique instance of ExtensionClassLoader, or NULL if none exists.
+** Set up by static method installExtensionClassLoader() of java.lang.ClassLoader.
+*/
+extern w_instance extensionClassLoader;
+
+/*
+** The unique instance of ApplicationClassLoader, or NULL if none exists.
+** Set up by static method installApplicationClassLoader() of java.lang.ClassLoader.
+*/
+extern w_instance applicationClassLoader;
 
 /*
 ** Function to compare two w_[Unloaded}Clazz pointers.
@@ -243,5 +267,12 @@ void deregisterUnloadedClazz(w_clazz clazz);
 ** Returns the number of class loaders processed.
 */
 w_fifo forEachClassLoader(void* (*fun)(w_instance));
+
+/*
+ * Return the number of classes which were defined by this class loader.
+ * (To find out how many were initiated, just check the occupancy of the
+ * loaded class hashtable).
+ */
+w_int numberOfDefinedClasses(w_instance loader);
 
 #endif /* _LOADING_H */

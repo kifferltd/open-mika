@@ -1,33 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2004, 2006 by Chris Gray, /k/ Embedded Java *
-* Solutions. All rights reserved.                                         *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: initialize.c,v 1.13 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 
@@ -35,20 +36,25 @@
 #include "clazz.h"
 #include "constant.h"
 #include "exception.h"
-#include "reflection.h"
 #include "fields.h"
 #include "interpreter.h"
 #include "loading.h"
 #include "methods.h"
+#include "reflection.h"
+#include "verifier.h"
 #include "wonka.h"
 
 void initializeStaticFields(w_thread thread, w_clazz clazz) {
-
   w_size  i;
   w_field field;
   w_ConstantType *c;
+  w_instance instance;
 
   woempa(1, "Setting the static fields of '%k' to default values.\n", clazz);
+  if (thread) {
+    threadMustBeSafe(thread);
+    enterUnsafeRegion(thread);
+  }
 
   for (i = 0; i < clazz->numStaticFields; i++) {
     field = &clazz->own_fields[i];
@@ -57,17 +63,14 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
       switch (*c) {
         case CONSTANT_STRING:
         case RESOLVED_STRING:
-          {
-            w_instance instance = getStringConstant(clazz, field->initval);
-
-            if (thread) {
-              enterUnsafeRegion(thread);
-            }
-            clazz->staticFields[field->size_and_slot] = (w_word) instance;
-            if (thread) {
-              enterSafeRegion(thread);
-            }
+          if (thread) {
+            enterSafeRegion(thread);
           }
+          instance = getStringConstant(clazz, field->initval);
+          if (thread) {
+            enterUnsafeRegion(thread);
+          }
+          clazz->staticFields[field->size_and_slot] = (w_word) instance;
           woempa(1, "Initialized static field '%w' (type %k) of '%k' to 0x%08x.\n", NM(field), field->value_clazz, clazz, clazz->staticFields[field->size_and_slot]);
           break;
       
@@ -110,15 +113,17 @@ void initializeStaticFields(w_thread thread, w_clazz clazz) {
       }
     }
   }
+  if (thread) {
+    enterSafeRegion(thread);
+  }
 }
 
 static void doSuperConstructorHack(w_clazz clazz, w_method m) {
   w_size j;
-  w_size n;
   w_method super;
 
   if (isSet(m->flags, METHOD_IS_CONSTRUCTOR) && m->exec.code && (m->exec.code_length > 4) && (m->exec.code[0] == 0x2a) && (m->exec.code[1] == 0xb7)) {
-    woempa(1, "First byte of %M is 0x2a (aload_0), second is 0xb7\n", m);
+    woempa(7, "First byte of %M is 0x2a (aload_0), second is 0xb7 (invokespecial)\n", m);
     j = (unsigned char)m->exec.code[2];
     j = (j << 8) | (unsigned char)m->exec.code[3];
     super = getMethodConstant(clazz, j);
@@ -128,64 +133,25 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
       return;
 
     }
-    woempa(1, "Method being called is %M with code length %d\n", super, super->exec.code_length);
-    if (isSet(m->flags, METHOD_IS_CONSTRUCTOR) && super->exec.code_length && (super->exec.code[0] == 0xb1)) {
-      woempa(7, "Removing call from %M to trivial constructor %M :)\n", m, super);
-      m->exec.code_length -= 4;
-      memmove(m->exec.code, m->exec.code + 4, m->exec.code_length);
-      if (m->exec.debug_info) {
-        w_methodDebugInfo debug_info = m->exec.debug_info;
-        n = debug_info->numLineNums;
-        while (n && (debug_info->lineNums[0].start_pc < 4)) {
-          woempa(1, "Eliminating lineNums[0] entry with start_pc %d\n", debug_info->lineNums[0].start_pc);
-          memmove(debug_info->lineNums, debug_info->lineNums + 1, (--n) * sizeof(w_LineNum));
-        }
-        debug_info->numLineNums = n;
-        woempa(1, "%d lineNums[] remaining\n", n);
+    woempa(7, "Method being called is %M with code length %d\n", super, super->exec.code_length);
+    if (isNotSet(super->flags, METHOD_NO_OVERRIDE)) {
+      woempa(9, "Method being called can be overridden, no optimisation possible.\n");
 
-        for (j = 0; j < n; ++j) {
-          if (debug_info->lineNums[j].start_pc > 3) {
-            woempa(1, "Reducing lineNums[%d].start_pc from %d to %d\n", j, debug_info->lineNums[j].start_pc, debug_info->lineNums[j].start_pc - 4);
-            debug_info->lineNums[j].start_pc -= 4;
-          }
-        }
-        n = debug_info->numLocalVars;
-        woempa(1, "%d localVars[]\n", n);
-        for (j = 0; j < n; ++j) {
-          if (debug_info->localVars[j].start_pc > 3) {
-            woempa(1, "Reducing localVars[%d].start_pc from %d to %d\n", j, debug_info->localVars[j].start_pc, debug_info->localVars[j].start_pc - 4);
-            debug_info->localVars[j].start_pc -= 4;
-          }
-          else {
-            debug_info->localVars[j].start_pc = 0;
-          }
-        }
+      return;
+
+    }
+    if (super->exec.code_length) {
+      j = 0;
+      if (super->exec.code[0] == 0xa7) {
+        j = (super->exec.code[1] << 8) | super->exec.code[2];
+        woempa(7, "  begins with a jump to pc %d, opcode = 0x%02x\n", j, super->exec.code[j]);
       }
-      n = m->exec.numExceptions;
-      for (j = 0; j < n; ++j) {
-        if (m->exec.exceptions[j].start_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].start_pc from %d to %d\n", j, m->exec.exceptions[j].start_pc, m->exec.exceptions[j].start_pc - 4);
-          m->exec.exceptions[j].start_pc -= 4;
-        }
-        else {
-          m->exec.exceptions[j].start_pc = 0;
-        }
-        if (m->exec.exceptions[j].end_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].end_pc from %d to %d\n", j, m->exec.exceptions[j].end_pc, m->exec.exceptions[j].end_pc - 4);
-          m->exec.exceptions[j].end_pc -= 4;
-        }
-        else {
-          woempa(8, "Setting exceptions[%d].end_pc to 0 -- handler may be unreachable?\n", j);
-          m->exec.exceptions[j].end_pc = 0;
-        }
-        if (m->exec.exceptions[j].handler_pc > 3) {
-          woempa(1, "Reducing exceptions[%d].handler_pc from %d to %d\n", j, m->exec.exceptions[j].handler_pc, m->exec.exceptions[j].handler_pc - 4);
-          m->exec.exceptions[j].handler_pc -= 4;
-        }
-        else {
-          woempa(8, "Setting exceptions[%d].handler_pc to 0 -- odd, eh?\n", j);
-          m->exec.exceptions[j].handler_pc = 0;
-        }
+      if (super->exec.code[j] == 0xb1) {
+        woempa(7, "Removing call from %M to trivial constructor %M :)\n", m, super);
+        m->exec.code[0] = 0xa7; // j_goto
+        m->exec.code[1] = 0;
+        m->exec.code[2] = 4;
+        m->exec.code[3] = 0;    // nop
       }
     }
   }
@@ -237,7 +203,7 @@ static void scanMethods(w_clazz clazz) {
 
         if (isSet(m->flags, ACC_ABSTRACT)) {
           woempa(1,"AbstractMethodError detected: non-abstract class %k fails to implement %M\n",clazz, m);
-          throwException(currentWonkaThread, clazzAbstractMethodError, "%w", clazz->dotified);
+          throwException(currentWonkaThread, clazzAbstractMethodError, "%M", m);
 
           return;
 
@@ -278,41 +244,37 @@ static void cleanUpClinit(w_method clinit) {
   }
 }
 
+
 /*
 ** Initialize a class.
 ** The result returned is CLASS_LOADING_xxxxx.
 */
 
-w_int initializeClazz(w_clazz clazz) {
-
-  w_thread   thread = currentWonkaThread;
+w_int initializeClazz(w_thread thread, w_clazz clazz) {
   w_frame    frame;
   w_size     i;
-  w_clazz    parent;
   w_fixup    fixup;
   w_int      result = CLASS_LOADING_DID_NOTHING;
 
-// These two classes can be needed if things go wrong later, so just make
-// sure that they are already initialized. We trust them not to throw an
-// exception during initialization.
-  if (clazz->clinit) {
-    mustBeInitialized(clazzExceptionInInitializerError);
-    mustBeInitialized(clazzAbstractMethodError);
+  threadMustBeSafe(thread);
+
+#ifdef USE_BYTECODE_VERIFIER
+  /*
+  ** If we are going to run this class through a bytecode verifier, now is a 
+  ** good time to resolve all the Class, Field, and Method constants. Otherwise
+  ** we'll have to do so in the middle of verification, which sucks.
+  ** (And which locks dead, to the point more).
+  */
+  if (clazzShouldBeVerified(clazz)) {
+    result = verifyClazz(clazz);
   }
 
-  parent = clazz;
-  for (i = clazz->dims; i && !classIsInitialized(parent->previousDimension); --i) {
-    parent = parent->previousDimension;
-  }
-  for (; i < clazz->dims; ++i) {
-    result |= mustBeInitialized(parent);
-    if (result == CLASS_LOADING_FAILED) {
+  if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
 
       return CLASS_LOADING_FAILED;
 
-    }
-    parent = parent->nextDimension;
   }
+#endif
 
   woempa(1, "Thread %t: initializing class %k.\n", thread, clazz);
   setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
@@ -474,7 +436,7 @@ w_int mustBeInitialized(w_clazz clazz) {
     }
 
     if (result != CLASS_LOADING_FAILED) {
-      result = initializeClazz(clazz);
+      result = initializeClazz(thread, clazz);
     }
 
     x_monitor_eternal(clazz->resolution_monitor);

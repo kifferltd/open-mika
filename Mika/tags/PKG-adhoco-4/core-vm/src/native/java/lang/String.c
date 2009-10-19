@@ -1,34 +1,34 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, bus 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-*                                                                         *
-* Modifications copyright (c) 2004, 2005, 2006 by Chris Gray,             *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: String.c,v 1.20 2006/10/04 14:24:16 cvsroot Exp $
-*/
 
 #include <string.h>
 #include "arrays.h"
@@ -62,8 +62,12 @@ void String_create_empty(JNIEnv *env, w_instance String) {
 
 void fast_String_create_empty(w_frame frame) {
   w_instance objectref = (w_instance) frame->jstack_top[-1].c;
-  w_string s = registerString(string_empty);
+  w_string s;
+
+  enterSafeRegion(frame->thread);
+  s = registerString(string_empty);
   setWotsitField(objectref, F_String_wotsit, s);
+  enterUnsafeRegion(frame->thread);
   frame->jstack_top -= 1;
   woempa(1, "%p new string at %p, empty\n", objectref, String2string(objectref));
 }
@@ -214,14 +218,16 @@ void fast_String_toString(w_frame frame) {
 }
 
 w_instance String_toCharArray(JNIEnv *env, w_instance This) {
-
+  w_thread thread = JNIEnv2w_thread(env);
   w_int length;
   w_string this = String2string(This);
   w_instance result;
   
   length = string_length(this);
   woempa(1, "Allocating array of char[%d]\n", length);
+  enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+  enterSafeRegion(thread);
   if (result) {
     if (string_is_latin1(this)) {
       w_size i;
@@ -293,6 +299,7 @@ w_instance String_getBytes(JNIEnv *env, w_instance This, w_boolean Enc) {
   w_byte *dst;
   w_int i;
 
+  enterUnsafeRegion(thread);
   if (Enc == WONKA_TRUE){
     w_byte * utfbytes = string2UTF8(this, &i);
 
@@ -321,6 +328,7 @@ w_instance String_getBytes(JNIEnv *env, w_instance This, w_boolean Enc) {
       }
     }
   }
+  enterSafeRegion(thread);
 
   return result;
 
@@ -892,7 +900,7 @@ w_instance String_toUpperCase(JNIEnv *env, w_instance This, w_instance Locale) {
     }
     string = unicode2String(buffer, string_length(this));
     if (string) {
-      result = newStringInstance(string);
+      result = getStringInstance(string);
     // string is now registered twice, which is once too many
       deregisterString(string);
     }
@@ -920,7 +928,7 @@ w_instance String_toLowerCase(JNIEnv *env, w_instance This, w_instance Locale) {
     }
     string = unicode2String(buffer, string_length(this));
     if (string) {
-      result = newStringInstance(string);
+      result = getStringInstance(string);
       deregisterString(string);
     }
     releaseMem(buffer);
@@ -952,7 +960,7 @@ w_instance String_replace(JNIEnv *env, w_instance This, w_char oldChar, w_char n
     }
     result = unicode2String(buffer, string_length(this));
     if (result) {
-      Result = newStringInstance(result);
+      Result = getStringInstance(result);
       deregisterString(result);
     }
     releaseMem(buffer);
@@ -1004,7 +1012,7 @@ w_instance String_concat(JNIEnv *env, w_instance This, w_instance String) {
       }
       result = unicode2String(buffer, string_length(this) + string_length(string));
       if (result) {
-        Result = newStringInstance(result);
+        Result = getStringInstance(result);
         deregisterString(result);
       }
       releaseMem(buffer);
@@ -1031,7 +1039,7 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
   woempa(1, "String '%w' (length %d) offset %d endIndex %d\n", this, length, offset, endIndex);
 
   if (offset < 0 || offset > (w_int)length || offset > endIndex || endIndex > (w_int)length) {
-    throwException(thread, clazzIndexOutOfBoundsException, NULL);
+    throwException(thread, clazzStringIndexOutOfBoundsException, NULL);
   }
   else {
     buffer = allocMem((endIndex - offset) * sizeof(w_char));
@@ -1049,7 +1057,7 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
       releaseMem(buffer);
     }
     if (subString) {
-      SubString = newStringInstance(subString);
+      SubString = getStringInstance(subString);
       deregisterString(subString);
     woempa(1, "Result is %w\n", subString);
     } 
@@ -1070,9 +1078,9 @@ void fast_String_substring(w_frame frame) {
   enterSafeRegion(thread);
   if (objectref) {
     w_instance subString = i_String_substring(frame->thread, objectref, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
-    frame->jstack_top[-3].c = (w_word)subString;
     enterUnsafeRegion(thread);
-    if (!exceptionThrown(thread)) {
+    frame->jstack_top[-3].c = (w_word)subString;
+    if (subString) {
       setFlag(instance2flags(subString), O_BLACK);
     }
     frame->jstack_top -= 2;
@@ -1088,11 +1096,13 @@ void fast_String_substring(w_frame frame) {
 */
 
 w_instance String_intern(JNIEnv *env, w_instance thisString) {
+  w_thread thread = JNIEnv2w_thread(env);
   w_string this = String2string(thisString);
   w_instance resultString;
 
+  threadMustBeSafe(thread);
   ht_lock(string_hashtable);
-  resultString = internString(thisString);
+  resultString = internString(thread, thisString);
   ht_unlock(string_hashtable);
 
   return resultString;
@@ -1145,12 +1155,12 @@ w_instance String_trim(JNIEnv *env, w_instance This) {
       if (leading != (w_int)string_length(this)) {
         result = unicode2String(buffer + leading, string_length(this) - trailing - leading);
         if (result) {
-          Result = newStringInstance(result);
+          Result = getStringInstance(result);
           deregisterString(result);
         }
       }
       else {
-        Result = newStringInstance(string_empty);
+        Result = getStringInstance(string_empty);
       }
       releaseMem(buffer);
     }
@@ -1166,7 +1176,7 @@ w_instance String_static_valueOf_char(JNIEnv *env, w_instance stringClass, w_cha
 
   string = unicode2String(&c, 1);
   if (string) {
-    result = newStringInstance(string);
+    result = getStringInstance(string);
     // string is now registered twice, which is once too many
     deregisterString(string);
   }

@@ -1,30 +1,34 @@
 /**************************************************************************
-* Copyright  (c) 2001, 2002 by Acunia N.V. All rights reserved.           *
+* Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
+* Embedded Java Solutions. All rights reserved.                           *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix nor the names of                 *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 /*
-** $Id: checks.c,v 1.1.1.1 2004/07/12 14:07:47 cvs Exp $
-** 
-**
 ** This file contains all sorts of routines to check for casts and assignment
 ** compatabilities. It is mostly used by the interpreter and the reflection
 ** methods, or JNI support functions.
@@ -155,8 +159,7 @@ w_boolean isAssignmentCompatible(w_clazz S_clazz, w_clazz T_clazz) {
 ** Check whether the 'caller' clazz is allowed to call 'method'.
 */
 
-w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
-
+w_boolean isAllowedToCall(w_clazz caller, w_method method, w_clazz objClazz) {
   if (method->spec.declaring_clazz == caller) {
     woempa(1,"This Class (%K) is same as calling Class, so any method can be called.\n",method->spec.declaring_clazz);
 
@@ -169,10 +172,10 @@ w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
     return isNotSet(method->spec.declaring_clazz->flags,ACC_PRIVATE) && isNotSet(method->flags,ACC_PRIVATE);
 
   }
-  else if (isSuperClass(method->spec.declaring_clazz, caller) && is_this) {
+  else if (isSuperClass(method->spec.declaring_clazz, caller)) {
     woempa(1,"This Class (%K) is a superclass of calling Class (%K), and the instance being accessed is `this', so protected methods can be called.\n",method->spec.declaring_clazz,caller);
     return isSet(method->spec.declaring_clazz->flags,ACC_PUBLIC) && (isSet(method->flags,ACC_PUBLIC) ||
-              (isSet(method->flags,ACC_PROTECTED) && isNotSet(method->flags,ACC_STATIC)));
+           (isSet(method->flags,ACC_PROTECTED) && (objClazz && isSuperClass(caller,objClazz))));
 
   }
   else {
@@ -187,7 +190,7 @@ w_boolean isAllowedToCall(w_clazz caller, w_method method, w_boolean is_this) {
 ** Check whether the 'caller' clazz is allowed to access 'field'.
 */
 
-w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this) {
+w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_clazz objClazz) {
 
   if (field->declaring_clazz == caller) {
     woempa(1,"This Class (%K) is same as calling Class, so any field can be accessed.\n",field->declaring_clazz);
@@ -201,11 +204,11 @@ w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this) {
     return isNotSet(field->declaring_clazz->flags,ACC_PRIVATE) && isNotSet(field->flags,ACC_PRIVATE);
 
   }
-  else if (is_this && isSuperClass(field->declaring_clazz, caller)) {
+  else if (isSuperClass(field->declaring_clazz, caller)) {
     woempa(1,"This Class (%K) is a superclass of calling Class (%K), and the instance being accessed is `this', so protected fields can be accessed.\n",field->declaring_clazz,caller);
 
     return isSet(field->declaring_clazz->flags,ACC_PUBLIC) && (isSet(field->flags,ACC_PUBLIC) ||
-              (isSet(field->flags,ACC_PROTECTED) && isNotSet(field->flags,ACC_STATIC)));
+          (isSet(field->flags,ACC_PROTECTED) && (objClazz && isSuperClass(caller, objClazz))));
 
   }
   else {
@@ -223,6 +226,8 @@ w_boolean isAllowedToAccess(w_clazz caller, w_field field, w_boolean is_this) {
  ** which happen to have part of their name in common.
  */
 w_boolean sameRuntimePackage(w_clazz clazz1, w_clazz clazz2) {
+  return clazz1->package == clazz2->package;
+/*
   w_string name1;
   w_string name2;
   w_size length1;
@@ -281,5 +286,6 @@ w_boolean sameRuntimePackage(w_clazz clazz1, w_clazz clazz2) {
   woempa(1,"  - same runtime package\n");
 
   return WONKA_TRUE;
+*/
 }
   

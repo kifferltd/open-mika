@@ -1,33 +1,33 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (c) 2005, 2006 by Chris Gray, /k/ Embedded Java *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2005, 2006, 2008, 2009 by /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: SystemClassLoader.java,v 1.5 2006/06/09 09:51:06 cvs Exp $
-*/
 
 package wonka.vm;
 
@@ -100,8 +100,8 @@ public final class SystemClassLoader extends ClassLoader {
     if (theSystemClassLoader == null) {
       PermissionCollection theAllPermission;
 
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-        theAllPermission = new com.acunia.wonka.security.DefaultPermissionCollection();
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+        theAllPermission = new wonka.security.DefaultPermissionCollection();
         theAllPermission.add(new AllPermission());
         systemProtectionDomain = new ProtectionDomain(null, theAllPermission);
       }
@@ -109,10 +109,7 @@ public final class SystemClassLoader extends ClassLoader {
       setSystemClassLoader(theSystemClassLoader);
     }
     else {
-      if (wonka.vm.SecurityConfiguration.USE_ACCESS_CONTROLLER) {
-        java.security.AccessController.checkPermission(new RuntimePermission("getClassLoader"));
-      }
-      else if (wonka.vm.SecurityConfiguration.USE_SECURITY_MANAGER) {
+      if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
         SecurityManager sm = System.getSecurityManager();
         if(sm!=null) {
           sm.checkPermission(new RuntimePermission("getClassLoader"));
@@ -196,7 +193,7 @@ public final class SystemClassLoader extends ClassLoader {
 
     for (int i = 0; i < bootclasspath.length; ++i) {
       Object bootclasspath_entry = bootclasspath[i];
-      Etc.woempa(9, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry);
+      //Etc.woempa(9, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry);
       if (bootclasspath_entry == bootstrap_zipfile_path) {
         bytes = getBootstrapFile(filename);
       }
@@ -208,14 +205,12 @@ public final class SystemClassLoader extends ClassLoader {
             if (je != null){
               int length = (int)je.getSize();
               in = jf.getInputStream(je);
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
-
-              break;
             }
             else {
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + filename + " in " + jf);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
             }
           } catch (IOException e){
             e.printStackTrace();
@@ -226,14 +221,12 @@ public final class SystemClassLoader extends ClassLoader {
             try {
               int length = (int)f.length();
               in = new FileInputStream(f);
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
-
-              break;
             }
             catch (FileNotFoundException fnfe) {
-              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
+              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
             }
             catch(IOException ioe) {
               ioe.printStackTrace();
@@ -241,19 +234,19 @@ public final class SystemClassLoader extends ClassLoader {
           }
         }
       }
-    }
 
-    if (bytes != null) {
-      int j = filename.lastIndexOf('/');
-      if(j > 0){
-        String packagename = dotname.substring(0,j);
-        if (getPackage(packagename) == null) {
-          definePackage(packagename,"","","","","","",null);
+      if (bytes != null) {
+        int j = filename.lastIndexOf('/');
+        if(j > 0){
+          String packagename = dotname.substring(0,j);
+          if (getPackage(packagename) == null) {
+            definePackage(packagename,"","","","","","",null);
+          }
         }
+
+        return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
+
       }
-
-      return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
-
     }
 
     throw new ClassNotFoundException("SystemClassLoader couldn't find "+dotname);
@@ -275,12 +268,12 @@ public final class SystemClassLoader extends ClassLoader {
         JarFile jf = (JarFile)bcpelem;
         JarEntry je = jf.getJarEntry(name);
         if (je != null) {
-          url = new URL("jar:" + jf + "!/"+name);
+          url = new URL("jar:file:" + jf.getName() + "!/"+name);
         }
       } catch (ClassCastException cce) {
-        File f = new File(bcpelem + name);
+        File f = new File((File)bcpelem, name);
         if (f.isFile()) {
-          url = new URL("file:"+f);
+          url = new URL("file:" + f);
         }
       }
     }
@@ -299,9 +292,7 @@ public final class SystemClassLoader extends ClassLoader {
       if (name.startsWith("/") || name.startsWith("{}/")) {
         File f = new File(name);
         if (f.isFile()) {
-
             return new URL("file:"+f);
-
         }
       }
 
@@ -340,7 +331,8 @@ public final class SystemClassLoader extends ClassLoader {
         catch (IOException e){}
       }
       catch (ClassCastException cce) {
-        File f = new File(bootclasspath[i] + name);
+        // if it's not a jarfile it must be a directory
+        File f = new File((File)bootclasspath[i], name);
         if (f.isFile()) {
           try {
             return new FileInputStream(f);
@@ -405,8 +397,8 @@ public final class SystemClassLoader extends ClassLoader {
     definePackage("com.acunia.device","","","","","","",null);
     definePackage("com.acunia.device.uart","","","","","","",null);
     definePackage("com.acunia.device.serial","","","","","","",null);
-    definePackage("com.acunia.resource","","","","","","",null);
-    definePackage("com.acunia.wonka.security","","","","","","",null);
+    definePackage("wonka.resource","","","","","","",null);
+    definePackage("wonka.security","","","","","","",null);
     definePackage("java.lang","","","","","","",null);
     definePackage("java.lang.ref","","","","","","",null);
     definePackage("java.lang.reflect","","","","","","",null);

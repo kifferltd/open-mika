@@ -1,28 +1,32 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2003, 2004, 2005, 2007 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications copyright (C) 2003, 2004, 2005 by Chris Gray,             *
-* /k/ Embedded  Java  Solutions.  All rights reserved.                    *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #ifndef VFS_INCLUDE
@@ -149,6 +153,7 @@ static inline void init_vfs(void) {
 
 #define vfs_fstat(...)            fstat(__VA_ARGS__)
 #define vfs_stat(path, ...)       stat(path, __VA_ARGS__)
+#define vfs_truncate(path,len)    truncate(path, len)
 
 #define vfs_mkdir(path, ...)      mkdir(path, __VA_ARGS__)
 #define vfs_rmdir(path)            rmdir(path)
@@ -213,6 +218,27 @@ typedef struct vfs_FILE {
   w_word          error;                /* Error flags */
 } vfs_FILE;
 
+static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
+  vfs_FILE   *stream = allocMem(sizeof(vfs_FILE)); 
+
+  if (stream) {
+    stream->file_desc = fildes;
+    stream->error = 0;
+    stream->mode = allocMem((w_size)strlen(mode)+1);
+    if (stream->mode) {
+      strcpy(stream->mode, mode);
+    }
+    else {
+      wabort(ABORT_WONKA, "No memory to create vfs_FILE->mode\n");
+    }
+  }
+  else {
+    wabort(ABORT_WONKA, "No memory to create vfs_FILE structure\n");
+  }
+
+  return stream;
+}
+
 static inline vfs_FILE *vfs_fopen(const char *path, const char *mode) {
   w_int      flags = 0;
   w_int      file_desc;
@@ -229,33 +255,12 @@ static inline vfs_FILE *vfs_fopen(const char *path, const char *mode) {
 
   file_desc = open(path, flags|O_NONBLOCK, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
 
-  if(file_desc != -1) {                                 /* Valid filedes ? */
-    stream = allocMem(sizeof(vfs_FILE));         /* Allocate memory */
-    if (stream) {
-      stream->file_desc = file_desc;                    /* Store the file descriptor */
-      stream->error = 0;
-      stream->mode = allocMem((w_size)strlen(mode)+1); /* Allocate memory to store the mode */
-      if (stream->mode) {
-        strcpy(stream->mode, mode);                     /* Copy the mode to the stream */
-      }
-      else {
-        wabort(ABORT_WONKA, "No memory to create vfs_FILE->mode\n");
-      }
-
-    }
-    else {
-      wabort(ABORT_WONKA, "No memory to create vfs_FILE structure\n");
-    }
+  if(file_desc != -1) {
+    stream = vfs_fdopen(file_desc, mode);
   }
 
   return stream;
 }
-
-/*
-** static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
-** }
-** -> This function is not supported !!!
-*/
 
 static inline w_word vfs_fclose(vfs_FILE *stream) {
   vfs_close(stream->file_desc);

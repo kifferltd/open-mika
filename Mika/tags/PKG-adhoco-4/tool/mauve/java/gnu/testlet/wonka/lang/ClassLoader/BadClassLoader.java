@@ -62,7 +62,11 @@ public class BadClassLoader extends ClassLoader {
 		} 	
 		Value v = (Value)o;
 		System.out.println("looking for "+className+" using "+v.name);
-		return defineClass(v.name, v.bytes, 0, v.bytes.length);
+		Class defined = defineClass(v.name, v.bytes, 0, v.bytes.length);
+    System.out.println("defined "+className+
+        " using "+v.name+" and got "+defined);
+    
+    return defined;
 	}
 
         private class Value{
