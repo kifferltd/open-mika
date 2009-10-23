@@ -49,9 +49,9 @@ public final class DefaultProvider extends Provider {
     super(NAME, VERSION , INFO);
     defaults = new Properties();
     //ADD YOUR ALGORITHMS with thier classes here ...
-    defaults.put("SecureRandom.notSoSecure", "com.acunia.wonka.security.SecureRandomImpl");
-    defaults.put("MessageDigest.MD5", "com.acunia.wonka.security.MD5MessageDigest");
-    defaults.put("MessageDigest.SHA", "com.acunia.wonka.security.ShaMessageDigest");
+    defaults.put("SecureRandom.notSoSecure", "wonka.security.SecureRandomImpl");
+    defaults.put("MessageDigest.MD5", "wonka.security.MD5MessageDigest");
+    defaults.put("MessageDigest.SHA", "wonka.security.ShaMessageDigest");
 
     /**
     ** When reading the documentation, you are guaranteed to have some aliases
