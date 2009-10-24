@@ -1,0 +1,85 @@
+###########################################################################
+# Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                #
+# All rights reserved.                                                    #
+# Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    #
+# All rights reserved.                                                    #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions#
+#    nor the names of other contributors may be used to endorse or promote#
+#    products derived from this software without specific prior written   #
+#    permission.                                                          #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER #
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   #
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     #
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      #
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  #
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    #
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      #
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            #
+###########################################################################
+
+SubDir WONKA_TOP ;
+
+WONKA_LIB = libwonka ;
+COMM_LIB = libcomm ;
+
+COMMON_TOP  = $(WONKA_TOP)/vm-cmp/kernel/common ;
+COMMON_LIB  = libcommon ;
+
+if $(USE_ZLIB) = true {
+  Z_LIB = libz ;
+  HDRS += $(WONKA_TOP)/zlib/include ;
+}
+
+if $(MODULES) = true {
+
+  LOCATE_TARGET = $(OROOT)/
+/rudolph/bin ;
+  LOCATE_SOURCE = $(OROOT)/awt/rudolph/bin ;
+  
+  DEPENDS mod_awt.o : $(AWT_LIB).a ;
+  DEPENDS mika : mod_awt.o ;
+  
+  GenFile mod_awt.o : make_module : $(AR_TOOL) $(LD_TOOL) $(LOCATE_TARGET)/mod_awt.o $(LOCATE_TARGET)/$(AWT_LIB).a ;
+  
+  InstallFile $(BINDIR)/system : mod_awt.o ;
+}  
+
+HDRS += $(WONKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include ;
+
+SubInclude WONKA_TOP vm-cmp kernel $(SCHEDULER) ;
+SubInclude WONKA_TOP vm-cmp kernel common ;
+SubInclude WONKA_TOP vm-cmp fs $(FILESYSTEM) ;
+SubInclude WONKA_TOP vm-cmp network $(NETWORK) ;
+SubInclude WONKA_TOP core-vm ;
+SubInclude WONKA_TOP vm-cmp awt $(AWT) ;
+SubInclude WONKA_TOP tool ;
+SubInclude WONKA_TOP vm-ext jpda ;
+SubInclude WONKA_TOP vm-cmp fp $(FLOATING_POINT) ;
+# TODO: we probably only need this if SECURITY_PROVIDER is not 'none'
+SubInclude WONKA_TOP vm-cmp security provider any src native wonka security ;
+
+if $(MATH) = native {
+  SubInclude WONKA_TOP vm-cmp math $(MATH) ;
+}
+
+if $(USE_ZLIB) = true {
+  SubInclude WONKA_TOP zlib src ;
+}
+
+if $(JAVAX_COMM) = true {
+  SubInclude WONKA_TOP vm-ext comm ;
+}
+
