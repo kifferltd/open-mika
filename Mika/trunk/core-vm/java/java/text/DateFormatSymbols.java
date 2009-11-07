@@ -202,9 +202,7 @@ public class DateFormatSymbols implements Cloneable,Serializable {
     return zone.getDisplayName(zone.inDaylightTime(cal.getTime()),(longString ? TimeZone.LONG : TimeZone.SHORT));
   }
 
-  int parseTimeZoneString(Calendar cal, boolean longString, String dest, ParsePosition pos) {
-    int val = longString ? 1 : 2;
-    int val2 = val + 2;
+  int parseTimeZoneString(Calendar cal, String dest, ParsePosition pos) {
     int start = pos.getIndex();
     int matchlen = 0;
     String candidate;
@@ -212,25 +210,22 @@ public class DateFormatSymbols implements Cloneable,Serializable {
     TimeZone tz;
     int result = -1;
 
+    //System.out.println("parsing TimeZone from " + dest.substring(start));
     for (int i = 0 ; i < zoneStrings.length ; i++) {
-      candidate = zoneStrings[i][val];
-      candlen = candidate.length();
-      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
-        matchlen = candlen;
-        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
-        //System.out.println("Case 1: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
-        cal.setTimeZone(tz);
-        result = 1;
-      }
-
-      candidate = zoneStrings[i][val2];
-      candlen = candidate.length();
-      if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
-        matchlen = candlen;
-        tz = TimeZone.getTimeZone(zoneStrings[i][0]);
-        //System.out.println("Case 2: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
-        cal.setTimeZone(tz);
-        result = 0;
+      // We try the longest strings first, so in the order: 1 3 2 4 0
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          candidate = zoneStrings[i][j + 2 * k + 1];
+          //System.out.println("candidate[" + i + "][" + (j + 2 * k + 1) + "]: " + candidate);
+          candlen = candidate.length();
+          if (candlen > matchlen && dest.regionMatches(start,candidate,0,candlen)) {
+            matchlen = candlen;
+            tz = TimeZone.getTimeZone(zoneStrings[i][0]);
+            //System.out.println("Case 1: matched '" + candidate + "', canonical name = '" + zoneStrings[i][0] + ", tz = " + tz);
+            cal.setTimeZone(tz);
+            result = 1;
+          }
+        }
       }
 
       candidate = zoneStrings[i][0];

@@ -204,7 +204,8 @@ public class SimpleDateFormat extends DateFormat {
                   res = 0;
                 }
                 else {
-                  res = formatData.parseTimeZoneString(calendar, nr > 3, str, pos);
+                  res = formatData.parseTimeZoneString(calendar, str, pos);
+                  p = pos.getIndex()-1;
                 }
 
                 if(res == -1){
