@@ -48,7 +48,7 @@ class GetSystemProperty implements java.security.PrivilegedAction {
   private String value;
 
   /**
-   ** Our static initialiser fetches the twoe system properties which
+   ** Our static initialiser fetches the two system properties which
    ** everybody in this package seems to need ...
    */
   static {
@@ -59,7 +59,7 @@ class GetSystemProperty implements java.security.PrivilegedAction {
       AccessController.doPrivileged(gsp);
       DEFAULT_LOCALE = gsp.get();
 
-      gsp = new GetSystemProperty("user.timezone","GMT");
+      gsp = new GetSystemProperty("user.timezone");
       AccessController.doPrivileged(gsp);
       DEFAULT_TIMEZONE = gsp.get();
 
@@ -67,7 +67,7 @@ class GetSystemProperty implements java.security.PrivilegedAction {
     }
     else {
       DEFAULT_LOCALE = System.getProperty("com.acunia.default.Locale", "");
-      DEFAULT_TIMEZONE = System.getProperty("user.timezone", "GMT");
+      DEFAULT_TIMEZONE = System.getProperty("user.timezone");
     }
   }
 

@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2005, 2008 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2008, 2009 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -47,13 +47,23 @@ import java.util.TimeZone;
 
 public class TimeZoneResourceBundle extends ResourceBundle {
 
-  public static final int SHORT_NAME_STANDARD = 0;
-  public static final int LONG_NAME_STANDARD = 1;
-  public static final int SHORT_NAME_DAYLIGHT = 2;
-  public static final int LONG_NAME_DAYLIGHT = 3;
-
+  /**
+   * Mapping of timezone names onto either a SimpleTimeZone object or
+   * a String which is the name of another time zone for which the
+   * current key is an alias. Thus if a given key returns a String value
+   * the query should be repeated with the String value as key.
+   */
   private static Hashtable timeZones = new Hashtable();	
 
+  /**
+   * The name of the default time zone (may be an alias). If no default
+   * is specified in the mika.timezones file then GMT is used.
+   */
+  private static String defaultTimeZoneName = "GMT";
+
+  /**
+   * The static initializer reads in and processes the mika.timezones file.
+   */
   static {
     InputStream tzis = ClassLoader.getSystemResourceAsStream(System.getProperty("mika.timezones", "mika.timezones"));
     if (tzis == null) {
@@ -72,6 +82,28 @@ public class TimeZoneResourceBundle extends ResourceBundle {
     }
   }
 
+  /**
+   * Process one line of the mika.timezones file.
+   * <dl><dt>Line starting with '#'
+   *     <dd>Comment line, ignore.
+   * </dl>
+   * <p>Ohterwise the line must contain an equals sign; the string to the
+   * left of this we call 'lhs' and the string to the right 'rhs'.
+   * <dl><dt>lhs is "Default"
+   *     <dd>Store rhs as <code>defaultTimeZoneName</code>.
+   *     <dd>rhs starts with '+', '-', or a digit
+   *     <dt>Parse the rhs as a SimpleTimeZone definition; for details see
+   *         the <code>mika.timezones</code> file. The SimpleTimeZone
+   *         definition may optionally be followed by up to four quotes
+   *         strings which are the short and long names for the timezone
+   *         without and with daylight saving time. Set a mapping from
+   *         lhs to this SimpleTimeZone.
+   *     <dt>Otherwise (rhs does not start with sign or digit)
+   *     <dd>Treat as an alias: the rhs must correspond to the lhs of a
+   *         line which was already processed. Set a mapping from
+   *         lhs to this String.
+   * </dl>
+   */ 
   private static void processTimeZoneLine(String tzline) {
     if (tzline.length() == 0 || tzline.charAt(0) == '#') {
 
@@ -89,6 +121,10 @@ public class TimeZoneResourceBundle extends ResourceBundle {
     String rhs = tzline.substring(equalssign + 1).trim();
     if (rhs.length() == 0) {
       System.err.println("Nothing after '=' sign in mika.timezones line: " + tzline);
+      return;
+    }
+    if ("Default".equalsIgnoreCase(lhs)) {
+      defaultTimeZoneName = rhs;
       return;
     }
     char rhs1stchar = rhs.charAt(0);
@@ -301,5 +337,13 @@ public class TimeZoneResourceBundle extends ResourceBundle {
     return z;
   }
 
+  /**
+   * Get the default time zone, i.e. the one specified in the mika.timezones
+   * file as "Default=FOO", or GMT if no such line is present in the file.
+   * @return The default time zone.
+   */
+  public TimeZone getDefaultTimeZone() {
+    return getTimeZone(defaultTimeZoneName);
+  }
 }
 
