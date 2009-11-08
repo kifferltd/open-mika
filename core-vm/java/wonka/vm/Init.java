@@ -247,6 +247,10 @@ final class Init {
 
     String verboseProperty = System.getProperty("mika.verbose","");
     Wonka.setWonkaVerbose(verboseProperty);
+    if (verboseProperty.indexOf("startup") >= 0) {
+        verbose = true;
+    }
+
     debug("Init: loading extensions");
     Wonka.loadExtensions();
 
@@ -256,10 +260,6 @@ final class Init {
     }
     else if (debugLineNumbers.equalsIgnoreCase("false")) {
       Wonka.setMethodDebugInfo(false);
-    }
-
-    if (verboseProperty.indexOf("startup") >= 0) {
-        verbose = true;
     }
 
     application_class_loader = (URLClassLoader)ClassLoader.getSystemClassLoader();
@@ -362,15 +362,18 @@ final class Init {
   // Start JDWP (does nothing if JDWP not compiled in)
     JDWP.getInstance();
   // Set the default timezone to the default default
-    String user_timezone = System.getProperty("user.timezone", "GMT");
+    TimeZone defaultTimeZone = null;
+    String user_timezone = System.getProperty("user.timezone");
     debug("Init: user.timezone = " + user_timezone);
-    TimeZone defaultTimeZone = TimeZone.getTimeZone(user_timezone);
-    if (defaultTimeZone == null) {
-      System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
-      defaultTimeZone = TimeZone.getTimeZone("GMT");
+    if (user_timezone != null) {
+      defaultTimeZone = TimeZone.getTimeZone(user_timezone);
+      if (defaultTimeZone == null) {
+        System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
+      }
     }
-    debug("Init: setting default TimeZone to " + defaultTimeZone);
-    TimeZone.setDefault(TimeZone.getTimeZone(user_timezone));
+    TimeZone.setDefault(defaultTimeZone);
+    debug("Init: default TimeZone is " + TimeZone.getDefault());
+
     if (jar_class_path != null) {
       // [CG 20060330] HACK to make java.class.path to look right when -jar is used
       System.setProperty("java.class.path", jar_class_path);

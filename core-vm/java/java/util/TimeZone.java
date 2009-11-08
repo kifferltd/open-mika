@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
 * Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -42,7 +42,10 @@ abstract public class TimeZone implements Serializable, Cloneable {
   public static final int SHORT=0;
   public static final int LONG=1;
 
-  // Package-visible for the benefit of Gregoria,Calendar
+  /**
+   * The always-available GMT time zone.
+   * Package-visible for the benefit of GregorianCalendar
+   */
   static TimeZone GMT = new SimpleTimeZone(0, "GMT");
 
   private static TimeZone defaultTZ = GMT;
@@ -76,11 +79,15 @@ abstract public class TimeZone implements Serializable, Cloneable {
     defaultTZ = tz;
     if (tz == null) {
       if (getTimeZoneResourceBundle() != null) {
-        defaultTZ = tzResBundle.getTimeZone(GetSystemProperty.DEFAULT_TIMEZONE);
+        String defaultTZname = GetSystemProperty.DEFAULT_TIMEZONE;
+        if (defaultTZname == null) {
+          defaultTZ = tzResBundle.getDefaultTimeZone();
+        }
+        else {
+          defaultTZ = tzResBundle.getTimeZone(defaultTZname);
+        }
       }
-      else {
-       defaultTZ = GMT;
-      }
+      // else if no bundle found just leave defaultTZ as GMT.
     }
   }
 
