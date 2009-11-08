@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -41,19 +41,6 @@ import java.io.Serializable;
 public class DateFormatSymbols implements Cloneable,Serializable {
 
   private static final long serialVersionUID = -5987973545549424702L;
-/*
-  private static final String[] AMPMS = {"AM","PM"};
-  private static final String[] ERAS = {"BC","AD"};
-  private static final String LOCALPATTERNCHARS = "GyMdkHmsSEDFwWahKz";
-  private static final String[] MONTHS = {"January", "February", "March", "April", "May", "June", "July", "August",
-                                          "September", "October", "November", "December", ""};
-  private static final String[] SHORTMONTHS = { "Jan",  "Feb", "Mar", "Apr", "May", "Jun", "Jul",
-                                                "Aug", "Sep", "Oct", "Nov", "Dec", ""};
-  private static final String[] SHORTWEEKDAYS = {"", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  private static final String[] WEEKDAYS = {"", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-  private static final String[][] ZONESTRINGS = {{"GMT", "Greenwich Mean Time", "GMT", "Greenwich Mean Time", "GMT"}};
-*/
-
 
   //dictated by serial form ...
   private String[] ampms;
