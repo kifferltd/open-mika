@@ -39,6 +39,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -373,6 +374,28 @@ final class Init {
     }
     TimeZone.setDefault(defaultTimeZone);
     debug("Init: default TimeZone is " + TimeZone.getDefault());
+
+    String user_language = System.getProperty("user.language");
+    if (user_language != null) {
+      String defaultLocaleName = user_language;
+      String user_region = System.getProperty("user.region");
+      Locale defaultLocale = null;
+      Locale[] available_locales = Locale.getAvailableLocales();
+      for (int i = 0; i < available_locales.length; ++i) {
+        if (user_language.equals(available_locales[i].getLanguage())) {
+          if (user_region == null || user_region.equals(available_locales[i].getCountry())) {
+            defaultLocale = available_locales[i];
+            break;
+          }
+        }
+      }
+
+      if (defaultLocale == null) {
+        defaultLocale = user_region == null ? new Locale(user_language) : new Locale(user_language, user_region);
+      }
+      Locale.setDefault(defaultLocale);
+    }
+    debug("Init: default Locale is " + Locale.getDefault());
 
     if (jar_class_path != null) {
       // [CG 20060330] HACK to make java.class.path to look right when -jar is used
