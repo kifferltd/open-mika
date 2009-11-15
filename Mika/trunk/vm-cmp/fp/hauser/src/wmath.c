@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) 2003, 2007 by Chris Gray, /k/ Embedded Java Solutions.        *
+* Copyright (c) 2003, 2007, 2009 by Chris Gray, /k/ Embedded Java Solutions.  *
 * Parts of this file are derived from John R. Hauser's SoftFloat package, see *
 * the notice below.                                                           *
 ===============================================================================
@@ -2186,6 +2186,34 @@ wfp_float64 wfp_float64_sqrt( wfp_float64 a ) {
 /****************************************************************************/
 /* Remaining code by Chris Gray. Do not blame John Hauser for this rubbish! */
 /****************************************************************************/
+/**************************************************************************
+* Copyright (c) 2005, 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  *
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+**************************************************************************/
 
 wfp_float64 wfp_float64_sqrt(wfp_float64 arg) {
   wfp_int16 exp;
@@ -2262,6 +2290,12 @@ static wfp_float64 wfp_float64_sine(wfp_float64 theta) {
   wfp_float64 temp;
   wfp_float64 t1;
 
+  if (wfp_float64_lt(wfp_float64_abs(theta), D_TINY)) {
+
+    return theta;
+
+  }
+
   theta_squared = wfp_float64_mul(theta, theta);
   temp = theta_squared;
   t1 = wfp_float64_mul(temp, D_ONE_OVER_156);
@@ -2288,7 +2322,7 @@ static wfp_float64 wfp_float64_sine(wfp_float64 theta) {
 }
 
 /*
-** Reduce arg to the range -pi..pi, and classify into an octant (-4..4).
+** Reduce arg to the range -pi..pi.
 */
 static wfp_float64 wfp_float64_reduce_angle(wfp_float64 arg) {
   wfp_float64 cycles;
@@ -2306,11 +2340,12 @@ static wfp_float64 wfp_float64_reduce_angle(wfp_float64 arg) {
 
   roundedcycles = wfp_int64_to_float64(wfp_float64_to_int64_round_to_zero(cycles));
 
-  if (wfp_float64_lt(cycles, D_ZERO)) {
-    theta = wfp_float64_add(arg, wfp_float64_mul(roundedcycles, D_TWO_PI));
+  theta = wfp_float64_sub(arg, wfp_float64_mul(roundedcycles, D_TWO_PI));
+  if (wfp_float64_lt(theta, D_MINUS_PI)) {
+    theta = wfp_float64_add(theta, D_TWO_PI);
   }
-  else if (wfp_float64_lt(D_ZERO, cycles)) {
-    theta = wfp_float64_sub(arg, wfp_float64_mul(roundedcycles, D_TWO_PI));
+  else if (wfp_float64_lt(D_PI, theta)) {
+    theta = wfp_float64_sub(theta, D_TWO_PI);
   }
 
   return theta;
@@ -2333,43 +2368,37 @@ wfp_float64 wfp_float64_sin(wfp_float64 arg) {
   wfp_float64 temp;
   wfp_int32 phase;
 
-  if (wfp_float64_lt(wfp_float64_abs(arg), D_TINY)) {
-
-    return arg;
-
-  }
-
   theta = wfp_float64_reduce_angle(arg);
   phase = wfp_float64_to_int32_round_to_zero(wfp_float64_div(theta, D_QUARTER_PI));
 
   switch(phase) {
-  case 0:
-  case -1:
-
-    return wfp_float64_sine(theta);
-
-  case 1:
-    temp = wfp_float64_sine(wfp_float64_sub(D_HALF_PI, theta));
-    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
-
-    return wfp_float64_sqrt(temp);
-
   case -3:
+    temp = wfp_float64_sine(wfp_float64_add(D_PI, theta));
+    return wfp_float64_negate(temp);
+
   case -2:
+  case -1:
     temp = wfp_float64_sine(wfp_float64_negate(wfp_float64_add(D_HALF_PI, theta)));
     temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
 
     return wfp_float64_negate(wfp_float64_sqrt(temp));
 
+  case 0:
+    return wfp_float64_sine(theta);
+
+  case 1:
   case 2:
-    temp = wfp_float64_sine(wfp_float64_sub(theta, D_HALF_PI));
+    temp = wfp_float64_sine(wfp_float64_sub(D_HALF_PI, theta));
     temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
 
     return wfp_float64_sqrt(temp);
 
-  default: // 3
-
+  case 3:
     return wfp_float64_sine(wfp_float64_sub(D_PI, theta));
+
+  default: // +/-4
+    return D_ZERO;
+
   }
 }
 
@@ -2381,18 +2410,20 @@ wfp_float64 wfp_float64_cos(wfp_float64 arg) {
   wfp_float64 temp;
   wfp_int32 phase;
 
-  if (wfp_float64_lt(wfp_float64_abs(arg), D_TINY)) {
-
-    return D_ONE;
-
-  }
-
   theta = wfp_float64_reduce_angle(arg);
   phase = wfp_float64_to_int32_round_to_zero(wfp_float64_div(theta, D_QUARTER_PI));
 
   switch(phase) {
-  case 0:
+  case -3:
+    temp = wfp_float64_sine(wfp_float64_add(D_PI, theta));
+    temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
+    return wfp_float64_negate(wfp_float64_sqrt(temp));
+    
   case -1:
+  case -2:
+    return wfp_float64_sine(wfp_float64_add(D_HALF_PI, theta));
+
+  case 0:
     temp = wfp_float64_sine(theta);
     temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
 
@@ -2400,19 +2431,15 @@ wfp_float64 wfp_float64_cos(wfp_float64 arg) {
 
   case 1:
   case 2:
-
     return wfp_float64_sine(wfp_float64_sub(D_HALF_PI, theta));
 
-  case -2:
-  case -3:
-
-    return wfp_float64_sine(wfp_float64_add(D_HALF_PI, theta));
-
-  default:
+  case 3:
     temp = wfp_float64_sine(wfp_float64_sub(D_PI, theta));
     temp = wfp_float64_sub(D_ONE, wfp_float64_mul(temp, temp));
-
     return wfp_float64_negate(wfp_float64_sqrt(temp));
+
+  default: // +/-4
+    return D_MINUS_ONE;
   }
 }
 

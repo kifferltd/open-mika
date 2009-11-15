@@ -1,15 +1,34 @@
+/**************************************************************************
+* Copyright (c) 2005, 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written permission.*
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  *
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+**************************************************************************/
+
 #ifndef _WMATH_H
 #define _WMATH_H
-
-/****************************************************************************
-* Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. *
-* All rights reserved.  The contents of this file may not be copied or      *
-* distributed in any form without express written consent of the author.    *
-****************************************************************************/
-
-/*
-** $Id: wmath.h,v 1.2 2005/09/18 12:26:14 cvs Exp $
-*/
 
 #include <sys/types.h>
 
@@ -118,6 +137,7 @@ typedef long long           wfp_sbits64;
 #define D_HALF_PI                      (0x3ff921fb54442d18LL)
 #define D_QUARTER_PI                   (0x3fe921fb54442d18LL)
 #define D_MINUS_HALF_PI                (0xbff921fb54442d18LL)
+#define D_MINUS_PI                     (0xc00921fb54442d18LL)
 
 #define D_ONE_TO_THE_POWER_EIGHT       (0x4197d78400000000LL)
 #define D_LONG_MIN_VALUE               (0xc3e0000000000000LL)
