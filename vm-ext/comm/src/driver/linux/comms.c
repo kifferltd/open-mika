@@ -88,6 +88,14 @@ static struct termios sio7_newtermios;
 #define SIO7_DEFAULT_BITRATE B115200
 
 /*
+** SIO_POLL_TICKS defines the polling interval of the wdi_wait_for_event loop
+** in OSwald ticks.
+*/
+#ifndef SIO_POLL_TICKS
+#define SIO_POLL_TICKS 10
+#endif
+
+/*
 ** The pathnames for the eight serial ports
 */
 char * pathname[8];
@@ -713,8 +721,7 @@ w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, 
           */
           sio->newflags = 0;
 
-          x_async_block(fd, timeout);
-          //x_thread_sleep(x_millis2ticks(400));
+          x_async_block(fd, SIO_POLL_TICKS);
 
 
 
@@ -797,14 +804,7 @@ w_driver_status sio_query(w_device device, w_driver_ioctl query, w_word *reply, 
             sio->event_data = sio->newflags | changedflags<<16;
           }
 
-          /*
-          ** If we got this without setting `event' then nothing interesting
-          ** has happened, so we just go round the loop again ...
-          */
-
-          else if (changedflags) {
-            sio->oldflags ^= changedflags;
-          }
+          sio->oldflags = sio->newflags;
         }
       }
 
