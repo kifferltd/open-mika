@@ -120,8 +120,8 @@ void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
 
 void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
 
-  w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_remoteAddress); 
-  w_int port = getIntegerField(ThisImpl, F_PlainSocketImpl_remotePort);
+  w_instance address = getReferenceField(ThisImpl, F_SocketImpl_address); 
+  w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
 
   if (!address) {
     throwException(JNIEnv2w_thread(env), clazzNullPointerException, "address field is NULL");
@@ -246,9 +246,6 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
 #endif
   }
   
-}
-
-static sigusr_handler(int sig) {
 }
 
 w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
@@ -403,7 +400,7 @@ void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int uda
 void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
 
   w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_localAddress); 
-  w_int port = getIntegerField(ThisImpl, F_PlainSocketImpl_localPort);
+  w_int port = getIntegerField(ThisImpl, F_SocketImpl_localport);
   w_thread thread = JNIEnv2w_thread(env);
   
   if (! address) {
@@ -625,10 +622,10 @@ int PlainSocketImpl_accept(JNIEnv* env , w_instance ThisImpl, w_instance newImpl
     else {
       setIntegerField(newImpl, F_SocketImpl_localport, w_switchPortBytes(sa.sin_port));
     }
+
+    // TODO This only works for IPv4 !!!
     return ntohl(sa.sin_addr.s_addr);  	
   }
-
-  return sock;
 }
 
 w_int PlainSocketImpl_available(JNIEnv* env , w_instance ThisImpl) {

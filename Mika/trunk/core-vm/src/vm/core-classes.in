@@ -690,9 +690,6 @@ java/net/PlainSocketImpl
         ipv6          		Z
 	timeout			I
 	localAddress 		Ljava/net/InetAddress;
-	localPort    		I
-	remoteAddress		Ljava/net/InetAddress;
-	remotePort		I
         shutdown		(Z)V	PlainSocketImpl_shutdown
 	setKeepAlive		(Z)V	PlainSocketImpl_setKeepAlive
 	setNoDelay		(Z)V	PlainSocketImpl_setNoDelay

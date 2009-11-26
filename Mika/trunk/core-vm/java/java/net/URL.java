@@ -129,7 +129,7 @@ public final class URL implements java.io.Serializable {
   public URL (String location) throws MalformedURLException {
       int colon = location.indexOf(":");
       if (colon < 0) {
-        throw new MalformedURLException();
+        throw new MalformedURLException("missing colon in '" + location + "'");
       }
       int hash = location.lastIndexOf("#");
       if (hash < 0) {

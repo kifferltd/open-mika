@@ -100,9 +100,6 @@ class PlainSocketImpl extends SocketImpl {
   private WeakReference wr;
 
   InetAddress localAddress;
-  private int         localPort;
-  private InetAddress remoteAddress;
-  private int         remotePort;
   private boolean     ipv6;
   
   public PlainSocketImpl() { }
@@ -131,7 +128,7 @@ class PlainSocketImpl extends SocketImpl {
       return new Boolean(nodelay);
 
     case SO_BINDADDR:
-      return remoteAddress;
+      return address;
 
     case IP_TOS:
       return new Integer(getIpTos());
@@ -254,9 +251,9 @@ class PlainSocketImpl extends SocketImpl {
   }
 
   protected synchronized void connect(InetAddress address, int port) throws IOException {
-    remoteAddress = address;
-    remotePort = port;
-    if (remoteAddress instanceof Inet6Address) {
+    this.address = address;
+    this.port = port;
+    if (address instanceof Inet6Address) {
       ipv6 = true;
     }
     try {
@@ -275,9 +272,9 @@ class PlainSocketImpl extends SocketImpl {
     try {
       SocketUsers.put(this, Thread.currentThread());
       InetSocketAddress isa = (InetSocketAddress)sa;
-      remoteAddress = isa.addr;
-      remotePort = isa.port;
-      if (remoteAddress instanceof Inet6Address) {
+      this.address = isa.addr;
+      this.port = isa.port;
+      if (address instanceof Inet6Address) {
         ipv6 = true;
       }
       this.timeout = timeout;
@@ -295,7 +292,7 @@ class PlainSocketImpl extends SocketImpl {
   
   protected synchronized void bind(InetAddress host, int port) throws IOException {
     localAddress = host;
-    localPort = port;
+    localport = port;
     if(localAddress instanceof Inet6Address) ipv6 = true;
   }
   
