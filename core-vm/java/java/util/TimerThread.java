@@ -43,7 +43,7 @@ class TimerThread extends Thread implements Comparator {
   long waitTime;
 
   private long savedtime;
-  private long savedoffset;
+  private long savedoffset = Heartbeat.getTimeOffset();
 
   /**
   ** we use a WeakReference to reference the Timer.  When all references to the timer are gone, the thread can terminate.
@@ -180,8 +180,8 @@ class TimerThread extends Thread implements Comparator {
     if(delay < 0){
       throw new IllegalArgumentException("negative delay is not allowed");
     }
-    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis() - Heartbeat.getTimeOffset()));
-    scheduleAtTime(task, delay + System.currentTimeMillis() - Heartbeat.getTimeOffset(), period, fixedRate);
+    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis()));
+    scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate);
   }
 
   synchronized void scheduleAtTime(TimerTask task, long time, long period, boolean fixedRate){
