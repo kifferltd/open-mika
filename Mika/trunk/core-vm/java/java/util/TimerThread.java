@@ -43,7 +43,6 @@ class TimerThread extends Thread implements Comparator {
   long waitTime;
 
   private long savedtime;
-  private long savedoffset = Heartbeat.getTimeOffset();
 
   /**
   ** we use a WeakReference to reference the Timer.  When all references to the timer are gone, the thread can terminate.
@@ -109,19 +108,19 @@ class TimerThread extends Thread implements Comparator {
             }
 
             offset = Heartbeat.getTimeOffset();
-            if (offset > savedoffset) {
-              //System.out.println("TIMERTHREAD " + this + ": offset has increased, " + savedoffset + " -> " + offset);
+            if (offset > task.savedoffset) {
+              //System.out.println("TIMERTHREAD " + this + ": offset has increased, " + task.savedoffset + " -> " + offset);
             }
-            else if (offset < savedoffset) {
-              //System.out.println("TIMERTHREAD " + this + ": offset has decreased, " + savedoffset + " -> " + offset);
+            else if (offset < task.savedoffset) {
+              //System.out.println("TIMERTHREAD " + this + ": offset has decreased, " + task.savedoffset + " -> " + offset);
             }
             time0 = System.currentTimeMillis();
-            if (offset > savedoffset) {
+            if (offset > task.savedoffset) {
               time1 = time0 - offset;
-              time2 = time0 - savedoffset;
+              time2 = time0 - task.savedoffset;
             }
             else {
-              time1 = time0 - savedoffset;
+              time1 = time0 - task.savedoffset;
               time2 = time0 - offset;
             }
             if (time0 < savedtime) {
@@ -165,7 +164,7 @@ class TimerThread extends Thread implements Comparator {
           //System.out.println("TIMERTHREAD " + this +": putting task back in "+task);
           //System.out.println("TIMERTHREAD " + this + (task.fixed ? " fixed rate scheduling, next = " + (task.period + task.startTime) : " free scheduling, next = " + (task.period + time1)));
           task.startTime = task.period + (task.fixed ? task.startTime : time1);
-          savedoffset = offset;
+          task.savedoffset = offset;
           tasks.add(task);
         }
         else {
@@ -180,7 +179,7 @@ class TimerThread extends Thread implements Comparator {
     if(delay < 0){
       throw new IllegalArgumentException("negative delay is not allowed");
     }
-    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", Heartbeat.getTimeOffset() = " + Heartbeat.getTimeOffset() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis()));
+    // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis()));
     scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate);
   }
 
@@ -196,7 +195,8 @@ class TimerThread extends Thread implements Comparator {
     }
     //System.out.println("Adding task to timer "+task);
     //System.out.println("Setting " + task + ".startTime to " + time);
-    task.startTime = time;
+    task.savedoffset = Heartbeat.getTimeOffset()
+    task.startTime = time - task.savedoffset;
     task.period = period;
     task.fixed = fixedRate;
     tasks.add(task);
