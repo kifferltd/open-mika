@@ -319,7 +319,7 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
   
   if(libnameString) {
     libname = String2string(libnameString);
-    i = string_length(libname) * 3 + 1;
+    i = string_length(libname) * 3 + 7;
     name = allocMem(i);
     if (!name) {
       wabort(ABORT_WONKA, "Unable to allocate space for name\n");
