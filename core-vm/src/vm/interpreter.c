@@ -596,7 +596,7 @@ static w_boolean enough_free_memory(w_thread thread, w_int bytes) {
   w_int count = 0;
   w_boolean unsafe;
 
-  if (thread == gc_thread || gc_instance == NULL || x_mem_avail() - bytes > min_heap_free) {
+  if (thread == gc_thread || gc_instance == NULL || (signed)x_mem_avail() - bytes > (signed)min_heap_free) {
     return TRUE;
   }
 
@@ -605,7 +605,7 @@ static w_boolean enough_free_memory(w_thread thread, w_int bytes) {
   }
 
   unsafe = enterSafeRegion(thread);
-  while (count < 100 && x_mem_avail() - bytes <= min_heap_free) {
+  while (count < 100 && (signed)x_mem_avail() - bytes <= (signed)min_heap_free) {
     gc_reclaim(bytes, NULL);
     count += retry_incr * thread->jpriority;
   }
