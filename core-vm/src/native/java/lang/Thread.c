@@ -180,6 +180,8 @@ void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGr
     registerString(name);
   }
 
+  woempa(1, "Reclaiming 256 KB so that launching many threads => performing much GC\n");
+  gc_reclaim(262144, NULL);
   woempa(1, "Creating thread '%w' for group %j, is%s the system group.\n", name, parentThreadGroup, parentThreadGroup == I_ThreadGroup_system ? "" : " not");
   newthread = createThread(currentthread, thisThread, parentThreadGroup, name, stacksize);
   if (!newthread) {
