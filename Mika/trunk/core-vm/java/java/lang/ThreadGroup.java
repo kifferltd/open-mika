@@ -316,6 +316,7 @@ public class ThreadGroup {
   */
 
   public int enumerate(ThreadGroup[] list) {
+    if (children == null) return 0;
     int max = list.length;
     int i = children.size();
 
