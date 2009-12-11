@@ -12,8 +12,10 @@
 
 typedef  union {
   unsigned short W[4];
-  w_double value;
+  w_double wd;
   double d;
+  w_float wf;
+  float f;
 } math_constant;
 
 
@@ -38,9 +40,9 @@ w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_d
   char* pattern = "%.10f";
 
 #ifdef ARM
-  mc.value = value<<32 | value>>32;
+  mc.wd = value<<32 | value>>32;
 #else
-  mc.value = value;
+  mc.wd = value;
 #endif
   d = mc.d;
  
@@ -59,9 +61,12 @@ w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_d
 w_instance MathHelper_static_floatToString(JNIEnv *env, w_instance myClazz, w_float value) {
   char chars[64];
   int retval;
-  float f =  *((float*)&value);
+  math_constant mc;
+  float f ;
   char* pattern = "%.7f";
 
+  mc.wf = value;
+  f = mc.f;
   retval = snprintf(chars, 64, pattern,f);
 
   if (retval == -1 || retval >= 64) {
