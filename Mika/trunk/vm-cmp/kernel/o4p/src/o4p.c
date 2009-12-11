@@ -108,6 +108,7 @@ void x_scheduler_enable(void) {
 }
 
 extern x_size heap_size; 
+extern x_size heap_remaining; 
 
 static void x_setup_kernel(x_size millis) {
 
@@ -127,6 +128,7 @@ static void x_setup_kernel(x_size millis) {
 
   x_os_main(command_line_argument_count, command_line_arguments, o4pe->staticMemory);
 
+  heap_remaining = heap_size;
   x_mem_init();
   x_setup_timers(millis);
 
