@@ -108,6 +108,9 @@ switch $(CPU) {
   case arm : {
     CCFLAGS += -DARM ;
   }
+  case armel : {
+    CCFLAGS += -DARMEL ;
+  }
   case mips : {
     CCFLAGS += -DMIPS ;
   }
@@ -134,7 +137,7 @@ if $(HOSTOS) = uclinux {
 }
 
 if $(HOSTOS) = linux {
-  CCFLAGS += -DHAVE_TIMEDWAIT ;
+#  CCFLAGS += -DHAVE_TIMEDWAIT ;
 }
 
 if $(HOSTOS) = netbsd {

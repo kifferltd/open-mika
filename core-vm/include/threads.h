@@ -64,6 +64,13 @@ static const w_int bytes_per_call        = 660;
   #define STACK_FACTOR                       3
  #endif
 static const w_int bytes_per_call        = 660;
+#elif defined(ARMEL)
+ #if defined(JSPOT)
+  #define STACK_FACTOR                       5
+ #else
+  #define STACK_FACTOR                       3
+ #endif
+static const w_int bytes_per_call        = 660;
 #elif defined(MIPS)
 #define STACK_FACTOR                        4
 static const w_size bytes_per_call       = 720;
