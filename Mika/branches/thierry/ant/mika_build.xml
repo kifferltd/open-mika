@@ -1,0 +1,333 @@
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- Copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java Solutions.    -->
+<!-- All rights reserved.                                                    -->
+<!--                                                                         -->
+<!-- Redistribution and use in source and binary forms, with or without      -->
+<!-- modification, are permitted provided that the following conditions      -->
+<!-- are met:                                                                -->
+<!-- 1. Redistributions of source code must retain the above copyright       -->
+<!--    notice, this list of conditions and the following disclaimer.        -->
+<!-- 2. Redistributions in binary form must reproduce the above copyright    -->
+<!--    notice, this list of conditions and the following disclaimer in the  -->
+<!--    documentation and/or other materials provided with the distribution. -->
+<!-- 3. Neither the name of /k/ Embedded Java Solutions nor the names of     -->
+<!--    other contributors may be used to endorse or promote products        -->
+<!--    derived from this software without specific prior written permission.-->
+<!--                                                                         -->
+<!-- THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          -->
+<!-- WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    -->
+<!-- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    -->
+<!-- IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  -->
+<!-- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     -->
+<!-- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    -->
+<!-- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         -->
+<!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   -->
+<!-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    -->
+<!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  -->
+<!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<project name="Mika build" default="build" basedir="..">
+  <!--<property file="${user.home}/.ant.properties"/>-->
+  <property name="ant.config.dir" value="${basedir}/Configuration/ant/"/>
+  <property name="vm.cmp.dir" value="${basedir}/vm-cmp/"/>
+  <property name="vm.ext.dir" value="${basedir}/vm-ext/"/>
+  <property name="build.dir" value="${basedir}/build/${ANT.PLATFORM}/"/>
+  <property name="jam.output.dir" value="${build.dir}jam/"/>
+  <property name="class.dir" value="${build.dir}class/"/>
+  <property name="empty.dir" value="${build.dir}empty/"/>
+  <property name="release.dir" value="${basedir}/release/${ANT.PLATFORM}/"/>
+  <property name="test.release.dir" value="${basedir}/release/test/${ANT.PLATFORM}/"/>
+  <property name="release.lib.dir" value="${release.dir}lib/mika/"/>
+  <property name="release.ext.dir" value="${release.lib.dir}ext/"/>
+  <property name="mika.bin.dir" value="${release.dir}bin/"/>
+  <property name="log.dir" value="${build.dir}log/"/>
+  <property name="vm.java.dir" value="${basedir}/core-vm/java"/>
+  <property name="vm.resource.dir" value="${basedir}/core-vm/resource/system"/>
+  <property name="rudolph.resource.dir" value="${vm.cmp.dir}awt/rudolph/resource/"/>
+  <property name="ant.dir" value="${basedir}/ant/"/>
+
+  <target name="prepare">
+    <subant antfile="build.xml" buildpath="${ant.dir}"/>
+    <property name="tools.dir" value="${basedir}/build/tools/"/>
+    <taskdef name="settingchecker" classname="be.kiffer.mika.ant.BuildSettingsChecker"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="propertychecker" classname="be.kiffer.mika.ant.ValueChecker"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="propertysetter" classname="be.kiffer.mika.ant.PropertySetter"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="doawk" classname="be.kiffer.mika.ant.AwkWrapper"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="condjavac" classname="be.kiffer.mika.ant.ConditionalJavac"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="condcall" classname="be.kiffer.mika.ant.ConditionalCall"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="flag" classname="be.kiffer.mika.ant.FlagTask"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <taskdef name="jamflags" classname="be.kiffer.mika.ant.JamFlags"
+             classpath="${tools.dir}/ant-mika.jar"/>
+  </target>
+
+  <!-- main build target --> 
+  <target name="build" depends="prepare,check-build-env">
+    <echo message="Platform = '${ANT.PLATFORM}'"/>
+    <mkdir dir="${class.dir}"/>
+    <mkdir dir="${empty.dir}"/>
+    <mkdir dir="${release.ext.dir}"/>
+    <property name="JAVA_DEBUG" value="false" />
+    <antcall target="arg.check"/>
+    <antcall target="build-wre"/>
+    <antcall target="build-ext"/>
+    <antcall target="jam-mika"/>
+    <antcall target="copy-resources"/>
+  </target>
+
+  <target name="source" depends="prepare,check-build-env">
+    <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+    <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
+
+    <jar destfile="${release.dir}/src.jar">
+      <fileset dir="${basedir}/vm-ext/comm/java"/>
+      <fileset dir="${crypto.dir}"/>
+      <fileset dir="${vm.ext.dir}beans/java"/>
+      <fileset dir="${vm.java.dir}"/>
+      <fileset dir="${security.dir}"/>
+      <fileset dir="${security.provider.dir}"/>
+      <fileset dir="${security.provider.any.dir}"/>
+      <fileset dir="${math.dir}"/>
+      <fileset dir="${awt.dir}"/>
+      <fileset dir="${jar.dir}"/>
+    </jar>
+    <mkdir dir="${release.dir}doc"/>
+    <condcall target="gen.javadoc" condition="${do.javadoc}"/>
+  </target>
+
+  <target name="gen.javadoc">
+    <javadoc packagenames="java.*,javax.*"
+             destdir="${release.dir}doc"
+             author="true"
+             version="true"
+             use="true"
+             excludepackagenames="com.*,gnu.*,wonka.*"
+             windowtitle="${ant.project.name} API Description">
+      <bottom><![CDATA[<i>Copyright &#169; 2006 /K/ Embedded Java Solutions. All Rights Reserved.</i><br>
+         For more information please contact <a href="mailto:k-info@kiffer.be">k-info@kiffer.be</a>
+         or <br>check our website <A HREF="http://www.k-embedded-java.com/">http://www.k-embedded-java.com/</A>
+           ]]></bottom>
+      <fileset dir="${basedir}/vm-ext/comm/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${crypto.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${vm.ext.dir}beans/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${vm.java.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.provider.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${security.provider.any.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${math.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${awt.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${jar.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+    </javadoc>
+ </target>
+ 
+  <!-- build helper targets ... -->
+  <target name="check-build-env">
+    <fail message="please provide a platform definition ex: -DANT.PLATFORM=pc" unless="ANT.PLATFORM"/>
+    <available file="${ant.config.dir}${ANT.PLATFORM}"
+               property="platform.file"
+               value="${ant.config.dir}${ANT.PLATFORM}"/>
+    <fail message="No platform definition '${ANT.PLATFORM}' found in ${ant.config.dir}" unless="platform.file"/>
+    <property file="${platform.file}"/>
+    <fail message="Please specify your UNICODE_SUBSETS config. example: 0 or 999" unless="UNICODE_SUBSETS"/>
+
+    <propertychecker property="SECURITY" values="none|java2"/>
+    <propertychecker property="JAR" values="none|java"/>
+    <propertychecker property="MATH" values="native|java"/>
+    <propertychecker property="AWT" values="none|rudolph"/>
+    <condition property="JAVA2_SECURITY_BUT_NO_JARSIGNING">
+      <and>
+        <equals arg1="${SECURITY}" arg2="java2"/>
+        <equals arg1="${JAR}" arg2="none"/>
+      </and>
+    </condition>
+    <fail message="SECURITY=java2 is not compatible with JAR=none." if="JAVA2_SECURITY_BUT_NO_JARSIGNING"/>
+    <condition property="SECURITY_PROVIDER.MISSING">
+      <and>
+        <equals arg1="${JAR}" arg2="java"/>
+        <or>
+          <not><isset property="SECURITY_PROVIDER"/></not>
+          <equals arg1="${SECURITY_PROVIDER}" arg2="none"/>
+        </or>
+      </and>
+    </condition>
+    <fail message="JAR=java requires a SECURITY_PROVIDER setting, e.g. harmony (not 'none')." if="SECURITY_PROVIDER.MISSING"/>
+    <condition property="AWT.DEF.MISSING">
+      <and>
+        <equals arg1="${AWT}" arg2="rudolph"/>
+        <not><isset property="AWT_DEF"/></not>
+      </and>
+    </condition>
+    <fail message="Please specify a AWT_DEF config. example: xsim,fdev" if="AWT.DEF.MISSING"/>
+  </target>
+
+  <target name="build-wre">
+    <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+
+    <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
+    <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.dir}:${security.provider.any.dir}"
+                    value="${security.provider.dir}"/>
+
+    <!-- special case: if JAR == java ==> include javax.crypto -->
+    <propertysetter property="jar.dirs" arg1="${JAR}" arg2="java" elsevalue="${vm.cmp.dir}jar/${JAR}/"
+                    value="${vm.cmp.dir}jar/${JAR}/:${crypto.dir}"/>
+
+    <javac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
+           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}"/>
+
+    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
+           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           srcdir="${vm.ext.dir}beans/java/" condition="${JAVA_BEANS}"/>
+
+    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
+               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               srcdir="${crypto.dir}" condition="${JAVAX_CRYPTO}"/>
+
+    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
+               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               srcdir="${basedir}/vm-ext/comm/java/" condition="${JAVAX_COMM}"/>
+
+    <copy todir="${class.dir}">
+      <fileset  dir="${vm.java.dir}">
+        <include name="**/*.properties"/>
+      </fileset>
+    </copy>
+    <jar destfile="${release.lib.dir}/wre.jar"
+         manifest="${basedir}/core-vm/resource/wre.mf"
+         basedir="${class.dir}"/>
+  </target>
+
+  <target name="build-ext">
+    <condcall target="build-micro-io" condition="${MICRO_IO}"/>
+  </target>
+
+  <target name="build-micro-io">
+    <property name="micro.io.class.dir" value="${build.dir}/ext/microio"/>
+    <property name="micro.io.dir" value="${basedir}/extension/microedition/io/"/>
+    <mkdir dir="${micro.io.class.dir}"/>
+    <javac compiler="jikes" destdir="${micro.io.class.dir}" bootclasspath="${class.dir}"
+           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           srcdir="${micro.io.dir}java"/>
+    <jar destfile="${release.ext.dir}/microedition-io.jar"
+         manifest="${micro.io.dir}/micro-io.mf"
+         basedir="${micro.io.class.dir}"/>
+  </target>
+
+  <!-- copy all resources to release.lib.dir + helper targets-->
+  <target name="copy-resources">
+    <copy todir="${release.lib.dir}">
+      <fileset  dir="${vm.resource.dir}"/>
+    </copy>
+    <condcall target="copy-rudolph-files" condition="${AWT}" value="rudolph"/>
+  </target>
+
+  <target name="copy-rudolph-files">
+    <copy todir="${release.lib.dir}">
+      <fileset  dir="${rudolph.resource.dir}" excludes="font/*complete.pcf">
+        <include name="*"/>
+        <include name="font/*.pcf"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="arg.check">
+    <property name="settings.file" value="${build.dir}/ant_build.settings"/>
+    <settingchecker file="${settings.file}" task="cleanplatform"/>
+  </target>
+
+  <target name="cleanplatform">
+    <delete dir="${build.dir}"/>
+    <delete dir="${release.dir}"/>
+    <mkdir dir="${class.dir}"/>
+    <mkdir dir="${empty.dir}"/>
+    <mkdir dir="${release.ext.dir}"/>
+  </target>
+
+  <!-- jamming mika targets -->
+  <target name="run-awk">
+    <property name="awk.dir" value="${basedir}/tool/script/"/>
+    <property name="awk.out.dir" value="${jam.output.dir}mika/bin/"/>
+    <mkdir dir="${awk.out.dir}"/>
+    <property name="vm.src.dir" value="${basedir}/core-vm/src/vm/"/>
+    <doawk output="${awk.out.dir}core-classes.h" script="${awk.dir}core-classes-h.awk" 
+           input="${vm.src.dir}core-classes.in"/>
+    <doawk output="${awk.out.dir}core-classes.c" script="${awk.dir}core-classes-c.awk" 
+           input="${vm.src.dir}core-classes.in"/>
+    <doawk output="${awk.out.dir}unicode.c" script="${awk.dir}unicode.awk" 
+           input="${vm.src.dir}UnicodeData-Latest.txt"
+           args="-vblox=${UNICODE_SUBSETS}"/>
+
+    <property name="math.in.dir" value="${vm.cmp.dir}math/${MATH}/"/>
+    <doawk output="${awk.out.dir}math-classes.h" script="${awk.dir}math-classes-h.awk" 
+           input="${math.in.dir}math-classes.in" condition="${MATH}" value="native"/>
+    <doawk output="${awk.out.dir}math-classes.c" script="${awk.dir}math-classes-c.awk" 
+           input="${math.in.dir}math-classes.in" condition="${MATH}" value="native"/>
+
+    <property name="awt.in.dir" value="${vm.cmp.dir}awt/${AWT}/src/"/>
+    <doawk output="${awk.out.dir}awt-classes.h" script="${awk.dir}awt-classes-h.awk" 
+           input="${awt.in.dir}awt-classes.in" condition="${AWT}" value="rudolph"/>
+    <doawk output="${awk.out.dir}awt-classes.c" script="${awk.dir}awt-classes-c.awk" 
+           input="${awt.in.dir}awt-classes.in" condition="${AWT}" value="rudolph"/>
+
+    <property name="xcomm.in.dir" value="${vm.ext.dir}comm/"/>
+    <doawk output="${awk.out.dir}uart-classes.h" script="${awk.dir}uart-classes-h.awk" 
+           input="${xcomm.in.dir}uart-classes.in" condition="${JAVAX_COMM}" value="true"/>
+    <doawk output="${awk.out.dir}uart-classes.c" script="${awk.dir}uart-classes-c.awk" 
+           input="${xcomm.in.dir}uart-classes.in" condition="${JAVAX_COMM}" value="true"/>
+</target>
+
+  <target name="jam-mika">
+    <fail message="Please define the JAM.PLATFORM in your ant config !" unless="JAM.PLATFORM"/>
+    <flag property="DEBUG" flag="DEBUG.FLAG"/>
+    <flag property="STATIC" flag="STATIC.FLAG"/>
+    <flag property="AWT_DEF" flag="AWT.FLAGS"/>
+    <exec executable="svnversion" outputproperty="svn.revision">
+      <arg value="."/>
+      <arg value="-n"/>
+    </exec>
+
+    <mkdir dir="${log.dir}"/>
+    <mkdir dir="${mika.bin.dir}"/>
+    <mkdir dir="${jam.output.dir}"/>
+    <mkdir dir="${test.release.dir}"/>
+
+    <antcall target="run-awk" />
+    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
+    <property environment="env"/>
+    <jamflags property="jam.flags"/>
+    <property name="config.jam.flags" 
+              value="-sAWT=${AWT} -sMATH=${MATH} -sJAVAX_COMM=${JAVAX_COMM} ${DEBUG.FLAG} ${STATIC.FLAG} ${AWT.FLAGS}"/>
+    <property name="base.jam.flags"
+              value="-sOROOT=${jam.output.dir} -sBINDIR=${release.dir}bin/ -sVERSION_STRING=${MIKA.VERSION} -sINSTALLTESTDIR=${test.release.dir}"/> 
+    <echo message="jam.flags = ${jam.flags}"/>
+    <echo message="config.jam.flags = ${config.jam.flags}"/>
+    <echo message="base.jam.flags = ${base.jam.flags}"/>
+
+    <property name="log.file" value="${log.dir}/build-${ANT.PLATFORM}.log"/>
+    <exec dir="${basedir}" executable="jam"
+          failonerror="true" output="${log.file}" append="false">
+      <arg line="${jam.flags} ${config.jam.flags} ${base.jam.flags} install"/>
+      <env key="WONKA_TOP" value="${basedir}"/>
+      <env key="PATH" path="${current.toolchain}:${env.PATH}"/>
+    </exec>
+    <gzip src="${log.file}" destfile="${log.dir}/build-${ANT.PLATFORM}.log.gz"/>
+    <delete file="${log.file}"/>
+  </target>
+</project>

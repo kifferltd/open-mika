@@ -1,0 +1,13 @@
+CPU_MIPS = 1000 ;
+DEFAULT_HEAP_SIZE default = 64M ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = true ;
+
+HOSTOS = linux ;
+CPU = x86 ;
+SCHEDULER = o4p ;
+
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+JDWP = true ;
+

@@ -1,0 +1,19 @@
+###########################################################################
+#                                                                         #
+# Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          #
+# All rights reserved.                                                    #
+#                                                                         #
+###########################################################################
+
+
+#
+# $Id: Jamfile,v 1.2 2006/09/07 19:59:51 cvsroot Exp $
+#
+
+SubDir WONKA_TOP core-vm hal hostos none src ;
+
+LOCATE_TARGET = $(OROOT)/mika/bin ;
+
+Library $(WONKA_LIB) : environment.c ;
+
+

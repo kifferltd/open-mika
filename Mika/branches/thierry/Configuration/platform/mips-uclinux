@@ -1,0 +1,13 @@
+AWT = none ;
+CPU_MIPS = 200 ;
+DEFAULT_HEAP_SIZE default = 16M ;
+MATH = native ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = false ;
+
+CPU = mips ;
+HOSTOS = uclinux ;
+SCHEDULER = o4p ;
+STATIC = true ;
+

@@ -1,0 +1,291 @@
+% ------------------------------------------------------------------------+
+% Copyright (c) 2001 by Punch Telematix. All rights reserved.             |
+%                                                                         |
+% Redistribution and use in source and binary forms, with or without      |
+% modification, are permitted provided that the following conditions      |
+% are met:                                                                |
+% 1. Redistributions of source code must retain the above copyright       |
+%    notice, this list of conditions and the following disclaimer.        |
+% 2. Redistributions in binary form must reproduce the above copyright    |
+%    notice, this list of conditions and the following disclaimer in the  |
+%    documentation and/or other materials provided with the distribution. |
+% 3. Neither the name of Punch Telematix nor the names of other           |
+%    contributors may be used to endorse or promote products derived      |
+%    from this software without specific prior written permission.        |
+%                                                                         |
+% THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          |
+% WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    |
+% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    |
+% IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       |
+% FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            |
+% CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    |
+% SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         |
+% BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   |
+% WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    |
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  |
+% IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           |
+% ------------------------------------------------------------------------+
+
+%
+% $Id: mailbox.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Mailboxes}
+
+\subsubsection{Operation}
+
+Mailboxes are elements that allow inter thread communication of a single 32
+bit variable, e.g. a pointer. Mailboxes work the same as queues with a
+message area size of 1 word.
+
+So a mailbox can have two states:
+
+\begin{enumerate}
+\item The mailbox' slot be empty, in which case a new message can be posted
+to the mailbox. A thread trying to get a message from the mailbox will be
+blocked until a message comes available or until the timeout window expires.
+A thread trying to send a message to the mailbox will not block, and the
+mailbox will come into the next state.
+\item The mailbox' slot can contain a 32 bit message, in which case a thread
+that wants to send something to the mailbox will be blocked, until the slot
+becomes available or until the timeout window expires. A thread trying to
+read a message from the mailbox will not block, the available message will
+be delivered immediately and the slot will become again empty so that the
+mailbox will again be in the first state.
+\end{enumerate}
+
+\subsubsection{Mailbox Structure Definition}
+
+The structure definition of a mailbox is as follows:
+
+\bcode
+\begin{verbatim}
+ 1: typedef struct x_Mailbox * x_mailbox;
+ 2:
+ 3: typedef struct x_Mailbox {
+ 4:   x_Event Event;
+ 5:   volatile void * message;
+ 6: } x_Mailbox;
+\end{verbatim}
+\ecode
+
+The relevant fields in the mailbox structure are the following:
+
+\begin{itemize}
+\item \txt{x\_mailbox$\rightarrow$Event} This is the universal event structure that is a field
+in all threadable components or elements. It controls the synchronized access
+to the mailbox component and the signalling between threads to indicate changes
+in the mailbox structure.
+\item \txt{x\_mailbox$\rightarrow$message} The pointer to the 32 bit
+message that is contained in the mailbox. When there is no message in the
+mailbox, this field contains \txt{NULL}.
+\end{itemize}
+
+
+\subsubsection{Creating a Mailbox}
+
+A mailbox is created by means of the following call:
+
+\txt{x\_status x\_mailbox\_create(x\_mailbox mailbox);}
+
+The mailbox referred to by the \txt{mailbox} argument will be initialized. The
+memory for the mailbox must be allocated and provided by the caller.
+
+\subsubsection{Deleting a Mailbox}
+
+A mailbox can be deleted with the following call:
+
+\txt{x\_status x\_mailbox\_delete(x\_mailbox mailbox);}
+
+The different return values that this call can produce are summarized in
+table \ref{table:rs_mailbox_delete}.
+
+\footnotesize
+\begin{longtable}{||l|p{9cm}||}
+\hline
+\hfill \textbf{Return Value} \hfill\null & \textbf{Meaning}  \hfill \\ 
+\hline \endhead
+\hline
+\endfoot
+\endlastfoot
+\hline
+
+
+% \begin{table}[!ht]
+%   \begin{center}
+%     \begin{tabular}{||>{\footnotesize}l<{\normalsize}|>{\footnotesize}c<{\normalsize}||} \hline
+%     \textbf{Return Value} & \textbf{Meaning} \\ \hline
+
+\txt{xs\_success} & The call succeeded and the mailbox was deleted. There were no threads that
+were trying to do a mailbox operation. \\
+
+\txt{xs\_waiting} & The mailbox structure has been deleted while there where threads waiting on
+the mailbox for sending or receiving a message. All these threads have been notified of the delete and have acknowledged this fact. This means that when this call returns, no threads are actively waiting on the mailbox. \\
+
+\txt{xs\_incomplete} & the mailbox structure has been deleted, but there were some threads waiting on it to send or receive a message and at least one of these threads did NOT acknowledge the deletion. This means that at least one thread is falsely assuming that the mailbox is still active. The caller of this function should better keep the memory of the mailbox around... \\
+
+\txt{xs\_deleted} & The mailbox structure has been deleted by another thread during the call. In
+other words, somebody beat us. This is the return value when another thread has deleted the mailbox when this tried was trying an operation on it. \\
+
+\txt{xs\_bad\_element} & The passed reference \txt{mailbox} doesn't refer to a mailbox event. Probable cause is that the mailbox has been deleted or the passed event structure is not properly set up or is not functional anymore. \\
+
+ \hline 
+\multicolumn{2}{c}{} \\
+\caption{Return Status for \txt{x\_mailbox\_delete}}
+\label{table:rs_mailbox_delete}
+\end{longtable}
+\normalsize
+
+%    \hline
+%     \end{tabular}
+%     \caption{Return Status for \txt{x\_mailbox\_delete}}
+%     \label{table:rs_mailbox_delete}
+%   \end{center}
+% \end{table}
+
+\subsubsection{Sending a Message to a Mailbox}
+
+Data is delivered to a mailbox with the following call:
+
+\txt{x\_status x\_mailbox\_send(x\_mailbox mailbox, void * message, x\_sleep timeout);}
+
+This call will try to send data to the single slot in a mailbox that is referred to by the
+\txt{mailbox} argument. If the slot became empty, during the \txt{timeout} window, the word pointed to
+by \txt{message} will be put into the slot of the mailbox. If the slot did not become available within the
+\txt{timeout} window, the status \txt{xs\_no\_instance} is returned. 
+
+If within the \txt{timeout} window, the slot did not become available, the returned status will
+be \txt{xs\_no\_instance}.
+
+If a \txt{timeout} value is given from within an interrupt handler or timer handler that was not
+\txt{x\_no\_wait}, the status \txt{xs\_bad\_context} is returned.
+
+If this call resulted in the thread waiting for
+the slot in the mailbox to come available, and the mailbox was deleted during the
+\txt{timeout} value, the returned status will be \txt{xs\_deleted}.
+
+The different return values that this call can produce are summarized in
+table \ref{table:rs_mailbox_send}.
+
+\footnotesize
+\begin{longtable}{||l|p{9cm}||}
+\hline
+\hfill \textbf{Return Value} \hfill\null & \textbf{Meaning} \hfill \\ 
+\hline
+\endhead
+\hline
+\endfoot
+\endlastfoot
+\hline
+
+
+
+% \begin{table}[!ht]
+%   \begin{center}
+%     \begin{tabular}{||>{\footnotesize}l<{\normalsize}|>{\footnotesize}c<{\normalsize}||} \hline
+%     \textbf{Return Value} & \textbf{Meaning} \\ \hline
+
+\txt{xs\_success} & The call succeeded and message was delivered into the mailbox slot. \\
+
+\txt{xs\_no\_instance} & The message slot of the mailbox did not become empty during the timeout window. \\
+
+\txt{xs\_bad\_context} & A \txt{timeout} argument other than \txt{x\_no\_wait} was given from within a timer or interrupt handler context. \\
+
+\txt{xs\_deleted} & The mailbox structure has been deleted by another thread during the call. \\
+
+\txt{xs\_bad\_element} & The passed reference \txt{mailbox} doesn't refer to a mailbox event or the mailbox structure became invalid, e.g. because it was deleted. \\
+
+\hline 
+\multicolumn{2}{c}{} \\
+\caption{Return Status for \txt{x\_mailbox\_send}}
+\label{table:rs_mailbox_send}
+\end{longtable}
+\normalsize
+
+
+
+
+%     \hline
+%     \end{tabular}
+%     \caption{Return Status for \txt{x\_mailbox\_send}}
+%     \label{table:rs_mailbox_send}
+%   \end{center}
+% \end{table}
+
+\subsubsection{Receiving a Message from a Mailbox}
+
+A message is received from a mailbox by means of the following call:
+
+\txt{x\_status x\_mailbox\_receive(x\_mailbox mailbox, void * message, x\_sleep timeout);}
+
+This call will try to receive a message from a mailbox that is referred to by the
+\txt{mailbox} argument. If there was no message available in the mailbox, during the
+\txt{timeout} window, this message will
+be copied into the variable pointed to by \txt{message}. If no message was available within the
+\txt{timeout} window, the status \txt{xs\_no\_instance} is returned. 
+
+If a \txt{timeout} value is given from within an interrupt handler or timer handler that was not
+\txt{x\_no\_wait}, the status \txt{xs\_bad\_context} is returned.
+
+If this call resulted in the thread waiting for
+a message to become available, and the mailbox was deleted during the
+\txt{timeout} value, the returned status will be \txt{xs\_deleted}.
+
+The different return values that this call can produce are summarized in
+table \ref{table:rs_mailbox_receive}.
+
+
+\footnotesize
+\begin{longtable}{||l|p{9cm}||}
+\hline
+\hfill \textbf{Return Value} \hfill\null & \textbf{Meaning} \hfill \\ 
+\endhead
+\hline
+\endfoot
+\endlastfoot
+\hline
+
+
+
+% \begin{table}[!ht]
+%   \begin{center}
+%     \begin{tabular}{||>{\footnotesize}l<{\normalsize}|>{\footnotesize}c<{\normalsize}||} \hline
+%     \textbf{Return Value} & \textbf{Meaning} \\ \hline
+
+\txt{xs\_success} & The call succeeded and message points to the 32 bit message that was available in the \txt{mailbox} argument given. \\
+
+\txt{xs\_no\_instance} & There became no message available in the \txt{mailbox} during the
+\txt{timeout} window. \\
+
+\txt{xs\_bad\_context} & A \txt{timeout} argument other than \txt{x\_no\_wait} was given from within a timer or interrupt handler context. \\
+
+\txt{xs\_deleted} & The \txt{mailbox} structure has been deleted by another thread during the call. \\
+
+\txt{xs\_bad\_element} & The passed reference \txt{mailbox} does not refer to a mailbox event. \\
+
+\hline 
+\multicolumn{2}{c}{} \\
+\caption{Return Status for \txt{x\_mailbox\_receive}}
+\label{table:rs_mailbox_receive}
+\end{longtable}
+\normalsize
+
+
+
+%     \hline
+%     \end{tabular}
+%     \caption{Return Status for \txt{x\_mailbox\_receive}}
+%     \label{table:rs_mailbox_receive}
+%   \end{center}
+% \end{table}
+
+
+
+
+
+
+
+
+
+
+
