@@ -1304,10 +1304,6 @@ static void _check_top(int l, x_chunk chunk) {
 
 }
 
-void _assert(const char *p) {
-  wabort(ABORT_WONKA%s\n", p); 
-}
-
 static void _check_chunk(int l, x_chunk chunk) { 
 
   x_units size;

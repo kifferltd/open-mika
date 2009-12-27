@@ -295,7 +295,9 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
     gettimeofday(&now, NULL);
     diff = ((w_long)now.tv_usec - (w_long)before.tv_usec) / 1000LL + ((w_long)now.tv_sec - (w_long)before.tv_sec) * 1000LL;
     if (diff < 0 || diff > 2 * millis) {
+#ifdef HAVE_TIMEDWAIT
       system_time_offset += diff - millis;
+#endif
     }
   }
 }

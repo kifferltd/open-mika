@@ -398,15 +398,20 @@ public abstract class URLConnection {
     }
 
     contentType = getContentType();
+System.out.println(this + ".getContent(): contentType = " + contentType);
     if (contentType == null) {
       contentType = guessContentTypeFromName(url.getFile());
+System.out.println(this + ".getContent(): contentType = " + contentType);
       if (contentType == null) {
          contentType = guessContentTypeFromStream(new BufferedInputStream(getInputStream()));
+System.out.println(this + ".getContent(): contentType = " + contentType);
         if (contentType == null) {
           return null;
         }
       }
     }
+System.out.println(this + ".getContent(): contentType = " + contentType);
+System.out.println(this + ".getContent(): handler = " + getContentHandler(contentType));
 
     return getContentHandler(contentType).getContent(this);
   }
@@ -432,6 +437,7 @@ public abstract class URLConnection {
 
   private ContentHandler getContentHandler(String type) throws IOException {
     ContentHandler cth;
+System.out.println(this + ".getContentHandler(" + type + "): factory = " + factory);
     if (factory != null) {
       cth = factory.createContentHandler(type);
       if (!(cth instanceof ContentHandler)) {
@@ -444,6 +450,7 @@ public abstract class URLConnection {
     }
     //get wonka classes to save the day (or at least try ...)
     // TODO: import logic from Apache Harmony implementation?
+System.out.println(this + ".getContentHandler(" + type + "): (new wonka.net.DefaultContentHandlerFactory()).createContentHandler(" + type + ")");
     cth = (new wonka.net.DefaultContentHandlerFactory()).createContentHandler(type);
     if(cth != null) {
       return cth;
@@ -466,6 +473,7 @@ public abstract class URLConnection {
   	
   	
     public String getContentTypeFor(String filename){
+System.out.println(this + "getContentTypeFor(" + filename + "): filenameMap = " + filenameMap);
       if (filenameMap != null) {
         String extension = "html";
           if (!filename.endsWith("/")) {

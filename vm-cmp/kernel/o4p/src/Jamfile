@@ -42,7 +42,7 @@ switch $(HOSTOS) {
 Library $(OSWALD_LIB) : mem.c ;
   }
   case linux : {
-Library $(OSWALD_LIB) : memnommu.c ;
+Library $(OSWALD_LIB) : mem.c ;
   }
   case uclinux : {
 Library $(OSWALD_LIB) : memnommu.c ;
