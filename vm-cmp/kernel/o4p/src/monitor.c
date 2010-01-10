@@ -225,19 +225,17 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
       loempa(1, "%p (%t) is in ((x_monitor)%p)->interrupted, removing it and setting status to xs_interrupted\n", current, current->xref, monitor);
       while(removeFromWordset((w_wordset*)&monitor->interrupted, (w_word)current));
 
-      pthread_mutex_unlock(&monitor->mon_mutex);
-
       loempa(2, "Thread %p has been interrupted", current);
     }
     else {
       status = xs_success;
-
-      unsetFlag(current->flags, TF_TIMEOUT);
-      monitor->owner = current;
-      monitor->count = current->waiting_with;
-
-      loempa(2, "Thread %p has re-acquired monitor %p with count %i\n", current, monitor, monitor->count);
     }
+
+    unsetFlag(current->flags, TF_TIMEOUT);
+    monitor->owner = current;
+    monitor->count = current->waiting_with;
+
+    loempa(2, "Thread %p has re-acquired monitor %p with count %i\n", current, monitor, monitor->count);
 
     current->waiting_on = NULL;
     current->waiting_with = 0;

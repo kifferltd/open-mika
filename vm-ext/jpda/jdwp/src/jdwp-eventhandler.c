@@ -1266,9 +1266,6 @@ void jdwp_internal_suspend_all(void) {
   while(isSet(blocking_all_threads, BLOCKED_BY_GC | BLOCKED_BY_JITC)) {
     woempa(7, "GC/JITC is blocking all threads, not possible to suspend VM yet.\n");
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-    }
   }
   woempa(2, "JDWP: setting blocking_all_threads to BLOCKED_BY_JDWP\n");
   setFlag(blocking_all_threads, BLOCKED_BY_JDWP);

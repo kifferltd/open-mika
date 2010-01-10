@@ -561,9 +561,6 @@ void waitForClassConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
 
   while (*c == RESOLVING_CLASS) {
     status = x_monitor_wait(clazz->resolution_monitor, 2);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -782,9 +779,6 @@ void waitForFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) 
 
   while (*c == RESOLVING_FIELD) {
     status = x_monitor_wait(clazz->resolution_monitor, 2);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -966,9 +960,6 @@ void waitForMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v)
 
   while (*c == RESOLVING_METHOD) {
     status = x_monitor_wait(clazz->resolution_monitor, 2);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -1143,9 +1134,6 @@ void waitForIMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v
 
   while (*c == RESOLVING_IMETHOD) {
     status = x_monitor_wait(clazz->resolution_monitor, 2);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -1209,9 +1197,7 @@ static w_string getClassConstantName(w_clazz clazz, w_int idx) {
 
   x_monitor_eternal(clazz->resolution_monitor);
   while (clazz->tags[idx] == RESOLVING_CLASS) {
-    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (clazz->tags[idx] == CONSTANT_CLASS) {
@@ -1297,9 +1283,7 @@ w_boolean getMemberConstantStrings(w_clazz clazz, w_int idx, w_string *declaring
   x_monitor_eternal(clazz->resolution_monitor);
 
   while (CONSTANT_STATE(clazz->tags[idx]) == RESOLVING_CONSTANT) {
-    if (x_monitor_wait(clazz->resolution_monitor, 2) == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (CONSTANT_STATE(clazz->tags[idx]) == UNRESOLVED_CONSTANT && clazz->tags[idx] != COULD_NOT_RESOLVE) {

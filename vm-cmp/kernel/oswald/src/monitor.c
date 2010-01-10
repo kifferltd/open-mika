@@ -579,6 +579,12 @@ x_status x_monitor_kick_all(x_monitor monitor) {
 ** and will not own the monitor in that case! Normally x_monitor_wait will
 ** always return with the monitor locked for that thread, but not in the
 ** interrupted case.
+** [CG 20100110] I have changed this annoying behaviour in o4p, if you want
+** to revive the native OSwald then you need to change this (or change every
+** call to x_monitor_wait in Mika). Before this we were always executing a
+** x_monitor_enter if x_monitor_wait returned xs_interrupted, but in fact 
+** this is unsafe; we have entered the monitor recursively, and then we
+** need to enter it the same number of times after the interrupt wait.
 **
 ** When a thread has been stopped or interrupted, waiting on a monitor, all
 ** subsequent attempts to stop it will return xs_no_instance, even when the

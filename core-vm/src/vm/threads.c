@@ -653,9 +653,6 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
     while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
       woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
       status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-      if (status == xs_interrupted) {
-        status = x_monitor_eternal(safe_points_monitor);
-      }
       checkOswaldStatus(status);
     }
   }
@@ -759,9 +756,6 @@ void _gcSafePoint(w_thread thread
   while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
     woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      status = x_monitor_eternal(safe_points_monitor);
-    }
     checkOswaldStatus(status);
   }
   ++ number_unsafe_threads;

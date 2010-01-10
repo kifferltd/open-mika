@@ -219,11 +219,7 @@ void waitMonitor(w_instance instance, x_sleep timeout) {
     if (status == xs_not_owner) {
       throwException(thread, clazzIllegalMonitorStateException, "not owner");
     }
-    else if (status == xs_interrupted) {
-      status = x_monitor_eternal(mon);
-      woempa(7, "re-entered monitor: x_monitor_eternal returned %d\n",status);
-    }
-    else if (status) {
+    else if (status != xs_success && status != xs_interrupted) {
       woempa(9, "x_monitor_wait returned %s\n",x_status2char(status));
       throwException(thread, clazzInternalError, "x_monitor_wait() returned %s", x_status2char(status));
     }

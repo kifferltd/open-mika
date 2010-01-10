@@ -117,9 +117,6 @@ static void threadEntry(void * athread) {
     }
     while (gc_phase == GC_PHASE_PREPARE || gc_phase == GC_PHASE_MARK) {
       monitor_status = x_monitor_wait(gc_monitor, 10);
-      if (monitor_status == xs_interrupted) {
-        monitor_status = x_monitor_eternal(gc_monitor);
-      }
     }
   }
 
