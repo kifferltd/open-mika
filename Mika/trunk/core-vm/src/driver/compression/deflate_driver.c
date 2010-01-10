@@ -152,13 +152,7 @@ static w_void unzip_termDevice(w_device device) {
     // wait till thread notifies us
     while (unzip->state == COMPRESSION_THREAD_RUNNING) {
       s = x_monitor_wait(&unzip->ready, COMPRESSION_WAIT_TICKS);
-      if (s == xs_interrupted) {
-        s = x_monitor_eternal(&unzip->ready);
-        if (s != xs_success) {
-           wabort(ABORT_WONKA, "re-entering unzip->ready, error %d in monitor\n", s);
-        }
-      }
-      else if (s != xs_success && s != xs_no_instance) {
+      if (s != xs_success && s != xs_no_instance && s != xs_interrupted) {
         wabort(ABORT_WONKA, "waiting for notify, error %d in monitor\n", s);
       }
     }
@@ -603,6 +597,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
           s = x_monitor_wait(&zip->ready, COMPRESSION_WAIT_TICKS);
           if (s == xs_interrupted) {
             wprintf("x_monitor_wait returned xs_interrupted\n");
+            x_monitor_exit(&zip->ready);
             return wds_internal_error;
           }
           else if (s != xs_success && s != xs_no_instance) {

@@ -917,9 +917,6 @@ hastalavista:
         while (l->resets_completed == l->resets_requested) {
           woempa(1, "Trying ...\n");
           s = x_monitor_wait(&l->ready, COMPRESSION_WAIT_TICKS);
-          if (s == xs_interrupted) {
-            x_monitor_eternal(&l->ready);
-          }
         }
       }
  

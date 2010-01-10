@@ -88,7 +88,8 @@ w_instance ReferenceQueue_remove(JNIEnv *env, w_instance this) {
   w_fifo fifo = getWotsitField(this, F_ReferenceQueue_fifo);
   x_monitor lock = getWotsitField(this, F_ReferenceQueue_lock);
   w_thread thread = JNIEnv2w_thread(env);
-  w_instance ref;
+  w_instance ref = NULL;
+  w_boolean interrupted = FALSE;
 
   if(!lock || !fifo) {
    return NULL;
@@ -100,30 +101,33 @@ w_instance ReferenceQueue_remove(JNIEnv *env, w_instance this) {
     return NULL;
   }
 
-  while(1) {
+  while(!interrupted) {
     ref = ReferenceQueue_poll(env,this);
-    if(ref == NULL) {
-     x_monitor_eternal(lock);
-      if(isEmptyFifo(fifo)) {
-        x_status status = x_monitor_wait(lock, x_eternal);
-        if(status == xs_interrupted) {
-          throwException(thread, clazzInterruptedException, NULL);
-          thread->flags &= ~WT_THREAD_INTERRUPTED;
-          return NULL;
-        }
-      }
-      x_monitor_exit(lock);
-    } else {
+    if (ref) {
       return ref;
     }
+
+   x_monitor_eternal(lock);
+    if(isEmptyFifo(fifo)) {
+      x_status status = x_monitor_wait(lock, x_eternal);
+      if(status == xs_interrupted) {
+        throwException(thread, clazzInterruptedException, NULL);
+        thread->flags &= ~WT_THREAD_INTERRUPTED;
+        interrupted = TRUE;
+      }
+    }
+    x_monitor_exit(lock);
   }
+
+  return NULL;
 }
 
 w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime) {
   w_fifo fifo = getWotsitField(this, F_ReferenceQueue_fifo);
   x_monitor lock = getWotsitField(this, F_ReferenceQueue_lock);
   w_thread thread = JNIEnv2w_thread(env);
-  w_instance ref;
+  w_instance ref =NULL;
+  w_boolean interrupted = FALSE;
 
   if(!lock || !fifo) {
    return NULL;
@@ -135,7 +139,7 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
     return NULL;
   }
 
-  while(1) {
+  while(!interrupted) {
     ref = ReferenceQueue_poll(env,this);
     if(ref) {
       return ref;
@@ -155,7 +159,7 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
         if(status == xs_interrupted) {
           throwException(thread, clazzInterruptedException, NULL);
           thread->flags &= ~WT_THREAD_INTERRUPTED;
-          return NULL;
+          interrupted = TRUE;
         }
       }
       x_monitor_exit(lock);
@@ -163,6 +167,8 @@ w_instance ReferenceQueue_removeJ(JNIEnv *env, w_instance this, w_long waittime)
       waittime -= diff;
     }
   }
+
+  return NULL;
 }
 
 void ReferenceQueue_create(JNIEnv *env, w_instance this) {

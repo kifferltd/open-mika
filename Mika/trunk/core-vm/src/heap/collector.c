@@ -326,8 +326,7 @@ static void gc_monitor_eternal(int line) {
 #define GC_MONITOR_WAIT(t) gc_monitor_wait(t,__LINE__);
 static void gc_monitor_wait(x_sleep t, int line) {
   x_status s = x_monitor_wait(gc_monitor, t);
-  if (s == xs_interrupted) GC_MONITOR_ETERNAL
-  else if (s) PRINT_MONITOR_STATUS(line, "x_monitor_wait", s);
+  if (s != xs_success && s != xs_interrupted) PRINT_MONITOR_STATUS(line, "x_monitor_wait", s);
 }
 
 #define GC_MONITOR_NOTIFY gc_monitor_notify(__LINE__);
@@ -1589,9 +1588,6 @@ static void prepreparation(w_thread thread) {
   while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
     woempa(7, "JDWP is blocking all threads, not possible to run yet.\n");
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-    }
   }
 #endif
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
@@ -1599,9 +1595,6 @@ static void prepreparation(w_thread thread) {
   while (number_unsafe_threads > 0) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-    }
   }
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);

@@ -412,9 +412,6 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   while(state == CLAZZ_STATE_INITIALIZING) {
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-    if (monitor_status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
     state = getClazzState(clazz);
   }
 

@@ -244,10 +244,7 @@ static void acquireJitcLock(w_thread thread) {
     woempa(7, "waiting for %d other threads to reach a safe point\n", number_unsafe_threads - 1);
 
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-    if (status == xs_interrupted) {
-      x_monitor_eternal(safe_points_monitor);
-    }
-    else {
+    if (status != xs_interrupted) {
       checkOswaldStatus(status);
     }
 

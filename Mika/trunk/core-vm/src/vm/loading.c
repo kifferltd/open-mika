@@ -382,9 +382,6 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     while(state < CLAZZ_STATE_LOADED) {
       woempa(1, "Another thread is loading %k (%p), %t waiting\n", current, current, thread);
       status = x_monitor_wait(monitor, CLASS_STATE_WAIT_TICKS);
-      if (status == xs_interrupted) {
-        x_monitor_eternal(monitor);
-      }
       state = getClazzState(current);
     }
     x_monitor_exit(monitor);

@@ -878,9 +878,6 @@ w_int mustBeReferenced(w_clazz clazz) {
     }
 
     monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-    if (monitor_status == xs_interrupted) {
-      x_monitor_eternal(clazz->resolution_monitor);
-    }
     state = getClazzState(clazz);
   }
 
