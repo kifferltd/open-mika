@@ -137,7 +137,7 @@ if $(HOSTOS) = uclinux {
 }
 
 if $(HOSTOS) = linux {
-#  CCFLAGS += -DHAVE_TIMEDWAIT ;
+  CCFLAGS += -DHAVE_TIMEDWAIT ;
 }
 
 if $(HOSTOS) = netbsd {
