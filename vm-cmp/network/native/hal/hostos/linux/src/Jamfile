@@ -22,10 +22,10 @@
 ###########################################################################
 
 #
-# $Id: Jamfile,v 1.2 2006/09/08 11:57:20 cvsroot Exp $
+# TODO: this file is no longer used, delete it!
 #
 
-SubDir WONKA_TOP vm-cmp network native hal hostos linux src ;
+# SubDir WONKA_TOP vm-cmp network native hal hostos linux src ;
 
-Library $(WONKA_LIB) : network.c ;
+# Library $(WONKA_LIB) : network.c ;
 

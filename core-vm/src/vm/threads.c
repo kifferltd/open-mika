@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -32,6 +32,7 @@
 
 #include <string.h>
 
+#include "argument.h"
 #include "arrays.h"
 #include "core-classes.h"
 #include "exception.h"
@@ -78,8 +79,6 @@ w_thread W_Thread_sysInit;
 w_thread W_Thread_system;
 
 jclass   class_ThreadGroup;
-
-static x_Mutex idLock;
 
 /*
 ** Hashtable relating host OS thread control block to our w_Thread structure.
@@ -318,16 +317,6 @@ const char *running_thread_report(x_thread x) {
 
   return "!!! Wonka thread xref is NULL !!!";
 
-}
-
-void initKernel() {
-
-  install_term_handler();
-  x_mutex_create(&idLock);
-
-  x_thread_create(&ur_thread_x_Thread, 
-    startWonka, NULL, ur_thread_stack, 
-    SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
 }
 
 #define INIT_CLASS "wonka.vm.Init"
