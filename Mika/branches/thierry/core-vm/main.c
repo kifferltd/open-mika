@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java               *
+* Parts copyright (c) 2009, 2010 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -335,18 +335,24 @@ void registerExternals(void) {
 #endif
 }
 
+static JavaVM *vm;
+static JNIEnv *env;
+
+#ifdef OSWALD
 /*
-** x_os_main is the function called by Oswald/o4p during system
-** startup.  At this point we have no threads, no heap, no nothing: just
+** x_os_main is the function called by Oswald during system startup.
+**  At this point we have no threads, no heap, no nothing: just
 ** a pointer to the first byte of memory after the Oswald/o4p data segment.
 ** We initialize all our static memory structures and the heap, and then
 ** start our initial threads.
 */
 
 w_ubyte* x_os_main(int argument_count, char ** arguments, w_ubyte* FirstUnusedMemory) {
-  initWonka();
+  woempa(7, "Calling JNI_CreateJavaVM() ...\n");
+  JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
   return FirstUnusedMemory;
 }
+#endif
 
 #ifndef O4P
 static int tick_detents[] = {500, 333, 250, 200, 167, 125, 100, 83, 50, 40, 30, 25, 20, 15, 10, 5, 0};
@@ -433,10 +439,12 @@ int main(int argc, char * argv[]) {
   command_line_argument_count = argc - 1;
   command_line_arguments = argv + 1;
 
-  startNetwork();
-
   x_oswald_init(max_heap_size, tick_millis);
-  // Hm. We get here for O4P, but not for OSwald. This needs to change.
+#ifdef OSWALD
+  // Never returns! calls us back in x_os_main() instead
+#else
+  woempa(7, "Calling JNI_CreateJavaVM() ...\n");
+  JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
 
 #ifdef USE_NANOSLEEP
   ts.tv_sec = 1;
@@ -448,6 +456,7 @@ int main(int argc, char * argv[]) {
     nanosleep(&ts, NULL);
 #else
     usleep(1000000);
+#endif
 #endif
   }
 

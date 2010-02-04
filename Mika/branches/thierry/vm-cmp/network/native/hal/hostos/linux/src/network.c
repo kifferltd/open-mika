@@ -27,14 +27,13 @@
 **************************************************************************/
 
 /*
-** $Id: network.c,v 1.2 2005/07/02 12:49:54 cvs Exp $
-*/
+** TODO: this file isn't used any more, delete it!
 
 #include <oswald.h>
 #include <network.h>
 #include <wonka.h>
 
-int (*x_socket)(int domain, int type, int protocol);
+//int (*x_socket)(int domain, int type, int protocol);
 int (*x_connect)(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
 int (*x_send)(int s, const void *msg, size_t len, int flags);
 int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
@@ -47,7 +46,7 @@ ssize_t (*x_read)(int fd, void *buf, size_t count);
 ssize_t (*x_write)(int fd, const void *buf, size_t count);
 
 void startNetwork(void) {
-  x_socket = socket;
+//  x_socket = socket;
   x_connect = connect;
   x_send = send;
   x_sendto = sendto;
@@ -59,4 +58,5 @@ void startNetwork(void) {
   x_read = read;
   x_write = write;
 }
+*/
 

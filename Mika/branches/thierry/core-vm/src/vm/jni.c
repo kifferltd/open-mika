@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -40,7 +40,9 @@
 #include "bar.h"
 #include "clazz.h"
 #include "core-classes.h"
+#include "deflate_driver.h"
 #include "descriptor.h"
+#include "device.h"
 #include "fields.h"
 #include "hashtable.h"
 #include "heap.h"
@@ -55,6 +57,8 @@
 #include "ts-mem.h"
 #include "methods.h"
 #include "misc.h"
+
+extern x_Mutex woempaMutex;
 
 w_hashtable globals_hashtable;
 
@@ -3188,6 +3192,71 @@ jint JNI_GetCreatedJavaVMs(JavaVM **vmBuf, jsize bufLen, jsize *nVMs) {
 }
 
 jint JNI_CreateJavaVM(JavaVM **p_VM, JNIEnv **p_env, void *vm_args) {
+  (void)x_mutex_create(&woempaMutex);
+
+#ifdef NATIVE_FP
+  F_NAN = strtof("NAN", NULL);
+  D_NAN = strtod("NAN", NULL);
+#endif
+
+  initLocks();
+  initModules();
+#ifdef MODULES
+  x_symtab_kernel();
+#endif
+  install_term_handler();
+
+  x_formatter('w', print_string);
+  x_formatter('k', print_clazz_short);
+  x_formatter('K', print_clazz_long);
+  x_formatter('j', print_instance_short);
+  x_formatter('J', print_instance_long);
+  x_formatter('m', print_method_short);
+  x_formatter('M', print_method_long);
+  x_formatter('v', print_field_short);
+  x_formatter('V', print_field_long);
+  x_formatter('e', print_exception);
+  x_formatter('t', print_thread_short);
+  x_formatter('T', print_thread_long);
+  x_formatter('y', print_descriptor);
+
+  make_ISO3309_CRC_table();
+
+  args_read();
+
+  startStrings();
+
+  startDeviceRegistry();
+  startDriverRegistry();
+  
+#ifdef FSENABLE
+#ifdef ECOS
+  registerDevice("hdb", "hdb", 0, wdt_block_random);
+  registerDriver((w_driver)&image_driver);
+#else
+  registerDevice("hda", "hda", 0, wdt_block_random);
+  registerDriver((w_driver)&disk_driver);
+#endif // ECOS
+#endif
+
+  /* Initialize known filesystems */
+  
+#if (defined(FSENABLE)) 
+  init_e2fs(); 
+#endif
+  startVFS();
+
+  registerDevice("unzip_", "zip", 0, wdt_byte_serial);
+  registerDevice("zip_", "zip", 20, wdt_byte_serial);
+  registerExternals();
+ 
+  registerDriver((w_driver)&deflate_driver);
+
+  haveWonkaThreads = WONKA_TRUE;
+
+#ifdef JSPOT
+  jspot_init();
+#endif
 
   globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   if (!globals_hashtable) {

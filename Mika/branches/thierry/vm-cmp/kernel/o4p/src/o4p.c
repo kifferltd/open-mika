@@ -1,5 +1,8 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* All rights reserved.                                                    *
+* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,21 +12,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "oswald.h"
@@ -48,10 +52,9 @@ void *start_routine(void *thread_ptr);
 
 /*
 ** This function is called once for setting up the Oswald emulation environment.
-** It is called from main, before going to x_os_main. It prepares the
-** linked list of timers and threads. If not called explicitly, the default
-** policy is used (which is the best for the OS), so only call this when you
-** know what you are doing.
+** If it is not called explicitly, ** the default policy is used
+** (which is the best for the OS), so only call this
+** when you know what you are doing.
 */
 
 void setScheduler(int scheduler) {
@@ -120,14 +123,6 @@ static void x_setup_kernel(x_size millis) {
 
   pthread_key_create(&x_thread_key, NULL);  
 
-  /*
-  ** Let the application define some threads. Remember that the oswald kernel doesn't start
-  ** scheduling until after the completion of this function. So we set the 
-  ** condition.
-  */
-
-  x_os_main(command_line_argument_count, command_line_arguments, o4pe->staticMemory);
-
   heap_remaining = heap_size;
   x_mem_init();
   x_setup_timers(millis);
@@ -150,6 +145,7 @@ static void x_setup_kernel(x_size millis) {
       thread->state = xt_ready;
       pthread_create(&thread->o4p_pthread, &thread->attributes, start_routine, (void *)thread);
     }
+
   }
 
 #ifdef SIGINT_IS_WABORT
@@ -160,6 +156,9 @@ static void x_setup_kernel(x_size millis) {
     wabort(ABORT_WONKA, "Unable to set up signal handler!\n");
   }
 #endif
+
+  // [CG 20100205] Not for now, we differentiate at the VM level instead
+  //x_os_main(command_line_argument_count, command_line_arguments, o4pe->staticMemory);
 } 
 
 extern x_size max_heap_bytes;

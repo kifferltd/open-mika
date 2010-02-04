@@ -29,16 +29,14 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
-/*
-** $Id: argument.h,v 1.1.1.1 2004/07/12 14:07:45 cvs Exp $
-*/
-
 #include "jni.h"
 
 extern Wonka_InitArgs  system_InitArgs;
 extern char            *bootclasspath;
 
 void args_read(void);
+
+#define w_getenv getenv
 
 #endif /* _ARGUMENT_H */
 

@@ -28,9 +28,9 @@
 SubDir WONKA_TOP vm-cmp network native ;
 
 NETWORK_TOP  = $(WONKA_TOP)/vm-cmp/network/native ;
-NETWORK_LIB  = libnetwork ;
+# NETWORK_LIB  = libnetwork ;
 
 HDRS += $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/include ;
 
-SubInclude WONKA_TOP vm-cmp network native hal hostos $(HOSTOS) src ;
+# SubInclude WONKA_TOP vm-cmp network native hal hostos $(HOSTOS) src ;
 

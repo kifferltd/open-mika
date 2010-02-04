@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -512,7 +512,6 @@ inline static w_instance JNIEnv2Thread(JNIEnv *env) {
 
 extern w_hashtable thread_hashtable;
 
-void initKernel(void);
 void startKernel(void);
 w_thread w_threadCreate(w_thread parent, w_object root);
 
