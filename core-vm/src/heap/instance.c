@@ -314,7 +314,6 @@ typedef struct w_Aas {
 */
 
 static void fillParentArray(w_thread thread, w_aas parent) {
-  w_boolean unsafe;
   w_int x;
 
   if (parent->next) {
@@ -326,12 +325,8 @@ static void fillParentArray(w_thread thread, w_aas parent) {
       }
       parent->next->Array[F_Array_length] = parent->next->length;
 
-      unsafe = enterUnsafeRegion(thread);      
       setArrayReferenceField_unsafe(parent->Array, parent->next->Array, x);
       popLocalReference(thread->top);
-      if (!unsafe) {
-        enterSafeRegion(thread);
-      }
       fillParentArray(thread, parent->next);
     }
   }
@@ -408,6 +403,7 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   w_Aas * Aas;
   w_clazz current;
   w_instance result;
+  w_boolean unsafe;
 
   //threadMustBeSafe(thread);
 
@@ -427,7 +423,7 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   }
 
   current = clazz;
-  woempa(1, "Allocating an instance of %k (%d dimensions)\n", clazz, dimensions);
+  woempa(7, "Allocating an instance of %k (%d dimensions)\n", clazz, dimensions);
   for (i = 0; i < dimensions; i++) {
     jlong size = ((jlong)clazz->previousDimension->bits) * ((jlong) lengths[0]);
     if (size > 0x7fffffff) {
@@ -437,18 +433,22 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
     }
     Aas[i].next = (i == dimensions - 1) ? NULL : Aas + i + 1;
     Aas[i].length = lengths[i];
-    woempa(1, "Dimension %d has length %d, bits/element is %d\n", i, lengths[i], current->previousDimension->bits);
+    woempa(7, "Dimension %d has length %d, bits/element is %d\n", i, lengths[i], current->previousDimension->bits);
 
     Aas[i].clazz = current;
     current = current->previousDimension;
   }
 
+  unsafe = enterUnsafeRegion(thread);      
   woempa(7, "%k root size = %d\n", clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * lengths[0]));
   result = internalAllocArrayInstance(thread, clazz, 1 + roundBitsToWords(clazz->previousDimension->bits * lengths[0]));
   Aas[0].Array = result;
   if (result) {
     result[F_Array_length] = Aas[0].length;
     fillParentArray(thread, Aas);
+  }
+  if (!unsafe) {
+    enterSafeRegion(thread);
   }
 
   x_mem_free(Aas);
