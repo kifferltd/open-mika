@@ -41,6 +41,7 @@
     <mkdir dir="${tools.class.dir}" />
     <mkdir dir="${test.dir}" />
     <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}">
+      <property name="SECURITY" value="none"/>
       <property name="SECURITY_PROVIDER" value="none"/>
     </subant>
     <javac compiler="jikes" destdir="${tools.class.dir}" 
