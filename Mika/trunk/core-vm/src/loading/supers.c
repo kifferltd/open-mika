@@ -320,12 +320,28 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
-  if (state < CLAZZ_STATE_LOADED) {
-    wabort(ABORT_WONKA, "%K must be loaded before it can be SupersLoaded\n", clazz);
+  switch (state) {
+  case CLAZZ_STATE_UNLOADED:
+    wabort(ABORT_WONKA, "%K must be loaded before it can be linked\n", clazz);
+
+  case CLAZZ_STATE_VERIFYING:
+  case CLAZZ_STATE_VERIFIED:
+    wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
+
+  default:
   }
 
   threadMustBeSafe(thread);
 #endif
+
+  x_monitor_eternal(clazz->resolution_monitor);
+  state = getClazzState(clazz);
+
+  while(state == CLAZZ_STATE_LOADING) {
+    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    state = getClazzState(clazz);
+  }
+  x_monitor_exit(clazz->resolution_monitor);
 
   if (state == CLAZZ_STATE_BROKEN) {
   // TODO - is the right thing to throw?

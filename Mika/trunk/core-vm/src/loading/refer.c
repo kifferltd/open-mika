@@ -290,6 +290,7 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
 
   threadMustBeSafe(currentWonkaThread);
 
+  woempa(7, "Cloning %M in %K\n", original, clazz);
   ++clazz->numDeclaredMethods;
   if (clazz->own_methods) {
     clazz->own_methods = reallocMem(clazz->own_methods, (clazz->numDeclaredMethods) * sizeof(w_Method));
@@ -823,8 +824,15 @@ w_int mustBeReferenced(w_clazz clazz) {
   x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
-  if (state < CLAZZ_STATE_LOADED) {
-    wabort(ABORT_WONKA, "%K must be loaded before it can be Referenced\n", clazz);
+  switch (state) {
+  case CLAZZ_STATE_UNLOADED:
+    wabort(ABORT_WONKA, "%K must be loaded before it can be linked\n", clazz);
+
+  case CLAZZ_STATE_VERIFYING:
+  case CLAZZ_STATE_VERIFIED:
+    wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
+
+  default:
   }
 
   if (exceptionThrown(thread)) {
@@ -833,6 +841,15 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   threadMustBeSafe(thread);
 #endif
+
+  x_monitor_eternal(clazz->resolution_monitor);
+  state = getClazzState(clazz);
+
+  while(state == CLAZZ_STATE_LOADING) {
+    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    state = getClazzState(clazz);
+  }
+  x_monitor_exit(clazz->resolution_monitor);
 
   if (state == CLAZZ_STATE_BROKEN) {
   // TODO - is the right thing to throw?
