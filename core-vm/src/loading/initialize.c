@@ -365,9 +365,31 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
-  case CLAZZ_STATE_LOADING:
     wabort(ABORT_WONKA, "%K must be loaded before it can be Initialized\n", clazz);
 
+  case CLAZZ_STATE_VERIFYING:
+  case CLAZZ_STATE_VERIFIED:
+    wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
+
+  default:
+    x_monitor_eternal(clazz->resolution_monitor);
+    state = getClazzState(clazz);
+
+    while(state == CLAZZ_STATE_LOADING) {
+      monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+      state = getClazzState(clazz);
+    }
+    x_monitor_exit(clazz->resolution_monitor);
+  }
+
+  /*
+   * From here on we know the class is not in any of the following states:
+   *    CLAZZ_STATE_UNLOADED
+   *    CLAZZ_STATE_LOADING
+   *    CLAZZ_STATE_VERIFYING:
+   *    CLAZZ_STATE_VERIFIED:
+   */
+  switch (state) {
   case CLAZZ_STATE_LOADED:
   case CLAZZ_STATE_SUPERS_LOADING:
   case CLAZZ_STATE_SUPERS_LOADED:
@@ -379,10 +401,6 @@ w_int mustBeInitialized(w_clazz clazz) {
       return CLASS_LOADING_FAILED;
     }
     break;
-
-  case CLAZZ_STATE_VERIFYING:
-  case CLAZZ_STATE_VERIFIED:
-    wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
 
   case CLAZZ_STATE_LINKED:
     break;
