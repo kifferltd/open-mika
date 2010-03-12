@@ -40,9 +40,11 @@
  * ALLOCMEM_RETRIES specifies the number of retries that will automatically
  * be made if a request to x_mem_alloc etc. returns NULL. Default is 0.
  * ALLOCMEM_SLEEP specifies the number of ticks to wait before each retry.
+ * [CG 20100214] I don't like ALLOCMEM_RETRIES because it enters GC safe
+ * mode without knowing why the thread was unsafe (if it was).
  */
-#define ALLOCMEM_RETRIES 10
-#define ALLOCMEM_SLEEP    5
+//#define ALLOCMEM_RETRIES 10
+//#define ALLOCMEM_SLEEP    5
 
 /**
  ** alloc_barrier acts to slow down a thread which is allocating memory while
@@ -288,7 +290,7 @@ static x_boolean checkWalk(void * mem, void * arg) {
   w_int bad;
 
   if (chunk->madgic != CHUNK_MADGIC) {
-    woempa(9, "chunk %p madgic at %p holds 0x%08x instead of 8x%08x, it's probably not one of ours.\n", chunk, &chunk->madgic, chunk->madgic, CHUNK_MADGIC);
+    woempa(1, "chunk %p madgic at %p holds 0x%08x instead of 0x%08x, it's probably not one of ours.\n", chunk, &chunk->madgic, chunk->madgic, CHUNK_MADGIC);
     return WONKA_TRUE;
   }    
 
@@ -297,7 +299,7 @@ static x_boolean checkWalk(void * mem, void * arg) {
 
   bad = 0;
   if (chunk->front != FRONT_FENCE) {
-    woempa(9, "chunk %p front fence at %p holds 0x%08x instead of 8x%08x.\n", chunk, &chunk->front, chunk->front, FRONT_FENCE);
+    woempa(9, "chunk %p front fence at %p holds 0x%08x instead of 0x%08x.\n", chunk, &chunk->front, chunk->front, FRONT_FENCE);
     bad += 1;
   }
 
@@ -466,7 +468,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   alloc_barrier(thread);
   x_mem_lock(x_eternal);
-  chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
+  chunk = _x_mem_calloc(sizeof(w_Chunk) + rsize, file, line);
 
 #ifdef ALLOCMEM_RETRIES
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
@@ -482,7 +484,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
-      chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
+      chunk = _x_mem_calloc(sizeof(w_Chunk) + rsize, file, line);
       if (chunk || --count <= 0) {
         break;
       }
@@ -531,7 +533,7 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   alloc_barrier(thread);
   x_mem_lock(x_eternal);
-  chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
+  chunk = _x_mem_alloc(sizeof(w_Chunk) + rsize, file, line);
 
 #ifdef ALLOCMEM_RETRIES
   if (!chunk && thread && threadIsSafe(thread) && thread != marking_thread) {
@@ -547,7 +549,7 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
       *gc_kicks_pointer = 3;
       gc_reclaim(rsize, NULL);
       x_mem_lock(x_eternal);
-      chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
+      chunk = _x_mem_alloc(sizeof(w_Chunk) + rsize, file, line);
       if (chunk || --count <= 0) {
         break;
       }
@@ -607,7 +609,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   alloc_barrier(thread);
   x_mem_lock(x_eternal);
-  newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
+  newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);
 
 #ifdef ALLOCMEM_RETRIES
   if (!newchunk && thread && thread != marking_thread) {
@@ -623,7 +625,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
       *gc_kicks_pointer = 3;
       gc_reclaim(newsize - oldsize, NULL);
       x_mem_lock(x_eternal);
-      newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
+      newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);
       if (newchunk || --count <= 0) {
         break;
       }
@@ -673,6 +675,9 @@ void _d_releaseMem(void * block, const char * file, const int line) {
     return;
 
   }
+  // Remove the madgic marker - otherwise if x_mem_alloc later returns the
+  // same memory it will look "one of ours" even if it isn't.
+  chunk->madgic = 0;
 
   x_mem_free(chunk);
 
@@ -684,6 +689,14 @@ void _d_discardMem(void * block, const char * file, const int line) {
 
   woempa(1,"Discarding block %p\n", block);
   chunk = checkChunk(block, 0, file, line);
+  if (!chunk) {
+
+    return;
+
+  }
+  // Remove the madgic marker - otherwise if x_mem_alloc later returns the
+  // same memory it will look "one of ours" even if it isn't.
+  chunk->madgic = 0;
 
   x_mem_discard(chunk);
 
