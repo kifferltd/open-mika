@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,27 +11,28 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "oswald.h"
 
 x_size heap_size; 
-x_size heap_remaining;
+x_size heap_remaining = 4096;
 
 x_size min_heap_bytes;
 x_size max_heap_bytes;
@@ -77,82 +80,114 @@ void x_mem_init(void) {
 
 #ifdef DEBUG
 void *_x_mem_alloc(w_size size, const char *file, int line) {
-  void *new = NULL;
+  o4p_memory_chunk newchunk;
 
-  if (size > MAX_SINGLE_ALLOC) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, maximum is %d!\n",file,line,size,MAX_SINGLE_ALLOC);
-
-    return NULL;
-  }
-  else if (size > heap_remaining) {
+  if (size > heap_remaining) {
     loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, heap_remaining);
 
     return NULL;
   }
   else {
-    new = calloc((size + 7 + sizeof(o4p_Memory_Chunk)) / 8, 8);
+    newchunk = malloc(sizeof(o4p_Memory_Chunk) + size);
   }
 
-  if (new) {
-    o4p_memory_chunk chunk = (o4p_memory_chunk)new;
-
-    chunk->file = (char*)file;
-    chunk->line = line;
-    chunk->size = size;
-    chunk->check = (char*)magic;
-    loempa(1,"%s:%d Allocated %d bytes at %p\n", chunk->file, chunk->line, size, new);
-    x_mem_lock(x_eternal);
-    x_list_insert(memory_sentinel, chunk);
-    heap_remaining -= size + sizeof(o4p_Memory_Chunk);
-    loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
-    x_mem_unlock();
-
-    return chunk2mem(chunk);
-  }
-  else {
+  if (!newchunk) {
     loempa(9,"%s:%d Out of memory!  heap_remaining was %d, setting it to 0\n", file, line, heap_remaining);
     heap_remaining = 0;
+
+    return NULL;
+
   }
 
-  return NULL;
+
+  newchunk->id = 0;
+  newchunk->file = (char*)file;
+  newchunk->line = line;
+  newchunk->size = size;
+  newchunk->check = (char*)magic;
+  loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
+  x_mem_lock(x_eternal);
+  x_list_insert(memory_sentinel, newchunk);
+  x_mem_unlock();
+  heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+  return chunk2mem(newchunk);
 }
 
 void *_x_mem_calloc(w_size size, const char *file, int line) {
-  void *new = NULL;
+  o4p_memory_chunk newchunk;
 
-  if (size > MAX_SINGLE_ALLOC) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, maximum is %d!\n",file,line,size,MAX_SINGLE_ALLOC);
-
-    return NULL;
-  }
-  else if (size > heap_remaining) {
+  if (size > heap_remaining) {
     loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, heap_remaining);
 
     return NULL;
   }
-  else {
-    w_size calloc_size = (size + sizeof(o4p_Memory_Chunk) + 7) / 8;
-    new = calloc(calloc_size, 8);
-  }
 
-  if (new) {
-    o4p_memory_chunk chunk = (o4p_memory_chunk)new;
+  newchunk = calloc(sizeof(o4p_Memory_Chunk) + size, 1);
 
-    chunk->file = (char*)file;
-    chunk->line = line;
-    chunk->size = size;
-    chunk->check = (char*)magic;
-    loempa(1,"%s:%d Allocated %d bytes at %p\n", chunk->file, chunk->line, size, new);
-    x_mem_lock(x_eternal);
-    x_list_insert(memory_sentinel, chunk);
-    heap_remaining -= size + sizeof(o4p_Memory_Chunk);
-    loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
-    x_mem_unlock();
-
-    return chunk2mem(chunk);
-  }
-  else {
+  if (!newchunk) {
     loempa(9,"%s:%d Out of memory!  heap_remaining was %d, setting it to 0\n", file, line, heap_remaining);
+    heap_remaining = 0;
+
+    return NULL;
+
+  }
+
+  newchunk->file = (char*)file;
+  newchunk->line = line;
+  newchunk->size = size;
+  newchunk->check = (char*)magic;
+  loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
+  x_mem_lock(x_eternal);
+  x_list_insert(memory_sentinel, newchunk);
+  x_mem_unlock();
+  heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+  return chunk2mem(newchunk);
+}
+
+void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
+  o4p_memory_chunk oldchunk = mem2chunk(old);
+  o4p_memory_chunk newchunk;
+  w_size oldsize;
+  w_size newsize;
+
+  if (oldchunk->check != magic) {
+    loempa(9,"Memory block %p is not valid!\n", old);
+
+    return NULL;
+
+  }
+
+  if (size - oldchunk->size > heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
+
+    return NULL;
+  }
+
+  x_mem_lock(x_eternal);
+  oldsize = oldchunk->size + sizeof(o4p_Memory_Chunk);
+  newsize = size + sizeof(o4p_Memory_Chunk);
+  newchunk = realloc(oldchunk, newsize);
+  if (newchunk) {
+    newchunk->file = (char*)file;
+    newchunk->line = line;
+    newchunk->size = size;
+    if (newchunk != oldchunk) {
+      x_list_remove(oldchunk);
+      x_list_insert(memory_sentinel, newchunk);
+    }
+    x_mem_unlock();
+    heap_remaining -= newsize - oldsize;
+    loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+    return chunk2mem(newchunk);
+  }
+  else {
+    x_mem_unlock();
+    x_mem_free(old);
     heap_remaining = 0;
   }
 
@@ -162,110 +197,98 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
 #else
 
 void *_x_mem_alloc(w_size size) {
-  void *new = NULL;
+  o4p_memory_chunk newchunk;
 
-  if (size > MAX_SINGLE_ALLOC) {
-
-    return NULL;
-  }
-  else if (size > heap_remaining) {
+  if (size > heap_remaining) {
 
     return NULL;
   }
-  else {
-    new = calloc((size + 7 + sizeof(o4p_Memory_Chunk)) / 8, 8);
-  }
 
-  if (new) {
-    o4p_memory_chunk chunk = (o4p_memory_chunk)new;
+  newchunk = malloc(sizeof(o4p_Memory_Chunk) + size);
 
-    chunk->size = size;
-    x_mem_lock(x_eternal);
-    x_list_insert(memory_sentinel, chunk);
-    heap_remaining -= size + sizeof(o4p_Memory_Chunk);
-    x_mem_unlock();
-
-    return chunk2mem(chunk);
-  }
-  else {
+  if (!newchunk) {
     heap_remaining = 0;
+
+    return NULL;
+
   }
 
-  return NULL;
+  newchunk->id = 0;
+  newchunk->size = size;
+  x_mem_lock(x_eternal);
+  x_list_insert(memory_sentinel, newchunk);
+  x_mem_unlock();
+  heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+  return chunk2mem(newchunk);
 }
 
 void *_x_mem_calloc(w_size size) {
-  void *new = NULL;
+  o4p_memory_chunk newchunk;
 
-  if (size > MAX_SINGLE_ALLOC) {
-
-    return NULL;
-  }
-  else if (size > heap_remaining) {
+  if (size > heap_remaining) {
 
     return NULL;
   }
-  else {
-    w_size calloc_size = (size + sizeof(o4p_Memory_Chunk) + 7) / 8;
-    new = calloc(calloc_size, 8);
-  }
 
-  if (new) {
-    o4p_memory_chunk chunk = (o4p_memory_chunk)new;
+    newchunk = calloc(sizeof(o4p_Memory_Chunk) + size, 1);
 
-    chunk->size = size;
-    x_mem_lock(x_eternal);
-    x_list_insert(memory_sentinel, chunk);
-    heap_remaining -= size + sizeof(o4p_Memory_Chunk);
-    loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
-    x_mem_unlock();
-
-    return chunk2mem(chunk);
-  }
-  else {
+  if (!newchunk) {
     heap_remaining = 0;
+
+    return NULL;
+
   }
 
-  return NULL;
+  newchunk->size = size;
+  x_mem_lock(x_eternal);
+  x_list_insert(memory_sentinel, newchunk);
+  x_mem_unlock();
+  heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+  return chunk2mem(newchunk);
 }
 
-#endif
-
-void *x_mem_realloc(void *old, w_size size) {
+void *_x_mem_realloc(void *old, w_size size) {
   o4p_memory_chunk oldchunk = mem2chunk(old);
   o4p_memory_chunk newchunk;
-  void *new;
+  w_size oldsize;
+  w_size newsize;
 
-  
-#ifdef DEBUG
-  if (oldchunk->check != magic) {
-    loempa(9,"Memory block %p is not valid!\n", old);
+  if (size - oldchunk->size > heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
+
+    return NULL;
+  }
+
+  x_mem_lock(x_eternal);
+  oldsize = oldchunk->size + sizeof(o4p_Memory_Chunk);
+  newsize = size + sizeof(o4p_Memory_Chunk);
+  newchunk = realloc(oldchunk, newsize);
+  if (!newchunk) {
+    heap_remaining = 0;
+    x_mem_free(old);
+    x_mem_unlock();
 
     return NULL;
 
   }
-#endif
 
-  if (size <= oldchunk->size) {
-    x_mem_lock(x_eternal);
-    heap_remaining += oldchunk->size - size;
-    oldchunk->size = size;
-    x_mem_unlock();
-  
-    return old;
-
+  newchunk->size = size;
+  if (newchunk != oldchunk) {
+    x_list_remove(oldchunk);
+    x_list_insert(memory_sentinel, newchunk);
   }
+  x_mem_unlock();
+  heap_remaining -= newsize - oldsize;
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
-  new = x_mem_alloc(size);
-  newchunk = mem2chunk(new);
-  loempa(1, "New chunk is at %p, copying %d bytes from %p to %p\n", newchunk, oldchunk->size, old, new); 
-  memcpy(new, old, oldchunk->size);
-  loempa(1,"Marking chunk %p with id 0x%x\n", new, oldchunk->id);
-  x_mem_tag_set(new, oldchunk->id);
-  x_mem_free(old);
-
-  return new;
+  return chunk2mem(newchunk);
 }
+
+#endif
 
 void x_mem_free(void *block) {
   o4p_memory_chunk chunk = mem2chunk(block);
@@ -278,6 +301,9 @@ void x_mem_free(void *block) {
 
   loempa(1,"Returning %d bytes at %p allocated at %s:%d\n", chunk->size, block, chunk->file, chunk->line);
   x_mem_lock(x_eternal);
+#ifdef DEBUG
+  chunk->check = NULL;
+#endif
   x_list_remove(chunk);
   heap_remaining += chunk->size + sizeof(o4p_Memory_Chunk);
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
@@ -401,9 +427,9 @@ w_size x_mem_size(void * mem) {
 }
 
 w_boolean x_mem_is_block(void * mem) {
+#ifdef DEBUG
   o4p_memory_chunk chunk = mem2chunk(mem);
   
-#ifdef DEBUG
   return chunk->check == magic;
 #else
   return 1;

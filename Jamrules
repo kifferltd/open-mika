@@ -664,6 +664,12 @@ if $(SCHEDULER) = o4p {
   else {
     O4P_INFO += "not using pthread_cond_timedwait;" ;
   }
+  if $(USE_NATIVE_MALLOC) = true {
+    O4P_INFO += "using native malloc;" ;
+  }
+  else {
+    O4P_INFO += "using own memory management routines;" ;
+  }
   if $(HOST_TIMER_GRANULARITY) {
     O4P_INFO += "host timer granularity = $(HOST_TIMER_GRANULARITY) usec;" ;
   }
