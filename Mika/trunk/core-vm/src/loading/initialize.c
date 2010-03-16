@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Parts copyright (c) 2004, 2005, 2006, 2010 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -365,6 +365,7 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
+  case CLAZZ_STATE_LOADING:
     wabort(ABORT_WONKA, "%K must be loaded before it can be Initialized\n", clazz);
 
   case CLAZZ_STATE_VERIFYING:
@@ -372,14 +373,7 @@ w_int mustBeInitialized(w_clazz clazz) {
     wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
 
   default:
-    x_monitor_eternal(clazz->resolution_monitor);
     state = getClazzState(clazz);
-
-    while(state == CLAZZ_STATE_LOADING) {
-      monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-      state = getClazzState(clazz);
-    }
-    x_monitor_exit(clazz->resolution_monitor);
   }
 
   /*
@@ -457,6 +451,7 @@ w_int mustBeInitialized(w_clazz clazz) {
     x_monitor_eternal(clazz->resolution_monitor);
     if (result == CLASS_LOADING_FAILED) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -466,6 +461,7 @@ w_int mustBeInitialized(w_clazz clazz) {
 
     if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;
     }
     else {

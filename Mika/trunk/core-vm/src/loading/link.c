@@ -1,5 +1,8 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,36 +12,26 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "chars.h"
 
-/*
-#include <string.h>
-
-#include "checks.h"
-#include "descriptor.h"
-#include "fields.h"
-#include "hashtable.h"
-#include "methods.h"
-#include "reflection.h"
-#include "threads.h"
-*/
 #include "clazz.h"
 #include "constant.h"
 #include "exception.h"
@@ -71,6 +64,7 @@ w_int mustBeLinked(w_clazz clazz) {
 
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
+  case CLAZZ_STATE_LOADING:
     wabort(ABORT_WONKA, "%K must be loaded before it can be linked\n", clazz);
 
   case CLAZZ_STATE_VERIFYING:
@@ -84,15 +78,6 @@ w_int mustBeLinked(w_clazz clazz) {
     woempa(9, "Eh? Exception '%e' already pending in mustBeLinked(%K)\n", exceptionThrown(thread), clazz);
   }
 #endif
-
-  x_monitor_eternal(clazz->resolution_monitor);
-  state = getClazzState(clazz);
-
-  while(state == CLAZZ_STATE_LOADING) {
-    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-    state = getClazzState(clazz);
-  }
-  x_monitor_exit(clazz->resolution_monitor);
 
   if (state == CLAZZ_STATE_BROKEN) {
   // TODO - is the right thing to throw?
@@ -129,6 +114,7 @@ w_int mustBeLinked(w_clazz clazz) {
     if(clazz->resolution_thread == thread) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Linking of %k failed", clazz);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -160,6 +146,7 @@ w_int mustBeLinked(w_clazz clazz) {
     clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -169,6 +156,7 @@ w_int mustBeLinked(w_clazz clazz) {
 
     if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;
     }
     else {

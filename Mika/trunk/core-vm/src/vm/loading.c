@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -376,15 +376,16 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
     }
   }
   else if (state < CLAZZ_STATE_LOADED) {
-    monitor = current->resolution_monitor;
-
-    x_monitor_eternal(monitor);
+    current = seekClazzByName(current->dotified, current->loader);
+    state = getClazzState(current);
     while(state < CLAZZ_STATE_LOADED) {
-      woempa(1, "Another thread is loading %k (%p), %t waiting\n", current, current, thread);
-      status = x_monitor_wait(monitor, CLASS_STATE_WAIT_TICKS);
+      // Messy that we need to busy-wait here, but we have no monitor yet
+      woempa(7, "%K is still loading, wait a bit and seek again\n", current);
+      x_thread_sleep(CLASS_STATE_WAIT_TICKS);
+      current = seekClazzByName(current->dotified, current->loader);
       state = getClazzState(current);
     }
-    x_monitor_exit(monitor);
+    *clazzptr = current;
   }
 
   if (current && getClazzState(current) == CLAZZ_STATE_BROKEN) {
@@ -1155,6 +1156,26 @@ w_clazz getNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
 
 }
 
+/**
+ * Save any exception detailMessage from the thread into clazz->failure_message
+ * (unless this was already set previously).
+ */
+void saveFailureMessage(w_thread thread, w_clazz clazz) {
+  if (clazz->failure_message) {
+    return;
+  }
+
+  if (thread) {
+    w_instance exception = exceptionThrown(thread);
+    if (exception) {
+      w_instance detailMessage = getReferenceField(exception, F_Throwable_detailMessage);
+      if (detailMessage) {
+        clazz->failure_message = registerString(String2string(detailMessage));
+      }
+    }
+  }
+}
+
 
 /*
 ** Create the 1-D array clazz corresponding to a given primitive type.
@@ -1432,6 +1453,7 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
     // wprintf("obtained lock for %j\n", effectiveLoader);
   }
 
+spin:
   current = seekClazzByName(name, effectiveLoader);
 
   woempa(1, "seekClazzByName result = %p\n", current);
@@ -1444,10 +1466,12 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
       current = loadBootstrapClass(name);
     }
     else {
-      w_clazz placeholder = allocMem(sizeof(w_UnloadedClazz));
+      w_clazz placeholder = allocClearedMem(sizeof(w_UnloadedClazz));
 
       placeholder->dotified = registerString(name);
       placeholder->loader = effectiveLoader;
+      placeholder = registerUnloadedClazz(placeholder);
+      placeholder->label = (char *)"clazz(loading)";
       setClazzState(placeholder, CLAZZ_STATE_LOADING);
       registerClazz(thread, placeholder, effectiveLoader);
       exitMonitor(effectiveLoader);
@@ -1459,9 +1483,8 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
         registerClazz(thread, current, effectiveLoader);
       }
       else if (seekClazzByName(name, effectiveLoader) == placeholder) {
-        deregisterClazz(placeholder, effectiveLoader); 
-        deregisterString(placeholder->dotified);
-        releaseMem(placeholder); 
+        setClazzState(placeholder, CLAZZ_STATE_BROKEN);
+        saveFailureMessage(thread, placeholder);
       }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
@@ -1475,6 +1498,14 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
         wprintf("Load %w: defining class loader is %j\n", name, current->loader);
       }
     }
+  }
+  else if (getClazzState(current) == CLAZZ_STATE_LOADING) {
+    woempa(7, "spin colours spin\n");
+    x_thread_sleep(2);
+    goto spin;
+  }
+  else if (getClazzState(current) == CLAZZ_STATE_BROKEN) {
+    current = NULL;
   }
 
   if (effectiveLoader) {

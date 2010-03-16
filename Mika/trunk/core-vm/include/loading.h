@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -274,5 +274,11 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance));
  * loaded class hashtable).
  */
 w_int numberOfDefinedClasses(w_instance loader);
+
+/**
+ * If the exception pending on this thread contains a detailMessage, save
+ * this as clazz->failure_message.
+ */
+void saveFailureMessage(w_thread thread, w_clazz clazz);
 
 #endif /* _LOADING_H */
