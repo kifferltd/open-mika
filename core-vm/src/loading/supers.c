@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -322,6 +322,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 #ifdef RUNTIME_CHECKS
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
+  case CLAZZ_STATE_LOADING:
     wabort(ABORT_WONKA, "%K must be loaded before it can be linked\n", clazz);
 
   case CLAZZ_STATE_VERIFYING:
@@ -333,15 +334,6 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 
   threadMustBeSafe(thread);
 #endif
-
-  x_monitor_eternal(clazz->resolution_monitor);
-  state = getClazzState(clazz);
-
-  while(state == CLAZZ_STATE_LOADING) {
-    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-    state = getClazzState(clazz);
-  }
-  x_monitor_exit(clazz->resolution_monitor);
 
   if (state == CLAZZ_STATE_BROKEN) {
   // TODO - is the right thing to throw?
@@ -361,6 +353,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
     if(clazz->resolution_thread == thread) {
       throwException(thread, clazzClassCircularityError, "Class %k is its own superclass", clazz);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
       
@@ -384,6 +377,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       woempa(9, "%K: Violation of J+JVM Constraint 4.1.1, item 3\n", clazz);
       throwException(currentWonkaThread, clazzIncompatibleClassChangeError, "Class %k is both FINAL and ABSTRACT", clazz);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -421,6 +415,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
     clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 

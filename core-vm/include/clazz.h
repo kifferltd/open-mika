@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -60,6 +60,7 @@ typedef struct w_Clazz {
   char   *label;         /* null-terminated C string beginning "class"  */
   w_flags flags;         /* class access and other flags, see below     */
   w_instance loader;     /* the ClassLoader that defined this class     */
+  w_string   failure_message; /* only non-null in CLAZZ_STATE_BROKEN    */
   w_ubyte type;          /* JIFF VMTYPE, see below                      */
   w_ubyte dims;          /* Number of dimensions if an array type       */
   w_ubyte bits;
@@ -144,7 +145,6 @@ typedef struct w_Clazz {
   w_long total_instances;
 #endif 
   
-  w_string   failure_message;
   w_size bytes_needed;     /* The number of bytes we have to allocate for an instance of this clazz. */
   w_clazz nextDimension;     /* Pointer to clazz with one more dimension if already defined */
   w_clazz previousDimension; /* Pointer to clazz with one less dimension (or null if dims == 0) */
@@ -166,7 +166,7 @@ typedef struct w_Clazz {
 
 /*
 ** An unloaded class consists of a name-classloader pair.  The state subfield
-** of the flags will always be zero (CLAZZ_STATE_UNLOADED).
+** of the flags will always be zero CLAZZ_STATE_UNLOADED or CLAZZ_STATE_BROKEN.
 */
 typedef struct w_UnloadedClazz {
 
@@ -174,6 +174,7 @@ typedef struct w_UnloadedClazz {
   char   *label;         /* null-terminated C string beginning "class"  */
   w_flags flags;         /* class access and other flags, see below     */
   w_instance loader;     /* the ClassLoader that initiated this class   */
+  w_string   failure_message; /* only non-null in CLAZZ_STATE_BROKEN    */
   w_ubyte type;          /* JIFF VMTYPE, see below                      */
   w_ubyte dims;          /* Number of dimensions if an array type       */
   w_ubyte bitz;          /* Not used                                    */
@@ -382,11 +383,9 @@ void startClasses(void);
 
 /**
 ** Register clazz 'clazz' with the loaded_classes_hashtable of 'loader'.
-** If an entry already exists in state CLAZZ_STATE_LOADING, we copy the
-** contents of 'clazz' over the existing entry, release the memory of
-** 'clazz', and return the existing entry as result. Otherwise the
-** result returned is 'clazz'.
-** A typical calling pattern is
+** This function is allowed to return a different w_clazz pointer to the
+** one it was given (for example to resolve a race condition). Therefore
+** a typical calling pattern is
 **   ...
 **   clazz = allocClazz();
 **   ...

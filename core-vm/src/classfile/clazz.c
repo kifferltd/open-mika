@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions.  All rights reserved.                *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1382,10 +1382,18 @@ w_boolean isReservedName(w_string name) {
   return WONKA_FALSE;
 }
 
-
 /*
 ** Register a w_Clazz structure in a class hashtable.  
-** See remarks in clazz.n.
+** This function is allowed to return a different w_clazz pointer to the
+** one it was given (for example to resolve a race condition). Therefore
+** a typical calling pattern is
+**   ...
+**   clazz = allocClazz();
+**   ...
+**   clazz = registerClazz(thread, clazz, loader);
+**   ...
+**
+** The caller must own the instance lock on 'loader'.
 */
 
 w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
@@ -1405,16 +1413,13 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
       woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
     }
     else {
-      if (getClazzState(existing) != CLAZZ_STATE_LOADING) { 
-        if (thread) {
-          throwException(thread, clazzSecurityException, "Class already defined: %w", clazz->dotified);
-        }
-        destroyClazz(existing);
+      if (getClazzState(existing) == CLAZZ_STATE_LOADING) { 
+        // Existing entry is a placeholder, throw it away 
+        deregisterUnloadedClazz(existing);
       }
       else {
-        // Existing entry is a placeholder, throw it away 
-        deregisterString(existing->dotified);
-        releaseMem(existing); 
+        destroyClazz(clazz);
+        result = existing;
       }
     }
   }

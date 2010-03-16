@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions.  All rights reserved.                *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -755,7 +755,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
-  if (getClazzState(clazz) < CLAZZ_STATE_LOADED) {
+  if (getClazzState(clazz) < CLAZZ_STATE_LOADED || getClazzState(clazz) == CLAZZ_STATE_BROKEN) {
     return 0;
   }
 
@@ -855,7 +855,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
 #endif
   }
 
-  if (state >= CLAZZ_STATE_SUPERS_LOADED) {
+  if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(clazz) != CLAZZ_STATE_BROKEN) {
     w_clazz super = getSuper(clazz);
     if (super) {
       woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super[0], clazz);
@@ -2030,7 +2030,6 @@ static w_int collect_dead_clazzes(void) {
       other_clazz = this_clazz->supers[k];
       j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
       if (j >= 0 && j < i) {
-wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }
@@ -2040,7 +2039,6 @@ wprintf("swap %d <-> %d\n", i, j);
       other_clazz = this_clazz->interfaces[k];
       j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
       if (j >= 0 && j < i) {
-wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }
@@ -2050,7 +2048,6 @@ wprintf("swap %d <-> %d\n", i, j);
     if (other_clazz) {
        j = (w_int)ht_read(dead_clazz_hashtable, (w_word)other_clazz);
         if (j >= 0 && j < i) {
-wprintf("swap %d <-> %d\n", i, j);
         dead_clazz_swap(i, j);
         i = j;
       }

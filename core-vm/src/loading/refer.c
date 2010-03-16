@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Parts copyright (c) 2004, 2005, 2006, 2010 by Chris Gray, /k/ Embedded  *
+ Java Solutions.  All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -826,6 +826,7 @@ w_int mustBeReferenced(w_clazz clazz) {
 #ifdef RUNTIME_CHECKS
   switch (state) {
   case CLAZZ_STATE_UNLOADED:
+  case CLAZZ_STATE_LOADING:
     wabort(ABORT_WONKA, "%K must be loaded before it can be linked\n", clazz);
 
   case CLAZZ_STATE_VERIFYING:
@@ -841,15 +842,6 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   threadMustBeSafe(thread);
 #endif
-
-  x_monitor_eternal(clazz->resolution_monitor);
-  state = getClazzState(clazz);
-
-  while(state == CLAZZ_STATE_LOADING) {
-    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
-    state = getClazzState(clazz);
-  }
-  x_monitor_exit(clazz->resolution_monitor);
 
   if (state == CLAZZ_STATE_BROKEN) {
   // TODO - is the right thing to throw?
@@ -888,6 +880,7 @@ w_int mustBeReferenced(w_clazz clazz) {
     if(clazz->resolution_thread == thread) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Refering %k failed", clazz);
+      saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
       x_monitor_exit(clazz->resolution_monitor);
 
@@ -935,9 +928,11 @@ w_int mustBeReferenced(w_clazz clazz) {
 
     if (result == CLASS_LOADING_FAILED) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
     }
     else if(exceptionThrown(thread)) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
+      saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;
     }
     else {
