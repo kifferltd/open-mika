@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java     *
-* Solutions. All rights reserved.                                         *
+* reserved. Parts copyright (c) 2005, 2010 by Chris Gray, /k/ Embedded    *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1361,6 +1361,8 @@ jboolean Graphics_drawImage2(JNIEnv *env, jobject thisGraphics, jobject image, j
   w_int        dy = 0;
   w_int        sx = 0;
   w_int        sy = 0;
+  w_int        ox;
+  w_int        oy;
   w_int        cw;
   w_int        ch;
   w_int        w;
@@ -1393,8 +1395,10 @@ jboolean Graphics_drawImage2(JNIEnv *env, jobject thisGraphics, jobject image, j
     return FALSE;
   }
 
-  dx1 += getIntegerField(thisGraphics, F_Graphics_ox) + dx;
-  dy1 += getIntegerField(thisGraphics, F_Graphics_oy) + dy;
+  ox = getIntegerField(thisGraphics, F_Graphics_ox);
+  oy = getIntegerField(thisGraphics, F_Graphics_oy);
+  dx1 += ox + dx;
+  dy1 += oy + dy;
     
   cw = getIntegerField(thisGraphics, F_Graphics_cw);
   ch = getIntegerField(thisGraphics, F_Graphics_ch);
@@ -1405,8 +1409,8 @@ jboolean Graphics_drawImage2(JNIEnv *env, jobject thisGraphics, jobject image, j
     ** setClip is used.
     */
     
-    w_int cx = thisGraphics[F_Graphics_cx] + dx;
-    w_int cy = thisGraphics[F_Graphics_cy] + dy;
+    w_int cx = thisGraphics[F_Graphics_cx] + ox + dx;
+    w_int cy = thisGraphics[F_Graphics_cy] + oy + dy;
     
     if (dx1 < cx) {
       sx = cx - dx1;
