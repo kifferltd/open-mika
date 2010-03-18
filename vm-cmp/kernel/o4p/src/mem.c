@@ -32,7 +32,7 @@
 #include "oswald.h"
 
 x_size heap_size; 
-x_size heap_remaining = 4096;
+x_size heap_remaining;
 
 x_size min_heap_bytes;
 x_size max_heap_bytes;
@@ -161,7 +161,7 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
 
   }
 
-  if (size - oldchunk->size > heap_remaining) {
+  if (size > oldchunk->size && size - oldchunk->size > heap_remaining) {
     loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
 
     return NULL;
@@ -180,7 +180,8 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
       x_list_insert(memory_sentinel, newchunk);
     }
     x_mem_unlock();
-    heap_remaining -= newsize - oldsize;
+    heap_remaining += oldsize;
+    heap_remaining -= newsize;
     loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
     return chunk2mem(newchunk);
@@ -257,7 +258,7 @@ void *_x_mem_realloc(void *old, w_size size) {
   w_size oldsize;
   w_size newsize;
 
-  if (size - oldchunk->size > heap_remaining) {
+  if (size > oldchunk->size && size - oldchunk->size > heap_remaining) {
     loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
 
     return NULL;
@@ -282,7 +283,8 @@ void *_x_mem_realloc(void *old, w_size size) {
     x_list_insert(memory_sentinel, newchunk);
   }
   x_mem_unlock();
-  heap_remaining -= newsize - oldsize;
+  heap_remaining += oldsize;
+  heap_remaining -= newsize;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
