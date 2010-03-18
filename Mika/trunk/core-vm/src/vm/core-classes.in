@@ -702,6 +702,7 @@ java/net/PlainSocketImpl
 	setIpTos		(I)V	PlainSocketImpl_setIpTos
 	setLinger		(I)V	PlainSocketImpl_setLinger
 	setOOBInline		(Z)V	PlainSocketImpl_setOOBInline
+	setReuseAddr		(Z)V	PlainSocketImpl_setReuseAddr
 	sendUrgentData		(I)V	PlainSocketImpl_sendUrgentData
         _read            	([BII)I	PlainSocketImpl_read
         write           	([BII)V	PlainSocketImpl_write
