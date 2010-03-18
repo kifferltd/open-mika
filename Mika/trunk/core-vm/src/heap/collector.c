@@ -745,8 +745,6 @@ static w_int markChildClazz(w_clazz parent, w_clazz child, w_fifo fifo, w_word f
 ** If a Class is reachable (because instances exist, or because it is
 ** known to a ClassLoader), and it has been initialised, we queue all
 ** of its (unmarked) static fields for marking.
-**
-** JD: Skip it if the clazz is marked 'BROKEN'
 */
 w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_instance child_instance;
@@ -774,12 +772,6 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     wabort(ABORT_WONKA, "No Class instance for class %k\n", clazz);
   }
 #endif
-
-  if (state == CLAZZ_STATE_BROKEN) {
-
-    return queued;
-
-  }
 
   if (clazz->references) {
     w_int n;
@@ -855,7 +847,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
 #endif
   }
 
-  if (getClazzState(clazz) >= CLAZZ_STATE_LOADED && getClazzState(clazz) != CLAZZ_STATE_BROKEN) {
+  if (getClazzState(clazz) >= CLAZZ_STATE_SUPERS_LOADED) {
     w_clazz super = getSuper(clazz);
     if (super) {
       woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super[0], clazz);

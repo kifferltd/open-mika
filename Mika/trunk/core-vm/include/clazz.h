@@ -291,7 +291,7 @@ typedef struct w_UnloadedClazz {
 /*
 ** Get the superclass of a clazz (returns NULL if clazz is java.lang.Object).
 */
-#define getSuper(clazz) (clazz->supers ? clazz->supers[0] : NULL)
+#define getSuper(clazz) (clazz->numSuperClasses && clazz->supers ? clazz->supers[0] : NULL)
 
 /*
 ** Return true iff T_clazz is a strict superclass of S_clazz.  Will return
