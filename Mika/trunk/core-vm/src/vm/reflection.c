@@ -828,22 +828,22 @@ static void wrapProxyException(w_thread thread, w_method current_method) {
 
   for (i = 0; i < current_method->numThrows; ++i) {
     allowed_clazz = getClassConstant(current_method->spec.declaring_clazz, current_method->throws[i], thread);
-    //wprintf("    allowed: %k\n", allowed_clazz);
+    //w_printf("    allowed: %k\n", allowed_clazz);
     if (allowed_clazz && isSuperClass(allowed_clazz, thrown_clazz)) {
       found = TRUE;
       break;
     }
   }
   if (found) {
-    //wprintf("Thrown is a subclass of %k\n", allowed_clazz);
+    //w_printf("Thrown is a subclass of %k\n", allowed_clazz);
   }
   else {
     if(isSuperClass(clazzRuntimeException, thrown_clazz)) {
-      //wprintf("Thrown is a subclass of RuntimeException\n", allowed_clazz);
+      //w_printf("Thrown is a subclass of RuntimeException\n", allowed_clazz);
     }
     else {
       if (isSuperClass(clazzError, thrown_clazz)) {
-        //wprintf("Thrown is a subclass of Error\n", allowed_clazz);
+        //w_printf("Thrown is a subclass of Error\n", allowed_clazz);
       }
       else {
         wrapException(thread, clazzUndeclaredThrowableException, F_UndeclaredThrowableException_undeclaredThrowable);

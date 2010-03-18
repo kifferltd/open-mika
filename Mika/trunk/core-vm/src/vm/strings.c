@@ -1231,18 +1231,18 @@ int string_sort(const void *v_string1, const void *v_string2) {
 void string_iterate(w_word string_word, w_word dummy1, void * dummy2, void * dummy3) {
   w_string string = (w_string)string_word;
 
-  wprintf("%p 0x%08x 0x%08x %6d '%w'\n", string, string->length_and_flags, string->wonka_hash, string->refcount, string); 
+  w_printf("%p 0x%08x 0x%08x %6d '%w'\n", string, string->length_and_flags, string->wonka_hash, string->refcount, string); 
   total_length += string_length(string);
 }
 
 
 void dumpStrings(void) {
-  wprintf("BEGIN string dump\n");
-  wprintf("  address  flags/len   hashcode  refcnt contents\n");
+  w_printf("BEGIN string dump\n");
+  w_printf("  address  flags/len   hashcode  refcnt contents\n");
   ht_iterate(string_hashtable, string_iterate, NULL, NULL);  
-  wprintf("  address  flags/len   hashcode  refcnt contents\n");
-  //wprintf("  momeness = %d\n", ht_momeness(string_hashtable));
-  wprintf("END string dump\n");
+  w_printf("  address  flags/len   hashcode  refcnt contents\n");
+  //w_printf("  momeness = %d\n", ht_momeness(string_hashtable));
+  w_printf("END string dump\n");
   woempa(9, "Total number of bytes for Unicode characters: %6d\n", total_length * sizeof(w_char));
   woempa(9, "Number of bytes for w_String (%d bytes) structures: %6d\n", sizeof(w_String), string_hashtable->occupancy * sizeof(w_String));
 }

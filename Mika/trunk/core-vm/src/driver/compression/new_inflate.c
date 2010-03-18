@@ -244,7 +244,7 @@ static w_ztable gen_tree(w_Hnode *tree, w_int max_code, w_size bl_count[]) {
         if (first) {
           releaseTable(first);
         }
-        wprintf("gen_tree : could not allocate %d bytes for table\n", sizeof(w_Ztable));
+        w_printf("gen_tree : could not allocate %d bytes for table\n", sizeof(w_Ztable));
         return NULL;
       }
       table->table = allocClearedMem(current_count * sizeof(w_Hnode));
@@ -253,7 +253,7 @@ static w_ztable gen_tree(w_Hnode *tree, w_int max_code, w_size bl_count[]) {
           releaseTable(first);
         }
         releaseMem(table);
-        wprintf("gen_tree : could not allocate %d bytes for table->table\n", current_count *sizeof(w_Hnode));
+        w_printf("gen_tree : could not allocate %d bytes for table->table\n", current_count *sizeof(w_Hnode));
         return NULL;
       }
       offset = 0;
@@ -505,13 +505,13 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
   n = numLiteralCodes + numDistanceCodes;
   codeLength = allocClearedMem(n * sizeof(w_size));
   if (! codeLength) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for codeLength table\n", n * sizeof(w_size));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for codeLength table\n", n * sizeof(w_size));
     return NULL;
   }
 
   tmpnodes = allocClearedMem((19 + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", 21 * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", 21 * sizeof(w_Hnode));
     releaseMem(codeLength);
     return NULL;
   }
@@ -525,7 +525,7 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
   }
 
   if (in->par_in == NULL) {
-    wprintf("par_in is NULL!\n");
+    w_printf("par_in is NULL!\n");
     return NULL;
   }
 
@@ -557,7 +557,7 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
   */
   tmptable = gen_tree(tmpnodes, 19, bit_length_counts);
   if (!tmptable) {
-    wprintf("gen_tree failed! (1)\n");
+    w_printf("gen_tree failed! (1)\n");
     // TODO : cleanup?
     return NULL;
   }
@@ -634,14 +634,14 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
   */
   dict = allocClearedMem(sizeof(w_Zdict));
   if (! dict) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for dict\n", sizeof(w_Zdict));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for dict\n", sizeof(w_Zdict));
     releaseMem(codeLength);
     return NULL;
   }
 
   tmpnodes = allocClearedMem((numLiteralCodes + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numLiteralCodes * 2) * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numLiteralCodes * 2) * sizeof(w_Hnode));
     releaseMem(dict);
     releaseMem(codeLength);
     return NULL;
@@ -672,7 +672,7 @@ w_zdict new_buildDynamicDictionary(w_inflate_control in) {
   */
   tmpnodes = allocClearedMem((numDistanceCodes + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numDistanceCodes * 2) * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numDistanceCodes * 2) * sizeof(w_Hnode));
     releaseTable(dict->lengths_literals);
     releaseMem(dict);
     releaseMem(codeLength);
@@ -906,7 +906,7 @@ woempa(7, "l->i_bits = %d\n", l->i_bits);
         }
         while (size--) {
           if (new_writeLiteralByte(l, new_readLiteralByte(l))) {
-            wprintf("writeLiteralFoo\n");
+            w_printf("writeLiteralFoo\n");
             err = 1;
             goto hastalavista;
           }
@@ -937,7 +937,7 @@ woempa(7, "l->i_bits = %d\n", l->i_bits);
           goto hastalavista;
         }
         if (new_inflateBlock(l, dict) != 0) {
-          wprintf("inflateBar\n");
+          w_printf("inflateBar\n");
           err = 1;
           goto hastalavista;
         }

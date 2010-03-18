@@ -95,14 +95,14 @@ static void printDeadlock(w_thread t0, w_thread t2) {
   w_thread t;
   w_int i;
 
-  wprintf("- - - DEADLOCK DETECTED - - -\n");
+  w_printf("- - - DEADLOCK DETECTED - - -\n");
   for (i = 0; i < chain_length; ++i) {
     t = chain[i];
-    wprintf("  %t is competing for monitor %p\n", t, t->kthread->waiting_on);
+    w_printf("  %t is competing for monitor %p\n", t, t->kthread->waiting_on);
     t = t->kthread->waiting_on->owner->xref;
-    wprintf("    which is owned by %t\n", t);
+    w_printf("    which is owned by %t\n", t);
   }
-  wprintf("- - - - - - - - - - - - - - -\n");
+  w_printf("- - - - - - - - - - - - - - -\n");
 }
 
 static void addToList(w_thread t, w_thread *list, w_int *length) {

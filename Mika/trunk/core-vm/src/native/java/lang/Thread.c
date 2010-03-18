@@ -87,9 +87,9 @@ static void threadEntry(void * athread) {
   }
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
-   wprintf("Start %t: pid is %d\n", thread, getpid());
+   w_printf("Start %t: pid is %d\n", thread, getpid());
 #else
-   wprintf("Start %t\n", thread);
+   w_printf("Start %t\n", thread);
 #endif
   }
 #ifdef JDWP
@@ -99,7 +99,7 @@ static void threadEntry(void * athread) {
   callMethod(thread->top, run_method);
   thread->top = & thread->rootFrame;
   if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
+    w_printf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
   }
 
   removeThreadCount(thread);
@@ -129,9 +129,9 @@ static void threadEntry(void * athread) {
   deleteGlobalReference(thread->Thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
-   wprintf("Finish %t: pid was %d\n", thread, getpid());
+   w_printf("Finish %t: pid was %d\n", thread, getpid());
 #else
-   wprintf("Finish %t\n", thread);
+   w_printf("Finish %t\n", thread);
 #endif
   }
 
@@ -358,7 +358,7 @@ w_boolean Thread_isInterrupted(JNIEnv *env, w_instance thisThread) {
   w_boolean interrupted = isSet(thread->flags, WT_THREAD_INTERRUPTED);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    wprintf("Thread.isInterrupted(): %t has %sbeen interrupted\n", thread, interrupted ? "" : "not ");
+    w_printf("Thread.isInterrupted(): %t has %sbeen interrupted\n", thread, interrupted ? "" : "not ");
   }
 
   return interrupted;
@@ -372,7 +372,7 @@ void Thread_interrupt(JNIEnv *env, w_instance thisThread) {
 
   woempa(1, "thread %t is interrupting %t\n", JNIEnv2w_thread(env), thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    wprintf("Thread.interrupt(): %t is interrupting %t\n", currentWonkaThread, thread);
+    w_printf("Thread.interrupt(): %t is interrupting %t\n", currentWonkaThread, thread);
   }
 
   setFlag(thread->flags, WT_THREAD_INTERRUPTED);
@@ -396,7 +396,7 @@ w_boolean Thread_static_interrupted(JNIEnv *env, w_instance classThread) {
   if (interrupted) {
     unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      wprintf("Thread.interrupted(): %t has been interrupted, clearing flag\n", thread);
+      w_printf("Thread.interrupted(): %t has been interrupted, clearing flag\n", thread);
     }
   }
   
@@ -448,7 +448,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
 
   if (checkForInterrupt(thread)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      wprintf("Thread.sleep(): %t has been interrupted before sleep()\n", thread);
+      w_printf("Thread.sleep(): %t has been interrupted before sleep()\n", thread);
     }
 
     return;
@@ -468,7 +468,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
     micros -= ONE_MINUTE_MICROS;
     if (checkForInterrupt(thread)) {
       if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-        wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
+        w_printf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
       }
       thread->state = wt_ready;
 
@@ -480,7 +480,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   thread->state = wt_ready;
   if (checkForInterrupt(thread)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      wprintf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
+      w_printf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
     }
   }
 }

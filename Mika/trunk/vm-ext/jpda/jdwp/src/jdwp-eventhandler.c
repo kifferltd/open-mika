@@ -352,7 +352,7 @@ w_void jdwp_send_event(jdwp_event event, w_grobag *data) {
   */
   woempa(7, "Sending composite event: suspend policy = %d, 1 event, kind %d, requestID %d\n", event->suspend_policy, event->event_kind, event->eventID);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: Sending composite event: suspend policy= %d, 1 event of kind %d (%s),  request id = %d\n", event->suspend_policy, event->event_kind, event_kind2name(event->event_kind), event->eventID);
+    w_printf("JDWP: Sending composite event: suspend policy= %d, 1 event of kind %d (%s),  request id = %d\n", event->suspend_policy, event->event_kind, event_kind2name(event->event_kind), event->eventID);
   }
 
   // suspend policy

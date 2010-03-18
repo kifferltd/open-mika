@@ -43,7 +43,7 @@ static w_void unzip_initDevice(w_device device) {
   if(device->familyMember != 0 && device->familyMember != 20) {
     device->control = allocClearedMem(sizeof(w_Deflate_Control));
     if(!device->control) {
-      wprintf("Unable to allocate memory for deflate controller\n");
+      w_printf("Unable to allocate memory for deflate controller\n");
       return;
     }
     
@@ -54,7 +54,7 @@ static w_void unzip_initDevice(w_device device) {
 #else
     unzip->stack = allocClearedMem_with_retries(driver_stack_size, 3);
     if(!unzip->stack) {
-      wprintf("Unable to allocate memory for deflater stack\n");
+      w_printf("Unable to allocate memory for deflater stack\n");
       releaseMem(device->control);
       device->control = NULL;
       return;
@@ -264,12 +264,12 @@ static w_driver_status unzip_write(w_device device, w_ubyte *bytes, w_int length
   w_deflate_queueelem qe = allocMem(sizeof(w_Deflate_QueueElem));
 
   if(!device->control) {
-    wprintf("Null deflate control\n");
+    w_printf("Null deflate control\n");
     return wds_internal_error;
   }
 
   if (!qe) {
-    wprintf("Unable to allocate queue element\n");
+    w_printf("Unable to allocate queue element\n");
     return wds_internal_error;
   }
 
@@ -277,7 +277,7 @@ static w_driver_status unzip_write(w_device device, w_ubyte *bytes, w_int length
 
   qe->data = allocMem((unsigned)length);
   if (!qe->data) {
-    wprintf("Unable to allocate queue element data\n");
+    w_printf("Unable to allocate queue element data\n");
     releaseMem(qe);
     return wds_internal_error;
   }
@@ -302,7 +302,7 @@ static w_driver_status unzip_write(w_device device, w_ubyte *bytes, w_int length
       releaseMem(qe);
       return wds_no_instance;    
     default:
-      wprintf("Unable to send queue element\n");
+      w_printf("Unable to send queue element\n");
       *lwritn = 0;
       releaseMem(qe->data);
       releaseMem(qe);
@@ -317,7 +317,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
   w_int offset;
 
   if(!device->control) {
-    wprintf("Null deflate control\n");
+    w_printf("Null deflate control\n");
     return wds_internal_error;
   }
 
@@ -399,10 +399,10 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
             *lread = 0;
 
             woempa(7, "AIAIAI, not good, allocation failure somewhere.\n");
-            wprintf("AIAIAI, not good, allocation failure somewhere.\n");
+            w_printf("AIAIAI, not good, allocation failure somewhere.\n");
 
             x_mutex_unlock(&l->mutx);
-	    wprintf("read null queue element\n");
+	    w_printf("read null queue element\n");
             return wds_internal_error;
           } 
           else {
@@ -450,7 +450,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
                 releaseMem(qe);
                 // Release lock
                 x_mutex_unlock(&l->mutx);
-	        wprintf("Unzipper returned error code %d\n", qe->errnum);
+	        w_printf("Unzipper returned error code %d\n", qe->errnum);
                 return wds_internal_error;
             }
           }
@@ -479,13 +479,13 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
           // AIAI, an error occured, throw away all data and return error
 
           woempa(INF_WOEMP_LEV_1, "queue : error\n");
-          wprintf("queue : error\n");
+          w_printf("queue : error\n");
           
           *lread = 0;
 
           // Release lock (no error checking necessary)
           x_mutex_unlock(&l->mutx);
-	  wprintf("Error receiving from queue\n");
+	  w_printf("Error receiving from queue\n");
           return wds_internal_error;    
       }  
     }
@@ -493,7 +493,7 @@ static w_driver_status unzip_read(w_device device, w_ubyte *bytes, w_int length,
 
   // Release lock (no error checking necessary) -- Redundant code, only for safety
   x_mutex_unlock(&l->mutx);
-	  wprintf("Should not get here\n");
+	  w_printf("Should not get here\n");
   return wds_internal_error;    
 }
  
@@ -508,7 +508,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
   w_short reset_count;
 
   if(!device->control) {
-	  wprintf("Null deflate control\n");
+	  w_printf("Null deflate control\n");
     woempa(9, "Device %p has no control\n", device);
     return wds_internal_error;
   }
@@ -527,7 +527,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         woempa(7, "qe = %p\n", qe);
         if (!qe) {
           woempa(9, "Unable to allocate qe\n");
-	  wprintf("Unable to allocate queue element\n");
+	  w_printf("Unable to allocate queue element\n");
           return wds_internal_error;
         }
         
@@ -544,7 +544,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
           case xs_no_instance:
             return wds_no_instance;    
           default:
-	  wprintf("Unable to send queue element\n");
+	  w_printf("Unable to send queue element\n");
             return wds_internal_error;    
         }
       }
@@ -579,7 +579,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
           case xs_success:
             break;
           default:
-            wprintf("Unable to send queue element\n");
+            w_printf("Unable to send queue element\n");
             return wds_internal_error;
         }
 
@@ -596,14 +596,14 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         while (zip->state == COMPRESSION_THREAD_RUNNING && zip->resets_completed != reset_count) {
           s = x_monitor_wait(&zip->ready, COMPRESSION_WAIT_TICKS);
           if (s == xs_interrupted) {
-            wprintf("x_monitor_wait returned xs_interrupted\n");
+            w_printf("x_monitor_wait returned xs_interrupted\n");
             x_monitor_exit(&zip->ready);
             return wds_internal_error;
           }
           else if (s != xs_success && s != xs_no_instance) {
             woempa(INF_WOEMP_LEV_1, "Exit ERROR\n");
             x_monitor_exit(&zip->ready);
-            wprintf("x_monitor_wait returned error code %d\n", s);
+            w_printf("x_monitor_wait returned error code %d\n", s);
             return wds_internal_error;
           }
         }
@@ -612,13 +612,13 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
         return wds_success;
       }
       else {
-        wprintf("Unable to enter zip->ready\n");
+        w_printf("Unable to enter zip->ready\n");
         return wds_internal_error;
       }
 
     case wdi_send_dictionary:
       woempa(9, "This does NOT work, yet\n");
-      wprintf("This does NOT work, yet\n");
+      w_printf("This does NOT work, yet\n");
       return wds_internal_error;
       
       /*
@@ -643,7 +643,7 @@ static w_driver_status unzip_query(w_device device, w_word query, w_word *reply,
   w_deflate_control zip = (w_deflate_control)device->control;
 
   if(!device->control) {
-    wprintf("No deflate control block!\n");
+    w_printf("No deflate control block!\n");
     return wds_internal_error;
   }
 

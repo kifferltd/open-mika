@@ -190,7 +190,7 @@ w_int verifyClazz(w_clazz clazz) {
   w_instance exception = NULL;
 
   if (verbose_flags & VERBOSE_FLAG_LOAD) {
-    wprintf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
+    w_printf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
   }
 
   for (i = 1; !exception && i < clazz->numConstants; ++i) { 
@@ -237,7 +237,7 @@ w_int verifyClazz(w_clazz clazz) {
     m = &clazz->own_methods[i];
     result |= loadDescriptorTypes(m);
     if (verbose_flags & VERBOSE_FLAG_LOAD) {
-      wprintf("Verify %k: verifying method %m\n", clazz, m);
+      w_printf("Verify %k: verifying method %m\n", clazz, m);
     }
     result |= verifyMethod(m) ? CLASS_LOADING_SUCCEEDED : CLASS_LOADING_FAILED;
   }
@@ -1036,9 +1036,9 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
       inslen += (opcode == iinc ? 2 : 1);
     }
     woempa(7, "instruction at pc[%d] is %s%s\n", pc, is_wide ? "wide " : "", opc2name(opcode));
-    //wprintf("instruction at pc[%d] is %s%s", pc, is_wide ? "wide " : "", opc2name(opcode));
-    //{int i; for (i = 1; i < inslen; ++i) wprintf(" %02x", code[pc + i]);}
-    //wprintf("\n");
+    //w_printf("instruction at pc[%d] is %s%s", pc, is_wide ? "wide " : "", opc2name(opcode));
+    //{int i; for (i = 1; i < inslen; ++i) w_printf(" %02x", code[pc + i]);}
+    //w_printf("\n");
   
     V_ASSERT(codelen - pc >= inslen, instruction_truncated);
     V_ASSERT(!instruction_undefined(opcode), illegal_opcode);

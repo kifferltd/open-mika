@@ -186,7 +186,7 @@ static char woempa_buffer[BUFSIZE];
 ** A small woempa aware function that can be called from the gdb debugger...
 */
 
-void wprintf(const char *fmt, ...) {
+void w_printf(const char *fmt, ...) {
 
   va_list ap;
 

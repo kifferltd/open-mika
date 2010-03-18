@@ -235,7 +235,7 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
       }
 
       if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-        wprintf("Execute command: host_exec: child executing\n");
+        w_printf("Execute command: host_exec: child executing\n");
       }
 
       if(index(cmd[0], '/')) {
@@ -277,7 +277,7 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
   *retpid = pid;
   woempa(7, "child process has pid %d and fd = %d,%d,%d...\n",pid,wpid->fd_in,wpid->fd_out,wpid->fd_err);
   if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-    wprintf("Execute command: host_exec: child process has pid %d and fd = %d,%d,%d...\n",pid,wpid->fd_in,wpid->fd_out,wpid->fd_err);
+    w_printf("Execute command: host_exec: child process has pid %d and fd = %d,%d,%d...\n",pid,wpid->fd_in,wpid->fd_out,wpid->fd_err);
   }
 
   /*
@@ -289,7 +289,7 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
     int result;
     woempa(9, "Execution of child process %d failed...\n",pid);
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: host_exec: child process %d failed.\n",pid);
+      w_printf("Execute command: host_exec: child process %d failed.\n",pid);
     }
     result = waitpid(pid, NULL, 0);
     if(result != pid) {
@@ -331,7 +331,7 @@ w_int host_wait_for_all(w_int* retval) {
   if (pid == -1) {
     woempa(7, "[GRU] waitpid(-1,&status, 0) returned -1 (%d, %s)\n", errno, strerror(errno)); 
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: host_wait_for_all: waitpid() returned -1 (%d, %s).\n", errno, strerror(errno));
+      w_printf("Execute command: host_wait_for_all: waitpid() returned -1 (%d, %s).\n", errno, strerror(errno));
     }
   }
 
@@ -339,12 +339,12 @@ w_int host_wait_for_all(w_int* retval) {
     if(WIFEXITED(status)) {
       *retval = WEXITSTATUS(status);
       if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-        wprintf("Execute command: host_wait_for_all: child return value = %d.\n",*retval);
+        w_printf("Execute command: host_wait_for_all: child return value = %d.\n",*retval);
       }
     } else {
       *retval = EXECUTION_ENDED;
       if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-        wprintf("Execute command: host_wait_for_all: child execution ended, return value lost.\n");
+        w_printf("Execute command: host_wait_for_all: child execution ended, return value lost.\n");
       }
     }
     woempa(9,"[GRU] waitpid(-1,&status, 0) returned %d (status = %d, retval = %d)\n",pid, status, *retval); 

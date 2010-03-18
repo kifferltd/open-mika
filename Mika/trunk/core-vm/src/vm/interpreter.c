@@ -390,7 +390,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) {
   frame->current = current;
   frame->jstack_top = tos;
   woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
-//  wprintf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+//  w_printf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
   if (!threadIsUnsafe(frame->thread)) { 
     wabort(ABORT_WONKA, "GC_UNSAFE not set at offset[%d] (%s) of %M\n", current - frame->method->exec.code, opcode_names[*current], frame->method);
@@ -402,7 +402,7 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) {
 inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
   woempa_bytecodecount += 1; 
   if (woempa_bytecodecount > 763230) {
-    wprintf("%d %t %M offset[%d] (%s)\n", woempa_bytecodecount, frame->thread, frame->method, current - frame->method->exec.code, opcode_names[*current]);
+    w_printf("%d %t %M offset[%d] (%s)\n", woempa_bytecodecount, frame->thread, frame->method, current - frame->method->exec.code, opcode_names[*current]);
     fflush(NULL);
   }
 }
@@ -623,7 +623,7 @@ inline static void i_callMethod(w_frame caller, w_method method) {
   int depth = (char*)caller->thread->native_stack_base - (char*)&depth;
   if (depth > caller->thread->native_stack_max_depth) {
     if (isSet(verbose_flags, VERBOSE_FLAG_STACK)) {
-      wprintf("%M: thread %t stack base %p, end %p, now at %p, used = %d%%\n", method, caller->thread, caller->thread->native_stack_base, (char*)caller->thread->native_stack_base - caller->thread->ksize, &depth, (depth * 100) / caller->thread->ksize);
+      w_printf("%M: thread %t stack base %p, end %p, now at %p, used = %d%%\n", method, caller->thread, caller->thread->native_stack_base, (char*)caller->thread->native_stack_base - caller->thread->ksize, &depth, (depth * 100) / caller->thread->ksize);
     }
     caller->thread->native_stack_max_depth = depth;
   }
@@ -2680,7 +2680,7 @@ void interpret(w_frame caller, w_method method) {
     tos[-3].c = long_x.w[1];
     tos -= 2;
     woempa(1, "lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-    // wprintf("lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    // w_printf("lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -4440,7 +4440,7 @@ static w_code searchHandler(w_frame frame) {
   */
   
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: Seeking handler for %e in %M, thread %t\n", thread->exception, frame->method, thread);
+    w_printf("Thrown: Seeking handler for %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   woempa(7, "Seeking handler for %k in %t, current frame is running %M\n", instance2clazz(thread->exception), thread, frame->method);
   threadMustBeUnsafe(thread);
@@ -4469,7 +4469,7 @@ static w_code searchHandler(w_frame frame) {
       if (pc >= ex->start_pc && pc < ex->end_pc) {
         if (cc == NULL || isSuperClass(cc, instance2object(pending)->clazz)) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-            wprintf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
+            w_printf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
           }
           woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
           woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
@@ -4495,7 +4495,7 @@ static w_code searchHandler(w_frame frame) {
   setReferenceField_unsafe(thread->Thread, pending, F_Thread_thrown);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    wprintf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, frame->method, thread);
+    w_printf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, frame->method, thread);
   }
   frame->auxstack_top = auxs;
 

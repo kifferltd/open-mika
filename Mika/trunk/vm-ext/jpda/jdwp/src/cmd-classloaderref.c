@@ -56,7 +56,7 @@ w_void jdwp_classloaderref_visible_classes(jdwp_command_packet cmd) {
   if (loader) {
     if (isSet(instance2clazz(loader)->flags, CLAZZ_IS_CLASSLOADER)) {
       if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-        wprintf("JDWP: loader = %j\n", loader);
+        w_printf("JDWP: loader = %j\n", loader);
       }
 
       ht = loader2loaded_classes(loader);

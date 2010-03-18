@@ -88,7 +88,7 @@ void install_term_handler(void) {
   term_action.sa_flags = 0;
   result = sigaction(SIGTERM, &term_action, &term_oldaction);
   if (result == -1) {
-    wprintf("Registering the term handler failed, return code = %d.\n", result);
+    w_printf("Registering the term handler failed, return code = %d.\n", result);
     abort();
   }
   if (term_oldaction.sa_handler == SIG_DFL) {
@@ -107,7 +107,7 @@ void install_term_handler(void) {
   int_action.sa_flags = 0;
   result = sigaction(SIGINT, &int_action, &int_oldaction);
   if (result == -1) {
-    wprintf("Registering the int handler failed, return code = %d.\n", result);
+    w_printf("Registering the int handler failed, return code = %d.\n", result);
     abort();
   }
   if (int_oldaction.sa_handler == SIG_DFL) {
@@ -155,7 +155,7 @@ void install_term_handler(void) {
   segv_action.sa_flags = SA_SIGINFO | SA_ONESHOT;
   result = sigaction(SIGSEGV, &segv_action, &segv_oldaction);
   if (result == -1) {
-    wprintf("Registering the segv handler failed, return code = %d.\n", result);
+    w_printf("Registering the segv handler failed, return code = %d.\n", result);
     abort();
   }
   if (segv_oldaction.sa_handler == SIG_DFL) {

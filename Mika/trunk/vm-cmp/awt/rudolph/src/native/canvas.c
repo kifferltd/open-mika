@@ -432,7 +432,7 @@ void buffer_realloc(r_canvas canvas) {
       canvas->buffer->data = allocRuBuDa(pixels2bytes(width * height));
       if (canvas->buffer->data == NULL) {
         woempa(9, "failed to allocate buffer of size %dx%d (%d bytes) for %k!\n", width, height, pixels2bytes(width * height), instance2clazz(canvas->component->instance));
-        wprintf("failed to allocate buffer of size %dx%d (%d bytes) for %k!\n", width, height, pixels2bytes(width * height), instance2clazz(canvas->component->instance));
+        w_printf("failed to allocate buffer of size %dx%d (%d bytes) for %k!\n", width, height, pixels2bytes(width * height), instance2clazz(canvas->component->instance));
         return;
       }
     }

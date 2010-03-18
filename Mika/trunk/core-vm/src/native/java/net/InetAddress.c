@@ -133,9 +133,9 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
 #else
   af = AF_INET;
 #endif
-  //wprintf("looking up %s (%d)\n", hostname, af);
+  //w_printf("looking up %s (%d)\n", hostname, af);
   host = w_gethostbyname2(hostname, af);
-  //wprintf("result = %p\n", host);
+  //w_printf("result = %p\n", host);
 
   if (! host) {
     woempa(9, "unable to find DNS name for '%s' due to %s", hostname,strerror(errno));
@@ -156,7 +156,7 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
   ** Creating and copying the hostname to private 'hostName' field of InetAddress Object
   */
 
-  //wprintf("canonical name = %s (%d)\n", h_name, host->h_addrtype);
+  //w_printf("canonical name = %s (%d)\n", h_name, host->h_addrtype);
   h_name = cstring2String(host->h_name, strlen(host->h_name));
   setReferenceField(InetAddress, getStringInstance(h_name), F_InetAddress_hostName);
   deregisterString(h_name);
@@ -191,7 +191,7 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
   releaseMem(hostname);
   setIntegerField(InetAddress, F_InetAddress_address, ntohl(ipnumber));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
-  //wprintf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
+  //w_printf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
 }
 
 w_instance InetAddress_getLocalName(JNIEnv *env, w_instance clazz) {

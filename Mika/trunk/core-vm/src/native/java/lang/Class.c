@@ -606,7 +606,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
         numRelevantMethods += 1;
         woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
         if (putFifo(method,relevantMethods) < 0) {
-          wprintf("No space to store relevant methods for Class/getMethods()\n");
+          w_printf("No space to store relevant methods for Class/getMethods()\n");
           throwOutOfMemoryError(thread);
           return NULL;
         }
@@ -622,7 +622,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
           numRelevantMethods += 1;
           woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
           if (putFifo(method,relevantMethods) < 0) {
-            wprintf("No space to store relevant methods for Class/getMethods()\n");
+            w_printf("No space to store relevant methods for Class/getMethods()\n");
             throwOutOfMemoryError(thread);
             return NULL;
           }
@@ -637,7 +637,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
             numRelevantMethods += 1;
             woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
             if (putFifo(method,relevantMethods) < 0) {
-              wprintf("No space to store relevant methods for Class/getMethods()\n");
+              w_printf("No space to store relevant methods for Class/getMethods()\n");
               throwOutOfMemoryError(thread);
               return NULL;
             }
@@ -655,7 +655,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
             numRelevantMethods += 1;
             woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
             if (putFifo(method,relevantMethods) < 0) {
-              wprintf("No space to store relevant methods for Class/getMethods()\n");
+              w_printf("No space to store relevant methods for Class/getMethods()\n");
               throwOutOfMemoryError(thread);
               return NULL;
             }
@@ -1175,7 +1175,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
 
         if (isSet(super->temp.inner_class_info[i].inner_class_access_flags, ACC_PUBLIC)) {
           if (putFifo(inner_clazz, inner_clazz_fifo) < 0) {
-            wprintf("No space to store inner class for Class/getClasses()\n");
+            w_printf("No space to store inner class for Class/getClasses()\n");
             throwOutOfMemoryError(thread);
             releaseFifo(inner_clazz_fifo);
 

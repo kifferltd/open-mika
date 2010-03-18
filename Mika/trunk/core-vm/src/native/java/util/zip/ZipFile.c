@@ -126,19 +126,19 @@ w_ubyte* quickInflate(w_ubyte* c_data, w_size c_size, w_size u_size, w_word d_cr
 
 
   if((inflate_device = deviceBSOpen("unzip_", wdp_none)) == 0) {
-    wprintf("Failed to open a unzip device\n");
+    w_printf("Failed to open a unzip device\n");
     return NULL;
   }
 
   // check if OK !!!
   if((s = deviceBSWrite(inflate_device, c_data, (signed)c_size, &lread, x_millis2ticks(5000)) != wds_success)) {
-    wprintf("Failed to write data to unzip device %i\n",s);
+    w_printf("Failed to write data to unzip device %i\n",s);
   }
 
   u_data = allocClearedMem_with_retries(u_size, 5);	
 
   if(u_data == NULL){
-    wprintf("Failed to allocate %d bytes for u_data\n", u_size);
+    w_printf("Failed to allocate %d bytes for u_data\n", u_size);
     deviceBSClose(inflate_device);
     return NULL;
   }
@@ -151,18 +151,18 @@ w_ubyte* quickInflate(w_ubyte* c_data, w_size c_size, w_size u_size, w_word d_cr
   }
 
   if (s == wds_internal_error) {
-    wprintf("  -UNZIP ERROR !!\n");
+    w_printf("  -UNZIP ERROR !!\n");
     releaseMem(u_data);
     deviceBSClose(inflate_device);
     return NULL;
   }
 
   if (s == wds_data_exhausted) {
-    wprintf("  -AIAI, no full buffer received, we did not calculate the decompressed size correctly, or device errors\n");
+    w_printf("  -AIAI, no full buffer received, we did not calculate the decompressed size correctly, or device errors\n");
   }
   else {
     if (offs != (signed)u_size) {
-      wprintf("  -AIAI, there is still data left on the device, we did not calculate the decompressed size correctly\n");
+      w_printf("  -AIAI, there is still data left on the device, we did not calculate the decompressed size correctly\n");
       releaseMem(u_data);
       deviceBSClose(inflate_device);
       return NULL;
@@ -171,7 +171,7 @@ w_ubyte* quickInflate(w_ubyte* c_data, w_size c_size, w_size u_size, w_word d_cr
   deviceBSClose(inflate_device);
 
   if (d_crc != (-1 ^ update_ISO3309_CRC(-1, u_data, u_size))) {
-    wprintf("crc failed\n");
+    w_printf("crc failed\n");
     releaseMem(u_data);
     return NULL;
   }

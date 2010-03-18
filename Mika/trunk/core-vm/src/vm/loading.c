@@ -1276,9 +1276,9 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
   w_clazz  current;
 
   if (initiating_loader) {
-    // wprintf("requesting lock for %j\n", initiating_loader);
+    // w_printf("requesting lock for %j\n", initiating_loader);
     enterMonitor(initiating_loader);
-    // wprintf("obtained lock for %j\n", initiating_loader);
+    // w_printf("obtained lock for %j\n", initiating_loader);
   }
 
   current = seekClazzByName(name, initiating_loader);
@@ -1293,7 +1293,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
     }
 
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-      wprintf("Load %w: initiating class loader is %j in thread %t\n", name, initiating_loader, thread);
+      w_printf("Load %w: initiating class loader is %j in thread %t\n", name, initiating_loader, thread);
     }
 
     w_string2chars(name, namebuff);
@@ -1347,7 +1347,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
     releaseMem(namebuff);
     if(prevname == NULL) {    
       if (initiating_loader) {
-        // wprintf("releasing lock for %j\n", initiating_loader);
+        // w_printf("releasing lock for %j\n", initiating_loader);
         exitMonitor(initiating_loader);
       }
       throwException(thread, clazzClassNotFoundException, "%j could not load %w", initiating_loader, name);
@@ -1360,19 +1360,19 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
 
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       if (!current) {
-        wprintf("Load %w: class not found by %j\n", name, initiating_loader);
+        w_printf("Load %w: class not found by %j\n", name, initiating_loader);
       }
       else if (exceptionThrown(thread)) {
-        wprintf("Load %w: failed with %e\n", name, exceptionThrown(thread));
+        w_printf("Load %w: failed with %e\n", name, exceptionThrown(thread));
       }
       else {
-        wprintf("Load %w: defining class loader is %j\n", name, current->loader);
+        w_printf("Load %w: defining class loader is %j\n", name, current->loader);
       }
     }
   }
 
   if (initiating_loader) {
-    // wprintf("releasing lock for %j\n", initiating_loader);
+    // w_printf("releasing lock for %j\n", initiating_loader);
     exitMonitor(initiating_loader);
   }
 
@@ -1448,9 +1448,9 @@ w_clazz namedClassMustBeLoaded(w_instance classLoader, w_string name) {
   }
 
   if (effectiveLoader) {
-    // wprintf("requesting lock for %j\n", effectiveLoader);
+    // w_printf("requesting lock for %j\n", effectiveLoader);
     enterMonitor(effectiveLoader);
-    // wprintf("obtained lock for %j\n", effectiveLoader);
+    // w_printf("obtained lock for %j\n", effectiveLoader);
   }
 
 spin:
@@ -1459,7 +1459,7 @@ spin:
   woempa(1, "seekClazzByName result = %p\n", current);
   if (current == NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-      wprintf("Load %w: initiating class loader is %j in thread %t\n", name, classLoader, thread);
+      w_printf("Load %w: initiating class loader is %j in thread %t\n", name, classLoader, thread);
     }
 
     if (effectiveLoader == NULL) {
@@ -1489,13 +1489,13 @@ spin:
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
       if (!current) {
-        wprintf("Load %w: class not found by %j\n", name, effectiveLoader);
+        w_printf("Load %w: class not found by %j\n", name, effectiveLoader);
       }
       else if (exceptionThrown(thread)) {
-        wprintf("Load %w: failed with %e\n", name, exceptionThrown(thread));
+        w_printf("Load %w: failed with %e\n", name, exceptionThrown(thread));
       }
       else {
-        wprintf("Load %w: defining class loader is %j\n", name, current->loader);
+        w_printf("Load %w: defining class loader is %j\n", name, current->loader);
       }
     }
   }
@@ -1509,7 +1509,7 @@ spin:
   }
 
   if (effectiveLoader) {
-    // wprintf("releasing lock for %j\n", effectiveLoader);
+    // w_printf("releasing lock for %j\n", effectiveLoader);
     exitMonitor(effectiveLoader);
   }
 

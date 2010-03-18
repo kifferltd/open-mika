@@ -272,11 +272,11 @@ r_screen screen_init(void) {
 */
 
   if(awt_args) {
-  wprintf("awt_args: %s\n", awt_args);
+    w_printf("awt_args: %s\n", awt_args);
     if (strcmp(awt_args, "zoom") == 0) {
       awt_zoom = 1;
       woempa(7, "AWT zoom enabled\n");
-      wprintf("AWT zoom enabled\n");
+      w_printf("AWT zoom enabled\n");
     }
 #ifdef AWT_VIRTUAL_SCREEN_SUPPORT
     else if (index(awt_args, 'x')) {

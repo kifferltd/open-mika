@@ -103,7 +103,7 @@ w_void jdwp_array_get_values(jdwp_command_packet cmd) {
       length = jdwp_get_u4(cmd->data, &offset);
       woempa(7, "Array = %j, first = %d length = %d\n", instance, first, length);
       if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-        wprintf("JDWP: Array = %j, first = %d length = %d\n", instance, first, length);
+        w_printf("JDWP: Array = %j, first = %d length = %d\n", instance, first, length);
       }
 
       if (first < 0 || length < 0 || first > instance2Array_length(instance) - length) {
@@ -264,7 +264,7 @@ w_void jdwp_array_set_values(jdwp_command_packet cmd) {
       length = jdwp_get_u4(cmd->data, &offset);
       woempa(7, "Array = %j, first = %d length = %d\n", instance, first, length);
       if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-        wprintf("JDWP: Array = %j, first = %d length = %d\n", instance, first, length);
+        w_printf("JDWP: Array = %j, first = %d length = %d\n", instance, first, length);
       }
 
       if (first < 0 || length < 0 || first > instance2Array_length(instance) - length) {

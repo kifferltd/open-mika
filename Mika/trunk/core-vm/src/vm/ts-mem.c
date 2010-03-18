@@ -104,7 +104,7 @@ void * _allocClearedMem(w_size rsize) {
     enterUnsafeRegion(thread);
   }
   if (!chunk) {
-    wprintf("Failed to allocate %d bytes\n", rsize);
+    w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -158,7 +158,7 @@ void * _allocMem(w_size rsize) {
     enterUnsafeRegion(thread);
   }
   if (!chunk) {
-    wprintf("Failed to allocate %d bytes\n", rsize);
+    w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -213,7 +213,7 @@ void * _reallocMem(void * block, w_size newsize) {
     enterUnsafeRegion(thread);
   }
   if (!newchunk) {
-    wprintf("Failed to reallocate %d bytes\n", newsize);
+    w_printf("Failed to reallocate %d bytes\n", newsize);
 
     if (thread && thread->Thread) {
       throwOutOfMemoryError(thread);
@@ -356,7 +356,7 @@ void _heapCheck(const char * function, const int line) {
   x_mem_walk(x_eternal, checkWalk, wa);
   walks += 1;
   woempa(9, "%s %d : %d anon %d tagged, %d MB anon %d MB tagged, %d errors, %d scans.\n", function, line, wa->all_count, wa->count, wa->all_bytes / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
-  wprintf("%s %d : %d anon %d tagged, %d MB anon %d MB tagged, %d errors, %d scans.\n", function, line, wa->all_count, wa->count, wa->all_bytes / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
+  w_printf("%s %d : %d anon %d tagged, %d MB anon %d MB tagged, %d errors, %d scans.\n", function, line, wa->all_count, wa->count, wa->all_bytes / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
   
   if (wa->errors) {
     wabort(ABORT_WONKA, "x_mem_walk returned %d errors\n", wa->errors);
@@ -893,9 +893,9 @@ void reportMemStat(w_int type) {
   for (i = 0; i < NUMBER_OF_BUCKETS; i++) {
     ht[i] = NULL;
   }
-  wprintf("ht = %p wa = %p: taking a walk now\n", ht, wa);
+  w_printf("ht = %p wa = %p: taking a walk now\n", ht, wa);
   x_mem_walk(x_eternal, cr_walk, wa);
-  wprintf("OK, enjoyed our stroll ...\n");
+  w_printf("OK, enjoyed our stroll ...\n");
 
   /*
   ** Iterate over the hashtable and put all reporting structure references
@@ -919,21 +919,21 @@ void reportMemStat(w_int type) {
   requested_mb = wa->bytes / (1024 * 1024);
 
   if (indx) {
-    wprintf("+---------------------------+--------+---------------+--------------+-------------+\n");
-    wprintf("|                file: line |  hits  | bytes req.  %% | bytes overh. | bytes total |\n");
-    wprintf("+---------------------------+--------+---------------+--------------+-------------+\n");
+    w_printf("+---------------------------+--------+---------------+--------------+-------------+\n");
+    w_printf("|                file: line |  hits  | bytes req.  %% | bytes overh. | bytes total |\n");
+    w_printf("+---------------------------+--------+---------------+--------------+-------------+\n");
   }
   for (i = 0; i < indx; i++) {
     cr = array[i];
     percent = ((w_int)(cr->total * 100)) / wa->bytes;
     total_percent += percent;
-    wprintf("|%20s:%5d | %6d | %7d  %3d%% |   %8d   | %9d   |\n", 
+    w_printf("|%20s:%5d | %6d | %7d  %3d%% |   %8d   | %9d   |\n", 
       fno(cr->file), cr->line, cr->hits, cr->total, percent, (w_int)(cr->hits * sizeof(w_Chunk)), cr->total + (w_int)(cr->hits * sizeof(w_Chunk)));
     was_printed = 1;
   }
   if (indx) {
-    wprintf("+---------------------------+--------+---------------+--------------+-------------+\n");
-    wprintf("Total requested bytes is %d (%d Mb) %d%% in %d chunks, total overhead bytes is %d (%d Mb)\n", 
+    w_printf("+---------------------------+--------+---------------+--------------+-------------+\n");
+    w_printf("Total requested bytes is %d (%d Mb) %d%% in %d chunks, total overhead bytes is %d (%d Mb)\n", 
       wa->bytes, requested_mb, total_percent, wa->count, (w_int)(wa->count * sizeof(w_Chunk)), overhead_mb);
   }
 
