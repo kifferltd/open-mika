@@ -820,6 +820,16 @@ void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int milli
   setOption(thread, ThisImpl, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
 }
 
+void PlainSocketImpl_setReuseAddr(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+  w_thread thread = JNIEnv2w_thread(env);
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d setting ReuseAddr to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+  }
+
+  setOption(thread, ThisImpl, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+}
+
 void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance aThread) {
   w_thread wt = w_threadFromThreadInstance(aThread);
   x_thread xt = wt->kthread;
