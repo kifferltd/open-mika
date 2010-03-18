@@ -732,26 +732,26 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     // Don't think the next line is needed, but here it is anyway
     verbose_cstring[l] = 0;
     if (l == 1 && verbose_cstring[0] == '?') {
-      wprintf("mika.verbose should be a colon(:)-separated selection from the following list\n");
-      wprintf("  startup:  VM startup\n");
-      wprintf("  shutdown: VM shutdown\n");
-      wprintf("  gc:       garbage collection\n");
-      wprintf("  threads:  thread creation/completion\n");
-      wprintf("  loading:  loading and unloading of classes\n");
+      w_printf("mika.verbose should be a colon(:)-separated selection from the following list\n");
+      w_printf("  startup:  VM startup\n");
+      w_printf("  shutdown: VM shutdown\n");
+      w_printf("  gc:       garbage collection\n");
+      w_printf("  threads:  thread creation/completion\n");
+      w_printf("  loading:  loading and unloading of classes\n");
 #ifdef DEBUG_STACKS
-      wprintf("  stack:    stack depth etc. at each method invocation\n");
+      w_printf("  stack:    stack depth etc. at each method invocation\n");
 #endif
-      wprintf("  throw:    exception handling\n");
-      wprintf("  socket:   socket activity\n");
-      wprintf("  traffic:  bytes sent/received over sockets\n");
-      wprintf("  http:     traffic interpreted as HTTP\n");
-      wprintf("  exec:     Runtime.exec()\n");
+      w_printf("  throw:    exception handling\n");
+      w_printf("  socket:   socket activity\n");
+      w_printf("  traffic:  bytes sent/received over sockets\n");
+      w_printf("  http:     traffic interpreted as HTTP\n");
+      w_printf("  exec:     Runtime.exec()\n");
 #ifdef JDWP
-      wprintf("  jdwp:     JDWP\n");
+      w_printf("  jdwp:     JDWP\n");
 #endif
     }
     else if (l) {
-      wprintf("mika.verbose=%s\n", verbose_cstring);
+      w_printf("mika.verbose=%s\n", verbose_cstring);
     }
     if (strstr(verbose_cstring, "start")) {
       verbose_flags |= VERBOSE_FLAG_STARTUP;

@@ -190,7 +190,7 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
   setReferenceField(theClass, thisClassLoader, F_Class_loader);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-    wprintf("Load %w: defined by %j in thread %t\n", name, thisClassLoader, thread);
+    w_printf("Load %w: defined by %j in thread %t\n", name, thisClassLoader, thread);
   }
 
   return theClass;

@@ -119,7 +119,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
   }
 
   if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-    wprintf("Execute command:");
+    w_printf("Execute command:");
   }
 
   for(i = 0; i < cmdlength; i++) {
@@ -136,12 +136,12 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
       goto clean_up;
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf(" %s", cmd[i]);
+      w_printf(" %s", cmd[i]);
     }
   }
   cmd[cmdlength] = 0;
   if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-    wprintf("\n");
+    w_printf("\n");
   }
 
   if(strlen(cmd[0]) == 0) {
@@ -156,7 +156,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
 
   if(envArray != NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: environment\n");
+      w_printf("Execute command: environment\n");
     }
 
     envlength = instance2Array_length(envArray);
@@ -180,7 +180,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
         goto clean_up;
       }
       if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-        wprintf("  %s\n", env[i]);
+        w_printf("  %s\n", env[i]);
       }
     }
     env[envlength] = 0;
@@ -197,7 +197,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
       goto clean_up;
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: working directory = %s\n", path);
+      w_printf("Execute command: working directory = %s\n", path);
     }
   }
 
@@ -224,7 +224,7 @@ w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmd
     setWotsitField(process, F_ProcessInfo_wotsit, wpid);
     setIntegerField(process, F_ProcessInfo_id, pid);
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: created %j with wotsit %p, pid %d\n", process, wpid, pid);
+      w_printf("Execute command: created %j with wotsit %p, pid %d\n", process, wpid, pid);
     }
   } else {
     host_destroy(wpid);
@@ -370,10 +370,10 @@ w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
 
   if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
     if (pid > 0) {
-      wprintf("Execute command: %j host_wait_for_all returned pid %d, retval %d\n", thisInstance, pid, retval);
+      w_printf("Execute command: %j host_wait_for_all returned pid %d, retval %d\n", thisInstance, pid, retval);
     }
     else {
-      wprintf("Execute command: %j host_wait_for_all returned pid %d\n", thisInstance, pid);
+      w_printf("Execute command: %j host_wait_for_all returned pid %d\n", thisInstance, pid);
     }
   }
   setIntegerField(thisInstance, F_ProcessMonitor_returnvalue, retval);
@@ -385,7 +385,7 @@ w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
 
   if(pid) {
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: cleaning up %j (wotsit %p)\n", thisInstance, pid);
+      w_printf("Execute command: cleaning up %j (wotsit %p)\n", thisInstance, pid);
     }
     clearWotsitField(thisInstance, F_ProcessInfo_wotsit);
     host_close(pid);
@@ -397,7 +397,7 @@ w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
 
   if(pid != NULL && (getBooleanField(thisInstance, F_ProcessInfo_destroyed)== WONKA_FALSE)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: destroying %j (wotsit %p)\n", thisInstance, pid);
+      w_printf("Execute command: destroying %j (wotsit %p)\n", thisInstance, pid);
     }
     host_destroy(pid);
     setBooleanField(thisInstance, F_ProcessInfo_destroyed, WONKA_TRUE);
@@ -409,7 +409,7 @@ w_void ProcessInfo_setReturnValue (JNIEnv *env, w_instance thisInstance, w_int r
 
   if(pid != NULL) {
     if (isSet(verbose_flags, VERBOSE_FLAG_EXEC)) {
-      wprintf("Execute command: %j returned %d\n", thisInstance, retval);
+      w_printf("Execute command: %j returned %d\n", thisInstance, retval);
     }
     host_setreturnvalue(pid, retval);
   }

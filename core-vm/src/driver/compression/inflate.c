@@ -241,7 +241,7 @@ static w_ztable gen_tree(w_Hnode *tree, w_int max_code, w_size bl_count[]) {
         if (first) {
           releaseTable(first);
         }
-        wprintf("gen_tree : could not allocate %d bytes for table\n", sizeof(w_Ztable));
+        w_printf("gen_tree : could not allocate %d bytes for table\n", sizeof(w_Ztable));
         return NULL;
       }
       table->table = allocClearedMem(current_count * sizeof(w_Hnode));
@@ -250,7 +250,7 @@ static w_ztable gen_tree(w_Hnode *tree, w_int max_code, w_size bl_count[]) {
           releaseTable(first);
         }
         releaseMem(table);
-        wprintf("gen_tree : could not allocate %d bytes for table->table\n", current_count *sizeof(w_Hnode));
+        w_printf("gen_tree : could not allocate %d bytes for table->table\n", current_count *sizeof(w_Hnode));
         return NULL;
       }
       offset = 0;
@@ -494,13 +494,13 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
   n = numLiteralCodes + numDistanceCodes;
   codeLength = allocClearedMem(n * sizeof(w_size));
   if (! codeLength) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for codeLength table\n", n * sizeof(w_size));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for codeLength table\n", n * sizeof(w_size));
     return NULL;
   }
 
   tmpnodes = allocClearedMem((19 + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", 21 * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", 21 * sizeof(w_Hnode));
     releaseMem(codeLength);
     return NULL;
   }
@@ -514,7 +514,7 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
   }
 
   if (in->par_in == NULL) {
-    wprintf("par_in is NULL!\n");
+    w_printf("par_in is NULL!\n");
     return NULL;
   }
 
@@ -546,7 +546,7 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
   */
   tmptable = gen_tree(tmpnodes, 19, bit_length_counts);
   if (!tmptable) {
-    wprintf("gen_tree failed! (1)\n");
+    w_printf("gen_tree failed! (1)\n");
     // TODO : cleanup?
     return NULL;
   }
@@ -623,14 +623,14 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
   */
   dict = allocClearedMem(sizeof(w_Zdict));
   if (! dict) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for dict\n", sizeof(w_Zdict));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for dict\n", sizeof(w_Zdict));
     releaseMem(codeLength);
     return NULL;
   }
 
   tmpnodes = allocClearedMem((numLiteralCodes + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numLiteralCodes * 2) * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numLiteralCodes * 2) * sizeof(w_Hnode));
     releaseMem(dict);
     releaseMem(codeLength);
     return NULL;
@@ -661,7 +661,7 @@ w_zdict buildDynamicDictionary(w_deflate_control in) {
   */
   tmpnodes = allocClearedMem((numDistanceCodes + 2) * sizeof(w_Hnode));
   if (! tmpnodes) {
-    wprintf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numDistanceCodes * 2) * sizeof(w_Hnode));
+    w_printf("buildDynamicDictionary() : could not allocate %d bytes for tmpnodes\n", (numDistanceCodes * 2) * sizeof(w_Hnode));
     releaseTable(dict->lengths_literals);
     releaseMem(dict);
     releaseMem(codeLength);
@@ -828,7 +828,7 @@ void zzzinflate(void *ll) {
           }
           while (size--) {
             if (writeLiteralByte(l, readLiteralByte(l))) {
-	      wprintf("writeLiteralFoo\n");
+	      w_printf("writeLiteralFoo\n");
               err = 1;
               goto hastalavista;
             }
@@ -844,7 +844,7 @@ void zzzinflate(void *ll) {
           }
           woempa(1, "--> block %d is of the 'fixed huffman code' type.\n", num);
           if (inflateBlock(l, fixed_dict)) {
-	      wprintf("inflateFoo\n");
+	      w_printf("inflateFoo\n");
             err = 1;
             goto hastalavista;
           }
@@ -854,12 +854,12 @@ void zzzinflate(void *ll) {
           woempa(1, "--> block %d is of the 'dynamic huffman code' type.\n", num);
           dict = buildDynamicDictionary(l);
           if (! dict) {
-	      wprintf("dictFoo\n");
+	      w_printf("dictFoo\n");
             err = 1;
             goto hastalavista;
           }
           if (inflateBlock(l, dict) != 0) {
-	      wprintf("inflateBar\n");
+	      w_printf("inflateBar\n");
             err = 1;
             goto hastalavista;
           }
@@ -869,7 +869,7 @@ void zzzinflate(void *ll) {
 
         default:
           woempa(7, "Block %d has an unknown type (0x%08x) or has an error in it!\n", num, type);
-          wprintf("Block %d has an unknown type (0x%08x) or has an error in it!\n", num, type);
+          w_printf("Block %d has an unknown type (0x%08x) or has an error in it!\n", num, type);
           err = 1;
           goto hastalavista;
 
@@ -936,7 +936,7 @@ hastalavista:
           case xs_success:
             break;
           default:
-	    wprintf("defaultFoo\n");
+	    w_printf("defaultFoo\n");
             err = 1;
             break;
         }
@@ -971,7 +971,7 @@ hastalavista:
     }
     else {
       woempa(9, "Monitor error !!!!\n");
-      wprintf("monitorFoo\n");
+      w_printf("monitorFoo\n");
       err = 1;
     }
   }

@@ -227,7 +227,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   rc = read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
 #ifndef OSWALD
   while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
-    wprintf("readZipEntry(): read() interrupted, retrying\n");
+    w_printf("readZipEntry(): read() interrupted, retrying\n");
     rc = read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
   }
 #endif
@@ -300,7 +300,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       data = start + 42;
       readptr = data;
       l =  nameLength + extraLength + commentLength - ZIPENTRY_BUFSIZ;
-      wprintf("Need to read an extra %d bytes\n", l);
+      w_printf("Need to read an extra %d bytes\n", l);
       while (l > 0) {
         rc = read(entry->zipFile->fd, readptr,  l);
 #ifndef OSWALD
@@ -313,7 +313,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
         }
         readptr += rc;
         l -= rc;
-        wprintf("Read another %d bytes, total = %d\n", rc, readptr - start);
+        w_printf("Read another %d bytes, total = %d\n", rc, readptr - start);
       }
     }
 
@@ -1090,7 +1090,7 @@ static w_ubyte *zip_inflate(z_zipEntry entry) {
     wabort(ABORT_WONKA, "lseek() failed\n");
   }
   woempa(1, "zip_inflate(): Need to read %d bytes\n", entry->c_size);
-  //wprintf("zip_inflate(): Need to read %d bytes\n", entry->c_size);
+  //w_printf("zip_inflate(): Need to read %d bytes\n", entry->c_size);
   while (l < entry->c_size) {
     rc = read(entry->zipFile->fd, source + l, entry->c_size - l);
 #ifndef OSWALD
@@ -1102,7 +1102,7 @@ static w_ubyte *zip_inflate(z_zipEntry entry) {
       wabort(ABORT_WONKA, "read() failed after %d bytes\n", l);
     }
     woempa(1, "zip_inflate(): Read %d bytes\n", rc);
-    //wprintf("zip_inflate(): Read %d bytes\n", rc);
+    //w_printf("zip_inflate(): Read %d bytes\n", rc);
     l += rc;
   }
 

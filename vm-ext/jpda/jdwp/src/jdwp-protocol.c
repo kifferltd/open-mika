@@ -130,7 +130,7 @@ w_fifo jdwp_send_fifo;
 
 w_ubyte jdwp_get_u1(char *buffer, w_size *offset) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get byte = %02x\n", buffer[(*offset)]);
+    w_printf("JDWP: get byte = %02x\n", buffer[(*offset)]);
   }
   return (w_ubyte)buffer[(*offset)++];
 }
@@ -143,7 +143,7 @@ w_ushort jdwp_get_u2(char *buffer, w_size *offset) {
   s = (s << 8) | (w_ubyte)*p++;
   *offset += 2;
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get short = %04x\n", s);
+    w_printf("JDWP: get short = %04x\n", s);
   }
 
   return s;
@@ -165,7 +165,7 @@ static w_word i_get_u4(char *buffer, w_size *offset) {
 w_word jdwp_get_u4(char *buffer, w_size *offset) {
   w_word w = i_get_u4(buffer, offset);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get int = %08x\n", w);
+    w_printf("JDWP: get int = %08x\n", w);
   }
 
   return w;
@@ -175,7 +175,7 @@ w_instance jdwp_get_objectref(char *buffer, w_size *offset) {
   w_word objectID = i_get_u4(buffer, offset);
   w_instance result = jdwp_objectID2instance(objectID);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get objectref = %d = %j\n", objectID, result);
+    w_printf("JDWP: get objectref = %d = %j\n", objectID, result);
   }
 
   return result;
@@ -189,7 +189,7 @@ w_ubyte *jdwp_get_bytes(char *buffer, w_size *offset, w_size len) {
   *offset += len;
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     char *contents = bytes2hex(result, len);
-    wprintf("JDWP: get bytes = %s\n", contents);
+    w_printf("JDWP: get bytes = %s\n", contents);
     releaseMem(contents);
   }
 
@@ -201,7 +201,7 @@ void jdwp_get_bytes_here(char *buffer, w_size *offset, w_size len, w_ubyte *here
   *offset += len;
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     char *contents = bytes2hex(here, len);
-    wprintf("JDWP: get bytes = %s\n", contents);
+    w_printf("JDWP: get bytes = %s\n", contents);
     releaseMem(contents);
   }
 }
@@ -217,7 +217,7 @@ w_string jdwp_get_string(char *buffer, w_size *offset) {
   result = utf2String(bytes, (w_int)len);
   releaseMem(bytes);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get string = %w\n", result);
+    w_printf("JDWP: get string = %w\n", result);
   }
 
   return result;
@@ -230,13 +230,13 @@ void jdwp_get_location_here(char *buffer, w_size *offset, jdwp_location location
   i_get_u4(buffer, offset); // skip MS 4 bytes
   location->pc = i_get_u4(buffer, offset);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: get location = %M at pc %d\n", location->method, location->pc);
+    w_printf("JDWP: get location = %M at pc %d\n", location->method, location->pc);
   }
 }
 
 void jdwp_put_u1(w_grobag *gb, w_ubyte b) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put byte = %02x\n", b);
+    w_printf("JDWP: put byte = %02x\n", b);
   }
   appendToGrobag(gb, &b, 1);
 }
@@ -245,7 +245,7 @@ void jdwp_put_u2(w_grobag *gb, w_ushort s) {
   w_ubyte temp[2];
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put short = %04x\n", s);
+    w_printf("JDWP: put short = %04x\n", s);
   }
   temp[0] = (s >> 8) & 0xff;
   temp[1] = s & 0xff;
@@ -264,7 +264,7 @@ void i_put_u4(w_grobag *gb, w_word w) {
 
 void jdwp_put_u4(w_grobag *gb, w_word w) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put int = %08x\n", w);
+    w_printf("JDWP: put int = %08x\n", w);
   }
   i_put_u4(gb, w);
 }
@@ -273,7 +273,7 @@ void jdwp_put_objectref(w_grobag *gb, w_instance instance) {
   w_word objectID = jdwp_instance2objectID(instance);;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put objectref = %d = %j\n", objectID, instance);
+    w_printf("JDWP: put objectref = %d = %j\n", objectID, instance);
   }
   i_put_u4(gb, objectID);
 }
@@ -281,7 +281,7 @@ void jdwp_put_objectref(w_grobag *gb, w_instance instance) {
 void jdwp_put_bytes(w_grobag *gb, w_ubyte *b, w_size l) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     char *contents = bytes2hex((char*)b, l);
-    wprintf("JDWP: put bytes = %s\n", contents);
+    w_printf("JDWP: put bytes = %s\n", contents);
     releaseMem(contents);
   }
   appendToGrobag(gb, b, l);
@@ -289,7 +289,7 @@ void jdwp_put_bytes(w_grobag *gb, w_ubyte *b, w_size l) {
 
 void jdwp_put_cstring(w_grobag *gb, char *b, w_size l) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put string = %s\n", b);
+    w_printf("JDWP: put string = %s\n", b);
   }
   i_put_u4(gb, l);
   appendToGrobag(gb, b, l);
@@ -300,7 +300,7 @@ void jdwp_put_string(w_grobag *gb, w_string string) {
   w_ubyte *cstring = jdwp_string2UTF8(string, &length);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put string = %w\n", string);
+    w_printf("JDWP: put string = %w\n", string);
   }
   i_put_u4(gb, length);
   appendToGrobag(gb, cstring + 4, length);
@@ -311,7 +311,7 @@ void jdwp_put_location(w_grobag *gb, jdwp_location location) {
   w_clazz clazz = location->method->spec.declaring_clazz;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    wprintf("JDWP: put location = %M at pc %d\n", location->method, location->pc);
+    w_printf("JDWP: put location = %M at pc %d\n", location->method, location->pc);
   }
   jdwp_put_u1(gb, isSet(clazz->flags, ACC_INTERFACE) ? jdwp_tt_interface : jdwp_tt_class);
   i_put_u4(gb, (w_word)clazz);
@@ -356,11 +356,11 @@ void jdwp_send_reply(w_int id, w_grobag *gb, w_int error) {
     if (length) {
       char *contents = bytes2hex((*gb)->contents, length);
 
-      wprintf("JDWP: Sending reply id %d, error code %d (%s),  length: %d, contents:%s\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length), contents);
+      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d, contents:%s\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length), contents);
       releaseMem(contents);
     }
     else {
-      wprintf("JDWP: Sending reply id %d, error code %d (%s),  length: %d\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length));
+      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length));
     }
   }
 

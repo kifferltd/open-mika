@@ -507,7 +507,7 @@ static x_boolean register_callback(void * mem, void * arg) {
 
 
 static void print_callback(w_word key, w_word value, void * arg1, void * arg2) {
-  wprintf("%6d instances of %k\n", value, key);
+  w_printf("%6d instances of %k\n", value, key);
 }
 
 void reportInstanceStat(void) {

@@ -161,7 +161,7 @@ extern w_flags verbose_flags;
 ** Function which behaves like printf, except that it recognizes wonka-specific
 ** formats such as %w, %j, etc..
 */
-void wprintf(const char *format, ...);
+void w_printf(const char *format, ...);
 
 #define DUMP_CLASSES
 #define DUMP_CLASSLOADERS

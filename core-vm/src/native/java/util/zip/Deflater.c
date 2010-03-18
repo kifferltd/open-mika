@@ -161,7 +161,7 @@ w_int Deflater_deflate(JNIEnv *env, w_instance thisDeflater, w_instance byteArra
           // x_thread_sleep(1);
         }
         if(status != wds_success){
-          wprintf("ERROR OCCURED in deflate - query status...\n");
+          w_printf("ERROR OCCURED in deflate - query status...\n");
         }
         ret += l;
         if(reply){
@@ -177,7 +177,7 @@ w_int Deflater_deflate(JNIEnv *env, w_instance thisDeflater, w_instance byteArra
         setIntegerField(thisDeflater, F_Deflater_finished, 2);
       }
       else if (status == wds_internal_error) {
-        wprintf("deflater had an internal error\n");
+        w_printf("deflater had an internal error\n");
       }
       ret += l;
     }

@@ -101,7 +101,7 @@ void Inflater_setDictionary(JNIEnv *env, w_instance thisInflater, w_instance byt
         w_driver_status status;
         while ((status = deviceBSSet(zstream, wdi_send_dictionary, 1, x_millis2ticks(250))) == wds_no_instance);
         if (status != wds_success) {
-          wprintf("internal error occured while setting dictionary for %p\n",thisInflater);
+          w_printf("internal error occured while setting dictionary for %p\n",thisInflater);
         }
         //the write will push the whole block in one go in the queue ...
         status = deviceBSWrite(zstream, (w_ubyte*)data, len, &l, x_eternal);
@@ -110,7 +110,7 @@ void Inflater_setDictionary(JNIEnv *env, w_instance thisInflater, w_instance byt
           setIntegerField(thisInflater, F_Inflater_dictAdler, 0);
         }
         else {
-          wprintf("internal error occured while setting dictionary for %p\n",thisInflater);
+          w_printf("internal error occured while setting dictionary for %p\n",thisInflater);
         }
       }
     }
@@ -126,7 +126,7 @@ void Inflater_setInput(JNIEnv *env, w_instance thisInflater, w_instance byteArra
   woempa(6, "DEBUG setting input for %p \n",thisInflater);
   status = deviceBSWrite(zstream, (w_ubyte*)data, len, &l, x_eternal);
   if (status != wds_success) {
-    wprintf("internal error occured while setting input for %p (data is lost)\n",thisInflater);
+    w_printf("internal error occured while setting input for %p (data is lost)\n",thisInflater);
   }
 }
 
@@ -175,7 +175,7 @@ w_int Inflater_inflate(JNIEnv *env, w_instance thisInflater, w_instance byteArra
         setBooleanField(thisInflater, F_Inflater_finished, WONKA_TRUE);
       }
       else if (status == wds_internal_error) {
-        wprintf("DEBUG - inflater had an internal error\n");
+        w_printf("DEBUG - inflater had an internal error\n");
         throwException(thread, clazzDataFormatException, NULL);
       }
       ret += l;

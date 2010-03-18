@@ -151,7 +151,7 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     char *contents = bytes2hex((*gb)->contents, (*gb)->occupancy);
 
-    wprintf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], swap_int(command->length), contents);
+    w_printf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], swap_int(command->length), contents);
     releaseMem(contents);
   }
 
@@ -362,7 +362,7 @@ void jdwp_dispatcher() {
       if (!wonka_killed && connection_attempt_count++ < MAX_CONNECTION_ATTEMPTS) {
         x_thread_sleep(x_millis2ticks(CONNECTION_REATTEMPT_MILLIS));
         if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-          wprintf("JDWP: Unable to establish connection, retrying in %d ms", CONNECTION_REATTEMPT_MILLIS);
+          w_printf("JDWP: Unable to establish connection, retrying in %d ms", CONNECTION_REATTEMPT_MILLIS);
         }
       }
       else {
@@ -371,14 +371,14 @@ void jdwp_dispatcher() {
         }
         jdwp_state = jdwp_state_terminated;
         if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-          wprintf("JDWP: Unable to establish connection after %d attempts, giving up", MAX_CONNECTION_ATTEMPTS);
+          w_printf("JDWP: Unable to establish connection after %d attempts, giving up", MAX_CONNECTION_ATTEMPTS);
         }
       }
       continue;
     }
 
     if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-      wprintf("JDWP: Connection established\n");
+      w_printf("JDWP: Connection established\n");
     }
     /*
     ** If VM_START was not yet sent, send it now.
@@ -406,7 +406,7 @@ void jdwp_dispatcher() {
         if (cmd->command_set > 0 || cmd->command_set <= 17) {
           if (cmd->command <= 0 || cmd->command > command_set_max_command[cmd->command_set]) {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-              wprintf("JDWP: Received command id %d, command set: %d (%s),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, swap_int(cmd->length));
+              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, swap_int(cmd->length));
             }
             continue;
           }
@@ -414,7 +414,7 @@ void jdwp_dispatcher() {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
               char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
 
-              wprintf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], swap_int(cmd->length), contents);
+              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], swap_int(cmd->length), contents);
               releaseMem(contents);
             }
           }
@@ -422,7 +422,7 @@ void jdwp_dispatcher() {
         else if (cmd->command_set == 64) {
           if (cmd->command != 100) {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-              wprintf("JDWP: Received command id %d, command set: %d (Event),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command, swap_int(cmd->length));
+              w_printf("JDWP: Received command id %d, command set: %d (Event),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command, swap_int(cmd->length));
             }
             continue;
           }
@@ -430,14 +430,14 @@ void jdwp_dispatcher() {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
               char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
 
-              wprintf("JDWP: Received command id %d, command set: 64 (Event),  command: 100 (Composite),  length: %d, contents: %s\n", swap_int(cmd->id), swap_int(cmd->length), contents);
+              w_printf("JDWP: Received command id %d, command set: 64 (Event),  command: 100 (Composite),  length: %d, contents: %s\n", swap_int(cmd->id), swap_int(cmd->length), contents);
               releaseMem(contents);
             }
           }
         }
         else {
           if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-            wprintf("JDWP: Received command id %d, command set: %d (unknown!)  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, swap_int(cmd->length));
+            w_printf("JDWP: Received command id %d, command set: %d (unknown!)  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, swap_int(cmd->length));
           }
           continue;
         }

@@ -103,7 +103,7 @@ static void _flying_pig_check(char *func, char *file, int line, w_object object)
     w_instance instance = object->fields;
 
 #ifdef DEBUG
-    wprintf("Object allocated at %s line %d\n", block2chunk(object)->file, block2chunk(object)->line);
+    w_printf("Object allocated at %s line %d\n", block2chunk(object)->file, block2chunk(object)->line);
 #endif
     if (object->clazz == clazzString) {
       wabort(ABORT_WONKA, "Flying pig %j (`%w')! in %s at %s:%d\n", instance, instance[F_String_wotsit], func, file, line);
@@ -126,13 +126,13 @@ static void _flying_pig_check(char *func, char *file, int line, w_object object)
 static w_hashtable instance_stat_hashtable;
 
 static void instance_stat_iteration(w_word clazz_word, w_word count, void* dummy1, void *dummy2) {
-  wprintf("%8d %k\n", count, clazz_word);
+  w_printf("%8d %k\n", count, clazz_word);
 }
 
 static void reportInstanceStat(void) {
-  wprintf("--- START INSTANCE STATS ---\n");
+  w_printf("--- START INSTANCE STATS ---\n");
   ht_iterate(instance_stat_hashtable, instance_stat_iteration, NULL, NULL);
-  wprintf("--- END INSTANCE STATS ---\n");
+  w_printf("--- END INSTANCE STATS ---\n");
 }
 #endif
 
@@ -387,13 +387,13 @@ static void Class_destructor(w_instance theClass) {
   }
 
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-    wprintf("Unloading %K\n", clazz);
+    w_printf("Unloading %K\n", clazz);
   }
 
   clearWotsitField(theClass, F_Class_wotsit);
   woempa(7, "Adding %K to dead_clazz_fifo\n", clazz);
   if (putFifo(clazz, dead_clazz_fifo) < 0) {
-    wprintf("Failed to put %K on dead_clazz_fifo\n", clazz);
+    w_printf("Failed to put %K on dead_clazz_fifo\n", clazz);
   };
 }
 
@@ -417,7 +417,7 @@ static void trashPackages(w_word key, w_word value, void *dummy1, void*dummy2) {
 
   woempa(7, "trashing %w in %j\n", package->name, package->loader);
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-    wprintf("Removing package %w from %j\n", package->name, package->loader);
+    w_printf("Removing package %w from %j\n", package->name, package->loader);
   }
   destroyPackage(package);
 }
@@ -427,7 +427,7 @@ static void ClassLoader_destructor(w_instance theClassLoader) {
 
   woempa(9, "Destroying ClassLoader instance %j\n", theClassLoader);
   if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
-    wprintf("Destroying ClassLoader instance %j\n", theClassLoader);
+    w_printf("Destroying ClassLoader instance %j\n", theClassLoader);
   }
   class_hashtable = getWotsitField(theClassLoader, F_ClassLoader_loaded_classes);
   if (class_hashtable) {
@@ -588,7 +588,7 @@ static w_int releaseInstance(w_object object) {
     Class_destructor(instance);
 #else
 // [CG 20040330] This could help get rid of "dead" class's static vars?
-//    wprintf("%K is now garbage\n", Class2clazz(instance));
+//    w_printf("%K is now garbage\n", Class2clazz(instance));
 //    setClazzState(Class2clazz(instance), CLAZZ_STATE_GARBAGE);
     return 0;
 #endif
@@ -688,7 +688,7 @@ w_int markInstance(w_instance instance, w_fifo fifo, w_word flag) {
     int depth = (char*)marking_thread->native_stack_base - (char*)&object;
     if (depth > marking_thread->native_stack_max_depth) {
       if (isSet(verbose_flags, VERBOSE_FLAG_STACK)) {
-        wprintf("GC: thread %t stack base %p, end %p, now at %p, used = %d%%\n", marking_thread, marking_thread->native_stack_base, (char*)marking_thread->native_stack_base - marking_thread->ksize, &object, (depth * 100) / marking_thread->ksize);
+        w_printf("GC: thread %t stack base %p, end %p, now at %p, used = %d%%\n", marking_thread, marking_thread->native_stack_base, (char*)marking_thread->native_stack_base - marking_thread->ksize, &object, (depth * 100) / marking_thread->ksize);
       }
       marking_thread->native_stack_max_depth = depth;
     }
@@ -2058,7 +2058,7 @@ static w_int collect_dead_clazzes(void) {
     this_clazz = dead_clazz_array[i];
     woempa(7, "Burying dead %K\n", this_clazz);
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: dead %K\n", this_clazz);
+      w_printf("GC: dead %K\n", this_clazz);
     }
     if (this_clazz->previousDimension) {
       this_clazz->previousDimension->nextDimension = NULL;
@@ -2215,7 +2215,7 @@ void sweepPhase(void) {
   w_size collected = sweep(2000000000);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: thread %t swept %d bytes\n", currentWonkaThread, collected);
+    w_printf("GC: thread %t swept %d bytes\n", currentWonkaThread, collected);
   }
 }
 
@@ -2324,7 +2324,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
   if (!reclaim_listener_list) {
     woempa(1, "No reclaim_listener_list, no fun\n");
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: No reclaim_listener_list\n");
+      w_printf("GC: No reclaim_listener_list\n");
     }
 
     return 0;
@@ -2333,7 +2333,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   if (isSet(blocking_all_threads, BLOCKED_BY_GC)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: cowardly refusal by thread %t to start a rival garbage collection cycle\n", thread);
+      w_printf("GC: cowardly refusal by thread %t to start a rival garbage collection cycle\n", thread);
       reclaim_accumulator /= 2;
     }
     return 0;
@@ -2341,7 +2341,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 #ifdef JDWP
   else if (isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: cowardly refusal by thread %t to start garbage collection cycle while JDWP is suspending VM\n", thread);
+      w_printf("GC: cowardly refusal by thread %t to start garbage collection cycle while JDWP is suspending VM\n", thread);
     }
     return 0;
   }
@@ -2352,7 +2352,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   if (x_mem_avail() - requested <= min_heap_free || reclaim_accumulator > reclaim_threshold) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC) && sizeOfWordset(&reclaim_listener_list) && gc_phase != GC_PHASE_UNREADY) {
-      wprintf("GC: thread %t trying to reclaim %d bytes\n", thread, remaining);
+      w_printf("GC: thread %t trying to reclaim %d bytes\n", thread, remaining);
     }
 
     if (thread 
@@ -2374,13 +2374,13 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
       exit_reclaim_listener_monitor();
       remaining = remaining - reclaimed_this_cycle;
       if (isSet(verbose_flags, VERBOSE_FLAG_GC) && sizeOfWordset(&reclaim_listener_list) && gc_phase != GC_PHASE_UNREADY) {
-        wprintf("GC: thread %t was able to reclaim %d bytes\n", thread, initial - remaining);
+        w_printf("GC: thread %t was able to reclaim %d bytes\n", thread, initial - remaining);
       }
       reclaim_accumulator = 0;
     }
     else if (thread) {
       if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-        wprintf("GC: thread %t postponing request for %d bytes because %s\n", thread, requested,
+        w_printf("GC: thread %t postponing request for %d bytes because %s\n", thread, requested,
           thread == marking_thread ? " is marking_thread" :
           thread == sweeping_thread ? " is sweeping_thread" :
 #ifdef JDWP
@@ -2418,14 +2418,14 @@ w_size internal_reclaim_callback(w_int requested, w_instance instance) {
     woempa(7, "Could not acquire gc_monitor, retrying.\n");
     x_thread_sleep(1);
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t found gc_monitor busy, retry #%d\n", currentWonkaThread, monitor_attempts);
+      w_printf("GC: thread %t found gc_monitor busy, retry #%d\n", currentWonkaThread, monitor_attempts);
     }
     status = x_monitor_enter(gc_monitor, 0);
   }
   if (status != xs_success) {
     woempa(7, "Could not acquire gc_monitor for internal_reclaim_callback.\n");
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: thread %t was unable to reclaim any memory (gc_monitor busy)\n", currentWonkaThread);
+      w_printf("GC: thread %t was unable to reclaim any memory (gc_monitor busy)\n", currentWonkaThread);
     }
   }
   else {
@@ -2500,8 +2500,8 @@ void gc_collect(w_instance theGarbageCollector) {
 
   woempa(7,"(GC) Begin pass %d\n",gc_pass_count);
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: starting scheduled pass %d : %d instances in use (%d allocated, %d freed)\n", gc_pass_count, instance_use, instance_allocated, instance_returned);
-    wprintf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
+    w_printf("GC: starting scheduled pass %d : %d instances in use (%d allocated, %d freed)\n", gc_pass_count, instance_use, instance_allocated, instance_returned);
+    w_printf("GC: %d bytes available out of %d, memory load factor = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, killing_soft_references ? "" : "not ");
   }
 #ifdef TRACE_MEM_ALLOC
   //if (gc_pass_count % (PRINTRATE*PRINTRATE) == 0) reportMemStat(1);
@@ -2509,14 +2509,14 @@ void gc_collect(w_instance theGarbageCollector) {
 
   while (done < 2) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: done = %d (%s), GC phase = %s.\n", done, done == 0 ? "nothing" : done == 1 ? "mark" : done == 2 ? "mark+sweep" : "fail", gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
+      w_printf("GC: done = %d (%s), GC phase = %s.\n", done, done == 0 ? "nothing" : done == 1 ? "mark" : done == 2 ? "mark+sweep" : "fail", gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
     }
     switch (gc_phase) {
       case GC_PHASE_UNREADY:
       case GC_PHASE_COMPLETE:
         woempa(7, "Thread %w: Phase = COMPLETE, doing a PREPARE and MARK\n", this_thread->name);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t setting GC phase to PREPARE\n", this_thread);
+          w_printf("GC: thread %t setting GC phase to PREPARE\n", this_thread);
 	  gc_start_ticks = x_time_get();
         }
         marking_thread = this_thread;
@@ -2526,7 +2526,7 @@ void gc_collect(w_instance theGarbageCollector) {
         if (retcode < 0) {
           woempa(9, "Aborting PREPARE\n");
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t aborting PREPARE\n", this_thread);
+            w_printf("GC: thread %t aborting PREPARE\n", this_thread);
           }
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
@@ -2538,7 +2538,7 @@ void gc_collect(w_instance theGarbageCollector) {
 
         }
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t setting GC phase to MARK\n", this_thread);
+          w_printf("GC: thread %t setting GC phase to MARK\n", this_thread);
         }
         gc_phase = GC_PHASE_MARK;
         retcode = markPhase();
@@ -2546,7 +2546,7 @@ void gc_collect(w_instance theGarbageCollector) {
         if (retcode < 0) {
           woempa(9, "Aborting MARK\n");
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t aborting MARK\n", this_thread);
+            w_printf("GC: thread %t aborting MARK\n", this_thread);
           }
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
@@ -2561,8 +2561,8 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         woempa(7,"(GC) Thread %w: Entering SWEEP phase.\n", this_thread->name);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: prepare/mark phase lasted %d ms\n", x_ticks2usecs(x_time_get() - gc_start_ticks) / 1000);
-          wprintf("GC: thread %t setting GC phase to SWEEP\n", this_thread);
+          w_printf("GC: prepare/mark phase lasted %d ms\n", x_ticks2usecs(x_time_get() - gc_start_ticks) / 1000);
+          w_printf("GC: thread %t setting GC phase to SWEEP\n", this_thread);
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
@@ -2573,7 +2573,7 @@ void gc_collect(w_instance theGarbageCollector) {
       case GC_PHASE_SWEEP:
         if (sweeping_thread) {
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t will not sweep, %t is already doing so\n", this_thread, sweeping_thread);
+            w_printf("GC: thread %t will not sweep, %t is already doing so\n", this_thread, sweeping_thread);
           }
           done = 99;
           gc_phase = GC_PHASE_COMPLETE;
@@ -2586,7 +2586,7 @@ void gc_collect(w_instance theGarbageCollector) {
         }
         woempa(7, "Thread %w: Phase = SWEEP, joining in the fun\n", this_thread->name);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t performing sweep\n", this_thread);
+          w_printf("GC: thread %t performing sweep\n", this_thread);
         }
 	sweeping_thread = this_thread;
 #ifdef INSTANCE_STATS
@@ -2600,7 +2600,7 @@ void gc_collect(w_instance theGarbageCollector) {
 #endif
 	sweeping_thread = NULL;
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t setting GC phase to COMPLETE\n", this_thread);
+          w_printf("GC: thread %t setting GC phase to COMPLETE\n", this_thread);
         }
         gc_phase = GC_PHASE_COMPLETE;
         marking_thread = NULL;
@@ -2626,8 +2626,8 @@ void gc_collect(w_instance theGarbageCollector) {
   }
   woempa(7,"(GC) End pass %d : %d instances returned so far\n",gc_pass_count, instance_returned);
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: finished scheduled pass %d : %d instances in use (%d allocated, %d freed)\n", gc_pass_count, instance_use, instance_allocated, instance_returned);
-    wprintf("GC: thread %t collected %d objects\n", this_thread, instance_returned);
+    w_printf("GC: finished scheduled pass %d : %d instances in use (%d allocated, %d freed)\n", gc_pass_count, instance_use, instance_allocated, instance_returned);
+    w_printf("GC: thread %t collected %d objects\n", this_thread, instance_returned);
   }
 }
 
@@ -2640,13 +2640,13 @@ w_int gc_request(w_int requested) {
   w_int retcode;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: %t starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", this_thread, instance_use, instance_allocated, instance_returned);
-    wprintf("GC: %d bytes available out of %d, memory load factor = %d, requested = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, remaining, killing_soft_references ? "" : "not ");
+    w_printf("GC: %t starting unscheduled pass : %d instances in use (%d allocated, %d freed)\n", this_thread, instance_use, instance_allocated, instance_returned);
+    w_printf("GC: %d bytes available out of %d, memory load factor = %d, requested = %d, %skilling soft references.\n", x_mem_avail(), memory_total, memory_load_factor, remaining, killing_soft_references ? "" : "not ");
   }
 
   while (tries > 0 && remaining > 0) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      wprintf("GC: tries remaining = %d, looking to collect %d bytes, GC phase = %s.\n", tries, remaining, gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
+      w_printf("GC: tries remaining = %d, looking to collect %d bytes, GC phase = %s.\n", tries, remaining, gc_phase == GC_PHASE_PREPARE ? "PREPARE" : gc_phase == GC_PHASE_MARK ? "MARK" : gc_phase == GC_PHASE_SWEEP ? "SWEEP" : gc_phase == GC_PHASE_COMPLETE ? "COMPLETE" : "UNREADY");
     }
     switch (gc_phase) {
       case GC_PHASE_PREPARE:
@@ -2658,7 +2658,7 @@ w_int gc_request(w_int requested) {
         else {
           woempa(7, "Thread %w: Phase = PREPARE/MARK, waiting\n", this_thread->name);
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t found heap was being marked by %t, waiting for %d ticks\n", this_thread, marking_thread, GC_OTHER_MARK_WAIT);
+            w_printf("GC: thread %t found heap was being marked by %t, waiting for %d ticks\n", this_thread, marking_thread, GC_OTHER_MARK_WAIT);
           }
 	  if (GC_OTHER_MARK_WAIT) {
             GC_MONITOR_WAIT(GC_OTHER_MARK_WAIT)
@@ -2669,7 +2669,7 @@ w_int gc_request(w_int requested) {
       case GC_PHASE_SWEEP:
 	if (sweeping_thread) {
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t will not sweep, %t is already doing so\n", this_thread, sweeping_thread);
+            w_printf("GC: thread %t will not sweep, %t is already doing so\n", this_thread, sweeping_thread);
           }
           tries = 0;
 
@@ -2677,11 +2677,11 @@ w_int gc_request(w_int requested) {
 	}
 
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t is sweeping\n", this_thread);
+          w_printf("GC: thread %t is sweeping\n", this_thread);
         }
         woempa(7, "Thread %w: Phase = SWEEP, joining in the fun\n", this_thread->name);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t performing sweep\n", this_thread);
+          w_printf("GC: thread %t performing sweep\n", this_thread);
         }
 	sweeping_thread = this_thread;
         swept = sweep(remaining);
@@ -2690,11 +2690,11 @@ w_int gc_request(w_int requested) {
         remaining -= swept;
         woempa(7, "Thread %w: Reclaimed %d bytes, %d to go\n", this_thread->name, swept, remaining);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t swept %d bytes, %d to go\n", this_thread, swept, remaining);
+          w_printf("GC: thread %t swept %d bytes, %d to go\n", this_thread, swept, remaining);
         }
         if (swept == 0) {
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t setting GC phase to COMPLETE\n", this_thread);
+            w_printf("GC: thread %t setting GC phase to COMPLETE\n", this_thread);
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
@@ -2707,7 +2707,7 @@ w_int gc_request(w_int requested) {
       case GC_PHASE_COMPLETE:
         woempa(7, "Thread %w: Phase = COMPLETE, doing a PREPARE and MARK\n", this_thread->name);
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t setting GC phase to PREPARE\n", this_thread);
+          w_printf("GC: thread %t setting GC phase to PREPARE\n", this_thread);
 	  gc_start_ticks = x_time_get();
         }
         marking_thread = this_thread;
@@ -2717,7 +2717,7 @@ w_int gc_request(w_int requested) {
         if (retcode < 0) {
           woempa(9, "Aborting PREPARE\n");
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t aborting PREPARE\n", this_thread);
+            w_printf("GC: thread %t aborting PREPARE\n", this_thread);
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
@@ -2729,7 +2729,7 @@ w_int gc_request(w_int requested) {
 
         }
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: thread %t setting GC phase to MARK\n", this_thread);
+          w_printf("GC: thread %t setting GC phase to MARK\n", this_thread);
         }
         gc_phase = GC_PHASE_MARK;
         retcode = markPhase();
@@ -2737,7 +2737,7 @@ w_int gc_request(w_int requested) {
         if (retcode < 0) {
           woempa(9, "Aborting MARK\n");
           if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-            wprintf("GC: thread %t aborting MARK\n", this_thread);
+            w_printf("GC: thread %t aborting MARK\n", this_thread);
           }
           gc_phase = GC_PHASE_COMPLETE;
           marking_thread = NULL;
@@ -2748,8 +2748,8 @@ w_int gc_request(w_int requested) {
 
         }
         if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-          wprintf("GC: prepare/mark phase lasted %d ms\n", x_ticks2usecs(x_time_get() - gc_start_ticks) / 1000);
-          wprintf("GC: thread %t setting GC phase to SWEEP\n", this_thread);
+          w_printf("GC: prepare/mark phase lasted %d ms\n", x_ticks2usecs(x_time_get() - gc_start_ticks) / 1000);
+          w_printf("GC: thread %t setting GC phase to SWEEP\n", this_thread);
         }
         gc_phase = GC_PHASE_SWEEP;
         marking_thread = NULL;
@@ -2762,8 +2762,8 @@ w_int gc_request(w_int requested) {
     }
   }
   if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-    wprintf("GC: finished unscheduled pass : %d instances in use (%d allocated, %d freed)\n", instance_use, instance_allocated, instance_returned);
-    wprintf("GC: thread %t freed %d bytes\n", this_thread, released);
+    w_printf("GC: finished unscheduled pass : %d instances in use (%d allocated, %d freed)\n", instance_use, instance_allocated, instance_returned);
+    w_printf("GC: thread %t freed %d bytes\n", this_thread, released);
   }
   woempa(7, "Released: %d bytes\n", released);
   reclaim_accumulator = 0;

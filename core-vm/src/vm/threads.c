@@ -199,7 +199,7 @@ void terminateThread(w_thread thread) {
     // Something else trying to join this thread, but it's always our job
     // to clean up. Just wait a bit and carry on.
     while (status == xs_bad_state) {
-      wprintf("Join status %s - waiting 1 sec and try again\n", x_status2char(status));
+      w_printf("Join status %s - waiting 1 sec and try again\n", x_status2char(status));
       x_thread_sleep(x_millis2ticks(1000));
       status = x_thread_join(thread->kthread, &result, 100);
     }
@@ -359,7 +359,7 @@ void startInitialThreads(void* data) {
   woempa(9, "********* %d instances in use after initial loading. ************\n", instance_use);
 
 #ifdef DEBUG
-  wprintf("Start %t: pid is %d\n", W_Thread_sysInit, getpid());
+  w_printf("Start %t: pid is %d\n", W_Thread_sysInit, getpid());
 #endif
   mustBeInitialized(clazzString);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
@@ -448,7 +448,7 @@ void startInitialThreads(void* data) {
   }
   W_Thread_sysInit->state = wt_dead;
 #ifdef DEBUG
-  wprintf("Finish %t: pid was %d\n", W_Thread_sysInit, getpid());
+  w_printf("Finish %t: pid was %d\n", W_Thread_sysInit, getpid());
 #endif
 }
 
