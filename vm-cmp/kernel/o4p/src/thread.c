@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2007, 2008, 2010 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -569,6 +569,7 @@ x_status x_thread_resume(x_thread thread) {
        return xs_no_mem;
     }
     else if (status != 0) {
+      wprintf("Warning: pthread_create returned error status=%d\n", status);
       return xs_no_instance;
     }
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
