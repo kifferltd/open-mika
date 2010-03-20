@@ -481,7 +481,13 @@ static void checkSingleStep1(w_frame frame, w_code current, w_slot tos) {
 static void checkSingleStep2(w_frame frame) {
   jdwp_step step = (jdwp_step)frame->thread->step;
 
-  if (step && step->depth == 2 && step->frame == frame) {
+  // [GR 20100317] It doesn't matter what kind of step you take.
+  // [GR 20100317] If the frame matches (step over & step out) or frame == NULL
+  // [GR 20100317] (step into), then an event is needed
+  if (step && ((step->frame == NULL) ||(step->frame == frame))) {
+    // [GR 20100317] reduce step size to min. If line (size == 1) remains 
+    // [GR 20100317] selected then you can stop on unexpected places
+    step->size = 0;
     step->depth = 0;
     step->frame = NULL;
   }

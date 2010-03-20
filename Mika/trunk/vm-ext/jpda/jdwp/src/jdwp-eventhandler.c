@@ -1247,7 +1247,7 @@ void jdwp_internal_resume_one(w_thread thread) {
   }
 }
 
-w_size jdwp_global_suspend_count;
+w_int jdwp_global_suspend_count = 0;
 
 void jdwp_internal_suspend_all(void) {
   x_status status;
@@ -1276,6 +1276,13 @@ void jdwp_internal_suspend_all(void) {
 }
 
 void jdwp_internal_resume_all(void) {
+  // [GR 20100317] Sometimes this function is called with
+  // [GR 20100317] 'jdwp_global_suspend_count' set to 0. This could caused
+  // [GR 20100317] long-lasting loops ...
+  if (jdwp_global_suspend_count == 0) {
+    return;
+  }
+
   if (--jdwp_global_suspend_count > 0) {
     woempa(7, "JDWP: still suspended, now count = %d\n", jdwp_global_suspend_count);
   }

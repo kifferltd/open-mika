@@ -500,6 +500,7 @@ typedef jdwp_Reply_Packet  *jdwp_reply_packet;
 
 #define swap_byte(b) (b)
 #define swap_bool(b) (b)
+#define swap_short(s) (s)
 #define swap_int(i) (i)
 #define swap_long(l) (l)
 

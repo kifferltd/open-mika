@@ -116,6 +116,7 @@ void setUpRootFrame(w_thread new) {
   new->rootFrame.previous = NULL;
   new->rootFrame.method = NULL;
   new->exception = NULL;
+  new->rootFrame.flags = FRAME_ROOT;
   new->rootFrame.thread = new;
   new->rootFrame.jstack_base = new->slots;
   new->rootFrame.jstack_top = new->rootFrame.jstack_base;
