@@ -183,6 +183,7 @@ void callMethod(w_frame arguments, w_method method);
 #define FRAME_LOADING       0x00000004   /* Frame built to invoke classloader */
 #define FRAME_CLINIT        0x00000008   /* Frame is used to run a <clinit> method  */
 #define FRAME_REFLECTION    0x00000010   /* Frame is used in reflection invocation */
+#define FRAME_ROOT          0x00000020   /* Frame is the root frame of a thread */
 #define FRAME_PRIVILEGED    0x00000040   /* Frame was built using doPrivileged */
 #define FRAME_STACKMAP      0x00000080   /* Frame has stack map  */
 

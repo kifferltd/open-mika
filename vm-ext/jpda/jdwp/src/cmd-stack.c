@@ -145,7 +145,7 @@ w_void jdwp_stack_set_values(jdwp_command_packet cmd) {
   
       for(i = 0; i < slots; i++) {
         slot = jdwp_get_u4(cmd->data, &offset);
-        tag = jdwp_get_u4(cmd->data, &offset);
+        tag = jdwp_get_u1(cmd->data, &offset);
 
         switch(tag) {
           case 'V':

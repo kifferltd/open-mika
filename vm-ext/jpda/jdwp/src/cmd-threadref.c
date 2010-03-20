@@ -315,7 +315,7 @@ w_void jdwp_thr_group(jdwp_command_packet cmd) {
   }
 }
 
-#define JDWP_IGNORE_FRAME (FRAME_JNI | FRAME_LOADING | FRAME_CLINIT | FRAME_REFLECTION)
+#define JDWP_IGNORE_FRAME (FRAME_JNI | FRAME_LOADING | FRAME_CLINIT | FRAME_REFLECTION | FRAME_ROOT)
 
 /*
 **  Returns the call stack of a thread. The thread has to be suspended, and the frameID is only 

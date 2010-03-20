@@ -375,6 +375,8 @@ static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
   w_fifo fifo = ht_list_values(thread_hashtable);
   w_thread thread;
   
+  jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
+
   while((thread = getFifo(fifo)) != NULL) {
     woempa(7, "Clearing suspend count of %t\n", thread);
     thread->flags &= ~WT_THREAD_SUSPEND_COUNT_MASK;

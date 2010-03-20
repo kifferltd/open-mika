@@ -112,12 +112,18 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
       rc = w_bind(serversock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
       if(rc == -1) {
         report_error(jdwp_address_host, jdwp_address_port, NULL);
+        w_socketclose (sock);
+        sock = 0;
+        serversock = 0;
 
         return FALSE;
       }
       rc = w_listen(serversock, 1);
       if(rc == -1) {
         report_error(jdwp_address_host, jdwp_address_port, NULL);
+        w_socketclose (sock);
+        sock = 0;
+        serversock = 0;
 
         return FALSE;
       }
@@ -240,7 +246,10 @@ void jdwp_send_packet_dt_socket(void *packet) {
 */
 
 void jdwp_disconnect_dt_socket(void) {
-  if(sock) w_socketclose(sock);
+  if(sock)  {
+    w_socketclose(sock);
+    sock = 0;
+  }
   jdwp_state = jdwp_state_initialised;
   return;
 }
