@@ -105,6 +105,19 @@ public class ServerSocket {
      socket.setOption(SocketOptions.SO_TIMEOUT, new Integer(timeout));
   }
 
+  public synchronized void setReuseAddress(boolean on) throws IOException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+     socket.setOption(SocketOptions.SO_REUSEADDR, new Boolean(on));
+  }
+
+  public synchronized boolean getReuseAddress() throws IOException {
+     if (socket == null) {
+       throw new SocketException();
+     }
+     return ((Boolean)socket.getOption(SocketOptions.SO_REUSEADDR)).booleanValue();
+  }
 
   public synchronized static void setSocketFactory(SocketImplFactory fact) throws IOException {
      if (factory != null) {
