@@ -168,31 +168,28 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   }
 
   x_mem_lock(x_eternal);
+  x_list_remove(oldchunk);
   oldsize = oldchunk->size + sizeof(o4p_Memory_Chunk);
   newsize = size + sizeof(o4p_Memory_Chunk);
   newchunk = realloc(oldchunk, newsize);
-  if (newchunk) {
-    newchunk->file = (char*)file;
-    newchunk->line = line;
-    newchunk->size = size;
-    if (newchunk != oldchunk) {
-      x_list_remove(oldchunk);
-      x_list_insert(memory_sentinel, newchunk);
-    }
+  if (!newchunk) {
     x_mem_unlock();
-    heap_remaining += oldsize;
-    heap_remaining -= newsize;
-    loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
-
-    return chunk2mem(newchunk);
-  }
-  else {
-    x_mem_unlock();
-    x_mem_free(old);
+    free(oldchunk);
     heap_remaining = 0;
+
+    return NULL;
   }
 
-  return NULL;
+  newchunk->file = (char*)file;
+  newchunk->line = line;
+  newchunk->size = size;
+  x_list_insert(memory_sentinel, newchunk);
+  x_mem_unlock();
+  heap_remaining += oldsize;
+  heap_remaining -= newsize;
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
+
+  return chunk2mem(newchunk);
 }
 
 #else
@@ -265,12 +262,13 @@ void *_x_mem_realloc(void *old, w_size size) {
   }
 
   x_mem_lock(x_eternal);
+  x_list_remove(oldchunk);
   oldsize = oldchunk->size + sizeof(o4p_Memory_Chunk);
   newsize = size + sizeof(o4p_Memory_Chunk);
   newchunk = realloc(oldchunk, newsize);
   if (!newchunk) {
     heap_remaining = 0;
-    x_mem_free(old);
+    free(oldchunk);
     x_mem_unlock();
 
     return NULL;
@@ -278,10 +276,7 @@ void *_x_mem_realloc(void *old, w_size size) {
   }
 
   newchunk->size = size;
-  if (newchunk != oldchunk) {
-    x_list_remove(oldchunk);
-    x_list_insert(memory_sentinel, newchunk);
-  }
+  x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
   heap_remaining += oldsize;
   heap_remaining -= newsize;
