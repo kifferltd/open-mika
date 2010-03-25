@@ -569,7 +569,7 @@ x_status x_thread_resume(x_thread thread) {
        return xs_no_mem;
     }
     else if (status != 0) {
-      wprintf("Warning: pthread_create returned error status=%d\n", status);
+      w_printf("Warning: pthread_create returned error status=%d\n", status);
       return xs_no_instance;
     }
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
