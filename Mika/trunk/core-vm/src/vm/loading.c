@@ -1502,7 +1502,12 @@ spin:
   }
   else if (getClazzState(current) == CLAZZ_STATE_LOADING) {
     woempa(7, "spin colours spin\n");
-    x_thread_sleep(2);
+    if (effectiveLoader) {
+      waitMonitor(effectiveLoader, 2);
+    }
+    else {
+      x_thread_sleep(2);
+    }
     goto spin;
   }
   else if (getClazzState(current) == CLAZZ_STATE_BROKEN) {
