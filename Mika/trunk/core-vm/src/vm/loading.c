@@ -1484,7 +1484,8 @@ spin:
       }
       else if (seekClazzByName(name, effectiveLoader) == placeholder) {
         setClazzState(placeholder, CLAZZ_STATE_BROKEN);
-        saveFailureMessage(thread, placeholder);
+        deregisterClazz(placeholder, effectiveLoader);
+        deregisterUnloadedClazz(placeholder);
       }
     }
     if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
@@ -1531,6 +1532,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   w_clazz    clazz;
   w_method   method;
   w_instance exception;
+  w_instance saved_exception;
 
   method = virtualLookup(loadClass_method, initiating_loader_clazz);
   woempa(7, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
@@ -1542,6 +1544,13 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
     return NULL;
 
   }
+
+  saved_exception = exceptionThrown(thread);
+  if (saved_exception) {
+    addLocalReference(thread->top, saved_exception); // so GC doesn't eat it
+     clearException(thread);
+  }
+
   frame = activateFrame(thread, method, FRAME_LOADING, 2, initiating_loader, stack_trace, Name, stack_trace);
   exception = exceptionThrown(thread);
   if (! exception) {
@@ -1549,11 +1558,6 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   }
   deactivateFrame(frame, theClass);
   removeLocalReference(thread, Name);
-
-  if (exception && theClass) {
-    woempa(9, "Odd. I asked %j to load %w, and it gave me back %j but also threw %e\n", initiating_loader, name, theClass, exception);
-    theClass = NULL;
-  }
 
   if (theClass == NULL) {
     woempa(7, "Ah. I asked %j to load %w, and it returned NULL.\n", initiating_loader,name);
@@ -1578,6 +1582,9 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   }
 
   woempa(7, "Loaded %k at %p, defining class loader is %j (%w), initiating class loader is %j (%w)\n", clazz, clazz, clazz->loader, loader2name(clazz->loader), initiating_loader, loader2name(initiating_loader));
+  if (saved_exception) {
+    throwExceptionInstance(thread, saved_exception);
+  }
 
   return clazz;
 
