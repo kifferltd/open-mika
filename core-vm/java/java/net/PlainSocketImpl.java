@@ -372,6 +372,7 @@ class PlainSocketImpl extends SocketImpl {
   private native void setSndBuf(int size) throws SocketException;
   private native void setLinger(int secs) throws SocketException;
   private native void setOOBInline(boolean on) throws SocketException;
+  private native void setReuseAddr(boolean on) throws SocketException;
   private native int getIpTos() throws SocketException;
   private native void setIpTos(int tos) throws SocketException;
   protected synchronized native void nativeConnect() throws IOException;
