@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009, 2010 by /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -291,20 +291,10 @@ public class Runtime {
     exit0(status);
   }
     
-  /**
-  **  Not allowed ...
-  **  @remark always throws a SecurityException
-  */
-  
   public Process exec(String command) throws IOException, SecurityException {
      return exec(command, null, null);
   }
 
-  /**
-  **  Not allowed ...
-  **  @remark always throws a SecurityException
-  */
-  
   public Process exec(String command, String envp[]) throws IOException, SecurityException {
     return exec(command, envp, null);
   }
@@ -322,38 +312,18 @@ public class Runtime {
     return exec(cmd, envp, path);
   }
 
-  /**
-  **  Not allowed ...
-  **  @remark always throws a SecurityException
-  */
-  
   public Process exec(String cmdarray[]) throws IOException, SecurityException{
     return exec(cmdarray, null, null);
   }
 
-  /**
-  **  Not allowed ...
-  **  @remark always throws a SecurityException
-  */
-  
   public Process exec(String cmdarray[], String envp[]) throws IOException, SecurityException{
     return exec(cmdarray, envp, null);
   }
 
   public Process exec(String cmdarray[], String envp[], File path) throws IOException, SecurityException{
     return new NativeProcess(cmdarray, envp, (path != null ? path.getAbsolutePath() : null));
-    // throw new SecurityException("execution of commands is not allowed");
   }
 
-
-  /**
-  **  Not allowed ...
-  **  @remark always throws a SecurityException
-  */
-  
-  public void load(String filename) throws SecurityException, UnsatisfiedLinkError{
-       throw new SecurityException("load is not allowed");
-  }
 
   /**
   ** Tell the garbage collector to do some work.
@@ -460,6 +430,56 @@ public class Runtime {
     }
   }
 
+  public void load(String libname) throws SecurityException, UnsatisfiedLinkError {
+
+    SecurityManager sm = System.theSecurityManager;
+
+    if (sm != null) {
+//      sm.checkLink(new RuntimePermission(libname));
+    }
+
+    synchronized (loadedLibraries) {
+      doLoadedLibrariesHousekeeping();
+      if (loadedLibraries.get(libname) == null) {
+        loadedLibraries.put(libname, "loading");
+      }
+      else {
+        // HACK HACK HACK
+        // Maybe the existing library is unreachable but we didn't notice,
+        // do GC and try once more before throwing an error.
+        gc();
+        doLoadedLibrariesHousekeeping();
+        if (loadedLibraries.get(libname) == null) {
+          loadedLibraries.put(libname, "loading");
+        }
+        else {
+          throw new UnsatisfiedLinkError("Library '" + libname + "' already loaded");
+        }
+      }
+    }
+
+    ClassLoader cl = getCallingClassLoader();
+    if (cl == null || cl == ClassLoader.systemClassLoader) {
+      cl = getCallingCallingClassLoader();
+    }
+    
+    int handle = load0(libname);
+
+    if (handle != 0) {
+      NativeLibrary nl = new NativeLibrary(handle);
+      cl.registerLibrary(nl);
+    
+      synchronized (loadedLibraries) {
+        loadedLibraries.put(libname, new WeakReference(nl));
+      }
+    }
+    else {
+      synchronized (loadedLibraries) {
+        loadedLibraries.remove(libname);
+      }
+    }
+  }
+    
   public void loadLibrary(String libname) throws SecurityException, UnsatisfiedLinkError {
 
     SecurityManager sm = System.theSecurityManager;
@@ -479,7 +499,7 @@ public class Runtime {
       cl = getCallingCallingClassLoader();
     }
     
-    if(cl != null) {
+   if(cl != null) {
       path = cl.findLibrary(libname);
     }
 
@@ -557,6 +577,8 @@ public class Runtime {
   public int availableProcessors() {
     return 1;
   }
+
+  private native int load0(String libname) throws UnsatisfiedLinkError;
 
   private native int loadLibrary0(String libname, String libpath) throws UnsatisfiedLinkError;
 

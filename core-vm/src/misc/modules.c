@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2010 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -37,104 +37,6 @@
 #include <stdio.h>  /* for sprintf */
 #include <string.h> /* for strlen */
 #include <unistd.h>
-
-char *loading_problem;
-
-#ifndef SHARED_OBJECTS
-
-#ifdef OSWALD
-
-#include "modules.h"
-#include "vfs.h"
-
-void initModules() {}
-
-void *loadModule(char * name, char * path) {
-  
-  x_status         status;
-  x_ubyte          *elfdata;
-  int              fd;
-  struct vfs_STAT  statbuf;
-  w_word           elfsize;
-  x_Module         Module;
-  x_module         module = &Module;
-  char             *filename;
-  
-  filename = allocMem(strlen(name) + 12);
-  // TODO : get the path from somewhere sensible
-  sprintf(filename, "./system/%s.o", name);
-  
-  if(vfs_stat(filename, &statbuf) != -1) { 
-    elfsize = statbuf.st_size;
-    woempa(9, "%s is %d bytes\n", filename, elfsize);
-    elfdata = allocMem(elfsize);
-    fd = vfs_open(filename, VFS_O_RDONLY, 0);
-    vfs_read(fd, elfdata, elfsize);
-    vfs_close(fd);
-    releaseMem(filename);
-  
-    status = x_module_load(module, elfdata, x_mem_alloc, x_mem_free);
-    if(status != xs_success) {
-      woempa(9, "Loading of lib %s failed... (%d)\n", name, status);
-      releaseMem(elfdata);
-      return NULL;
-    }
-
-    status = x_module_resolve(module);
-    if(status != xs_success) {
-      woempa(9, "Resolving of lib %s failed... (%d)\n", name, status);
-      releaseMem(elfdata);
-      return NULL;
-    }
-  
-    status = x_module_relocate(module);
-    if(status != xs_success) {
-      woempa(9, "Relocating of lib %s failed... (%d)\n", name, status);
-      releaseMem(elfdata);
-      return NULL;
-    }
-  
-    status = x_module_init(module);
-    if(status != xs_success) {
-      woempa(9, "Initialization of lib %s failed... (%d)\n", name, status);
-      releaseMem(elfdata);
-      return NULL;
-    }
-  
-  } else {
-    releaseMem(filename);
-    woempa(9, "Could not find lib %s.\n", name);
-    return NULL;
-  }
-
-  return (void *)module;
-}
-
-void unloadModule(void* handle) {
-  woempa(9, "Can't unload an OSwald module\n");
-}
-
-x_boolean searchForSymbol(x_module module, void * argument) {
-  return 1;
-}
-
-void *lookupModuleSymbol(char *name) {
- /* Iterate through all the loaded modules to find the symbol */
-  x_module_iterate(searchForSymbol, name);
-  return NULL; 
-}
-
-#else /* !OSWALD */
-
-void initModules() {}
-
-void *loadModule(char *name, char *path) { return NULL; }
-void unloadModule(void *handle) {}
-void *lookupModuleSymbol(char *name) { return NULL; }
-
-#endif /* OSWALD */
-
-#else /* SHARED_OBJECTS */
 
 #include "vfs.h"
 #include <dlfcn.h>
@@ -331,10 +233,6 @@ void *loadModule(char *name, char *path) {
     woempa(7, "Added handle %p to list, now have %d entries\n", handle, current - handles);
     callOnLoad(handle);
   }
-  else {
-    loading_problem = dlerror();
-    woempa(9, "filename: %s, dlerror() : %s\n", filename, loading_problem);
-  }
 
   return handle;
 }
@@ -371,6 +269,4 @@ void *lookupModuleSymbol(char *name) {
   
   return symbol;
 }
-
-#endif /* SHARED_OBJECTS */ 
 

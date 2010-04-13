@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2005, 2010 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -29,6 +29,8 @@
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
+
+#include <dlfcn.h>
 
 #include "core-classes.h"
 #include "hashtable.h"
@@ -296,9 +298,41 @@ void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 #endif
 }
 
-//typedef void (*w_loadlib)(w_thread,w_instance);
+w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathString) {
 
-//extern int woempa_stderr;
+  w_thread   thread = JNIEnv2w_thread(env);
+  w_string   libpath = NULL;
+  w_ubyte *  path = NULL;
+  void *     handle;
+  w_int      i;
+  
+  if(libpathString) {
+    libpath = String2string(libpathString);
+    i = string_length(libpath) * 3 + 1;
+    path = allocMem(i);
+    if (!path) {
+      wabort(ABORT_WONKA, "Unable to allocate space for path\n");
+    }
+    x_snprintf(path, i, "%w", libpath);
+  }
+
+  woempa(7, "Calling loadModule ...\n");
+  handle = loadModule(NULL, path);
+  if (handle) {
+    woempa(7, "Successfully loaded library %w: handle = %p\n", libpath, handle);
+  }
+  else {
+    char *loading_problem = dlerror();
+    if (!loading_problem) {
+      loading_problem = "<null>";
+    }
+    throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: path = '%w' dlerror = %s", libpath, loading_problem);
+  }
+
+  if(path) releaseMem(path);
+
+  return (w_int)handle;
+}
 
 /*
  * If libnameString is null:
@@ -343,7 +377,11 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
     woempa(7, "Successfully loaded library %w from %w: handle = %p\n", libname, libpath, handle);
   }
   else {
-    throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: name = '%w', path = '%w'", libname, libpath);
+    char *loading_problem = dlerror();
+    if (!loading_problem) {
+      loading_problem = "<null>";
+    }
+    throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: name = '%w', path = '%w' dlerror = %s", libname, libpath, loading_problem);
   }
 
   if(name) releaseMem(name);

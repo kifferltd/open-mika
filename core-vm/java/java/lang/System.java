@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2007, 2008, 2009 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2007, 2008, 2009, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -297,13 +297,13 @@ public final class System {
   public static void load(String libname) 
     throws SecurityException, UnsatisfiedLinkError
   {
-    throw new UnsatisfiedLinkError("not implemented");
+    // throw new UnsatisfiedLinkError("not implemented");
+    Runtime.getRuntime().load(libname);
   }
 
   public static void loadLibrary(String libname) 
     throws SecurityException, UnsatisfiedLinkError
   {
-    // throw new UnsatisfiedLinkError("not implemented");
     Runtime.getRuntime().loadLibrary(libname);
   }
   
