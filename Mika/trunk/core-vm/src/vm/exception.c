@@ -100,15 +100,14 @@ char * print_exception(char * buffer, int * remain, void * data, int w, int p, u
 
 /**
  * Attach a detail message to an OutOfMemoryError giving the size of the failed
- * allocation (if known: -1 indicates unknown).
+ * allocation.
  */
 void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
   char buffer[42];
-  char *temp = buffer;
   int remain = 41;
   w_string message;
 
-  x_snprintf(temp, remain, "unable to allocate %d bytes", size);
+  x_snprintf(buffer, remain, "unable to allocate %d bytes", size);
   setReferenceField_unsafe(thread->Thread, oome, F_Thread_thrown);
   message = cstring2String(buffer, strlen(buffer));
   if (message) {
@@ -141,7 +140,7 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
       }
       thread->exception = oome;
       removeLocalReference(thread, oome);
-      if (thread->Thread) {
+      if (thread->Thread && size >= 0) {
         addDetailMessageToOOME(thread, oome, size);
       }
       else {
@@ -173,7 +172,7 @@ void _throwOutOfMemoryError(w_thread thread, w_int size) {
       }
       thread->exception = oome;
       removeLocalReference(thread, oome);
-      if (thread->Thread) {
+      if (thread->Thread && size >= 0) {
         addDetailMessageToOOME(thread, oome, size);
       }
       else {
