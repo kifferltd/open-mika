@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2006, 2010 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -98,8 +98,32 @@ char * print_exception(char * buffer, int * remain, void * data, int w, int p, u
   return temp + nbytes;
 }
 
+/**
+ * Attach a detail message to an OutOfMemoryError giving the size of the failed
+ * allocation (if known: -1 indicates unknown).
+ */
+void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
+  char buffer[42];
+  char *temp = buffer;
+  int remain = 41;
+  w_string message;
+
+  x_snprintf(temp, remain, "unable to allocate %d bytes", size);
+  setReferenceField_unsafe(thread->Thread, oome, F_Thread_thrown);
+  message = cstring2String(buffer, strlen(buffer));
+  if (message) {
+    w_instance messageString = getStringInstance(message);
+    if (messageString) {
+      setReferenceField_unsafe(oome, messageString, F_Throwable_detailMessage);
+      removeLocalReference(thread, messageString);
+    }
+    deregisterString(message);
+  }
+}
+
+
 #ifdef DEBUG
-void _throwOutOfMemoryError(w_thread thread, const char *file, const char *function, const int line) {
+void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const char *function, const int line) {
   w_instance oome;
 
   if (thread) {
@@ -118,7 +142,7 @@ void _throwOutOfMemoryError(w_thread thread, const char *file, const char *funct
       thread->exception = oome;
       removeLocalReference(thread, oome);
       if (thread->Thread) {
-        setReferenceField_unsafe(thread->Thread, oome, F_Thread_thrown);
+        addDetailMessageToOOME(thread, oome, size);
       }
       else {
         bootstrap_exception = oome;
@@ -136,7 +160,7 @@ void _throwOutOfMemoryError(w_thread thread, const char *file, const char *funct
   }
 }
 #else
-void _throwOutOfMemoryError(w_thread thread) {
+void _throwOutOfMemoryError(w_thread thread, w_int size) {
   w_instance oome;
 
   if (thread) {
@@ -150,7 +174,7 @@ void _throwOutOfMemoryError(w_thread thread) {
       thread->exception = oome;
       removeLocalReference(thread, oome);
       if (thread->Thread) {
-        setReferenceField_unsafe(thread->Thread, oome, F_Thread_thrown);
+        addDetailMessageToOOME(thread, oome, size);
       }
       else {
         bootstrap_exception = oome;

@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -107,7 +107,7 @@ void * _allocClearedMem(w_size rsize) {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, rsize);
     }
 
     return NULL;
@@ -161,7 +161,7 @@ void * _allocMem(w_size rsize) {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, rsize);
     }
 
     return NULL;
@@ -216,7 +216,7 @@ void * _reallocMem(void * block, w_size newsize) {
     w_printf("Failed to reallocate %d bytes\n", newsize);
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, newsize);
     }
 
     return NULL;
@@ -504,7 +504,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
     }
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, rsize);
     }
 
     return NULL;
@@ -569,7 +569,7 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
     }
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, rsize);
     }
 
     return NULL;
@@ -646,7 +646,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
     }
 
     if (thread && thread->Thread) {
-      throwOutOfMemoryError(thread);
+      throwOutOfMemoryError(thread, newsize);
     }
 
     return NULL;

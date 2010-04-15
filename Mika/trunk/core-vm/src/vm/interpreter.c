@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -546,6 +546,8 @@ static void checkSingleStep2(w_frame frame) {
   clazz = (c);                            \
   goto c_clazz2exception;                 \
 }
+
+#define do_OutOfMemoryError(n) { i = (n); goto c_OutOfMemoryError; }
 
 #define do_AbstractMethodError goto c_AbstractMethodError
 
@@ -1695,7 +1697,7 @@ void interpret(w_frame caller, w_method method) {
 
   new_common: {
     if (!enough_free_memory(thread, clazz->bytes_needed)) {
-      do_throw_clazz(clazzOutOfMemoryError);
+      do_OutOfMemoryError(clazz->bytes_needed);
     }
     if (thread->exception) {
       do_the_exception;
@@ -3918,7 +3920,7 @@ void interpret(w_frame caller, w_method method) {
     clazz = atype2clazz[*(current + 1)];
     bytes = (F_Array_data + roundBitsToWords(clazz->previousDimension->bits * s)) * sizeof(w_word);
     if (!enough_free_memory(thread, bytes)) {
-      do_throw_clazz(clazzOutOfMemoryError);
+      do_OutOfMemoryError(bytes);
     }
 
     frame->jstack_top = tos;
@@ -3955,7 +3957,7 @@ void interpret(w_frame caller, w_method method) {
     }
     bytes = (F_Array_data + s) * sizeof(w_word);
     if (!enough_free_memory(thread, bytes)) {
-      do_throw_clazz(clazzOutOfMemoryError);
+      do_OutOfMemoryError(bytes);
     }
 
     frame->jstack_top = tos;
@@ -4158,7 +4160,7 @@ void interpret(w_frame caller, w_method method) {
     }
     if (!enough) {
       releaseMem(dimensions);
-      do_throw_clazz(clazzOutOfMemoryError);
+      do_OutOfMemoryError(-1);
     }
     if (thread->exception) {
       releaseMem(dimensions);
@@ -4224,9 +4226,8 @@ void interpret(w_frame caller, w_method method) {
 
   /*
   ** Exception logic:
-  ** c_AbstractMethodError: allocates an AbstractMethodError with a message
-  ** describing the offending method, records the current opcode in the frame,
-  ** and jumps to c_find_handler
+  ** c_AbstractMethodError: throws an AbstractMethodError with a message
+  ** describing the offending method and jumps to c_find_handler.
   */
 
   c_AbstractMethodError: 
@@ -4234,6 +4235,22 @@ void interpret(w_frame caller, w_method method) {
       // Assuming that frame->jstack_top is up to date
       enterSafeRegion(thread);
       throwException(thread, clazzAbstractMethodError, "%M in %K", x, clazz);
+      enterUnsafeRegion(thread);
+      frame->current = current;
+      frame->jstack_top = tos;
+    }
+    goto c_find_handler;
+
+  /*
+  ** c_OutOfMemoryError: throws an OutOfMemoryError with a message
+  ** describing the amount to be allocated and jumps to c_find_handler.
+  */
+
+  c_OutOfMemoryError: 
+    {
+      // Assuming that frame->jstack_top is up to date
+      enterSafeRegion(thread);
+      throwOutOfMemoryError(thread, i);
       enterUnsafeRegion(thread);
       frame->current = current;
       frame->jstack_top = tos;

@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -314,6 +314,7 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
     return NULL;
   }
 
+
   classname = String2string(Classname);
   if (isPrimitiveClassName(classname)) {
     throwException(thread, clazzClassNotFoundException, "Not allowed to find class %w using Class.forName()", classname);
@@ -607,7 +608,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
         woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
         if (putFifo(method,relevantMethods) < 0) {
           w_printf("No space to store relevant methods for Class/getMethods()\n");
-          throwOutOfMemoryError(thread);
+          throwOutOfMemoryError(thread, -1);
           return NULL;
         }
       }
@@ -623,7 +624,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
           woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
           if (putFifo(method,relevantMethods) < 0) {
             w_printf("No space to store relevant methods for Class/getMethods()\n");
-            throwOutOfMemoryError(thread);
+            throwOutOfMemoryError(thread, -1);
             return NULL;
           }
         }
@@ -638,7 +639,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
             woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
             if (putFifo(method,relevantMethods) < 0) {
               w_printf("No space to store relevant methods for Class/getMethods()\n");
-              throwOutOfMemoryError(thread);
+              throwOutOfMemoryError(thread, -1);
               return NULL;
             }
           }
@@ -656,7 +657,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
             woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
             if (putFifo(method,relevantMethods) < 0) {
               w_printf("No space to store relevant methods for Class/getMethods()\n");
-              throwOutOfMemoryError(thread);
+              throwOutOfMemoryError(thread, -1);
               return NULL;
             }
           }
@@ -1176,7 +1177,7 @@ w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
         if (isSet(super->temp.inner_class_info[i].inner_class_access_flags, ACC_PUBLIC)) {
           if (putFifo(inner_clazz, inner_clazz_fifo) < 0) {
             w_printf("No space to store inner class for Class/getClasses()\n");
-            throwOutOfMemoryError(thread);
+            throwOutOfMemoryError(thread, -1);
             releaseFifo(inner_clazz_fifo);
 
             return NULL;

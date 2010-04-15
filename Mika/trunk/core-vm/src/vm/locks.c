@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2010 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -78,15 +78,9 @@ x_monitor allocMonitor(w_instance instance) {
     }
     x_monitor_create(mon);
 
-    if (mon) {
-      woempa(1, "created new lock %p for instance %p.\n", mon, instance);
-      ht_write_no_lock(lock_hashtable, (w_word)instance, (w_word)mon);
-      setFlag(instance2flags(instance), O_HAS_LOCK);
-    }
-    else {
-      woempa(9, "No memory to create x_Monitor\n");
-      throwOutOfMemoryError(currentWonkaThread);
-    }
+    woempa(1, "created new lock %p for instance %p.\n", mon, instance);
+    ht_write_no_lock(lock_hashtable, (w_word)instance, (w_word)mon);
+    setFlag(instance2flags(instance), O_HAS_LOCK);
   }
 
   ht_unlock(lock_hashtable);
