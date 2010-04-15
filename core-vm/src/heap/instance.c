@@ -341,7 +341,7 @@ w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length) {
 
   size = ((jlong)clazz->previousDimension->bits) * ((jlong) length);
   if (size > 0x7fffffff) {
-    throwException(thread, clazzOutOfMemoryError, NULL);
+    throwOutOfMemoryError(thread, -1);
     return NULL;
    }
 
@@ -427,7 +427,7 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
   for (i = 0; i < dimensions; i++) {
     jlong size = ((jlong)clazz->previousDimension->bits) * ((jlong) lengths[0]);
     if (size > 0x7fffffff) {
-      throwException(thread, clazzOutOfMemoryError, NULL);
+      throwOutOfMemoryError(thread, -1);
       x_mem_free(Aas);
       return NULL;
     }
