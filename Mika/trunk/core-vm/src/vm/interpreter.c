@@ -682,6 +682,7 @@ void callMethod(w_frame caller, w_method method) {
 static void ** labels = NULL;
 
 extern void fast_StringBuffer_append_String(w_frame);
+extern void fast_StringBuffer_append_char(w_frame);
 extern void fast_StringBuffer_toString(w_frame);
 extern void fast_String_create_empty(w_frame);
 extern void fast_String_create_byte(w_frame);
@@ -712,6 +713,7 @@ extern void fast_Math_static_exp(w_frame);
 typedef void (*w_fast_method)(w_frame);
 static w_fast_method fast_method_table[] = {
   fast_StringBuffer_append_String,
+  fast_StringBuffer_append_char,
   fast_StringBuffer_toString,
   fast_String_create_empty,
   fast_String_create_byte,

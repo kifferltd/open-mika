@@ -223,6 +223,20 @@ static w_instance i_StringBuffer_append_String(w_thread thread, w_instance thisS
    
 }
 
+static w_instance i_StringBuffer_append_char(w_thread thread, w_instance thisStringBuffer, w_char c) {
+  woempa(1, "Appending char '%c' to %j.\n", c, thisStringBuffer);
+
+  if (exceptionThrown(thread) == NULL) {
+    w_word* countptr = wordFieldPointer(thisStringBuffer, F_StringBuffer_count);
+ 
+    instance2Array_char(getReferenceField(thisStringBuffer, F_StringBuffer_value))[*countptr] = c;
+    ++(*countptr);
+  }
+
+  return thisStringBuffer;
+   
+}
+
 w_instance StringBuffer_append_String(JNIEnv *env, w_instance thisStringBuffer, w_instance theString) {
   w_thread thread = JNIEnv2w_thread(env);
   w_int curr_length = getIntegerField(thisStringBuffer, F_StringBuffer_count);
@@ -237,6 +251,32 @@ w_instance StringBuffer_append_String(JNIEnv *env, w_instance thisStringBuffer, 
   else {
     i_ensureCapacity(thread, thisStringBuffer, 4 + curr_length);
     return i_StringBuffer_append_String_null(thread, thisStringBuffer);
+  }
+}
+
+void fast_StringBuffer_append_char(w_frame frame) {
+  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
+  w_thread thread = frame->thread;
+  w_int curr_length;
+
+  enterSafeRegion(thread);
+  if (!objectref) {
+    throwException(thread, clazzNullPointerException, NULL);
+    enterUnsafeRegion(thread);
+  }
+  else {
+    x_monitor m;
+    int c;
+
+    m = getMonitor(objectref);
+    x_monitor_eternal(m);
+    curr_length  = getIntegerField(objectref, F_StringBuffer_count);
+    c = frame->jstack_top[-1].c;
+    i_ensureCapacity(thread, objectref, curr_length + 1);
+    (void)i_StringBuffer_append_char(thread, objectref, c);
+    x_monitor_exit(m);
+    enterUnsafeRegion(thread);
+    frame->jstack_top -= 1;
   }
 }
 

@@ -189,14 +189,17 @@ void fastcall_init_tables() {
   static_calls[2] = current;
 #endif
 
-  current = createClassTable(2,cstring2String("java/lang/StringBuffer", 22));
+  current = createClassTable(3,cstring2String("java/lang/StringBuffer", 22));
   virtual_calls[0] = current;
-  current->calls[0]->index = FAST_STRINGBUFFER_APPEND;
+  current->calls[0]->index = FAST_STRINGBUFFER_APPEND_STRING;
   current->calls[0]->method_name = cstring2String("append", 6);
   current->calls[0]->method_sig = cstring2String("(Ljava/lang/String;)Ljava/lang/StringBuffer;", 44);
-  current->calls[1]->index = FAST_STRINGBUFFER_TOSTRING;
-  current->calls[1]->method_name = cstring2String("toString", 8);
-  current->calls[1]->method_sig = cstring2String("()Ljava/lang/String;", 20);
+  current->calls[1]->index = FAST_STRINGBUFFER_APPEND_CHAR;
+  current->calls[1]->method_name = cstring2String("append", 6);
+  current->calls[1]->method_sig = cstring2String("(C)Ljava/lang/StringBuffer;", 27);
+  current->calls[2]->index = FAST_STRINGBUFFER_TOSTRING;
+  current->calls[2]->method_name = cstring2String("toString", 8);
+  current->calls[2]->method_sig = cstring2String("()Ljava/lang/String;", 20);
 
   current = createClassTable(8,clazz_name_String);
   virtual_calls[1] = current;
