@@ -47,31 +47,32 @@
 ** The "fast" methods defined to date. The indices here need to correspond to
 ** the fast call table in interpreter.c !!!
 */
-#define FAST_STRINGBUFFER_APPEND         0
-#define FAST_STRINGBUFFER_TOSTRING       1
-#define FAST_STRING_CREATE_EMPTY         2
-#define FAST_STRING_CREATE_BYTE          3
-#define FAST_STRING_CREATE_CHAR          4
-#define FAST_STRING_EQUALS               5
-#define FAST_STRING_HASHCODE             6
-#define FAST_STRING_LENGTH               7
-#define FAST_STRING_SUBSTRING            8
-#define FAST_STRING_INDEXOF_CHAR         9
-#define FAST_STRING_CHARAT              10
-#define FAST_STRING_TOSTRING            11
-#define FAST_STRING_STARTSWITH          12
-#define FAST_CHARACTER_ISDIGIT_CHAR     13
-#define FAST_CHARACTER_FORDIGIT_INT_INT 14
-#define FAST_CHARACTER_DIGIT_CHAR_INT   15
-#define FAST_SYSTEM_CURRENTTIMEMILLIS   16
-#define FAST_MATH_SQRT                  17
-#define FAST_MATH_SIN                   18
-#define FAST_MATH_COS                   19
-#define FAST_MATH_TAN                   20
-#define FAST_MATH_ASIN                  21
-#define FAST_MATH_ATAN                  22
-#define FAST_MATH_LOG                   23
-#define FAST_MATH_EXP                   24
+#define FAST_STRINGBUFFER_APPEND_STRING  0
+#define FAST_STRINGBUFFER_APPEND_CHAR    1
+#define FAST_STRINGBUFFER_TOSTRING       2
+#define FAST_STRING_CREATE_EMPTY         3
+#define FAST_STRING_CREATE_BYTE          4
+#define FAST_STRING_CREATE_CHAR          5
+#define FAST_STRING_EQUALS               6
+#define FAST_STRING_HASHCODE             7
+#define FAST_STRING_LENGTH               8
+#define FAST_STRING_SUBSTRING            9
+#define FAST_STRING_INDEXOF_CHAR        10
+#define FAST_STRING_CHARAT              11
+#define FAST_STRING_TOSTRING            12
+#define FAST_STRING_STARTSWITH          13
+#define FAST_CHARACTER_ISDIGIT_CHAR     14
+#define FAST_CHARACTER_FORDIGIT_INT_INT 15
+#define FAST_CHARACTER_DIGIT_CHAR_INT   16
+#define FAST_SYSTEM_CURRENTTIMEMILLIS   17
+#define FAST_MATH_SQRT                  18
+#define FAST_MATH_SIN                   19
+#define FAST_MATH_COS                   20
+#define FAST_MATH_TAN                   21
+#define FAST_MATH_ASIN                  22
+#define FAST_MATH_ATAN                  23
+#define FAST_MATH_LOG                   24
+#define FAST_MATH_EXP                   25
 
 typedef struct w_FastCall {
   w_string method_name;

@@ -109,6 +109,8 @@ public final class StringBuffer implements java.io.Serializable, CharSequence {
 
   native public synchronized StringBuffer append(String s);
 
+  native public synchronized StringBuffer append(char c);
+
   public StringBuffer append(char[] str) throws NullPointerException  {
     return this.append(new String(str));
   }
@@ -119,16 +121,6 @@ public final class StringBuffer implements java.io.Serializable, CharSequence {
 
   public StringBuffer append(boolean b) {
     return this.append(String.valueOf(b));
-  }
-
-  public synchronized StringBuffer append(char c) {
-    int idx = count;
-    if(idx >= value.length){
-      this.ensureCapacity(idx + 1);
-    }
-    value[idx++] = c;
-    count = idx;
-    return this;
   }
 
   public StringBuffer append(int i) {
