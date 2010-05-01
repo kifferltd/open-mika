@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2003 by Chris Gray, /k/ Embedded Java Solutions.          *
-* All rights reserved.                                                    *
+* Copyright (c) 2003, 2008, 2010 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,11 +26,6 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
-/****************************************************************************
-* Copyright (c) 2003 by Chris Gray, trading as /k/ Embedded Java Solutions. *
-* All rights reserved.  The contents of this file may not be copied or      *
-* distributed in any form without express written consent of the author.    *
-****************************************************************************/
 
 #ifndef _FASTCALL_H
 
@@ -61,18 +56,20 @@
 #define FAST_STRING_CHARAT              11
 #define FAST_STRING_TOSTRING            12
 #define FAST_STRING_STARTSWITH          13
-#define FAST_CHARACTER_ISDIGIT_CHAR     14
-#define FAST_CHARACTER_FORDIGIT_INT_INT 15
-#define FAST_CHARACTER_DIGIT_CHAR_INT   16
-#define FAST_SYSTEM_CURRENTTIMEMILLIS   17
-#define FAST_MATH_SQRT                  18
-#define FAST_MATH_SIN                   19
-#define FAST_MATH_COS                   20
-#define FAST_MATH_TAN                   21
-#define FAST_MATH_ASIN                  22
-#define FAST_MATH_ATAN                  23
-#define FAST_MATH_LOG                   24
-#define FAST_MATH_EXP                   25
+#define FAST_PUSHBACKREADER_READ        14
+#define FAST_PUSHBACKREADER_UNREAD      15
+#define FAST_CHARACTER_ISDIGIT_CHAR     16
+#define FAST_CHARACTER_FORDIGIT_INT_INT 17
+#define FAST_CHARACTER_DIGIT_CHAR_INT   18
+#define FAST_SYSTEM_CURRENTTIMEMILLIS   19
+#define FAST_MATH_SQRT                  20
+#define FAST_MATH_SIN                   21
+#define FAST_MATH_COS                   22
+#define FAST_MATH_TAN                   23
+#define FAST_MATH_ASIN                  24
+#define FAST_MATH_ATAN                  25
+#define FAST_MATH_LOG                   26
+#define FAST_MATH_EXP                   27
 
 typedef struct w_FastCall {
   w_string method_name;
@@ -94,7 +91,7 @@ typedef w_FastClass* w_fastclass;
 #else
 #define FAST_STATIC_CLASSES 2
 #endif
-#define FAST_VIRTUAL_CLASSES 2
+#define FAST_VIRTUAL_CLASSES 3
 #define FAST_SPECIAL_CLASSES 1
 
 void fastcall_check_invoke_static(w_clazz clazz, unsigned char * bytecodes);

@@ -555,6 +555,10 @@ java/io/Serializable
 java/io/Externalizable
 java/io/BufferedReader
         locateEnd       ([CII)I                 BufferedReader_locateEnd
+java/io/PushbackReader
+        chars           [C
+        in           	Ljava/io/Reader;
+        pos           	I
 java/io/ObjectStreamClass
         osFields	[Ljava/io/ObjectStreamField;
         clazz		Ljava/lang/Class;
@@ -803,6 +807,7 @@ java/lang/Package
 java/io/FilePermission
 java/io/InputStreamReader
 java/io/Reader
+	lock	Ljava/lang/Object;
 java/util/jar/Attributes
 java/util/zip/ZipByteArrayInputStream
 # only needed if SECURITY=coarse or SECURITY=fine

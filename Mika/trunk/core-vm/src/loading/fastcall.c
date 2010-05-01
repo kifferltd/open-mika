@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright  (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.
+* Copyright  (c) 2006, 2010 by Chris Gray, /k/ Embedded Java Solutions.
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,6 @@
 * 
 **************************************************************************/
 
-/*
-** $Id: link.c,v 1.4 2006/05/24 10:31:55 cvs Exp $
-*/
 #include "clazz.h"
 #include "constant.h"
 #include "exception.h"
@@ -120,10 +117,10 @@ void fastcall_check_invoke_special(w_clazz clazz, unsigned char * bytecodes) {
 }
 
 w_fastclass createClassTable(w_size size, w_string name) {
-  w_int i=0;
+  w_size i = 0;
   w_fastclass current = (w_fastclass) allocMem(sizeof(w_FastClass));
   current->class_name = name;
-  current->calls = (w_fastcall)allocMem((size+1)*sizeof(w_fastcall));
+  current->calls = allocMem((size+1)*sizeof(w_fastcall));
   current->calls[size] = NULL;
   for(; i < size ; i++) {
     current->calls[i] = (w_fastcall)allocMem(sizeof(w_FastCall));
@@ -136,6 +133,8 @@ void fastcall_init_tables() {
   w_fastclass current;
 
   w_string no_args_void = cstring2String("()V", 3);
+  w_string no_args_int = cstring2String("()I", 3);
+  w_string double_double = cstring2String("(D)D", 4);
   w_string clazz_name_String = cstring2String("java/lang/String", 16);
   w_string init = cstring2String("<init>", 6);
 
@@ -157,35 +156,35 @@ void fastcall_init_tables() {
   current->calls[1]->method_name = cstring2String("forDigit", 8);
   current->calls[1]->method_sig = cstring2String("(II)C", 5);
   current->calls[2]->index = FAST_CHARACTER_ISDIGIT_CHAR;
-  current->calls[2]->method_name = cstring2String("isDigit", 5);
+  current->calls[2]->method_name = cstring2String("isDigit", 7);
   current->calls[2]->method_sig = cstring2String("(C)Z", 4);
 
 #ifdef NATIVE_MATH
   current = createClassTable(8,clazz_name_Math);
   current->calls[0]->index = FAST_MATH_SQRT;
   current->calls[0]->method_name = cstring2String("sqrt", 4);
-  current->calls[0]->method_sig = cstring2String("(D)D", 4);
+  current->calls[0]->method_sig = double_double;
   current->calls[1]->index = FAST_MATH_SIN;
   current->calls[1]->method_name = cstring2String("sin", 3);
-  current->calls[1]->method_sig = cstring2String("(D)D", 4);
+  current->calls[1]->method_sig = double_double;
   current->calls[2]->index = FAST_MATH_COS;
   current->calls[2]->method_name = cstring2String("cos", 3);
-  current->calls[2]->method_sig = cstring2String("(D)D", 4);
+  current->calls[2]->method_sig = double_double;
   current->calls[3]->index = FAST_MATH_TAN;
   current->calls[3]->method_name = cstring2String("tan", 3);
-  current->calls[3]->method_sig = cstring2String("(D)D", 4);
+  current->calls[3]->method_sig = double_double;
   current->calls[4]->index = FAST_MATH_ASIN;
   current->calls[4]->method_name = cstring2String("asin", 4);
-  current->calls[4]->method_sig = cstring2String("(D)D", 4);
+  current->calls[4]->method_sig = double_double;
   current->calls[5]->index = FAST_MATH_ATAN;
   current->calls[5]->method_name = cstring2String("atan", 4);
-  current->calls[5]->method_sig = cstring2String("(D)D", 4);
+  current->calls[5]->method_sig = double_double;
   current->calls[6]->index = FAST_MATH_LOG;
   current->calls[6]->method_name = cstring2String("log", 3);
-  current->calls[6]->method_sig = cstring2String("(D)D", 4);
+  current->calls[6]->method_sig = double_double;
   current->calls[7]->index = FAST_MATH_EXP;
   current->calls[7]->method_name = cstring2String("exp", 3);
-  current->calls[7]->method_sig = cstring2String("(D)D", 4);
+  current->calls[7]->method_sig = double_double;
   static_calls[2] = current;
 #endif
 
@@ -204,7 +203,7 @@ void fastcall_init_tables() {
   current = createClassTable(8,clazz_name_String);
   virtual_calls[1] = current;
   current->calls[0]->index = FAST_STRING_SUBSTRING;
-  current->calls[0]->method_name = cstring2String("substring", 11);
+  current->calls[0]->method_name = cstring2String("substring", 9);
   current->calls[0]->method_sig = cstring2String("(II)Ljava/lang/String;", 22);
   current->calls[1]->index = FAST_STRING_INDEXOF_CHAR;
   current->calls[1]->method_name = cstring2String("indexOf", 7);
@@ -217,16 +216,25 @@ void fastcall_init_tables() {
   current->calls[3]->method_sig = cstring2String("(Ljava/lang/Object;)Z", 21);
   current->calls[4]->index = FAST_STRING_HASHCODE;
   current->calls[4]->method_name = cstring2String("hashCode", 8);
-  current->calls[4]->method_sig = cstring2String("()I", 3);
+  current->calls[4]->method_sig = no_args_int;
   current->calls[5]->index = FAST_STRING_LENGTH;
   current->calls[5]->method_name = cstring2String("length", 6);
-  current->calls[5]->method_sig = cstring2String("()I", 3);
+  current->calls[5]->method_sig = no_args_int;
   current->calls[6]->index = FAST_STRING_TOSTRING;
   current->calls[6]->method_name = cstring2String("toString", 8);
   current->calls[6]->method_sig = cstring2String("([BIII)V", 8);
   current->calls[7]->index = FAST_STRING_STARTSWITH;
   current->calls[7]->method_name = cstring2String("startsWith", 10);
   current->calls[7]->method_sig = cstring2String("(Ljava/lang/String;I)V", 22);
+
+  current = createClassTable(2, cstring2String("java/io/PushbackReader", 22));
+  virtual_calls[2] = current;
+  current->calls[0]->index = FAST_PUSHBACKREADER_READ;
+  current->calls[0]->method_name = cstring2String("read", 4);
+  current->calls[0]->method_sig = no_args_int;
+  current->calls[1]->index = FAST_PUSHBACKREADER_UNREAD;
+  current->calls[1]->method_name = cstring2String("unread", 6);
+  current->calls[1]->method_sig = cstring2String("(I)V", 4);
 
   current = createClassTable(3,clazz_name_String);
   special_calls[0] = current;
