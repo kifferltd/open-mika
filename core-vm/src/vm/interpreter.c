@@ -695,6 +695,8 @@ extern void fast_String_indexOf_char(w_frame);
 extern void fast_String_charAt(w_frame);
 extern void fast_String_toString(w_frame);
 extern void fast_String_startsWith(w_frame);
+extern void fast_PushbackReader_read(w_frame);
+extern void fast_PushbackReader_unread(w_frame);
 extern void fast_Character_isDigit_char(w_frame);
 extern void fast_Character_forDigit_int_int(w_frame);
 extern void fast_Character_digit_char_int(w_frame);
@@ -726,6 +728,8 @@ static w_fast_method fast_method_table[] = {
   fast_String_charAt,
   fast_String_toString,
   fast_String_startsWith,
+  fast_PushbackReader_read,
+  fast_PushbackReader_unread,
   fast_Character_isDigit_char,
   fast_Character_forDigit_int_int,
   fast_Character_digit_char_int,

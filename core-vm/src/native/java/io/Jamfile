@@ -33,5 +33,8 @@ LOCATE_TARGET = $(OROOT)/mika/bin ;
 SUBDIRHDRS += $(FS_TOP)/hal/hostos/$(HOSTOS)/include ;
 SUBDIRHDRS += $(FS_TOP)/include ;
 
-Library $(WONKA_LIB) : BufferedReader.c File.c FileDescriptor.c FileInputStream.c FileOutputStream.c ;
-Library $(WONKA_LIB) : ObjectInputStream.c ObjectOutputStream.c ObjectStreamClass.c  ObjectStreamField.c RandomAccessFile.c ;
+Library $(WONKA_LIB) : BufferedReader.c File.c FileDescriptor.c ;
+Library $(WONKA_LIB) : FileInputStream.c FileOutputStream.c ;
+Library $(WONKA_LIB) : ObjectInputStream.c ObjectOutputStream.c ;
+Library $(WONKA_LIB) : ObjectStreamClass.c  ObjectStreamField.c ;
+Library $(WONKA_LIB) : PushbackReader.c RandomAccessFile.c ;
