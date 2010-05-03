@@ -54,7 +54,6 @@ void fastcall_check_class(w_fastclass fclass, w_string method_name,
 
      woempa(1,"Using  %w.%w%w fastcalls\n",fclass->class_name,
            fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
-           fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
 
       //A bit of a hack to guarantee that some classes get initialized...
       if(fclass->class_name ==  clazz_name_Character) {
@@ -148,7 +147,7 @@ void fastcall_init_tables() {
   current->calls[0]->method_sig = cstring2String("()J", 3);
   static_calls[0] = current;
 
-  current = createClassTable(3,clazz_name_Character);
+  current = createClassTable(5,clazz_name_Character);
   static_calls[1] = current;
   current->calls[0]->index = FAST_CHARACTER_DIGIT_CHAR_INT;
   current->calls[0]->method_name = cstring2String("digit", 5);
@@ -156,9 +155,15 @@ void fastcall_init_tables() {
   current->calls[1]->index = FAST_CHARACTER_FORDIGIT_INT_INT;
   current->calls[1]->method_name = cstring2String("forDigit", 8);
   current->calls[1]->method_sig = cstring2String("(II)C", 5);
-  current->calls[2]->index = FAST_CHARACTER_ISDIGIT_CHAR;
-  current->calls[2]->method_name = cstring2String("isDigit", 7);
+  current->calls[2]->index = FAST_CHARACTER_ISLETTER;
+  current->calls[2]->method_name = cstring2String("isLetter", 8);
   current->calls[2]->method_sig = cstring2String("(C)Z", 4);
+  current->calls[3]->index = FAST_CHARACTER_ISWHITESPACE;
+  current->calls[3]->method_name = cstring2String("isWhitespace", 12);
+  current->calls[3]->method_sig = cstring2String("(C)Z", 4);
+  current->calls[4]->index = FAST_CHARACTER_ISDIGIT_CHAR;
+  current->calls[4]->method_name = cstring2String("isDigit", 7);
+  current->calls[4]->method_sig = cstring2String("(C)Z", 4);
 
 #ifdef NATIVE_MATH
   current = createClassTable(8,clazz_name_Math);
