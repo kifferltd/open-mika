@@ -63,6 +63,7 @@ public class BufferedInputStream extends FilterInputStream {
         int j1 = pos % bufsiz;
         int k = 0;
         int l;
+        int nBufs = localBufs.size();
         byte[] b0 = (byte[])localBufs.get(i0);
         byte[] b1 = (byte[])localBufs.get(i1);
         while (k < count) {
@@ -78,20 +79,31 @@ public class BufferedInputStream extends FilterInputStream {
                 k += b1.length - j1;
                 j0 += b1.length - j1;
                 j1 = 0;
-                b1 = (byte[])localBufs.get(++i1);
+                if (++i1 == nBufs) {
+                  break;
+                }
+                b1 = (byte[])localBufs.get(i1);
             }
             else if (b1.length - j1 > b0.length - j0) {
                 System.arraycopy(b1, j1, b0, j0, b0.length - j0);
                 k += b0.length - j0;
                 j0 = 0;
                 j1 += b0.length - j0;
-                b0 = (byte[])localBufs.get(++i0);
+                if (++i0 == nBufs) {
+                  break;
+                }
+                b0 = (byte[])localBufs.get(i0);
             }
             else {
                 System.arraycopy(b1, j1, b0, j0, b0.length - j0);
                 k += b0.length - j0;
                 j0 = 0;
                 j1 = 0;
+                ++i0;
+                ++i1;
+                if (i0 == nBufs || i1 == nBufs) {
+                  break;
+                }
                 b0 = (byte[])localBufs.get(++i0);
                 b1 = (byte[])localBufs.get(++i1);
             }
