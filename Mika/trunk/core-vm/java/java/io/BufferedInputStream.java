@@ -104,8 +104,8 @@ public class BufferedInputStream extends FilterInputStream {
                 if (i0 == nBufs || i1 == nBufs) {
                   break;
                 }
-                b0 = (byte[])localBufs.get(++i0);
-                b1 = (byte[])localBufs.get(++i1);
+                b0 = (byte[])localBufs.get(i0);
+                b1 = (byte[])localBufs.get(i1);
             }
         }
     }
