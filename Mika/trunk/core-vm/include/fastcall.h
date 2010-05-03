@@ -56,18 +56,20 @@
 #define FAST_STRING_CHARAT              11
 #define FAST_STRING_TOSTRING            12
 #define FAST_STRING_STARTSWITH          13
-#define FAST_CHARACTER_ISDIGIT_CHAR     14
-#define FAST_CHARACTER_FORDIGIT_INT_INT 15
-#define FAST_CHARACTER_DIGIT_CHAR_INT   16
-#define FAST_SYSTEM_CURRENTTIMEMILLIS   17
-#define FAST_MATH_SQRT                  18
-#define FAST_MATH_SIN                   19
-#define FAST_MATH_COS                   20
-#define FAST_MATH_TAN                   21
-#define FAST_MATH_ASIN                  22
-#define FAST_MATH_ATAN                  23
-#define FAST_MATH_LOG                   24
-#define FAST_MATH_EXP                   25
+#define FAST_CHARACTER_ISLETTER         14
+#define FAST_CHARACTER_ISWHITESPACE     15
+#define FAST_CHARACTER_ISDIGIT_CHAR     16
+#define FAST_CHARACTER_FORDIGIT_INT_INT 17
+#define FAST_CHARACTER_DIGIT_CHAR_INT   18
+#define FAST_SYSTEM_CURRENTTIMEMILLIS   19
+#define FAST_MATH_SQRT                  20
+#define FAST_MATH_SIN                   21
+#define FAST_MATH_COS                   22
+#define FAST_MATH_TAN                   23
+#define FAST_MATH_ASIN                  24
+#define FAST_MATH_ATAN                  25
+#define FAST_MATH_LOG                   26
+#define FAST_MATH_EXP                   27
 
 typedef struct w_FastCall {
   w_string method_name;

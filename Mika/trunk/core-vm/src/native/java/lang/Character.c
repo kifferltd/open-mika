@@ -83,6 +83,14 @@ w_boolean Character_static_isDigit
   return charIsDigit(ch);
 }
 
+void fast_Character_isLetter(w_frame frame) {
+  frame->jstack_top[-1].c = charIsLetter(frame->jstack_top[-1].c);
+}
+
+void fast_Character_isWhitespace(w_frame frame) {
+  frame->jstack_top[-1].c = charIsWhitespace(frame->jstack_top[-1].c);
+}
+
 void fast_Character_isDigit_char(w_frame frame) {
   frame->jstack_top[-1].c = charIsDigit(frame->jstack_top[-1].c);
 }
