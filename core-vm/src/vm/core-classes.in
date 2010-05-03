@@ -1,7 +1,7 @@
 ###########################################################################
 # Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     #
 # reserved. Parts copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010 by   #
- Chris Gray, /k/ Embedded Solutions. All rights reserved.                 #
+# Chris Gray, /k/ Embedded Solutions. All rights reserved.                #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -554,11 +554,17 @@ java/util/jar/JarException
 java/io/Serializable
 java/io/Externalizable
 java/io/BufferedReader
+	buf		[C
+	count		I
+	pos		I
+	read		()I			BufferedReader_read
         locateEnd       ([CII)I                 BufferedReader_locateEnd
 java/io/PushbackReader
         chars           [C
         in           	Ljava/io/Reader;
         pos           	I
+	read		()I			PushbackReader_read
+	unread		(I)V			PushbackReader_unread
 java/io/ObjectStreamClass
         osFields	[Ljava/io/ObjectStreamField;
         clazz		Ljava/lang/Class;

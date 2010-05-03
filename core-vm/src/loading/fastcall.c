@@ -54,13 +54,14 @@ void fastcall_check_class(w_fastclass fclass, w_string method_name,
 
      woempa(1,"Using  %w.%w%w fastcalls\n",fclass->class_name,
            fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
+           fclass->calls[i]->method_name,fclass->calls[i]->method_sig);
 
       //A bit of a hack to guarantee that some classes get initialized...
       if(fclass->class_name ==  clazz_name_Character) {
         mustBeInitialized(clazzCharacter);
       }
 #ifdef NATIVE_MATH
-      if(fclass->class_name ==  clazz_name_Math) {
+      else if(fclass->class_name ==  clazz_name_Math) {
         mustBeInitialized(clazzMath);
       }
 #endif
@@ -222,19 +223,10 @@ void fastcall_init_tables() {
   current->calls[5]->method_sig = no_args_int;
   current->calls[6]->index = FAST_STRING_TOSTRING;
   current->calls[6]->method_name = cstring2String("toString", 8);
-  current->calls[6]->method_sig = cstring2String("([BIII)V", 8);
+  current->calls[6]->method_sig = cstring2String("()Ljava/lang/String;", 20);
   current->calls[7]->index = FAST_STRING_STARTSWITH;
   current->calls[7]->method_name = cstring2String("startsWith", 10);
   current->calls[7]->method_sig = cstring2String("(Ljava/lang/String;I)V", 22);
-
-  current = createClassTable(2, cstring2String("java/io/PushbackReader", 22));
-  virtual_calls[2] = current;
-  current->calls[0]->index = FAST_PUSHBACKREADER_READ;
-  current->calls[0]->method_name = cstring2String("read", 4);
-  current->calls[0]->method_sig = no_args_int;
-  current->calls[1]->index = FAST_PUSHBACKREADER_UNREAD;
-  current->calls[1]->method_name = cstring2String("unread", 6);
-  current->calls[1]->method_sig = cstring2String("(I)V", 4);
 
   current = createClassTable(3,clazz_name_String);
   special_calls[0] = current;
