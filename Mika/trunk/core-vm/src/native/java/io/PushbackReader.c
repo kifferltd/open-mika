@@ -39,92 +39,77 @@
 static jclass   class_Reader;
 static jmethodID read_method;
 
-void fast_PushbackReader_read(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-1].c;
-  w_thread thread = frame->thread;
-  w_int result = -1;
+w_int PushbackReader_read(JNIEnv *env, w_instance thisPushbackReader) {
+  w_thread thread = JNIEnv2w_thread(env);
+  x_monitor m;
+  w_instance lock = getReferenceField(thisPushbackReader, F_Reader_lock);
+  w_instance chars;
+  w_instance in;
+  w_frame new_frame;
+  w_int result;
+  w_word *posptr;
 
-  enterSafeRegion(thread);
-  if (!objectref) {
-    throwException(thread, clazzNullPointerException, NULL);
+  m = getMonitor(lock);
+  x_monitor_eternal(m);
+  chars = getReferenceField(thisPushbackReader, F_PushbackReader_chars);
+  if (!chars) {
+    x_monitor_exit(m);
+    throwException(thread, clazzIOException, "PushBackReader is closed");
+
+    return -1;
+  }
+
+  posptr = wordFieldPointer(thisPushbackReader, F_PushbackReader_pos);
+  if (*posptr < instance2Array_length(chars)){
+    result = instance2Array_char(chars)[*posptr];
+    ++(*posptr);
   }
   else {
-    x_monitor m;
-    w_instance lock = getReferenceField(objectref, F_Reader_lock);
-    w_instance chars;
-    w_instance in;
-    w_frame new_frame;
-
-    m = getMonitor(lock);
-    x_monitor_eternal(m);
-    chars = getReferenceField(objectref, F_PushbackReader_chars);
-    if (!chars) {
-      x_monitor_exit(m);
-      throwException(thread, clazzIOException, "Reader is closed");
+    if (!read_method) {
+      mustBeInitialized(clazzReader);
+      class_Reader = clazz2Class(clazzReader);
+      read_method = (*env)->GetMethodID(env, class_Reader, "read", "()I"); 
+      woempa(7,"read_method is %M\n",read_method);
     }
-    else {
-      w_word *posptr = wordFieldPointer(objectref, F_PushbackReader_pos);
-      if (*posptr < instance2Array_length(chars)){
-        result = instance2Array_char(chars)[*posptr];
-        ++(*posptr);
-      }
-      else {
-        JNIEnv  *env = w_thread2JNIEnv(thread);
-        if (!read_method) {
-          class_Reader = clazz2Class(clazzReader);
-          read_method = (*env)->GetMethodID(env, class_Reader, "read", "()I"); 
-          woempa(7,"read_method is %M\n",read_method);
-        }
-        in = getReferenceField(objectref, F_PushbackReader_in);
-        new_frame = activateFrame(thread, virtualLookup(read_method, instance2clazz(in)), 0, 1, in, stack_trace);
-        result = (w_int) new_frame->jstack_top[-1].c;
-        deactivateFrame(new_frame, NULL);
-      }
-      x_monitor_exit(m);
-    }
+    in = getReferenceField(thisPushbackReader, F_PushbackReader_in);
+    new_frame = activateFrame(thread, virtualLookup(read_method, instance2clazz(in)), 0, 1, in, stack_trace);
+    result = (w_int) new_frame->jstack_top[-1].c;
+    deactivateFrame(new_frame, NULL);
+    removeLocalReference(thread, in);
   }
-  enterUnsafeRegion(thread);
-  frame->jstack_top[0].s = 0;
-  frame->jstack_top[0].c = result;
-  frame->jstack_top += 1;
+  x_monitor_exit(m);
+  return result;
 }
 
-void fast_PushbackReader_unread(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
-  w_thread thread = frame->thread;
-  w_int result = -1;
+void PushbackReader_unread(JNIEnv *env, w_instance thisPushbackReader, w_int c) {
+  w_thread thread = JNIEnv2w_thread(env);
+  x_monitor m;
+  w_instance lock = getReferenceField(thisPushbackReader, F_Reader_lock);
+  w_instance chars;
+  w_word *posptr;
+  w_instance in;
+  w_frame new_frame;
 
-  enterSafeRegion(thread);
-  if (!objectref) {
-    throwException(thread, clazzNullPointerException, NULL);
-  }
-  else {
-    x_monitor m;
-    w_instance lock = getReferenceField(objectref, F_Reader_lock);
-    w_instance chars;
-    w_word *posptr;
-    w_instance in;
-    w_frame new_frame;
+  m = getMonitor(lock);
+  x_monitor_eternal(m);
+  chars = getReferenceField(thisPushbackReader, F_PushbackReader_chars);
+  posptr = wordFieldPointer(thisPushbackReader, F_PushbackReader_pos);
+  if (!chars) {
+    x_monitor_exit(m);
+    throwException(thread, clazzIOException, "PushBackReader is closed");
 
-    m = getMonitor(lock);
-    x_monitor_eternal(m);
-    chars = getReferenceField(objectref, F_PushbackReader_chars);
-    posptr = wordFieldPointer(objectref, F_PushbackReader_pos);
-    if (!chars) {
-      x_monitor_exit(m);
-      throwException(thread, clazzIOException, "Reader is closed");
-    }
-    else if (!*posptr) {
-      x_monitor_exit(m);
-      throwException(thread, clazzIOException, "Pushback buffer is full");
-    }
-    else {
-      --(*posptr);
-      instance2Array_char(chars)[*posptr] = (w_char)frame->jstack_top[-1].c;
-      x_monitor_exit(m);
-    }
+    return;
   }
-  enterUnsafeRegion(thread);
-  frame->jstack_top -= 2;
+
+  if (!*posptr) {
+    x_monitor_exit(m);
+    throwException(thread, clazzIOException, "Pushback buffer is full");
+
+    return;
+  }
+
+  --(*posptr);
+  instance2Array_char(chars)[*posptr] = (w_char)c;
+  x_monitor_exit(m);
 }
 

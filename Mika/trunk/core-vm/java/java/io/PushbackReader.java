@@ -70,7 +70,7 @@ public class PushbackReader extends FilterReader {
 
   public native void unread(int ch) throws IOException;
 
-/* [CG 20100501] Made into fastcall to help Knopflerfish's XMLReader
+/* [CG 200100501] Replaced by native code to help Knopfkerfish XMLReader
   public int read()throws IOException {
     synchronized(lock){
       if(chars == null){
@@ -122,7 +122,7 @@ public class PushbackReader extends FilterReader {
     throw new IOException("mark/reset not supported");
   }
 
-/* [CG 20100501] Made into fastcall to help Knopflerfish's XMLReader
+/* [CG 200100501] Replaced by native code to help Knopfkerfish XMLReader
   public void unread(int ch) throws IOException {
     synchronized(lock){
       if(chars == null || pos == 0){

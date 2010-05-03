@@ -59,6 +59,9 @@ public class BufferedReader extends Reader {
     markpos = -1;
   }
 
+  public native int read() throws IOException;
+
+/* [CG 200100501] Replaced by native code to help Knopfkerfish XMLReader
   public int read() throws IOException {
     synchronized (lock) {
       if(buf == null){
@@ -70,6 +73,7 @@ public class BufferedReader extends Reader {
       return buf[pos++];
     }
   }
+*/
 
   public int read(char b[], int off, int len) throws IOException {
     synchronized (lock) {
