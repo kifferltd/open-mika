@@ -44,6 +44,7 @@ public abstract class TimerTask implements Runnable {
   */
   long startTime = -1;
   boolean cancelled;
+  boolean absolute;
 
   long savedoffset;
 
