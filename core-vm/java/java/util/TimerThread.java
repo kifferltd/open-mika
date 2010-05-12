@@ -88,7 +88,7 @@ class TimerThread extends Thread implements Comparator {
               //disturbing any timer tasks ...
               //System.out.println("TIMERTHREAD " + this +": timer is alive");
               waiting = true;
-              this.wait(1000);//we wait for 10 seconds ...
+              this.wait(1000);
               waiting = false;
             }
             else {
@@ -107,7 +107,7 @@ class TimerThread extends Thread implements Comparator {
               continue;
             }
 
-            offset = Heartbeat.getTimeOffset();
+            offset = task.absolute ? 0 : Heartbeat.getTimeOffset();
             if (offset > task.savedoffset) {
               //System.out.println("TIMERTHREAD " + this + ": offset has increased, " + task.savedoffset + " -> " + offset);
             }
@@ -137,11 +137,12 @@ class TimerThread extends Thread implements Comparator {
               waiting = true;
               this.wait(nap);
               waiting = false;
-              //System.out.println("TIMERTHREAD " + this +":  waited "+(System.currentTimeMillis() - Heartbeat.getTimeOffset() - time2));
               continue;
             }
             //System.out.println("TIMERTHREAD " + this +": task is ready to run " + (task.startTime - time2));
             tasks.remove(task);
+            // if task is periodic, subsequent schedulings are considered to be relative
+            task.absolute = false;
             savedtime = time0;
           }
         }
@@ -180,10 +181,10 @@ class TimerThread extends Thread implements Comparator {
       throw new IllegalArgumentException("negative delay is not allowed");
     }
     // System.out.println("System.currentTimeMillis() = " + System.currentTimeMillis() + ", delay = " + delay + " => schedule at " + (delay + System.currentTimeMillis()));
-    scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate);
+    scheduleAtTime(task, delay + System.currentTimeMillis(), period, fixedRate, false);
   }
 
-  synchronized void scheduleAtTime(TimerTask task, long time, long period, boolean fixedRate){
+  synchronized void scheduleAtTime(TimerTask task, long time, long period, boolean fixedRate, boolean absolute){
     if(time < 0){
       throw new IllegalArgumentException("negative time is not allowed");
     }
@@ -195,7 +196,7 @@ class TimerThread extends Thread implements Comparator {
     }
     //System.out.println("Adding task to timer "+task);
     //System.out.println("Setting " + task + ".startTime to " + time);
-    task.savedoffset = Heartbeat.getTimeOffset();
+    task.savedoffset = absolute ? 0 : Heartbeat.getTimeOffset();
     task.startTime = time - task.savedoffset;
     task.period = period;
     task.fixed = fixedRate;

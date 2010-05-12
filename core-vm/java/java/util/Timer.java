@@ -57,14 +57,14 @@ public class Timer {
   }
 
   public void schedule(TimerTask task, Date date){
-    thread.scheduleAtTime(task, date.getTime(), -1, false);
+    thread.scheduleAtTime(task, date.getTime(), -1, false, true);
   }
 
   public void schedule(TimerTask task, Date date, long period){
     if(period <= 0){
       throw new IllegalArgumentException();
     }
-    thread.scheduleAtTime(task, date.getTime(), period, false);
+    thread.scheduleAtTime(task, date.getTime(), period, false, true);
   }
 
   public void schedule(TimerTask task, long delay){
@@ -82,7 +82,7 @@ public class Timer {
     if(period <= 0){
       throw new IllegalArgumentException();
     }
-    thread.scheduleAtTime(task, date.getTime(), period, true);
+    thread.scheduleAtTime(task, date.getTime(), period, true, true);
   }
 
   public void scheduleAtFixedRate(TimerTask task, long delay, long period){
