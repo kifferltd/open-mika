@@ -1,6 +1,30 @@
 /**************************************************************************
-* Copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.          *
-* All rights reserved.                                                    *
+* Copyright (c) 2007, 2010 by Chris Gray, /k/ Embedded Java Solutions.
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+* 1. Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+* 3. Neither the name of /k/ Embedded Java Solutions nor the names of other contributors
+*    may be used to endorse or promote products derived from this software
+*    without specific prior written permission.
+* 
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+* FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL /K/
+* EMBEDDED SOLUTIONS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* 
 **************************************************************************/
 
 package java.lang;
@@ -62,7 +86,13 @@ import java.util.Properties;
 class DefaultProperties extends Properties {
 
   DefaultProperties() {
-    super(new NativeProperties());
+    NativeProperties natives = new NativeProperties();
+    Enumeration nativeNames = natives.propertyNames();
+    while (nativeNames.hasMoreElements()) {
+      String name = (String)nativeNames.nextElement();
+      String value = natives.getProperty(name);
+      put(name, value);
+    }
     try {
       super.load(new ByteArrayInputStream("java.vm.name=Mika\njava.vm.version=1.4.2\njava.vendor=/k/ Embedded Java Solutions\njava.vendor.url=http://www.k-embedded-java.com\njava.vm.vendor=/k/ Embedded Java Solutions\njava.vm.name=Mika\njava.class.version=48.0\njava.class.path=this will be set later\nfile.separator=/\nfile.encoding=8859_1\npath.separator=:\nline.separator=\\n\n".getBytes("ISO-8859-1")));
     }
@@ -84,9 +114,12 @@ class DefaultProperties extends Properties {
 
   public Enumeration propertyNames() {
     Vector v = new Vector();
-    Enumeration en = defaults.keys();
-    while (en.hasMoreElements()) {
-      v.add(en.nextElement());
+    Enumeration en;
+    if (defaults != null) {
+      en = defaults.keys();
+      while (en.hasMoreElements()) {
+        v.add(en.nextElement());
+      }
     }
     en = keys();
     while (en.hasMoreElements()) {
