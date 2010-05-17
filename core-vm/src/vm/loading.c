@@ -1552,7 +1552,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
 
   saved_exception = exceptionThrown(thread);
   if (saved_exception) {
-    addLocalReference(thread->top, saved_exception); // so GC doesn't eat it
+    addLocalReference(thread, saved_exception); // so GC doesn't eat it
      clearException(thread);
   }
 
