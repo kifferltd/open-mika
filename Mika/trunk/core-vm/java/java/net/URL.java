@@ -41,6 +41,8 @@ public final class URL implements java.io.Serializable {
 
   private static final char OR='|';
   
+  private static final String DEFAULT_PROTOCOL_PACKAGE = "wonka.net";
+
   private static final Object lock = new Object();
   /**
    ** The factory for URL stream handlers, if one has been set
@@ -357,7 +359,7 @@ public final class URL implements java.io.Serializable {
     this.port = port;
     this.path = path;
     this.fragment = ref;
-    debug("URL: set " + this + " to protocol '" + protocol + "', host '" + host + "', port '" + port + "', path '" + path + "', fragment '" + ref + "'");
+    debug("URL: set protocol '" + protocol + "', host '" + host + "', port '" + port + "', path '" + path + "', fragment '" + ref + "'");
   }
 
   protected void set(String protocol, String host, int port, String authority, String userInfo, String path, String query, String ref){
@@ -378,7 +380,7 @@ public final class URL implements java.io.Serializable {
     this.authority = authority;
     this.query = query;
     this.userInfo = userInfo;
-    debug("URL: set " + this + " to protocol '" + protocol + "', host '" + host + "', port '" + port + "', authority '" + authority + "', user info '" + userInfo + "', path '" + path + "', query '" + query + "', fragment '" + ref + "'");
+    debug("URL: set protocol '" + protocol + "', host '" + host + "', port '" + port + "', authority '" + authority + "', user info '" + userInfo + "', path '" + path + "', query '" + query + "', fragment '" + ref + "'");
   }
 
 // package protected methods to update an URL.
@@ -422,7 +424,6 @@ public final class URL implements java.io.Serializable {
 
   void setQuery(String query) {
     this.query = query;
-    //System.out.println("Q: " + query);
   }
 
   void setPort(int port) {
@@ -453,6 +454,7 @@ public final class URL implements java.io.Serializable {
     synchronized(lock) {
     
       if (factory != null) {
+        //debug("URL: trying to create handler for protocol '" + protocol + "' using " + factory);
         handler = factory.createURLStreamHandler(protocol);
         if (handler != null) {
           handlers.put(protocol, handler);
@@ -462,6 +464,13 @@ public final class URL implements java.io.Serializable {
       }
 
       String pkgs = GetSystemProperty.PROTOCOL_HANDLER_PKGS;
+      if (pkgs.length() == 0) {
+        pkgs = DEFAULT_PROTOCOL_PACKAGE;
+      }
+      else {
+        pkgs = pkgs + "|" + DEFAULT_PROTOCOL_PACKAGE;
+      }
+      //debug("URL: protocol packages list = '" + pkgs + "'");
       String name;
       while (pkgs.length() > 0 ) {
         int i = pkgs.indexOf(OR);
@@ -475,13 +484,15 @@ public final class URL implements java.io.Serializable {
         }
         name = name+"."+protocol+".Handler";
         try {
+          //debug("URL: trying handler " + name + " for protocol '" + protocol + "'");
           handler = (URLStreamHandler)Class.forName(name, true , ClassLoader.getSystemClassLoader()).newInstance();
           handlers.put(protocol, handler);
           debug("URL: created handler " + handler + " for protocol '" + protocol + "'");
           return handler;
         }
         catch(Exception e){
-          /*if we catch an Exception here we should continue looking ...*/
+          debug("URL: failed to load handler " + name + " : " + e);
+          /* continue looking ...*/
         }        
       }
     }  
