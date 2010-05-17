@@ -487,7 +487,7 @@ static void reallyReallyReleaseInstance(w_object object) {
   instance_returned += 1;
   instance_use -= 1;
 #ifdef JAVA_PROFILE
-  clazz->instances--;
+  object->clazz->instances--;
 #endif 
 }
 
