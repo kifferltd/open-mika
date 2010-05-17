@@ -35,6 +35,7 @@
 #include "arrays.h"
 #include "exception.h"
 #include "fields.h"
+#include "interpreter.h"
 #include "heap.h"
 #include "jni.h"
 #include "locks.h"
