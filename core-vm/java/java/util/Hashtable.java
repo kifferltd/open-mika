@@ -242,6 +242,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
   // [CG 20100517] not yet ready, see Hashtable.c:
   // public native synchronized Object put(Object key, Object newvalue);
 
+  /* Replaced by native method
   public synchronized Object get(Object key) {
     int   cap = capacity;
     int   hash = key.hashCode() % cap;
@@ -262,6 +263,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
       hash--;
     } while(true);
   }
+  */
 
   public synchronized Object put(Object key, Object newvalue) throws NullPointerException {
     if(newvalue == null)
