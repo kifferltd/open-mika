@@ -1210,7 +1210,6 @@ w_void zzzdeflate(w_void *ll) {
       // if reset, clear all queues and partial data
       if (l->resets_completed != l->resets_requested) {
         woempa(INF_WOEMP_LEV_1, "Resetting\n");
-        l->resets_completed = l->resets_requested;
         no_auto = 0;
 
         switch (x_mutex_lock(&l->mutx, x_eternal)) {
@@ -1239,6 +1238,7 @@ w_void zzzdeflate(w_void *ll) {
 
         x_mutex_unlock(&l->mutx);
         
+        l->resets_completed = l->resets_requested;
         // notify thread we are ready
         x_monitor_notify_all(&l->ready);
       }
