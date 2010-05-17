@@ -792,6 +792,10 @@ void zzzinflate(void *ll) {
     woempa(1, "Inflating stream.\n");
 
     do {
+      if (l->resets_completed != l->resets_requested) {
+        goto hastalavista;
+      }
+
       woempa(1, "State: err %i, stop %i, reset %i--%i, noauto %i\n", err, stop, l->resets_requested, l->resets_completed, no_auto);
       lastblock = readSingleBit(l);
 
@@ -929,7 +933,6 @@ hastalavista:
       // if reset, clear all queues and partial data
       if (l->resets_completed != l->resets_requested) {
         woempa(1, "Resetting\n");
-        l->resets_completed = l->resets_requested;
         no_auto = 0;
 
         switch (x_mutex_lock(&l->mutx, x_eternal)) {
@@ -959,6 +962,7 @@ hastalavista:
 
         x_mutex_unlock(&l->mutx);
 
+        l->resets_completed = l->resets_requested;
         // notify thread we are ready
         x_monitor_notify_all(&l->ready);
       }

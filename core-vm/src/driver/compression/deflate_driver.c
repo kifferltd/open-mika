@@ -129,7 +129,7 @@ static w_void unzip_termDevice(w_device device) {
       wabort(ABORT_WONKA, "entering unzip->ready, error %d in monitor\n", s);
     }
 
-    unzip->resets_requested = unzip->resets_completed + 1;
+    unzip->resets_requested = (unzip->resets_completed + 1) % 0x7fff;
     unzip->stop = 1;
     unzip->nomoreinput = 1;
 
@@ -568,7 +568,7 @@ static w_driver_status unzip_set(w_device device, w_word command, w_word param, 
       woempa(INF_WOEMP_LEV_1, "Entering\n");
       s = x_monitor_eternal(&zip->ready);
       if (s == xs_success) {
-        reset_count = zip->resets_requested + 1;
+        reset_count = (zip->resets_requested + 1) & 0x7fff;
         zip->resets_requested = reset_count;
 
         zip->nomoreinput = 1;
