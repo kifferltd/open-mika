@@ -239,7 +239,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   public native synchronized Object get(Object key);
 
-  [CG 20100517] not yet ready, see Hashtable.c:
+  // [CG 20100517] not yet ready, see Hashtable.c:
   // public native synchronized Object put(Object key, Object newvalue);
 
   public synchronized Object get(Object key) {
