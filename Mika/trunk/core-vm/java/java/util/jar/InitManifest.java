@@ -139,7 +139,7 @@ class InitManifest {
 
             if (!((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
                     || b == '-' || (b >= '0' && b <= '9'))) {
-                throw new IOException("Invalid attribute " + b);
+                throw new IOException("Invalid attribute character code " + b);
             }
         }
         if (i > 0) {
