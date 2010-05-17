@@ -138,7 +138,7 @@ w_word CCITT_32(w_ubyte *buf, w_size len) {
   return update_ISO3309_CRC(0xffffffffL, buf, len) ^ 0xffffffffL;
 }
 
-int strcmp(const char *p1, const char *p2) {
+int w_strcmp(const char *p1, const char *p2) {
 
   unsigned char c1;
   unsigned char c2;
