@@ -1,5 +1,7 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,26 +11,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
-
-/*
-** $Id: Hashtable.java,v 1.4 2006/04/18 11:35:28 cvs Exp $
-*/
 
 package java.util;
 
@@ -137,6 +136,11 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   }
   
+  public native int size();
+
+  // [CG 20100517] not yet ready, see Hashtable.c:
+  // protected native void rehash();
+
   protected void rehash() {
     int newsize = this.capacity*2+1;
     int oldsize = this.capacity;
@@ -167,11 +171,13 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
     }
   }
   
+/* Replaced by native code
   public int size() {
 
      return this.occupancy;
 
   }
+*/
   
   public boolean isEmpty() {
 
@@ -230,6 +236,11 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
     // repeat from R1 ...
     }
   }
+
+  public native synchronized Object get(Object key);
+
+  [CG 20100517] not yet ready, see Hashtable.c:
+  // public native synchronized Object put(Object key, Object newvalue);
 
   public synchronized Object get(Object key) {
     int   cap = capacity;
@@ -331,7 +342,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   
 
-  class HashtableKeyEnum implements Enumeration, Iterator {
+  final class HashtableKeyEnum implements Enumeration, Iterator {
 
     private int nextSlot = 0;
 
@@ -380,7 +391,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   // This could probably be done with an anonymous class, but for now:
 
-  class HashtableElementEnum implements Enumeration {
+  final class HashtableElementEnum implements Enumeration {
     private int nextSlot = firstBusySlot(0);
 
     public boolean hasMoreElements() {
@@ -478,7 +489,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
    ** inner class which implements Map.Entry
    **
    */
-  private class HashtableMapEntry implements java.util.Map.Entry {
+  private final class HashtableMapEntry implements java.util.Map.Entry {
 
     private Object key;
     private Object value;
@@ -519,7 +530,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   }
 
-  private class HashtableSet extends AbstractSet {
+  private final class HashtableSet extends AbstractSet {
 
 
     public HashtableSet(){}
@@ -532,7 +543,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
     }
   }	
 
-  private class EntrySetIterator implements Iterator {
+  private final class EntrySetIterator implements Iterator {
     int pos=firstBusySlot(0);
     int oldpos=-1;
     int mc=modCount;
@@ -563,7 +574,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
   }
 
 
-  private class KeySetIterator implements Iterator {
+  private final class KeySetIterator implements Iterator {
 
     public KeySetIterator(){}
 
@@ -596,7 +607,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   }
 
-  private class HashtableKeySet extends AbstractSet {
+  private final class HashtableKeySet extends AbstractSet {
     public HashtableKeySet(){}
 
     public Iterator iterator() {
@@ -606,7 +617,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
       return occupancy;
     }
   }
-  private class ValuesIterator implements Iterator {
+  private final class ValuesIterator implements Iterator {
 
     public ValuesIterator(){}
 
@@ -639,7 +650,7 @@ public class Hashtable extends Dictionary implements Cloneable, Serializable, Ma
 
   }
 
-  private class HashtableValues extends AbstractCollection {
+  private final class HashtableValues extends AbstractCollection {
     public HashtableValues(){}
 
     public Iterator iterator() {
