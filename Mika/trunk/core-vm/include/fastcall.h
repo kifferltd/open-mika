@@ -56,20 +56,21 @@
 #define FAST_STRING_CHARAT              11
 #define FAST_STRING_TOSTRING            12
 #define FAST_STRING_STARTSWITH          13
-#define FAST_CHARACTER_ISLETTER         14
-#define FAST_CHARACTER_ISWHITESPACE     15
-#define FAST_CHARACTER_ISDIGIT_CHAR     16
-#define FAST_CHARACTER_FORDIGIT_INT_INT 17
-#define FAST_CHARACTER_DIGIT_CHAR_INT   18
-#define FAST_SYSTEM_CURRENTTIMEMILLIS   19
-#define FAST_MATH_SQRT                  20
-#define FAST_MATH_SIN                   21
-#define FAST_MATH_COS                   22
-#define FAST_MATH_TAN                   23
-#define FAST_MATH_ASIN                  24
-#define FAST_MATH_ATAN                  25
-#define FAST_MATH_LOG                   26
-#define FAST_MATH_EXP                   27
+#define FAST_HASHTABLE_FIRSTBUSYSLOT    14
+#define FAST_CHARACTER_ISLETTER         15
+#define FAST_CHARACTER_ISWHITESPACE     16
+#define FAST_CHARACTER_ISDIGIT_CHAR     17
+#define FAST_CHARACTER_FORDIGIT_INT_INT 18
+#define FAST_CHARACTER_DIGIT_CHAR_INT   19
+#define FAST_SYSTEM_CURRENTTIMEMILLIS   20
+#define FAST_MATH_SQRT                  21
+#define FAST_MATH_SIN                   22
+#define FAST_MATH_COS                   23
+#define FAST_MATH_TAN                   24
+#define FAST_MATH_ASIN                  25
+#define FAST_MATH_ATAN                  26
+#define FAST_MATH_LOG                   27
+#define FAST_MATH_EXP                   28
 
 typedef struct w_FastCall {
   w_string method_name;
@@ -91,7 +92,7 @@ typedef w_FastClass* w_fastclass;
 #else
 #define FAST_STATIC_CLASSES 2
 #endif
-#define FAST_VIRTUAL_CLASSES 2
+#define FAST_VIRTUAL_CLASSES 3
 #define FAST_SPECIAL_CLASSES 1
 
 void fastcall_check_invoke_static(w_clazz clazz, unsigned char * bytecodes);

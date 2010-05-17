@@ -498,8 +498,16 @@ java/util/Date
 	create_ymdhms	(IIIIII)V		Date_create_ymdhms
 java/util/Hashtable
 	capacity	I
+        loadFactor	F
+	occupancy	I
+	threshold	I
 	keys		[Ljava/lang/Object;
+	values		[Ljava/lang/Object;
 	firstBusySlot	(I)I			Hashtable_firstBusySlot
+	get		(Ljava/lang/Object;)Ljava/lang/Object;	Hashtable_get
+#	put		(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;	Hashtable_put
+#	rehash		()V			Hashtable_rehash
+	size		()I			Hashtable_size
 java/util/Vector
 	elementData	[Ljava/lang/Object;
 	elementCount	I

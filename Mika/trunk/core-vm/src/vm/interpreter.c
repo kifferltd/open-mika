@@ -695,6 +695,7 @@ extern void fast_String_indexOf_char(w_frame);
 extern void fast_String_charAt(w_frame);
 extern void fast_String_toString(w_frame);
 extern void fast_String_startsWith(w_frame);
+extern void fast_Hashtable_firstBusySlot(w_frame);
 extern void fast_Character_isLetter(w_frame);
 extern void fast_Character_isWhitespace(w_frame);
 extern void fast_Character_isDigit_char(w_frame);
@@ -728,6 +729,7 @@ static w_fast_method fast_method_table[] = {
   fast_String_charAt,
   fast_String_toString,
   fast_String_startsWith,
+  fast_Hashtable_firstBusySlot,
   fast_Character_isLetter,
   fast_Character_isWhitespace,
   fast_Character_isDigit_char,

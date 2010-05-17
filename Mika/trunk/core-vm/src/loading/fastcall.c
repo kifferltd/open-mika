@@ -41,6 +41,7 @@ w_fastclass virtual_calls[FAST_VIRTUAL_CLASSES];
 w_fastclass special_calls[FAST_SPECIAL_CLASSES];
 
 w_string clazz_name_Character;
+w_string clazz_name_Hashtable;
 w_string clazz_name_Math;
 
 void fastcall_check_class(w_fastclass fclass, w_string method_name, 
@@ -139,6 +140,7 @@ void fastcall_init_tables() {
   w_string init = cstring2String("<init>", 6);
 
   clazz_name_Character = cstring2String("java/lang/Character", 19);
+  clazz_name_Hashtable = cstring2String("java/util/Hashtable", 19);
   clazz_name_Math = cstring2String("java/lang/Math", 14);
 
   current = createClassTable(1,cstring2String("java/lang/System", 16));
@@ -232,6 +234,12 @@ void fastcall_init_tables() {
   current->calls[7]->index = FAST_STRING_STARTSWITH;
   current->calls[7]->method_name = cstring2String("startsWith", 10);
   current->calls[7]->method_sig = cstring2String("(Ljava/lang/String;I)V", 22);
+
+  current = createClassTable(1,clazz_name_Hashtable);
+  virtual_calls[2] = current;
+  current->calls[0]->index = FAST_HASHTABLE_FIRSTBUSYSLOT;
+  current->calls[0]->method_name = cstring2String("firstBusySlot", 13);
+  current->calls[0]->method_sig = cstring2String("(I)I", 4);
 
   current = createClassTable(3,clazz_name_String);
   special_calls[0] = current;
