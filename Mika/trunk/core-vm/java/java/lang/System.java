@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
+import java.util.Enumeration;
 import java.util.Properties;
 import java.util.PropertyPermission;
 
@@ -56,7 +57,14 @@ public final class System {
     out = new PrintStream(new wonka.io.StandardOutputStream(), false);
     err = new PrintStream(new wonka.io.ErrorOutputStream(), true);
     theRuntime = Runtime.getRuntime();
-    systemProperties = new Properties(new DefaultProperties());
+    systemProperties = new Properties();
+    DefaultProperties defaults = new DefaultProperties();
+    Enumeration defaultNames = defaults.propertyNames();
+    while (defaultNames.hasMoreElements()) {
+      String name = (String)defaultNames.nextElement();
+      String value = defaults.getProperty(name);
+      systemProperties.put(name, value);
+    }
 
     try {
       InputStream syspropstream = ClassLoader.getSystemResourceAsStream("system.properties");
