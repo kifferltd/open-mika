@@ -366,12 +366,12 @@ int main(int argc, char * argv[]) {
 #endif
 #ifdef USE_NANOSLEEP
   struct timespec ts;
+#endif
 #ifdef HOST_TIMER_GRANULARITY
   w_int host_timer_granularity_millis = HOST_TIMER_GRANULARITY / 1000;
 #else
 #warning HOST_TIMER_GRANULARITY not defined, assuming 10000 (usec)
   w_int host_timer_granularity_millis = 10;
-#endif
 #endif
 
   help_texts[0] = general_help_text;
