@@ -404,6 +404,8 @@ public final class SystemClassLoader extends ClassLoader {
     definePackage("java.lang.reflect","","","","","","",null);
     definePackage("java.io","","","","","","",null);
     definePackage("java.util","","","","","","",null);
+    definePackage("java.util.jar","","","","","","",null);
+    definePackage("java.util.zip","","","","","","",null);
     definePackage("java.net","","","","","","",null);
     definePackage("java.awt.event","","","","","","",null);
     definePackage("java.awt","","","","","","",null);
