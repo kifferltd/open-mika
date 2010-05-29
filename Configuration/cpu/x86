@@ -35,4 +35,5 @@ RANLIB = ranlib ;
 LINK = gcc ;
 LD_TOOL = ld ;
 AR_TOOL = ar ;
+STRIP = strip ;
 
