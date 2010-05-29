@@ -95,3 +95,4 @@ JAVA_DEBUG=true
 #
 UNICODE_SUBSETS=0 
 
+JDWP=true

@@ -8,6 +8,10 @@ SHARED_OBJECTS = false ;
 
 CPU = mips ;
 HOSTOS = uclinux ;
+TOOLCHAIN_PREFIX = ~/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc- ;
 SCHEDULER = o4p ;
 STATIC = true ;
+
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+JDWP = true ;
 

@@ -2,11 +2,16 @@ AWT = none ;
 CPU_MIPS = 300 ;
 DEFAULT_HEAP_SIZE default = 16M ;
 MATH = native ;
+USE_NATIVE_MALLOC = true ;
 
 FLOATING_POINT = hauser ;
 SHARED_OBJECTS = true ;
+TOOLCHAIN_PREFIX = mipsel-linux- ;
 
 CPU = mips ;
 HOSTOS = linux ;
 SCHEDULER = o4p ;
+
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+JDWP = true ;
 
