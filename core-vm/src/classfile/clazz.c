@@ -1418,6 +1418,7 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
         deregisterUnloadedClazz(existing);
       }
       else {
+        throwException(thread, clazzNoClassDefFoundError, "%w is already defined in %j", clazz->dotified, loader);
         destroyClazz(clazz);
         result = existing;
       }
