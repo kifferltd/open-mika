@@ -173,6 +173,11 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
     name = NULL;
   }
 
+  if (!loader2loaded_classes(thisClassLoader)) {
+    throwException(thread, clazzSecurityException, "%j is not fully initialised", thisClassLoader);
+    return NULL;
+  }
+
   enterMonitor(thisClassLoader);
   clazz = createClazz(thread, name, &bar, thisClassLoader, trusted);
   exitMonitor(thisClassLoader);
@@ -214,15 +219,19 @@ void ClassLoader_resolveClass(JNIEnv *env, w_instance This, w_instance theClass)
 
 }
 
-w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance This, w_instance nameString) {
+w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance thisClassLoader, w_instance nameString) {
 
   w_clazz clazz;
   w_string name;
 
-  if (nameString) {
+  if (!loader2loaded_classes(thisClassLoader)) {
+    w_thread thread = JNIEnv2w_thread(env);
+    throwException(thread, clazzSecurityException, "%j is not fully initialised", thisClassLoader);
+  }
+  else if (nameString) {
     name = String2string(nameString);
 
-    clazz = seekClazzByName(name, This);
+    clazz = seekClazzByName(name, thisClassLoader);
 
     if (clazz) {
       w_int state = getClazzState(clazz);
