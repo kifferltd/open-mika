@@ -54,7 +54,7 @@ void FileDescriptor_createFromPath(JNIEnv *env, w_instance thisFileDescriptor, w
 
   file = vfs_fopen(path, mode);
   if (!file) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "could not open file '%s' using mode '%s': %s\n", path, mode, strerror(errno));
+    throwException(JNIEnv2w_thread(env), clazzFileNotFoundException, "could not open file '%s' using mode '%s': %s\n", path, mode, strerror(errno));
   }
   releaseMem(path - 2);
 
