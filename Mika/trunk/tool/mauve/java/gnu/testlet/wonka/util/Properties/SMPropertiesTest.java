@@ -335,6 +335,7 @@ public class SMPropertiesTest implements Testlet
 *
 */
   public void test_propertyNames(){
+    /* [CG 20100530] I can see no reason why this test should pass, and neither can RI 1.6
     th.checkPoint("propertyNames()java.util.Enumeration");
     Properties p = new Properties();
     try { p.load(bin); }
@@ -367,6 +368,7 @@ public class SMPropertiesTest implements Testlet
     }
     th.check(ok , "see if no double were generated");
     th.check(v.isEmpty() , "check if all names were mentioned -- got:"+v);
+    */
   }
 
 /**
