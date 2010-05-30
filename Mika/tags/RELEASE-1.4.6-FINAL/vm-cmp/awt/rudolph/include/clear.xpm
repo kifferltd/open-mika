@@ -1,0 +1,76 @@
+/**************************************************************************
+* Copyright  (c) 2002 by Acunia N.V. All rights reserved.                 *
+*                                                                         *
+* This software is copyrighted by and is the sole property of Acunia N.V. *
+* and its licensors, if any. All rights, title, ownership, or other       *
+* interests in the software remain the property of Acunia N.V. and its    *
+* licensors, if any.                                                      *
+*                                                                         *
+* This software may only be used in accordance with the corresponding     *
+* license agreement. Any unauthorized use, duplication, transmission,     *
+*  distribution or disclosure of this software is expressly forbidden.    *
+*                                                                         *
+* This Copyright notice may not be removed or modified without prior      *
+* written consent of Acunia N.V.                                          *
+*                                                                         *
+* Acunia N.V. reserves the right to modify this software without notice.  *
+*                                                                         *
+*   Acunia N.V.                                                           *
+*   Philips site 5, box 3       info@acunia.com                           *
+*   3001 Leuven                 http://www.acunia.com                     *
+*   Belgium - EUROPE                                                      *
+**************************************************************************/
+
+/* $Id: */
+
+/*
+** Sample clear.xpm file generated using tgif. Note that currently Rudolph
+** assumes clear_format 1 and clear_chars_per_pixel 1, so files with other
+** values may not work correctly.
+** The image may be anything from a single pixel to a complete screenfull:
+** it will be tiled across the whole screen.
+**
+** The example below shoes how to paint the screen in a 'solid' colour.
+*/
+
+#define clear_format 1
+#define clear_chars_per_pixel 1
+#define clear_ncolors 1
+#define clear_width 1
+#define clear_height 1
+static char *clear_colors[] = {" ", "acunia red"};
+static char *clear_pixels[] = {" "};
+
+/*
+** Here's an example of gorgeous(?) gingham:
+
+#define clear_format 1
+#define clear_width  16
+#define clear_height 16
+#define clear_ncolors 2
+#define clear_chars_per_pixel 1
+static char *clear_colors[] = {
+   "`", "white",
+   "a", "acunia red"
+};
+static char *clear_pixels[] = {
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"````````aaaaaaaa",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+"aaaaaaaa````````",
+};
+
+*/
+

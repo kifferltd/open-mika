@@ -1,0 +1,98 @@
+#!/bin/bash
+
+###########################################################################
+# Copyright (c) 2001 by Punch Telematix. All rights reserved.             #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of other           #
+#    contributors may be used to endorse or promote products derived      #
+#    from this software without specific prior written permission.        #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
+###########################################################################
+
+# -------------------------------------------------------------------
+function checkTools() {
+  if [ -z $RTTOOL ] ; then
+    echo "Environment variable RTTOOL not defined. Cannot proceed."
+    exit 1
+  else
+    source $RTTOOL/j_include
+    if [ $? -ne 0 ]; then
+      echo "Aborting ..."
+      exit 1
+    fi
+  fi
+}
+
+# -------------------------------------------------------------------
+function showHelp() {
+  echo " This script creates main directory and neccessary sub-directories"
+  echo " for unit testing a new open-wonka release."
+  echo " usage: $0 {<open-wonka-release dir>}"
+  echo "  e.g.: $0 0-8-2"
+}
+
+# -------------------------------------------------------------------
+
+function getArgs () {
+
+  if [ $1 ] && [ $1 = -x ]; then
+    shift
+    set -x
+  fi
+
+  if [ $# -ne 1 ]; then
+    showHelp
+    exit 1
+  else
+    if [ $1 = "--help" ] || [ $1 = "-h" ]; then
+      showHelp
+      exit 0
+    else
+      newdir=$1
+    fi
+  fi
+}
+
+# MAIN -------------------------------------------------------------------------
+
+checkTools
+
+newdir=
+getArgs $@
+
+mkdir $newdir
+j_abort $?
+
+mkdir $newdir/product
+mkdir $newdir/report
+mkdir $newdir/javadoc
+mkdir $newdir/test-log
+j_abort $?
+mkdir $newdir/test-log/arm-anakin-linux
+mkdir $newdir/test-log/arm-familiar-4.0
+mkdir $newdir/test-log/x86-debian-potato
+mkdir $newdir/test-log/x86-redhat-6.2
+mkdir $newdir/test-log/x86-redhat-7.1
+mkdir $newdir/test-log/x86-suse-7.2
+#cp $RTTOOL/mkbuild $newdir
+cp $RTTOOL/refmauve.fail $newdir
+

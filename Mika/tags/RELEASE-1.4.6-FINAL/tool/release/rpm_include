@@ -1,0 +1,346 @@
+#!/bin/bash
+
+###########################################################################
+# Copyright (c) 2001 by Punch Telematix. All rights reserved.             #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix nor the names of other           #
+#    contributors may be used to endorse or promote products derived      #
+#    from this software without specific prior written permission.        #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       #
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            #
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    #
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         #
+# BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   #
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    #
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  #
+# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           #
+###########################################################################
+
+# -------------------------------------------------------------------
+# function definitions made available to scripts by including the statement
+#       source $RTTOOL/rpm_include
+# if this file was sourced already, it won't be done again
+# -------------------------------------------------------------------
+if [ ! -z $RPM_INCLUDE ]; then
+  return 0
+fi
+RPM_INCLUDE=defined
+
+
+# -------------------------------------------------------------------
+# function changes properties in file open-wonka/Configuration/dist
+# function assumes their exists at most 1 dist in path $1
+# -------------------------------------------------------------------
+function rpm_changeRPMBuild() {
+
+  # $1 = root of search path
+  # $2 = search value of DEBUG property (true|false)
+  # $3 = replace value of DEBUG property (true|false)
+
+  RPMCONFIG=dist               # 'dist' is current name of rpm build config file.
+
+  J_FILEPATH=
+  j_filePath $1 $RPMCONFIG
+  if [ $? -ne 0 ]; then
+    return $J_ERROR
+  fi
+  cp ${J_FILEPATH}${RPMCONFIG} ${J_FILEPATH}${RPMCONFIG}.copy
+  sed -e /DEBUG/s/$2/$3/g ${J_FILEPATH}${RPMCONFIG}.copy > ${J_FILEPATH}${RPMCONFIG}
+  j_seterror $? "update of file $RPMCONFIG not succeeded."
+  if [ $? -ne 0 ]; then
+    return $J_ERROR
+  fi
+  return 0
+
+}
+
+# -------------------------------------------------------------------
+# function writes spec file for open-wonka rpm creation
+# -------------------------------------------------------------------
+function rpm_writeRPMSpec() {
+
+  # get output file name
+  spec=$1
+
+  # write info fields
+  shift
+  echo "Summary: $1" > $spec
+  echo "Name: $2" >> $spec
+  echo "Version: $3" >> $spec
+  echo "Release: $4" >> $spec
+  echo "Copyright: $5" >> $spec
+  echo "Group: $6" >> $spec
+  echo "Vendor: $7" >> $spec
+  echo "URL: $8" >> $spec
+  echo "Packager: $9" >> $spec
+
+  # write the description string. It may contain '\n' sequences which
+  # are interpreted as newlines
+  echo "" >> $spec
+  echo "%description" >> $spec
+  shift
+  description="$9 \n"
+  while [ ! -z "$description" ] ; do
+    echo $description | cut -d \\ -f1 >> $spec
+    nl=$(echo $description | cut -d \\ -f2 | cut -c1)
+    test "$nl" = "n"
+    j_seterror $? "illegal sequence '\$nl' in rpm spec description string"
+    if [ $J_ERROR -ne 0 ]; then
+      return $J_ERROR
+    fi
+    description=$(echo $description | cut -d \\ -f2- | cut -c3-)
+  done
+
+  # write 'files' string. It may contain '\n' sequences which
+  # are interpreted as newlines
+  echo "" >> $spec
+  echo "%files" >> $spec
+  shift
+  files="$9 \n"
+  while [ ! -z "$files" ] ; do
+    echo $files | cut -d \\ -f1 >> $spec
+    nl=$(echo $files | cut -d \\ -f2 | cut -c1)
+    test "$nl" = "n"
+    j_seterror $? "illegal sequence '\$nl' in rpm spec files string"
+    if [ $J_ERROR -ne 0 ]; then
+      return $J_ERROR
+    fi
+    files=$(echo $files | cut -d \\ -f2- | cut -c3-)
+  done
+
+  echo "" >> $spec
+  return 0
+}
+
+# -------------------------------------------------------------------------
+# main rpm create function :
+#    checks that RTTOOL is defined and loads functions
+#    checks that utility jam is installed ans accessible
+#    checks that the working directory has a 'open-wonka' subdirectory
+#    builds debug and no-debug wonka binaries
+#    updates the root path for the wonka test directory in files vte.properties
+#      and system.properties
+#    writes the .spec file needed by the rpm utility
+#    executes the rpm utility creating the wonka rpm product file
+#
+#    calling function or script is assumed to source $RTTOOL/j_include
+#
+# $1=prefix for spec file name
+# $2=version number <a.b[.c]>
+# $3=rpm release : integer
+# $4=path for specfile
+#
+# -------------------------------------------------------------------------
+
+function rpm_make()   {
+
+  #set -x
+
+  # don't even start if important utilities are not accessible
+  j_checkUtils jam rpm
+  if [ $? -ne 0 ]; then
+    return $J_ERROR
+  fi
+
+  # don't even start if this directory doesn't contain an open-wonka directory.
+  test -d open-wonka
+  j_abort $? "directory ./open-wonka not found."
+
+  cd open-wonka
+
+  export WONKA_TOP=$PWD
+  export CLASSPATH=
+
+  # build wonka debug binary
+
+  jam mrproper
+  j_changeVTEBuild tool/visualtest/java/com/acunia/wonka/test/awt/
+  rpm_changeRPMBuild Configuration/wonka false true
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  jam -sWONKA_CONFIG=dist install
+  j_seterror $? "Build of wonka-debug binary not succeeded."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+
+  mv /usr/local/bin/wonka /usr/local/bin/wonka-debug
+
+  # build wonka non-debug binary
+  jam mrproper
+  rpm_changeRPMBuild Configuration/wonka true false
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  jam -sWONKA_CONFIG=dist install
+  j_seterror $? "Build of wonka binary not succeeded."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+
+  cd ..
+
+  # update file vte.properties
+
+  test -f /usr/local/lib/wonka/vte.properties
+  j_seterror $? "file /usr/local/lib/wonka/vte.properties not found."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  sed -e /property.path/s/test/"usr\/local\/lib\/wonka\/test"/g  /usr/local/lib/wonka/vte.properties > /usr/local/lib/wonka/vte.p
+  j_seterror $? "update of file vte.properties not succeeded."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  mv /usr/local/lib/wonka/vte.p /usr/local/lib/wonka/vte.properties
+
+  # update file system.properties
+
+  test -f /usr/local/lib/wonka/system.properties
+  j_seterror $? "file /usr/local/lib/wonka/system.properties not found."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  sed -e /"com.acunia.wonka.jarfiles"/s/test/"usr\/local\/lib\/wonka\/test"/g  /usr/local/lib/wonka/system.properties > /usr/local/lib/wonka/system.p
+  j_seterror $? "update of file system.properties not succeeded."
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+  mv /usr/local/lib/wonka/system.p /usr/local/lib/wonka/system.properties
+
+  # create spec file for rpm command
+
+  rpm_summary="A cleanroom Java(TM) Virtual Machine"
+  rpm_name=$1
+  rpm_version=$2
+  rpm_release=$3
+  rpm_copyright="WPL"
+  rpm_group="Development/Languages"
+  rpm_vendor="Acunia"
+  rpm_url="http://wonka.acunia.com"
+  rpm_packager="Johan Vandeneede <johan.vandeneede@acunia.com>"
+
+  rpm_description="Wonka is ACUNIA's cleanroom Virtual Machine for the Java(TM) \n \
+  language. It is extremely portable and self-contained, and \n \
+  can optionally be used with its own real-time executive \n    \
+  (OSwald(TM)) to provide a complete solution for embedded \n   \
+  devices. It is a full implementation of the Java language, \n  \
+  not just a subset. And it's Open Source."
+
+  rpm_files="/usr/local/lib/wonka \n \
+  /usr/local/bin/wonka \n \
+  /usr/local/bin/wonka-debug"
+
+  rpm_spec=$4/${rpm_name}-${rpm_version}-${rpm_release}.spec
+
+  rpm_writeRPMSpec $rpm_spec "$rpm_summary" $rpm_name $rpm_version $rpm_release $rpm_copyright \
+  $rpm_group $rpm_vendor $rpm_url "$rpm_packager" "$rpm_description" "$rpm_files"
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+
+  # execute rpm command to generate <file>.rpm  in /usr/src/redhat/RPMS/i386/
+
+  rpm -bb $rpm_spec
+  j_seterror $? "generation of rpm file not succeeded"
+  if [ $? -ne 0 ]; then
+  #  return $J_ERROR
+    j_abort $J_ERROR "$J_ERRORMSG"
+  fi
+
+  set -
+  return 0
+}
+
+# -------------------------------------------------------------------------
+# main wonka uninstall function :
+#    tries to rpm uninstall existing version
+#    tries to remove remaining wonka files
+#
+# $1=prefix of rpm filename
+# $2=version number <a.b[.c]>
+# $3=rpm release : integer
+#
+# -------------------------------------------------------------------------
+
+function rpm_uninstall() {
+  WONKABIN=/usr/local/bin/            # these could perhaps be retrieved
+  WONKALIB=/usr/local/lib/            # from WONKA_CONFIG file
+
+  # uninstall existing version
+  rpm -e open-wonka
+
+  # delete remaining wonka files
+  if [ -f ${WONKABIN}wonka ]; then
+    rm ${WONKABIN}wonka
+    j_seterror $? "Can not delete file ${WONKABIN}wonka."
+    if [ $? -ne 0 ]; then
+      return $J_ERROR
+    fi
+  fi
+  if [ -f ${WONKABIN}wonka-debug ]; then
+    rm ${WONKABIN}wonka-debug
+    j_seterror $? "Can not delete file ${WONKABIN}wonka-debug."
+    if [ $? -ne 0 ]; then
+      return $J_ERROR
+    fi
+  fi
+  if [ -d ${WONKALIB}wonka ]; then
+    rm -rf ${WONKALIB}wonka
+    j_seterror $? "Can not delete directory ${WONKALIB}wonka"
+    if [ $? -ne 0 ]; then
+      return $J_ERROR
+    fi
+  fi
+}
+
+# -------------------------------------------------------------------------
+# main rpm install function :
+#    installs rpm file
+#    checks existance of important files
+#
+# $1=prefix of rpm filename
+# $2=version number <a.b[.c]>
+# $3=rpm release : integer
+#
+# -------------------------------------------------------------------------
+function rpm_install() {
+  #set -x
+  j_checkUtils rpm
+  if [ $? -ne 0 ]; then
+    return $J_ERROR
+  fi
+
+  RPM=/usr/src/redhat/RPMS/i386/$1-$2-$3.i386.rpm
+  rpm -i  $RPM
+  j_seterror $? "${RPM} : installation of rpm failed"
+  if [ $? -ne 0 ]; then
+    return $J_ERROR
+  fi
+
+  return 0
+}
+
+# -------------------------------------------------------------------------

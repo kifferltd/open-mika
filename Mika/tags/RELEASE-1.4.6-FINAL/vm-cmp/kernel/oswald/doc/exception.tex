@@ -1,0 +1,90 @@
+% ------------------------------------------------------------------------+
+% Copyright (c) 2001 by Punch Telematix. All rights reserved.             |
+%                                                                         |
+% Redistribution and use in source and binary forms, with or without      |
+% modification, are permitted provided that the following conditions      |
+% are met:                                                                |
+% 1. Redistributions of source code must retain the above copyright       |
+%    notice, this list of conditions and the following disclaimer.        |
+% 2. Redistributions in binary form must reproduce the above copyright    |
+%    notice, this list of conditions and the following disclaimer in the  |
+%    documentation and/or other materials provided with the distribution. |
+% 3. Neither the name of Punch Telematix nor the names of other           |
+%    contributors may be used to endorse or promote products derived      |
+%    from this software without specific prior written permission.        |
+%                                                                         |
+% THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          |
+% WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    |
+% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    |
+% IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       |
+% FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            |
+% CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    |
+% SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         |
+% BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   |
+% WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    |
+% OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  |
+% IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           |
+% ------------------------------------------------------------------------+
+
+%
+% $Id: exception.tex,v 1.1.1.1 2004/07/12 14:07:44 cvs Exp $
+%
+
+\subsection{Exception Handling}
+
+\subsubsection{Operation}
+
+\subsubsection{Exception Structure Definition}
+
+The structure definition of an exception and the ancillary structures, is as follows:
+
+\bcode
+\begin{verbatim}
+ 1: typedef void (*x_exception_cb)(void * arg);
+ 2: typedef struct x_Xcb * x_xcb;
+ 3:
+ 4: typedef struct x_Xcb {
+ 5:   x_xcb previous;
+ 6:   x_xcb next;
+ 7:   x_exception_cb cb;
+ 8:   void * arg;
+ 9: } x_Xcb;
+10:
+11: typedef struct x_Exception * x_exception;
+12:
+13: typedef struct x_Mutex {
+14:   void * pc;
+15:   void * sp;
+16:   unsigned int registers[NUM_CALLEE_SAVED];
+17:   x_boolean fired;
+18:   x_xcb callbacks;
+19:   x_Xcb Callbacks;
+20: } x_Exception;
+\end{verbatim}
+\ecode
+
+The relevant fields in the exception structure are the following:
+
+\begin{itemize}
+\item \txt{x\_exception$\rightarrow$pc} This field is used by the
+\textsf{x\_context\_save} function to store the program counter of the
+instruction following the call.
+\item \txt{x\_exception$\rightarrow$sp} This field is used by the
+\textsf{x\_context\_save} function to store the stack pointer at the moment
+of the the call.
+\item \txt{x\_exception$\rightarrow$registers} Is used to store all the
+registers that are normally saved by the callee\footnote{The function that
+is being called.}. This array is filled by the CPU specific
+\textsf{x\_context\_save} function. Its contents are later restored when an
+exception is being thrown, by the \textsf{x\_context\_restore} function. The
+size of this array is CPU specific and the macro definition
+\textsf{NUM\_CALLEE\_SAVED} is set in the include file of the specific CPU.
+\item \txt{x\_exception$\rightarrow$fired} Is a boolean that indicates wether
+an exception has been thrown or not.
+\item \txt{x\_exception$\rightarrow$callbacks} Is the begin of a circular
+linked list of callbacks that will be executed when an exception has been
+thrown. This pointer is preset to the address of the embedded
+\textsf{Callbacks} structure that is the last element of this structure.
+\end{itemize}
+
+\subsubsection{Using Native Exceptions}

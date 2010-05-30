@@ -1,0 +1,838 @@
+###########################################################################
+# Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     #
+# reserved. Parts copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010 by   #
+# Chris Gray, /k/ Embedded Solutions. All rights reserved.                #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of Punch Telematix or of /k/ Embedded Java          #
+#    solutions nor the names of other contributors may be used to         #
+#    endorse or promote products derived from this software without       #
+#    specific prior written permission.                                   #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER #
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   #
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     #
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      #
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  #
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    #
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      #
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            #
+###########################################################################
+
+# 
+# This file is used to generate core-classes.h and core-classes.c.  
+# It contains two types of record:
+#
+# 1. A single field which is a fully-qualified class name, e.g.
+#   java/lang/Object
+# There must be no whitespace preceding the name.
+#
+# This causes code to be generated for two static strings:
+#    string_Object	value "java/lang/Object" and
+#    string_ObjectDesc  value "Ljava/lang/Object;"
+# and for w_clazz clazzObject, initialized by resolving java/lang/Object.
+# It also sets the context for the type-2 records which follow.
+#
+# 2. one or two fields preceded and separated by whitespace 
+# (space or tab characters).
+#
+# 2a.
+# 	<field>       <descr>
+#
+# (where <descr> is a field descriptor) causes an int F_<class>_<field> 
+# to be declared and set to the offset of the slot for <field> within an 
+# instance of <class>. The <class> is a not fully qualified name like e.g.
+# 'Object' or 'StringBuffer'.
+#
+# 2b.
+# 	<field>       +
+#
+# causes an int F_<class>_<field> to be declared and set equal to the current
+# instanceSize, which is then incremented.  The "fictitious" field(s) so
+# created follow all "real" fields in the instance structure.
+# 
+# N.B. The "+"-type fields of Class, Array, Object and String are included 
+# in this file for documentation purposes only: the corresponding values are 
+# initialized "by hand" in array.c and clazz.c.
+#
+# 2c.    
+# 	<method name> <method descriptor>     <entry point>
+#
+# causes the function <entrypoint> to be registered as the implementation
+# of <class>.<method name> <method descriptor>.
+#
+# What needs to be in here?
+#
+# A class should be included in the file if the clazz_... or string_...
+# declarations are needed, or if it is essential that the class be loaded
+# before Init.run() is executed; this includes all those subclasses of 
+# Throwable for which a WS_... constant needs to be defined.  A class
+# must also be included if any of its fields or methods are to be included:
+# native methods and "fictitious" fields obviously need to be included, but
+# other methods and fields need only be present if the F_... declaration
+# is needed.
+#
+wonka/vm/ApplicationClassLoader
+wonka/vm/ArrayUtil
+	bArrayToI	([BI)I		ArrayUtil_bArrayToI
+	bArrayToL	([BI)J		ArrayUtil_bArrayToL
+	iInBArray	(I[BI)V		ArrayUtil_iInBArray
+	lInBArray	(J[BI)V		ArrayUtil_lInBArray
+	bArrayToF	([BI)F		ArrayUtil_bArrayToF
+	bArrayToD	([BI)D		ArrayUtil_bArrayToD
+	fInBArray	(F[BI)V		ArrayUtil_fInBArray
+	dInBArray	(D[BI)V		ArrayUtil_dInBArray
+wonka/vm/Heartbeat
+	nativesleep		(J)V	Heartbeat_static_nativesleep
+	create			(Z)V	Heartbeat_create
+	numberNonDaemonThreads  ()I	Heartbeat_numberNonDaemonThreads
+	isKilled                ()Z	Heartbeat_isKilled
+	setThread               (Ljava/lang/Thread;)V   Heartbeat_setThread
+	getTimeOffset		()J	Heartbeat_static_getTimeOffset
+wonka/vm/Init
+wonka/vm/JDWP
+	refsToClassLoaders	Ljava/util/Vector;
+	isEnabled		()Z		JDWP_static_isEnabled
+	isRunning		()Z		JDWP_static_isRunning
+	run			()V		JDWP_run
+wonka/vm/Wonka
+        suid            (Ljava/lang/Class;)J    Wonka_suid
+	setWonkaVerbose	(Ljava/lang/String;)V	Wonka_static_setWonkaVerbose
+	setMethodDebugInfo	(Z)V		Wonka_static_setMethodDebugInfo
+	loadExtensions	()V			Wonka_static_loadExtensions
+java/lang/Object
+	hashCode	()I			Object_hashCode
+	getClass	()Ljava/lang/Class;	Object_getClass
+	equals		(Ljava/lang/Object;)Z	Object_equals
+	clone		()Ljava/lang/Object;	Object_clone
+	wait		(JI)V			Object_wait
+	notify		()V			Object_notify
+	notifyAll	()V			Object_notifyAll
+java/lang/Class
+	wotsit		+
+	domain		Ljava/security/ProtectionDomain;
+        loader		Ljava/lang/ClassLoader;
+	getName		()Ljava/lang/String;	Class_getName
+	isArray		()Z			Class_isArray
+	isInterface	()Z			Class_isInterface
+	isPrimitive	()Z			Class_isPrimitive
+	isInstance	(Ljava/lang/Object;)Z	Class_isInstance
+	isAssignableFrom (Ljava/lang/Class;)Z	Class_isAssignableFrom
+	getSuperclass	()Ljava/lang/Class;	Class_getSuperclass
+	getInterfaces	()[Ljava/lang/Class;	Class_getInterfaces
+	newInstance0	()Ljava/lang/Object;	Class_newInstance0
+	forName_S       (Ljava/lang/String;)Ljava/lang/Class;	Class_forName_S
+	forName_SZCL    (Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;	Class_forName_SZCL
+	get_constructors        (I)[Ljava/lang/reflect/Constructor;  Class_get_constructors
+	get_fields              (I)[Ljava/lang/reflect/Field;  Class_get_fields
+	get_methods             (I)[Ljava/lang/reflect/Method;  Class_get_methods
+	get_one_constructor     ([Ljava/lang/Class;I)Ljava/lang/reflect/Constructor;  Class_get_one_constructor
+	get_one_field           (Ljava/lang/String;I)Ljava/lang/reflect/Field;  Class_get_one_field
+	get_one_method          (Ljava/lang/String;[Ljava/lang/Class;I)Ljava/lang/reflect/Method;  Class_get_one_method
+        getComponentType        ()Ljava/lang/Class;                                               Class_getComponentType
+        getModifiers            ()I                             Class_getModifiers
+	getDeclaringClass	()Ljava/lang/Class;		Class_getDeclaringClass
+	getDeclaredClasses0	()[Ljava/lang/Class;		Class_getDeclaredClasses0
+	getClasses0		()[Ljava/lang/Class;		Class_getClasses0
+java/lang/Math
+	init			()V				Math_static_init
+java/lang/NativeProperties
+	init			()[Ljava/lang/String;				NativeProperties_init
+	get		(Ljava/lang/Object;)Ljava/lang/Object;	NativeProperties_get
+java/lang/Throwable
+	cause			Ljava/lang/Throwable;
+        trace                   +
+        frame                   +
+        current                 +
+        records                 +
+        detailMessage           Ljava/lang/String;
+	getStackTraceLength 	()I					Throwable_getStackTraceLength
+	nextStackTrace 		(Ljava/lang/StackTraceElement;)V	Throwable_nextStackTrace
+	fillInStackTrace	()Ljava/lang/Throwable;			Throwable_fillInStackTrace
+java/lang/StackTraceElement
+	declaringClass		Ljava/lang/String;
+	methodName		Ljava/lang/String;
+        fileName		Ljava/lang/String;
+	lineNumber		I
+	nativeM			Z
+java/lang/reflect/AccessibleObject
+	accessible		Z
+java/lang/reflect/Member
+	DECLARED		I
+	PUBLIC			I
+java/lang/reflect/Method
+	wotsit          	+
+	getDeclaringClass	()Ljava/lang/Class;						Method_getDeclaringClass
+	getName			()Ljava/lang/String;						Method_getName
+	getModifiers		()I								Method_getModifiers
+	getReturnType		()Ljava/lang/Class;						Method_getReturnType
+	getParameterTypes	()[Ljava/lang/Class;						Method_getParameterTypes
+	getExceptionTypes	()[Ljava/lang/Class;						Method_getExceptionTypes
+	equals			(Ljava/lang/Object;)Z						Method_equals
+	invoke0			(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;	Method_invoke0
+java/lang/reflect/InvocationTargetException
+	target                  Ljava/lang/Throwable;
+java/lang/reflect/Field
+        wotsit          +
+	getDeclaringClass	()Ljava/lang/Class;						Field_getDeclaringClass
+	getName			()Ljava/lang/String;						Field_getName
+	getModifiers		()I								Field_getModifiers
+	getType			()Ljava/lang/Class;						Field_getType
+	equals			(Ljava/lang/Object;)Z						Field_equals
+	get			(Ljava/lang/Object;)Ljava/lang/Object;				Field_get
+	getBoolean		(Ljava/lang/Object;)Z						Field_getBoolean
+	getByte			(Ljava/lang/Object;)B						Field_getByte
+	getChar			(Ljava/lang/Object;)C						Field_getChar
+	getShort		(Ljava/lang/Object;)S						Field_getShort
+	getInt			(Ljava/lang/Object;)I						Field_getInt
+	getLong			(Ljava/lang/Object;)J						Field_getLong
+	getFloat		(Ljava/lang/Object;)F						Field_getFloat
+	getDouble		(Ljava/lang/Object;)D						Field_getDouble
+	set			(Ljava/lang/Object;Ljava/lang/Object;)V				Field_set
+	setBoolean		(Ljava/lang/Object;Z)V						Field_setBoolean
+	setByte			(Ljava/lang/Object;B)V						Field_setByte
+	setChar			(Ljava/lang/Object;C)V						Field_setChar
+	setShort		(Ljava/lang/Object;S)V						Field_setShort
+	setInt			(Ljava/lang/Object;I)V						Field_setInt
+	setLong			(Ljava/lang/Object;J)V						Field_setLong
+	setFloat		(Ljava/lang/Object;F)V						Field_setFloat
+	setDouble		(Ljava/lang/Object;D)V						Field_setDouble
+java/lang/reflect/Constructor
+	wotsit		+
+	getDeclaringClass	()Ljava/lang/Class;						Constructor_getDeclaringClass
+	getName			()Ljava/lang/String;						Constructor_getName
+	getModifiers		()I								Constructor_getModifiers
+	getParameterTypes	()[Ljava/lang/Class;						Constructor_getParameterTypes
+	getExceptionTypes	()[Ljava/lang/Class;						Constructor_getExceptionTypes
+        newInstance0             ([Ljava/lang/Object;)Ljava/lang/Object;                         Constructor_newInstance0
+java/lang/reflect/Array
+        get                     (Ljava/lang/Object;I)Ljava/lang/Object;                         Array_static_get
+        getLength               (Ljava/lang/Object;)I                                           Array_static_getLength
+        newInstance             (Ljava/lang/Class;I)Ljava/lang/Object;                          Array_static_newInstance_single
+        newInstance             (Ljava/lang/Class;[I)Ljava/lang/Object;                         Array_static_newInstance_multi
+java/lang/reflect/Modifier
+java/lang/reflect/Proxy
+      h				Ljava/lang/reflect/Proxy;
+      isProxyClass		(Ljava/lang/Class;)Z		Proxy_static_isProxyClass
+#
+# Here we cheat a bit.  Method `set' is defined in Reference.c, but is
+# actually used as a private method of SoftReference, WeakReference, and
+# PhantomReference.  This to avoid having 3 twisty little C files, all alike.
+java/lang/ref/Reference
+        referent                +
+	ref_queue		Ljava/lang/ref/ReferenceQueue;
+        queued			Z
+        get                     ()Ljava/lang/Object;	Reference_get
+        clear                   ()V			Reference_clear
+	set			(Ljava/lang/Object;)V	Reference_set
+java/lang/ref/ReferenceQueue
+        lock                	+
+        fifo			+
+        append			(Ljava/lang/ref/Reference;)Z 	ReferenceQueue_append
+ 	create			()V				ReferenceQueue_create
+	poll			()Ljava/lang/ref/Reference;	ReferenceQueue_poll
+	_remove			(J)Ljava/lang/ref/Reference;	ReferenceQueue_removeJ
+	remove			()Ljava/lang/ref/Reference;	ReferenceQueue_remove
+java/lang/ref/SoftReference
+java/lang/ref/WeakReference
+java/lang/ref/PhantomReference
+#
+java/lang/Cloneable
+java/lang/Thread
+	started		Z
+	stopped		Z
+	parent          Ljava/lang/ThreadGroup;
+        thrown          Ljava/lang/Throwable;
+	context_classloader	Ljava/lang/ClassLoader;
+	wotsit		+
+	create		(Ljava/lang/ThreadGroup;Ljava/lang/String;Ljava/lang/Runnable;)V Thread_create
+	currentThread	()Ljava/lang/Thread;	Thread_currentThread
+	getName		()Ljava/lang/String;    Thread_getName
+	getPriority   	()I			 Thread_getPriority
+	holdsLock	(Ljava/lang/Object;)Z	Thread_static_holdsLock
+	interrupted	()Z			Thread_static_interrupted
+	interrupt	()V			Thread_interrupt
+	isInterrupted	()Z			Thread_isInterrupted
+	resume0		()V			Thread_resume0
+	setDaemon0	(Z)V			Thread_setDaemon0
+	setName0	(Ljava/lang/String;)V	Thread_setName0
+	setPriority0   	(I)V			 Thread_setPriority0
+	sleep0		(JI)V			Thread_sleep0
+	start0		()I			Thread_start0
+	stop0		(Ljava/lang/Throwable;)V Thread_stop0
+	suspend0	()V			Thread_suspend0
+	yield		()V			Thread_static_yield
+java/lang/ThreadGroup
+	name		Ljava/lang/String;
+	parent		Ljava/lang/ThreadGroup;
+	flock		Ljava/util/Vector;
+	children	Ljava/util/Vector;
+java/lang/String
+	wotsit                  +
+        hashCode		+
+#        create_empty            ()V                     String_create_empty
+        create_String           (Ljava/lang/String;)V   String_create_String
+        create_char             ([CII)V                 String_create_char
+        create_byte             ([BIII)V                String_create_byte
+        create_StringBuffer     (Ljava/lang/StringBuffer;)V String_create_StringBuffer
+        endsWith                (Ljava/lang/String;)Z   String_endsWith
+        regionMatches           (ZILjava/lang/String;II)Z                        String_regionMatches
+        startsWith              (Ljava/lang/String;I)Z  String_startsWith
+	trim			()Ljava/lang/String;	String_trim
+	intern			()Ljava/lang/String;	String_intern
+        getNativeBytes          (Z)[B  			String_getBytes
+	equals			(Ljava/lang/Object;)Z	String_equals
+	equalsIgnoreCase	(Ljava/lang/String;)Z	String_equalsIgnoreCase
+        compareTo               (Ljava/lang/String;)I   String_compareTo
+        toCharArray             ()[C                    String_toCharArray
+	hashCode		()I			String_hashCode
+	length			()I			String_length
+	charAt			(I)C			String_charAt
+        concat                  (Ljava/lang/String;)Ljava/lang/String;            String_concat
+        replace                 (CC)Ljava/lang/String;  String_replace
+        toLowerCase             (Ljava/util/Locale;)Ljava/lang/String;            String_toLowerCase
+        toUpperCase             (Ljava/util/Locale;)Ljava/lang/String;            String_toUpperCase
+	getChars		(II[CI)V		String_getChars
+	indexOf                 (II)I                   String_indexOf_char
+        indexOf                 (Ljava/lang/String;I)I  String_indexOf_String
+	lastIndexOf             (II)I                   String_lastIndexOf_char
+	lastIndexOf             (Ljava/lang/String;I)I  String_lastIndexOf_String
+	substring		(II)Ljava/lang/String;	String_substring
+        valueOf                 (C)Ljava/lang/String;   String_static_valueOf_char
+java/lang/StringBuffer
+	value			[C
+	count			I
+        createFromString        (Ljava/lang/String;)V                           StringBuffer_createFromString
+        append                  (Ljava/lang/String;)Ljava/lang/StringBuffer;    StringBuffer_append_String
+        substring               (II)Ljava/lang/String;                          StringBuffer_substring
+        ensureCapacity          (I)V                                            StringBuffer_ensureCapacity
+	toString		()Ljava/lang/String;				StringBuffer_toString
+java/lang/ClassLoader
+	ownname			Ljava/lang/String;
+	loaded_classes          +
+	unloaded_classes        +
+	packages		+
+        create                  ()V                                             ClassLoader_create
+        _defineClass		(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;       ClassLoader_defineClass
+        resolveClass            (Ljava/lang/Class;)V            ClassLoader_resolveClass
+        _findLoadedClass        (Ljava/lang/String;)Ljava/lang/Class;           ClassLoader_findLoadedClass
+	checkClassName		(Ljava/lang/String;)Z		ClassLoader_checkClassName
+#        get_system_resource_as_bytes (Ljava/lang/String;)[B     ClassLoader_get_system_resource_as_bytes
+	getCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingClassLoader
+	getCommandLineClasspath	()Ljava/lang/String;		ClassLoader_getCommandLineClasspath
+      setProxyFlag		(Ljava/lang/Class;)V		ClassLoader_static_setProxyFlag
+	installExtensionClassLoader (Ljava/lang/ClassLoader;)V	ClassLoader_static_installExtensionClassLoader
+	installApplicationClassLoader (Ljava/lang/ClassLoader;)V	ClassLoader_static_installApplicationClassLoader
+java/lang/Boolean
+        value                   Z
+        getWrappedClass         ()Ljava/lang/Class;                             Boolean_getWrappedClass
+java/lang/Character
+	value			C
+	createTables		()V		Character_static_createTables
+	isDefined		(C)Z		Character_static_isDefined
+	isWhitespace		(C)Z		Character_static_isWhitespace
+	isFormat		(C)Z		Character_static_isFormat
+	isLowerCase		(C)Z		Character_static_isLowerCase
+	isUpperCase		(C)Z		Character_static_isUpperCase
+	isTitleCase		(C)Z		Character_static_isTitleCase
+	toLowerCase		(C)C		Character_static_toLowerCase
+	toUpperCase		(C)C		Character_static_toUpperCase
+	toTitleCase		(C)C		Character_static_toTitleCase
+	isDigit			(C)Z		Character_static_isDigit
+	forDigit		(II)C		Character_static_forDigit
+	digit			(CI)I		Character_static_digit
+	isLetter		(C)Z		Character_static_isLetter
+#	digitValue		(C)I		Character_static_digitValue
+	numericValue		(C)I		Character_static_numericValue
+	getCategory	(C)Ljava/lang/String;	Character_static_getCategory
+	getDirectionality	(C)B		Character_static_getDirectionality
+	isMirrored		(C)Z		Character_static_isMirrored
+	toUnicodeBlock		(C)I		Character_static_toUnicodeBlock
+	getWrappedClass	()Ljava/lang/Class;	Character_getWrappedClass
+java/lang/Void
+	getWrappedClass	()Ljava/lang/Class;	Void_getWrappedClass
+java/lang/Float
+	value			F
+	floatToRawIntBits	(F)I		Float_static_floatToRawIntBits
+	intBitsToFloat		(I)F		Float_static_intToFloatBits
+	getWrappedClass	        ()Ljava/lang/Class; Float_getWrappedClass
+        isNaN                   (F)Z            Float_static_isNaN
+        isInfinite              (F)Z            Float_static_isInfinite
+java/lang/Double
+	value			D
+	doubleToRawLongBits	(D)J		Double_static_doubleToRawLongBits
+	longBitsToDouble	(J)D		Double_static_longToDoubleBits
+	getWrappedClass	()Ljava/lang/Class;	Double_getWrappedClass
+        isNaN                   (D)Z            Double_static_isNaN
+        isInfinite              (D)Z            Double_static_isInfinite
+java/lang/Long
+	value			J
+	getWrappedClass         ()Ljava/lang/Class;                             Long_getWrappedClass
+java/lang/Integer
+	value			I
+	getWrappedClass         ()Ljava/lang/Class;                             Integer_getWrappedClass
+java/lang/Short
+	value			S
+	getWrappedClass	()Ljava/lang/Class;	Short_getWrappedClass
+java/lang/Byte
+	value			B
+	getWrappedClass	()Ljava/lang/Class;	Byte_getWrappedClass
+java/lang/Error
+java/lang/VirtualMachineError
+java/lang/ThreadDeath
+java/lang/AbstractMethodError
+java/lang/IllegalAccessError
+java/lang/IncompatibleClassChangeError
+java/lang/StackOverflowError
+java/lang/OutOfMemoryError
+java/lang/InternalError
+java/lang/VerifyError
+java/lang/LinkageError
+java/lang/UnsatisfiedLinkError
+java/lang/NoClassDefFoundError
+java/lang/NoSuchFieldError
+java/lang/NoSuchMethodError
+java/lang/InstantiationError
+java/lang/ClassCircularityError
+java/lang/ClassFormatError
+java/lang/ArithmeticException
+java/lang/ArrayStoreException
+java/lang/ClassCastException
+java/lang/ClassNotFoundException
+java/lang/CloneNotSupportedException
+java/lang/IllegalAccessException
+java/lang/IllegalArgumentException
+java/lang/IllegalMonitorStateException
+java/lang/IndexOutOfBoundsException
+java/lang/ArrayIndexOutOfBoundsException
+java/lang/StringIndexOutOfBoundsException
+java/lang/InstantiationException
+java/lang/InterruptedException
+java/lang/NegativeArraySizeException
+java/lang/NullPointerException
+java/lang/SecurityException
+java/lang/NoSuchFieldException
+java/lang/NoSuchMethodException
+java/lang/RuntimeException
+java/lang/ExceptionInInitializerError
+java/lang/Exception
+java/lang/reflect/UndeclaredThrowableException
+	undeclaredThrowable	Ljava/lang/Throwable;
+#
+java/lang/Runtime
+	exit0		(I)V			Runtime_static_exit0
+	freeMemory	()J			Runtime_freeMemory
+	totalMemory	()J			Runtime_totalMemory
+	loadLibrary0	(Ljava/lang/String;Ljava/lang/String;)I	Runtime_loadLibrary0
+	load0		(Ljava/lang/String;)I	Runtime_load0
+	getCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingClassLoader
+	getCallingCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingCallingClassLoader
+java/lang/System
+        currentTimeMillis ()J			System_static_currentTimeMillis
+        arraycopy (Ljava/lang/Object;ILjava/lang/Object;II)V		System_static_arraycopy
+        getCmdLineProperties	()[Ljava/lang/String;   System_getCmdLineProperties
+        identityHashCode   (Ljava/lang/Object;)I                      System_identityHashCode
+java/lang/SecurityManager
+	getClassContext	()[Ljava/lang/Class;	SecurityManager_getClassContext
+	getNonPrivilegedClassContext	()[Ljava/lang/Class;	SecurityManager_getNonPrivilegedClassContext
+	currentClassLoader ()Ljava/lang/ClassLoader; SecurityManager_currentClassLoader
+	currentLoadedClass ()Ljava/lang/Class;	SecurityManager_currentLoadedClass
+java/math/Utils
+	numberOfLeadingZeros	(I)I	Utils_static_numberOfLeadingZeros_int
+	numberOfLeadingZeros	(J)I	Utils_static_numberOfLeadingZeros_long
+	numberOfTrailingZeros	(I)I	Utils_static_numberOfTrailingZeros_int
+	numberOfTrailingZeros	(J)I	Utils_static_numberOfTrailingZeros_long
+	signum			(I)I	Utils_static_signum_int
+	signum			(J)I	Utils_static_signum_long
+wonka/rmi/RMIConnection
+        getStringHash   (Ljava/lang/String;)J  RMIConnection_getStringHash
+wonka/decoders/Latin1Decoder
+        copyArray       ([BI[CII)V	Latin1Decoder_copyArray 
+	cToB		([CII)[B	Latin1Decoder_cToB
+wonka/decoders/UTF8Decoder
+	cToB		([CII)[B			UTF8Decoder_cToB
+	bToC		([BII)[C			UTF8Decoder_bToC
+	stringToB	(Ljava/lang/String;)[B 		UTF8Decoder_stringToB
+	bToString	([BII)Ljava/lang/String;	UTF8Decoder_bToString
+wonka/security/ShaMessageDigest
+	wotsit		+
+	engineReset	()V		ShaMessageDigest_engineReset
+	engineUpdate	([BII)V		ShaMessageDigest_engineUpdate
+	finalize	()V		ShaMessageDigest_finalize
+	nativeDigest	([BI)V		ShaMessageDigest_nativeDigest
+	shaClone	(Lwonka/security/ShaMessageDigest;)V	ShaMessageDigest_shaClone
+wonka/security/MD5MessageDigest
+	wotsit		+
+	engineReset	()V		MD5MessageDigest_engineReset
+	engineUpdate	([BII)V		MD5MessageDigest_engineUpdate
+	finalize	()V		MD5MessageDigest_finalize
+	nativeDigest	([BI)V		MD5MessageDigest_nativeDigest
+	md5Clone	(Lwonka/security/MD5MessageDigest;)V	MD5MessageDigest_md5Clone
+java/security/AccessController
+	initialize	()V		AccessController_static_initialize
+	doPrivileged0	(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;	AccessController_static_doPrivileged0
+	doPrivileged0	(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;	AccessController_static_doPrivileged0
+        get_calling_domains	()[Ljava/security/ProtectionDomain;	AccessController_static_get_calling_domains
+        get_inherited_context	()Ljava/security/AccessControlContext;	AccessController_static_get_inherited_context
+java/security/ProtectionDomain
+	codeSource	Ljava/security/CodeSource;
+	permissions	Ljava/security/PermissionCollection;
+
+#
+java/util/Arrays
+  fill          ([ZZ)V       fill_bool
+  fill          ([BB)V       fill_byte
+  fill          ([BIIB)V     fill_byte_range
+java/util/Date
+ 	millisSince1jan1970  J
+	create_ymdhms	(IIIIII)V		Date_create_ymdhms
+java/util/Hashtable
+	capacity	I
+        loadFactor	F
+	occupancy	I
+	threshold	I
+	keys		[Ljava/lang/Object;
+	values		[Ljava/lang/Object;
+	firstBusySlot	(I)I			Hashtable_firstBusySlot
+	get		(Ljava/lang/Object;)Ljava/lang/Object;	Hashtable_get
+#	put		(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;	Hashtable_put
+#	rehash		()V			Hashtable_rehash
+	size		()I			Hashtable_size
+java/util/Vector
+	elementData	[Ljava/lang/Object;
+	elementCount	I
+java/util/zip/Adler32
+	s1	I
+	s2	I
+	update		([BII)V			Adler32_update
+java/util/zip/CRC32
+	crc	J
+	update		([BII)V			CRC32_update
+java/util/zip/DataFormatException
+java/util/zip/ZipException
+java/util/zip/ZipFile
+	quickInflate	([BII)[B		ZipFile_quickInflate
+	bytesToLong	([BI)J			ZipFile_bytesToLong
+	getDate		([BI)J			ZipFile_getDate
+java/util/zip/Deflater
+        wotsit          +
+	level           I
+ 	finished 	I
+ 	needsInput 	Z
+ 	updateLvl		()V          	Deflater_updateLvl
+ 	create			()V		Deflater_create
+	finalize		()V		Deflater_finalize
+ 	nativeReset		()V	        Deflater_reset
+	_deflate		([BII)I         Deflater_deflate
+	_setInput		([BII)V         Deflater_setInput
+ 	_setDictionary		([BII)V         Deflater_setDictionary
+	end			()V             Deflater_end
+	finish			()V             Deflater_finish
+java/util/zip/Inflater
+        wotsit          +
+	noHeader	Z
+ 	finished 	Z
+ 	needsInput 	Z
+ 	needsDict 	Z
+	dictAdler	I
+	remain		I
+	totalIn		I
+ 	create			()V		Inflater_create
+	finalize		()V		Inflater_finalize
+ 	nativeReset		()V	        Inflater_reset
+	_inflate		([BII)I         Inflater_inflate
+	_setInput		([BII)V         Inflater_setInput
+ 	setDictionary		([BII)V         Inflater_setDictionary
+	end			()V             Inflater_end
+	getRemaining		()I		Inflater_getRemaining
+java/util/jar/Attributes
+java/util/jar/JarFile
+java/util/jar/JarEntry
+java/util/jar/JarException
+java/io/Serializable
+java/io/Externalizable
+java/io/BufferedReader
+	buf		[C
+	count		I
+	pos		I
+	read		()I			BufferedReader_read
+        locateEnd       ([CII)I                 BufferedReader_locateEnd
+java/io/PushbackReader
+        chars           [C
+        in           	Ljava/io/Reader;
+        pos           	I
+	read		()I			PushbackReader_read
+	unread		(I)V			PushbackReader_unread
+java/io/ObjectStreamClass
+        osFields	[Ljava/io/ObjectStreamField;
+        clazz		Ljava/lang/Class;
+	suid		J
+	name		Ljava/lang/String;
+	flags		I
+	writeObject	Ljava/lang/reflect/Method;
+        writeReplace  	Ljava/lang/reflect/Method;
+	readObject	Ljava/lang/reflect/Method;
+        readResolve  	Ljava/lang/reflect/Method;
+	createObjectStreamClass (Ljava/lang/Class;)Ljava/io/ObjectStreamClass; 	ObjectStreamClass_createObjectStreamClass
+	createFields		()[Ljava/io/ObjectStreamField;			ObjectStreamClass_createFields
+	verifyInput		()V						ObjectStreamClass_verifyInput
+java/io/ObjectOutputStream
+	pointer		I 
+   	primitiveArrayToBytes	(Ljava/lang/Object;)[B 	ObjectOutputStream_primitiveArrayToBytes
+java/io/ObjectStreamField
+        field		Ljava/lang/reflect/Field;
+        isPrimitive     Z
+        code            C
+        type            Ljava/lang/Class;
+        name            Ljava/lang/String;
+        typeString   	Ljava/lang/String;
+        create          (Ljava/lang/String;Ljava/lang/Class;)V                  ObjectStreamField_create
+java/io/ObjectInputStream
+	allocNewInstance	(Ljava/lang/Class;)Ljava/lang/Object;	ObjectInputStream_allocNewInstance
+	getCallingClassLoader	()Ljava/lang/ClassLoader;		ObjectInputStream_getCallingClassLoader
+	createPrimitiveArray    (Ljava/lang/Class;I)Ljava/lang/Object;	ObjectInputStream_createPrimitiveArray
+java/io/InvalidClassException
+	classname	Ljava/lang/String;    
+java/io/IOException
+java/io/EOFException
+java/io/FileNotFoundException
+java/io/InterruptedIOException
+java/io/StreamCorruptedException
+java/io/UTFDataFormatException
+java/text/RuleBasedCollator
+	createHashtables ()V			RuleBasedCollator_createHashtables
+	getCombiningClass (C)I			RuleBasedCollator_getCombiningClass
+	getDecomposition  (C)Ljava/lang/String;	RuleBasedCollator_getDecomposition
+	getCompatibility  (C)Ljava/lang/String;	RuleBasedCollator_getCompatibility
+#
+# Our Wonka required classes...
+#
+wonka/io/StandardInputStream
+	read		([BII)I			StandardInputStream_read
+	skip		(J)J			StandardInputStream_skip
+	available	()I			StandardInputStream_available
+wonka/io/StandardOutputStream
+	write		([BII)V			StandardOutputStream_write
+wonka/io/ErrorOutputStream
+	write		([BII)V			ErrorOutputStream_write
+wonka/vm/GarbageCollector
+	create		()V			GarbageCollector_create
+	collect		()V			GarbageCollector_collect
+	request		(I)I			GarbageCollector_request
+	memTotal	()J			GarbageCollector_memTotal
+	memAvail	()J			GarbageCollector_memAvail
+	sleep_millis	I
+	passes		I
+	kicks		I
+wonka/vm/Finalizer
+	theFinalizer	Lwonka/vm/Finalizer;
+	nextFinalizee	()Ljava/lang/Object;	Finalizer_nextFinalizee
+	finalized	(Ljava/lang/Object;)V	Finalizer_finalized
+wonka/vm/Etc
+	setTriggerLevel (Ljava/lang/String;I)V	Etc_static_setTriggerLevel
+	setAllTriggerLevel (I)V			Etc_static_setAllTriggerLevel
+        woempa		(ILjava/lang/String;)V	Etc_static_woempa
+        heapCheck       ()V			Etc_static_heapCheck
+wonka/vm/NativeThread
+wonka/vm/NativeLibrary
+	handle		I
+	finalize	()V			NativeLibrary_finalize
+wonka/vm/SystemClassLoader
+  getBootclasspath	()Ljava/lang/String;	SystemClassLoader_getBootclasspath
+  setSystemClassLoader	(Lwonka/vm/SystemClassLoader;)V	 SystemClassLoader_setSystemClassLoader
+  getBootstrapFile	(Ljava/lang/String;)[B	SystemClassLoader_getBootstrapFile
+# the resource bundle calls this method this way because it cannot reach this method from java
+#
+java/util/ResourceBundle
+	getCallingClassLoader	()Ljava/lang/ClassLoader;	ClassLoader_getCallingClassLoader
+java/net/NetworkInterface
+	getAddressDevice	(Ljava/lang/String;)I		NetworkInterface_getAddressDevice
+	nativeGetInterfaces	(Ljava/util/Vector;)V		NetworkInterface_getInterfaces
+java/net/InetAddress
+	address			I
+	family			I
+	hostName		Ljava/lang/String;
+	ipAddressString		Ljava/lang/String;
+	createInetAddress	(Ljava/lang/String;)V		InetAddress_createInetAddress
+	getLocalName		()Ljava/lang/String;		InetAddress_getLocalName
+        lookupName		(Ljava/net/InetAddress;)Z	InetAddress_static_lookupName
+java/net/Inet4Address
+java/net/Inet6Address
+	ipaddress	[B
+java/net/DatagramSocketImpl
+        localPort  		I
+java/net/DatagramPacket
+        bytes     [B
+        length    I
+        offset    I
+        port      I
+        address   Ljava/net/InetAddress;
+java/net/PlainDatagramSocketImpl
+        wotsit        +
+	open	      Z
+	timeout	      I
+        nativeCreate  ()V	                    PlainDatagramSocketImpl_nativeCreate
+	finalize      ()V			    PlainDatagramSocketImpl_finalize
+        bind          (ILjava/net/InetAddress;)V    PlainDatagramSocketImpl_bind
+        send          (Ljava/net/DatagramPacket;)V  PlainDatagramSocketImpl_send
+        _receive      (Ljava/net/DatagramPacket;)I  PlainDatagramSocketImpl_receive
+        peek          (Ljava/net/InetAddress;)I     PlainDatagramSocketImpl_peek
+        close         ()V                           PlainDatagramSocketImpl_close
+        join	      (Ljava/net/InetAddress;Ljava/net/InetAddress;)V     PlainDatagramSocketImpl_join
+        leave	      (Ljava/net/InetAddress;)V     PlainDatagramSocketImpl_leave
+        getTimeToLive ()I			    PlainDatagramSocketImpl_getTimeToLive
+        setTimeToLive (I)V			    PlainDatagramSocketImpl_setTimeToLive
+	getSocket     ()I			    PlainDatagramSocketImpl_getSocket		
+        getBindAddress 	(I)I 	    		    PlainDatagramSocketImpl_optBindAddress
+        optMulticastIF 	(ILjava/net/InetAddress;Z)I PlainDatagramSocketImpl_optMulticastIF
+        optNoDelay    (IZZ)Z			    PlainDatagramSocketImpl_optNoDelay
+        optLinger     (II)I			    PlainDatagramSocketImpl_optLinger
+        optIntOptions 	(III)I 			    PlainDatagramSocketImpl_optIntOptions
+ 	setSoTimeout	(II)V			    PlainDatagramSocketImpl_setSoTimeout
+java/net/SocketImpl
+        address    		Ljava/net/InetAddress;
+        port       		I
+        localport  		I
+java/net/PlainSocketImpl
+	wotsit			+
+        open          		Z
+        ipv6          		Z
+	timeout			I
+	localAddress 		Ljava/net/InetAddress;
+        shutdown		(Z)V	PlainSocketImpl_shutdown
+	setKeepAlive		(Z)V	PlainSocketImpl_setKeepAlive
+	setNoDelay		(Z)V	PlainSocketImpl_setNoDelay
+	setSoTimeout		(I)V	PlainSocketImpl_setSoTimeout
+	getRcvBuf		()I	PlainSocketImpl_getRcvBuf
+	setRcvBuf		(I)V	PlainSocketImpl_setRcvBuf
+	getSndBuf		()I	PlainSocketImpl_getSndBuf
+	setSndBuf		(I)V	PlainSocketImpl_setSndBuf
+	getIpTos		()I	PlainSocketImpl_getIpTos
+	setIpTos		(I)V	PlainSocketImpl_setIpTos
+	setLinger		(I)V	PlainSocketImpl_setLinger
+	setOOBInline		(Z)V	PlainSocketImpl_setOOBInline
+	setReuseAddr		(Z)V	PlainSocketImpl_setReuseAddr
+	sendUrgentData		(I)V	PlainSocketImpl_sendUrgentData
+        _read            	([BII)I	PlainSocketImpl_read
+        write           	([BII)V	PlainSocketImpl_write
+        nativeCreate    	()V	PlainSocketImpl_nativeCreate   
+	finalize		()V	PlainSocketImpl_finalize
+	nativeListen		(I)V    PlainSocketImpl_listen
+        nativeAccept		(Ljava/net/SocketImpl;)I	PlainSocketImpl_accept
+        available       	()I	PlainSocketImpl_available
+        nativeBind            	()V	PlainSocketImpl_bind
+        _close           	()V	PlainSocketImpl_close
+        nativeConnect         	()V	PlainSocketImpl_connect
+	getSocket		()I	PlainSocketImpl_getSocket
+	signal			(Ljava/lang/Thread;)V	PlainSocketImpl_signal
+java/net/ConnectException                                         
+java/net/BindException                                         
+java/net/SocketException                                         
+java/net/SocketTimeoutException                                         
+java/net/UnknownHostException
+# Force java.net.URL to be loaded by the native loader, otherwise SystemClassLoader deadlocks :-[
+java/net/URL
+java/io/FileDescriptor
+	validFD			Z
+	fileName		Ljava/lang/String;
+	fd			+
+	createFromPath		(Ljava/lang/String;I)V	FileDescriptor_createFromPath
+        sync                    ()V                     FileDescriptor_sync
+java/io/FileInputStream
+	fd			java/io/FileDescriptor
+        read                    ()I                                             FileInputStream_read 
+        readIntoBuffer          ([BII)I                                         FileInputStream_readIntoBuffer
+        skip                    (J)J                                            FileInputStream_skip
+        available               ()I                                             FileInputStream_available
+        close                   ()V                                             FileInputStream_close
+java/io/FileOutputStream
+	fd			java/io/FileDescriptor
+        write                   (I)V                                            FileOutputStream_write
+        writeFromBuffer         ([BII)V                                         FileOutputStream_writeFromBuffer
+        close                   ()V                                             FileOutputStream_close
+        flush                   ()V                                             FileOutputStream_flush
+java/io/File
+	absname			Ljava/lang/String;
+        _createNew		()Z                     File_createNew
+        _exists			()Z                     File_exists
+        _list			()[Ljava/lang/String;   File_list
+        _canRead		()Z                     File_canRead
+        _canWrite		()Z                     File_canWrite
+        _isFile			()Z                     File_isFile
+        _isDirectory		()Z                     File_isDirectory
+        _lastModified		()J                     File_lastModified
+        _length			()J                     File_length
+        _mkdir			()Z                     File_mkdir
+        _rename			(Ljava/lang/String;Ljava/lang/String;)Z File_rename
+	_setReadOnly		()Z			File_setReadOnly
+        _delete			()Z    	 		File_delete
+        get_CWD                 ()Ljava/lang/String;	File_get_CWD
+        get_fsroot              ()Ljava/lang/String;    File_get_fsroot
+	_setLastModified	(J)Z			File_setModTime
+java/io/RandomAccessFile
+	fd			Ljava/io/FIleDescriptor;
+        createFromString        (Ljava/lang/String;I)I  RandomAccessFile_createFromString
+        read                    ()I                     RandomAccessFile_read
+        readIntoBuffer          ([BII)I                 RandomAccessFile_readIntoBuffer
+        write                   (I)V                    RandomAccessFile_write
+        writeFromBuffer         ([BII)V                 RandomAccessFile_writeFromBuffer
+        skipBytes               (I)I                    RandomAccessFile_skipBytes
+        getFilePointer          ()J                     RandomAccessFile_getFilePointer
+        seek                    (J)V                    RandomAccessFile_seek
+        length                  ()J                     RandomAccessFile_length
+        setLength               (J)V                    RandomAccessFile_setLength
+        close                   ()V                     RandomAccessFile_close
+wonka/vm/ProcessInfo
+  wotsit	+
+  id		I
+  destroyed	Z
+  cleanUp	()V		ProcessInfo_cleanUp
+  destroy	()V		ProcessInfo_destroy
+  nativeReturnValue (I)V	ProcessInfo_setReturnValue
+wonka/vm/ProcessMonitor
+  returnvalue	I
+  nativeExec    ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Lwonka/vm/ProcessInfo;  NativeProcess_exec
+  waitForAllProcesses	()I	ProcessMonitor_WaitForAll
+wonka/vm/ProcessInputStream
+  info   	Lwonka/vm/ProcessInfo;
+  input      	Z
+  available    ()I    	ProcessInputStream_available
+  read         ()I    	ProcessInputStream_read
+  read         ([BII)I  ProcessInputStream_read_Array
+#  nativeClose  ()V	ProcessInputStream_close
+wonka/vm/ProcessOutputStream
+  info   	Lwonka/vm/ProcessInfo;
+  write        (I)V   	ProcessOutputStream_write
+  write        ([BII)V	ProcessOutputStream_write_Array
+  nativeClose  ()V	ProcessOutputStream_close
+java/lang/Package
+# only needed if JAR=java (i.e. Jarfile verification is enabled)
+# TODO: find a way not to load these if JAR=none
+java/io/FilePermission
+java/io/InputStreamReader
+java/io/Reader
+	lock	Ljava/lang/Object;
+java/util/jar/Attributes
+java/util/zip/ZipByteArrayInputStream
+# only needed if SECURITY=coarse or SECURITY=fine
+# TODO: find a way not to load these if SECURITY=none
+java/util/jar/InitManifest
+java/io/ByteArrayOutputStream
+# # only needed if SECURITY=fine
+# TODO: find a way not to load these if SECURITY=none or SECURITY=coarse
+java/lang/RuntimePermission
+java/security/Security
+java/security/Security$SecurityProperties
+java/security/SecurityPermission
+java/util/jar/Attributes$Name
+
