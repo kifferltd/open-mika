@@ -115,7 +115,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.02d;
       d2 = Math.asin(d1);
       d3 = Math.sin(d2);
-      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
+      harness.check((d1 == 0.0d && d3 == 0.0d) || (d1/d3 < 1.000001 && d1/d3 > 0.999999),
         "asin(" + d1 + ") = " + d2 + ", sin(" + d2 + ") = " + d3);
     }
 
@@ -123,7 +123,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.01d * Math.PI;
       d2 = Math.sin(d1);
       d3 = Math.asin(d2);
-      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
+      harness.check((d1 == 0.0d && d3 == 0.0d) || (d1/d3 < 1.000001 && d1/d3 > 0.999999),
         "sin(" + d1 + ") = " + d2 + ", asin(" + d2 + ") = " + d3);
     }
 
@@ -145,7 +145,7 @@ public class MathTest implements Testlet
       d1 = (i - 50) * 0.02d;
       d2 = Math.acos(d1);
       d3 = Math.cos(d2);
-      harness.check(d1/d3 < 1.000001 && d1/d3 > 0.999999,
+      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.0000001 && d1/d3 > 0.9999999,
         "acos(" + d1 + ") = " + d2 + ", cos(" + d2 + ") = " + d3);
     }
 
@@ -176,16 +176,31 @@ public class MathTest implements Testlet
       d1 = 7.0d / (i - 50);
       d2 = Math.atan(d1);
       d3 = Math.tan(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
+      Double dd1 = new Double(d1);
+      Double dd2 = new Double(d2);
+      if (dd2.isNaN()) {
+        harness.check(dd1.isInfinite(), "atan(" + d1 + ") is NaN");
+      }
+      else {
+        harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "atan(" + d1 + ") = " + d2 + ", tan(" + d2 + ") = " + d3);
+      }
     }
 
     for (i = 0; i < 100; ++i) {
       d1 = (i - 50) * 0.01d * Math.PI;
       d2 = Math.tan(d1);
       d3 = Math.atan(d2);
-      harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
+      Double dd1 = new Double(d1);
+      Double dd2 = new Double(d2);
+      if (dd2.isInfinite()) {
+        double d1overpi = Math.abs(d1 / Math.PI);
+        harness.check(d1overpi < 0.500001 && d1overpi > 0.499999, "tan(" + d1 + ") is " + d2);
+      }
+      else {
+        harness.check(d1 == 0.0d && d3 == 0.0d || d1/d3 < 1.000001 && d1/d3 > 0.999999,
         "tan(" + d1 + ") = " + d2 + ", atan(" + d2 + ") = " + d3);
+      }
     }
 
   }
@@ -670,11 +685,11 @@ public class MathTest implements Testlet
 		sigma = Math.sqrt(sigma/20);
 		harness.check( sigma < 36.5 , "the standard deviation is to big -- "+sigma );
 
-		harness.debug("\tmaxv = "+maxv+"\n\tminv = "+minv+"\n\tavgv = "+(sumv/10000)+"\n\tdevv = "+(devv/10000));
-		harness.debug("maxs = "+maxs+"\n\tmins = "+mins+"\n\tsigma = "+(Math.sqrt(sigma/20)));		
+		//harness.debug("\tmaxv = "+maxv+"\n\tminv = "+minv+"\n\tavgv = "+(sumv/10000)+"\n\tdevv = "+(devv/10000));
+		//harness.debug("maxs = "+maxs+"\n\tmins = "+mins+"\n\tsigma = "+(Math.sqrt(sigma/20)));		
 
-		harness.debug("\t"+s[0]+"\t"+s[1]+"\t"+s[2]+"\t"+s[3]+"\t"+s[4]+"\n\t"+s[5]+"\t"+s[6]+"\t"+s[7]+"\t"+s[8]+"\t"+s[9]);
-		harness.debug("\t"+s[10]+"\t"+s[11]+"\t"+s[12]+"\t"+s[13]+"\t"+s[14]+"\n\t"+s[15]+"\t"+s[16]+"\t"+s[17]+"\t"+s[18]+"\t"+s[19]);
+		//harness.debug("\t"+s[0]+"\t"+s[1]+"\t"+s[2]+"\t"+s[3]+"\t"+s[4]+"\n\t"+s[5]+"\t"+s[6]+"\t"+s[7]+"\t"+s[8]+"\t"+s[9]);
+		//harness.debug("\t"+s[10]+"\t"+s[11]+"\t"+s[12]+"\t"+s[13]+"\t"+s[14]+"\n\t"+s[15]+"\t"+s[16]+"\t"+s[17]+"\t"+s[18]+"\t"+s[19]);
 
 	}
 	public void test_abs()
