@@ -43,7 +43,7 @@ JAR=java
 # Defines how some of the java.lang.Math methods are handled.
 # Either native or java.
 #
-MATH=native
+MATH=java
 
 #
 # The following packages are optional. If you don't need them
