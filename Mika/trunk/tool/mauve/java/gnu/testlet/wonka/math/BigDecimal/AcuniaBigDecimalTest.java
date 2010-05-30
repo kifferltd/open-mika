@@ -132,7 +132,8 @@ public class AcuniaBigDecimalTest implements Testlet {
     checkCreateBigDecimal(1.0,false);
     checkCreateBigDecimal(1.25E308,false);
     checkCreateBigDecimal(1.23456E123,false);
-    checkCreateBigDecimal(1.234567891123456,true);
+    // [CG 20100530] changed next one because with "true" it also fails on RI 1.6
+    checkCreateBigDecimal(1.234567891123456,false);
     checkCreateBigDecimal(999999.5, true);
     checkCreateBigDecimal(12345.0,false);
     checkCreateBigDecimal(1.2334545E234,false);
@@ -335,6 +336,7 @@ public class AcuniaBigDecimalTest implements Testlet {
     catch(ArithmeticException ae){
       th.check(true);
     }
+    /* [CH 20100530] also fails on RI 1.6
     try {
       bd.divide(bd,-1,4);
       th.fail("should throw an ArithmeticException -- 3");
@@ -342,6 +344,7 @@ public class AcuniaBigDecimalTest implements Testlet {
     catch(ArithmeticException iae){
       th.check(true);
     }
+    */
     checkdivide(123.50, 1.0, 7, BigDecimal.ROUND_UNNECESSARY);
     checkdivide(123.50, 10.0, 1, BigDecimal.ROUND_DOWN);
     checkdivide(12345.5, 12345.5, 5, BigDecimal.ROUND_DOWN);
@@ -387,7 +390,8 @@ public class AcuniaBigDecimalTest implements Testlet {
     th.checkPoint("max(java.math.BigDecimal)java.math.BigDecimal");
     BigDecimal bd = new BigDecimal("12345");
     BigDecimal val = new BigDecimal("12345");
-    th.check(bd.max(val) == val,"checking max -- 1");
+    // [CG 20100530] changed next one because with "==" it also fails on RI 1.6
+    th.check(bd.max(val).equals(val),"checking max -- 1");
     val = new BigDecimal("12345.5");
     th.check(bd.max(val) == val,"checking max -- 2");
     val = new BigDecimal("12344.5");
@@ -403,7 +407,8 @@ public class AcuniaBigDecimalTest implements Testlet {
     th.checkPoint("min(java.math.BigDecimal)java.math.BigDecimal");
     BigDecimal bd = new BigDecimal("12345");
     BigDecimal val = new BigDecimal("12345");
-    th.check(bd.min(val) == val,"checking min -- 1");
+    // [CG 20100530] changed next one because with "==" it also fails on RI 1.6
+    th.check(bd.min(val).equals(val),"checking min -- 1");
     val = new BigDecimal("12345.5");
     th.check(bd.min(val) == bd,"checking min -- 2");
     val = new BigDecimal("12344.5");
@@ -755,6 +760,7 @@ public class AcuniaBigDecimalTest implements Testlet {
     checkValueOf(8128345677898753445L,354);
     checkValueOf(-128345677898753445L,1111223);
     checkValueOf(128345677898753445L,11);
+    /* [CG 20100530] also fails on RI 1.6
     try {
       BigDecimal.valueOf(12L,-1);
       th.fail("should throw a NumberFormatException");
@@ -762,6 +768,7 @@ public class AcuniaBigDecimalTest implements Testlet {
     catch(NumberFormatException nfe){
       th.check(true);
     }
+    */
   }
 
   private void checkValueOf(long value, int scale){
