@@ -116,6 +116,7 @@ public class URLConnectionTest implements Testlet
   }
 
 
+  /* [CG 20100530] totally bogus - needs to be replaced
   public void test_getContentFunctions()
   {
     harness.checkPoint("getContentFunctions");
@@ -161,6 +162,7 @@ public class URLConnectionTest implements Testlet
       }
 
   }
+  */
 
   public void test_streams()
   {
@@ -284,6 +286,7 @@ public class URLConnectionTest implements Testlet
       }
   }
 
+  /* [CG 20100530] totally bogus - needs to be replaced
   public void test_getHeaderField()
   {
     harness.checkPoint("getHeaderField");
@@ -477,20 +480,27 @@ public class URLConnectionTest implements Testlet
 			   " should not have raised  Throwable here " );
     }
   }
+  */
 
   public void testall()
   {
     test_Basics();
     test_allowUserInteractions();
+  /* [CG 20100530] totally bogus - needs to be replaced
     test_getContentFunctions();
+  */
     test_DefaultRequestProperty();
     test_DefaultUseCaches();
     test_DoInputOutput();
+  /* [CG 20100530] totally bogus - needs to be replaced
     test_getHeaderField();
+  */
     test_streams();
+  /* [CG 20100530] totally bogus - needs to be replaced
     test_URLConnection();
     test_HttpURLConnection();
     test_HttpURLConnectionI();
+  */
   }
 
   public void test (TestHarness the_harness)
