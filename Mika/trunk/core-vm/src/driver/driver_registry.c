@@ -35,7 +35,7 @@
 static w_hashtable driver_registry_hashtable;
 
 w_void startDriverRegistry(w_void) {
-  driver_registry_hashtable = ht_create((w_ubyte *)"hashtable:driver-registry", 51, cstring_hash, cstring_equal, 0, 0);
+  driver_registry_hashtable = ht_create((char*)"hashtable:driver-registry", 51, cstring_hash, cstring_equal, 0, 0);
   woempa(1, "Created driver registry hashtable at %p\n", driver_registry_hashtable);
 }
 

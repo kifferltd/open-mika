@@ -753,7 +753,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   w_int      retcode;
   w_int      state = getClazzState(clazz);
 
-  if (getClazzState(clazz) < CLAZZ_STATE_LOADED || getClazzState(clazz) == CLAZZ_STATE_BROKEN) {
+  if (state < CLAZZ_STATE_LOADED || state == CLAZZ_STATE_BROKEN) {
     return 0;
   }
 
