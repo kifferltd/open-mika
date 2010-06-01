@@ -38,7 +38,7 @@
 static w_hashtable device_registry_hashtable;
 
 w_void startDeviceRegistry(w_void) {
-  device_registry_hashtable = ht_create((w_ubyte *)"hashtable:device-registry", 51, cstring_hash, cstring_equal, 0, 0);
+  device_registry_hashtable = ht_create((char*)"hashtable:device-registry", 51, cstring_hash, cstring_equal, 0, 0);
   woempa(1, "Created device registry hashtable at %p\n", device_registry_hashtable);
 }
 

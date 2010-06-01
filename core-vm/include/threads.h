@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -459,13 +459,13 @@ inline static void gcSafePoint(w_thread thread) {
   }
 }
 
-inline static void _threadMustBeSafe(w_thread thread, char *file, int line, const char *function) {
+static void _threadMustBeSafe(w_thread thread, char *file, int line, const char *function) {
   if (threadIsUnsafe(thread)) {
     wabort(ABORT_WONKA, "Thread must be GC safe at %s:%d (%s)!\n", file, line, function);
   }
 }
 
-inline static void _threadMustBeUnsafe(w_thread thread, char *file, int line, const char *function) {
+static void _threadMustBeUnsafe(w_thread thread, char *file, int line, const char *function) {
   if (threadIsSafe(thread)) {
     wabort(ABORT_WONKA, "Thread must not be GC safe at %s:%d (%s)!\n", file, line, function);
   }

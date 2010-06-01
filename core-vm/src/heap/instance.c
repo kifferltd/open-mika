@@ -129,12 +129,22 @@ static void registerObject(w_object object, w_thread thread) {
   x_mem_tag_set(block2chunk(object), (x_mem_tag_get(block2chunk(object)) | OBJECT_TAG));
 }
 
-inline static void checkClazz(w_clazz clazz) {
+#ifdef RUNTIME_CHECKS
+static void checkClazz(w_clazz clazz) {
 
   if (! clazz) {
     wabort(ABORT_WONKA, "Clazz is NULL\n");
   }
+
+  if (! clazz->dims 
+    && getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
+    && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
+    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
+  }
 }
+#else
+#define checkClazz(c)
+#endif
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 w_instance allocInstanceFromCache(w_clazz clazz) {
@@ -178,15 +188,7 @@ static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz
 w_instance allocInstance(w_thread thread, w_clazz clazz) {
   w_object object = NULL;
 
-#ifdef RUNTIME_CHECKS
   checkClazz(clazz);
-
-  if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
-   && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
-    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
-    return NULL;
-  }
-#endif
 
   if (clazz == clazzString) {
 
@@ -224,16 +226,7 @@ w_instance allocThrowableInstance(w_thread thread, w_clazz clazz) {
 
   w_object object = NULL;
 
-#ifdef RUNTIME_CHECKS
   checkClazz(clazz);
-
-  if (getClazzState(clazz) != CLAZZ_STATE_INITIALIZED
-   && getClazzState(clazz) != CLAZZ_STATE_INITIALIZING) {
-    wabort(ABORT_WONKA, "Cannot create instance of %K, is not initialized\n", clazz);
-    return NULL;
-  }
-#endif
-
 
   woempa(1, "clazz is %k at %p, requested size is %d words, instance needs %d bytes.\n", clazz, clazz, clazz->instanceSize, clazz->bytes_needed);
 

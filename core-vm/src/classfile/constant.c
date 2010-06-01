@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
+* Gray, /k/ Embedded Java Solutions.  All rights reserved.                *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -49,8 +49,8 @@
 #include "wordset.h"
 
 #ifdef RUNTIME_CHECKS
-static void check_constant_index(w_clazz clazz, w_int i) {
-  if (i <=0 || i > clazz->numConstants) {
+static void check_constant_index(w_clazz clazz, w_size i) {
+  if (i == 0 || i > clazz->numConstants) {
     wabort(ABORT_WONKA, "Nom d'un chien! Trying to resolve constant[%d] of %k, which has %d constants\n", i, clazz, clazz->numConstants);
   }
 }
