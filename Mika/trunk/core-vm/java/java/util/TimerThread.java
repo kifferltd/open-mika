@@ -196,6 +196,7 @@ class TimerThread extends Thread implements Comparator {
     }
     //System.out.println("Adding task to timer "+task);
     //System.out.println("Setting " + task + ".startTime to " + time);
+    task.absolute = absolute;
     task.savedoffset = absolute ? 0 : Heartbeat.getTimeOffset();
     task.startTime = time - task.savedoffset;
     task.period = period;
