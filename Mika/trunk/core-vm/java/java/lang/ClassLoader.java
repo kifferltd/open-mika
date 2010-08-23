@@ -262,12 +262,7 @@ public abstract class ClassLoader {
   protected Class findClass(String classname) 
     throws ClassNotFoundException
   {
-    String message = this.getClass()+" failed to override method findClass(String="+classname+") of ClassLoader";
-    System.err.println("----------------- Lame ClassLoader Warning --------------");
-    System.err.println(message);
-    System.err.println("------------------ This sucks!  Fix it !  ---------------");
-
-    throw new ClassNotFoundException(message);
+    throw new ClassNotFoundException(classname);
   }
 
   /** @deprecated Replaced by defineClass(String, byte[], int, int) 
