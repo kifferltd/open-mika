@@ -96,6 +96,7 @@ const char *general_help_text =
 const char *X_help_text =
   "  -Xms<size>                    set initial Java heap size (currently does nothing)\n"
   "  -Xmx<size>                    set maximum Java heap size\n"
+  "  -Xss<size>                    set Java stack size\n"
   "  -Xbootclasspath:<classpath>   set the bootclasspath.\n"
 #ifdef JDWP
   "  -Xdebug             enable remote debugging\n"
@@ -134,6 +135,7 @@ const char *info_help_text =
   "Version: " VERSION_STRING " (compiled on " __DATE__ " " __TIME__ ")\n"
   "VM options: " WONKA_INFO "\n"
   "Default heap size: " DEFAULT_HEAP_SIZE "\n"
+  "Default Java stack size: " DEFAULT_STACK_SIZE "\n"
   "AWT options: " AWT_INFO "\n"
 #ifdef O4P
   "O4P options: " O4P_INFO "\n"
@@ -278,6 +280,43 @@ w_int getMaxHeapSize(int *argument_count_ptr, char *arguments[]) {
 }
 
 /*
+** Search the command line for a Java stack size, and if found process and remove it.
+*/
+w_int getJavaStackSize(int *argument_count_ptr, char *arguments[]) {
+  w_int i;
+  char *ss = NULL;
+  w_int stacksize;
+
+  for (i = 1; i < *argument_count_ptr; ++i) {
+    if (strncmp(arguments[i], "-Xss", 4) == 0) {
+      ss = arguments[i];
+    }
+    else if (ss) {
+      arguments[i - 1] = arguments[i];
+    }
+  }
+
+  if (ss) {
+    --*argument_count_ptr;
+  }
+  else {
+    ss = "-Xss" DEFAULT_STACK_SIZE;
+  }
+
+#ifdef DEBUG
+  printf("Using -Xss%s\n", ss + 4);
+#endif
+
+  stacksize = getSize(ss + 4);
+
+#ifdef DEBUG
+  printf("Max heap size = %d\n", stacksize);
+#endif
+
+  return stacksize;
+}
+
+/*
 ** Search the command line for a dump file, and if found process and remove it.
 ** Do the same also for the -Woempa=y|n and -Wdebugfrom=<count> commands.
 */
@@ -394,16 +433,13 @@ int main(int argc, char * argv[]) {
   getInitialHeapSize(&argc, argv);
   max_heap_size = getMaxHeapSize(&argc, argv);
   if (max_heap_size == 0) {
-#ifdef UNC20
-    max_heap_size = 8 * 1024 * 1024;
-#else
 #ifdef RUDOLPH
     max_heap_size = 32 * 1024 * 1024;
 #else
     max_heap_size = 16 * 1024 * 1024;
 #endif
-#endif
   }
+  java_stack_size = getJavaStackSize(&argc, argv);
 
 #ifdef O4P
   tick_millis = host_timer_granularity_millis;

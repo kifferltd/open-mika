@@ -218,11 +218,13 @@ w_instance getCallingInstance(w_thread thread);
 
 #define DEBUG_STACKS
 
+extern w_int java_stack_size;
+
 /*
  * Number of slots allocated to each thread, for the Java stack and auxiliary
  * stack combined.
  */
-#define SLOTS_PER_THREAD 2048
+#define SLOTS_PER_THREAD (java_stack_size / sizeof(w_Slot))
 
 /*
  * Min. no. of slots which must be free when we push something, else we
@@ -281,7 +283,7 @@ typedef struct w_Thread {
   int        native_stack_max_depth;
 #endif
   w_Frame    rootFrame;               // The root frame.
-  volatile w_Slot  slots[SLOTS_PER_THREAD]; // Reserve space for the slots
+  volatile w_Slot  slots[0];  // Need to add space for the slots when allocating
 } w_Thread;
 
 /*

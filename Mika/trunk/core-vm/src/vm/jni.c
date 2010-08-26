@@ -3277,7 +3277,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
     woempa(7, "Setting thread name to %s\n", cname);
   }
 
-  thread  = allocClearedMem(sizeof(w_Thread));
+  thread  = allocClearedMem(sizeof(w_Thread) + java_stack_size);
   if (!thread) {
     woempa(9, "Unable to allocate w_Thread\n");
 
