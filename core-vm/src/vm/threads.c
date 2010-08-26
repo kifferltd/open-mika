@@ -44,6 +44,8 @@ w_boolean haveWonkaThreads = FALSE;
 
 w_hashtable thread_hashtable;
 
+w_int java_stack_size;
+
 w_int nondaemon_thread_count;
 w_boolean system_init_thread_started;
 
@@ -141,7 +143,7 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
 
   w_thread newthread;
   
-  newthread = allocClearedMem(sizeof(w_Thread));
+  newthread = allocClearedMem(sizeof(w_Thread) + java_stack_size);
 
   if (!newthread) {
     woempa(9, "Unable to allocate w_Thread for %w\n", name);
@@ -473,7 +475,7 @@ void startKernel() {
   I_Thread_sysInit = allocInstance(NULL, clazzThread);
   string_sysThread = cstring2String("SystemInitThread", 16);
 
-  W_Thread_sysInit = allocClearedMem(sizeof(w_Thread));
+  W_Thread_sysInit = allocClearedMem(sizeof(w_Thread) + java_stack_size);
 
   if (!W_Thread_sysInit) {
     wabort(ABORT_WONKA, "Couldn't allocate memory for initial thread!\n");
