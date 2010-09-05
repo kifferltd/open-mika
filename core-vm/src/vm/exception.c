@@ -107,13 +107,14 @@ void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
   int remain = 41;
   w_string message;
 
+  threadMustBeSafe(thread);
   x_snprintf(buffer, remain, "unable to allocate %d bytes", size);
-  setReferenceField_unsafe(thread->Thread, oome, F_Thread_thrown);
+  setReferenceField(thread->Thread, oome, F_Thread_thrown);
   message = cstring2String(buffer, strlen(buffer));
   if (message) {
     w_instance messageString = getStringInstance(message);
     if (messageString) {
-      setReferenceField_unsafe(oome, messageString, F_Throwable_detailMessage);
+      setReferenceField(oome, messageString, F_Throwable_detailMessage);
       removeLocalReference(thread, messageString);
     }
     deregisterString(message);

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2009 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2009, 2010 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1082,6 +1082,7 @@ void fast_String_substring(w_frame frame) {
     frame->jstack_top[-3].c = (w_word)subString;
     if (subString) {
       setFlag(instance2flags(subString), O_BLACK);
+      removeLocalReference(thread, subString);
     }
     frame->jstack_top -= 2;
   }

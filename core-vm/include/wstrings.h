@@ -275,6 +275,9 @@ w_instance newStringInstance(w_string s);
 
 /*
 ** Get the canonical instance of s, or create one ("intern" s) if needed.
+** This function must always be called from the "GC safe" state; the reference
+** returned is also pushed onto the auxilary stack. The caller should pop
+** this reference as soon as it is safe to do so.
 */
 w_instance getStringInstance(w_string s);
 

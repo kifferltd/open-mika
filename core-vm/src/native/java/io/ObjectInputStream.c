@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -48,22 +48,31 @@ void throwInvalidClassException(w_thread thread, w_instance Class, char * messag
   threadMustBeSafe(thread);
 
   mustBeInitialized(clazzInvalidClassException);
+  w_instance messageString =  getStringInstance(cstring2String(message, l)); 
+  w_instance classnameString = getStringInstance(Class2clazz(Class)->dotified);
 
   enterUnsafeRegion(thread);
   ice = allocInstance(thread,clazzInvalidClassException);
 
+  // TODO: this is messy!
   if(ice){
-    w_clazz clazz = Class2clazz(Class);
-    w_string string = cstring2String(message, l);
-    
-    if(string){
-      setReferenceField_unsafe(ice, getStringInstance(string), F_Throwable_detailMessage);
-      setReferenceField_unsafe(ice, getStringInstance(clazz->dotified), F_InvalidClassException_classname);
-      deregisterString(string);
-      throwExceptionInstance(thread,ice);
+    if(messageString){
+      setReferenceField_unsafe(ice, messageString, F_Throwable_detailMessage);
+      deregisterString(messageString);
     }
+    if(classnameString){
+      setReferenceField_unsafe(ice, classnameString, F_InvalidClassException_classname);
+      deregisterString(classnameString);
+    }
+    throwExceptionInstance(thread,ice);
   }
   enterSafeRegion(thread);
+  if(messageString){
+    removeLocalReference(thread, messageString);
+  }
+  if(classnameString){
+    removeLocalReference(thread, classnameString);
+  }
 }
 
 w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_instance Clazz) {

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2008, 2009, 2010 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -152,6 +152,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
         entry = getStringInstance(entry_string);
         setArrayReferenceField(result, entry, i++);
         deregisterString(entry_string);
+        removeLocalReference(thread, entry);
       }	
     }
   
