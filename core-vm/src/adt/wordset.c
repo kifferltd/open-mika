@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004m 2010 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -131,6 +131,13 @@ w_boolean removeFromWordset(w_wordset* wordset, w_word what) {
   return WONKA_FALSE;
 }
 
+/** Release the memory used by a Wordset
+** (Sets \texttt{*wordset} to \texttt{NULL}.
+*/
+void releaseWordset(w_wordset* wordset) {
+  releaseMem(*wordset);
+  *wordset = NULL;
+}
 /**
  ** Returns the i'th element of a wordset.
  */

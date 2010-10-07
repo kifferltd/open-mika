@@ -768,7 +768,7 @@ static w_boolean pre_check_remainder(w_clazz clazz, w_bar bar, w_thread thread) 
  ** Returns TRUE if all checks pass. If any check fails, throws a 
  ** ClassFormatError and returns FALSE.
 */
-inline static w_boolean check_classname(w_clazz clazz, w_string name, w_thread thread) {
+static w_boolean check_classname(w_clazz clazz, w_string name, w_thread thread) {
   w_int classConstantIndex;
   w_int classNameIndex;
   w_string slashed;
