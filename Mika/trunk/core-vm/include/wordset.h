@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2010 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -80,10 +80,7 @@ inline static w_boolean wordsetIsEmpty(w_wordset *wordset) {
 /** Release the memory used by a Wordset
 ** (Sets \texttt{*wordset} to \texttt{NULL}.
 */
-inline static void releaseWordset(w_wordset* wordset) {
-  releaseMem(*wordset);
-  *wordset = NULL;
-}
+extern void releaseWordset(w_wordset* wordset);
 
 /** Add a word to a wordset, after expanding it if necessary.
     Duplicates may be created.
