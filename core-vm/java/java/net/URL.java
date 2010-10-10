@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2007, 2009, 2010 by Chris Gray, /k/ Embedded Java   *
 * Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -144,19 +144,19 @@ public final class URL implements java.io.Serializable {
       this.protocol = location.substring(0, colon);
       streamHandler = getHandler(this.protocol);
       streamHandler.parseURL(this, location, colon+1, hash);
-      debug("URL: new URL " + this);
+      debug("URL: new URL(" + location + ") -> " + this);
   }
 
   public URL(String protocol, String host, String path) throws MalformedURLException {
     this(protocol,host,-1,path,null);
   }
 
-  public URL(String protocol, String host, int port, String File) throws MalformedURLException {
-    this(protocol,host,port,File,null);
+  public URL(String protocol, String host, int port, String file) throws MalformedURLException {
+    this(protocol,host,port,file,null);
   }
 
-  public URL(String protocol, String host, int port, String File, URLStreamHandler handler) throws MalformedURLException {
-    if (protocol == null || File == null) {
+  public URL(String protocol, String host, int port, String file, URLStreamHandler handler) throws MalformedURLException {
+    if (protocol == null || file == null) {
        throw new NullPointerException();
     }
 
@@ -177,8 +177,8 @@ public final class URL implements java.io.Serializable {
     }
     this.port = port;
     this.host = host;
-    this.path = File;
-    debug("URL: new URL " + this);
+    this.path = file;
+    debug("URL: new URL(" + protocol + ", " + port + ", " + file + ", " + handler + ") -> " + this);
   }
 
   public URL(URL context, String spec) throws MalformedURLException {
@@ -246,14 +246,22 @@ public final class URL implements java.io.Serializable {
          streamHandler = handler;
       }
 
+      String specpath;
       if ( hash != -1) {
-         path = context.path + spec.substring(0,hash);
-         fragment = spec.substring(hash+1);
+         specpath = spec.substring(0,hash);
       }
       else {
-         path = context.path + spec;
+         specpath = spec;
+      }
+
+      if (specpath.startsWith("/")) {
+        path = specpath.substring(1);
+      }
+      else {
+        path = context.path + specpath;
       }
     }      
+    debug("URL: new URL(" + context + ", " + spec + ") -> " + this);
   }
 
   public boolean equals(Object o) {
@@ -381,6 +389,7 @@ public final class URL implements java.io.Serializable {
     this.query = query;
     this.userInfo = userInfo;
     debug("URL: set protocol '" + protocol + "', host '" + host + "', port '" + port + "', authority '" + authority + "', user info '" + userInfo + "', path '" + path + "', query '" + query + "', fragment '" + ref + "'");
+    debug("URL: -> " + this);
   }
 
 // package protected methods to update an URL.
@@ -390,6 +399,7 @@ public final class URL implements java.io.Serializable {
     }
     hashCode=0;
     this.host = host;
+    debug("URL: set host '" + host + "'");
   }
 
   void setProtocol(String protocol) {
@@ -398,16 +408,19 @@ public final class URL implements java.io.Serializable {
       hashCode=0;
       this.protocol = protocol;
     }
+    debug("URL: set protocol '" + protocol + "'");
   }
 
   void setUserInfo(String userinfo) {
     hashCode=0;
     this.userInfo = userinfo;
+    debug("URL: set userinfo '" + userinfo + "'");
   }
 
   void setAuthority(String auth) {
     hashCode=0;
     this.authority = auth;
+    debug("URL: set authority '" + auth + "'");
   }
 
   void setFile(String path) {
@@ -416,14 +429,17 @@ public final class URL implements java.io.Serializable {
     }
     hashCode=0;
     this.path = path;
+    debug("URL: set path '" + path + "'");
   }
 
   void setRef(String ref) {
     this.fragment = ref;
+    debug("URL: set ref '" + ref + "'");
   }
 
   void setQuery(String query) {
     this.query = query;
+    debug("URL: set query '" + query + "'");
   }
 
   void setPort(int port) {
@@ -431,6 +447,7 @@ public final class URL implements java.io.Serializable {
        throw new IllegalArgumentException();
     }
     this.port = port;
+    debug("URL: set port '" + port + "'");
   }
 
   public int getDefaultPort() {
