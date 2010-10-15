@@ -255,10 +255,33 @@ public final class URL implements java.io.Serializable {
       }
 
       if (specpath.startsWith("/")) {
-        path = specpath.substring(1);
+        // absolute spec: replaces whole path
+        path = specpath;
       }
       else {
-        path = context.path + specpath;
+        // relative spec: replaces path after last '/'
+        String contextpath = context.path;
+        int lastslash = contextpath.lastIndexOf('/');
+        while (lastslash > 0) {
+          if (specpath.startsWith("../")) {
+            specpath =  specpath.substring(3);
+            contextpath = contextpath.substring(0, lastslash);
+            lastslash = contextpath.lastIndexOf('/');
+          }
+          else if (specpath.startsWith("./")) {
+            specpath =  specpath.substring(2);
+          }
+          else {
+            break;
+          }
+        }
+
+        if (lastslash <= 0) {
+          path = "/" + specpath;
+        }
+        else {
+          path = context.path.substring(0, lastslash + 1) + specpath;
+        }
       }
     }      
     debug("URL: new URL(" + context + ", " + spec + ") -> " + this);
