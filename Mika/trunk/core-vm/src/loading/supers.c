@@ -330,6 +330,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
     wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
 
   default:
+    ;
   }
 
   threadMustBeSafe(thread);
