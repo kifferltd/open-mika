@@ -72,6 +72,7 @@ w_int mustBeLinked(w_clazz clazz) {
     wabort(ABORT_WONKA, "Class state VERIFYING/VERIFIED doesn't exist yet!");
 
   default:
+    ;
   }
 
   if (exceptionThrown(thread)) {
