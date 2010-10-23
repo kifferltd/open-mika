@@ -223,7 +223,7 @@ typedef struct x_Thread {
 #endif
   volatile int          flags;
 
-  void *                xref;                   /* May be used to point to user thread control block */
+  volatile void *       xref;                   /* May be used to point to user thread control block */
   x_report              report;
 #ifdef JAVA_PROFILE
   w_long     time_delta;
