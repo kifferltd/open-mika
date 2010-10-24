@@ -652,4 +652,7 @@ void w_dump_info() {
 #endif
   w_dump(" Global References: %d\n\n",globals_hashtable->occupancy);
   w_dump_meminfo();
+#ifdef ENABLE_THREAD_RECYCLING
+  w_dump(" Number of native threads in pool: %d\n\n", occupancyOfFifo(xthread_fifo));
+#endif // ENABLE_THREAD_RECYCLING
 }

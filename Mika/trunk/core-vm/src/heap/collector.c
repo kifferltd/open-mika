@@ -2135,19 +2135,22 @@ w_size sweep(w_int target) {
         if (isSet(object->clazz->flags, CLAZZ_IS_THREAD)) {
           w_thread thread = getWotsitField(object->fields, F_Thread_wotsit);
 
+#ifdef ENABLE_THREAD_RECYCLING
+#else
           if (thread) {
             if (thread->state != wt_dead && thread->state != wt_unstarted) {
               woempa(9, "Hold on a moment - thread '%t' is still running...\n", thread);
               do_collect = 0;
             }
-#ifndef OSWALD
-// For OSWALD we need to do something else, TBD
             else if (thread->kthread && thread->kthread->waiting_on) {
+#ifdef OSWALD
+#error For OSWALD we need to do something elsei here, TBD
+#endif
               woempa(9, "Hold on a moment - thread '%w' is still waiting on monitor %p...\n", thread, thread->kthread->waiting_on);
               do_collect = 0;
             }
-#endif
           }
+#endif
         }
         else if (isSet(object->clazz->flags, CLAZZ_IS_CLASSLOADER)) {
           w_int ndef = numberOfDefinedClasses(object->fields);
