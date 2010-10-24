@@ -209,3 +209,9 @@ TOOL_CONFIG default = none ;
 # Enables or disable the java bytecode verifier
 #
 BYTECODE_VERIFIER default = false ; 
+
+#
+# Enable or disable re-use of a native thread when the Java thread terminates
+#
+ENABLE_THREAD_RECYCLING default = false ;
+

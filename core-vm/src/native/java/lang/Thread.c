@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2008, 2010 by Chris Gray, /k/ Embedded Java   *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -47,6 +47,10 @@ extern void jdwp_event_thread_end(w_thread);
 extern w_method jdwp_Thread_run_method;
 #endif
 
+#ifdef ENABLE_THREAD_RECYCLING
+extern x_monitor xthreads_monitor;
+#endif
+
 static jclass   class_Thread;
 static jmethodID run_method;
 
@@ -69,14 +73,17 @@ static void threadEntry(void * athread) {
 #endif
   w_thread thread = athread;
   JNIEnv  *env = w_thread2JNIEnv(thread);
-  w_boolean gc_is_running = (gc_instance != NULL);
+  volatile w_boolean gc_is_running;
+  w_thread oldthread;
   x_status monitor_status;
+  x_thread kthread = thread->kthread;
 
 #ifdef DEBUG_STACKS
   thread->native_stack_base = &thread;
   thread->native_stack_max_depth = 0;
 #endif
 
+  threadMustBeSafe(thread);
   if (!run_method) {
     class_Thread = clazz2Class(clazzThread);
     run_method = (*env)->GetMethodID(env, class_Thread, "_run", "()V"); 
@@ -85,57 +92,89 @@ static void threadEntry(void * athread) {
     jdwp_Thread_run_method = (*env)->GetMethodID(env, class_Thread, "_run", "()V"); 
 #endif
   }
-  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-#ifdef O4P
-   w_printf("Start %t: pid is %d\n", thread, getpid());
-#else
-   w_printf("Start %t\n", thread);
-#endif
-  }
-#ifdef JDWP
-  jdwp_event_thread_start(thread);
-#endif
-  thread->state = wt_ready;
-  callMethod(thread->top, run_method);
-  thread->top = & thread->rootFrame;
-  if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    w_printf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
-  }
 
-  removeThreadCount(thread);
-  thread->state = wt_dying;
-#ifdef JDWP
-  jdwp_event_thread_end(thread);
+#ifdef ENABLE_THREAD_RECYCLING
+  while (TRUE) {
 #endif
-  /*
-  ** Don't futz with the thread_hashtable etc. while prepare/mark is in progress
-  */
-  if (gc_is_running) {
-    monitor_status = x_monitor_eternal(gc_monitor);
-    if (monitor_status != xs_success) {
-      wabort(ABORT_WONKA, "Unable to enter gc_monitor!\n");
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("starting %t using kthread %p\n", thread, kthread);
     }
-    while (gc_phase == GC_PHASE_PREPARE || gc_phase == GC_PHASE_MARK) {
-      monitor_status = x_monitor_wait(gc_monitor, 10);
+    if(jpda_hooks) {
+      jdwp_event_thread_start(thread);
     }
-  }
+    oldthread = (w_thread)ht_write(thread_hashtable, (w_word)kthread, (w_word)thread);
 
-  ht_erase(thread_hashtable,(w_word)thread->kthread);
-  thread->state = wt_dead;
-  if (gc_is_running) {
-    x_monitor_exit(gc_monitor);
-  }
-  enterSafeRegion(thread);
-  deleteGlobalReference(thread->Thread);
-  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-#ifdef O4P
-   w_printf("Finish %t: pid was %d\n", thread, getpid());
-#else
-   w_printf("Finish %t\n", thread);
+#ifdef RUNTIME_CHECKS
+    if (oldthread) {
+      wabort(ABORT_WONKA, "Sapristi! that os thread %p was already registered!\n", kthread);
+    }
 #endif
-  }
 
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+#ifdef O4P
+      w_printf("Start %t: pid is %d\n", thread, getpid());
+#else
+      w_printf("Start %t\n", thread);
+#endif
+    }
+#ifdef JDWP
+    jdwp_event_thread_start(thread);
+#endif
+    thread->state = wt_ready;
+    callMethod(thread->top, run_method);
+    thread->top = & thread->rootFrame;
+    if (exceptionThrown(thread) && isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
+      w_printf("Uncaught exception in %t: %e, is someone calling stop()?\n", thread, exceptionThrown(thread));
+    }
+
+    removeThreadCount(thread);
+    thread->state = wt_dying;
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("finished %t using kthread %p\n", thread, kthread);
+    }
+
+#ifdef JDWP
+    jdwp_event_thread_end(thread);
+#endif
+    enterUnsafeRegion(thread);
+
+    ht_erase(thread_hashtable,(w_word)thread->kthread);
+    thread->state = wt_dead;
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+#ifdef O4P
+      w_printf("Finish %t: pid was %d\n", thread, getpid());
+#else
+      w_printf("Finish %t\n", thread);
+#endif
+    }
+    deleteGlobalReference(thread->Thread);
+    enterSafeRegion(thread);
+
+#ifdef ENABLE_THREAD_RECYCLING
+    {
+      x_monitor_eternal(xthreads_monitor);
+      woempa(7, "%t ->kthread was %p, setting to NULL\n", thread, kthread);
+      kthread->xref = NULL;
+      thread->kthread = NULL;
+      if (thread->Thread) {
+        clearWotsitField(thread->Thread, F_Thread_wotsit);
+        thread->Thread = NULL;
+      }
+      thread = NULL;
+      putFifo(kthread, xthread_fifo);
+      if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+        w_printf("added kthread %p to native thread pool, now contains %d xthreads\n", kthread, occupancyOfFifo(xthread_fifo));
+      }
+      while (!(thread = kthread->xref)) {
+        x_monitor_wait(xthreads_monitor, x_eternal);
+      }
+      x_monitor_exit(xthreads_monitor);
+    }
+   }
+#endif
 }
+
+ 
 
 void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGroup, w_instance nameString, w_instance theRunnable) {
 
@@ -192,8 +231,12 @@ void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGr
 }
 
 void Thread_destructor(w_instance thisThread) {
+  w_thread thread;
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
+#ifdef ENABLE_THREAD_RECYCLING
+  x_monitor_eternal(xthreads_monitor);
+#endif
+  thread = getWotsitField(thisThread, F_Thread_wotsit);
 
   if (thread) {
     thread->Thread = NULL;
@@ -203,6 +246,9 @@ void Thread_destructor(w_instance thisThread) {
       clearWotsitField(thisThread, F_Thread_wotsit);
     }
   }
+#ifdef ENABLE_THREAD_RECYCLING
+  x_monitor_exit(xthreads_monitor);
+#endif
 
 }
 
@@ -227,6 +273,36 @@ void Thread_setName0(JNIEnv *env, w_instance thisThread, w_instance nameString) 
 
 }
 
+#ifdef ENABLE_THREAD_RECYCLING
+w_boolean getXThreadFromPool(w_instance thisThread) {
+  w_thread wthread = getWotsitField(thisThread, F_Thread_wotsit);
+  w_boolean result;
+  x_status monitor_status;
+  x_thread kthread;
+
+  x_monitor_eternal(xthreads_monitor);
+  kthread = getFifo(xthread_fifo);
+  if (!kthread) {
+    x_monitor_exit(xthreads_monitor);
+
+    return FALSE;
+  }
+
+  wthread->state = wt_starting;
+  wthread->kthread = kthread;
+  kthread->xref = wthread;
+  kthread->report = running_thread_report;
+  addThreadCount(wthread);
+  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+    w_printf("Binding %t to kthread %p, native thread pool now contains %d xthreads\n", wthread, kthread, occupancyOfFifo(xthread_fifo));
+  }
+  x_monitor_notify_all(xthreads_monitor);
+  x_monitor_exit(xthreads_monitor);
+
+  return TRUE;
+}
+#endif
+
 w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   w_thread current_thread = JNIEnv2w_thread(env);
   w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
@@ -236,52 +312,65 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   w_boolean gc_is_running = (gc_instance != NULL);
   x_status monitor_status;
 
+#ifdef RUNTIME_CHECKS
+  if (!this_thread) {
+    wabort(ABORT_WONKA, "Whoa. Trying to start a Thread whose wotsit is NULL");
+  }
+  if (this_thread->kthread) {
+    wabort(ABORT_WONKA, "Oops - %t already has a kthread attached", this_thread);
+  }
+  threadMustBeSafe(current_thread);
+#endif
+
+  // Need to do this before calling getXThreadFromPool, because that function
+  // can put the thread on the wthread_fifo and then we're no longer in control (the
+  // thread could run to completion before we get a chance to create the 
+  // global reference).
+  newGlobalReference(thisThread);
+  
+#ifdef ENABLE_THREAD_RECYCLING
+  if (!getXThreadFromPool(thisThread)) {
+#else
+  {
+#endif
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("Allocating new kthread for %t\n", this_thread);
+    }
+    woempa(7, "Allocating new kthread for %t\n", this_thread);
+    this_thread->kthread = allocClearedMem(sizeof(x_Thread));
 /* [CG 20050601]
  * For O4P we let the system supply the stack, since LinuxThreads ignores the
  * one we supply anyway. (NetBSD probably does the Right Thing, but whatever ...)
  */
 #ifndef O4P
-  this_thread->kstack = allocMem(this_thread->ksize);
-  if (!this_thread->kstack) {
-
-    return -1;
-
-  }
-#endif
-
-#ifdef RUNTIME_CHECKS
-  if (!this_thread) {
-    wabort(ABORT_WONKA, "Whoa. Trying to start a Thread whose wotsit is NULL");
-  }
-  if (!this_thread->kthread) {
-    wabort(ABORT_WONKA, "Steady on old boy. Trying to start a thread whose kthread is NULL");
-  }
-  threadMustBeSafe(current_thread);
-#endif
-
-  this_thread->state = wt_starting;
-  enterUnsafeRegion(current_thread);
-  oldthread = (w_thread)ht_write(thread_hashtable, (w_word)this_thread->kthread, (w_word)this_thread);
-
-  if (oldthread) {
-    wabort(ABORT_WONKA, "Sapristi! that os thread %p was already registered!\n", this_thread->kthread);
-  }
-
-  x_thread_create(this_thread->kthread, threadEntry, this_thread, this_thread->kstack, this_thread->ksize, this_thread->kpriority, TF_SUSPENDED);
-  this_thread->kthread->report = running_thread_report;
-
-  woempa(7, "Starting Java Thread %t.\n", this_thread);
-
-  newGlobalReference(thisThread);
-  addThreadCount(this_thread);
-  enterSafeRegion(current_thread);
-  status = x_thread_resume(this_thread->kthread);
-  if (status == xs_success) {
-    if(jpda_hooks) {
-      jdwp_event_thread_start(this_thread);
+    this_thread->kstack = allocMem(this_thread->ksize);
+    if (!this_thread->kstack) {
+      if (this_thread->kthread) {
+        releaseMem(this_thread->kthread);
+        this_thread->kthread = NULL;
+      }
     }
-  }
-  else {
+#endif
+
+    if (!this_thread->kthread) {
+      woempa(9, "Unable to allocate x_Thread for %t\n", this_thread);
+
+      return -1;
+ 
+    }
+
+    this_thread->kthread->xref = this_thread;
+    this_thread->state = wt_starting;
+    addThreadCount(this_thread);
+    enterUnsafeRegion(current_thread);
+
+    x_thread_create(this_thread->kthread, threadEntry, this_thread, this_thread->kstack, this_thread->ksize, this_thread->kpriority, TF_SUSPENDED);
+    this_thread->kthread->report = running_thread_report;
+
+    woempa(7, "Starting Java Thread %t.\n", this_thread);
+
+    enterSafeRegion(current_thread);
+    status = x_thread_resume(this_thread->kthread);
     result = status;
   }
 

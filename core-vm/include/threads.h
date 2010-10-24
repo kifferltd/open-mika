@@ -572,4 +572,14 @@ void setUpRootFrame(w_thread new);
  */
 void terminateThread(w_thread thread);
 
+/**
+ * Logic for recycling native threads: only used if ENABLE_THREAD_RECYCLING
+ * is defined.
+ */
+#ifdef ENABLE_THREAD_RECYCLING
+extern w_fifo xthread_fifo;
+extern x_monitor xthreads_monitor;
+#endif // ENABLE_THREAD_RECYCLING
+
+
 #endif /* _THREADS_H */

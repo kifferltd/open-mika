@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by         *
+* Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -93,6 +93,16 @@ w_hashtable thread_hashtable;
 
 #define THREAD_HASHTABLE_SIZE 51
 
+/**
+ * Logic for recycling native threads: only used if ENABLE_THREAD_RECYCLING
+ * is defined.
+ */
+#ifdef ENABLE_THREAD_RECYCLING
+w_fifo xthread_fifo;
+static x_Monitor xthreads_Monitor;
+x_monitor xthreads_monitor;
+#endif // ENABLE_THREAD_RECYCLING
+
 static const char *unborn_thread_report(x_thread);
 static const char *dying_thread_report(x_thread);
 
@@ -157,16 +167,6 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   newthread->label = (char *)"thread";
   newthread->name = name;
   newthread->Thread = Thread;
-  newthread->kthread = allocClearedMem(sizeof(x_Thread));
-  if (!newthread->kthread) {
-    woempa(9, "Unable to allocate x_Thread for %w\n", name);
-    releaseMem(newthread);
-
-    return NULL;
-
-  }
-
-  newthread->kthread->xref = newthread;
   newthread->ksize = stacksize;
 
   if (!parentthread->jpriority) {
@@ -190,10 +190,14 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
 void terminateThread(w_thread thread) {
 
   void * result;
-  x_status status;
+  x_status status = xs_success;
   w_string name;
 
-  status = x_thread_join(thread->kthread, &result, 100);
+#ifndef ENABLE_THREAD_RECYCLING
+  if (thread->kthread) {
+    status = x_thread_join(thread->kthread, &result, 100);
+  }
+
   if (status == xs_success || status == xs_no_instance) {
     woempa(1, "Join status %s\n", x_status2char(status));
   }
@@ -213,40 +217,39 @@ void terminateThread(w_thread thread) {
   }
 
   woempa(1,"Cleaning up %t\n", thread);
-  if (thread->state != wt_unstarted) {
+  if (thread->kthread) {
     status = x_thread_delete(thread->kthread);
-  }
-  if (status == xs_success) {
-    woempa(1,"Cleaned up %t\n", thread);
-
+    if (status != xs_success) {
+      wabort(ABORT_WONKA, "Thread delete status %s\n", x_status2char(status));
+    }
+ 
     thread->kthread->xref = NULL;
     thread->kthread->report = dying_thread_report;
+  }
+  woempa(1,"Cleaned up %t\n", thread);
 
-    if (thread->kthread == &ur_thread_x_Thread) {
-      woempa(9,"This is the ur-thread, so I won't releaseMem memory that wasn't allocMem'd.\n");
-    }
-    else {
-      if (thread->kthread) {
-        releaseMem(thread->kthread);
-	thread->kthread = NULL;
-      }  
-      if (thread->kstack) {
-        releaseMem(thread->kstack);
-	thread->kstack = NULL;
-      }  
-      name = thread->name;
-      if (name) {
-        deregisterString(name);
-	thread->name = NULL;
-      }
-      // TODO: delete mutex
-    }
-    //
-
+  if (thread->kthread == &ur_thread_x_Thread) {
+    woempa(9,"This is the ur-thread, so I won't releaseMem memory that wasn't allocMem'd.\n");
   }
   else {
-    wabort(ABORT_WONKA, "Thread delete status %s\n", x_status2char(status));
+    if (thread->kthread) {
+      releaseMem(thread->kthread);
+      thread->kthread = NULL;
+    }  
+    if (thread->kstack) {
+      releaseMem(thread->kstack);
+      thread->kstack = NULL;
+    }  
   }
+#endif
+
+  name = thread->name;
+  if (name) {
+    deregisterString(name);
+    thread->name = NULL;
+  }
+  // TODO: delete mutex
+
   releaseMem(thread);
 
 }
@@ -361,9 +364,9 @@ void startInitialThreads(void* data) {
 
   woempa(9, "********* %d instances in use after initial loading. ************\n", instance_use);
 
-#ifdef DEBUG
-  w_printf("Start %t: pid is %d\n", W_Thread_sysInit, getpid());
-#endif
+  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+    w_printf("Start %t: pid is %d\n", W_Thread_sysInit, getpid());
+  }
   mustBeInitialized(clazzString);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
   setReferenceField(I_ThreadGroup_system, getStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
@@ -450,9 +453,9 @@ void startInitialThreads(void* data) {
     enterSafeRegion(W_Thread_sysInit);
   }
   W_Thread_sysInit->state = wt_dead;
-#ifdef DEBUG
-  w_printf("Finish %t: pid was %d\n", W_Thread_sysInit, getpid());
-#endif
+  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+    w_printf("Finish %t: pid was %d\n", W_Thread_sysInit, getpid());
+  }
 }
 
 static x_Mutex Mutex64;
@@ -463,6 +466,13 @@ void startKernel() {
 
   mustBeInitialized(clazzThreadGroup);
   mustBeInitialized(clazzThread);
+
+#ifdef ENABLE_THREAD_RECYCLING
+  xthread_fifo = allocFifo(32);
+  xthreads_monitor = &xthreads_Monitor;
+  x_monitor_create(xthreads_monitor);
+#endif // ENABLE_THREAD_RECYCLING
+
   thread_hashtable = ht_create((char*)"hashtable:threads", THREAD_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "Created thread_hashtable at %p\n",thread_hashtable);
 #ifdef USE_OBJECT_HASHTABLE
@@ -575,25 +585,25 @@ char * print_thread_long(char* buffer, int *remain, void *data, int w, int p, un
     else {
       thread_progress = "unallocated ";
     }
-    length = x_snprintf(buffer, *remain, thread_progress);
+    length = x_snprintf(buffer, *remain, "%sThread %w p%-2d of %j", thread_progress, thread_name, t->jpriority, getReferenceField(ti, F_Thread_parent));
 
     if (! t->top || ! (method = t->top->method)) {
-      length += x_snprintf(buffer + length, *remain, "Thread %w p%-2d (no stack frame available)", thread_name, t->jpriority);
+      length += x_snprintf(buffer + length, *remain, " (no stack frame available)");
     }
     else {
       if (isSet(method->flags, METHOD_IS_COMPILED)) {
-        length += x_snprintf(buffer + length, *remain, "Thread %w p%-2d, jitted ", thread_name, t->jpriority);
+        length += x_snprintf(buffer + length, *remain, ", jitted ");
       }
       else if (isSet(method->flags, ACC_NATIVE)) {
-        length += x_snprintf(buffer + length, *remain, "Thread %w p%-2d, ", thread_name, t->jpriority);
+        length += x_snprintf(buffer + length, *remain, " ");
       }
       else {
         pc = t->top->current - method->exec.code;
         if (method->exec.debug_info) {
-          length += x_snprintf(buffer + length, *remain, "Thread %w p%-2d, line %d [%05d] in ", thread_name, t->jpriority, code2line(method, t->top->current), pc);
+          length += x_snprintf(buffer + length, *remain, ", line %d [%05d] in ", code2line(method, t->top->current), pc);
         }
         else {
-          length += x_snprintf(buffer + length, *remain, "Thread %w p%-2d, [%05d] in ", thread_name, t->jpriority, pc);
+          length += x_snprintf(buffer + length, *remain, ", [%05d] in ", pc);
         }
       }
       length += x_snprintf(buffer + length, *remain - length, "%M", method);
