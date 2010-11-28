@@ -202,7 +202,7 @@ public final class StringBuffer implements java.io.Serializable, CharSequence {
   }
   
   public int lastIndexOf(String string) {
-    return lastIndexOf(string, 0);
+    return lastIndexOf(string, count);
   }
 
   public int lastIndexOf(String string, int index) {    

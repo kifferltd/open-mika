@@ -29,14 +29,6 @@ import gnu.testlet.TestHarness;
 
 /**
 * this file contains testcode for java.lang.StringBuffer.	<br>
-* it all the methods together with StringBufferTest and plus <br>
-* <br>
-* methods in this file: <br>
-* - setCharAt    <br>
-* - ensureCapacity  <br>
-*  <br>
-* 4 new methods need testing: delete, deleteCharAt, replace and substring <br>
-* the test for these methods are commented out !
 */
 public class SMStringBufferTest implements Testlet
 {
@@ -62,8 +54,21 @@ public class SMStringBufferTest implements Testlet
 		th.checkPoint("replace(int,int,java.lang.String)java.lang.StringBuffer");
 		test_replace();
 
+            th.checkPoint("substring(int)java.lang.String");
 		test_substring();
 
+
+		th.checkPoint("indexOf(String)");
+		test_indexOf_String();
+
+		th.checkPoint("indexOf(String, int)");
+		test_indexOf_String_int();
+
+		th.checkPoint("lastIndexOf(String)");
+		test_lastIndexOf_String();
+
+		th.checkPoint("lastIndexOf(String, int)");
+		test_lastIndexOf_String_int();
 
 
 	}
@@ -189,7 +194,6 @@ public class SMStringBufferTest implements Testlet
 */
 	public void test_substring()
 	{
-            th.checkPoint("substring(int)java.lang.String");
 
 		StringBuffer sb = new StringBuffer("test substring");
 		try 	{	
@@ -287,5 +291,35 @@ public class SMStringBufferTest implements Testlet
 		catch	(IndexOutOfBoundsException ie)	{ th.check(true); }
 
 		}
+	public void test_indexOf_String() {
+		StringBuffer testBuf = new StringBuffer("SELECT x, y, z");
+		th.check(testBuf.indexOf(" "), 6);
+		th.check(testBuf.indexOf(","), 8);
+	}
+
+	public void test_indexOf_String_int() {
+		StringBuffer testBuf = new StringBuffer("SELECT x, y, z");
+		th.check(testBuf.indexOf(" ", 3), 6);
+		th.check(testBuf.indexOf(" ", 7), 9);
+		th.check(testBuf.indexOf(",", 0), 8);
+		th.check(testBuf.indexOf(",", 10), 11);
+		th.check(testBuf.indexOf(",", 14), -1);
+	}
+
+	public void test_lastIndexOf_String() {
+		StringBuffer testBuf = new StringBuffer("SELECT x, y, z");
+		th.check(testBuf.lastIndexOf(" "), 12);
+		th.check(testBuf.lastIndexOf(","), 11);
+		th.check(testBuf.lastIndexOf("/"), -1);
+	}
+
+	public void test_lastIndexOf_String_int() {
+		StringBuffer testBuf = new StringBuffer("SELECT x, y, z");
+		th.check(testBuf.lastIndexOf(" ", 13), 12);
+		th.check(testBuf.lastIndexOf(" ", 7), 6);
+		th.check(testBuf.lastIndexOf(",", 0), -1);
+		th.check(testBuf.lastIndexOf(",", 10), 8);
+	}
 
 }  
+
