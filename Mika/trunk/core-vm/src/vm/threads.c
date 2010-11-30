@@ -294,8 +294,7 @@ w_thread _currentWonkaThread(const char *f, int l) {
     return NULL; /* MB: Thread can't have been set up yet */
   }
 
-  if (*((w_word*)thread->label)!=*((w_word*)"thread")  
-     && *((w_word*)thread->label)!=*((w_word*)"group")){
+  if (strncmp(thread->label, "thread", 5)) {
     return NULL; /* CG: thread structure freed or corrupt??? */
   }
 
