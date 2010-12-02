@@ -27,6 +27,9 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
+#ifdef USE_LIBFFI
+#include <ffi.h>
+#endif
 
 #include "core-classes.h"
 #include "exception.h"
@@ -38,10 +41,84 @@
 
 typedef w_long (w_fun)(JNIEnv*, w_instance, ...);
 
-w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_methodExec exec) {
-  w_fun *f = (w_fun*)exec->function.long_fun;
+#ifdef USE_LIBFFI
+void *getactual(w_slot *slotloc, w_clazz c) {
+  woempa(7, "  parameter type = %k\n", c);
+  w_slot slot = *slotloc;
+  woempa(7, "  slot = %p\n", slot);
 
-  switch (exec->arg_i) {
+  if (clazzIsPrimitive(c)) {
+    switch (c->type & 0x0f) {
+      case VM_TYPE_SHORT:
+      case VM_TYPE_INT:
+      case VM_TYPE_BYTE:
+      case VM_TYPE_CHAR:
+      case VM_TYPE_FLOAT:
+      case VM_TYPE_BOOLEAN:
+        {
+          w_word *wordptr = allocMem(sizeof(w_word));
+          *wordptr = slot->c;
+          woempa(7, "  word parameter: %08x\n", *wordptr);
+          *slotloc = slot + 1;
+          return wordptr;
+        }
+
+      case VM_TYPE_LONG:
+      case VM_TYPE_DOUBLE:
+        {
+          void *dwordptr = allocMem(sizeof(w_dword));
+          memcpy(dwordptr, &slot->c, 4);
+          ++slot;
+          memcpy((char*)dwordptr + 4, &slot->c, 4);
+          //woempa(7, "  dword parameter: %08x%08x\n", u.w[WORD_MSW], u.w[WORD_LSW]);
+          woempa(7, "  dword parameter: %0%08x\n", (*(w_dword*)dwordptr) >> 32, (*(w_dword*)dwordptr) & 0x0ffffffffULL);
+          *slotloc = slot + 1;
+          return dwordptr;
+        }
+
+      default:
+        wabort(ABORT_WONKA, "Coddling catfish! Arg of unknown VM_TYPE %02x", c->type); 
+        return NULL;
+    }
+  }
+  else {
+    w_instance *instanceptr = allocMem(sizeof(w_instance));
+    *instanceptr = (w_instance)slot->c;
+    woempa(7, "  instance parameter: %p %j\n", *instanceptr, *instanceptr);
+    *slotloc = slot + 1;
+    return instanceptr;
+  }
+}
+#endif
+
+w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_method m) {
+#ifdef USE_LIBFFI
+  ffi_cif *cifptr;
+  void *actuals[m->exec.nargs + 2];
+  w_long retval;
+  w_slot nextparm;
+  int i;
+
+  cifptr = m->exec.cif;
+  nextparm = top - m->exec.arg_i;
+//printf("parms start at %p\n", nextparm);
+
+  actuals[0] = &env;
+  actuals[1] = &theClass;
+  for (i = 0; i < m->exec.nargs; ++i) {
+    w_clazz c = m->spec.arg_types[i];
+    actuals[i + 2] = getactual(&nextparm, c);
+  }
+
+//printf("fun = %p retval ptr = %p acuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.long_fun, &retval, actuals);
+
+  return retval;
+
+#else
+  w_fun *f = (w_fun*)m->exec.function.long_fun;
+
+  switch (m->exec.arg_i) {
   case 0: 
       return f(env, theClass);
 
@@ -148,12 +225,40 @@ w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_methodExec e
       return dummy;
     }
   }
+#endif
 }
 
-w_long _call_instance(JNIEnv* env, w_slot top, w_methodExec exec) {
-  w_fun *f = (w_fun*)exec->function.long_fun;
+w_long _call_instance(JNIEnv* env, w_slot top, w_method m) {
+#ifdef USE_LIBFFI
+  ffi_cif *cifptr;
+  void *actuals[m->exec.nargs + 2];
+  w_long retval;
+  w_slot nextparm;
+  int i;
 
-  switch (exec->arg_i) {
+  cifptr = m->exec.cif;
+  nextparm = top - m->exec.arg_i;
+
+  woempa(7, "instance method %m has %d parameters\n", m, m->exec.nargs);
+  actuals[0] = &env;
+  woempa(7, "calling thread = %t\n", env);
+  actuals[1] = &nextparm->c;
+  woempa(7, "instance = %j\n", nextparm->c);
+  nextparm++;
+  for (i = 0; i < m->exec.nargs; ++i) {
+    w_clazz c = m->spec.arg_types[i];
+    actuals[i + 2] = getactual(&nextparm, c);
+  }
+
+//printf("fun = %p retval ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.long_fun, &retval, actuals);
+
+  return retval;
+
+#else
+  w_fun *f = (w_fun*)m->exec.function.long_fun;
+
+  switch (m->exec.arg_i) {
   case 1: 
       return f(env, (w_instance)top[-1].c);
 
@@ -258,6 +363,7 @@ w_long _call_instance(JNIEnv* env, w_slot top, w_methodExec exec) {
 
     }
   }
+#endif
 }
 
 

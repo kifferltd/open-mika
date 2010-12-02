@@ -33,8 +33,8 @@
 
 #include "wonka.h"
 
-w_long _call_static(JNIEnv * env, w_instance clazz, w_slot top, w_methodExec exec);
-w_long _call_instance(JNIEnv * env, w_slot top, w_methodExec exec);
+w_long _call_static(JNIEnv * env, w_instance clazz, w_slot top, w_method m);
+w_long _call_instance(JNIEnv * env, w_slot top, w_method m);
 
 #endif /* _CALLS_H */
 
