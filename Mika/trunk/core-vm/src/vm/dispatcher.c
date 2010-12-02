@@ -30,6 +30,9 @@
 **************************************************************************/
 
 #include <string.h>
+#ifdef USE_LIBFFI
+#include <ffi.h>
+#endif
 
 #include "clazz.h"
 #include "constant.h"
@@ -628,10 +631,132 @@ w_callfun dispatchers[] = {
 #endif
 };
 
+#ifdef USE_LIBFFI
+static w_hashtable desclet_hashtable;
+
+static w_string desc2desclet(w_string desc) {
+  w_int i;
+  w_int j;
+  w_int l = 0;
+  w_int dims = 0;
+  w_char buff[256];
+
+  buff[0] = 0;
+  for (i = 1, j = 1; i < (w_int)string_length(desc) && !buff[0]; ++i) {
+    w_char ch = string_char(desc, i);
+    switch(ch) {
+    case '[':
+      ++dims;
+      continue;
+
+    case ')':
+      l = j;
+      j = 0;
+      break;
+
+    case 'L':
+      while (string_char(desc, ++i) != ';');
+      // fall through
+    default:
+      buff[j++] = dims ? 'L' : ch;
+    }
+    dims = 0;
+  }
+
+  return unicode2String(buff, l);
+}
+
+/**
+ * Convert a descriptor char (one of V, S, I, J, B, C, F, D, Z, L) to an ffi_type.
+ * It is important that the resulting type exactly match the type used inside 
+ * Mika: e.g. jboolean = w_boolean = int32_t, so Z must translate to ffi_type_sint32.
+ * (Whether this is really a good representation for booleans is another matter,
+ * the point is that it must be consistent.)
+ */
+ffi_type *char2ffi_type(w_char ch) {
+  switch (ch) {
+  case 'V':
+    return &ffi_type_void;
+
+  case 'S':
+    return &ffi_type_sint16;
+
+  case 'I':
+    return &ffi_type_sint32;
+
+  case 'J':
+    return &ffi_type_sint64;
+
+  case 'B':
+    return &ffi_type_sint8;
+
+  case 'C':
+    return &ffi_type_uint32;
+
+  case 'F':
+#ifdef HAUSER_FP
+    return &ffi_type_uint32;
+#else
+    return &ffi_type_float;
+#endif
+
+  case 'D':
+#ifdef HAUSER_FP
+    return &ffi_type_uint64;
+#else
+    return &ffi_type_double;
+#endif
+
+  case 'Z':
+    return &ffi_type_sint32;
+
+  case 'L':
+    return &ffi_type_pointer;
+
+  default:
+    wabort(ABORT_WONKA, "Dolloping doubloons! unknown type char '%02x'", ch); 
+    return NULL;
+  }
+}
+
+static ffi_cif *desc2cif(w_string desc) {
+  w_string desclet = desc2desclet(desc);
+  w_int l = (w_int)string_length(desclet);
+  ffi_cif* cifptr = NULL;
+  ffi_status s;
+  ffi_type *rettype;
+  ffi_type **argtype = allocMem(sizeof(ffi_type*) * (l + 2));;
+  int i;
+
+  // TODO: not really thread-safe, but the first call will be single-threaded anyway, right?
+  if (!desclet_hashtable) {
+    desclet_hashtable = ht_create("hashtable:desclets", 101, NULL, NULL, 0, 0);
+  }
+
+  ht_lock(desclet_hashtable);
+  cifptr = (ffi_cif*)ht_read_no_lock(desclet_hashtable, (w_word)desclet);
+  if (!cifptr) {
+    rettype = char2ffi_type(string_char(desclet, 0));
+    argtype[0] = &ffi_type_pointer;
+    argtype[1] = &ffi_type_pointer;
+    for (i = 1; i < l; ++i) {
+      w_char ch = string_char(desclet, i);
+      argtype[i + 1] = char2ffi_type(ch);
+    }
+    cifptr = allocClearedMem(sizeof(ffi_cif));
+    s = ffi_prep_cif (cifptr, FFI_DEFAULT_ABI, string_length(desclet) + 1, rettype, argtype);
+
+    ht_write_no_lock(desclet_hashtable, (w_word)desclet, (w_word)cifptr);
+  }
+  ht_unlock(desclet_hashtable);
+
+  return cifptr;
+}
+#endif
+
 void initialize_native_dispatcher(w_frame caller, w_method method) {
 
   w_int i;
-  //w_instance ref_result;
 
   if (method->exec.function.void_fun == NULL) {
     woempa(9, "Oh deary me: method %M has no code -> Trying to look it up\n", method);
@@ -666,6 +791,9 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
 
   woempa(1, "Will call native code at %p using dispatcher[%d]\n", method->exec.function.void_fun, i);
   method->exec.dispatcher = dispatchers[i];
+#ifdef USE_LIBFFI
+  method->exec.cif = desc2cif(method->desc);
+#endif
 
   callMethod(caller, method);
 }
@@ -719,7 +847,7 @@ void native_instance_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   x_monitor_exit(m);
@@ -766,7 +894,7 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -802,7 +930,7 @@ void native_instance_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l= _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  result.l= _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -838,7 +966,7 @@ void native_instance_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -866,7 +994,7 @@ void native_instance_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
 
@@ -904,7 +1032,7 @@ void native_instance_unsynchronized_32bits(w_frame caller, w_method method) {
   prepareNativeFrame(frame, thread, caller, method);
 
   thread->top = frame;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -931,7 +1059,7 @@ void native_instance_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  result.l = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -958,7 +1086,7 @@ void native_instance_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, &method->exec);
+  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -992,7 +1120,7 @@ void native_static_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   x_monitor_exit(m);
@@ -1039,7 +1167,7 @@ void native_static_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1075,7 +1203,7 @@ void native_static_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, &method->exec);
+  result.l = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1111,7 +1239,7 @@ void native_static_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, &method->exec);
+  _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1138,7 +1266,7 @@ void native_static_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
   // WAS: ref_result  = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   if (thread->exception) {
@@ -1175,7 +1303,7 @@ void native_static_unsynchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, &method->exec);
+  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1202,7 +1330,7 @@ void native_static_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, &method->exec);
+  result.l = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1229,7 +1357,7 @@ void native_static_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, &method->exec);
+  _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1348,8 +1476,9 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
 void prepareBytecode(w_method method) {
   w_clazz cclazz = method->spec.declaring_clazz;
   w_int pc = 0;
+#ifdef USE_SPECIAL_CASE_DISPATCHERS
   w_int first_real_opcode = 0;
-  w_int jump_offset;
+#endif
   w_ConstantType *tag;
   w_int i;
   w_int * n;

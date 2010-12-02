@@ -211,6 +211,16 @@ TOOL_CONFIG default = none ;
 BYTECODE_VERIFIER default = false ; 
 
 #
+# If true use libffi, otherwise use our own hackery.
+#
+USE_LIBFFI default = false ;
+
+#
+# If USE_LIBFFI is true, this location holds the libffi.a file used for linking
+#
+LIBFFI_A_LOCATION default = $(WONKA_TOP)/core-vm/hal/cpu/$(CPU)/lib ;
+
+#
 # Enable or disable re-use of a native thread when the Java thread terminates
 #
 ENABLE_THREAD_RECYCLING default = false ;

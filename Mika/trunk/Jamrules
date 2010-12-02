@@ -120,6 +120,9 @@ switch $(CPU) {
   case ppc : {
     CCFLAGS += -DPPC ;
   }
+  case sh4 : {
+    CCFLAGS += -DSH4 ;
+  }
   case x86 : {
     CCFLAGS += -DX86 ;
   }
@@ -211,6 +214,10 @@ if $(USE_NATIVE_MALLOC) = true {
   CCFLAGS += -DUSE_NATIVE_MALLOC ;
 }
 
+if $(USE_LIBFFI) = true {
+  CCFLAGS += -DUSE_LIBFFI ;
+}
+
 if $(CPU_MIPS) {
   CCFLAGS += -DCPU_MIPS=$(CPU_MIPS) ;
 }
@@ -267,6 +274,10 @@ if $(SHARED_OBJECTS) = true {
       CCFLAGS += -DSHARED_OBJECTS ;
       LINKLIBS += -ldl ;
       LINKFLAGS += -Wl,-export-dynamic ;
+      if $(USE_LIBFFI) = true {
+        LINKLIBS += -lffi ;
+        LINKFLAGS += -L$(LIBFFI_A_LOCATION) ;
+      }
       if $(SCHEDULER) = oswald {
         if $(SHARED_HEAP) = true {
           CCFLAGS += -DSHARED_HEAP ;
@@ -538,6 +549,13 @@ switch $(JDWP) {
   case false : {
     WONKA_INFO += "no JDWP;" ;
   }
+}
+
+if $(USE_LIBFFI) = true {
+    WONKA_INFO += "using libffi to call native code;" ;
+}
+else {
+    WONKA_INFO += "using own hacks to call native code;" ;
 }
 
 switch $(NETWORK) {
