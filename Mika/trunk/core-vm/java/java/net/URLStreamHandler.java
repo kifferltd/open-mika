@@ -171,8 +171,11 @@ public abstract class URLStreamHandler {
   */
   protected String toExternalForm(URL url) {
     StringBuffer buf = new StringBuffer(url.getProtocol());
-    buf.append("://");
-    buf.append(url.getAuthority());
+    buf.append(":");
+    if (url.getAuthority() != null) {
+        buf.append("//");
+        buf.append(url.getAuthority());
+    }
     //the slash is already in the file ...
     //buf.append('/');
     buf.append(url.getFile());
