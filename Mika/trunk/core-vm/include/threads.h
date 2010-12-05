@@ -77,6 +77,9 @@ static const w_size bytes_per_call       = 720;
 #elif defined(PPC)
 #define STACK_FACTOR                        3
 static const w_size bytes_per_call       = 0x1b0;
+#elif defined(SH4)
+#define STACK_FACTOR                        3
+static const w_size bytes_per_call       = 660;
 #elif defined(X86)
 #define STACK_FACTOR                        5 
 static const w_size bytes_per_call       = 500;
@@ -485,8 +488,7 @@ void _gcSafePoint(w_thread thread);
 /// Check that a w_thread pointer really does point to a w_Thread
 #ifdef RUNTIME_CHECKS
 static INLINE w_thread checkThreadPointer(w_thread t) {
-  if (*((w_word*)t->label) != *((w_word*)"thread")
-        && *((w_word*)t->label) != *((w_word*)"group")) {
+  if (strncmp(t->label, "thread", 6)) {
     wabort(ABORT_WONKA, "%p is not a thread!\n", t);
   }
   return t;
