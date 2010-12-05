@@ -294,9 +294,11 @@ w_thread _currentWonkaThread(const char *f, int l) {
     return NULL; /* MB: Thread can't have been set up yet */
   }
 
-  if (strncmp(thread->label, "thread", 5)) {
+#ifdef RUNTIME_CHECKS
+  if (strncmp(thread->label, "thread", 6)) {
     return NULL; /* CG: thread structure freed or corrupt??? */
   }
+#endif
 
   return thread;
 }
