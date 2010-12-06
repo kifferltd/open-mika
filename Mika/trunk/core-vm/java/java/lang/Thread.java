@@ -672,6 +672,15 @@ public class Thread implements Runnable {
   public static void sleep(long millis, int nanos)
     throws InterruptedException
   {
+    if (millis < 0) {
+      throw new IllegalArgumentException("millis must be > 0");
+    }
+
+    if (nanos < 0 || nanos > 999999) {
+      throw new IllegalArgumentException("nanos must be from 0 to 999999");
+    }
+
+
     currentThread().sleep0(millis,nanos);
   }
 
