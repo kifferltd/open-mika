@@ -42,10 +42,9 @@
 typedef w_long (w_fun)(JNIEnv*, w_instance, ...);
 
 #ifdef USE_LIBFFI
-void *getactual(w_slot *slotloc, w_clazz c) {
-  woempa(7, "  parameter type = %k\n", c);
+void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
   w_slot slot = *slotloc;
-  woempa(7, "  slot = %p\n", slot);
+  jvalue *jvalptr = *jvalptrloc;
 
   if (clazzIsPrimitive(c)) {
     switch (c->type & 0x0f) {
@@ -56,24 +55,33 @@ void *getactual(w_slot *slotloc, w_clazz c) {
       case VM_TYPE_FLOAT:
       case VM_TYPE_BOOLEAN:
         {
-          w_word *wordptr = allocMem(sizeof(w_word));
-          *wordptr = slot->c;
-          woempa(7, "  word parameter: %08x\n", *wordptr);
+          jvalptr->i = slot->c;
+          woempa(1, "  word parameter: %08x\n", jvalptr->i);
           *slotloc = slot + 1;
-          return wordptr;
+          *jvalptrloc = jvalptr + 1;
+          return jvalptr;
         }
 
       case VM_TYPE_LONG:
+        {
+          memcpy(&jvalptr->j, &slot->c, 4);
+          ++slot;
+          memcpy((char*)&jvalptr->j + 4, &slot->c, 4);
+          woempa(1, "  long parameter: %0%08x\n", jvalptr->j >> 32, jvalptr->j & 0x0ffffffffULL);
+          *slotloc = slot + 1;
+          *jvalptrloc = jvalptr + 1;
+          return jvalptr;
+        }
+
       case VM_TYPE_DOUBLE:
         {
-          void *dwordptr = allocMem(sizeof(w_dword));
-          memcpy(dwordptr, &slot->c, 4);
+          memcpy(&jvalptr->d, &slot->c, 4);
           ++slot;
-          memcpy((char*)dwordptr + 4, &slot->c, 4);
-          //woempa(7, "  dword parameter: %08x%08x\n", u.w[WORD_MSW], u.w[WORD_LSW]);
-          woempa(7, "  dword parameter: %0%08x\n", (*(w_dword*)dwordptr) >> 32, (*(w_dword*)dwordptr) & 0x0ffffffffULL);
+          memcpy((char*)&jvalptr->d + 4, &slot->c, 4);
+          woempa(1, "  double parameter: %0%08x\n", jvalptr->d >> 32, jvalptr->d & 0x0ffffffffULL);
           *slotloc = slot + 1;
-          return dwordptr;
+          *jvalptrloc = jvalptr + 1;
+          return jvalptr;
         }
 
       default:
@@ -82,11 +90,11 @@ void *getactual(w_slot *slotloc, w_clazz c) {
     }
   }
   else {
-    w_instance *instanceptr = allocMem(sizeof(w_instance));
-    *instanceptr = (w_instance)slot->c;
-    woempa(7, "  instance parameter: %p %j\n", *instanceptr, *instanceptr);
+    jvalptr->l = (w_instance)slot->c;
+    woempa(1, "  instance parameter: %p %j\n", jvalptr->l, jvalptr->l);
     *slotloc = slot + 1;
-    return instanceptr;
+          *jvalptrloc = jvalptr + 1;
+          return jvalptr;
   }
 }
 #endif
@@ -95,19 +103,21 @@ w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_method m) {
 #ifdef USE_LIBFFI
   ffi_cif *cifptr;
   void *actuals[m->exec.nargs + 2];
+  jvalue jvalues[m->exec.nargs + 2];
   w_long retval;
   w_slot nextparm;
+  jvalue *nextjvalue;
   int i;
 
   cifptr = m->exec.cif;
   nextparm = top - m->exec.arg_i;
-//printf("parms start at %p\n", nextparm);
+  nextjvalue = jvalues;
 
   actuals[0] = &env;
   actuals[1] = &theClass;
   for (i = 0; i < m->exec.nargs; ++i) {
     w_clazz c = m->spec.arg_types[i];
-    actuals[i + 2] = getactual(&nextparm, c);
+    actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
 //printf("fun = %p retval ptr = %p acuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
@@ -232,22 +242,25 @@ w_long _call_instance(JNIEnv* env, w_slot top, w_method m) {
 #ifdef USE_LIBFFI
   ffi_cif *cifptr;
   void *actuals[m->exec.nargs + 2];
+  jvalue jvalues[m->exec.nargs + 2];
   w_long retval;
   w_slot nextparm;
+  jvalue *nextjvalue;
   int i;
 
   cifptr = m->exec.cif;
   nextparm = top - m->exec.arg_i;
+  nextjvalue = jvalues;
 
-  woempa(7, "instance method %m has %d parameters\n", m, m->exec.nargs);
+  woempa(1, "instance method %m has %d parameters\n", m, m->exec.nargs);
   actuals[0] = &env;
-  woempa(7, "calling thread = %t\n", env);
+  woempa(1, "calling thread = %t\n", env);
   actuals[1] = &nextparm->c;
-  woempa(7, "instance = %j\n", nextparm->c);
+  woempa(1, "instance = %j\n", nextparm->c);
   nextparm++;
   for (i = 0; i < m->exec.nargs; ++i) {
     w_clazz c = m->spec.arg_types[i];
-    actuals[i + 2] = getactual(&nextparm, c);
+    actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
 //printf("fun = %p retval ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
