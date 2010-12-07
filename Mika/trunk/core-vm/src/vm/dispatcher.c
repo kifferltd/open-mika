@@ -735,7 +735,10 @@ static ffi_cif *desc2cif(w_string desc) {
 
   ht_lock(desclet_hashtable);
   cifptr = (ffi_cif*)ht_read_no_lock(desclet_hashtable, (w_word)desclet);
-  if (!cifptr) {
+  if (cifptr) {
+    releaseMem(argtype);
+  }
+  else {
     rettype = char2ffi_type(string_char(desclet, 0));
     argtype[0] = &ffi_type_pointer;
     argtype[1] = &ffi_type_pointer;
