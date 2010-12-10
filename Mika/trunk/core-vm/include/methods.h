@@ -28,7 +28,10 @@
 
 #ifndef _METHODS_H
 #define _METHODS_H
+
+#ifdef USE_LIBFFI
 #include <ffi.h>
+#endif
 
 #include "clazz.h"
 #include "hashtable.h"
@@ -100,7 +103,9 @@ typedef struct w_MethodExec {
   w_ushort local_i;        /* Number local vars, from class file */
   w_ushort stack_i;        /* Number of temporary locations used on stack */
   w_ushort nargs;          /* Number of arguments (of whatever size)      */
-  ffi_cif *cif;            /* Call InterFace ised by libffi               */
+#ifdef USE_LIBFFI
+  ffi_cif *cif;            /* Call InterFace used by libffi               */
+#endif
   w_int    code_length;    /* Length of code - can be > 65535 (!)         */
   w_code   code;           /* Bytecode array (if not native method)       */
   w_short numExceptions;   /* Number of exception handlers                */
