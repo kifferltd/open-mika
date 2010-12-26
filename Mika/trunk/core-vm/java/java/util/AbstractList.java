@@ -1,452 +1,727 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 /*
-** $Id: AbstractList.java,v 1.3 2006/03/29 09:27:14 cvs Exp $
-*/
+ * Imported by CG 20101225 based on Apache Harmony ("enhanced") revision 929253.
+ */
 
 package java.util;
 
+/**
+ * {@code AbstractList} is an abstract implementation of the {@code List} interface, optimized
+ * for a backing store which supports random access. This implementation does
+ * not support adding or replacing. A subclass must implement the abstract
+ * methods {@code get()} and {@code size()}, and to create a
+ * modifiable {@code List} it's necessary to override the {@code add()} method that
+ * currently throws an {@code UnsupportedOperationException}.
+ *
+ * @since 1.2
+ */
 public abstract class AbstractList extends AbstractCollection implements List {
 
-  protected transient int modCount = 0;
+    /**
+     * A counter for changes to the list.
+     */
+    protected transient int modCount;
 
-  protected AbstractList() {
-  }
+    private class SimpleListIterator implements Iterator {
+        int numLeft = size();
+        int expectedModCount = modCount;
+        int lastPosition = -1;
 
-  public abstract Object get(int index);
+        public boolean hasNext() {
+            return numLeft > 0;
+        }
 
-  public Object set(int index, Object element) 
-    throws UnsupportedOperationException, ClassCastException, IllegalArgumentException
-   {
-    throw new UnsupportedOperationException("method set from AbtstractList, called by "+this.getClass());
-  }
+        public Object next() {
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
 
-  public Object remove(int index) throws UnsupportedOperationException {
-    throw new UnsupportedOperationException("method remove from AbtstractList, called by "+this.getClass());
-  }
+            try {
+                int index = size() - numLeft;
+                Object result = get(index);
+                lastPosition = index;
+                numLeft--;
+                return result;
+            } catch (IndexOutOfBoundsException e) {
+                throw new NoSuchElementException();
+            }
+        }
 
-  public void add(int index, Object Element) 
-    throws UnsupportedOperationException, ClassCastException, IllegalArgumentException
-   {
-    throw new UnsupportedOperationException("method add from AbtstractList, called by "+this.getClass());
-  }
-  public boolean add(Object o) throws UnsupportedOperationException,
-      ClassCastException, IllegalArgumentException {
-    add(size(),o);
-    return true;
-  }
+        public void remove() {
+            if (lastPosition == -1) {
+                throw new IllegalStateException();
+            }
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
 
-  public boolean addAll(int index, Collection c) {
-    boolean changedList = false;
-    Iterator it = c.iterator();
-
-    while (it.hasNext()) {
-      add(index++,it.next());
-      changedList = true;
-    }
-    return changedList; 
-  }
-
-  public int indexOf(Object o) throws UnsupportedOperationException {
-    Iterator it;
-    int i;
-
-    it = iterator();
-    i = 0;
-    if (o==null) {
-      while (it.hasNext()) {
-
-        if (it.next()==null) return i;
-
-        ++i;
-      }
-    }
-    else {
-      while (it.hasNext()) {
-
-        if (o.equals(it.next())) return i;
-
-        ++i;
-      }
+            try {
+                if (lastPosition == size() - numLeft) {
+                    numLeft--; // we're removing after a call to previous()
+                }
+                AbstractList.this.remove(lastPosition);
+            } catch (IndexOutOfBoundsException e) {
+                throw new ConcurrentModificationException();
+            }
+            
+            expectedModCount = modCount;
+            lastPosition = -1;
+        }
     }
 
-    return -1;
-  }
+    private final class FullListIterator extends SimpleListIterator implements
+            ListIterator {
+        FullListIterator(int start) {
+            if (start < 0 || start > numLeft) {
+                throw new IndexOutOfBoundsException();
+            }
+            numLeft -= start;
+        }
 
-  public int hashCode() {
-   	int hash=1;
-   	Object o;
-   	Iterator it = iterator();
-   	while (it.hasNext()) {
-   		o = it.next();
-   		hash = hash * 31 + (o==null ? 0 : o.hashCode());
-   	}
-   	return hash;	
-  }
+        public void add(Object object) {
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
 
-  public boolean equals(Object o) {
-  	if (!(o instanceof List)) return false;
-  	List l = (List) o;
-  	if ( l.size() != size()) return false;
-  	//save time if different size !
-  	int size = size();
-  	for (int i=0 ; i < size ; i++) {
-  	 	if (!(get(i) == null ? l.get(i)==null : get(i).equals(l.get(i))))
-  	 		return false;
-  	}
-   	return true;
-  }
+            try {
+                AbstractList.this.add(size() - numLeft, object);
+                expectedModCount = modCount;
+                lastPosition = -1;
+            } catch (IndexOutOfBoundsException e) {
+                throw new NoSuchElementException();
+            }
+        }
 
-  public int lastIndexOf(Object o) throws UnsupportedOperationException {
-    ListIterator lit;
-    int i;
+        public boolean hasPrevious() {
+            return numLeft < size();
+        }
 
-    i = size();
-    lit = listIterator(i);
-    if (o==null) {
-      while (lit.hasPrevious()) {
-        --i;
-        if (lit.previous()==null) return i;
-       }
-    }
-    else {
-      while (lit.hasPrevious()) {
-        --i;
-        if (o.equals(lit.previous())) return i;
-      }
-    }
-    return -1;
-  }
+        public int nextIndex() {
+            return size() - numLeft;
+        }
 
-  public void clear() {
-   	removeRange(0, size());
-  }
+        public Object previous() {
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
 
-  protected void removeRange(int frix, int toix) {
-  	if (frix < 0) throw new IndexOutOfBoundsException("starting index < 0");
-  	try {
-  	    while ( frix < toix ) {
-  		remove(frix);
-  		toix--;
-  	    }
-  	}
-  	catch(IndexOutOfBoundsException ioobe) {
-  		throw new NoSuchElementException("reached the end of the list --> stopped removing");
-  	}
-  }
+            try {
+                int index = size() - numLeft - 1;
+                Object result = get(index);
+                numLeft++;
+                lastPosition = index;
+                return result;
+            } catch (IndexOutOfBoundsException e) {
+                throw new NoSuchElementException();
+            }
+        }
 
-  private class _Iterator implements Iterator {
-    private int i, m,status;
+        public int previousIndex() {
+            return size() - numLeft - 1;
+        }
 
-    public _Iterator() {
-      i = 0;
-      m = modCount;
-      status=0;
+        public void set(Object object) {
+            if (expectedModCount != modCount) {
+                throw new ConcurrentModificationException();
+            }
+
+            try {
+                AbstractList.this.set(lastPosition, object);
+            } catch (IndexOutOfBoundsException e) {
+                throw new IllegalStateException();
+            }
+        }
     }
 
-    public boolean hasNext() {
-      return i<size();
-
+    private static final class SubAbstractListRandomAccess extends
+            SubAbstractList implements RandomAccess {
+        SubAbstractListRandomAccess(AbstractList list, int start, int end) {
+            super(list, start, end);
+        }
     }
 
-    public Object next() throws UnsupportedOperationException {
-      if (modCount!=m) throw new ConcurrentModificationException();
-      if (i>=size()) throw new NoSuchElementException("Sorry no more Elements left");
-      status=1;
-      Object o = get(i++);
-      if (modCount!=m) throw new ConcurrentModificationException("list was co-modified");
-//should we check again if the list is changed or not --> might be waste of time
-//and throw a ConcurrentModificationException !!!
-// we do the checks to be correct and care about performance later ...
-      return o;
+    private static class SubAbstractList extends AbstractList {
+        private final AbstractList fullList;
 
+        private int offset;
+
+        private int size;
+
+        private static final class SubAbstractListIterator implements
+                ListIterator {
+            private final SubAbstractList subList;
+
+            private final ListIterator iterator;
+
+            private int start;
+
+            private int end;
+
+            SubAbstractListIterator(ListIterator it,
+                    SubAbstractList list, int offset, int length) {
+                super();
+                iterator = it;
+                subList = list;
+                start = offset;
+                end = start + length;
+            }
+
+            public void add(Object object) {
+                iterator.add(object);
+                subList.sizeChanged(true);
+                end++;
+            }
+
+            public boolean hasNext() {
+                return iterator.nextIndex() < end;
+            }
+
+            public boolean hasPrevious() {
+                return iterator.previousIndex() >= start;
+            }
+
+            public Object next() {
+                if (iterator.nextIndex() < end) {
+                    return iterator.next();
+                }
+                throw new NoSuchElementException();
+            }
+
+            public int nextIndex() {
+                return iterator.nextIndex() - start;
+            }
+
+            public Object previous() {
+                if (iterator.previousIndex() >= start) {
+                    return iterator.previous();
+                }
+                throw new NoSuchElementException();
+            }
+
+            public int previousIndex() {
+                int previous = iterator.previousIndex();
+                if (previous >= start) {
+                    return previous - start;
+                }
+                return -1;
+            }
+
+            public void remove() {
+                iterator.remove();
+                subList.sizeChanged(false);
+                end--;
+            }
+
+            public void set(Object object) {
+                iterator.set(object);
+            }
+        }
+
+        SubAbstractList(AbstractList list, int start, int end) {
+            super();
+            fullList = list;
+            modCount = fullList.modCount;
+            offset = start;
+            size = end - start;
+        }
+
+        public void add(int location, Object object) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location <= size) {
+                    fullList.add(location + offset, object);
+                    size++;
+                    modCount = fullList.modCount;
+                } else {
+                    throw new IndexOutOfBoundsException();
+                }
+            } else {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        public boolean addAll(int location, Collection collection) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location <= size) {
+                    boolean result = fullList.addAll(location + offset,
+                            collection);
+                    if (result) {
+                        size += collection.size();
+                        modCount = fullList.modCount;
+                    }
+                    return result;
+                }
+                throw new IndexOutOfBoundsException();
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public boolean addAll(Collection collection) {
+            if (modCount == fullList.modCount) {
+                boolean result = fullList.addAll(offset + size, collection);
+                if (result) {
+                    size += collection.size();
+                    modCount = fullList.modCount;
+                }
+                return result;
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public Object get(int location) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location < size) {
+                    return fullList.get(location + offset);
+                }
+                throw new IndexOutOfBoundsException();
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public Iterator iterator() {
+            return listIterator(0);
+        }
+
+        public ListIterator listIterator(int location) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location <= size) {
+                    return new SubAbstractListIterator(fullList
+                            .listIterator(location + offset), this, offset,
+                            size);
+                }
+                throw new IndexOutOfBoundsException();
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public Object remove(int location) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location < size) {
+                    Object result = fullList.remove(location + offset);
+                    size--;
+                    modCount = fullList.modCount;
+                    return result;
+                }
+                throw new IndexOutOfBoundsException();
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        protected void removeRange(int start, int end) {
+            if (start != end) {
+                if (modCount == fullList.modCount) {
+                    fullList.removeRange(start + offset, end + offset);
+                    size -= end - start;
+                    modCount = fullList.modCount;
+                } else {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        }
+
+        public Object set(int location, Object object) {
+            if (modCount == fullList.modCount) {
+                if (0 <= location && location < size) {
+                    return fullList.set(location + offset, object);
+                }
+                throw new IndexOutOfBoundsException();
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        public int size() {
+            if (modCount == fullList.modCount) {
+                return size;
+            }
+            throw new ConcurrentModificationException();
+        }
+
+        void sizeChanged(boolean increment) {
+            if (increment) {
+                size++;
+            } else {
+                size--;
+            }
+            modCount = fullList.modCount;
+        }
     }
 
-    public void remove() throws ConcurrentModificationException, IllegalStateException {
-      if (modCount!=m) throw new ConcurrentModificationException("in iterator "+this);
-      if (status != 1)
-        throw new IllegalStateException("remove() must be called after next()");
-      AbstractList.this.remove(i-1);
-      status = 0;
-      m++;
-      i--;
-      if (modCount!=m) throw new ConcurrentModificationException("the list is co-modified ! while removing");
+    /**
+     * Constructs a new instance of this AbstractList.
+     */
+    protected AbstractList() {
+        super();
     }
 
-  }
-
-  public Iterator iterator() {
-    return new _Iterator();
-  }
-
-  public ListIterator listIterator() throws UnsupportedOperationException {
-//    throw new UnsupportedOperationException();
-  	return listIterator(0);
-  }
-
-  public ListIterator listIterator(int index) throws UnsupportedOperationException {
-//    throw new UnsupportedOperationException();
-   	return new _ListIterator(index);
-  }
-
-  private class _ListIterator implements ListIterator {
-
-    private int current;
-    private int status = 1;//nothing
-    private int m = modCount;
-
-    _ListIterator() {
-      	this(0);
-    }
-    _ListIterator(int first) {
-      current = first;
-    }
-
-    public boolean hasNext() {
-      return (size() > current);
+    /**
+     * Inserts the specified object into this List at the specified location.
+     * The object is inserted before any previous element at the specified
+     * location. If the location is equal to the size of this List, the object
+     * is added at the end.
+     * <p>
+     * Concrete implementations that would like to support the add functionality
+     * must override this method.
+     *
+     * @param location
+     *            the index at which to insert.
+     * @param object
+     *            the object to add.
+     * 
+     * @throws UnsupportedOperationException
+     *                if adding to this List is not supported.
+     * @throws ClassCastException
+     *                if the class of the object is inappropriate for this
+     *                List
+     * @throws IllegalArgumentException
+     *                if the object cannot be added to this List
+     * @throws IndexOutOfBoundsException
+     *                if {@code location < 0 || >= size()}
+     */
+    public void add(int location, Object object) {
+        throw new UnsupportedOperationException();
     }
 
-    public Object next() {
-      if (modCount!=m) throw new ConcurrentModificationException();
-      if (size() <= current) {
-        throw new NoSuchElementException("No next element");
-      }
-      Object answer = get(current);
-      current++;
-      status = -1;
-      return answer;
+    /**
+     * Adds the specified object at the end of this List.
+     * 
+     * 
+     * @param object
+     *            the object to add
+     * @return true
+     * 
+     * @throws UnsupportedOperationException
+     *                if adding to this List is not supported
+     * @throws ClassCastException
+     *                if the class of the object is inappropriate for this
+     *                List
+     * @throws IllegalArgumentException
+     *                if the object cannot be added to this List
+     */
+    public boolean add(Object object) {
+        add(size(), object);
+        return true;
     }
 
-    public boolean hasPrevious() {
-      return (current > 0);
+    /**
+     * Inserts the objects in the specified Collection at the specified location
+     * in this List. The objects are added in the order they are returned from
+     * the collection's iterator.
+     * 
+     * @param location
+     *            the index at which to insert.
+     * @param collection
+     *            the Collection of objects
+     * @return {@code true} if this List is modified, {@code false} otherwise.
+     * @throws UnsupportedOperationException
+     *             if adding to this list is not supported.
+     * @throws ClassCastException
+     *             if the class of an object is inappropriate for this list.
+     * @throws IllegalArgumentException
+     *             if an object cannot be added to this list.
+     * @throws IndexOutOfBoundsException
+     *             if {@code location < 0 || > size()}
+     */
+    public boolean addAll(int location, Collection collection) {
+        Iterator it = collection.iterator();
+        while (it.hasNext()) {
+            add(location++, it.next());
+        }
+        return !collection.isEmpty();
     }
 
-    public Object previous() {
-      if (modCount!=m) throw new ConcurrentModificationException();
-      if (current <= 0) {
-        throw new NoSuchElementException("No previous element");
-      }
-      current--;
-      status = 0;
-      return get(current);
+    /**
+     * Removes all elements from this list, leaving it empty.
+     * 
+     * @throws UnsupportedOperationException
+     *             if removing from this list is not supported.
+     * @see List#isEmpty
+     * @see List#size
+     */
+    public void clear() {
+        removeRange(0, size());
     }
 
-    public int nextIndex() {
-      return current;
+    /**
+     * Compares the specified object to this list and return true if they are
+     * equal. Two lists are equal when they both contain the same objects in the
+     * same order.
+     * 
+     * @param object
+     *            the object to compare to this object.
+     * @return {@code true} if the specified object is equal to this list,
+     *         {@code false} otherwise.
+     * @see #hashCode
+     */
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object instanceof List) {
+            List list = (List) object;
+            if (list.size() != size()) {
+                return false;
+            }
+
+            Iterator it1 = iterator(), it2 = list.iterator();
+            while (it1.hasNext()) {
+                Object e1 = it1.next(), e2 = it2.next();
+                if (!(e1 == null ? e2 == null : e1.equals(e2))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
-    public int previousIndex() {
-      return current -1;
+    /**
+     * Returns the element at the specified location in this list.
+     * 
+     * @param location
+     *            the index of the element to return.
+     * @return the element at the specified index.
+     * @throws IndexOutOfBoundsException
+     *             if {@code location < 0 || >= size()}
+     */
+    public abstract Object get(int location);
+
+    /**
+     * Returns the hash code of this list. The hash code is calculated by taking
+     * each element's hashcode into account.
+     * 
+     * @return the hash code.
+     * @see #equals
+     * @see List#hashCode()
+     */
+    public int hashCode() {
+        int result = 1;
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            Object object = it.next();
+            result = (31 * result) + (object == null ? 0 : object.hashCode());
+        }
+        return result;
     }
 
-    public void remove() {
-      	if (modCount!=m) throw new ConcurrentModificationException();
-    	if ( status == 1 ) throw new IllegalStateException("remove must be called after next or previous");
-      AbstractList.this.remove(current+status);
-    	if ( status == -1 ) current--;
-    	status = 1;
-    	m++;
+    /**
+     * Searches this list for the specified object and returns the index of the
+     * first occurrence.
+     * 
+     * @param object
+     *            the object to search for.
+     * @return the index of the first occurrence of the object, or -1 if it was
+     *         not found.
+     */
+    public int indexOf(Object object) {
+        ListIterator it = listIterator();
+        if (object != null) {
+            while (it.hasNext()) {
+                if (object.equals(it.next())) {
+                    return it.previousIndex();
+                }
+            }
+        } else {
+            while (it.hasNext()) {
+                if (it.next() == null) {
+                    return it.previousIndex();
+                }
+            }
+        }
+        return -1;
     }
 
-    public void set(Object o) {
-        if (modCount!=m) throw new ConcurrentModificationException();
-    	if ( status == 1 ) throw new IllegalStateException("set must be called after next or previous");
-      AbstractList.this.set(current+status,o);
-    	m++;
+    /**
+     * Returns an iterator on the elements of this list. The elements are
+     * iterated in the same order as they occur in the list.
+     * 
+     * @return an iterator on the elements of this list.
+     * @see Iterator
+     */
+    public Iterator iterator() {
+        return new SimpleListIterator();
     }
 
-    public void add(Object o) {
-        if (modCount!=m) throw new ConcurrentModificationException();
-        AbstractList.this.add(current++,o);
-        status = 1;
-    	m++;
+    /**
+     * Searches this list for the specified object and returns the index of the
+     * last occurrence.
+     * 
+     * @param object
+     *            the object to search for.
+     * @return the index of the last occurrence of the object, or -1 if the
+     *         object was not found.
+     */
+    public int lastIndexOf(Object object) {
+        ListIterator it = listIterator(size());
+        if (object != null) {
+            while (it.hasPrevious()) {
+                if (object.equals(it.previous())) {
+                    return it.nextIndex();
+                }
+            }
+        } else {
+            while (it.hasPrevious()) {
+                if (it.previous() == null) {
+                    return it.nextIndex();
+                }
+            }
+        }
+        return -1;
     }
 
-  }
-
-  public List subList(int fromIndex, int toIndex) throws UnsupportedOperationException {
-    if (fromIndex < 0 || toIndex > size()) throw new IndexOutOfBoundsException();
-    if (toIndex < fromIndex) throw new IllegalArgumentException();
-    	return new SubList(fromIndex , toIndex, modCount,this);
-  }
-
-
-  private class SubList extends AbstractList {
-  	private int start;
-    private int length;
-    private AbstractList backList;
-  	
-  	public SubList(int from, int to, int mod, AbstractList backing) {
-      start = from;
-      length = to - from;
-      this.modCount=mod;
-      backList=backing;
-   	}
-   	
-   	public int size() {
-   	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
-   	 	return length;
-   	} 	
-   	public Object get(int pos) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
-   	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
-   	 	return backList.get(start+pos);
-   	}
-   	public Object set(int pos, Object o) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
-   	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
-   	 	return backList.set(start+pos,o);
-   	}
-	public void add(int pos, Object o) {   	
-   	 	if ( pos < 0 || pos > length )  throw new IndexOutOfBoundsException();
-   	 	if (this.modCount++ != backList.modCount) throw new ConcurrentModificationException();
-   	 	length++;
-   	 	backList.add(start+pos, o);
-   	}
-   	public boolean addAll(int pos, Collection c) {
-                if (c.isEmpty()) return false;
-    		Iterator it = c.iterator();
-                while (it.hasNext()) {
-      			add(pos++,it.next());
-    		}
-    		return true;
-   	}
-   	public ListIterator listIterator(int idx) {
-   	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
-   	 	return new SubListListIterator(idx,start,length);
-   	}
-   	
-   	public Iterator iterator() {
-   	 	if (this.modCount != backList.modCount) throw new ConcurrentModificationException();
-   		return new SubListListIterator(0,start,length);
-   	}
-   	public Object remove(int pos) {
-   	 	if ( pos < 0 || pos >= length )  throw new IndexOutOfBoundsException();
-   	 	if (this.modCount++ != backList.modCount) throw new ConcurrentModificationException();
-   	 	length--;
-   	 	return backList.remove(start+pos);
-   	}
-   	protected void removeRange(int f, int t) {
-  		if (f < 0) throw new IndexOutOfBoundsException("starting index < 0");
-  		try {
-  	    		while ( f < t ) {
-  			remove(f);
-  			t--;
-  	    		}
-  		}
-  		catch(IndexOutOfBoundsException ioobe) {
-  			throw new NoSuchElementException("reached the end of the list --> stopped removing");
-  		}	
-   	}  	
-  }
-
-  private class SubListListIterator implements ListIterator {
-    private int current;
-    private int status = 0;
-    private int m = modCount;
-    private int size;
-    private int start;
-    SubListListIterator(int start,int length) {
-      	this(0,start,length);
-    }
-    SubListListIterator(int first, int startidx, int length) {
-      current = first;
-      start = startidx;
-      size=length;
+    /**
+     * Returns a ListIterator on the elements of this list. The elements are
+     * iterated in the same order that they occur in the list.
+     * 
+     * @return a ListIterator on the elements of this list
+     * @see ListIterator
+     */
+    public ListIterator listIterator() {
+        return listIterator(0);
     }
 
-    public boolean hasNext() {
-      return (size > current);
+    /**
+     * Returns a list iterator on the elements of this list. The elements are
+     * iterated in the same order as they occur in the list. The iteration
+     * starts at the specified location.
+     * 
+     * @param location
+     *            the index at which to start the iteration.
+     * @return a ListIterator on the elements of this list.
+     * @throws IndexOutOfBoundsException
+     *             if {@code location < 0 || location > size()}
+     * @see ListIterator
+     */
+    public ListIterator listIterator(int location) {
+        return new FullListIterator(location);
     }
 
-    public Object next() {
-      if (modCount!=m) throw new ConcurrentModificationException();
-      if (size <= current) {
-        throw new NoSuchElementException("No next element");
-      }
-      Object answer = get(current);
-      current++;
-      status = -1;
-      return answer;
+    /**
+     * Removes the object at the specified location from this list.
+     * 
+     * @param location
+     *            the index of the object to remove.
+     * @return the removed object.
+     * @throws UnsupportedOperationException
+     *             if removing from this list is not supported.
+     * @throws IndexOutOfBoundsException
+     *             if {@code location < 0 || >= size()}
+     */
+    public Object remove(int location) {
+        throw new UnsupportedOperationException();
     }
 
-    public boolean hasPrevious() {
-      return (current  > 0);
+    /**
+     * Removes the objects in the specified range from the start to the end
+     * index minus one.
+     * 
+     * @param start
+     *            the index at which to start removing.
+     * @param end
+     *            the index after the last element to remove.
+     * @throws UnsupportedOperationException
+     *             if removing from this list is not supported.
+     * @throws IndexOutOfBoundsException
+     *             if {@code start < 0} or {@code start >= size()}.
+     */
+    protected void removeRange(int start, int end) {
+        Iterator it = listIterator(start);
+        for (int i = start; i < end; i++) {
+            it.next();
+            it.remove();
+        }
     }
 
-    public Object previous() {
-      if (modCount!=m) throw new ConcurrentModificationException();
-      if (current <= 0) {
-        throw new NoSuchElementException("No previous element");
-      }
-      current--;
-      status = +1;
-      return get(current);
+    /**
+     * Replaces the element at the specified location in this list with the
+     * specified object.
+     * 
+     * @param location
+     *            the index at which to put the specified object.
+     * @param object
+     *            the object to add.
+     * @return the previous element at the index.
+     * @throws UnsupportedOperationException
+     *             if replacing elements in this list is not supported.
+     * @throws ClassCastException
+     *             if the class of an object is inappropriate for this list.
+     * @throws IllegalArgumentException
+     *             if an object cannot be added to this list.
+     * @throws IndexOutOfBoundsException
+     *             if {@code location < 0 || >= size()}
+     */
+    public Object set(int location, Object object) {
+        throw new UnsupportedOperationException();
     }
 
-    public int nextIndex() {
-      return current;
+    /**
+     * Returns a part of consecutive elements of this list as a view. The
+     * returned view will be of zero length if start equals end. Any change that
+     * occurs in the returned subList will be reflected to the original list,
+     * and vice-versa. All the supported optional operations by the original
+     * list will also be supported by this subList.
+     * <p>
+     * This method can be used as a handy method to do some operations on a sub
+     * range of the original list, for example
+     * {@code list.subList(from, to).clear();}
+     * <p>
+     * If the original list is modified in other ways than through the returned
+     * subList, the behavior of the returned subList becomes undefined.
+     * <p>
+     * The returned subList is a subclass of AbstractList. The subclass stores
+     * offset, size of itself, and modCount of the original list. If the
+     * original list implements RandomAccess interface, the returned subList
+     * also implements RandomAccess interface.
+     * <p>
+     * The subList's set(int, Object), get(int), add(int, Object), remove(int),
+     * addAll(int, Collection) and removeRange(int, int) methods first check the
+     * bounds, adjust offsets and then call the corresponding methods of the
+     * original AbstractList. addAll(Collection c) method of the returned
+     * subList calls the original addAll(offset + size, c).
+     * <p>
+     * The listIterator(int) method of the subList wraps the original list
+     * iterator. The iterator() method of the subList invokes the original
+     * listIterator() method, and the size() method merely returns the size of
+     * the subList.
+     * <p>
+     * All methods will throw a ConcurrentModificationException if the modCount
+     * of the original list is not equal to the expected value.
+     * 
+     * @param start
+     *            start index of the subList (inclusive).
+     * @param end
+     *            end index of the subList, (exclusive).
+     * @return a subList view of this list starting from {@code start}
+     *         (inclusive), and ending with {@code end} (exclusive)
+     * @throws IndexOutOfBoundsException
+     *             if (start < 0 || end > size())
+     * @throws IllegalArgumentException
+     *             if (start > end)
+     */
+    public List subList(int start, int end) {
+        if (0 <= start && end <= size()) {
+            if (start <= end) {
+                if (this instanceof RandomAccess) {
+                    return new SubAbstractListRandomAccess(this, start, end);
+                }
+                return new SubAbstractList(this, start, end);
+            }
+            throw new IllegalArgumentException();
+        }
+        throw new IndexOutOfBoundsException();
     }
-
-    public int previousIndex() {
-      return (current - 1);
-    }
-
-    public void remove() {
-      	if (modCount!=m) throw new ConcurrentModificationException();
-    	if ( status == 0 ) throw new IllegalStateException("remove must be called after next or previous");
-      AbstractList.this.remove(current+status);
-    	if ( status == -1 ) current--;
-    	status = 0;
-    	size--;
-    	m++;
-    }
-
-    public void set(Object o) {
-      if (modCount!=m) throw new ConcurrentModificationException();
-    	if ( status == 0 ) throw new IllegalStateException("set must be called after next or previous");
-      AbstractList.this.set(start+current+status,o);
-    	m++;
-    }
-
-    public void add(Object o) {
-        if (modCount!=m) throw new ConcurrentModificationException();
-      	if (status == 1) current++;
-        AbstractList.this.add(start+current,o);
-        status = 0;
-    	m++;
-    	size++;
-    }
-
-  }
-
-
-
 }
-

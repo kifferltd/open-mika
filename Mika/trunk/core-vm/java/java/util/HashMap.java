@@ -1,41 +1,19 @@
-/* HashMap.java -- a class providing a basic hashtable data structure,
-   mapping Object --> Object
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
-
-This file is part of GNU Classpath.
-
-GNU Classpath is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
-
-GNU Classpath is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Classpath; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-02110-1301 USA.
-
-Linking this library statically or dynamically with other modules is
-making a combined work based on this library.  Thus, the terms and
-conditions of the GNU General Public License cover the whole
-combination.
-
-As a special exception, the copyright holders of this library give you
-permission to link this library with independent modules to produce an
-executable, regardless of the license terms of these independent
-modules, and to copy and distribute the resulting executable under
-terms of your choice, provided that you also meet, for each linked
-independent module, the terms and conditions of the license of that
-module.  An independent module is a module which is not derived from
-or based on this library.  If you modify this library, you may extend
-this exception to your version of the library, but you are not
-obligated to do so.  If you do not wish to do so, delete this
-exception statement from your version. */
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 package java.util;
 
@@ -44,860 +22,776 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-// NOTE: This implementation is very similar to that of Hashtable. If you fix
-// a bug in here, chances are you should make a similar change to the Hashtable
-// code.
-
-// NOTE: This implementation has some nasty coding style in order to
-// support LinkedHashMap, which extends this.
-
 /**
- * This class provides a hashtable-backed implementation of the
- * Map interface.
- * <p>
- *
- * It uses a hash-bucket approach; that is, hash collisions are handled
- * by linking the new node off of the pre-existing node (or list of
- * nodes).  In this manner, techniques such as linear probing (which
- * can cause primary clustering) and rehashing (which does not fit very
- * well with Java's method of precomputing hash codes) are avoided.
- * <p>
- *
- * Under ideal circumstances (no collisions), HashMap offers O(1)
- * performance on most operations (<code>containsValue()</code> is,
- * of course, O(n)).  In the worst case (all keys map to the same
- * hash code -- very unlikely), most operations are O(n).
- * <p>
- *
- * HashMap is part of the JDK1.2 Collections API.  It differs from
- * Hashtable in that it accepts the null key and null values, and it
- * does not support "Enumeration views." Also, it is not synchronized;
- * if you plan to use it in multiple threads, consider using:<br>
- * <code>Map m = Collections.synchronizedMap(new HashMap(...));</code>
- * <p>
- *
- * The iterators are <i>fail-fast</i>, meaning that any structural
- * modification, except for <code>remove()</code> called on the iterator
- * itself, cause the iterator to throw a
- * <code>ConcurrentModificationException</code> rather than exhibit
- * non-deterministic behavior.
- *
- * @author Jon Zeppieri
- * @author Jochen Hoenicke
- * @author Bryce McKinlay
- * @author Eric Blake (ebb9@email.byu.edu)
- * @see Object#hashCode()
- * @see Collection
- * @see Map
- * @see TreeMap
- * @see LinkedHashMap
- * @see IdentityHashMap
- * @see Hashtable
- * @since 1.2
- * @status updated to 1.4
+ * HashMap is an implementation of Map. All optional operations (adding and
+ * removing) are supported. Keys and values can be any objects.
  */
-public class HashMap extends AbstractMap
-  implements Map, Cloneable, Serializable
-{
-  /**
-   * Default number of buckets. This is the value specified in JSR 219. Some
-   * early documentation specified this value as 101. That is incorrect.
-   * Package visible for use by HashSet.
-   */
-  static final int DEFAULT_CAPACITY = 16;
+public class HashMap extends AbstractMap implements Map,
+        Cloneable, Serializable {
 
-  /**
-   * The default load factor; this is explicitly specified by the spec.
-   * Package visible for use by HashSet.
-   */
-  static final float DEFAULT_LOAD_FACTOR = 0.75f;
+    private static final long serialVersionUID = 362498820763181265L;
 
-  /**
-   * Compatible with JDK 1.2.
-   */
-  private static final long serialVersionUID = 362498820763181265L;
-
-  /**
-   * The rounded product of the capacity and the load factor; when the number
-   * of elements exceeds the threshold, the HashMap calls
-   * <code>rehash()</code>.
-   * @serial the threshold for rehashing
-   */
-  private int threshold;
-
-  /**
-   * Load factor of this HashMap:  used in computing the threshold.
-   * Package visible for use by HashSet.
-   * @serial the load factor
-   */
-  final float loadFactor;
-
-  /**
-   * Array containing the actual key-value mappings.
-   * Package visible for use by nested and subclasses.
-   */
-  transient HashEntry[] buckets;
-
-  /**
-   * Counts the number of modifications this HashMap has undergone, used
-   * by Iterators to know when to throw ConcurrentModificationExceptions.
-   * Package visible for use by nested and subclasses.
-   */
-  transient int modCount;
-
-  /**
-   * The size of this HashMap:  denotes the number of key-value pairs.
-   * Package visible for use by nested and subclasses.
-   */
-  transient int size;
-
-  /**
-   * The cache for {@link #entrySet()}.
-   */
-  private transient Set entries;
-
-  /**
-   * Class to represent an entry in the hash table. Holds a single key-value
-   * pair. Package visible for use by subclass.
-   *
-   * @author Eric Blake (ebb9@email.byu.edu)
-   */
-  static class HashEntry extends AbstractMap.BasicMapEntry
-  {
-    /**
-     * The next entry in the linked list. Package visible for use by subclass.
+    /*
+     * Actual count of entries
      */
-    HashEntry next;
+    transient int elementCount;
 
-    /**
-     * Simple constructor.
-     * @param key the key
-     * @param value the value
+    /*
+     * The internal data structure to hold Entries
      */
-    HashEntry(Object key, Object value)
-    {
-      super(key, value);
-    }
+    transient Entry[] elementData;
 
-    /**
-     * Called when this entry is accessed via {@link #put(Object, Object)}.
-     * This version does nothing, but in LinkedHashMap, it must do some
-     * bookkeeping for access-traversal mode.
+    /*
+     * modification count, to keep track of structural modifications between the
+     * HashMap and the iterator
      */
-    void access()
-    {
-    }
+    transient int modCount = 0;
 
-    /**
-     * Called when this entry is removed from the map. This version simply
-     * returns the value, but in LinkedHashMap, it must also do bookkeeping.
-     *
-     * @return the value of this key as it is removed
+    /*
+     * default size that an HashMap created using the default constructor would
+     * have.
      */
-    Object cleanup()
-    {
-      return value;
-    }
-  }
+    private static final int DEFAULT_SIZE = 16;
 
-  /**
-   * Construct a new HashMap with the default capacity (11) and the default
-   * load factor (0.75).
-   */
-  public HashMap()
-  {
-    this(DEFAULT_CAPACITY, DEFAULT_LOAD_FACTOR);
-  }
+    /*
+     * maximum ratio of (stored elements)/(storage size) which does not lead to
+     * rehash
+     */
+    final float loadFactor;
 
-  /**
-   * Construct a new HashMap from the given Map, with initial capacity
-   * the greater of the size of <code>m</code> or the default of 11.
-   * <p>
-   *
-   * Every element in Map m will be put into this new HashMap.
-   *
-   * @param m a Map whose key / value pairs will be put into the new HashMap.
-   *        <b>NOTE: key / value pairs are not cloned in this constructor.</b>
-   * @throws NullPointerException if m is null
-   */
-  public HashMap(Map m)
-  {
-    this(Math.max(m.size() * 2, DEFAULT_CAPACITY), DEFAULT_LOAD_FACTOR);
-    putAll(m);
-  }
+    /*
+     * maximum number of elements that can be put in this map before having to
+     * rehash
+     */
+    int threshold;
 
-  /**
-   * Construct a new HashMap with a specific inital capacity and
-   * default load factor of 0.75.
-   *
-   * @param initialCapacity the initial capacity of this HashMap (&gt;=0)
-   * @throws IllegalArgumentException if (initialCapacity &lt; 0)
-   */
-  public HashMap(int initialCapacity)
-  {
-    this(initialCapacity, DEFAULT_LOAD_FACTOR);
-  }
+    static class Entry extends MapEntry {
+        final int origKeyHash;
 
-  /**
-   * Construct a new HashMap with a specific inital capacity and load factor.
-   *
-   * @param initialCapacity the initial capacity (&gt;=0)
-   * @param loadFactor the load factor (&gt; 0, not NaN)
-   * @throws IllegalArgumentException if (initialCapacity &lt; 0) ||
-   *                                     ! (loadFactor &gt; 0.0)
-   */
-  public HashMap(int initialCapacity, float loadFactor)
-  {
-    if (initialCapacity < 0)
-      throw new IllegalArgumentException("Illegal Capacity: "
-                                         + initialCapacity);
-    if (! (loadFactor > 0)) // check for NaN too
-      throw new IllegalArgumentException("Illegal Load: " + loadFactor);
+        Entry next;
 
-    if (initialCapacity == 0)
-      initialCapacity = 1;
-    buckets = new HashEntry[initialCapacity];
-    this.loadFactor = loadFactor;
-    threshold = (int) (initialCapacity * loadFactor);
-  }
-
-  /**
-   * Returns the number of kay-value mappings currently in this Map.
-   *
-   * @return the size
-   */
-  public int size()
-  {
-    return size;
-  }
-
-  /**
-   * Returns true if there are no key-value mappings currently in this Map.
-   *
-   * @return <code>size() == 0</code>
-   */
-  public boolean isEmpty()
-  {
-    return size == 0;
-  }
-
-  /**
-   * Return the value in this HashMap associated with the supplied key,
-   * or <code>null</code> if the key maps to nothing.  NOTE: Since the value
-   * could also be null, you must use containsKey to see if this key
-   * actually maps to something.
-   *
-   * @param key the key for which to fetch an associated value
-   * @return what the key maps to, if present
-   * @see #put(Object, Object)
-   * @see #containsKey(Object)
-   */
-  public Object get(Object key)
-  {
-    int idx = hash(key);
-    HashEntry e = buckets[idx];
-    while (e != null)
-      {
-        if (equals(key, e.key))
-          return e.value;
-        e = e.next;
-      }
-    return null;
-  }
-
-  /**
-   * Returns true if the supplied object <code>equals()</code> a key
-   * in this HashMap.
-   *
-   * @param key the key to search for in this HashMap
-   * @return true if the key is in the table
-   * @see #containsValue(Object)
-   */
-  public boolean containsKey(Object key)
-  {
-    int idx = hash(key);
-    HashEntry e = buckets[idx];
-    while (e != null)
-      {
-        if (equals(key, e.key))
-          return true;
-        e = e.next;
-      }
-    return false;
-  }
-
-  /**
-   * Puts the supplied value into the Map, mapped by the supplied key.
-   * The value may be retrieved by any object which <code>equals()</code>
-   * this key. NOTE: Since the prior value could also be null, you must
-   * first use containsKey if you want to see if you are replacing the
-   * key's mapping.
-   *
-   * @param key the key used to locate the value
-   * @param value the value to be stored in the HashMap
-   * @return the prior mapping of the key, or null if there was none
-   * @see #get(Object)
-   * @see Object#equals(Object)
-   */
-  public Object put(Object key, Object value)
-  {
-    int idx = hash(key);
-    HashEntry e = buckets[idx];
-
-    while (e != null)
-      {
-        if (equals(key, e.key))
-          {
-            e.access(); // Must call this for bookkeeping in LinkedHashMap.
-            Object r = e.value;
-            e.value = value;
-            return r;
-          }
-        else
-          e = e.next;
-      }
-
-    // At this point, we know we need to add a new entry.
-    modCount++;
-    if (++size > threshold)
-      {
-        rehash();
-        // Need a new hash value to suit the bigger table.
-        idx = hash(key);
-      }
-
-    // LinkedHashMap cannot override put(), hence this call.
-    addEntry(key, value, idx, true);
-    return null;
-  }
-
-  /**
-   * Copies all elements of the given map into this hashtable.  If this table
-   * already has a mapping for a key, the new mapping replaces the current
-   * one.
-   *
-   * @param m the map to be hashed into this
-   */
-  public void putAll(Map m)
-  {
-    Iterator itr = m.entrySet().iterator();
-    while (itr.hasNext())
-      {
-        Map.Entry e = (Map.Entry) itr.next();
-        // Optimize in case the Entry is one of our own.
-        if (e instanceof AbstractMap.BasicMapEntry)
-          {
-            AbstractMap.BasicMapEntry entry = (AbstractMap.BasicMapEntry) e;
-            put(entry.key, entry.value);
-          }
-        else
-          put(e.getKey(), e.getValue());
-      }
-  }
-  
-  /**
-   * Removes from the HashMap and returns the value which is mapped by the
-   * supplied key. If the key maps to nothing, then the HashMap remains
-   * unchanged, and <code>null</code> is returned. NOTE: Since the value
-   * could also be null, you must use containsKey to see if you are
-   * actually removing a mapping.
-   *
-   * @param key the key used to locate the value to remove
-   * @return whatever the key mapped to, if present
-   */
-  public Object remove(Object key)
-  {
-    int idx = hash(key);
-    HashEntry e = buckets[idx];
-    HashEntry last = null;
-
-    while (e != null)
-      {
-        if (equals(key, e.key))
-          {
-            modCount++;
-            if (last == null)
-              buckets[idx] = e.next;
-            else
-              last.next = e.next;
-            size--;
-            // Method call necessary for LinkedHashMap to work correctly.
-            return e.cleanup();
-          }
-        last = e;
-        e = e.next;
-      }
-    return null;
-  }
-
-  /**
-   * Clears the Map so it has no keys. This is O(1).
-   */
-  public void clear()
-  {
-    if (size != 0)
-      {
-        modCount++;
-        Arrays.fill(buckets, null);
-        size = 0;
-      }
-  }
-
-  /**
-   * Returns true if this HashMap contains a value <code>o</code>, such that
-   * <code>o.equals(value)</code>.
-   *
-   * @param value the value to search for in this HashMap
-   * @return true if at least one key maps to the value
-   * @see #containsKey(Object)
-   */
-  public boolean containsValue(Object value)
-  {
-    for (int i = buckets.length - 1; i >= 0; i--)
-      {
-        HashEntry e = buckets[i];
-        while (e != null)
-          {
-            if (equals(value, e.value))
-              return true;
-            e = e.next;
-          }
-      }
-    return false;
-  }
-
-  /**
-   * Returns a shallow clone of this HashMap. The Map itself is cloned,
-   * but its contents are not.  This is O(n).
-   *
-   * @return the clone
-   */
-  public Object clone()
-  {
-    HashMap copy = null;
-    try
-      {
-        copy = (HashMap) super.clone();
-      }
-    catch (CloneNotSupportedException x)
-      {
-        // This is impossible.
-      }
-    copy.buckets = new HashEntry[buckets.length];
-    copy.putAllInternal(this);
-    // Clear the entry cache. AbstractMap.clone() does the others.
-    copy.entries = null;
-    return copy;
-  }
-
-  /**
-   * Returns a "set view" of this HashMap's keys. The set is backed by the
-   * HashMap, so changes in one show up in the other.  The set supports
-   * element removal, but not element addition.
-   *
-   * @return a set view of the keys
-   * @see #values()
-   * @see #entrySet()
-   */
-  public Set keySet()
-  {
-    if (keys == null)
-      // Create an AbstractSet with custom implementations of those methods
-      // that can be overridden easily and efficiently.
-      keys = new AbstractSet()
-      {
-        public int size()
-        {
-          return size;
+        Entry(Object theKey, int hash) {
+            super(theKey, null);
+            this.origKeyHash = hash;
         }
 
-        public Iterator iterator()
-        {
-          // Cannot create the iterator directly, because of LinkedHashMap.
-          return HashMap.this.iterator(KEYS);
+        Entry(Object theKey, Object theValue) {
+            super(theKey, theValue);
+            origKeyHash = (theKey == null ? 0 : computeHashCode(theKey));
         }
 
-        public void clear()
-        {
-          HashMap.this.clear();
-        }
-
-        public boolean contains(Object o)
-        {
-          return containsKey(o);
-        }
-
-        public boolean remove(Object o)
-        {
-          // Test against the size of the HashMap to determine if anything
-          // really got removed. This is necessary because the return value
-          // of HashMap.remove() is ambiguous in the null case.
-          int oldsize = size;
-          HashMap.this.remove(o);
-          return oldsize != size;
-        }
-      };
-    return keys;
-  }
-
-  /**
-   * Returns a "collection view" (or "bag view") of this HashMap's values.
-   * The collection is backed by the HashMap, so changes in one show up
-   * in the other.  The collection supports element removal, but not element
-   * addition.
-   *
-   * @return a bag view of the values
-   * @see #keySet()
-   * @see #entrySet()
-   */
-  public Collection values()
-  {
-    if (values == null)
-      // We don't bother overriding many of the optional methods, as doing so
-      // wouldn't provide any significant performance advantage.
-      values = new AbstractCollection()
-      {
-        public int size()
-        {
-          return size;
-        }
-
-        public Iterator iterator()
-        {
-          // Cannot create the iterator directly, because of LinkedHashMap.
-          return HashMap.this.iterator(VALUES);
-        }
-
-        public void clear()
-        {
-          HashMap.this.clear();
-        }
-      };
-    return values;
-  }
-
-  /**
-   * Returns a "set view" of this HashMap's entries. The set is backed by
-   * the HashMap, so changes in one show up in the other.  The set supports
-   * element removal, but not element addition.<p>
-   *
-   * Note that the iterators for all three views, from keySet(), entrySet(),
-   * and values(), traverse the HashMap in the same sequence.
-   *
-   * @return a set view of the entries
-   * @see #keySet()
-   * @see #values()
-   * @see Map.Entry
-   */
-  public Set entrySet()
-  {
-    if (entries == null)
-      // Create an AbstractSet with custom implementations of those methods
-      // that can be overridden easily and efficiently.
-      entries = new AbstractSet()
-      {
-        public int size()
-        {
-          return size;
-        }
-
-        public Iterator iterator()
-        {
-          // Cannot create the iterator directly, because of LinkedHashMap.
-          return HashMap.this.iterator(ENTRIES);
-        }
-
-        public void clear()
-        {
-          HashMap.this.clear();
-        }
-
-        public boolean contains(Object o)
-        {
-          return getEntry(o) != null;
-        }
-
-        public boolean remove(Object o)
-        {
-          HashEntry e = getEntry(o);
-          if (e != null)
-            {
-              HashMap.this.remove(e.key);
-              return true;
+        public Object clone() {
+            Entry entry = (Entry) super.clone();
+            if (next != null) {
+                entry.next = (Entry) next.clone();
             }
-          return false;
+            return entry;
         }
-      };
-    return entries;
-  }
+    }
 
-  /**
-   * Helper method for put, that creates and adds a new Entry.  This is
-   * overridden in LinkedHashMap for bookkeeping purposes.
-   *
-   * @param key the key of the new Entry
-   * @param value the value
-   * @param idx the index in buckets where the new Entry belongs
-   * @param callRemove whether to call the removeEldestEntry method
-   * @see #put(Object, Object)
-   */
-  void addEntry(Object key, Object value, int idx, boolean callRemove)
-  {
-    HashEntry e = new HashEntry(key, value);
-    e.next = buckets[idx];
-    buckets[idx] = e;
-  }
+    private static class AbstractMapIterator  {
+        private int position = 0;
+        int expectedModCount;
+        Entry futureEntry;
+        Entry currentEntry;
+        Entry prevEntry;
 
-  /**
-   * Helper method for entrySet(), which matches both key and value
-   * simultaneously.
-   *
-   * @param o the entry to match
-   * @return the matching entry, if found, or null
-   * @see #entrySet()
-   */
-  // Package visible, for use in nested classes.
-  final HashEntry getEntry(Object o)
-  {
-    if (! (o instanceof Map.Entry))
-      return null;
-    Map.Entry me = (Map.Entry) o;
-    Object key = me.getKey();
-    int idx = hash(key);
-    HashEntry e = buckets[idx];
-    while (e != null)
-      {
-        if (equals(e.key, key))
-          return equals(e.value, me.getValue()) ? e : null;
-        e = e.next;
-      }
-    return null;
-  }
+        final HashMap associatedMap;
 
-  /**
-   * Helper method that returns an index in the buckets array for `key'
-   * based on its hashCode().  Package visible for use by subclasses.
-   *
-   * @param key the key
-   * @return the bucket number
-   */
-  final int hash(Object key)
-  {
-    return key == null ? 0 : Math.abs(key.hashCode() % buckets.length);
-  }
+        AbstractMapIterator(HashMap hm) {
+            associatedMap = hm;
+            expectedModCount = hm.modCount;
+            futureEntry = null;
+        }
 
-  /**
-   * Generates a parameterized iterator.  Must be overrideable, since
-   * LinkedHashMap iterates in a different order.
-   *
-   * @param type {@link #KEYS}, {@link #VALUES}, or {@link #ENTRIES}
-   * @return the appropriate iterator
-   */
-  Iterator iterator(int type)
-  {
-    return new HashIterator(type);
-  }
+        public boolean hasNext() {
+            if (futureEntry != null) {
+                return true;
+            }
+            while (position < associatedMap.elementData.length) {
+                if (associatedMap.elementData[position] == null) {
+                    position++;
+                } else {
+                    return true;
+                }
+            }
+            return false;
+        }
 
-  /**
-   * A simplified, more efficient internal implementation of putAll(). clone() 
-   * should not call putAll or put, in order to be compatible with the JDK 
-   * implementation with respect to subclasses.
-   *
-   * @param m the map to initialize this from
-   */
-  void putAllInternal(Map m)
-  {
-    Iterator itr = m.entrySet().iterator();
-    size = 0;
-    while (itr.hasNext())
-      {
-        size++;
-	Map.Entry e = (Map.Entry) itr.next();
-	Object key = e.getKey();
-	int idx = hash(key);
-	addEntry(key, e.getValue(), idx, false);
-      }
-  }
+        final void checkConcurrentMod() throws ConcurrentModificationException {
+            if (expectedModCount != associatedMap.modCount) {
+                throw new ConcurrentModificationException();
+            }
+        }
 
-  /**
-   * Increases the size of the HashMap and rehashes all keys to new
-   * array indices; this is called when the addition of a new value
-   * would cause size() &gt; threshold. Note that the existing Entry
-   * objects are reused in the new hash table.
-   *
-   * <p>This is not specified, but the new size is twice the current size
-   * plus one; this number is not always prime, unfortunately.
-   */
-  private void rehash()
-  {
-    HashEntry[] oldBuckets = buckets;
+        final void makeNext() {
+            checkConcurrentMod();
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            if (futureEntry == null) {
+                currentEntry = associatedMap.elementData[position++];
+                futureEntry = currentEntry.next;
+                prevEntry = null;
+            } else {
+                if(currentEntry!=null){
+                    prevEntry = currentEntry;
+                }
+                currentEntry = futureEntry;
+                futureEntry = futureEntry.next;
+            }
+        }
 
-    int newcapacity = (buckets.length * 2) + 1;
-    threshold = (int) (newcapacity * loadFactor);
-    buckets = new HashEntry[newcapacity];
+        public final void remove() {
+            checkConcurrentMod();
+            if (currentEntry==null) {
+                throw new IllegalStateException();
+            }
+            if(prevEntry==null){
+                int index = currentEntry.origKeyHash & (associatedMap.elementData.length - 1);
+                associatedMap.elementData[index] = associatedMap.elementData[index].next;
+            } else {
+                prevEntry.next = currentEntry.next;
+            }
+            currentEntry = null;
+            expectedModCount++;
+            associatedMap.modCount++;
+            associatedMap.elementCount--;
 
-    for (int i = oldBuckets.length - 1; i >= 0; i--)
-      {
-        HashEntry e = oldBuckets[i];
-        while (e != null)
-          {
-            int idx = hash(e.key);
-            HashEntry next = e.next;
-            e.next = buckets[idx];
-            buckets[idx] = e;
-            e = next;
-          }
-      }
-  }
+        }
+    }
 
-  /**
-   * Serializes this object to the given stream.
-   *
-   * @param s the stream to write to
-   * @throws IOException if the underlying stream fails
-   * @serialData the <i>capacity</i>(int) that is the length of the
-   *             bucket array, the <i>size</i>(int) of the hash map
-   *             are emitted first.  They are followed by size entries,
-   *             each consisting of a key (Object) and a value (Object).
-   */
-  private void writeObject(ObjectOutputStream s) throws IOException
-  {
-    // Write the threshold and loadFactor fields.
-    s.defaultWriteObject();
 
-    s.writeInt(buckets.length);
-    s.writeInt(size);
-    // Avoid creating a wasted Set by creating the iterator directly.
-    Iterator it = iterator(ENTRIES);
-    while (it.hasNext())
-      {
-        HashEntry entry = (HashEntry) it.next();
-        s.writeObject(entry.key);
-        s.writeObject(entry.value);
-      }
-  }
+    private static class EntryIterator  extends AbstractMapIterator implements Iterator {
 
-  /**
-   * Deserializes this object from the given stream.
-   *
-   * @param s the stream to read from
-   * @throws ClassNotFoundException if the underlying stream fails
-   * @throws IOException if the underlying stream fails
-   * @serialData the <i>capacity</i>(int) that is the length of the
-   *             bucket array, the <i>size</i>(int) of the hash map
-   *             are emitted first.  They are followed by size entries,
-   *             each consisting of a key (Object) and a value (Object).
-   */
-  private void readObject(ObjectInputStream s)
-    throws IOException, ClassNotFoundException
-  {
-    // Read the threshold and loadFactor fields.
-    s.defaultReadObject();
+        EntryIterator (HashMap map) {
+            super(map);
+        }
 
-    // Read and use capacity, followed by key/value pairs.
-    buckets = new HashEntry[s.readInt()];
-    int len = s.readInt();
-    size = len;
-    while (len-- > 0)
-      {
-        Object key = s.readObject();
-        addEntry(key, s.readObject(), hash(key), false);
-      }
-  }
+        public Object next() {
+            makeNext();
+            return currentEntry;
+        }
+    }
 
-  /**
-   * Iterate over HashMap's entries.
-   * This implementation is parameterized to give a sequential view of
-   * keys, values, or entries.
-   *
-   * @author Jon Zeppieri
-   */
-  private final class HashIterator implements Iterator
-  {
-    /**
-     * The type of this Iterator: {@link #KEYS}, {@link #VALUES},
-     * or {@link #ENTRIES}.
-     */
-    private final int type;
-    /**
-     * The number of modifications to the backing HashMap that we know about.
-     */
-    private int knownMod = modCount;
-    /** The number of elements remaining to be returned by next(). */
-    private int count = size;
-    /** Current index in the physical hash table. */
-    private int idx = buckets.length;
-    /** The last Entry returned by a next() call. */
-    private HashEntry last;
-    /**
-     * The next entry that should be returned by next(). It is set to something
-     * if we're iterating through a bucket that contains multiple linked
-     * entries. It is null if next() needs to find a new bucket.
-     */
-    private HashEntry next;
+    private static class KeyIterator  extends AbstractMapIterator implements Iterator {
 
-    /**
-     * Construct a new HashIterator with the supplied type.
-     * @param type {@link #KEYS}, {@link #VALUES}, or {@link #ENTRIES}
-     */
-    HashIterator(int type)
-    {
-      this.type = type;
+        KeyIterator (HashMap map) {
+            super(map);
+        }
+
+        public Object next() {
+            makeNext();
+            return currentEntry.key;
+        }
+    }
+
+    private static class ValueIterator  extends AbstractMapIterator implements Iterator {
+
+        ValueIterator (HashMap map) {
+            super(map);
+        }
+
+        public Object next() {
+            makeNext();
+            return currentEntry.value;
+        }
+    }
+
+    static class HashMapEntrySet extends AbstractSet {
+        private final HashMap associatedMap;
+
+        public HashMapEntrySet(HashMap hm) {
+            associatedMap = hm;
+        }
+
+        HashMap hashMap() {
+            return associatedMap;
+        }
+
+        public int size() {
+            return associatedMap.elementCount;
+        }
+
+        public void clear() {
+            associatedMap.clear();
+        }
+
+        public boolean remove(Object object) {
+            if (object instanceof Map.Entry) {
+                Map.Entry oEntry = (Map.Entry) object;
+                Entry entry = associatedMap.getEntry(oEntry.getKey());
+                if(valuesEq(entry, oEntry)) {
+                    associatedMap.removeEntry(entry);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public boolean contains(Object object) {
+            if (object instanceof Map.Entry) {
+                Map.Entry oEntry = (Map.Entry) object;
+                Entry entry = associatedMap.getEntry(oEntry.getKey());
+                return valuesEq(entry, oEntry);
+            }
+            return false;
+        }
+
+        private static boolean valuesEq(Entry entry, Map.Entry oEntry) {
+            return (entry != null) &&
+                                   ((entry.value == null) ?
+                                    (oEntry.getValue() == null) :
+                                    (areEqualValues(entry.value, oEntry.getValue())));
+        }
+
+        public Iterator iterator() {
+            return new EntryIterator (associatedMap);
+        }
     }
 
     /**
-     * Returns true if the Iterator has more elements.
-     * @return true if there are more elements
-     * @throws ConcurrentModificationException if the HashMap was modified
+     * Create a new element array
+     *
+     * @param s
+     * @return Reference to the element array
      */
-    public boolean hasNext()
-    {
-      return count > 0;
+    Entry[] newElementArray(int s) {
+        return new Entry[s];
     }
 
     /**
-     * Returns the next element in the Iterator's sequential view.
-     * @return the next element
-     * @throws ConcurrentModificationException if the HashMap was modified
-     * @throws NoSuchElementException if there is none
+     * Constructs a new empty {@code HashMap} instance.
      */
-    public Object next()
-    {
-      if (knownMod != modCount)
-        throw new ConcurrentModificationException();
-      if (count == 0)
-        throw new NoSuchElementException();
-      count--;
-      HashEntry e = next;
-
-      while (e == null)
-        e = buckets[--idx];
-
-      next = e.next;
-      last = e;
-      if (type == VALUES)
-        return e.value;
-      if (type == KEYS)
-        return e.key;
-      return e;
+    public HashMap() {
+        this(DEFAULT_SIZE);
     }
 
     /**
-     * Removes from the backing HashMap the last element which was fetched
-     * with the <code>next()</code> method.
-     * @throws ConcurrentModificationException if the HashMap was modified
-     * @throws IllegalStateException if called when there is no last element
+     * Constructs a new {@code HashMap} instance with the specified capacity.
+     *
+     * @param capacity
+     *            the initial capacity of this hash map.
+     * @throws IllegalArgumentException
+     *                when the capacity is less than zero.
      */
-    public void remove()
-    {
-      if (knownMod != modCount)
-        throw new ConcurrentModificationException();
-      if (last == null)
-        throw new IllegalStateException();
+    public HashMap(int capacity) {
+        this(capacity, 0.75f);  // default load factor of 0.75
+        }
 
-      HashMap.this.remove(last.key);
-      last = null;
-      knownMod++;
+    /**
+     * Calculates the capacity of storage required for storing given number of
+     * elements
+     * 
+     * @param x
+     *            number of elements
+     * @return storage size
+     */
+    private static final int calculateCapacity(int x) {
+        if(x >= 1 << 30){
+            return 1 << 30;
+        }
+        if(x == 0){
+            return 16;
+        }
+        x = x -1;
+        x |= x >> 1;
+        x |= x >> 2;
+        x |= x >> 4;
+        x |= x >> 8;
+        x |= x >> 16;
+        return x + 1;
     }
-  }
+
+    /**
+     * Constructs a new {@code HashMap} instance with the specified capacity and
+     * load factor.
+     *
+     * @param capacity
+     *            the initial capacity of this hash map.
+     * @param loadFactor
+     *            the initial load factor.
+     * @throws IllegalArgumentException
+     *                when the capacity is less than zero or the load factor is
+     *                less or equal to zero.
+     */
+    public HashMap(int capacity, float loadFactor) {
+        if (capacity >= 0 && loadFactor > 0) {
+            capacity = calculateCapacity(capacity);
+            elementCount = 0;
+            elementData = newElementArray(capacity);
+            this.loadFactor = loadFactor;
+            computeThreshold();
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    /**
+     * Constructs a new {@code HashMap} instance containing the mappings from
+     * the specified map.
+     *
+     * @param map
+     *            the mappings to add.
+     */
+    public HashMap(Map map) {
+        this(calculateCapacity(map.size()));
+        putAllImpl(map);
+    }
+
+    /**
+     * Removes all mappings from this hash map, leaving it empty.
+     *
+     * @see #isEmpty
+     * @see #size
+     */
+    public void clear() {
+        if (elementCount > 0) {
+            elementCount = 0;
+            Arrays.fill(elementData, null);
+            modCount++;
+        }
+    }
+
+    /**
+     * Returns a shallow copy of this map.
+     *
+     * @return a shallow copy of this map.
+     */
+    public Object clone() {
+        try {
+            HashMap map = (HashMap) super.clone();
+            map.elementCount = 0;
+            map.elementData = newElementArray(elementData.length);
+            map.putAll(this);
+            
+            return map;
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Computes the threshold for rehashing
+     */
+    private void computeThreshold() {
+        threshold = (int) (elementData.length * loadFactor);
+    }
+
+    /**
+     * Returns whether this map contains the specified key.
+     *
+     * @param key
+     *            the key to search for.
+     * @return {@code true} if this map contains the specified key,
+     *         {@code false} otherwise.
+     */
+    public boolean containsKey(Object key) {
+        Entry m = getEntry(key);
+        return m != null;
+    }
+
+    /**
+     * Returns whether this map contains the specified value.
+     *
+     * @param value
+     *            the value to search for.
+     * @return {@code true} if this map contains the specified value,
+     *         {@code false} otherwise.
+     */
+    public boolean containsValue(Object value) {
+        if (value != null) {
+            for (int i = 0; i < elementData.length; i++) {
+                Entry entry = elementData[i];
+                while (entry != null) {
+                    if (areEqualValues(value, entry.value)) {
+                        return true;
+                    }
+                    entry = entry.next;
+                }
+            }
+        } else {
+            for (int i = 0; i < elementData.length; i++) {
+                Entry entry = elementData[i];
+                while (entry != null) {
+                    if (entry.value == null) {
+                        return true;
+                    }
+                    entry = entry.next;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns a set containing all of the mappings in this map. Each mapping is
+     * an instance of {@link Map.Entry}. As the set is backed by this map,
+     * changes in one will be reflected in the other.
+     *
+     * @return a set of the mappings.
+     */
+    public Set entrySet() {
+        return new HashMapEntrySet(this);
+    }
+
+    /**
+     * Returns the value of the mapping with the specified key.
+     *
+     * @param key
+     *            the key.
+     * @return the value of the mapping with the specified key, or {@code null}
+     *         if no mapping for the specified key is found.
+     */
+    public Object get(Object key) {
+        Entry m = getEntry(key);
+        if (m != null) {
+            return m.value;
+        }
+        return null;
+    }
+
+    final Entry getEntry(Object key) {
+        Entry m;
+        if (key == null) {
+            m = findNullKeyEntry();
+        } else {
+            int hash = computeHashCode(key);
+            int index = hash & (elementData.length - 1);
+            m = findNonNullKeyEntry(key, index, hash);
+        }
+        return m;
+    }
+
+    final Entry findNonNullKeyEntry(Object key, int index, int keyHash) {
+        Entry m = elementData[index];
+        while (m != null
+                && (m.origKeyHash != keyHash || !areEqualKeys(key, m.key))) {
+            m = m.next;
+        }
+        return m;
+    }
+
+    final Entry findNullKeyEntry() {
+        Entry m = elementData[0];
+        while (m != null && m.key != null)
+            m = m.next;
+        return m;
+    }
+
+    /**
+     * Returns whether this map is empty.
+     *
+     * @return {@code true} if this map has no elements, {@code false}
+     *         otherwise.
+     * @see #size()
+     */
+    public boolean isEmpty() {
+        return elementCount == 0;
+    }
+
+    /**
+     * Returns a set of the keys contained in this map. The set is backed by
+     * this map so changes to one are reflected by the other. The set does not
+     * support adding.
+     *
+     * @return a set of the keys.
+     */
+    public Set keySet() {
+        if (keySet == null) {
+            keySet = new AbstractSet() {
+                public boolean contains(Object object) {
+                    return containsKey(object);
+                }
+
+                public int size() {
+                    return HashMap.this.size();
+                }
+
+                public void clear() {
+                    HashMap.this.clear();
+                }
+
+                public boolean remove(Object key) {
+                    Entry entry = HashMap.this.removeEntry(key);
+                    return entry != null;
+                }
+
+                public Iterator iterator() {
+                    return new KeyIterator (HashMap.this);
+                }
+            };
+        }
+        return keySet;
+    }
+
+    /**
+     * Maps the specified key to the specified value.
+     *
+     * @param key
+     *            the key.
+     * @param value
+     *            the value.
+     * @return the value of any previous mapping with the specified key or
+     *         {@code null} if there was no such mapping.
+     */
+    public Object put(Object key, Object value) {
+        return putImpl(key, value);
+    }
+
+    Object putImpl(Object key, Object value) {
+        Entry entry;
+        if(key == null) {
+            entry = findNullKeyEntry();
+            if (entry == null) {
+                modCount++;
+                entry = createHashedEntry(null, 0, 0);
+                if (++elementCount > threshold) {
+                    rehash();
+                }
+            }
+        } else {
+            int hash = computeHashCode(key);
+            int index = hash & (elementData.length - 1);
+            entry = findNonNullKeyEntry(key, index, hash);
+            if (entry == null) {
+                modCount++;
+                entry = createHashedEntry(key, index, hash);
+                if (++elementCount > threshold) {
+                    rehash();
+                }
+            }
+        }
+
+        Object result = entry.value;
+        entry.value = value;
+        return result;
+    }
+
+    Entry createEntry(Object key, int index, Object value) {
+        Entry entry = new Entry(key, value);
+        entry.next = elementData[index];
+        elementData[index] = entry;
+        return entry;
+    }
+
+    Entry createHashedEntry(Object key, int index, int hash) {
+        Entry entry = new Entry(key,hash);
+        entry.next = elementData[index];
+        elementData[index] = entry;
+        return entry;
+    }
+
+    /**
+     * Copies all the mappings in the specified map to this map. These mappings
+     * will replace all mappings that this map had for any of the keys currently
+     * in the given map.
+     *
+     * @param map
+     *            the map to copy mappings from.
+     * @throws NullPointerException
+     *             if {@code map} is {@code null}.
+     */
+    public void putAll(Map map) {
+        if (!map.isEmpty()) {
+            putAllImpl(map);
+        }
+    }
+
+    private void putAllImpl(Map map) {
+        int capacity = elementCount + map.size();
+        if (capacity > threshold) {
+            rehash(capacity);
+        }
+        Iterator iter = map.entrySet().iterator();
+        while (iter.hasNext()) {
+            Map.Entry entry = (Map.Entry)iter.next();
+            putImpl(entry.getKey(), entry.getValue());
+        }
+    }
+
+    void rehash(int capacity) {
+        int length = calculateCapacity((capacity == 0 ? 1 : capacity << 1));
+
+        Entry[] newData = newElementArray(length);
+        for (int i = 0; i < elementData.length; i++) {
+            Entry entry = elementData[i];
+            elementData[i] = null;
+            while (entry != null) {
+                int index = entry.origKeyHash & (length - 1);
+                Entry next = entry.next;
+                entry.next = newData[index];
+                newData[index] = entry;
+                entry = next;
+            }
+        }
+        elementData = newData;
+        computeThreshold();
+    }
+
+    void rehash() {
+        rehash(elementData.length);
+    }
+
+    /**
+     * Removes the mapping with the specified key from this map.
+     *
+     * @param key
+     *            the key of the mapping to remove.
+     * @return the value of the removed mapping or {@code null} if no mapping
+     *         for the specified key was found.
+     */
+    public Object remove(Object key) {
+        Entry entry = removeEntry(key);
+        if (entry != null) {
+            return entry.value;
+        }
+        return null;
+    }
+
+    /*
+     * Remove the given entry from the hashmap.
+     * Assumes that the entry is in the map.
+     */
+    final void removeEntry(Entry entry) {
+        int index = entry.origKeyHash & (elementData.length - 1);
+        Entry m = elementData[index];
+        if (m == entry) {
+            elementData[index] = entry.next;
+        } else {
+            while (m.next != entry) {
+                m = m.next;
+            }
+            m.next = entry.next;
+
+        }
+        modCount++;
+        elementCount--;
+    }
+
+    final Entry removeEntry(Object key) {
+        int index = 0;
+        Entry entry;
+        Entry last = null;
+        if (key != null) {
+            int hash = computeHashCode(key);
+            index = hash & (elementData.length - 1);
+            entry = elementData[index];
+            while (entry != null && !(entry.origKeyHash == hash && areEqualKeys(key, entry.key))) {
+                last = entry;
+                entry = entry.next;
+            }
+        } else {
+            entry = elementData[0];
+            while (entry != null && entry.key != null) {
+                last = entry;
+                entry = entry.next;
+            }
+        }
+        if (entry == null) {
+            return null;
+        }
+        if (last == null) {
+            elementData[index] = entry.next;
+        } else {
+            last.next = entry.next;
+        }
+        modCount++;
+        elementCount--;
+        return entry;
+    }
+
+    /**
+     * Returns the number of elements in this map.
+     *
+     * @return the number of elements in this map.
+     */
+    public int size() {
+        return elementCount;
+    }
+
+    /**
+     * Returns a collection of the values contained in this map. The collection
+     * is backed by this map so changes to one are reflected by the other. The
+     * collection supports remove, removeAll, retainAll and clear operations,
+     * and it does not support add or addAll operations.
+     * <p>
+     * This method returns a collection which is the subclass of
+     * AbstractCollection. The iterator method of this subclass returns a
+     * "wrapper object" over the iterator of map's entrySet(). The {@code size}
+     * method wraps the map's size method and the {@code contains} method wraps
+     * the map's containsValue method.
+     * <p>
+     * The collection is created when this method is called for the first time
+     * and returned in response to all subsequent calls. This method may return
+     * different collections when multiple concurrent calls occur, since no
+     * synchronization is performed.
+     *
+     * @return a collection of the values contained in this map.
+     */
+    public Collection values() {
+        if (valuesCollection == null) {
+            valuesCollection = new AbstractCollection() {
+                public boolean contains(Object object) {
+                    return containsValue(object);
+                }
+
+                public int size() {
+                    return HashMap.this.size();
+                }
+
+                public void clear() {
+                    HashMap.this.clear();
+                }
+
+                public Iterator iterator() {
+                    return new ValueIterator(HashMap.this);
+                }
+            };
+        }
+        return valuesCollection;
+    }
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        stream.defaultWriteObject();
+        stream.writeInt(elementData.length);
+        stream.writeInt(elementCount);
+        Iterator iterator = entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry entry = (Entry) iterator.next();
+            stream.writeObject(entry.key);
+            stream.writeObject(entry.value);
+            entry = entry.next;
+        }
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException,
+            ClassNotFoundException {
+        stream.defaultReadObject();
+        int length = stream.readInt();
+        elementData = newElementArray(length);
+        elementCount = stream.readInt();
+        for (int i = elementCount; --i >= 0;) {
+            Object key = stream.readObject();
+            int index = (null == key) ? 0 : (computeHashCode(key) & (length - 1));
+            createEntry(key, index, stream.readObject());
+        }
+    }
+
+    /*
+     * Contract-related functionality 
+     */
+    static int computeHashCode(Object key) {
+        return key.hashCode();
+}
+
+    static boolean areEqualKeys(Object key1, Object key2) {
+        return (key1 == key2) || key1.equals(key2);
+    }
+    
+    static boolean areEqualValues(Object value1, Object value2) {
+        return (value1 == value2) || value1.equals(value2);
+    }
+    
+    
 }
