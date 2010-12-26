@@ -30,6 +30,6 @@ SubDir WONKA_TOP core-vm src native java util ;
 
 LOCATE_TARGET = $(OROOT)/mika/bin ;
 
-Library $(WONKA_LIB) : Date.c Hashtable.c Arrays.c ;
+Library $(WONKA_LIB) : Date.c Arrays.c ;
 
 SubInclude WONKA_TOP core-vm src native java util zip ;
