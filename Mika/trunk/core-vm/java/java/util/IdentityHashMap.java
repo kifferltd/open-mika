@@ -1,40 +1,23 @@
-/* IdentityHashMap.java -- a class providing a hashtable data structure,
-   mapping Object --> Object, which uses object identity for hashing.
-   Copyright (C) 2001, 2002, 2004, 2005  Free Software Foundation, Inc.
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-This file is part of GNU Classpath.
-
-GNU Classpath is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
-
-GNU Classpath is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with GNU Classpath; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-02110-1301 USA.
-
-Linking this library statically or dynamically with other modules is
-making a combined work based on this library.  Thus, the terms and
-conditions of the GNU General Public License cover the whole
-combination.
-
-As a special exception, the copyright holders of this library give you
-permission to link this library with independent modules to produce an
-executable, regardless of the license terms of these independent
-modules, and to copy and distribute the resulting executable under
-terms of your choice, provided that you also meet, for each linked
-independent module, the terms and conditions of the license of that
-module.  An independent module is a module which is not derived from
-or based on this library.  If you modify this library, you may extend
-this exception to your version of the library, but you are not
-obligated to do so.  If you do not wish to do so, delete this
-exception statement from your version. */
+/*
+ * Imported by CG 20101225 based on Apache Harmony ("enhanced") revision 1043880.
+ */
 
 package java.util;
 
@@ -44,892 +27,765 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 /**
- * This class provides a hashtable-backed implementation of the
- * Map interface, but uses object identity to do its hashing.  In fact,
- * it uses object identity for comparing values, as well. It uses a
- * linear-probe hash table, which may have faster performance
- * than the chaining employed by HashMap.
+ * IdentityHashMap is a variant on HashMap which tests equality by reference
+ * instead of equality by value. Basically, keys and values are compared for
+ * equality by checking if their references are equal rather than by calling the
+ * "equals" function.
  * <p>
- *
- * <em>WARNING: This is not a general purpose map. Because it uses
- * System.identityHashCode and ==, instead of hashCode and equals, for
- * comparison, it violated Map's general contract, and may cause
- * undefined behavior when compared to other maps which are not
- * IdentityHashMaps.  This is designed only for the rare cases when
- * identity semantics are needed.</em> An example use is
- * topology-preserving graph transformations, such as deep cloning,
- * or as proxy object mapping such as in debugging.
+ * <b>Note: This class intentionally violates the general contract of {@code
+ * Map}'s on comparing objects by their {@code equals} method.</b>
  * <p>
- *
- * This map permits <code>null</code> keys and values, and does not
- * guarantee that elements will stay in the same order over time. The
- * basic operations (<code>get</code> and <code>put</code>) take
- * constant time, provided System.identityHashCode is decent. You can
- * tune the behavior by specifying the expected maximum size. As more
- * elements are added, the map may need to allocate a larger table,
- * which can be expensive.
+ * IdentityHashMap uses open addressing (linear probing in particular) for
+ * collision resolution. This is different from HashMap which uses Chaining.
  * <p>
- *
- * This implementation is unsynchronized.  If you want multi-thread
- * access to be consistent, you must synchronize it, perhaps by using
- * <code>Collections.synchronizedMap(new IdentityHashMap(...));</code>.
- * The iterators are <i>fail-fast</i>, meaning that a structural modification
- * made to the map outside of an iterator's remove method cause the
- * iterator, and in the case of the entrySet, the Map.Entry, to
- * fail with a {@link ConcurrentModificationException}.
- *
- * @author Tom Tromey (tromey@redhat.com)
- * @author Eric Blake (ebb9@email.byu.edu)
- * @see System#identityHashCode(Object)
- * @see Collection
- * @see Map
- * @see HashMap
- * @see TreeMap
- * @see LinkedHashMap
- * @see WeakHashMap
+ * Like HashMap, IdentityHashMap is not thread safe, so access by multiple
+ * threads must be synchronized by an external mechanism such as
+ * Collections.synchronizedMap.
+ * 
  * @since 1.4
- * @status updated to 1.4
  */
-public class IdentityHashMap extends AbstractMap
-  implements Map, Serializable, Cloneable
-{
-  /** The default capacity. */
-  private static final int DEFAULT_CAPACITY = 21;
+public class IdentityHashMap extends AbstractMap implements
+        Map, Serializable, Cloneable {
 
-  /**
-   * This object is used to mark deleted items. Package visible for use by
-   * nested classes.
-   */
-  static final Object tombstone = new Object();
+    private static final long serialVersionUID = 8188218128353913216L;
 
-  /**
-   * This object is used to mark empty slots.  We need this because
-   * using null is ambiguous. Package visible for use by nested classes.
-   */
-  static final Object emptyslot = new Object();
+    /*
+     * The internal data structure to hold key value pairs This array holds keys
+     * and values in an alternating fashion.
+     */
+    transient Object[] elementData;
 
-  /**
-   * Compatible with JDK 1.4.
-   */
-  private static final long serialVersionUID = 8188218128353913216L;
+    /* Actual number of key-value pairs. */
+    int size;
 
-  /**
-   * The number of mappings in the table. Package visible for use by nested
-   * classes.
-   * @serial
-   */
-  int size;
+    /*
+     * maximum number of elements that can be put in this map before having to
+     * rehash.
+     */
+    transient int threshold;
 
-  /**
-   * The table itself. Package visible for use by nested classes.
-   */
-  transient Object[] table;
+    /*
+     * default threshold value that an IdentityHashMap created using the default
+     * constructor would have.
+     */
+    private static final int DEFAULT_MAX_SIZE = 21;
 
-  /**
-   * The number of structural modifications made so far. Package visible for
-   * use by nested classes.
-   */
-  transient int modCount;
+    /* Default load factor of 0.75; */
+    private static final int loadFactor = 7500;
 
-  /**
-   * The cache for {@link #entrySet()}.
-   */
-  private transient Set entries;
+    /*
+     * modification count, to keep track of structural modifications between the
+     * IdentityHashMap and the iterator
+     */
+    transient int modCount = 0;
 
-  /**
-   * The threshold for rehashing, which is 75% of (table.length / 2).
-   */
-  private transient int threshold;
+    /*
+     * Object used to represent null keys and values. This is used to
+     * differentiate a literal 'null' key value pair from an empty spot in the
+     * map.
+     */
+    private static final Object NULL_OBJECT = new Object();  //$NON-LOCK-1$
 
-  /**
-   * Create a new IdentityHashMap with the default capacity (21 entries).
-   */
-  public IdentityHashMap()
-  {
-    this(DEFAULT_CAPACITY);
-  }
+    static class IdentityHashMapEntry extends MapEntry {
 
-  /**
-   * Create a new IdentityHashMap with the indicated number of
-   * entries.  If the number of elements added to this hash map
-   * exceeds this maximum, the map will grow itself; however, that
-   * incurs a performance penalty.
-   *
-   * @param max initial size
-   * @throws IllegalArgumentException if max is negative
-   */
-  public IdentityHashMap(int max)
-  {
-    if (max < 0)
-      throw new IllegalArgumentException();
-    // Need at least two slots, or hash() will break.
-    if (max < 2)
-      max = 2;
-    table = new Object[max << 1];
-    Arrays.fill(table, emptyslot);
-    threshold = (max >> 2) * 3;
-  }
+        final Object iKey;
 
-  /**
-   * Create a new IdentityHashMap whose contents are taken from the
-   * given Map.
-   *
-   * @param m The map whose elements are to be put in this map
-   * @throws NullPointerException if m is null
-   */
-  public IdentityHashMap(Map m)
-  {
-    this(Math.max(m.size() << 1, DEFAULT_CAPACITY));
-    putAll(m);
-  }
+        final Object[] elementData;
 
-  /**
-   * Remove all mappings from this map.
-   */
-  public void clear()
-  {
-    if (size != 0)
-      {
-        modCount++;
-        Arrays.fill(table, emptyslot);
-        size = 0;
-      }
-  }
-
-  /**
-   * Creates a shallow copy where keys and values are not cloned.
-   */
-  public Object clone()
-  {
-    try
-      {
-        IdentityHashMap copy = (IdentityHashMap) super.clone();
-        copy.table = (Object[]) table.clone();
-        copy.entries = null; // invalidate the cache
-        return copy;
-      }
-    catch (CloneNotSupportedException e)
-      {
-        // Can't happen.
-        return null;
-      }
-  }
-
-  /**
-   * Tests whether the specified key is in this map.  Unlike normal Maps,
-   * this test uses <code>entry == key</code> instead of
-   * <code>entry == null ? key == null : entry.equals(key)</code>.
-   *
-   * @param key the key to look for
-   * @return true if the key is contained in the map
-   * @see #containsValue(Object)
-   * @see #get(Object)
-   */
-  public boolean containsKey(Object key)
-  {
-    return key == table[hash(key)];
-  }
-
-  /**
-   * Returns true if this HashMap contains the value.  Unlike normal maps,
-   * this test uses <code>entry == value</code> instead of
-   * <code>entry == null ? value == null : entry.equals(value)</code>.
-   *
-   * @param value the value to search for in this HashMap
-   * @return true if at least one key maps to the value
-   * @see #containsKey(Object)
-   */
-  public boolean containsValue(Object value)
-  {
-    for (int i = table.length - 1; i > 0; i -= 2)
-      if (table[i] == value)
-        return true;
-    return false;
-  }
-
-  /**
-   * Returns a "set view" of this Map's entries. The set is backed by
-   * the Map, so changes in one show up in the other.  The set supports
-   * element removal, but not element addition.
-   * <p>
-   *
-   * <em>The semantics of this set, and of its contained entries, are
-   * different from the contract of Set and Map.Entry in order to make
-   * IdentityHashMap work.  This means that while you can compare these
-   * objects between IdentityHashMaps, comparing them with regular sets
-   * or entries is likely to have undefined behavior.</em>  The entries
-   * in this set are reference-based, rather than the normal object
-   * equality.  Therefore, <code>e1.equals(e2)</code> returns
-   * <code>e1.getKey() == e2.getKey() && e1.getValue() == e2.getValue()</code>,
-   * and <code>e.hashCode()</code> returns
-   * <code>System.identityHashCode(e.getKey()) ^
-   *       System.identityHashCode(e.getValue())</code>.
-   * <p>
-   *
-   * Note that the iterators for all three views, from keySet(), entrySet(),
-   * and values(), traverse the Map in the same sequence.
-   *
-   * @return a set view of the entries
-   * @see #keySet()
-   * @see #values()
-   * @see Map.Entry
-   */
-  public Set entrySet()
-  {
-    if (entries == null)
-      entries = new AbstractSet()
-      {
-        public int size()
-        {
-          return size;
+        IdentityHashMapEntry(Object theKey, Object theValue, Object[] elementData) {
+            super(theKey == NULL_OBJECT ? null : theKey,
+                    theValue == NULL_OBJECT ? null : theValue);
+            iKey = theKey;
+            this.elementData = elementData;
         }
 
-        public Iterator iterator()
-        {
-          return new IdentityIterator(ENTRIES);
+        public Object clone() {
+            return super.clone();
         }
 
-        public void clear()
-        {
-          IdentityHashMap.this.clear();
-        }
-
-        public boolean contains(Object o)
-        {
-          if (! (o instanceof Map.Entry))
-            return false;
-          Map.Entry m = (Map.Entry) o;
-          return m.getValue() == table[hash(m.getKey()) + 1];
-        }
-
-        public int hashCode()
-        {
-          return IdentityHashMap.this.hashCode();
-        }
-
-        public boolean remove(Object o)
-        {
-          if (! (o instanceof Map.Entry))
-            return false;
-          Object key = ((Map.Entry) o).getKey();
-          int h = hash(key);
-          if (table[h] == key)
-            {
-              size--;
-              modCount++;
-              table[h] = tombstone;
-              table[h + 1] = tombstone;
-              return true;
-            }
-          return false;
-        }
-      };
-    return entries;
-  }
-
-  /**
-   * Compares two maps for equality. This returns true only if both maps
-   * have the same reference-identity comparisons. While this returns
-   * <code>this.entrySet().equals(m.entrySet())</code> as specified by Map,
-   * this will not work with normal maps, since the entry set compares
-   * with == instead of .equals.
-   *
-   * @param o the object to compare to
-   * @return true if it is equal
-   */
-  public boolean equals(Object o)
-  {
-    // Why did Sun specify this one? The superclass does the right thing.
-    return super.equals(o);
-  }
-
-  /**
-   * Return the value in this Map associated with the supplied key, or
-   * <code>null</code> if the key maps to nothing.
-   *
-   * <p>NOTE: Since the value could also be null, you must use
-   * containsKey to see if this key actually maps to something.
-   * Unlike normal maps, this tests for the key with <code>entry ==
-   * key</code> instead of <code>entry == null ? key == null :
-   * entry.equals(key)</code>.
-   *
-   * @param key the key for which to fetch an associated value
-   * @return what the key maps to, if present
-   * @see #put(Object, Object)
-   * @see #containsKey(Object)
-   */
-  public Object get(Object key)
-  {
-    int h = hash(key);
-    return table[h] == key ? table[h + 1] : null;
-  }
-
-  /**
-   * Returns the hashcode of this map. This guarantees that two
-   * IdentityHashMaps that compare with equals() will have the same hash code,
-   * but may break with comparison to normal maps since it uses
-   * System.identityHashCode() instead of hashCode().
-   *
-   * @return the hash code
-   */
-  public int hashCode()
-  {
-    int hash = 0;
-    for (int i = table.length - 2; i >= 0; i -= 2)
-      {
-        Object key = table[i];
-        if (key == emptyslot || key == tombstone)
-          continue;
-        hash += (System.identityHashCode(key)
-                 ^ System.identityHashCode(table[i + 1]));
-      }
-    return hash;
-  }
-
-  /**
-   * Returns true if there are no key-value mappings currently in this Map
-   * @return <code>size() == 0</code>
-   */
-  public boolean isEmpty()
-  {
-    return size == 0;
-  }
-
-  /**
-   * Returns a "set view" of this Map's keys. The set is backed by the
-   * Map, so changes in one show up in the other.  The set supports
-   * element removal, but not element addition.
-   * <p>
-   *
-   * <em>The semantics of this set are different from the contract of Set
-   * in order to make IdentityHashMap work.  This means that while you can
-   * compare these objects between IdentityHashMaps, comparing them with
-   * regular sets is likely to have undefined behavior.</em>  The hashCode
-   * of the set is the sum of the identity hash codes, instead of the
-   * regular hashCodes, and equality is determined by reference instead
-   * of by the equals method.
-   * <p>
-   *
-   * @return a set view of the keys
-   * @see #values()
-   * @see #entrySet()
-   */
-  public Set keySet()
-  {
-    if (keys == null)
-      keys = new AbstractSet()
-      {
-        public int size()
-        {
-          return size;
-        }
-
-        public Iterator iterator()
-        {
-          return new IdentityIterator(KEYS);
-        }
-
-        public void clear()
-        {
-          IdentityHashMap.this.clear();
-        }
-
-        public boolean contains(Object o)
-        {
-          return containsKey(o);
-        }
-
-        public int hashCode()
-        {
-          int hash = 0;
-          for (int i = table.length - 2; i >= 0; i -= 2)
-            {
-              Object key = table[i];
-              if (key == emptyslot || key == tombstone)
-                continue;
-              hash += System.identityHashCode(key);
-            }
-          return hash;
-
-        }
-
-        public boolean remove(Object o)
-        {
-          int h = hash(o);
-          if (table[h] == o)
-            {
-              size--;
-              modCount++;
-              table[h] = tombstone;
-              table[h + 1] = tombstone;
-              return true;
-            }
-          return false;
-        }
-      };
-    return keys;
-  }
-
-  /**
-   * Puts the supplied value into the Map, mapped by the supplied key.
-   * The value may be retrieved by any object which <code>equals()</code>
-   * this key. NOTE: Since the prior value could also be null, you must
-   * first use containsKey if you want to see if you are replacing the
-   * key's mapping.  Unlike normal maps, this tests for the key
-   * with <code>entry == key</code> instead of
-   * <code>entry == null ? key == null : entry.equals(key)</code>.
-   *
-   * @param key the key used to locate the value
-   * @param value the value to be stored in the HashMap
-   * @return the prior mapping of the key, or null if there was none
-   * @see #get(Object)
-   */
-  public Object put(Object key, Object value)
-  {
-    // Rehash if the load factor is too high.
-    if (size > threshold)
-      {
-        Object[] old = table;
-        // This isn't necessarily prime, but it is an odd number of key/value
-        // slots, which has a higher probability of fewer collisions.
-        table = new Object[(old.length * 2) + 2];
-        Arrays.fill(table, emptyslot);
-        size = 0;
-        threshold = (table.length >>> 3) * 3;
-
-        for (int i = old.length - 2; i >= 0; i -= 2)
-          {
-            Object oldkey = old[i];
-            if (oldkey != tombstone && oldkey != emptyslot)
-              // Just use put.  This isn't very efficient, but it is ok.
-              put(oldkey, old[i + 1]);
-          }
-      }
-
-    int h = hash(key);
-    if (table[h] == key)
-      {
-        Object r = table[h + 1];
-        table[h + 1] = value;
-        return r;
-      }
-
-    // At this point, we add a new mapping.
-    modCount++;
-    size++;
-    table[h] = key;
-    table[h + 1] = value;
-    return null;
-  }
-
-  /**
-   * Copies all of the mappings from the specified map to this. If a key
-   * is already in this map, its value is replaced.
-   *
-   * @param m the map to copy
-   * @throws NullPointerException if m is null
-   */
-  public void putAll(Map m)
-  {
-    // Why did Sun specify this one? The superclass does the right thing.
-    super.putAll(m);
-  }
-
-  /**
-   * Removes from the HashMap and returns the value which is mapped by
-   * the supplied key. If the key maps to nothing, then the HashMap
-   * remains unchanged, and <code>null</code> is returned.
-   *
-   * NOTE: Since the value could also be null, you must use
-   * containsKey to see if you are actually removing a mapping.
-   * Unlike normal maps, this tests for the key with <code>entry ==
-   * key</code> instead of <code>entry == null ? key == null :
-   * entry.equals(key)</code>.
-   *
-   * @param key the key used to locate the value to remove
-   * @return whatever the key mapped to, if present
-   */
-  public Object remove(Object key)
-  {
-    int h = hash(key);
-    if (table[h] == key)
-      {
-        modCount++;
-        size--;
-        Object r = table[h + 1];
-        table[h] = tombstone;
-        table[h + 1] = tombstone;
-        return r;
-      }
-    return null;
-  }
-
-  /**
-   * Returns the number of kay-value mappings currently in this Map
-   * @return the size
-   */
-  public int size()
-  {
-    return size;
-  }
-
-  /**
-   * Returns a "collection view" (or "bag view") of this Map's values.
-   * The collection is backed by the Map, so changes in one show up
-   * in the other.  The collection supports element removal, but not element
-   * addition.
-   * <p>
-   *
-   * <em>The semantics of this set are different from the contract of
-   * Collection in order to make IdentityHashMap work.  This means that
-   * while you can compare these objects between IdentityHashMaps, comparing
-   * them with regular sets is likely to have undefined behavior.</em>
-   * Likewise, contains and remove go by == instead of equals().
-   * <p>
-   *
-   * @return a bag view of the values
-   * @see #keySet()
-   * @see #entrySet()
-   */
-  public Collection values()
-  {
-    if (values == null)
-      values = new AbstractCollection()
-      {
-        public int size()
-        {
-          return size;
-        }
-
-        public Iterator iterator()
-        {
-          return new IdentityIterator(VALUES);
-        }
-
-        public void clear()
-        {
-          IdentityHashMap.this.clear();
-        }
-
-        public boolean remove(Object o)
-        {
-          for (int i = table.length - 1; i > 0; i -= 2)
-            if (table[i] == o)
-              {
-                modCount++;
-                table[i - 1] = tombstone;
-                table[i] = tombstone;
-                size--;
+        public boolean equals(Object object) {
+            if (this == object) {
                 return true;
-              }
-          return false;
+            }
+            if (object instanceof Map.Entry) {
+                Map.Entry entry = (Map.Entry) object;
+                return (key == entry.getKey()) && (value == entry.getValue());
+            }
+            return false;
         }
-      };
-    return values;
-  }
 
-  /**
-   * Helper method which computes the hash code, then traverses the table
-   * until it finds the key, or the spot where the key would go.
-   *
-   * @param key the key to check
-   * @return the index where the key belongs
-   * @see #IdentityHashMap(int)
-   * @see #put(Object, Object)
-   */
-  // Package visible for use by nested classes.
-  int hash(Object key)
-  {
-    // Implementation note: it is feasible for the table to have no
-    // emptyslots, if it is full with entries and tombstones, so we must
-    // remember where we started. If we encounter the key or an emptyslot,
-    // we are done.  If we encounter a tombstone, the key may still be in
-    // the array.  If we don't encounter the key, we use the first emptyslot
-    // or tombstone we encountered as the location where the key would go.
-    // By requiring at least 2 key/value slots, and rehashing at 75%
-    // capacity, we guarantee that there will always be either an emptyslot
-    // or a tombstone somewhere in the table.
-    int h = Math.abs(System.identityHashCode(key) % (table.length >> 1)) << 1;
-    int del = -1;
-    int save = h;
-
-    do
-      {
-        if (table[h] == key)
-          return h;
-        if (table[h] == emptyslot)
-          break;
-        if (table[h] == tombstone && del < 0)
-          del = h;
-        h -= 2;
-        if (h < 0)
-          h = table.length - 2;
-      }
-    while (h != save);
-
-    return del < 0 ? h : del;
-  }
-
-  /**
-   * This class allows parameterized iteration over IdentityHashMaps.  Based
-   * on its construction, it returns the key or value of a mapping, or
-   * creates the appropriate Map.Entry object with the correct fail-fast
-   * semantics and identity comparisons.
-   *
-   * @author Tom Tromey (tromey@redhat.com)
-   * @author Eric Blake (ebb9@email.byu.edu)
-   */
-  private class IdentityIterator implements Iterator
-  {
-    /**
-     * The type of this Iterator: {@link #KEYS}, {@link #VALUES},
-     * or {@link #ENTRIES}.
-     */
-    final int type;
-    /** The number of modifications to the backing Map that we know about. */
-    int knownMod = modCount;
-    /** The number of elements remaining to be returned by next(). */
-    int count = size;
-    /** Location in the table. */
-    int loc = table.length;
-
-    /**
-     * Construct a new Iterator with the supplied type.
-     * @param type {@link #KEYS}, {@link #VALUES}, or {@link #ENTRIES}
-     */
-    IdentityIterator(int type)
-    {
-      this.type = type;
-    }
-
-    /**
-     * Returns true if the Iterator has more elements.
-     * @return true if there are more elements
-     * @throws ConcurrentModificationException if the Map was modified
-     */
-    public boolean hasNext()
-    {
-      if (knownMod != modCount)
-        throw new ConcurrentModificationException();
-      return count > 0;
-    }
-
-    /**
-     * Returns the next element in the Iterator's sequential view.
-     * @return the next element
-     * @throws ConcurrentModificationException if the Map was modified
-     * @throws NoSuchElementException if there is none
-     */
-    public Object next()
-    {
-      if (knownMod != modCount)
-        throw new ConcurrentModificationException();
-      if (count == 0)
-        throw new NoSuchElementException();
-      count--;
-
-      Object key;
-      do
-        {
-          loc -= 2;
-          key = table[loc];
+        public int hashCode() {
+            return System.identityHashCode(key)
+                    ^ System.identityHashCode(value);
         }
-      while (key == emptyslot || key == tombstone);
 
-      return type == KEYS ? key : (type == VALUES ? table[loc + 1]
-                                   : new IdentityEntry(loc));
+        public String toString() {
+            return key + "=" + value; //$NON-NLS-1$
+        }
+
+        public Object setValue(Object object) {
+            int index = findIndex(iKey, elementData);
+            if (elementData[index] == key) {
+                elementData[index + 1] = object;
+            }
+            return super.setValue(object);
+        }
+    }
+
+    static class IdentityHashMapIterator implements Iterator {
+        private int position = 0; // the current position
+
+        // the position of the entry that was last returned from next()
+        private int lastPosition = 0;
+
+        final IdentityHashMap associatedMap;
+
+        int expectedModCount;
+
+        final MapEntry.Type type;
+
+        boolean canRemove = false;
+
+        IdentityHashMapIterator(MapEntry.Type value,
+                IdentityHashMap hm) {
+            associatedMap = hm;
+            type = value;
+            expectedModCount = hm.modCount;
+        }
+
+        public boolean hasNext() {
+            while (position < associatedMap.elementData.length) {
+                // if this is an empty spot, go to the next one
+                if (associatedMap.elementData[position] == null) {
+                    position += 2;
+                } else {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void checkConcurrentMod() throws ConcurrentModificationException {
+            if (expectedModCount != associatedMap.modCount) {
+                throw new ConcurrentModificationException();
+            }
+        }
+
+        public Object next() {
+            checkConcurrentMod();
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+
+            IdentityHashMapEntry result = associatedMap
+                    .getEntry(position);
+            lastPosition = position;
+            position += 2;
+
+            canRemove = true;
+            return type.get(result);
+        }
+
+        public void remove() {
+            checkConcurrentMod();
+            if (!canRemove) {
+                throw new IllegalStateException();
+            }
+
+            canRemove = false;
+            associatedMap.remove(associatedMap.elementData[lastPosition]);
+            position = lastPosition;
+            expectedModCount++;
+        }
+    }
+
+    static class IdentityHashMapEntrySet extends AbstractSet {
+        private final IdentityHashMap associatedMap;
+
+        public IdentityHashMapEntrySet(IdentityHashMap hm) {
+            associatedMap = hm;
+        }
+
+        IdentityHashMap hashMap() {
+            return associatedMap;
+        }
+
+        public int size() {
+            return associatedMap.size;
+        }
+
+        public void clear() {
+            associatedMap.clear();
+        }
+
+        public boolean remove(Object object) {
+            if (contains(object)) {
+                associatedMap.remove(((Map.Entry) object).getKey());
+                return true;
+            }
+            return false;
+        }
+
+        public boolean contains(Object object) {
+            if (object instanceof Map.Entry) {
+                IdentityHashMapEntry entry = associatedMap
+                        .getEntry(((Map.Entry) object).getKey());
+                // we must call equals on the entry obtained from "this"
+                return entry != null && entry.equals(object);
+            }
+            return false;
+        }
+
+        public Iterator iterator() {
+            return new IdentityHashMapIterator(
+                    new MapEntry.Type() {
+                        public Map.Entry get(MapEntry entry) {
+                            return entry;
+                        }
+                    }, associatedMap);
+        }
     }
 
     /**
-     * Removes from the backing Map the last element which was fetched
-     * with the <code>next()</code> method.
-     *
-     * @throws ConcurrentModificationException if the Map was modified
-     * @throws IllegalStateException if called when there is no last element
+     * Creates an IdentityHashMap with default expected maximum size.
      */
-    public void remove()
-    {
-      if (knownMod != modCount)
-        throw new ConcurrentModificationException();
-      if (loc == table.length || table[loc] == tombstone)
-        throw new IllegalStateException();
-      modCount++;
-      size--;
-      table[loc] = tombstone;
-      table[loc + 1] = tombstone;
-      knownMod++;
-    }
-  } // class IdentityIterator
-
-  /**
-   * This class provides Map.Entry objects for IdentityHashMaps.  The entry
-   * is fail-fast, and will throw a ConcurrentModificationException if
-   * the underlying map is modified, or if remove is called on the iterator
-   * that generated this object.  It is identity based, so it violates
-   * the general contract of Map.Entry, and is probably unsuitable for
-   * comparison to normal maps; but it works among other IdentityHashMaps.
-   *
-   * @author Eric Blake (ebb9@email.byu.edu)
-   */
-  private final class IdentityEntry implements Map.Entry
-  {
-    /** The location of this entry. */
-    final int loc;
-    /** The number of modifications to the backing Map that we know about. */
-    final int knownMod = modCount;
-
-    /**
-     * Constructs the Entry.
-     *
-     * @param loc the location of this entry in table
-     */
-    IdentityEntry(int loc)
-    {
-      this.loc = loc;
+    public IdentityHashMap() {
+        this(DEFAULT_MAX_SIZE);
     }
 
     /**
-     * Compares the specified object with this entry, using identity
-     * semantics. Note that this can lead to undefined results with
-     * Entry objects created by normal maps.
-     *
-     * @param o the object to compare
-     * @return true if it is equal
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Creates an IdentityHashMap with the specified maximum size parameter.
+     * 
+     * @param maxSize
+     *            The estimated maximum number of entries that will be put in
+     *            this map.
      */
-    public boolean equals(Object o)
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      if (! (o instanceof Map.Entry))
+    public IdentityHashMap(int maxSize) {
+        if (maxSize >= 0) {
+            this.size = 0;
+            threshold = getThreshold(maxSize);
+            elementData = newElementArray(computeElementArraySize());
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private int getThreshold(int maxSize) {
+        // assign the threshold to maxSize initially, this will change to a
+        // higher value if rehashing occurs.
+        return maxSize > 3 ? maxSize : 3;
+    }
+
+    private int computeElementArraySize() {
+        int arraySize = (int) (((long) threshold * 10000) / loadFactor) * 2;
+        // ensure arraySize is positive, the above cast from long to int type
+        // leads to overflow and negative arraySize if threshold is too big
+        return arraySize < 0 ? -arraySize : arraySize;
+    }
+
+    /**
+     * Create a new element array
+     * 
+     * @param s
+     *            the number of elements
+     * @return Reference to the element array
+     */
+    private Object[] newElementArray(int s) {
+        return new Object[s];
+    }
+
+    /**
+     * Creates an IdentityHashMap using the given map as initial values.
+     * 
+     * @param map
+     *            A map of (key,value) pairs to copy into the IdentityHashMap.
+     */
+    public IdentityHashMap(Map map) {
+        this(map.size() < 6 ? 11 : map.size() * 2);
+        putAllImpl(map);
+    }
+
+    private Object massageValue(Object value) {
+        return ((value == NULL_OBJECT) ? null : value);
+    }
+
+    /**
+     * Removes all elements from this map, leaving it empty.
+     * 
+     * @see #isEmpty()
+     * @see #size()
+     */
+    public void clear() {
+        size = 0;
+        for (int i = 0; i < elementData.length; i++) {
+            elementData[i] = null;
+        }
+        modCount++;
+    }
+
+    /**
+     * Returns whether this map contains the specified key.
+     * 
+     * @param key
+     *            the key to search for.
+     * @return {@code true} if this map contains the specified key,
+     *         {@code false} otherwise.
+     */
+    public boolean containsKey(Object key) {
+        if (key == null) {
+            key = NULL_OBJECT;
+        }
+
+        int index = findIndex(key, elementData);
+        return elementData[index] == key;
+    }
+
+    /**
+     * Returns whether this map contains the specified value.
+     * 
+     * @param value
+     *            the value to search for.
+     * @return {@code true} if this map contains the specified value,
+     *         {@code false} otherwise.
+     */
+    public boolean containsValue(Object value) {
+        if (value == null) {
+            value = NULL_OBJECT;
+        }
+
+        for (int i = 1; i < elementData.length; i = i + 2) {
+            if (elementData[i] == value) {
+                return true;
+            }
+        }
         return false;
-      Map.Entry e = (Map.Entry) o;
-      return table[loc] == e.getKey() && table[loc + 1] == e.getValue();
     }
 
     /**
-     * Returns the key of this entry.
-     *
-     * @return the key
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Returns the value of the mapping with the specified key.
+     * 
+     * @param key
+     *            the key.
+     * @return the value of the mapping with the specified key.
      */
-    public Object getKey()
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      return table[loc];
+    public Object get(Object key) {
+        if (key == null) {
+            key = NULL_OBJECT;
+        }
+
+        int index = findIndex(key, elementData);
+
+        if (elementData[index] == key) {
+            Object result = elementData[index + 1];
+            return massageValue(result);
+        }
+
+        return null;
+    }
+
+    private IdentityHashMapEntry getEntry(Object key) {
+        if (key == null) {
+            key = NULL_OBJECT;
+        }
+
+        int index = findIndex(key, elementData);
+        if (elementData[index] == key) {
+            return getEntry(index);
+        }
+
+        return null;
     }
 
     /**
-     * Returns the value of this entry.
-     *
-     * @return the value
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Convenience method for getting the IdentityHashMapEntry without the
+     * NULL_OBJECT elements
      */
-    public Object getValue()
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      return table[loc + 1];
+    private IdentityHashMapEntry getEntry(int index) {
+        return new IdentityHashMapEntry(elementData[index],
+                elementData[index + 1], elementData);
     }
 
     /**
-     * Returns the hashcode of the entry, using identity semantics.
-     * Note that this can lead to undefined results with Entry objects
-     * created by normal maps.
-     *
-     * @return the hash code
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Returns the index where the key is found at, or the index of the next
+     * empty spot if the key is not found in this table.
      */
-    public int hashCode()
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      return (System.identityHashCode(table[loc])
-              ^ System.identityHashCode(table[loc + 1]));
+    private static int findIndex(Object key, Object[] array) {
+        int length = array.length;
+        int index = getModuloHash(key, length);
+        int last = (index + length - 2) % length;
+        while (index != last) {
+            if (array[index] == key || (array[index] == null)) {
+                /*
+                 * Found the key, or the next empty spot (which means key is not
+                 * in the table)
+                 */
+                break;
+            }
+            index = (index + 2) % length;
+        }
+        return index;
+    }
+
+    private static int getModuloHash(Object key, int length) {
+        return ((System.identityHashCode(key) & 0x7FFFFFFF) % (length / 2)) * 2;
     }
 
     /**
-     * Replaces the value of this mapping, and returns the old value.
-     *
-     * @param value the new value
-     * @return the old value
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Maps the specified key to the specified value.
+     * 
+     * @param key
+     *            the key.
+     * @param value
+     *            the value.
+     * @return the value of any previous mapping with the specified key or
+     *         {@code null} if there was no such mapping.
      */
-    public Object setValue(Object value)
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      Object r = table[loc + 1];
-      table[loc + 1] = value;
-      return r;
+    public Object put(Object key, Object value) {
+        Object _key = key;
+        Object _value = value;
+        if (_key == null) {
+            _key = NULL_OBJECT;
+        }
+
+        if (_value == null) {
+            _value = NULL_OBJECT;
+        }
+
+        int index = findIndex(_key, elementData);
+
+        // if the key doesn't exist in the table
+        if (elementData[index] != _key) {
+            modCount++;
+            if (++size > threshold) {
+                rehash();
+                index = findIndex(_key, elementData);
+            }
+
+            // insert the key and assign the value to null initially
+            elementData[index] = _key;
+            elementData[index + 1] = null;
+        }
+
+        // insert value to where it needs to go, return the old value
+        Object result = elementData[index + 1];
+        elementData[index + 1] = _value;
+
+        return massageValue(result);
+    }
+    
+    /**
+     * Copies all the mappings in the specified map to this map. These mappings
+     * will replace all mappings that this map had for any of the keys currently
+     * in the given map.
+     * 
+     * @param map
+     *            the map to copy mappings from.
+     * @throws NullPointerException
+     *             if {@code map} is {@code null}.
+     */
+    public void putAll(Map map) {
+        putAllImpl(map);
+    }
+
+    private void rehash() {
+        int newlength = elementData.length << 1;
+        if (newlength == 0) {
+            newlength = 1;
+        }
+        Object[] newData = newElementArray(newlength);
+        for (int i = 0; i < elementData.length; i = i + 2) {
+            Object key = elementData[i];
+            if (key != null) {
+                // if not empty
+                int index = findIndex(key, newData);
+                newData[index] = key;
+                newData[index + 1] = elementData[i + 1];
+            }
+        }
+        elementData = newData;
+        computeMaxSize();
+    }
+
+    private void computeMaxSize() {
+        threshold = (int) ((long) (elementData.length / 2) * loadFactor / 10000);
     }
 
     /**
-     * This provides a string representation of the entry. It is of the form
-     * "key=value", where string concatenation is used on key and value.
-     *
-     * @return the string representation
-     * @throws ConcurrentModificationException if the entry was invalidated
-     *         by modifying the Map or calling Iterator.remove()
+     * Removes the mapping with the specified key from this map.
+     * 
+     * @param key
+     *            the key of the mapping to remove.
+     * @return the value of the removed mapping, or {@code null} if no mapping
+     *         for the specified key was found.
      */
-    public String toString()
-    {
-      if (knownMod != modCount || table[loc] == tombstone)
-        throw new ConcurrentModificationException();
-      return table[loc] + "=" + table[loc + 1];
+    public Object remove(Object key) {
+        if (key == null) {
+            key = NULL_OBJECT;
+        }
+
+        boolean hashedOk;
+        int index, next, hash;
+        Object result, object;
+        index = next = findIndex(key, elementData);
+
+        if (elementData[index] != key) {
+            return null;
+        }
+
+        // store the value for this key
+        result = elementData[index + 1];
+
+        // shift the following elements up if needed
+        // until we reach an empty spot
+        int length = elementData.length;
+        while (true) {
+            next = (next + 2) % length;
+            object = elementData[next];
+            if (object == null) {
+                break;
+            }
+
+            hash = getModuloHash(object, length);
+            hashedOk = hash > index;
+            if (next < index) {
+                hashedOk = hashedOk || (hash <= next);
+            } else {
+                hashedOk = hashedOk && (hash <= next);
+            }
+            if (!hashedOk) {
+                elementData[index] = object;
+                elementData[index + 1] = elementData[next + 1];
+                index = next;
+            }
+        }
+
+        size--;
+        modCount++;
+
+        // clear both the key and the value
+        elementData[index] = null;
+        elementData[index + 1] = null;
+
+        return massageValue(result);
     }
-  } // class IdentityEntry
 
-  /**
-   * Reads the object from a serial stream.
-   *
-   * @param s the stream to read from
-   * @throws ClassNotFoundException if the underlying stream fails
-   * @throws IOException if the underlying stream fails
-   * @serialData expects the size (int), followed by that many key (Object)
-   *             and value (Object) pairs, with the pairs in no particular
-   *             order
-   */
-  private void readObject(ObjectInputStream s)
-    throws IOException, ClassNotFoundException
-  {
-    s.defaultReadObject();
+    /**
+     * Returns a set containing all of the mappings in this map. Each mapping is
+     * an instance of {@link Map.Entry}. As the set is backed by this map,
+     * changes in one will be reflected in the other.
+     * 
+     * @return a set of the mappings.
+     */
+    public Set entrySet() {
+        return new IdentityHashMapEntrySet(this);
+    }
 
-    int num = s.readInt();
-    table = new Object[Math.max(num << 1, DEFAULT_CAPACITY) << 1];
-    // Read key/value pairs.
-    while (--num >= 0)
-      put(s.readObject(), s.readObject());
-  }
+    /**
+     * Returns a set of the keys contained in this map. The set is backed by
+     * this map so changes to one are reflected by the other. The set does not
+     * support adding.
+     * 
+     * @return a set of the keys.
+     */
+    public Set keySet() {
+        if (keySet == null) {
+            keySet = new AbstractSet() {
+                public boolean contains(Object object) {
+                    return containsKey(object);
+                }
 
-  /**
-   * Writes the object to a serial stream.
-   *
-   * @param s the stream to write to
-   * @throws IOException if the underlying stream fails
-   * @serialData outputs the size (int), followed by that many key (Object)
-   *             and value (Object) pairs, with the pairs in no particular
-   *             order
-   */
-  private void writeObject(ObjectOutputStream s)
-    throws IOException
-  {
-    s.defaultWriteObject();
-    s.writeInt(size);
-    for (int i = table.length - 2; i >= 0; i -= 2)
-      {
-        Object key = table[i];
-        if (key != tombstone && key != emptyslot)
-          {
-            s.writeObject(key);
-            s.writeObject(table[i + 1]);
-          }
-      }
-  }
+                public int size() {
+                    return IdentityHashMap.this.size();
+                }
+
+                public void clear() {
+                    IdentityHashMap.this.clear();
+                }
+
+                public boolean remove(Object key) {
+                    if (containsKey(key)) {
+                        IdentityHashMap.this.remove(key);
+                        return true;
+                    }
+                    return false;
+                }
+
+                public Iterator iterator() {
+                    return new IdentityHashMapIterator(
+                            new MapEntry.Type() {
+                                public Object get(MapEntry entry) {
+                                    return entry.key;
+                                }
+                            }, IdentityHashMap.this);
+                }
+            };
+        }
+        return keySet;
+    }
+
+    /**
+     * Returns a collection of the values contained in this map. The collection
+     * is backed by this map so changes to one are reflected by the other. The
+     * collection supports remove, removeAll, retainAll and clear operations,
+     * and it does not support add or addAll operations.
+     * <p>
+     * This method returns a collection which is the subclass of
+     * AbstractCollection. The iterator method of this subclass returns a
+     * "wrapper object" over the iterator of map's entrySet(). The {@code size}
+     * method wraps the map's size method and the {@code contains} method wraps
+     * the map's containsValue method.
+     * <p>
+     * The collection is created when this method is called for the first time
+     * and returned in response to all subsequent calls. This method may return
+     * different collections when multiple concurrent calls occur, since no
+     * synchronization is performed.
+     * 
+     * @return a collection of the values contained in this map.
+     */
+    public Collection values() {
+        if (valuesCollection == null) {
+            valuesCollection = new AbstractCollection() {
+                public boolean contains(Object object) {
+                    return containsValue(object);
+                }
+
+                public int size() {
+                    return IdentityHashMap.this.size();
+                }
+
+                public void clear() {
+                    IdentityHashMap.this.clear();
+                }
+
+                public Iterator iterator() {
+                    return new IdentityHashMapIterator(
+                            new MapEntry.Type() {
+                                public Object get(MapEntry entry) {
+                                    return entry.value;
+                                }
+                            }, IdentityHashMap.this);
+                }
+
+                public boolean remove(Object object) {
+                    Iterator it = iterator();
+                    while (it.hasNext()) {
+                        if (object == it.next()) {
+                            it.remove();
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            };
+        }
+        return valuesCollection;
+    }
+
+    /**
+     * Compares this map with other objects. This map is equal to another map is
+     * it represents the same set of mappings. With this map, two mappings are
+     * the same if both the key and the value are equal by reference. When
+     * compared with a map that is not an IdentityHashMap, the equals method is
+     * neither necessarily symmetric (a.equals(b) implies b.equals(a)) nor
+     * transitive (a.equals(b) and b.equals(c) implies a.equals(c)).
+     * 
+     * @param object
+     *            the object to compare to.
+     * @return whether the argument object is equal to this object.
+     */
+    public boolean equals(Object object) {
+        /*
+         * We need to override the equals method in AbstractMap because
+         * AbstractMap.equals will call ((Map) object).entrySet().contains() to
+         * determine equality of the entries, so it will defer to the argument
+         * for comparison, meaning that reference-based comparison will not take
+         * place. We must ensure that all comparison is implemented by methods
+         * in this class (or in one of our inner classes) for reference-based
+         * comparison to take place.
+         */
+        if (this == object) {
+            return true;
+        }
+        if (object instanceof Map) {
+            Map map = (Map) object;
+            if (size() != map.size()) {
+                return false;
+            }
+
+            Set set = entrySet();
+            // ensure we use the equals method of the set created by "this"
+            return set.equals(map.entrySet());
+        }
+        return false;
+    }
+
+    /**
+     * Returns a new IdentityHashMap with the same mappings and size as this
+     * one.
+     * 
+     * @return a shallow copy of this IdentityHashMap.
+     * @see java.lang.Cloneable
+     */
+    public Object clone() {
+        try {
+            IdentityHashMap cloneHashMap = (IdentityHashMap) super
+                    .clone();
+            cloneHashMap.elementData = newElementArray(elementData.length);
+            System.arraycopy(elementData, 0, cloneHashMap.elementData, 0,
+                    elementData.length);
+            return cloneHashMap;
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns whether this IdentityHashMap has no elements.
+     * 
+     * @return {@code true} if this IdentityHashMap has no elements,
+     *         {@code false} otherwise.
+     * @see #size()
+     */
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    /**
+     * Returns the number of mappings in this IdentityHashMap.
+     * 
+     * @return the number of mappings in this IdentityHashMap.
+     */
+    public int size() {
+        return size;
+    }
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        stream.defaultWriteObject();
+        stream.writeInt(size);
+        Iterator iterator = entrySet().iterator();
+        while (iterator.hasNext()) {
+            MapEntry entry = (MapEntry) iterator.next();
+            stream.writeObject(entry.key);
+            stream.writeObject(entry.value);
+        }
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException,
+            ClassNotFoundException {
+        stream.defaultReadObject();
+        int savedSize = stream.readInt();
+        threshold = getThreshold(DEFAULT_MAX_SIZE);
+        elementData = newElementArray(computeElementArraySize());
+        for (int i = savedSize; --i >= 0;) {
+            Object key = stream.readObject();
+            put(key, stream.readObject());
+        }
+        size = savedSize;
+    }
+    
+    private void putAllImpl(Map map) {
+        if (map.entrySet() != null) {
+            super.putAll(map);
+        }
+    }
 }
