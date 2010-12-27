@@ -105,7 +105,6 @@ public class AcuniaInetAddressTest implements Testlet
   {
     harness.checkPoint("InetAddress getByName(random adress) for valid and invalid address strings");
     checkByName("www.kuleuven.ac.be"); //valid adress
-     failByName("kuleuven.ac.be","no http or www on web adress");
      failByName("www.sun","no web adress extension");
     checkByName("users.skynet.be");//valid address start
      failByName("users.skynet.be/bs975938","no extensions");
@@ -113,9 +112,9 @@ public class AcuniaInetAddressTest implements Testlet
      failByName("www.yahoo.com/r/m1","no extensions (redirects to mail)");
      failByName("www.yah123.com","unexisting page");
     checkByName("127.0.0.1"      ); //self
-     failByName("192.168.  8.  2","Name tag no spaces"); //hermeske/librarian, on intranet
-     failByName("195.0.76.33    ","Name tag no spaces"); //hermeske/librarian, on intranet
-     failByName("    195.0.76.33","Name tag no spaces"); //hermeske/librarian, on intranet
+     failByName("192.168.  8.  2","Name tag no spaces");
+     failByName("195.0.76.33    ","Name tag no spaces");
+     failByName("    195.0.76.33","Name tag no spaces");
      failByName("wonka.acunia. com","no spaces allowed");
      failByName(" wonka.acunia.com","no spaces allowed");
      failByName("wonka.acuni a.com","no spaces allowed");
