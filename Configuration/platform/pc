@@ -1,6 +1,7 @@
 CPU_MIPS = 1000 ;
 DEFAULT_HEAP_SIZE default = 64M ;
 USE_NATIVE_MALLOC = true ;
+USE_LIBFFI = true ;
 
 FLOATING_POINT = hauser ;
 SHARED_OBJECTS = true ;
