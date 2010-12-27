@@ -493,17 +493,27 @@ static INLINE w_thread checkThreadPointer(w_thread t) {
   }
   return t;
 }
-#else
-#define checkThreadPointer(t) (t)
-#endif
 
-inline static w_thread  JNIEnv2w_thread(JNIEnv *env) {
+static w_thread  JNIEnv2w_thread(JNIEnv *env) {
   return checkThreadPointer((w_thread)env);
 }
 
-inline static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
+static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
   return &checkThreadPointer(t)->natenv;
 }
+
+#else
+
+#define checkThreadPointer(t) (t)
+
+inline static w_thread  JNIEnv2w_thread(JNIEnv *env) {
+  return (w_thread)env;
+}
+
+inline static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
+  return &(t)->natenv;
+}
+#endif
 
 inline static w_instance JNIEnv2Thread(JNIEnv *env) {
   return JNIEnv2w_thread(env)->Thread;

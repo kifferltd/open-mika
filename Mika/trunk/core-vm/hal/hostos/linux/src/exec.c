@@ -217,8 +217,8 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
         *env3 = *env1;
         for(env2 = (char **)env; *env2; env2++) {
           if((int)*env2 != 0x01) {
-            int j = (int)(index(*(char **)env1, '=') - *env1);
-            int k = (int)(index(*(char **)env2, '=') - *env2);
+            int j = (int)(strchr(*(char **)env1, '=') - *env1);
+            int k = (int)(strchr(*(char **)env2, '=') - *env2);
             if(j == k && strncmp(*env1, *env2, j) == 0) {
               *env3 = *env2;
               *(char **)env2 = (char *)0x1;
@@ -238,7 +238,7 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
         w_printf("Execute command: host_exec: child executing\n");
       }
 
-      if(index(cmd[0], '/')) {
+      if(strchr(cmd[0], '/')) {
         execve(cmd[0], (char **)cmd, (char **)newenv);
       }
       else {
