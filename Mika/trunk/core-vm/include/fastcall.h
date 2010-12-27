@@ -56,7 +56,6 @@
 #define FAST_STRING_CHARAT              11
 #define FAST_STRING_TOSTRING            12
 #define FAST_STRING_STARTSWITH          13
-#define FAST_HASHTABLE_FIRSTBUSYSLOT    14
 #define FAST_CHARACTER_ISLETTER         15
 #define FAST_CHARACTER_ISWHITESPACE     16
 #define FAST_CHARACTER_ISDIGIT_CHAR     17
@@ -92,7 +91,7 @@ typedef w_FastClass* w_fastclass;
 #else
 #define FAST_STATIC_CLASSES 2
 #endif
-#define FAST_VIRTUAL_CLASSES 3
+#define FAST_VIRTUAL_CLASSES 2
 #define FAST_SPECIAL_CLASSES 1
 
 void fastcall_check_invoke_static(w_clazz clazz, unsigned char * bytecodes);

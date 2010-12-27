@@ -695,7 +695,6 @@ extern void fast_String_indexOf_char(w_frame);
 extern void fast_String_charAt(w_frame);
 extern void fast_String_toString(w_frame);
 extern void fast_String_startsWith(w_frame);
-extern void fast_Hashtable_firstBusySlot(w_frame);
 extern void fast_Character_isLetter(w_frame);
 extern void fast_Character_isWhitespace(w_frame);
 extern void fast_Character_isDigit_char(w_frame);
@@ -729,7 +728,7 @@ static w_fast_method fast_method_table[] = {
   fast_String_charAt,
   fast_String_toString,
   fast_String_startsWith,
-  fast_Hashtable_firstBusySlot,
+  NULL,
   fast_Character_isLetter,
   fast_Character_isWhitespace,
   fast_Character_isDigit_char,
@@ -3775,11 +3774,13 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     fast_method_table[short_operand](frame);
 
+/*
 #ifdef RUNTIME_CHECKS
     if(p != frame->auxstack_top) {
       wabort(ABORT_WONKA, "Fast method %d grew aux stack by %d, top = %j\n",short_operand, p - frame->auxstack_top, frame->auxstack_top[-1]);
     }
 #endif
+*/
 
     if (thread->exception) {
       do_the_exception;
