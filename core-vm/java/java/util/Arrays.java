@@ -145,6 +145,20 @@ public class Arrays {
         /* empty */
     }
 
+   /**
+    * Returns a {@code List} of the objects in the specified array. The size of the
+    * {@code List} cannot be modified, i.e. adding and removing are unsupported, but
+    * the elements can be set. Setting an element modifies the underlying
+    * array.
+    * 
+    * @param array
+    *            the array.
+    * @return a {@code List} of the elements of the specified array.
+    */
+    public static List asList(Object[] array) {
+        return new ArrayList(array);
+    }
+
     /**
      * Performs a binary search for the specified element in the specified
      * ascending sorted array. Searching in an unsorted array has an undefined
