@@ -15,6 +15,10 @@
  *  limitations under the License.
  */
 
+/*
+ * Imported by CG 20101225 based on Apache Harmony ("enhanced") revision 929253.
+ */
+
 package java.util;
 
 import java.io.IOException;
