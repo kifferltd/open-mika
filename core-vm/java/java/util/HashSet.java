@@ -1,322 +1,213 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-
-/**
- * $Id: HashSet.java,v 1.2 2006/03/29 09:27:14 cvs Exp $
+/*
+ * Imported by CG 20101225 based on Apache Harmony ("enhanced") revision 929253.
  */
 
 package java.util;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-public class HashSet extends AbstractSet implements Set, Cloneable, Serializable {
+/**
+ * HashSet is an implementation of a Set. All optional operations (adding and
+ * removing) are supported. The elements can be any objects.
+ */
+public class HashSet extends AbstractSet implements Set, Cloneable,
+        Serializable {
 
-  private static final long serialVersionUID = -5024744406713321676L;
+    private static final long serialVersionUID = -5024744406713321676L;
 
-  private static int defaultSize = HashMap.DEFAULT_CAPACITY;
-  private static float defaultLoadFactor= 0.75f;
-  final static Object nullKey = new Object();
+    transient HashMap backingMap;
 
-  transient int modCount;
-
-  transient float loadFactor;
-  transient int occupancy;
-  transient int capacity;
-  transient int threshold;
-  transient Object[] key;
-
-  public HashSet() {
-  	this(defaultSize,defaultLoadFactor);
-  }
-
-  public HashSet(Collection c){
-  	this(1 + (c.size() * 2),defaultLoadFactor);
-    addAll(c);
-  }
-
-  public HashSet(int initCap){
-  	this(initCap,defaultLoadFactor);
-  }
-
-  public HashSet(int initCap, float loadFactor){
-    if (initCap < 0 || loadFactor < 0.0f) {
-      throw new IllegalArgumentException();
-    }
-    initCap = (initCap < 5 ? 5 : initCap);
-    capacity = initCap;
-    if(loadFactor > 1.0f){
-      loadFactor = defaultLoadFactor;
-    }
-    this.loadFactor = loadFactor;
-    key = new Object[initCap];
-    threshold =  (int)(loadFactor * initCap);
-  }
-
-  public boolean add(Object key) {
-    if(key == null) {
-      key = nullKey;
+    /**
+     * Constructs a new empty instance of {@code HashSet}.
+     */
+    public HashSet() {
+        this(new HashMap());
     }
 
-    int cap = this.capacity;
-    int hashcode = key.hashCode() % cap;
-    Object[] k = this.key;
+    /**
+     * Constructs a new instance of {@code HashSet} with the specified capacity.
+     * 
+     * @param capacity
+     *            the initial capacity of this {@code HashSet}.
+     */
+    public HashSet(int capacity) {
+        this(new HashMap(capacity));
+    }
 
-    do {
-      if(hashcode < 0){
-        hashcode += cap;
-      }
-      Object o = k[hashcode];
+    /**
+     * Constructs a new instance of {@code HashSet} with the specified capacity
+     * and load factor.
+     * 
+     * @param capacity
+     *            the initial capacity.
+     * @param loadFactor
+     *            the initial load factor.
+     */
+    public HashSet(int capacity, float loadFactor) {
+        this(new HashMap(capacity, loadFactor));
+    }
 
-      if(o == null) {
-        modCount++;
-        k[hashcode] = key;
-        if(++this.occupancy >= threshold){
-          resize();
+    /**
+     * Constructs a new instance of {@code HashSet} containing the unique
+     * elements in the specified collection.
+     * 
+     * @param collection
+     *            the collection of elements to add.
+     */
+    public HashSet(Collection collection) {
+        this(new HashMap(collection.size() < 6 ? 11 : collection
+                .size() * 2));
+        Iterator iter = collection.iterator();
+        while (iter.hasNext()) {
+            Object e = iter.next();
+            add(e);
         }
-        return true;
-      }
-      else if(key.equals(o)) {
-        return false;
-      }
-      hashcode--;
-
-    } while(true);
-  }
-
-  public int size() {
-    return occupancy;
-  }
-
-  public boolean isEmpty() {
-   	return (occupancy == 0);
-  }
-
-  public boolean remove(Object rkey){
-
-    if(rkey == null) {
-      rkey = nullKey;
     }
 
-    int cap = this.capacity;
-    int hashcode = rkey.hashCode() % cap;
-    Object[] k = this.key;
-
-    do {
-      if(hashcode < 0){
-        hashcode += cap;
-      }
-
-      Object o = k[hashcode];
-
-      if(o == null) {
-        return false;
-      }
-      else if(rkey.equals(o)) {
-        modCount++;
-        deleteSlot(hashcode);
-        return true;
-      }
-      hashcode--;
-    } while(true);
-  }
-
-  public Iterator iterator() {
-    return new HashSetIterator();
-  }
-
-  public void clear(){
-    if(occupancy > 0){
-      modCount++;
-      occupancy=0;
-      key = new Object[capacity];
+    HashSet(HashMap backingMap) {
+        this.backingMap = backingMap;
     }
-  }
 
-  public Object clone(){
-  	HashSet h = null;
-  	try {
-  	 	h = (HashSet) super.clone();
-	   	h.key = (Object[])this.key.clone();
-  	}
-  	catch(CloneNotSupportedException cnse){}
-  	return h;
-  }
-
-  public boolean contains(Object key) {
-    int nextSlot = firstBusySlot(0);
-    if (key == null){
-      key = nullKey;
+    /**
+     * Adds the specified object to this {@code HashSet} if not already present.
+     * 
+     * @param object
+     *            the object to add.
+     * @return {@code true} when this {@code HashSet} did not already contain
+     *         the object, {@code false} otherwise
+     */
+    public boolean add(Object object) {
+        return backingMap.put(object, this) == null;
     }
-    Object[] k = this.key;
-    while(nextSlot>=0) {
-      if(key.equals(k[nextSlot])) {
-        return true;
-      }
-      nextSlot = firstBusySlot(nextSlot+1);
+
+    /**
+     * Removes all elements from this {@code HashSet}, leaving it empty.
+     * 
+     * @see #isEmpty
+     * @see #size
+     */
+    public void clear() {
+        backingMap.clear();
     }
-    return false;
-  }
 
-
-  int firstBusySlot(int i) {
-    Object[] key = this.key;
-    int capacity = this.capacity;
-    if (i<0) {
-      return -1;
-    }
-    for( ; i < capacity; ++i) {
-      if (key[i] != null){
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  private void resize() {
-    int oldsize = this.capacity;
-    int newsize = oldsize * 2 + 1;
-    Object[] oldkeys = this.key;
-    this.key = new Object[newsize];
-    this.capacity = newsize;
-    this.occupancy = 0;
-    this.threshold = (int)(loadFactor * newsize);
-
-    for (int oldindex = 0; oldindex < oldsize; ++oldindex) {
-      Object key = oldkeys[oldindex];
-      if (key != null)
-        this.add(key);
-    }
-  }
-
-  void deleteSlot(int slotIndex) {
-    int vacant, current, home, distance1, distance2;
-    boolean happy;
-    --occupancy;
-    current = slotIndex;
-
-    Object[] key = this.key;
-    int capacity = this.capacity;
-
-    while(true) {
-    // R1
-      key[current] = null;
-      vacant = current;
-    // R2
-      happy = true;
-      while(happy) {
-        current = current==0 ? capacity-1 : current-1;
-    // R3
-        if (key[current] == null) {
-          return; // normal termination
+    /**
+     * Returns a new {@code HashSet} with the same elements and size as this
+     * {@code HashSet}.
+     * 
+     * @return a shallow copy of this {@code HashSet}.
+     * @see java.lang.Cloneable
+     */
+    public Object clone() {
+        try {
+            HashSet clone = (HashSet) super.clone();
+            clone.backingMap = (HashMap) backingMap.clone();
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            return null;
         }
-        home = key[current].hashCode() % capacity;
-        if(home < 0){
-          home += capacity;
+    }
+
+    /**
+     * Searches this {@code HashSet} for the specified object.
+     * 
+     * @param object
+     *            the object to search for.
+     * @return {@code true} if {@code object} is an element of this
+     *         {@code HashSet}, {@code false} otherwise.
+     */
+    public boolean contains(Object object) {
+        return backingMap.containsKey(object);
+    }
+
+    /**
+     * Returns true if this {@code HashSet} has no elements, false otherwise.
+     * 
+     * @return {@code true} if this {@code HashSet} has no elements,
+     *         {@code false} otherwise.
+     * @see #size
+     */
+    public boolean isEmpty() {
+        return backingMap.isEmpty();
+    }
+
+    /**
+     * Returns an Iterator on the elements of this {@code HashSet}.
+     * 
+     * @return an Iterator on the elements of this {@code HashSet}.
+     * @see Iterator
+     */
+    public Iterator iterator() {
+        return backingMap.keySet().iterator();
+    }
+
+    /**
+     * Removes the specified object from this {@code HashSet}.
+     * 
+     * @param object
+     *            the object to remove.
+     * @return {@code true} if the object was removed, {@code false} otherwise.
+     */
+    public boolean remove(Object object) {
+        return backingMap.remove(object) != null;
+    }
+
+    /**
+     * Returns the number of elements in this {@code HashSet}.
+     * 
+     * @return the number of elements in this {@code HashSet}.
+     */
+    public int size() {
+        return backingMap.size();
+    }
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        stream.defaultWriteObject();
+        stream.writeInt(backingMap.elementData.length);
+        stream.writeFloat(backingMap.loadFactor);
+        stream.writeInt(backingMap.elementCount);
+        for (int i = backingMap.elementData.length; --i >= 0;) {
+            HashMap.Entry entry = backingMap.elementData[i];
+            while (entry != null) {
+                stream.writeObject(entry.key);
+                entry = entry.next;
+            }
         }
-        distance1 = current<=home ? home - current : capacity + home - current;
-        distance2 = current<=vacant ? vacant - current : capacity + vacant - current;
-        happy = distance1<distance2;
-      // back to R2
-      }
-    // R4
-      key[vacant] = key[current];
-    // repeat from R1 ...
     }
-  }
 
-  private class HashSetIterator implements Iterator {
-
-  	private int mc;
-  	private int pos;
-  	private int oldpos;
-  	
-  	public HashSetIterator(){
-  		mc = modCount;
-  		pos = firstBusySlot(0);
-  		oldpos = pos;
-  	}	
-  	
-  	public boolean hasNext() {
-      return (pos != -1);
-  	}
-  	
-  	public Object next() {
-      if (pos == -1) {
-        throw new NoSuchElementException();  	       	 	
-      }
-      if (mc != modCount) {
-        throw new ConcurrentModificationException();
-      }
-      Object e = key[pos];
-      oldpos = pos;
-      pos = firstBusySlot(pos+1);
-      return (nullKey == e ? null : e);		  	
-  	} 	
-  	
-  	public void remove() {
-      if (oldpos == pos) {
-        throw new IllegalStateException();
-      }
-      if (mc != modCount) {
-        throw new ConcurrentModificationException();
-      }
-      deleteSlot(oldpos);
-      oldpos = pos; 	
-  	}
-  }
-
-  private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException {
-    int cap = s.readInt();
-    capacity = cap;
-    threshold = (int)(cap * loadFactor);
-    loadFactor = s.readFloat();
-    int occ = s.readInt();
-    key = new Object[cap];
-    while(occ-- > 0){
-      add(s.readObject());
-      occ--;
+    private void readObject(ObjectInputStream stream) throws IOException,
+            ClassNotFoundException {
+        stream.defaultReadObject();
+        int length = stream.readInt();
+        float loadFactor = stream.readFloat();
+        backingMap = createBackingMap(length, loadFactor);
+        int elementCount = stream.readInt();
+        for (int i = elementCount; --i >= 0;) {
+            Object key = stream.readObject();
+            backingMap.put(key, this);
+        }
     }
-  }
 
-  private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException {
-    s.writeInt(capacity);
-    s.writeFloat(loadFactor);
-    int occ = this.occupancy;
-    s.writeInt(occ);
-    int i = 0;
-    Object[] k = key;
-    while(occ > 0){
-      while(k[i] == null){
-        i++;
-      }
-      s.writeObject(k[i++]);
-      occ--;
+    HashMap createBackingMap(int capacity, float loadFactor) {
+        return new HashMap(capacity, loadFactor);
     }
-  }
 }

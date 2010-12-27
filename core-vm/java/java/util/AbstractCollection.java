@@ -1,184 +1,399 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 /*
-** $Id: AbstractCollection.java,v 1.2 2006/02/27 11:46:39 cvs Exp $
-*/
+ * Imported by CG 20101225 based on Apache Harmony ("enhanced") revision 929253.
+ */
 
 package java.util;
 
+import java.lang.reflect.Array;
+
+/**
+ * Class {@code AbstractCollection} is an abstract implementation of the {@code
+ * Collection} interface. A subclass must implement the abstract methods {@code
+ * iterator()} and {@code size()} to create an immutable collection. To create a
+ * modifiable collection it's necessary to override the {@code add()} method that
+ * currently throws an {@code UnsupportedOperationException}.
+ *
+ * @since 1.2
+ */
 public abstract class AbstractCollection implements Collection {
 
-  protected AbstractCollection() {
-  }
-
-  public abstract Iterator iterator();
-
-  public abstract int size();
-
-  public boolean isEmpty() {
-    return (size() == 0);
-  }
-
-  public boolean contains(Object o) throws UnsupportedOperationException {
-    Iterator it = iterator();
-    if (o==null) {
-      while (it.hasNext()) {
-        if (it.next()==null) return true;
-      }
-    }
-    else {
-      while (it.hasNext()) {
-        if (o.equals(it.next())) return true;
-      }
+    /**
+     * Constructs a new instance of this AbstractCollection.
+     */
+    protected AbstractCollection() {
+        super();
     }
 
-    return false;
-  }
-
-  public Object[] toArray() {
-
-    Iterator it = iterator();
-    Object[] newArray = new Object[size()];
-    int counter = 0;
-
-    while (it.hasNext()) {
-      newArray[counter++]=it.next();
+    public boolean add(Object object) {
+        throw new UnsupportedOperationException();
     }
-    return newArray;
-  }
 
-  public Object[] toArray(Object[] a) throws NullPointerException, ArrayStoreException {
-    if (a.length < size()) {
-      Class ctype = a.getClass().getComponentType();
-      a = (Object[]) java.lang.reflect.Array.newInstance(ctype,size());
+    /**
+     * Attempts to add all of the objects contained in {@code collection}
+     * to the contents of this {@code Collection} (optional). This implementation
+     * iterates over the given {@code Collection} and calls {@code add} for each
+     * element. If any of these calls return {@code true}, then {@code true} is
+     * returned as result of this method call, {@code false} otherwise. If this
+     * {@code Collection} does not support adding elements, an {@code
+     * UnsupportedOperationException} is thrown.
+     * <p>
+     * If the passed {@code Collection} is changed during the process of adding elements
+     * to this {@code Collection}, the behavior depends on the behavior of the passed
+     * {@code Collection}.
+     * 
+     * @param collection
+     *            the collection of objects.
+     * @return {@code true} if this {@code Collection} is modified, {@code false}
+     *         otherwise.
+     * @throws UnsupportedOperationException
+     *                if adding to this {@code Collection} is not supported.
+     * @throws ClassCastException
+     *                if the class of an object is inappropriate for this
+     *                {@code Collection}.
+     * @throws IllegalArgumentException
+     *                if an object cannot be added to this {@code Collection}.
+     * @throws NullPointerException
+     *                if {@code collection} is {@code null}, or if it contains
+     *                {@code null} elements and this {@code Collection} does not support
+     *                such elements.
+     */
+    public boolean addAll(Collection collection) {
+        boolean result = false;
+        Iterator it = collection.iterator();
+        while (it.hasNext()) {
+            if (add(it.next())) {
+                result = true;
+            }
+        }
+        return result;
     }
-    Object[] b = toArray();
-    System.arraycopy(b, 0, a, 0, size());
-    if (a.length > size()) {
-     	a[size()] = null;
+
+    /**
+     * Removes all elements from this {@code Collection}, leaving it empty (optional).
+     * This implementation iterates over this {@code Collection} and calls the {@code
+     * remove} method on each element. If the iterator does not support removal
+     * of elements, an {@code UnsupportedOperationException} is thrown.
+     * <p>
+     * Concrete implementations usually can clear a {@code Collection} more efficiently
+     * and should therefore overwrite this method.
+     * 
+     * @throws UnsupportedOperationException
+     *                it the iterator does not support removing elements from
+     *                this {@code Collection}
+     * @see #iterator
+     * @see #isEmpty
+     * @see #size
+     */
+    public void clear() {
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            it.next();
+            it.remove();
+        }
     }
-    return a;
-  }
 
-  public boolean add(Object o) throws UnsupportedOperationException, NullPointerException, ClassCastException, IllegalArgumentException {
-//System.out.println("JV: I need to add something to "+this.getClass().getName());
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean remove(Object o) throws UnsupportedOperationException {
-    Iterator i = iterator();
-    Object ito;
-    while (i.hasNext()) {
-    	ito = i.next();
-    	if ((o==null ? ito == null : o.equals(ito))) {
-//System.out.println("DEBUG trying remove, o = "+o+" class"+o.getClass()+", ito = "+ito+" from "+ito.getClass());    		
-    		i.remove();
-    		return true;
-    	}
-    }
-    return false;
-  }
-
-  public boolean containsAll(Collection c) {
-    Iterator it=c.iterator();
-    while (it.hasNext()) {
-      if ( !contains(it.next()) )
+    /**
+     * Tests whether this {@code Collection} contains the specified object. This
+     * implementation iterates over this {@code Collection} and tests, whether any
+     * element is equal to the given object. If {@code object != null} then
+     * {@code object.equals(e)} is called for each element {@code e} returned by
+     * the iterator until the element is found. If {@code object == null} then
+     * each element {@code e} returned by the iterator is compared with the test
+     * {@code e == null}.
+     * 
+     * @param object
+     *            the object to search for.
+     * @return {@code true} if object is an element of this {@code Collection}, {@code
+     *         false} otherwise.
+     * @throws ClassCastException
+     *                if the object to look for isn't of the correct type.
+     * @throws NullPointerException
+     *                if the object to look for is {@code null} and this
+     *                {@code Collection} doesn't support {@code null} elements.
+     */
+    public boolean contains(Object object) {
+        Iterator it = iterator();
+        if (object != null) {
+            while (it.hasNext()) {
+                if (object.equals(it.next())) {
+                    return true;
+                }
+            }
+        } else {
+            while (it.hasNext()) {
+                if (it.next() == null) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
-    return true;
-  }
 
-  public boolean addAll(Collection c) throws UnsupportedOperationException {
-    Iterator it=c.iterator();
-    boolean modified=false;
-    while (it.hasNext()) {
-      if (add(it.next()) )
-        modified = true;
+    /**
+     * Tests whether this {@code Collection} contains all objects contained in the
+     * specified {@code Collection}. This implementation iterates over the specified
+     * {@code Collection}. If one element returned by the iterator is not contained in
+     * this {@code Collection}, then {@code false} is returned; {@code true} otherwise.
+     * 
+     * @param collection
+     *            the collection of objects.
+     * @return {@code true} if all objects in the specified {@code Collection} are
+     *         elements of this {@code Collection}, {@code false} otherwise.
+     * @throws ClassCastException
+     *                if one or more elements of {@code collection} isn't of the
+     *                correct type.
+     * @throws NullPointerException
+     *                if {@code collection} contains at least one {@code null}
+     *                element and this {@code Collection} doesn't support {@code null}
+     *                elements.
+     * @throws NullPointerException
+     *                if {@code collection} is {@code null}.
+     */
+    public boolean containsAll(Collection collection) {
+        Iterator it = collection.iterator();
+        while (it.hasNext()) {
+            if (!contains(it.next())) {
+                return false;
+            }
+        }
+        return true;
     }
-    return modified;
-  }
 
-  public boolean removeAll(Collection c) throws UnsupportedOperationException{
-
-    Iterator it=c.iterator();
-    boolean modified=false;
-    Object o;
-    while (it.hasNext()) {
-    	o = it.next();
-     	while  (remove(o)){
-           modified = true;
-      	}
+    /**
+     * Returns if this {@code Collection} contains no elements. This implementation
+     * tests, whether {@code size} returns 0.
+     * 
+     * @return {@code true} if this {@code Collection} has no elements, {@code false}
+     *         otherwise.
+     *
+     * @see #size
+     */
+    public boolean isEmpty() {
+        return size() == 0;
     }
-    return modified;
 
-  }
+    /**
+     * Returns an instance of {@link Iterator} that may be used to access the
+     * objects contained by this {@code Collection}. The order in which the elements are
+     * returned by the {@link Iterator} is not defined unless the instance of the
+     * {@code Collection} has a defined order.  In that case, the elements are returned in that order.
+     * <p>
+     * In this class this method is declared abstract and has to be implemented
+     * by concrete {@code Collection} implementations.
+     * 
+     * @return an iterator for accessing the {@code Collection} contents.
+     */
+    public abstract Iterator iterator();
 
-  public void clear() {
-    Iterator it = iterator();
-    while (it.hasNext()) {
-      it.next();
-      it.remove();
+    /**
+     * Removes one instance of the specified object from this {@code Collection} if one
+     * is contained (optional). This implementation iterates over this
+     * {@code Collection} and tests for each element {@code e} returned by the iterator,
+     * whether {@code e} is equal to the given object. If {@code object != null}
+     * then this test is performed using {@code object.equals(e)}, otherwise
+     * using {@code object == null}. If an element equal to the given object is
+     * found, then the {@code remove} method is called on the iterator and
+     * {@code true} is returned, {@code false} otherwise. If the iterator does
+     * not support removing elements, an {@code UnsupportedOperationException}
+     * is thrown.
+     * 
+     * @param object
+     *            the object to remove.
+     * @return {@code true} if this {@code Collection} is modified, {@code false}
+     *         otherwise.
+     * @throws UnsupportedOperationException
+     *                if removing from this {@code Collection} is not supported.
+     * @throws ClassCastException
+     *                if the object passed is not of the correct type.
+     * @throws NullPointerException
+     *                if {@code object} is {@code null} and this {@code Collection}
+     *                doesn't support {@code null} elements.
+     */
+    public boolean remove(Object object) {
+        Iterator it = iterator();
+        if (object != null) {
+            while (it.hasNext()) {
+                if (object.equals(it.next())) {
+                    it.remove();
+                    return true;
+                }
+            }
+        } else {
+            while (it.hasNext()) {
+                if (it.next() == null) {
+                    it.remove();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
-  }
 
-
-  public boolean retainAll(Collection c) throws UnsupportedOperationException {
-	Iterator it = iterator();
-    	boolean modified=false;
-	Object o;
-    	
-	while (it.hasNext()) {
-        	o = it.next();
-        	if (! c.contains(o)) {
-        	 	it.remove();
-        	        modified=true;
-        	} 	
-	
-	}
-    	return modified;
-  }
-
-
-  public String toString() {
-    StringBuffer buffer = new StringBuffer("[");
-    Iterator iter = iterator();
-    while (iter.hasNext()) {
-      Object element = iter.next();
-      buffer.append(element == this ? 
-          "(this Collection)" : String.valueOf(element)).append(", ");
-      
+    /**
+     * Removes all occurrences in this {@code Collection} of each object in the
+     * specified {@code Collection} (optional). After this method returns none of the
+     * elements in the passed {@code Collection} can be found in this {@code Collection}
+     * anymore.
+     * <p>
+     * This implementation iterates over this {@code Collection} and tests for each
+     * element {@code e} returned by the iterator, whether it is contained in
+     * the specified {@code Collection}. If this test is positive, then the {@code
+     * remove} method is called on the iterator. If the iterator does not
+     * support removing elements, an {@code UnsupportedOperationException} is
+     * thrown.
+     * 
+     * @param collection
+     *            the collection of objects to remove.
+     * @return {@code true} if this {@code Collection} is modified, {@code false}
+     *         otherwise.
+     * @throws UnsupportedOperationException
+     *                if removing from this {@code Collection} is not supported.
+     * @throws ClassCastException
+     *                if one or more elements of {@code collection} isn't of the
+     *                correct type.
+     * @throws NullPointerException
+     *                if {@code collection} contains at least one {@code null}
+     *                element and this {@code Collection} doesn't support {@code null}
+     *                elements.
+     * @throws NullPointerException
+     *                if {@code collection} is {@code null}.
+     */
+    public boolean removeAll(Collection collection) {
+        boolean result = false;
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            if (collection.contains(it.next())) {
+                it.remove();
+                result = true;
+            }
+        }
+        return result;
     }
-    int length = buffer.length();
-    if(length > 1) {
-      buffer.setLength(length - 2);
-      buffer.append(']');
+
+    /**
+     * Removes all objects from this {@code Collection} that are not also found in the
+     * {@code Collection} passed (optional). After this method returns this {@code Collection}
+     * will only contain elements that also can be found in the {@code Collection}
+     * passed to this method.
+     * <p>
+     * This implementation iterates over this {@code Collection} and tests for each
+     * element {@code e} returned by the iterator, whether it is contained in
+     * the specified {@code Collection}. If this test is negative, then the {@code
+     * remove} method is called on the iterator. If the iterator does not
+     * support removing elements, an {@code UnsupportedOperationException} is
+     * thrown.
+     * 
+     * @param collection
+     *            the collection of objects to retain.
+     * @return {@code true} if this {@code Collection} is modified, {@code false}
+     *         otherwise.
+     * @throws UnsupportedOperationException
+     *                if removing from this {@code Collection} is not supported.
+     * @throws ClassCastException
+     *                if one or more elements of {@code collection}
+     *                isn't of the correct type.
+     * @throws NullPointerException
+     *                if {@code collection} contains at least one
+     *                {@code null} element and this {@code Collection} doesn't support
+     *                {@code null} elements.
+     * @throws NullPointerException
+     *                if {@code collection} is {@code null}.
+     */
+    public boolean retainAll(Collection collection) {
+        boolean result = false;
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            if (!collection.contains(it.next())) {
+                it.remove();
+                result = true;
+            }
+        }
+        return result;
     }
-    return buffer.toString();
-  }
+
+    /**
+     * Returns a count of how many objects this {@code Collection} contains.
+     * <p>
+     * In this class this method is declared abstract and has to be implemented
+     * by concrete {@code Collection} implementations.
+     * 
+     * @return how many objects this {@code Collection} contains, or {@code Integer.MAX_VALUE}
+     *         if there are more than {@code Integer.MAX_VALUE} elements in this
+     *         {@code Collection}.
+     */
+    public abstract int size();
+
+    public Object[] toArray() {
+        int size = size(), index = 0;
+        Iterator it = iterator();
+        Object[] array = new Object[size];
+        while (index < size) {
+            array[index++] = it.next();
+        }
+        return array;
+    }
+
+    public Object[] toArray(Object[] contents) {
+        int size = size(), index = 0;
+        if (size > contents.length) {
+            Class ct = contents.getClass().getComponentType();
+            contents = (Object[]) Array.newInstance(ct, size);
+        }
+        Iterator iter = iterator();
+        while (iter.hasNext()) {
+            Object entry = iter.next();
+            contents[index++] = entry;
+        }
+        if (index < contents.length) {
+            contents[index] = null;
+        }
+        return contents;
+    }
+
+    /**
+     * Returns the string representation of this {@code Collection}. The presentation
+     * has a specific format. It is enclosed by square brackets ("[]"). Elements
+     * are separated by ', ' (comma and space).
+     * 
+     * @return the string representation of this {@code Collection}.
+     */
+    public String toString() {
+        if (isEmpty()) {
+            return "[]"; //$NON-NLS-1$
+        }
+
+        StringBuffer buffer = new StringBuffer(size() * 16);
+        buffer.append('[');
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            Object next = it.next();
+            if (next != this) {
+                buffer.append(next);
+            } else {
+                buffer.append("(this Collection)"); //$NON-NLS-1$
+            }
+            if (it.hasNext()) {
+                buffer.append(", "); //$NON-NLS-1$
+            }
+        }
+        buffer.append(']');
+        return buffer.toString();
+    }
 }
