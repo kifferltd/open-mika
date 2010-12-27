@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2003, 2004, 2005, 2007 by Chris Gray, /k/ Embedded  *
-* Java Solutions.  All rights reserved.                                   *
+* Parts copyright (c) 2003, 2004, 2005, 2007, 2010 by Chris Gray,         *
+* /k/ Embedded  Java Solutions.  All rights reserved.                     *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -239,7 +239,7 @@ static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
   return stream;
 }
 
-static inline vfs_FILE *vfs_fopen(const char *path, const char *mode) {
+static vfs_FILE *vfs_fopen(const char *path, const char *mode) {
   w_int      flags = 0;
   w_int      file_desc;
   vfs_FILE   *stream = NULL; 
