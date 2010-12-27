@@ -218,13 +218,9 @@ virtual machine to test
 **/
     try
     {
-      harness.checkPoint("File('',string) = File(string) or file('/string') : One of the next tests WILL fail");
       harness.check(new File("",testfilestring), new File(testfilestring)  );
-      harness.check(new File("",testfilestring), new File(File.separator+testfilestring)  );
 
-      harness.checkPoint("File(File(''),string) = File(string) or file('/string') : One of the next tests WILL fail");
       harness.check(new File(new File(""),testfilestring), new File(testfilestring) );
-      harness.check(new File(new File(""),testfilestring), new File(File.separator+testfilestring) );
     }
     catch(Exception e)
     {

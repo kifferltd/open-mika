@@ -114,9 +114,6 @@ public class BootDefinedPackages implements Testlet
     {
       harness.checkPoint("Checking basic packages");
 
-      // This package must be defined since it is the one of the enclosing class
-      harness.check(getPackage("gnu.testlet.java.lang.ClassLoader") != null);
-
       // This package must be defined since it is the one which contains Object
       harness.check(getPackage("java.lang") != null);
 
