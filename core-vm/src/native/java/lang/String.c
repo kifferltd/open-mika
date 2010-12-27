@@ -1098,7 +1098,6 @@ void fast_String_substring(w_frame frame) {
 
 w_instance String_intern(JNIEnv *env, w_instance thisString) {
   w_thread thread = JNIEnv2w_thread(env);
-  w_string this = String2string(thisString);
   w_instance resultString;
 
   threadMustBeSafe(thread);

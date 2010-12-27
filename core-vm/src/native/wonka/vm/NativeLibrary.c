@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2007, 2008 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Copyright (c) 2007, 2008, 2010 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -29,7 +29,8 @@
 
 #include "core-classes.h"
 #include "fields.h"
-#include "jni.h"
+#include "loading.h"
+#include "misc.h"
 
 void NativeLibrary_finalize(JNIEnv *env, w_instance thisNativeLibrary) {
   void *handle = getWotsitField(thisNativeLibrary, F_NativeLibrary_handle);

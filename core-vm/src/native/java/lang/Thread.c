@@ -527,7 +527,6 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   volatile w_long micros = 0;
 
   if (millis < 0 || nanos < 0 || nanos >= 1000000) {
-    throwException(thread, clazzIllegalArgumentException, NULL);
     return;
   }
 
