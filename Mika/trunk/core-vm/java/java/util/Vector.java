@@ -533,7 +533,7 @@ public class Vector extends AbstractList
 
   }
 
-  public void clear() {
+  public synchronized void clear() {
   	for (int i=0 ; i < elementCount ; i++) {
   	 	elementData[i] = null;
   	}
