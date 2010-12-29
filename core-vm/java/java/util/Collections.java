@@ -404,7 +404,7 @@ public class Collections {
                           return hasNext;
                       }
 
-                      public Map.Entry next() {
+                      public Object next() {
                           if (!hasNext) {
                               throw new NoSuchElementException();
                           }
@@ -1154,7 +1154,7 @@ public class Collections {
                         return iterator.hasNext();
                     }
 
-                    public Map.Entry next() {
+                    public Object next() {
                         return new UnmodifiableMapEntry((Map.Entry)iterator.next());
                     }
 

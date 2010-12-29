@@ -208,7 +208,7 @@ public class LinkedHashMap extends HashMap implements Map {
             super(map);
         }
 
-        public Map.Entry next() {
+        public Object next() {
             makeNext();
             return currentEntry;
         }

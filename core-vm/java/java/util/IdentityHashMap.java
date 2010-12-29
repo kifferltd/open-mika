@@ -239,7 +239,7 @@ public class IdentityHashMap extends AbstractMap implements
         public Iterator iterator() {
             return new IdentityHashMapIterator(
                     new MapEntry.Type() {
-                        public Map.Entry get(MapEntry entry) {
+                        public Object get(MapEntry entry) {
                             return entry;
                         }
                     }, associatedMap);
