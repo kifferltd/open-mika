@@ -1,94 +1,117 @@
-/**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005 by /k/ Embedded Java Solutions.                *
-* All rights reserved.                                                    *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
-**************************************************************************/
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+/*
+ * Imported by CG 20101226 based on Apache Harmony ("enhanced") revision 929253.
+ */
 
 package java.util;
 
-public abstract class AbstractSet extends AbstractCollection implements Set {
+/**
+ * An AbstractSet is an abstract implementation of the Set interface. This
+ * implementation does not support adding. A subclass must implement the
+ * abstract methods iterator() and size().
+ * 
+ * @since 1.2
+ */
+public abstract class AbstractSet extends AbstractCollection implements
+        Set {
 
-  protected AbstractSet() {
-  }
-
-  public boolean equals (Object o) {
-    if (!( o instanceof Set)) return false;
-    // null is no instance of Set !!!
-    if (o == this) return true;
-    Set s = (Set)o;
-    boolean answer = true;
-    answer =(answer && (size() == s.size()));
-    answer =(answer && containsAll(s));
-    return answer;
-  }
-
-  public int hashCode() {
-    int h = 0;
-    Object o;
-    Iterator it = iterator();
-    while (it.hasNext()) {
-      o = it.next();
-      h = h +(o == null ? 0 :o.hashCode());
-    }
-    return h;
-  }
-
-  public boolean removeAll(Collection c) {
-    Iterator it;
-    Object o;
-    boolean result = false;
-
-    if (size() < c.size()) {
-      // this set is smaller than c, iterate over this set and remove each 
-      // element which is present in c
-      it = iterator();
-      while (it.hasNext()) {
-        o = it.next();
-	if (c.contains(o)) {
-	  it.remove();
-	  result = true;
-	}
-      }
-    }
-    else {
-      // this set is at least as big as c, iterate over c and remove each 
-      // element which is present in this set
-      it = c.iterator();
-      while (it.hasNext()) {
-        o = it.next();
-	if (this.contains(o)) {
-	  it.remove();
-	  result = true;
-	}
-      }
+    /**
+     * Constructs a new instance of this AbstractSet.
+     */
+    protected AbstractSet() {
+        super();
     }
 
-    return result;
-  }
+    /**
+     * Compares the specified object to this Set and returns true if they are
+     * equal. The object must be an instance of Set and contain the same
+     * objects.
+     * 
+     * @param object
+     *            the object to compare with this set.
+     * @return {@code true} if the specified object is equal to this set,
+     *         {@code false} otherwise
+     * @see #hashCode
+     */
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object instanceof Set) {
+            Set s = (Set) object;
 
-}  
+            try {
+                return size() == s.size() && containsAll(s);
+            } catch (NullPointerException ignored) {
+                return false;
+            } catch (ClassCastException ignored) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns the hash code for this set. Two set which are equal must return
+     * the same value. This implementation calculates the hash code by adding
+     * each element's hash code.
+     * 
+     * @return the hash code of this set.
+     * @see #equals
+     */
+    public int hashCode() {
+        int result = 0;
+        Iterator it = iterator();
+        while (it.hasNext()) {
+            Object next = it.next();
+            result += next == null ? 0 : next.hashCode();
+        }
+        return result;
+    }
+
+    /**
+     * Removes all occurrences in this collection which are contained in the
+     * specified collection.
+     * 
+     * @param collection
+     *            the collection of objects to remove.
+     * @return {@code true} if this collection was modified, {@code false}
+     *         otherwise.
+     * @throws UnsupportedOperationException
+     *                if removing from this collection is not supported.
+     */
+    public boolean removeAll(Collection collection) {
+        boolean result = false;
+        if (size() <= collection.size()) {
+            Iterator it = iterator();
+            while (it.hasNext()) {
+                if (collection.contains(it.next())) {
+                    it.remove();
+                    result = true;
+                }
+            }
+        } else {
+            Iterator it = collection.iterator();
+            while (it.hasNext()) {
+                result = remove(it.next()) || result;
+            }
+        }
+        return result;
+    }
+}
