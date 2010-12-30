@@ -174,7 +174,7 @@ public class Hashtable extends Dictionary implements Map,
                 }
                 if (lastEntry != null) {
                     canRemove = true;
-                    return (Entry)type.get(lastEntry);
+                    return type.get(lastEntry);
                 }
                 throw new NoSuchElementException();
             }
