@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010, 2011            *
+* by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -70,7 +70,7 @@ void * _allocClearedMem(w_size rsize) {
   if (!chunk) {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
     }
 
@@ -101,7 +101,7 @@ void * _allocMem(w_size rsize) {
   if (!chunk) {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
     }
 
@@ -132,7 +132,7 @@ void * _reallocMem(void * block, w_size newsize) {
   if (!newchunk) {
     w_printf("Failed to reallocate %d bytes\n", newsize);
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, newsize);
     }
 
@@ -394,7 +394,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
       enterUnsafeRegion(thread);
     }
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
     }
 
@@ -433,7 +433,7 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
       enterUnsafeRegion(thread);
     }
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
     }
 
@@ -483,7 +483,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
       enterUnsafeRegion(thread);
     }
 
-    if (thread && thread->Thread) {
+    if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, newsize);
     }
 
