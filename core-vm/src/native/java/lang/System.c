@@ -466,7 +466,7 @@ void System_static_arraycopy(JNIEnv *env, w_instance Class, w_instance Src, w_in
   dstLength = instance2Array_length(Dst);
 
   if (srco < 0 || dsto < 0 || length < 0 || srco > srcLength - length || dsto > dstLength - length) {
-    throwException(thread, clazzArrayIndexOutOfBoundsException, NULL);
+    throwException(thread, clazzArrayIndexOutOfBoundsException, "src offset %d src length %d dst offset %d dst length %d copy length %d", srco, srcLength, dsto, dstLength, length);
     return;
   }
 

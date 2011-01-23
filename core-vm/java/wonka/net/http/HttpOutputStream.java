@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2005, 2011 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -31,7 +31,8 @@
 
 package wonka.net.http;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
 
 class HttpOutputStream extends OutputStream {
 
@@ -86,10 +87,9 @@ class HttpOutputStream extends OutputStream {
   private boolean chunked;
 
   /**
-   ** True iff we are in non-chunked mode and the content-length header has
-   ** yet to be written.
+   ** True iff no content-length header has yet been written.
    */
-  private boolean contentLengthNeeded;
+  private boolean contentLengthNotYetSent;
 
   /**
    ** The BasicHttpURLConnection by which this HttpOutputStream was created.
@@ -104,8 +104,8 @@ class HttpOutputStream extends OutputStream {
   HttpOutputStream(OutputStream out, int contentLength) throws IOException {
     this.out = out;
     this.contentLength = contentLength;
-    contentLengthNeeded = contentLength < 0;
-    buffer = new byte[contentLengthNeeded ? bufsize : contentLength];
+    contentLengthNotYetSent = contentLength < 0;
+    buffer = new byte[contentLengthNotYetSent ? bufsize : contentLength];
   }
 
   /**
@@ -124,9 +124,9 @@ class HttpOutputStream extends OutputStream {
         out.write(NEWLINE,0,2);
       }
       else {
-        if (contentLengthNeeded) {
+        if (contentLengthNotYetSent) {
           out.write(("Content-Length: "+count+"\r\n").getBytes());
-          contentLengthNeeded = false;
+          contentLengthNotYetSent = false;
         }
         out.write(NEWLINE,0,2);
         out.write(buffer,0,count);
@@ -152,9 +152,9 @@ class HttpOutputStream extends OutputStream {
         flushBuffer(buffer, 0);
       }
       else if (count >= contentLength) {
-        if (contentLengthNeeded) {
+        if (contentLengthNotYetSent) {
           out.write(("Content-Length: " + contentLength+"\r\n").getBytes());
-          contentLengthNeeded = false;
+          contentLengthNotYetSent = false;
         }
         out.write(NEWLINE,0,2);
         if (contentLength > 0) {
@@ -231,12 +231,11 @@ class HttpOutputStream extends OutputStream {
    ** already enabled.
    */
   private void flushBuffer(byte[] buf, int off) throws IOException {
-    // if contentLengthNeeded is not set then we already sent a
+    // if contentLengthNotYetSent is not set then we already sent a
     // Content-length, so we mustn't enter chunked mode.
-    if (contentLengthNeeded) {
+    if (contentLengthNotYetSent) {
       if(!chunked){
         chunked = true;
-        contentLengthNeeded = false;
         out.write(CHUNKED,0,CHUNKED.length);
       }
       out.write((Integer.toHexString(count)+"\r\n").getBytes());
