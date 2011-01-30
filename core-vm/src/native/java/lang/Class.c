@@ -155,7 +155,7 @@ w_instance Class_getSuperclass(JNIEnv *env, w_instance Class) {
     woempa(1, "--> is array; returning Object Class.\n");
     Super = clazzObject->Class;
   }
-  else {      
+  else if (mustBeSupersLoaded(clazz) != CLASS_LOADING_FAILED) {
     woempa(1, "--> super class is '%k'.\n", clazz->supers[0]);
     super = getSuper(clazz);
     Super = super ? clazz2Class(super) : NULL;
