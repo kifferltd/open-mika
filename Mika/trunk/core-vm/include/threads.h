@@ -39,8 +39,10 @@
 
 // If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
 // user-defined class loader in each frame.
-#ifdef DEBUG
+#if (defined(DEBUG) || defined(RESMON))
+#ifndef TRACE_CLASSLOADERS
 #define TRACE_CLASSLOADERS
+#endif
 #endif
 
 extern w_size numThreads;
@@ -584,6 +586,30 @@ void setUpRootFrame(w_thread new);
  * Terminate a Wonka thread.
  */
 void terminateThread(w_thread thread);
+
+/*
+ * Definitions used by Object.wait and Thread.sleep; three weeks corresponds to
+ * almost 0x7fffffff millis (0x6C258C00 to be precise).
+ */
+#define THREE_WEEKS_MILLIS 1814400000LL
+#define THREE_WEEKS_TICKS (x_millis2ticks(THREE_WEEKS_MILLIS))
+
+/*
+ * If 'thread' has been interrupted, clear its interrupt flag, throw
+ * InterruptedException, and return true. Otherwise return false.
+ */
+extern w_clazz clazzInterruptedException;
+static w_boolean testForInterrupt(w_thread thread) {
+  if (thread->flags & WT_THREAD_INTERRUPTED) {
+    throwException(thread, clazzInterruptedException, NULL);
+    thread->flags &= ~WT_THREAD_INTERRUPTED;
+
+    return TRUE;
+
+  }
+
+  return FALSE;
+}
 
 /**
  * Logic for recycling native threads: only used if ENABLE_THREAD_RECYCLING
