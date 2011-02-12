@@ -192,7 +192,7 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   else {
 #ifdef HAVE_TIMEDWAIT
     struct timespec ts;
-    x_now_plus_ticks(timeout, &ts);
+    x_now_plus_ticks((x_long)timeout, &ts);
     retcode = pthread_cond_timedwait(&monitor->mon_cond, &monitor->mon_mutex, &ts);
 #else // pthreads lib has no pthread_cond_timed_wait(), fake it
     loempa(2, "Setting thread %p sleep_ticks to %d\n", current, timeout);
