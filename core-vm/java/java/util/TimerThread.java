@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2009 by /k/ Embedded Java Solutions.                *
+* Parts copyright (c) 2009, 2011 by /k/ Embedded Java Solutions.          *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -88,7 +88,7 @@ class TimerThread extends Thread implements Comparator {
               //disturbing any timer tasks ...
               //System.out.println("TIMERTHREAD " + this +": timer is alive");
               waiting = true;
-              this.wait(1000);
+              this.wait();
               waiting = false;
             }
             else {
