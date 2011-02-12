@@ -36,13 +36,18 @@ void _o4p_abort(char *file, int line, int type, char *message, int rc){
   switch(type) {
   case O4P_ABORT_BAD_STATUS:
     _wabort(file, line, ABORT_WONKA, "%s returned '%s'", message, x_status2char(rc));
+    break;
+
   case O4P_ABORT_PTHREAD_RETCODE:
      if (strerror_r(rc, strerror_buf, 64) == 0) {
       _wabort(file, line, ABORT_WONKA, "%s returned '%s'", message, strerror_buf);
     }
-    else {
-      _wabort(file, line, ABORT_WONKA, "%s returned unknown error code %d", message, rc);
-    }
+    break;
+
+  case O4P_ABORT_OVERFLOW:
+    _wabort(file, line, ABORT_WONKA, "%s", message);
+    break;
+
   default:
     _wabort(file, line, ABORT_WONKA, "o4p_abort called with unknown type %d and message '%s'", type, message);
   }
