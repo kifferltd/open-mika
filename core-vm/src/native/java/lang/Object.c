@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002 by Punch Telematix.                      *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2005, 2006, 2008, 2011 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -123,39 +123,62 @@ w_int Object_hashCode(JNIEnv *env, w_instance thisObject) {
   return hashcode;
 }
 
-
 void Object_wait(JNIEnv *env, w_instance thisObject, w_long millis, w_int nanos) {
   w_thread thread = JNIEnv2w_thread(env);
-  w_long   sleep_millis;
-  x_sleep  sleep_ticks;
+  x_sleep  sleep_ticks = 0;
  
-  if(millis < 0 || nanos < 0 || nanos >= 10000) {
+  if(millis < 0 || nanos < 0 || nanos >= 1000000) {
     throwException(thread,clazzIllegalArgumentException,NULL);
   }
 
  
-  sleep_millis = millis + ((w_long)nanos >> 20);
-  sleep_ticks = sleep_millis ? x_millis2ticks((w_size)sleep_millis) : x_eternal;
   if (isNotSet(instance2flags(thisObject), O_HAS_LOCK)) {
-    throwException(thread, clazzIllegalMonitorStateException, "not owner");
+    throwException(thread, clazzIllegalMonitorStateException, "lock has no owner");
 
     return;
   }
 
-  if (thread->flags & WT_THREAD_INTERRUPTED) {
-    throwException(thread, clazzInterruptedException, NULL);
-    thread->flags &= ~WT_THREAD_INTERRUPTED;
-
+  if (testForInterrupt(thread)) {
     return;
-
   }
 
-  waitMonitor(thisObject, sleep_ticks);
-
-  if (thread->flags & WT_THREAD_INTERRUPTED) {
-    throwException(thread, clazzInterruptedException, NULL);
-    thread->flags &= ~WT_THREAD_INTERRUPTED;
+  /*
+   * The combination millis==0, nanos==0 means "wait forever".
+   * But any nonzero number of nanos would mean "wait for a very short time" ...
+   */
+  if (millis == 0) {
+    if (nanos == 0) {
+      sleep_ticks = x_eternal;
+    }
+    else {
+      sleep_ticks = 1;
+    }
   }
+
+  /* [CG 20110126, see comment in Thread_wait0 dated 20070509]
+  ** This isn't ideal, because the time taken to go around the loop is
+  ** additional to the wait time, so we could build up a cumulative
+  ** excess of expectancy. However I don't think it's worth it to try
+  ** to read the system clock and perform arithmetic on it.
+  ** All of this because x_sleep is 32 bits instead of 64 ...
+  */
+  while (millis > THREE_WEEKS_MILLIS) {
+    waitMonitor(thisObject, THREE_WEEKS_TICKS);
+    millis -= THREE_WEEKS_MILLIS;
+
+    if (testForInterrupt(thread)) {
+      return;
+    }
+  }
+
+  if (!sleep_ticks) {
+    sleep_ticks = x_millis2ticks((w_size)millis);
+  }
+  if (sleep_ticks) {
+    waitMonitor(thisObject, sleep_ticks);
+  }
+
+  testForInterrupt(thread);
 }
 
 void Object_notify(JNIEnv *env, w_instance thisObject) {

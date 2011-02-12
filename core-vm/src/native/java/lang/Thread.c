@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008, 2010 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2008, 2010, 2011 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -173,8 +173,6 @@ static void threadEntry(void * athread) {
    }
 #endif
 }
-
- 
 
 void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGroup, w_instance nameString, w_instance theRunnable) {
 
@@ -505,42 +503,20 @@ void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
 
 }
 
-static w_boolean checkForInterrupt(w_thread thread) {
-  if (isSet(thread->flags, WT_THREAD_INTERRUPTED)) {
-    unsetFlag(thread->flags, WT_THREAD_INTERRUPTED);
-    throwException(thread, clazzInterruptedException, NULL);
-    woempa(6, "THROWING an InterruptedException\n");
-
-    return TRUE;
-
-  }
-
-  return FALSE;
-}
-
-#define ONE_MINUTE_MICROS 60000000LL
-#define ONE_MINUTE_TICKS (x_usecs2ticks(60000000))
-
 void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
 
   w_thread thread = getWotsitField(Thread, F_Thread_wotsit);
-  volatile w_long micros = 0;
 
   if (millis < 0 || nanos < 0 || nanos >= 1000000) {
+    throwException(thread,clazzIllegalArgumentException,NULL);
+  }
+
+  if (millis == 0) {
     return;
   }
 
-  micros = millis ? (millis * 1000) + (nanos / 1000) : 1000 ;
-  
-  woempa(1, "thread will go to sleep!!! %t\n", thread);
-
-  if (checkForInterrupt(thread)) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      w_printf("Thread.sleep(): %t has been interrupted before sleep()\n", thread);
-    }
-
+  if (testForInterrupt(thread)) {
     return;
-
   }
 
   thread->state = wt_sleeping;
@@ -551,26 +527,22 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   ** to read the system clock and perform arithmetic on it.
   ** All of this because x_sleep is 32 bits instead of 64 ...
   */
-  while (micros > ONE_MINUTE_MICROS) {
-    x_thread_sleep(ONE_MINUTE_TICKS);
-    micros -= ONE_MINUTE_MICROS;
-    if (checkForInterrupt(thread)) {
-      if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-        w_printf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
-      }
+  while (millis > THREE_WEEKS_MILLIS) {
+    x_thread_sleep(THREE_WEEKS_TICKS);
+    millis -= THREE_WEEKS_MILLIS;
+
+    if (testForInterrupt(thread)) {
       thread->state = wt_ready;
 
       return;
     }
   }
 
-  x_thread_sleep(x_usecs2ticks(micros));
-  thread->state = wt_ready;
-  if (checkForInterrupt(thread)) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      w_printf("Thread.sleep(): %t has been interrupted during sleep()\n", thread);
-    }
+  if (millis) {
+    x_thread_sleep(x_millis2ticks(millis));
   }
+  thread->state = wt_ready;
+  testForInterrupt(thread);
 }
 
 w_boolean Thread_static_holdsLock(JNIEnv *env, w_instance classThread, w_instance instance) {
