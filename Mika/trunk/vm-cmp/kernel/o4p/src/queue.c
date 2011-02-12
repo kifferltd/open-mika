@@ -163,7 +163,7 @@ unsigned int x_queue_receive(x_queue queue, void **msg, x_sleep owait) {
 #ifdef HAVE_TIMEDWAIT
       {
         struct timespec deadline;
-        x_now_plus_ticks(owait, &deadline);
+        x_now_plus_ticks((x_long)owait, &deadline);
         while (queue->available == 0) {
           pthread_cond_timedwait(&queue->queue_not_empty, &queue->queue_mutex, &deadline);
           if (x_deadline_passed(&deadline)) {
@@ -278,7 +278,7 @@ unsigned int x_queue_send(x_queue queue, void *msg, x_sleep wait) {
 #ifdef HAVE_TIMEDWAIT
       {
         struct timespec deadline;
-        x_now_plus_ticks(wait, &deadline);
+        x_now_plus_ticks((x_long)wait, &deadline);
         while (queue->available == queue->capacity) {
           pthread_cond_timedwait(&queue->queue_not_full, &queue->queue_mutex, &deadline);
           if (x_deadline_passed(&deadline)) {

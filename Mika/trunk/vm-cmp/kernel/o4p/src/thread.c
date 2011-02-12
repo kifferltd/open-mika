@@ -616,7 +616,7 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
 #ifdef HAVE_TIMEDWAIT
   {
     struct timespec ts;
-    x_now_plus_ticks(timer_ticks, &ts);
+    x_now_plus_ticks((x_long)timer_ticks, &ts);
     retcode = pthread_cond_timedwait(&thread->sleep_cond, &thread->sleep_timer, &ts);
   }
 #else
@@ -690,7 +690,7 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
   }
   else {
 #ifdef HAVE_TIMEDWAIT
-     x_now_plus_ticks(timeout, &end);
+     x_now_plus_ticks((x_long)timeout, &end);
 #endif
 
      do {

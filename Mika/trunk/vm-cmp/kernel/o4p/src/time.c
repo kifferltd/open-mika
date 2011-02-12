@@ -206,19 +206,20 @@ x_long x_time_now_millis() {
   return result;
 }
 
-void x_now_plus_ticks(x_size ticks, struct timespec *ts)
+void x_now_plus_ticks(x_long ticks, struct timespec *ts)
 {
   // volatile 'coz I don't trust gcc any further than I can throw it
-  volatile x_long usec, sec; 
+  volatile x_long msec, sec; 
   struct timeval now;
 
-  usec =  usecs_per_tick * ticks;
-  sec = usec / 1000000;
-  usec %= 1000000;
+  msec =  x_ticks2millis(ticks);
+
+  sec = msec / 1000;
+  msec %= 1000;
 
   gettimeofday(&now, NULL);
   ts->tv_sec = now.tv_sec + sec;
-  ts->tv_nsec = (now.tv_usec + usec) * 1000;
+  ts->tv_nsec = ((now.tv_usec / 1000) + msec) * 1000000;
 
   while (ts->tv_nsec > 1000000000) {
     ts->tv_nsec -= 1000000000;
@@ -253,13 +254,18 @@ x_size x_seconds2ticks(x_size seconds) {
 }
 
 /*
-** Return the number of seconds corresponding to a number of ticks.
+** Return the number of milliseconds corresponding to a number of ticks.
 ** Uncompensated rounded downwards, , can be zero.
-x_size x_ticks2secs(x_size ticks) {
-  x_long usecs = ticks * usecs_per_tick;
-  return usecs / 1000000;
-}
 */
+x_long x_ticks2millis(x_long ticks) {
+  x_long msecs = ticks * (usecs_per_tick / 1000);
+
+  if (msecs / (usecs_per_tick / 1000) != ticks) {
+    o4p_abort(O4P_ABORT_OVERFLOW, "overflow converting ticks to millis", 0);
+  }
+
+  return msecs;
+}
 
 /*
 ** Return an number of ticks for a number of milliseconds.

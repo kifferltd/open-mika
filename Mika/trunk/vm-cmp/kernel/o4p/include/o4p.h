@@ -327,7 +327,12 @@ typedef struct o4p_Memory_Chunk {
 
 x_size x_ticks2usecs(x_size ticks);
 
-extern void x_now_plus_ticks(x_size ticks, struct timespec *ts);
+/**
+ * Add the length of time represented by 'ticks' to the current system time,
+ * placing the result in 'ts'.  The number of milliseconds to be added must
+ * not exceed the maximum value of an x_long (2**63 - 1), i.e. about 24 days.
+ */
+extern void x_now_plus_ticks(x_long ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
 
 void _o4p_abort(char *file, int line, int type, char *message, int rc);
@@ -336,6 +341,7 @@ void _o4p_abort(char *file, int line, int type, char *message, int rc);
 
 #define O4P_ABORT_BAD_STATUS      1
 #define O4P_ABORT_PTHREAD_RETCODE 2
+#define O4P_ABORT_OVERFLOW        3
 
 #endif /* _O4P_H */
 
