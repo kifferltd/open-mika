@@ -221,7 +221,7 @@ void x_now_plus_ticks(x_long ticks, struct timespec *ts)
   ts->tv_sec = now.tv_sec + sec;
   ts->tv_nsec = ((now.tv_usec / 1000) + msec) * 1000000;
 
-  while (ts->tv_nsec > 1000000000) {
+  while (ts->tv_nsec >= 1000000000) {
     ts->tv_nsec -= 1000000000;
     ts->tv_sec++;
   }
