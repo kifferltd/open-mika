@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 by   *
 * Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -36,6 +36,7 @@
 #include "core-classes.h"
 #include "exception.h"
 #include "heap.h"
+#include "loading.h"
 #include "methods.h"
 #include "threads.h"
 #include "wstrings.h"
@@ -189,11 +190,12 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
 
 void terminateThread(w_thread thread) {
 
-  void * result;
-  x_status status = xs_success;
   w_string name;
 
 #ifndef ENABLE_THREAD_RECYCLING
+  x_status status = xs_success;
+  void * result;
+
   if (thread->kthread) {
     status = x_thread_join(thread->kthread, &result, 100);
   }
@@ -315,15 +317,13 @@ static const char *dying_thread_report(x_thread x) {
 
 const char *running_thread_report(x_thread x) {
 
-  w_thread t;
-
   if (x) {
-    t = x->xref;
+    w_thread t =  (w_thread)x->xref;
     x_snprintf(thread_report_buffer, 91, "%T", t);
     return thread_report_buffer;
   }
 
-  return "!!! Wonka thread xref is NULL !!!";
+  return "!!! thread xref is NULL !!!";
 
 }
 
@@ -535,6 +535,22 @@ void startKernel() {
   W_Thread_sysInit->kthread->xref = W_Thread_sysInit;
   x_thread_create(W_Thread_sysInit->kthread, startInitialThreads, 0, W_Thread_sysInit->kstack, W_Thread_sysInit->ksize, W_Thread_sysInit->kpriority, TF_SUSPENDED);
   W_Thread_sysInit->kthread->report = running_thread_report;
+}
+
+/*
+ * If 'thread' has been interrupted, clear its interrupt flag, throw
+ * InterruptedException, and return true. Otherwise return false.
+ */
+w_boolean testForInterrupt(w_thread thread) {
+  if (thread->flags & WT_THREAD_INTERRUPTED) {
+    throwException(thread, clazzInterruptedException, NULL);
+    thread->flags &= ~WT_THREAD_INTERRUPTED;
+
+    return TRUE;
+
+  }
+
+  return FALSE;
 }
 
 char * print_thread_short(char* buffer, int *remain, void *data, int w, int p, unsigned int f) {
