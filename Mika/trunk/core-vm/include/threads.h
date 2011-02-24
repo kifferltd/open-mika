@@ -222,8 +222,6 @@ w_method getCallingMethod(w_thread thread);
 w_clazz getCallingClazz(w_thread thread);
 w_instance getCallingInstance(w_thread thread);
 
-#define DEBUG_STACKS
-
 extern w_int java_stack_size;
 
 /*
@@ -598,18 +596,7 @@ void terminateThread(w_thread thread);
  * If 'thread' has been interrupted, clear its interrupt flag, throw
  * InterruptedException, and return true. Otherwise return false.
  */
-extern w_clazz clazzInterruptedException;
-static w_boolean testForInterrupt(w_thread thread) {
-  if (thread->flags & WT_THREAD_INTERRUPTED) {
-    throwException(thread, clazzInterruptedException, NULL);
-    thread->flags &= ~WT_THREAD_INTERRUPTED;
-
-    return TRUE;
-
-  }
-
-  return FALSE;
-}
+w_boolean testForInterrupt(w_thread thread);
 
 /**
  * Logic for recycling native threads: only used if ENABLE_THREAD_RECYCLING
