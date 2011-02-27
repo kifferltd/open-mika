@@ -33,7 +33,9 @@
 
 #if defined (X86_64) && defined (__i386__)
 #undef X86_64
+#ifndef X86
 #define X86
+#endif
 #endif
 
 #ifdef X86_WIN64

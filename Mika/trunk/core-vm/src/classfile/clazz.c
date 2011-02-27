@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
-* Gray, /k/ Embedded Java Solutions.  All rights reserved.                *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 by   *
+* Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.          *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -275,7 +275,9 @@ inline static u1 get_u1(w_bar bar) {
 
 }
 
-inline static u2 get_u2(w_bar s) {
+// not marked 'inline' because gcc makes such a fuss when it decides not to
+// => noise in gcc output
+static u2 get_u2(w_bar s) {
 
   w_ubyte b0, b1;
 
@@ -286,7 +288,9 @@ inline static u2 get_u2(w_bar s) {
 
 }
 
-inline static u4 get_u4(w_bar s) {
+// not marked 'inline' because gcc makes such a fuss when it decides not to
+// => noise in gcc output
+static u4 get_u4(w_bar s) {
 
   w_ubyte b0, b1, b2, b3;
 

@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
-* Gray, /k/ Embedded Java Solutions.  All rights reserved.                *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011      *
+* by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -316,12 +316,6 @@ x_monitor gc_monitor;
 ** (Almost) all accesses to gc_monitor are wrapped to check the status.
 */
 #define PRINT_MONITOR_STATUS(l,f,s) printf("collect.c line %d: %s returned %d\n", (l), (f), (s))
-
-#define GC_MONITOR_ETERNAL gc_monitor_eternal(__LINE__);
-static void gc_monitor_eternal(int line) { 
-  x_status s = x_monitor_eternal(gc_monitor);
-  if (s) PRINT_MONITOR_STATUS(line, "x_monitor_eternal", s);
-}
 
 #define GC_MONITOR_WAIT(t) gc_monitor_wait(t,__LINE__);
 static void gc_monitor_wait(x_sleep t, int line) {

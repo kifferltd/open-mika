@@ -64,9 +64,9 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
 
       case VM_TYPE_LONG:
         {
-          memcpy(&jvalptr->j, &slot->c, 4);
+          memcpy(&jvalptr->j, (const void*)&slot->c, 4);
           ++slot;
-          memcpy((char*)&jvalptr->j + 4, &slot->c, 4);
+          memcpy((char*)&jvalptr->j + 4, (const void*)&slot->c, 4);
           woempa(1, "  long parameter: %0%08x\n", jvalptr->j >> 32, jvalptr->j & 0x0ffffffffULL);
           *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -75,9 +75,9 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
 
       case VM_TYPE_DOUBLE:
         {
-          memcpy(&jvalptr->d, &slot->c, 4);
+          memcpy(&jvalptr->d, (const void*)&slot->c, 4);
           ++slot;
-          memcpy((char*)&jvalptr->d + 4, &slot->c, 4);
+          memcpy((char*)&jvalptr->d + 4, (const void*)&slot->c, 4);
           woempa(1, "  double parameter: %0%08x\n", jvalptr->d >> 32, jvalptr->d & 0x0ffffffffULL);
           *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -120,8 +120,8 @@ w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_method m) {
     actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
-//printf("fun = %p retval ptr = %p acuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
-  ffi_call(cifptr, m->exec.function.long_fun, &retval, actuals);
+//printf("fun = %p retval ptr = %p acuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, &retval, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.void_fun, &retval, actuals);
 
   return retval;
 
@@ -240,6 +240,7 @@ w_long _call_static(JNIEnv* env, w_instance theClass, w_slot top, w_method m) {
 
 w_long _call_instance(JNIEnv* env, w_slot top, w_method m) {
 #ifdef USE_LIBFFI
+  w_thread thread = JNIEnv2w_thread(env);
   ffi_cif *cifptr;
   void *actuals[m->exec.nargs + 2];
   jvalue jvalues[m->exec.nargs + 2];
@@ -253,8 +254,8 @@ w_long _call_instance(JNIEnv* env, w_slot top, w_method m) {
   nextjvalue = jvalues;
 
   woempa(1, "instance method %m has %d parameters\n", m, m->exec.nargs);
-  actuals[0] = &env;
-  woempa(1, "calling thread = %t\n", env);
+  actuals[0] = &thread;
+  woempa(1, "calling thread = %t\n", thread);
   actuals[1] = &nextparm->c;
   woempa(1, "instance = %j\n", nextparm->c);
   nextparm++;
@@ -263,8 +264,8 @@ w_long _call_instance(JNIEnv* env, w_slot top, w_method m) {
     actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
-//printf("fun = %p retval ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.long_fun, &retval, actuals, actuals[0], actuals[1]);
-  ffi_call(cifptr, m->exec.function.long_fun, &retval, actuals);
+//printf("fun = %p retval ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, &retval, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.void_fun, &retval, actuals);
 
   return retval;
 

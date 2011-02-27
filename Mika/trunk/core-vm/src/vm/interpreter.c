@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011 by Chris   *
+* * Gray, /k/ Embedded Java Solutions. All rights reserved.               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -52,6 +52,7 @@
 #include "hashtable.h"
 #include "Math.h"
 #include "profile.h"
+#include "reflection.h"
 #include "wmath.h"
 #include "heap.h"
 #include "interpreter.h"
@@ -231,6 +232,8 @@ volatile w_thread jitting_thread;
 ** This function must always be called in the GC-Unsafe state (so there can
 ** be no contention with GC or JDWP).
 */
+// Not yet used so ifdef'd out to avoid compiler warnings
+#ifdef HIPPOPOTAMUS_ON_A_POGO_STICK
 static void acquireJitcLock(w_thread thread) {
   x_status status;
 
@@ -271,6 +274,7 @@ static void releaseJitcLock(w_thread thread) {
   x_monitor_exit(safe_points_monitor);
   woempa(7, "JITC: finished unlocking other threads\n");
 }
+#endif
 
 #else
 
@@ -299,7 +303,8 @@ static void releaseJitcLock(w_thread thread) {
 ** argument words required.
 */
 
-inline static void stack2locals(w_Slot locals[], volatile w_Slot *args, w_int num) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void stack2locals(w_Slot locals[], volatile w_Slot *args, w_int num) {
 
 
   args -= num;
@@ -347,7 +352,8 @@ inline static w_int extend_s2i(w_int s) {
   return ((s & 0x8000) ? (w_int) (s | 0xffff0000) : (w_int) (s & 0x00007fff));
 }
 
-inline static void do_astore(w_frame frame, w_word slot, w_Slot **tosptr) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void do_astore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   frame->jstack_base[slot].s = stack_notrace;    // Set safe situation for GC if we would be interrupted before assigning value
   frame->jstack_base[slot].c = (*tosptr)[-1].c; // The top of stack can also contain return address of 'jsr' ...
@@ -356,7 +362,8 @@ inline static void do_astore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
 }
 
-inline static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   (*tosptr)[0].s = stack_notrace;
   (*tosptr)[1].s = stack_notrace;
@@ -367,7 +374,8 @@ inline static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 
 }
 
-inline static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   (*tosptr) -= 2;
   frame->jstack_base[slot].s = stack_notrace;
@@ -386,7 +394,8 @@ static void do_drem(w_Slot**);
 #define int_operand              ((signed int)((current[1] << 24) | (current[2] << 16) | (current[3] << 8) | current[4]))
 
 #ifdef DEBUG
-inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
+// FIXME: not declared inline because gcc bleats about it being to big
+static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
   frame->jstack_top = tos;
   woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
@@ -399,7 +408,8 @@ inline static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) {
 #else
 #define updateDebugInfo(f,c,t)
 /*
-inline static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
   woempa_bytecodecount += 1; 
   if (woempa_bytecodecount > 763230) {
     w_printf("%d %t %M offset[%d] (%s)\n", woempa_bytecodecount, frame->thread, frame->method, current - frame->method->exec.code, opcode_names[*current]);
@@ -620,7 +630,8 @@ static w_boolean enough_free_memory(w_thread thread, w_int bytes) {
   return count < 100;
 }
 
-inline static void i_callMethod(w_frame caller, w_method method) {
+// FIXME: not declared inline because gcc bleats about it being to big
+static void i_callMethod(w_frame caller, w_method method) {
 
 #ifdef JAVA_PROFILE
   w_thread thread = caller->thread;
@@ -638,7 +649,11 @@ inline static void i_callMethod(w_frame caller, w_method method) {
 #endif
 
   woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
-  if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS && caller->thread->ksize - depth > 4096) {
+  if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS
+#ifdef DEBUG_STACKS
+    && caller->thread->ksize - depth > 4096
+#endif
+  ) {
 #ifdef JAVA_PROFILE
     if(method->exec.dispatcher) {
       updateProfileCalls(caller->method, method);
@@ -1104,7 +1119,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getstatic_single: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
 
     tos[0].s = stack_notrace;
 #ifdef CACHE_TOS
@@ -1117,7 +1132,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getstatic_double: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
     w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
 
     if (isVolatile) {
@@ -1137,7 +1152,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_getstatic_ref: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
 
 #ifdef CACHE_TOS
     tos_cache =
@@ -1150,7 +1165,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_single: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
@@ -1165,7 +1180,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_double: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
     w_boolean isVolatile = isSet(field->flags, ACC_VOLATILE);
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
@@ -1185,7 +1200,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   i_putstatic_ref: {
-    w_field field = (w_field)cclazz->values[(unsigned short) short_operand];
+    field = (w_field)cclazz->values[(unsigned short) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
 #ifdef CACHE_TOS
@@ -3915,7 +3930,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_newarray: {
     w_size bytes;
-    //w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -3955,7 +3969,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_anewarray: {
     w_size bytes;
-    w_boolean enough;
 #ifdef CACHE_TOS
     s = tos_cache;
 #else
@@ -4124,6 +4137,8 @@ void interpret(w_frame caller, w_method method) {
   c_multianewarray: {
     w_int * dimensions;
     w_boolean enough;
+    w_size bytes;
+    w_clazz element_clazz;
 
     frame->jstack_top = tos;
     s = (unsigned int) (unsigned char) *(current + 3);
@@ -4155,9 +4170,6 @@ void interpret(w_frame caller, w_method method) {
     }
 
     {
-      w_size bytes;
-      w_clazz element_clazz;
-
       bytes = 1;
       element_clazz = clazz->previousDimension;
       for (i = 0; i < s - 1; ++i) {

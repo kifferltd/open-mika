@@ -486,6 +486,9 @@ void w_dump_locks(void) {
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
   x_dump_monitor("            AWT treelock : ", tree_lock);
 #endif
+#ifdef ENABLE_THREAD_RECYCLING
+  x_dump_monitor("     Thread pool monitor : ", xthreads_monitor);
+#endif
 #ifndef GC_SAFE_POINTS_USE_NO_MONITORS
   x_dump_monitor("       GC status monitor : ", safe_points_monitor);
 #endif
