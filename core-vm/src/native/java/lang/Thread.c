@@ -502,11 +502,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
     throwException(thread,clazzIllegalArgumentException,NULL);
   }
 
-  if (millis == 0) {
-    return;
-  }
-
-  if (testForInterrupt(thread)) {
+  if (testForInterrupt(thread) || millis == 0) {
     return;
   }
 
