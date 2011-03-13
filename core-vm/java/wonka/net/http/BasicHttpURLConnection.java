@@ -67,6 +67,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   private final static boolean CACHE_PROXY_AUTH = true;
 
+  private static final int MAX_RECONNECTS = 20;
+
   /**
    ** This is the date format we always use when sending a request, 
    **and the first one we try when parsing the date in a response.
@@ -232,11 +234,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private String realm;
 
   /**
-   ** Set true iff we already sent basic authentication on this connection.
-   */
-  private boolean sentBasicAuthentication;
-
-  /**
    ** The value of the <code>Content-length</code> request header,
    ** or -1 if none has been set. Package-protected, so HttpInputStream
    ** can see it.
@@ -244,10 +241,14 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   int requestContentLength;
 
   /**
-  /**
    ** True iff parseResponse() has been called.
    */
   private boolean responseParsed;
+
+  /**
+   ** Number of reconnects (redirections or authorisation attempts) so far.
+   */
+  private int reconnectCount;
 
   /**
    ** Prepare the connection (we only connect later, "lazily").
@@ -335,7 +336,10 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Connect to the remote host, send the request, and get the response.
    */
   public void connect() throws IOException {
-    if(!connected){
+      if (connected) {
+        return;
+      }
+
       responseHeaders = new HashMap();
       keys = new ArrayList();
       int port = url.getPort();
@@ -383,7 +387,44 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       else {
         throw new IOException("invalid method '"+method+"'");
       }
-    }
+
+      parseResponse();
+
+      while (true) {
+        if (responseCode == HTTP_UNAUTHORIZED) {
+          String challenge = internal_getResponseProperty("www-authenticate");
+          if (challenge == null) {
+            throw new ProtocolException("HTTP_UNAUTHORIZED response contained no www-authenticate header");
+          }
+          else if (getAuthorisation(challenge.trim(), url.toString(), hostAddr, url.getPort())) {
+            debug("HTTP: retrying with authorization");
+
+            if (!reconnect()) {
+              break;
+            }
+          }
+          else {
+            throw new IOException(url + " requires authorisation, but we have no credentials");
+          }
+        }
+        else if (responseCode == HTTP_PROXY_AUTH && usingProxy()) {
+          String challenge = internal_getResponseProperty("proxy-authenticate");
+          if (challenge == null) {
+            throw new ProtocolException("HTTP_PROXY_AUTH response contained no proxy-authenticate header");
+          }
+          else if (getAuthorisation(challenge.trim(), "Proxy", getProxyAddr(), getProxyPort())) {
+            debug("HTTP: retrying with proxy authorization");
+
+            if (!reconnect()) {
+              break;
+            }
+          }
+          else {
+            throw new IOException("Proxy server requested authentication, but we have no credentials");
+          }
+        }
+        else break;
+      }
   }
 
   /**
@@ -430,7 +471,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public String getHeaderField(String name){
     try {
-      parseResponse();
+      connect();
     }
     catch(IOException ioe){
       ioe.printStackTrace();
@@ -444,7 +485,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** response headers.
    */
   public int getResponseCode() throws IOException {
-    parseResponse();
+    connect();
 
     return responseCode;
   }
@@ -454,7 +495,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** response headers.
    */
   public String getResponseMessage() throws IOException {
-    parseResponse();
+    connect();
 
     return responseMessage;
   }
@@ -490,7 +531,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** If necessary, <code>connect()</code> first.
    */
   public InputStream getInputStream() throws IOException {
-    parseResponse();
+    connect();
+    checkConnection();
 
     return in;
   }
@@ -730,7 +772,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       String credentials = (String)basicCredentials.get(hostAddr + ":" + realm);
       if (credentials != null) {
         requestHeaders.put(new Attributes.Name("authorization"), "Basic " + credentials);
-        sentBasicAuthentication = true;
       }
     }
   }
@@ -879,8 +920,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     }
 
-    connect();
-
+    // TODO: should this code be moved to checkConnection()?
     if (out != null) {
       try {
         ((HttpOutputStream)out).flush_internal();
@@ -953,11 +993,13 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       throw new IOException();
     }
 
+    // TODO: should this code be moved to checkConnection()?
     if(internal_checkResponseProperty("Transfer-encoding", "chunked")){
       in = new ChunkedInputStream(in);
       debug("HTTP: switched to chunked input");
     }
 
+    // TODO: should this code be moved to checkConnection()?
     if(internal_checkResponseProperty("Content-encoding", "gzip")){
       in = new GZIPInputStream(in);
       debug("HTTP: gunzipping input");
@@ -989,49 +1031,43 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       // I don't see where it says we have to this but it seems reasonable
       requestHeaders.put(new Attributes.Name("host"),url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
 
-      disconnect();
-      parseResponse();
+      reconnect();
     }
-    else if (responseCode==HTTP_UNAUTHORIZED) {
-      if (sentBasicAuthentication) {
-        // Our credentials are no good, it seems ...
-        removeAuthorisation(hostAddr, realm);
-        responseParsed = true;
-        throw new IOException(url + " refused our credentials");
-      }
 
-      String challenge = internal_getResponseProperty("www-authenticate").trim();
-      if (getAuthorisation(challenge, url.toString(), hostAddr, url.getPort())) {
-        debug("HTTP: retrying with authorization");
+    responseParsed = true;
+  }
 
-        disconnect();
-        parseResponse();
-      }
-      else {
-        responseParsed = true;
-        throw new IOException(url + " requires authorisation, but we have no credentials");
-      }
+  boolean reconnect() throws IOException {
+    disconnect();
+    responseParsed = false;
+    if (++reconnectCount >= MAX_RECONNECTS) {
+      return false;
     }
-    else if(responseCode == HTTP_PROXY_AUTH && usingProxy()) {
-      String challenge = internal_getResponseProperty("proxy-authenticate").trim();
-      if (getAuthorisation(challenge, "Proxy", getProxyAddr(), getProxyPort())) {
-        debug("HTTP: retrying with proxy authorization");
 
-        disconnect();
-        parseResponse();
-      }
-      else {
-        responseParsed = true;
-        throw new IOException("Proxy server requested authentication, but we have no credentials");
-      }
+    connect();
+
+    return true;
+  }
+
+  /**
+   ** Throw an exception if it is not possible to read data from the connection.
+   ** 
+   */
+  void checkConnection() throws IOException {
+
+    if (responseCode == HTTP_OK) {
+      return;
     }
-    else if((responseCode<200) || (responseCode>=400)) {
-      responseParsed = true;
-      throw new IOException("Server returned HTTP response code " + responseCode + " for " + method + " to " + url);
+
+    if (++reconnectCount >= MAX_RECONNECTS) {
+      throw new ProtocolException("Server redirected too many  times (" + MAX_RECONNECTS + ")");
     }
-    else {
-      responseParsed = true;
+
+    if (responseCode == HTTP_NOT_FOUND) {
+      throw new FileNotFoundException(url.toString());
     }
+
+    throw new IOException("Server returned HTTP response code " + responseCode + " for " + method + " to " + url);
   }
 
   /**
