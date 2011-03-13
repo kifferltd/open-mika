@@ -249,6 +249,8 @@ java/lang/ref/PhantomReference
 #
 java/lang/Cloneable
 java/lang/Thread
+	name		Ljava/lang/String;
+	priority	I
 	started		Z
 	stopped		Z
 	parent          Ljava/lang/ThreadGroup;
@@ -257,8 +259,6 @@ java/lang/Thread
 	wotsit		+
 	create		(Ljava/lang/ThreadGroup;Ljava/lang/String;Ljava/lang/Runnable;)V Thread_create
 	currentThread	()Ljava/lang/Thread;	Thread_currentThread
-	getName		()Ljava/lang/String;    Thread_getName
-	getPriority   	()I			 Thread_getPriority
 	holdsLock	(Ljava/lang/Object;)Z	Thread_static_holdsLock
 	interrupted	()Z			Thread_static_interrupted
 	interrupt	()V			Thread_interrupt
