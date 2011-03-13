@@ -372,6 +372,7 @@ void startInitialThreads(void* data) {
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
   setReferenceField(I_ThreadGroup_system, getStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
+  setReferenceField(I_Thread_sysInit, getStringInstance(string_sysThread), F_Thread_name);
   setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
 
 /*
@@ -529,6 +530,7 @@ void startKernel() {
 
   setWotsitField(I_Thread_sysInit, F_Thread_wotsit, W_Thread_sysInit);
   setReferenceField(I_Thread_sysInit, I_ThreadGroup_system, F_Thread_parent);
+  setIntegerField(I_Thread_sysInit, F_Thread_priority, 5);
   woempa(7, "registering os thread %p as thread instance %p\n", W_Thread_sysInit->kthread, W_Thread_sysInit);
   ht_write(thread_hashtable, (w_word)W_Thread_sysInit->kthread, (w_word)W_Thread_sysInit);
 

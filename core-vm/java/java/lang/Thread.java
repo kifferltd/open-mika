@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by     *
-* Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
+* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2011  *
+* by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -62,6 +62,16 @@ public class Thread implements Runnable {
    ** stuff preceding each use of this field, sorry.
    */
   private Object state_lock;
+
+  /**
+   * The name of this Thread.
+   */
+  private String name;
+
+  /**
+   * Priority of this Thread.
+   */
+  private int priority;
 
   /**
    ** started    is true iff start() has been called on this thread.
@@ -131,7 +141,13 @@ public class Thread implements Runnable {
     if(myname == null) {
       throw new NullPointerException();
     }
+    name = myname;
     
+    priority = Thread.currentThread().getPriority();
+    if (priority == 0) {
+      priority = 5;
+    }
+
     if (group == null) {
       if (sm == null) {
         myparent = Thread.currentThread().getThreadGroup();
@@ -140,13 +156,19 @@ public class Thread implements Runnable {
         myparent = sm.getThreadGroup();
       }
     }
-    else myparent = group;
-
-    this.parent = myparent;
+    else {
+      myparent = group;
+      int groupMaxPriority = myparent.getMaxPriority();
+      if (priority > groupMaxPriority) {
+        priority = groupMaxPriority;
+      }
+    }
 
     if (myparent.isDestroyed()) {
       throw new IllegalThreadStateException();
     }
+
+    this.parent = myparent;
 
     if (sm != null) {
       sm.checkAccess(myparent);
@@ -330,7 +352,7 @@ public class Thread implements Runnable {
    ** and parent ThreadGroup.
    */
   public String toString() {
-    return "Thread[" + getName() + "," + getPriority() + "," + 
+    return "Thread[" + name + "," + priority + "," + 
     (parent != null ? parent.getName() : null) +"]";
   }
 
@@ -453,7 +475,9 @@ public class Thread implements Runnable {
   /**
    ** getName() returns the name of the Thread
    */
-  public final native String getName();
+  public final String getName() {
+    return name;
+  }
 
   /**
    ** setName() changes the name of the Thread.
@@ -472,6 +496,7 @@ public class Thread implements Runnable {
     if(name==null) {
       throw new NullPointerException();
     } else {
+      this.name = name;
       setName0(name);
     }
   }
@@ -486,7 +511,9 @@ public class Thread implements Runnable {
   /**
    ** getPriority() returns the current priority of this thread.
    */
-  public final native int getPriority();
+  public final int getPriority() {
+    return priority;
+  }
 
   /**
    ** setPriority(int) changes the current priority of this thread.
@@ -508,9 +535,13 @@ public class Thread implements Runnable {
       throw new IllegalArgumentException("priority "+newPriority+" not allowed");
 
     if (parent!=null) {
-      newPriority = Math.min(newPriority,parent.getMaxPriority());
+      priority = Math.min(newPriority,parent.getMaxPriority());
     }
-    setPriority0(newPriority);
+    else {
+      priority = newPriority;
+    }
+
+    setPriority0(priority);
   }
 
 

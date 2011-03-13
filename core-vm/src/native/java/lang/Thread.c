@@ -250,25 +250,18 @@ void Thread_destructor(w_instance thisThread) {
 
 }
 
-w_instance Thread_getName(JNIEnv *env, w_instance thisThread) {
-
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-
-  return getStringInstance(thread->name);
-
-}
-
 void Thread_setName0(JNIEnv *env, w_instance thisThread, w_instance nameString) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-  w_string oldname = thread->name;
-  w_string newname = String2string(nameString);
+  if (thread) {
+    w_string oldname = thread->name;
+    w_string newname = String2string(nameString);
 
-  registerString(newname);
-  deregisterString(oldname);
+    registerString(newname);
+    deregisterString(oldname);
 
-  thread->name = newname;
-
+    thread->name = newname;
+  }
 }
 
 #ifdef ENABLE_THREAD_RECYCLING
@@ -407,16 +400,6 @@ void Thread_resume0(JNIEnv *env, w_instance thisThread) {
 }
 
 
-w_int Thread_getPriority(JNIEnv *env, w_instance thisThread) {
-
-  w_thread thread;
-
-  thread = getWotsitField(thisThread, F_Thread_wotsit);
-
-  return thread->jpriority;
-
-}
-
 void Thread_setPriority0(JNIEnv *env, w_instance thisThread, w_int newPriority) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
@@ -435,27 +418,35 @@ void Thread_setDaemon0(JNIEnv *env, w_instance thisThread, w_boolean on) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
 
-  thread->isDaemon = on;
-
+  if(thread) {
+    thread->isDaemon = on;
+  }
 }
 
 w_boolean Thread_isInterrupted(JNIEnv *env, w_instance thisThread) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-  w_boolean interrupted = isSet(thread->flags, WT_THREAD_INTERRUPTED);
+  if(thread) {
+    w_boolean interrupted = isSet(thread->flags, WT_THREAD_INTERRUPTED);
 
-  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    w_printf("Thread.isInterrupted(): %t has %sbeen interrupted\n", thread, interrupted ? "" : "not ");
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("Thread.isInterrupted(): %t has %sbeen interrupted\n", thread, interrupted ? "" : "not ");
+    }
+
+    return interrupted;
   }
 
-  return interrupted;
-
+  return FALSE;
 }
 
 void Thread_interrupt(JNIEnv *env, w_instance thisThread) {
 
   w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
   x_status status;
+
+  if (!thread) {
+    return;
+  }
 
   woempa(1, "thread %t is interrupting %t\n", JNIEnv2w_thread(env), thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
