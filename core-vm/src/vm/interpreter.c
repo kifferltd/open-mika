@@ -2152,6 +2152,7 @@ void interpret(w_frame caller, w_method method) {
     w_ConstantType *tag; 
     i = (unsigned short) short_operand; 
     tag = &cclazz->tags[i]; 
+#ifdef JAVA5
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
@@ -2168,7 +2169,9 @@ void interpret(w_frame caller, w_method method) {
       tos[0].s = stack_trace;
       *current = in_ldc_w_class;
     }
-    else if (*tag == RESOLVED_STRING) {
+    else
+#endif
+    if (*tag == RESOLVED_STRING) {
 #ifdef CACHE_TOS
     tos_cache =
 #endif
@@ -2210,6 +2213,7 @@ void interpret(w_frame caller, w_method method) {
     do_next_opcode;
   }
 
+#ifdef JAVA5
   i_ldc_w_class: {
     w_clazz target_clazz;
     i = (unsigned short) short_operand; 
@@ -2223,11 +2227,13 @@ void interpret(w_frame caller, w_method method) {
     tos += 1;
     do_next_opcode;
   }
+#endif
 
   c_ldc: {
     w_ConstantType *tag; 
     i = (unsigned short) byte_operand;
     tag = &cclazz->tags[i]; 
+#ifdef JAVA5
     if ((*tag & 0xf) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
@@ -2241,7 +2247,9 @@ void interpret(w_frame caller, w_method method) {
       tos[0].s = stack_trace;
       current[-1] = in_ldc_class;
     }
-    else if (*tag == RESOLVED_STRING) {
+    else
+#endif
+    if (*tag == RESOLVED_STRING) {
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_trace;
       current[-1] = in_ldc_string;
@@ -2277,6 +2285,7 @@ void interpret(w_frame caller, w_method method) {
     do_next_opcode;
   }
 
+#ifdef JAVA5
   i_ldc_class: {
     w_clazz target_clazz;
     i = (unsigned short) byte_operand;
@@ -2289,6 +2298,7 @@ void interpret(w_frame caller, w_method method) {
     tos += 1;
     do_next_opcode;
   }
+#endif
 
   c_lload: c_dload: {
     do_zload(frame, byte_operand, &tos);
@@ -4237,6 +4247,10 @@ void interpret(w_frame caller, w_method method) {
 #ifndef PACK_BYTE_FIELDS
   i_getfield_byte:
   i_putfield_byte:
+#endif
+#ifndef JAVA5
+  i_ldc_class:
+  i_ldc_w_class:
 #endif
   c_nocode_219: 
   c_nocode_230: 

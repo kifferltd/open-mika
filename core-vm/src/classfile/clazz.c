@@ -415,6 +415,15 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
 }
 
 #ifndef NO_FORMAT_CHECKS
+
+#define MAJOR_VERSION(v) ((v)<<16)
+#define MIN_VERSION MAJOR_VERSION(45)
+#ifdef JAVA5
+#define MAX_VERSION MAJOR_VERSION(49)
+#else 
+#define MAX_VERSION MAJOR_VERSION(48)
+#endif
+
 /**
  ** Check cafebabe and spec version.
  ** 'bar' should be set to the start of the classfile, and will be rewound
@@ -440,8 +449,13 @@ static w_boolean pre_check_header(w_clazz clazz, w_bar bar) {
 
   clazz->cminor = get_u2(bar);
   clazz->cmajor = get_u2(bar);
-  // TODO: check these ...
+  w_word version = (clazz->cmajor << 16) | clazz->cminor;
+  if (version < MIN_VERSION || version > MAX_VERSION) {
+    woempa(9, "bad class file version `%08x', should be between %08x and %08x inclusive\n", version, MIN_VERSION, MAX_VERSION);
+    woempa(9, "bad class file version `%d.%d'\n", clazz->cmajor, clazz->cminor);
 
+    return FALSE;
+  }
   bar_seek(bar, 0);
 
   return TRUE;
@@ -893,8 +907,9 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
   w_word flags = m->flags;
 
   if (isSet(clazz->flags, ACC_INTERFACE)) {
-    // Interface methods must be public static final and nowt else.
-    if (m->spec.name != string_angle_brackets_clinit && (flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != (ACC_PUBLIC | ACC_ABSTRACT)) {
+    // Interface methods must be abstract and may or may not be marked public.
+    // No other flags may be set.
+    if (m->spec.name != string_angle_brackets_clinit && (flags & (ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT | ACC_STRICT)) != ACC_ABSTRACT) {
       return FALSE;
     }
   }
