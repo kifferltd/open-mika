@@ -1,7 +1,7 @@
 ###########################################################################
 # Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                #
 # All rights reserved.                                                    #
-# Parts copyright (c) 2009, 2010 by Chris Gray, /k/ Embedded Java         #
+# Parts copyright (c) 2009, 2010, 2011 by Chris Gray, /k/ Embedded Java   #
 # Solutions.  All rights reserved.                                        #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -185,6 +185,10 @@ CCFLAGS += -DEXTCLASSDIR=\'\"{}/$(BOOTCLASSDIR)/ext\"\' ;
 CCFLAGS += -DDEFAULT_HEAP_SIZE=\'\"$(DEFAULT_HEAP_SIZE)\"\' ;
 CCFLAGS += -DDEFAULT_STACK_SIZE=\'\"$(DEFAULT_STACK_SIZE)\"\' ;
 CCFLAGS += -DVERSION_STRING=\'\"$(VERSION_STRING)\"\' ;
+
+if $(JAVA5_SUPPORT) = true {
+  CCFLAGS += -DJAVA5 ;
+}
 
 if $(JDWP) = true {
   CCFLAGS += -DJDWP ;
@@ -539,6 +543,15 @@ switch $(FILESYSTEM) {
   }
   case native : {
     WONKA_INFO += "using host OS filesystem, with virtual root at $(FSROOT);" ;
+  }
+}
+
+switch $(JAVA5_SUPPORT) {
+  case true : {
+    WONKA_INFO += "with Java5 support;" ;
+  }
+  case false : {
+    WONKA_INFO += "no Java5 support;" ;
   }
 }
 

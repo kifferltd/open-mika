@@ -1,7 +1,7 @@
 ###########################################################################
 # Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     #
-# reserved. Parts copyright 2004, 2005, 2006 by Chris Gray, /k/ Embedded  #
-# Java Solutions. All rights reserved.                                    #
+# reserved. Parts copyright 2004, 2005, 2006, 2010, 2011 by Chris Gray,   #
+# /k/ Embedded Java Solutions. All rights reserved.                       #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -136,8 +136,13 @@ STATIC default = false ;
 SHARED_HEAP default = false ;
 
 #
-# The Java Debug Wire Protocol is disabled by default, because currently
-# JDPA does not work.
+# Support for Java5 language features is disabled by default.
+#
+
+JAVA5_SUPPORT default = false ;
+
+#
+# The Java Debug Wire Protocol is disabled by default.
 #
 
 JDWP default = false ;

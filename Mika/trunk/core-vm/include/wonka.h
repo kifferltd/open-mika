@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2011 by Chris Gray,   *
 * /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -54,6 +54,12 @@
 #define maskFlags(m, f)             ((m) & (f))
 
 #include <sys/types.h>
+/*
+** Include processor dependent stuff from 
+** the ./processor/<arch> directory.
+*/
+
+#include "processor.h"
 
 #ifndef __BIT_TYPES_DEFINED__
 #error Your compilation environment does not define __BIT_TYPES_DEFINED__!
@@ -85,12 +91,6 @@ typedef u_int16_t                   w_char;
 typedef volatile u1 w_ConstantType;
 typedef volatile u4 w_ConstantValue;
 
-/*
-** Include processor dependent stuff from 
-** the ./processor/<arch> directory.
-*/
-
-#include "processor.h"
 
 #define LSW_PART(l)                  (w_word)(l)
 #define MSW_PART(l)                  (w_word)((w_ulong)(l)>>32)
@@ -205,7 +205,15 @@ typedef unsigned int                w_flags;
 #define ACC_INTERFACE               0x00000200
 #define ACC_ABSTRACT                0x00000400
 #define ACC_STRICT                  0x00000800
-#define ACC_FLAGS                   0x00000fff
+#define ACC_SYNTHETIC               0x00001000
+// for later maybe ...
+#ifdef JAVA6
+#define ACC_ANNOTATION              0x00002000
+#endif
+#ifdef JAVA5
+#define ACC_ENUM                    0x00004000
+#endif
+#define ACC_FLAGS                   0x00007fff
 
 /*
 ** An entry in our constant pool array.
@@ -429,5 +437,7 @@ void w_memcpy(void * adst, const void * asrc, w_size length);
 ** even if the offending method is never called at runtime.
 */
 extern w_boolean pedantic;
+
+// #define RESMON
 
 #endif /* _WONKA_H */
