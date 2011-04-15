@@ -64,7 +64,7 @@ public class MimeTable implements FileNameMap {
 
         if (SecurityConfiguration.ENABLE_SECURITY_CHECKS && System.getSecurityManager() != null) {
             str = (InputStream) AccessController.doPrivileged(new PrivilegedAction() {
-                public InputStream run() {
+                public Object run() {
                     return getContentTypes();
                 }
             });

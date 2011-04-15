@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2005, 2008, 2009, 2011 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -361,10 +361,12 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 	  
       socket.setSoTimeout(timeout);
       in = new BufferedInputStream(socket.getInputStream(),4096);
+      out = socket.getOutputStream();
       connected = true;
-      //send request ...
+    }
+
+    protected void doRequest() throws IOException {
       if("PUT".equals(method) || "POST".equals(method)){
-        OutputStream out = socket.getOutputStream();
         out.write(getRequestLine().getBytes());
         sendPartialHeaders(out);
         doOutput = true;
@@ -472,6 +474,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   public String getHeaderField(String name){
     try {
       connect();
+      doRequest();
     }
     catch(IOException ioe){
       ioe.printStackTrace();
@@ -486,6 +489,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public int getResponseCode() throws IOException {
     connect();
+    doRequest();
 
     return responseCode;
   }
@@ -496,6 +500,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public String getResponseMessage() throws IOException {
     connect();
+    doRequest();
 
     return responseMessage;
   }
@@ -532,6 +537,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public InputStream getInputStream() throws IOException {
     connect();
+    doRequest();
     checkConnection();
 
     return in;
@@ -557,7 +563,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         out.write(13);
         out.write(10);
       }
+    doRequest();
     }
+
     return out;
   }
 
@@ -902,7 +910,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** headers except Content-Length.
    */
   private void requestGET() throws IOException {
-    OutputStream out = socket.getOutputStream();
     requestHeaders.remove(new Attributes.Name("content-length"));
     out.write(getRequestLine().getBytes());
     out.write(getRequestHeaders().getBytes());
