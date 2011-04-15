@@ -54,8 +54,8 @@ class PlainSocketImpl extends SocketImpl {
   private static HashSet opensockets;
 
   /**
-   * Number of references which have been added to <code<opensockets</code>
-   * since the last purge of stqle references.
+   * Number of references which have been added to <code>opensockets</code>
+   * since the last purge of stale references.
    */
   private static int regcount;
 
@@ -79,7 +79,11 @@ class PlainSocketImpl extends SocketImpl {
           PlainSocketImpl psi = (PlainSocketImpl)wr.get();
           if (psi != null) {
             try {
-              psi.close();
+              Thread t = SocketUsers.get(psi);
+              if (t != null) {
+                psi.signal(t);
+              }
+              psi._close();
             }
             catch (IOException ioe) {
             }
@@ -233,12 +237,15 @@ class PlainSocketImpl extends SocketImpl {
   }
 
   protected synchronized void accept(SocketImpl s) throws IOException {
-    int ip = nativeAccept(s);
-    s.address = InetAddress.createInetAddress(ip);
     try {
-      ((PlainSocketImpl)s).register();
+      SocketUsers.put(this, Thread.currentThread());
+      int ip = nativeAccept(s);
+      s.address = InetAddress.createInetAddress(ip);
     }
     catch (ClassCastException cce) {
+    }
+    finally {
+      SocketUsers.remove(this);
     }
   }
 
@@ -305,10 +312,10 @@ class PlainSocketImpl extends SocketImpl {
   
   protected void close() throws IOException {
     Thread t = SocketUsers.get(this);
+    _close();
     if (t != null) {
       signal(t);
     }
-    _close();
   }
 
   private void register() {
