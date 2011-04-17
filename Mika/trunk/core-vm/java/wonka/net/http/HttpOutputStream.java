@@ -40,7 +40,7 @@ class HttpOutputStream extends OutputStream {
   private static final byte[] NEWLINE = new byte[]{(byte)'\r',(byte)'\n'};
 
   /**
-   ** The size of the buffer used when no Content-Length was specified.
+   ** The size of the buffer used.
    ** If more data than this is written to the HttpOutputStream, or
    ** if <code>flush()</code> is called, chunking is applied.
    */
@@ -86,26 +86,15 @@ class HttpOutputStream extends OutputStream {
    */
   private boolean chunked;
 
-  /**
-   ** True iff no content-length header has yet been written.
-   */
   private boolean contentLengthNotYetSent;
 
   /**
-   ** The BasicHttpURLConnection by which this HttpOutputStream was created.
-   */
-  int contentLength;
-
-  /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
-   ** The buffer size is <var>contentLength</var> if this is >=0,
-   ** <var>bufsize</var> otherwise.
    */
-  HttpOutputStream(OutputStream out, int contentLength) throws IOException {
+  HttpOutputStream(OutputStream out) throws IOException {
     this.out = out;
-    this.contentLength = contentLength;
-    contentLengthNotYetSent = contentLength < 0;
-    buffer = new byte[contentLengthNotYetSent ? bufsize : contentLength];
+    contentLengthNotYetSent = true;
+    buffer = new byte[bufsize];
   }
 
   /**
@@ -139,8 +128,7 @@ class HttpOutputStream extends OutputStream {
   /**
    ** Variant of flush() used by BasicHttpURLConnection.
    ** If operating in chunked mode, flush the current contents of <var>buffer</var> to <var>out</var>.
-   ** If not operating in chunked mode and the data indicated by the
-   ** request content-length is available, send the data.
+   ** If not operating in chunked mode and data is available, send the data.
    ** Otherwise do nothing. 
    */
   void flush_internal() throws IOException {
@@ -151,17 +139,8 @@ class HttpOutputStream extends OutputStream {
       if(chunked) {
         flushBuffer(buffer, 0);
       }
-      else if (count >= contentLength) {
-        if (contentLengthNotYetSent) {
-          out.write(("Content-Length: " + contentLength+"\r\n").getBytes());
-          contentLengthNotYetSent = false;
-        }
+      else {
         out.write(NEWLINE,0,2);
-        if (contentLength > 0) {
-          out.write(buffer,0,contentLength);
-          count = 0;
-          out.flush();
-        }
       }
     }
   }
@@ -231,18 +210,14 @@ class HttpOutputStream extends OutputStream {
    ** already enabled.
    */
   private void flushBuffer(byte[] buf, int off) throws IOException {
-    // if contentLengthNotYetSent is not set then we already sent a
-    // Content-length, so we mustn't enter chunked mode.
-    if (contentLengthNotYetSent) {
-      if(!chunked){
-        chunked = true;
-        out.write(CHUNKED,0,CHUNKED.length);
-      }
-      out.write((Integer.toHexString(count)+"\r\n").getBytes());
-      out.write(buf,off, count);
-      count = 0;
-      out.write(NEWLINE,0,2);
+    if(!chunked){
+      chunked = true;
+      out.write(CHUNKED,0,CHUNKED.length);
     }
+    out.write((Integer.toHexString(count)+"\r\n").getBytes());
+    out.write(buf,off, count);
+    count = 0;
+    out.write(NEWLINE,0,2);
     out.flush();
   }
 }

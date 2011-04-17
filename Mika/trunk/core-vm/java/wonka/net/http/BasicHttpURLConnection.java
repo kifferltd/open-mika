@@ -59,6 +59,19 @@ import wonka.encoder.Base64Encoder;
  ** and a value of 0 means that no timeout will be applied.
  */
 public class BasicHttpURLConnection extends HttpURLConnection {
+    private static final String POST = "POST";
+
+    private static final String GET = "GET";
+
+    private static final String PUT = "PUT";
+
+    private static final String HEAD = "HEAD";
+
+    private static final String DELETE = "DELETE";
+
+    private static final String OPTIONS = "OPTIONS";
+
+    private static final String TRACE = "TRACE";
 
   /**
    ** If set to <code>true</code>, cache the proxy user name and password
@@ -144,6 +157,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       System.err.println(s);
     }
   }
+
+  private boolean requestSent;
 
   /**
    ** Set up the static variables <code>proxyHost</code>, <code>proxyUser</code>,
@@ -278,6 +293,15 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   ** null will be returned, because we associate 0 with the HTTP status line.
   */
   public String getHeaderFieldKey(int n) {
+    // ensure that response has been read
+    try {
+      getInputStream();
+    }
+    catch (IOException ioe) {}
+    if (responseHeaders == null) {
+      return null;
+    }
+
     if (keys == null || n <= 0 || n > keys.size()) {
       return null;
     }
@@ -290,6 +314,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   ** the HTTP status line will be returned.
   */
   public String getHeaderField(int n) {
+    // ensure that response has been read
+    try {
+      getInputStream();
+    }
+    catch (IOException ioe) {
+    }
+    if (responseHeaders == null) {
+      return null;
+    }
+
     if (keys == null || n < 0 || n > keys.size()) {
       return null;
     }
@@ -340,7 +374,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         return;
       }
 
-      responseHeaders = new HashMap();
       keys = new ArrayList();
       int port = url.getPort();
       if (port < 0) {
@@ -366,29 +399,51 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     protected void doRequest() throws IOException {
-      if("PUT".equals(method) || "POST".equals(method)){
+      if (requestSent) {
+        // Clean up and get out
+        OutputStream local_out = out;
+        if ((local_out != null) && !responseParsed) {
+          debug("HTTP: flushing " +  local_out);
+          try {
+            ((HttpOutputStream)local_out).flush_internal();
+          }
+          catch (ClassCastException ioe) {
+            // Ignore - we were writing directly to the socket
+          }
+          catch (IOException ioe) {
+            // Ignore - probably stream was already closed
+          }
+        }
+        return;
+      }
+
+      if(PUT.equals(method) || POST.equals(method)){
         out.write(getRequestLine().getBytes());
         sendPartialHeaders(out);
         doOutput = true;
+        requestSent = true;
+        return;
       }
-      else if("GET".equals(method)){
+      else if(GET.equals(method)) {
         requestGET();
       }
-      else if("HEAD".equals(method)){
+      else if(HEAD.equals(method)) {
         requestGET();
       }
-      else if("DELETE".equals(method)){
+      else if(DELETE.equals(method)) {
         requestGET();
       }
-      else if("OPTIONS".equals(method)){
+      else if(OPTIONS.equals(method)) {
         requestGET();
       }
-      else if("TRACE".equals(method)){
+      else if(TRACE.equals(method)) {
         requestGET();
       }
       else {
         throw new IOException("invalid method '"+method+"'");
       }
+
+      requestSent = true;
 
       parseResponse();
 
@@ -472,14 +527,15 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Get the response header field named <var>name</var>.
    */
   public String getHeaderField(String name){
+    // ensure that response has been read
     try {
-      connect();
-      doRequest();
+      getInputStream();
     }
-    catch(IOException ioe){
-      ioe.printStackTrace();
+    catch (IOException ioe) {}
+    if (responseHeaders == null) {
       return null;
     }
+
     return internal_getResponseProperty(name);
   }
 
@@ -490,6 +546,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   public int getResponseCode() throws IOException {
     connect();
     doRequest();
+    parseResponse();
 
     return responseCode;
   }
@@ -501,6 +558,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   public String getResponseMessage() throws IOException {
     connect();
     doRequest();
+    parseResponse();
 
     return responseMessage;
   }
@@ -538,6 +596,17 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   public InputStream getInputStream() throws IOException {
     connect();
     doRequest();
+    OutputStream local_out = out;
+    out = null;
+    if (local_out != null && local_out instanceof HttpOutputStream) {
+      debug("HTTP: closing " +  local_out);
+      try {
+        local_out.close();
+      }
+      catch(IOException ioe){}
+    }
+
+    parseResponse();
     checkConnection();
 
     return in;
@@ -549,22 +618,36 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public OutputStream getOutputStream() throws IOException {
 
-    connect();
-
     if(!doOutput){
       throw new IOException("output is disabled");
     }
-    if (out == null) {
+
+    if (requestSent) {
+      throw new ProtocolException("request already sent");
+    }
+
+    if (out != null) {
+      return out;
+    }
+
+    if (method.equals(GET)) {
+      method = POST;
+    }
+    else if (!(PUT.equals(method) || POST.equals(method))) {
+      throw new ProtocolException("can only call getOutputStream() on PUT or POST");
+    }
+
+    connect();
+    doRequest();
+
       if (requestContentLength < 0) {
-        out = new HttpOutputStream(socket.getOutputStream(), requestContentLength);
+        out = new HttpOutputStream(socket.getOutputStream());
       }
       else {
         out = socket.getOutputStream();
         out.write(13);
         out.write(10);
       }
-    doRequest();
-    }
 
     return out;
   }
@@ -711,8 +794,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         h = r.readLine();
       }
     }
-    catch (IOException ioe) {
-    }
+    catch (IOException ioe) {}
   }
 
   /**
@@ -927,6 +1009,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     }
 
+    responseHeaders = new HashMap();
     // TODO: should this code be moved to checkConnection()?
     if (out != null) {
       try {
@@ -942,6 +1025,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     try {
       if(probeStatusLine()){
+        responseParsed = true;
         String line = readLine(false);
         responseLine = line;
         debug("HTTP: response: " + line);
@@ -1014,15 +1098,15 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
     if(responseCode>=100 && responseCode<200) {
         // Continue recognized. Parse next header
+        responseParsed = false;
         parseResponse();
     }
     else if (((responseCode==HTTP_MOVED_PERM) || (responseCode==HTTP_MOVED_TEMP) || (responseCode==HTTP_SEE_OTHER)) && instanceFollowRedirects) {
-      if (!("GET".equals(method) || "HEAD".equals(method))) {
+      if (!(GET == method || HEAD == method)) {
         if (responseCode == HTTP_SEE_OTHER) {
-          method = "GET";
+          method = GET;
         }
         else {
-          responseParsed = true;
           throw new IOException(responseCode + " redirection response not allowed for " + method);
         }
       }
@@ -1040,8 +1124,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
       reconnect();
     }
-
-    responseParsed = true;
   }
 
   boolean reconnect() throws IOException {
@@ -1083,6 +1165,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   ** @return	true if this is a HTTP/1.0 or HTTP/1.1 response, false otherwise.
   */
   private boolean probeStatusLine() throws IOException {
+    connect();
     byte[] bytes = new byte[8];
     // [CG 20090226] Guard against close() in another thread
     InputStream local_in = in;
