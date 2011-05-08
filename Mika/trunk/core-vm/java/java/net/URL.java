@@ -146,7 +146,12 @@ public final class URL implements java.io.Serializable {
                 sm.checkSetFactory();
             }
         }
-        streamHandlers.clear();
+        // [CG 20110508] The following statement has the effect of removing
+        // all handlers found so far from the cache.  I don't see any reason
+        // to do this, and it seems to screw up the ServiceURLStreamHandler
+        // logic of Knopflerfish (rev. 2.3.3) - so I'm removing it (even 
+        // the KF code looks pretty dodgy if you ask me).
+        // streamHandlers.clear();
         streamHandlerFactory = streamFactory;
     }
 
@@ -568,18 +573,10 @@ public final class URL implements java.io.Serializable {
         // If so, then walk this list looking for an applicable one.
         String packageList = GetSystemProperty.PROTOCOL_HANDLER_PKGS;
 
-        // FIXME: for the time being we default to the Wonka handlers
-        if (packageList.length() == 0) {
-            packageList = DEFAULT_PROTOCOL_PACKAGE;
-        }
-        else {
-            packageList = packageList + "|" + DEFAULT_PROTOCOL_PACKAGE;
-        }
-
         if (packageList != null) {
             StringTokenizer st = new StringTokenizer(packageList, "|"); //$NON-NLS-1$
             while (st.hasMoreTokens()) {
-                String className = st.nextToken() + "." + protocol + ".Handler"; //$NON-NLS-1$ //$NON-NLS-2$
+                String className = st.nextToken() + "." + protocol + ".Handler";
 
                 try {
                     strmHandler = (URLStreamHandler) Class.forName(className,
@@ -598,8 +595,9 @@ public final class URL implements java.io.Serializable {
 
         // No one else has provided a handler, so try our internal one.
 
-        String className = "org.apache.harmony.luni.internal.net.www.protocol." + protocol //$NON-NLS-1$
-                + ".Handler"; //$NON-NLS-1$
+        // WAS: String className = "org.apache.harmony.luni.internal.net.www.protocol." + protocol //$NON-NLS-1$
+        // WAS:         + ".Handler"; //$NON-NLS-1$
+        String className = DEFAULT_PROTOCOL_PACKAGE + "." + protocol + ".Handler";
         try {
             strmHandler = (URLStreamHandler) Class.forName(className)
                     .newInstance();
