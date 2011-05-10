@@ -312,8 +312,8 @@ public class Proxy implements java.io.Serializable {
 // magic number, minor version, major version
     classfile.write16(0xcafe);
     classfile.write16(0xbabe);
-    classfile.write16(0x0003);
-    classfile.write16(0x0046);
+    classfile.write16(0);
+    classfile.write16(45);
 // constant pool
     classfile.writeConstants();
 // access flags
