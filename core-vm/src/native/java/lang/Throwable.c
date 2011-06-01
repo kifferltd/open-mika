@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2006, 2010 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2006, 2010, 2011 by Chris Gray, /k/ Embedded  *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -79,6 +79,7 @@ w_int Throwable_getStackTraceLength(JNIEnv *env, w_instance thisThrowable) {
 ** and advance the `frame' field of the Throwable to the next record.
 */
 void Throwable_nextStackTrace(JNIEnv *env, w_instance thisThrowable, w_instance stack) {
+  w_thread thread = JNIEnv2w_thread(env);
   w_exr current = getWotsitField(thisThrowable, F_Throwable_frame);
   w_exr next = current + 1;
   
@@ -86,7 +87,7 @@ void Throwable_nextStackTrace(JNIEnv *env, w_instance thisThrowable, w_instance 
    return;
   }
 
-  threadMustBeSafe(JNIEnv2w_thread(*env));
+  threadMustBeSafe(thread);
   if (current) {
     w_method method = current->method;
     w_clazz clazz = method->spec.declaring_clazz;
