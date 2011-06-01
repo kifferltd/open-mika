@@ -126,8 +126,9 @@ void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
 void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const char *function, const int line) {
   w_instance oome;
 
+  threadMustBeSafe(thread);
   if (thread) {
-    w_boolean was_unsafe = enterUnsafeRegion(thread);
+    enterUnsafeRegion(thread);
 
     woempa(9,"FREE MEMORY %i TOTAL MEMORY %i\n",x_mem_avail(),  x_mem_total());
     if (instance2clazz(exceptionThrown(thread)) == clazzOutOfMemoryError) {
@@ -143,7 +144,9 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
       thread->exception = oome;
       removeLocalReference(thread, oome);
       if (thread->Thread && size >= 0) {
+        enterSafeRegion(thread);
         addDetailMessageToOOME(thread, oome, size);
+        enterUnsafeRegion(thread);
       }
       else {
         bootstrap_exception = oome;
@@ -153,9 +156,7 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
     else {
     woempa(9, "OutOfMemoryError thrown when %e already pending - ignoring OutOfMemoryError at line %d in %s (%s)\n", exceptionThrown(thread), line, function, file);
     }
-    if (!was_unsafe) {
-      enterSafeRegion(thread);
-    }
+    enterSafeRegion(thread);
   }
   else {
     wabort(ABORT_WONKA, "Out of memory!");
@@ -165,6 +166,7 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
 void _throwOutOfMemoryError(w_thread thread, w_int size) {
   w_instance oome;
 
+  threadMustBeSafe(thread);
   if (thread) {
     w_boolean was_unsafe = enterUnsafeRegion(thread);
 
@@ -177,7 +179,9 @@ void _throwOutOfMemoryError(w_thread thread, w_int size) {
       thread->exception = oome;
       removeLocalReference(thread, oome);
       if (thread->Thread && size >= 0) {
+        enterSafeRegion(thread);
         addDetailMessageToOOME(thread, oome, size);
+        enterUnsafeRegion(thread);
       }
       else {
         bootstrap_exception = oome;
