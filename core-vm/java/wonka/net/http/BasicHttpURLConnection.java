@@ -622,14 +622,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       throw new IOException("output is disabled");
     }
 
-    if (requestSent) {
-      throw new ProtocolException("request already sent");
-    }
-
-    if (out != null) {
-      return out;
-    }
-
     if (method.equals(GET)) {
       method = POST;
     }
@@ -638,8 +630,12 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     connect();
-    doRequest();
+    if (!requestSent) {
+      doRequest();
+    }
 
+
+    if (out == null) {
       if (requestContentLength < 0) {
         out = new HttpOutputStream(socket.getOutputStream());
       }
@@ -648,6 +644,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         out.write(13);
         out.write(10);
       }
+    }
 
     return out;
   }
