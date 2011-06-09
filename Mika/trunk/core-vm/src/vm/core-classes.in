@@ -1,7 +1,7 @@
 ###########################################################################
 # Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     #
-# reserved. Parts copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010 by   #
-# Chris Gray, /k/ Embedded Solutions. All rights reserved.                #
+# reserved. Parts copyright 2004, 2005, 2006, 2007, 2008, 2009, 2010,     #
+# 2011 by Chris Gray, /k/ Embedded Solutions. All rights reserved.        #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -98,6 +98,7 @@ wonka/vm/Heartbeat
 	numberNonDaemonThreads  ()I	Heartbeat_numberNonDaemonThreads
 	isKilled                ()Z	Heartbeat_isKilled
 	setThread               (Ljava/lang/Thread;)V   Heartbeat_setThread
+	collectTimeOffset	()V	Heartbeat_static_collectTimeOffset
 	getTimeOffset		()J	Heartbeat_static_getTimeOffset
 wonka/vm/Init
 wonka/vm/JDWP

@@ -49,6 +49,11 @@ class TimerThread extends Thread implements Comparator {
   */
   private WeakReference timerReference;
 
+  // Only start collecting timer drift on the first active use of this class
+  static {
+    Heartbeat.collectTimeOffset();
+  }
+
   TimerThread(Timer timer, boolean daemon){
     super("Thread for timer:"+timer);
     timerReference = new WeakReference(timer);
