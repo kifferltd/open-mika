@@ -267,6 +267,7 @@ static struct timespec ts;
 #endif
 static struct timeval before;
 static struct timeval now;
+static w_boolean collecting;
 static w_boolean inited;
 
 // Volatile 'coz gcc might screw up otherwise
@@ -277,14 +278,16 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
   w_long diff;
 
 #ifdef USE_NANOSLEEP
-  if (!inited) {
-    ts.tv_sec = 0;
-    ts.tv_nsec = micros * 1000;
-  }
+  ts.tv_sec = 0;
+  ts.tv_nsec = micros * 1000;
   nanosleep(&ts, NULL);
 #else
   usleep(micros);
 #endif
+
+  if (!collecting) {
+    return;
+  }
 
   if (!inited) {
     gettimeofday(&now, NULL);
@@ -300,6 +303,10 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
 #endif
     }
   }
+}
+
+void Heartbeat_static_collectTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
+  collecting = TRUE;
 }
 
 w_long Heartbeat_static_getTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
