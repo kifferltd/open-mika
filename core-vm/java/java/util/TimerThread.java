@@ -58,10 +58,10 @@ class TimerThread extends Thread implements Comparator {
   }
 
   public int compare(Object o, Object t){
-    if(o == t){
-      return 0;
-    }
-    return (((TimerTask)o).startTime < ((TimerTask)t).startTime) ? -1 : 1 ;
+    TimerTask task_o = (TimerTask)o;
+    TimerTask task_t = (TimerTask)t;
+    long diff = (task_o.startTime - task_o.savedoffset) - (task_t.startTime- task_t.savedoffset);
+    return diff == 0L ? 0 : diff < 0L ? -1 : 1 ;
   }
 
   public void run(){
