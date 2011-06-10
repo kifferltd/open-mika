@@ -40,18 +40,28 @@ class HttpOutputStream extends OutputStream {
   private static final byte[] NEWLINE = new byte[]{(byte)'\r',(byte)'\n'};
 
   /**
-   ** The size of the buffer used.
-   ** If more data than this is written to the HttpOutputStream, or
-   ** if <code>flush()</code> is called, chunking is applied.
+   ** The default size of the buffer used.  Chunking is applied if the content
+   ** length is unknown and more data than this is written to the
+   ** HttpOutputStream, or if <code>flush()</code> is called.
    */
-  private static int bufsize;
+  private static int default_bufsize;
 
   /**
-   ** Get <var>bufsize</var> from system property <code>wonka.http.request.buffer.size</code>,
-   ** with 4096 (bytes) as the default size.
+   ** The maximum size of the buffer used.  Even if the content length is 
+   ** known chunking will be applied if more data than this is written to the
+   ** HttpOutputStream.
+   */
+  private static int max_bufsize;
+
+  /**
+   ** Get <var>default_bufsize</var> and <var>max_bufsize</var> from system
+   ** properties <code>wonka.http.request.buffer.size</code> and
+   ** <code>wonka.http.request.buffer.size.max</code> respectively; defaults
+   ** are 4 Ki and 512Ki (bytes).
    */
   static {
-    bufsize = Integer.getInteger("wonka.http.request.buffer.size", 4096).intValue();
+    default_bufsize = Integer.getInteger("wonka.http.request.buffer.size", 4096).intValue();
+    max_bufsize = Integer.getInteger("wonka.http.request.buffer.size.max", 512 * 1024).intValue();
   }
 
   /**
@@ -76,25 +86,39 @@ class HttpOutputStream extends OutputStream {
   private boolean closed;
 
   /**
-   ** True iff this HttpOutputStream has already been internally flushed.
-   ** Any data written after this will be ignored.
-   */
-  private boolean flushed;
-
-  /**
    ** True iff this HttpOutputStream is using chunked mode.
    */
   private boolean chunked;
 
-  private boolean contentLengthNotYetSent;
+  private int contentLength;
+
+  private boolean contentLengthSent;
 
   /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
    */
   HttpOutputStream(OutputStream out) throws IOException {
     this.out = out;
-    contentLengthNotYetSent = true;
-    buffer = new byte[bufsize];
+    buffer = new byte[default_bufsize];
+  }
+
+  /**
+   ** Construct a HttpOutputStream which wraps <var>out</var>.
+   */
+  HttpOutputStream(OutputStream out, int contentLength) throws IOException {
+    this.out = out;
+    if (contentLength < 0) {
+      buffer = new byte[default_bufsize];
+    }
+    else {
+      contentLengthSent = true;
+      if (contentLength < max_bufsize) {
+        buffer = new byte[contentLength];
+      }
+      else {
+        buffer = new byte[max_bufsize];
+      }
+    }
   }
 
   /**
@@ -113,9 +137,9 @@ class HttpOutputStream extends OutputStream {
         out.write(NEWLINE,0,2);
       }
       else {
-        if (contentLengthNotYetSent) {
+        if (!contentLengthSent) {
           out.write(("Content-Length: "+count+"\r\n").getBytes());
-          contentLengthNotYetSent = false;
+          contentLengthSent = true;
         }
         out.write(NEWLINE,0,2);
         out.write(buffer,0,count);
@@ -141,6 +165,9 @@ class HttpOutputStream extends OutputStream {
       }
       else {
         out.write(NEWLINE,0,2);
+        out.write(buffer, 0, count);
+        count = 0;
+        out.flush();
       }
     }
   }
@@ -152,9 +179,6 @@ class HttpOutputStream extends OutputStream {
   public void flush() throws IOException {
     if(closed){
       throw new IOException("Stream is closed");
-    }
-    if (flushed) {
-      // silently discard
     }
     if (count > 0){
       flushBuffer(buffer, 0);
@@ -168,9 +192,6 @@ class HttpOutputStream extends OutputStream {
   public void write(int b) throws IOException {
     if(closed){
       throw new IOException("Stream is closed");
-    }
-    if (flushed) {
-      // silently discard
     }
     if(count == buffer.length){
       flushBuffer(buffer, 0);
@@ -186,9 +207,6 @@ class HttpOutputStream extends OutputStream {
   public void write(byte[] bytes, int off, int length) throws IOException {
     if(closed){
       throw new IOException("Stream is closed");
-    }
-    if (flushed) {
-      // silently discard
     }
     if(length > (buffer.length - count)){
       if(count > 0){
