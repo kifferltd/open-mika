@@ -635,15 +635,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
 
-    if (out == null) {
-      if (requestContentLength < 0) {
-        out = new HttpOutputStream(socket.getOutputStream());
-      }
-      else {
-        out = socket.getOutputStream();
-        out.write(13);
-        out.write(10);
-      }
+    if (!(out instanceof HttpOutputStream)) {
+      out = new HttpOutputStream(out, requestContentLength);
     }
 
     return out;
