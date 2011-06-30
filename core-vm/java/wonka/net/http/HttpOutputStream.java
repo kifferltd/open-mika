@@ -96,11 +96,11 @@ class HttpOutputStream extends OutputStream {
 
   /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
-   */
   HttpOutputStream(OutputStream out) throws IOException {
     this.out = out;
     buffer = new byte[default_bufsize];
   }
+   */
 
   /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
@@ -137,17 +137,23 @@ class HttpOutputStream extends OutputStream {
         out.write(NEWLINE,0,2);
       }
       else {
-        if (!contentLengthSent) {
-          out.write(("Content-Length: "+count+"\r\n").getBytes());
-          contentLengthSent = true;
-        }
-        out.write(NEWLINE,0,2);
-        out.write(buffer,0,count);
-        buffer = null;
+        finishHeadersAndFlushBuffer();
       }
       out.flush();
     }
   }
+
+  private void finishHeadersAndFlushBuffer() throws IOException {
+    if (!contentLengthSent) {
+      out.write(("Content-Length: "+count+"\r\n").getBytes());
+      contentLengthSent = true;
+    }
+    out.write(NEWLINE,0,2);
+    out.write(buffer,0,count);
+    count = 0;
+    buffer = null;
+  }
+
 
   /**
    ** Variant of flush() used by BasicHttpURLConnection.
@@ -164,9 +170,7 @@ class HttpOutputStream extends OutputStream {
         flushBuffer(buffer, 0);
       }
       else {
-        out.write(NEWLINE,0,2);
-        out.write(buffer, 0, count);
-        count = 0;
+        finishHeadersAndFlushBuffer();
         out.flush();
       }
     }
