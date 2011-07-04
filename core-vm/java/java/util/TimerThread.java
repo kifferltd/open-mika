@@ -62,11 +62,29 @@ class TimerThread extends Thread implements Comparator {
     this.start();
   }
 
+  /**
+   * Compare two timers o and t.
+   * <ul><li>If o == t then we return 0.
+   * <li>Otherwise if o and t have different start times (allowing for any
+   * offset) then we return +/-1 based on the start times.
+   * <li>If the start times are the * same then we return +/-1 based on the
+   * hash code: this is arbitrary, but consistent.  (It is important that we
+   * only return 0 if o.equals(t) would return true, otherwise we screw up
+   * our TreeSet).
+   */
   public int compare(Object o, Object t){
+    if (o == t) {
+      return 0;
+    }
+
     TimerTask task_o = (TimerTask)o;
     TimerTask task_t = (TimerTask)t;
     long diff = (task_o.startTime - task_o.savedoffset) - (task_t.startTime- task_t.savedoffset);
-    return diff == 0L ? 0 : diff < 0L ? -1 : 1 ;
+    if (diff != 0L) {
+      return diff < 0L ? -1 : 1 ;
+    }
+
+    return o.hashCode() < t.hashCode()  ? -1 : 1 ;
   }
 
   public void run(){
