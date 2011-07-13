@@ -47,21 +47,11 @@ class HttpOutputStream extends OutputStream {
   private static int default_bufsize;
 
   /**
-   ** The maximum size of the buffer used.  Even if the content length is 
-   ** known chunking will be applied if more data than this is written to the
-   ** HttpOutputStream.
-   */
-  private static int max_bufsize;
-
-  /**
-   ** Get <var>default_bufsize</var> and <var>max_bufsize</var> from system
-   ** properties <code>wonka.http.request.buffer.size</code> and
-   ** <code>wonka.http.request.buffer.size.max</code> respectively; defaults
-   ** are 4 Ki and 512Ki (bytes).
+   ** Get <var>default_bufsize</var> from system property 
+   ** <code>wonka.http.request.buffer.size</code>; default is 4096 bytes.
    */
   static {
     default_bufsize = Integer.getInteger("wonka.http.request.buffer.size", 4096).intValue();
-    max_bufsize = Integer.getInteger("wonka.http.request.buffer.size.max", 512 * 1024).intValue();
   }
 
   /**
@@ -96,14 +86,6 @@ class HttpOutputStream extends OutputStream {
 
   /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
-  HttpOutputStream(OutputStream out) throws IOException {
-    this.out = out;
-    buffer = new byte[default_bufsize];
-  }
-   */
-
-  /**
-   ** Construct a HttpOutputStream which wraps <var>out</var>.
    */
   HttpOutputStream(OutputStream out, int contentLength) throws IOException {
     this.out = out;
@@ -112,12 +94,6 @@ class HttpOutputStream extends OutputStream {
     }
     else {
       contentLengthSent = true;
-      if (contentLength < max_bufsize) {
-        buffer = new byte[contentLength];
-      }
-      else {
-        buffer = new byte[max_bufsize];
-      }
     }
   }
 
@@ -149,9 +125,11 @@ class HttpOutputStream extends OutputStream {
       contentLengthSent = true;
     }
     out.write(NEWLINE,0,2);
-    out.write(buffer,0,count);
-    count = 0;
-    buffer = null;
+    if (buffer != null) {
+      out.write(buffer,0,count);
+      count = 0;
+      buffer = null;
+    }
   }
 
 
@@ -197,6 +175,13 @@ class HttpOutputStream extends OutputStream {
     if(closed){
       throw new IOException("Stream is closed");
     }
+
+    if (buffer == null) {
+      out.write(b);
+
+      return;
+    }
+
     if(count == buffer.length){
       flushBuffer(buffer, 0);
     }
@@ -212,6 +197,13 @@ class HttpOutputStream extends OutputStream {
     if(closed){
       throw new IOException("Stream is closed");
     }
+
+    if (buffer == null) {
+      out.write(bytes, off, length);
+
+      return;
+    }
+
     if(length > (buffer.length - count)){
       if(count > 0){
         flushBuffer(buffer, 0);
