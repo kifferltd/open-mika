@@ -80,9 +80,9 @@ class HttpOutputStream extends OutputStream {
    */
   private boolean chunked;
 
-  private int contentLength;
-
   private boolean contentLengthSent;
+
+  private boolean headersSent;
 
   /**
    ** Construct a HttpOutputStream which wraps <var>out</var>.
@@ -102,29 +102,40 @@ class HttpOutputStream extends OutputStream {
    ** and close <var>out</out>. Process the response.
    */ 
   public void close() throws IOException {
-    if(!closed){
-      closed = true;
-      if(chunked){
-        if(count > 0){
-          flushBuffer(buffer,0);
-        }
-        out.write('0');
-        out.write(NEWLINE,0,2);
-        out.write(NEWLINE,0,2);
-      }
-      else {
-        finishHeadersAndFlushBuffer();
-      }
-      out.flush();
+    if(closed) {
+      return;
     }
+
+    closed = true;
+    if(chunked){
+      if(count > 0){
+        flushBuffer(buffer,0);
+      }
+      out.write('0');
+      out.write(NEWLINE,0,2);
+      out.write(NEWLINE,0,2);
+    }
+    else {
+      finishHeadersAndFlushBuffer();
+    }
+    out.flush();
   }
 
-  private void finishHeadersAndFlushBuffer() throws IOException {
+  private void checkHeadersSent() throws IOException {
+    if (headersSent) {
+      return;
+    }
     if (!contentLengthSent) {
-      out.write(("Content-Length: "+count+"\r\n").getBytes());
+      out.write(("Content-Length: "+count).getBytes());
+      out.write(NEWLINE,0,2);
       contentLengthSent = true;
     }
     out.write(NEWLINE,0,2);
+    headersSent = true;
+  }
+
+  private void finishHeadersAndFlushBuffer() throws IOException {
+    checkHeadersSent();
     if (buffer != null) {
       out.write(buffer,0,count);
       count = 0;
@@ -143,15 +154,17 @@ class HttpOutputStream extends OutputStream {
     if(closed){
       throw new IOException("Stream is closed");
     }
-    if (count > 0){
-      if(chunked) {
+
+    if (chunked) {
+      if (count > 0){
         flushBuffer(buffer, 0);
       }
-      else {
-        finishHeadersAndFlushBuffer();
-        out.flush();
-      }
     }
+    else {
+      finishHeadersAndFlushBuffer();
+      out.flush();
+    }
+
   }
 
   /**
@@ -177,6 +190,7 @@ class HttpOutputStream extends OutputStream {
     }
 
     if (buffer == null) {
+      checkHeadersSent();
       out.write(b);
 
       return;
@@ -199,6 +213,7 @@ class HttpOutputStream extends OutputStream {
     }
 
     if (buffer == null) {
+      checkHeadersSent();
       out.write(bytes, off, length);
 
       return;
@@ -228,7 +243,8 @@ class HttpOutputStream extends OutputStream {
       chunked = true;
       out.write(CHUNKED,0,CHUNKED.length);
     }
-    out.write((Integer.toHexString(count)+"\r\n").getBytes());
+    out.write((Integer.toHexString(count)).getBytes());
+    out.write(NEWLINE,0,2);
     out.write(buf,off, count);
     count = 0;
     out.write(NEWLINE,0,2);
