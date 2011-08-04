@@ -31,8 +31,9 @@
 
 package java.lang;
 
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.WeakHashMap;
+import java.util.Map;
 
 public class Thread implements Runnable {
 
@@ -108,7 +109,7 @@ public class Thread implements Runnable {
    **            including InheritableThreadLocal) onto the corresponding
    **            values for this Thread.
    */
-  private WeakHashMap threadLocals;
+  private Map threadLocals;
 
   /**
    ** thrown     used to store a pending exception 
@@ -309,8 +310,6 @@ public class Thread implements Runnable {
         parent.uncaughtException(this, t);
       }
     } finally {
-      parent.deregisterThread(this);
-      parent = null;
       synchronized (this) {
         // [CG 20080131]
         // Emulate behaviour of Sun's VM, in which returning from run() seems
@@ -321,6 +320,8 @@ public class Thread implements Runnable {
         stopped = true;
         state_lock.notifyAll();
       }
+      parent.deregisterThread(this);
+      parent = null;
     }
   }
 
@@ -721,21 +722,20 @@ public class Thread implements Runnable {
    ** table of the current Thread (in other words, it inherits them).
    */
   private void inheritThreadLocals(Thread t) {
-    WeakHashMap   h = t.threadLocals;
+    Map   h = t.threadLocals;
 
     if (h==null) return;
 
     Iterator i = h.keySet().iterator();
 
     if (threadLocals == null) {
-      threadLocals = new WeakHashMap();
+      threadLocals = new HashMap();
     }
 
     while (i.hasNext()) {
       try {
         InheritableThreadLocal ihl = (InheritableThreadLocal)(i.next());
         threadLocals.put(ihl,ihl.childValue(t.threadLocals.get(ihl)));
-        ihl.threads.put(this,null);
       }
       catch (ClassCastException x) {}
     }
@@ -748,7 +748,7 @@ public class Thread implements Runnable {
    */
   void setThreadLocal(ThreadLocal tl, Object obj) {
     if (threadLocals == null) {
-      threadLocals = new WeakHashMap();
+      threadLocals = new HashMap();
     }
 
     threadLocals.put(tl,obj);
@@ -763,21 +763,24 @@ public class Thread implements Runnable {
    */
   Object getThreadLocal(ThreadLocal tl) {
     if (threadLocals == null) {
-      threadLocals = new WeakHashMap();
+      threadLocals = new HashMap();
     }
 
-    return threadLocals.get(tl);
+    Object result = threadLocals.get(tl);
+
+    return result;
   }
 
   /**
-   ** deleteThreadLocal(ThreadLocal tl) deletes the value associated with tl.
+   ** removeThreadLocal(ThreadLocal tl) deletes the value associated with tl.
    ** TODO: only allow this to be called by tl itself.
-   */
-  void deleteThreadLocal(ThreadLocal tl) {
+   ** Only needed for Java 5+
+  void removeThreadLocal(ThreadLocal tl) {
     if (threadLocals != null) {
     threadLocals.remove(tl);
     }
   }
+   */
 
   public ClassLoader getContextClassLoader() {
     ClassLoader caller = ClassLoader.getCallingClassLoader();
