@@ -73,7 +73,7 @@ public final class Boolean implements java.io.Serializable {
   }
 
   public static Boolean valueOf(String s) {
-    return new Boolean(s!=null && s.equalsIgnoreCase("true"));
+    return (s!=null && s.equalsIgnoreCase("true")) ? TRUE : FALSE;
   }
 
   public static boolean getBoolean(String nm) {
