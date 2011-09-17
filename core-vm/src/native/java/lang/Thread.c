@@ -409,7 +409,7 @@ void Thread_setPriority0(JNIEnv *env, w_instance thisThread, w_int newPriority) 
   thread->jpriority = newPriority;
 
   thread->kpriority = priority_j2k(thread->jpriority,0);
-  if (threadIsActive(thread)) {
+  if (threadIsActive(thread) && thread->kthread) {
    x_thread_priority_set(thread->kthread, thread->kpriority);
   }
 }
