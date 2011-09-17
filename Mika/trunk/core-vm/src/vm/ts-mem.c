@@ -31,6 +31,11 @@
 **************************************************************************/
 
 #include "heap.h"
+#ifdef RESMON
+#include "core-classes.h"
+#include "fields.h"
+#include "hashtable.h"
+#endif
 #include "ts-mem.h"
 #include "threads.h"
 #include "oswald.h"
@@ -50,6 +55,17 @@ static void alloc_barrier(w_thread thread) {
   }
 }
 
+#ifdef RESMON
+extern w_hashtable resmon_memory_hashtable;
+extern w_boolean pre_alloc_check(w_thread thread, w_size nbytes);
+extern void post_alloc(w_thread thread, void *address);
+extern void pre_dealloc(w_thread thread, void *address, w_size nbytes);
+#else
+#define pre_alloc_check(t,n) TRUE
+#define post_alloc(t,a)
+#define pre_dealloc(t,a,n)
+#endif
+
 /*
 ** Allocate cleared (zeroed) memory.
 */
@@ -57,17 +73,21 @@ void * _allocClearedMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   gc_reclaim(rsize, NULL);
 
-  alloc_barrier(thread);
-  chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
-
-  if (unsafe) {
-    enterUnsafeRegion(thread);
+  if (pre_alloc_check(thread, rsize)) {
+    alloc_barrier(thread);
+    chunk = x_mem_calloc(sizeof(w_Chunk) + rsize);
   }
-  if (!chunk) {
+  else {
+    chunk = NULL;
+  }
+
+  if (chunk) {
+    post_alloc(thread, chunk);
+  }
+  else {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -88,17 +108,21 @@ void * _allocMem(w_size rsize) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   gc_reclaim(rsize, NULL);
 
-  alloc_barrier(thread);
-  chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
-
-  if (unsafe) {
-    enterUnsafeRegion(thread);
+  if (pre_alloc_check(thread, rsize)) {
+    alloc_barrier(thread);
+    chunk = x_mem_alloc(sizeof(w_Chunk) + rsize);
   }
-  if (!chunk) {
+  else {
+    chunk = NULL;
+  }
+
+  if (chunk) {
+    post_alloc(thread, chunk);
+  }
+  else {
     w_printf("Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -117,19 +141,24 @@ void * _reallocMem(void * block, w_size newsize) {
   w_size  oldsize;
   w_chunk newchunk;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   oldchunk = block2chunk(block);
   oldsize = x_mem_size(oldchunk);
   gc_reclaim(newsize - oldsize, NULL);
 
-  alloc_barrier(thread);
-  newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
-  
-  if (unsafe) {
-    enterUnsafeRegion(thread);
+  if (pre_alloc_check(thread, newsize - oldsize)) {
+    alloc_barrier(thread);
+    pre_dealloc(thread, oldchunk, 0);
+    newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
   }
-  if (!newchunk) {
+  else {
+    newchunk = NULL;
+  }
+  
+  if (newchunk) {
+    post_alloc(thread, newchunk);
+  }
+  else {
     w_printf("Failed to reallocate %d bytes\n", newsize);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -150,6 +179,7 @@ void _releaseMem(void * block) {
   }
 
   chunk = block2chunk(block);
+  pre_dealloc(currentWonkaThread, chunk, x_mem_size(chunk));
   x_mem_free(chunk);
 }
 
@@ -159,6 +189,7 @@ void _discardMem(void * block) {
 
   if (block) {
     chunk = block2chunk(block);
+    pre_dealloc(currentWonkaThread, chunk, x_mem_size(chunk));
     x_mem_discard(chunk);
   }
 
@@ -380,19 +411,23 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
-  alloc_barrier(thread);
-  x_mem_lock(x_eternal);
-  chunk = _x_mem_calloc(sizeof(w_Chunk) + rsize, file, line);
+  if (pre_alloc_check(thread, rsize)) {
+    alloc_barrier(thread);
+    x_mem_lock(x_eternal);
+    chunk = _x_mem_calloc(sizeof(w_Chunk) + rsize, file, line);
+  }
+  else {
+    chunk = NULL;
+  }
 
-  if (chunk == NULL) {
+  if (chunk) {
+    post_alloc(thread, chunk);
+  }
+  else {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes\n", rsize);
-    if (unsafe) {
-      enterUnsafeRegion(thread);
-    }
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
@@ -405,9 +440,6 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-  if (unsafe) {
-    enterUnsafeRegion(thread);
-  }
 
   return chunk->data;
 
@@ -417,21 +449,25 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   gc_reclaim(rsize, NULL);
 
-  alloc_barrier(thread);
-  x_mem_lock(x_eternal);
-  chunk = _x_mem_alloc(sizeof(w_Chunk) + rsize, file, line);
+  if (pre_alloc_check(thread, rsize)) {
+    alloc_barrier(thread);
+    x_mem_lock(x_eternal);
+    chunk = _x_mem_alloc(sizeof(w_Chunk) + rsize, file, line);
+  }
+  else {
+    chunk = NULL;
+  }
 
-  if (chunk == NULL) {
+  if (chunk) {
+    post_alloc(thread, chunk);
+  }
+  else {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes for %s:%d\n", rsize, file, line);
-    if (unsafe) {
-      enterUnsafeRegion(thread);
-    }
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, rsize);
@@ -444,9 +480,6 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
-  if (unsafe) {
-    enterUnsafeRegion(thread);
-  }
   
   return chunk->data;
 
@@ -457,7 +490,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   w_chunk newchunk;
   w_size  oldsize;
   w_thread thread = currentWonkaThread;
-  w_boolean unsafe = FALSE;
 
   woempa(1,"%s.%d: Reallocating block %p, new size = %d\n", file, line, block, newsize);
   oldchunk = checkChunk(block, 1, file, line);
@@ -468,20 +500,26 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   }
 
+  pre_dealloc(thread, oldchunk, 0);
   oldsize = x_mem_size(oldchunk);
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, newsize, sizeof(w_Chunk) + newsize);
   gc_reclaim(newsize - oldsize, NULL);
 
-  alloc_barrier(thread);
-  x_mem_lock(x_eternal);
-  newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);
+  if (pre_alloc_check(thread, newsize - oldsize)) {
+    alloc_barrier(thread);
+    x_mem_lock(x_eternal);
+    newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);
+  }
+  else {
+    newchunk = NULL;
+  }
 
-  if (!newchunk) {
+  if (newchunk) {
+    post_alloc(thread, newchunk);
+  }
+  else {
     x_mem_unlock();
     printf("Failed to reallocate %d bytes for %s:%d\n", newsize, file, line);
-    if (unsafe) {
-      enterUnsafeRegion(thread);
-    }
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
       throwOutOfMemoryError(thread, newsize);
@@ -495,9 +533,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   prepareChunk(newchunk, newsize, file, line);  
   x_mem_unlock();
   checkChunk(newchunk->data, 1, file, line);
-  if (unsafe) {
-    enterUnsafeRegion(thread);
-  }
 
   return newchunk->data;
 }
@@ -517,6 +552,7 @@ void _d_releaseMem(void * block, const char * file, const int line) {
   // same memory it will look "one of ours" even if it isn't.
   chunk->madgic = 0;
 
+  pre_dealloc(currentWonkaThread, chunk, x_mem_size(chunk));
   x_mem_free(chunk);
 
 }
@@ -536,6 +572,7 @@ void _d_discardMem(void * block, const char * file, const int line) {
   // same memory it will look "one of ours" even if it isn't.
   chunk->madgic = 0;
 
+  pre_dealloc(currentWonkaThread, chunk, x_mem_size(chunk));
   x_mem_discard(chunk);
 
 }

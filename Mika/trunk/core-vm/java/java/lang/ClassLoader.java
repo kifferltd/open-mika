@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2009, 2010 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -128,6 +128,11 @@ public abstract class ClassLoader {
    ** Our name, as returned by toString()
    */
   private String ownname;
+
+  /**
+   * Link to a resource monitor on builds where this feature is enabled.
+   */
+  private Object resourceMonitor;
 
   /**
    ** Get a reference to the default protection domain.
@@ -843,5 +848,7 @@ ClassFormatError
   static boolean isSystemClassLoader(ClassLoader cl) {
     return cl == null || cl == systemClassLoader || cl == extensionClassLoader || cl == applicationClassLoader;
   }
+
+  public native void enableResourceMonitoring(boolean enable);
 
 }
