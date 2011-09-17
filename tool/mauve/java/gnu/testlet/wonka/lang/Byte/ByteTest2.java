@@ -448,54 +448,61 @@ public class ByteTest2 implements Testlet
 */
 	public void testValueConversion()
 	{
-		Byte zero  = new Byte((byte) 0 );
-		Byte abyte = new Byte((byte)'a');
-		Byte min   = new Byte(Byte.MIN_VALUE);
-		Byte max   = new Byte(Byte.MAX_VALUE);
+                // [CG20110913] Use valueOf so that we can test cacheing below
+		Byte zero  = Byte.valueOf("0");
+		Byte abyte = new Byte((byte) 'a');
+		Byte min   = Byte.valueOf(Byte.toString(Byte.MIN_VALUE));
+		Byte max   = Byte.valueOf(Byte.toString(Byte.MAX_VALUE));
 		
 		
 		// as the check comparisons by itself convert to integer, float or string, it is better to do a direct (value == expected)??
 		// instead of Boolean check(int target, int expected)		
-		harness.checkPoint("Value conversins");
+		harness.checkPoint("Value conversions");
 		harness.check( zero.byteValue() == 0);
 		harness.check(abyte.byteValue() == (byte)'a');
 		harness.check(max.byteValue() == 127);
 		harness.check(min.byteValue() ==-128);
 		
-		//harness.checkPoint("Value conversins: Byte => shortValue");
+		harness.checkPoint("Value conversions: Byte => shortValue");
 		harness.check( zero.shortValue() == 0);
 		harness.check(abyte.shortValue() == (short)'a');
 		harness.check(abyte.shortValue() == (short)(abyte.byteValue()) );		
 		harness.check(max.shortValue() == 127);
 		harness.check(min.shortValue() ==-128);
 		
-		//harness.checkPoint("Value conversins: Byte => intValue");
+		harness.checkPoint("Value conversions: Byte => intValue");
 		harness.check( zero.intValue() == 0);
 		harness.check(abyte.intValue() == (int)'a');
 		harness.check(abyte.intValue() == (int)(abyte.byteValue()) );		
 		harness.check(max.intValue() == 127);
 		harness.check(min.intValue() ==-128);
 		
-		//harness.checkPoint("Value conversins: Byte => longValue");
+		harness.checkPoint("Value conversions: Byte => longValue");
 		harness.check( zero.longValue() == 0l);
 		harness.check(abyte.longValue() == (long)'a');
 		harness.check(abyte.longValue() == (long)(abyte.byteValue()) );		
 		harness.check(max.longValue() == 127l);
 		harness.check(min.longValue() ==-128l);
 		
-		//harness.checkPoint("Value conversins: Byte => floatValue");
+		harness.checkPoint("Value conversions: Byte => floatValue");
 		harness.check( zero.floatValue() == 0.0f);
 		harness.check(abyte.floatValue() == (float)'a');
 		harness.check(abyte.floatValue() == (float)(abyte.byteValue()) );		
 		harness.check(max.floatValue() == 127.0f);
 		harness.check(min.floatValue() ==-128.0f);
 		
-		//harness.checkPoint("Value conversins: Byte => doubleValue");
+		harness.checkPoint("Value conversions: Byte => doubleValue");
 		harness.check( zero.doubleValue() == 0.0);
 		harness.check(abyte.doubleValue() == (double)'a');
 		harness.check(abyte.doubleValue() == (double)(abyte.byteValue()) );		
 		harness.check(max.doubleValue() == 127.0);
 		harness.check(min.doubleValue() ==-128.0);
+
+                // Added CG 20110913 - check cacheing
+                harness.checkPoint("Value conversions: cached results for -128..127.");
+                harness.check(max == Byte.valueOf("127"));
+                harness.check(min == Byte.valueOf("-128"));
+                harness.check(zero == Byte.valueOf("0"));
 	}
 
 /*
