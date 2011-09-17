@@ -34,5 +34,11 @@ public class value implements Testlet
       harness.check (! b.booleanValue());
       harness.check (a.equals(Boolean.valueOf("TrUE")));
       harness.check (! b.equals(Boolean.valueOf("TrUE")));
+
+      // tests added CG 20110913
+      harness.check (Boolean.TRUE == Boolean.valueOf("true"));
+      harness.check (Boolean.FALSE == Boolean.valueOf("false"));
+      harness.check (Boolean.TRUE == Boolean.valueOf(true));
+      harness.check (Boolean.FALSE == Boolean.valueOf(false));
     }
 }
