@@ -1,5 +1,4 @@
 // Tags: JDK1.0
-// Uses: MyURLStreamHandler
 
 /*
    Copyright (C) 1999 Hewlett-Packard Company
@@ -234,6 +233,11 @@ public class URLTest implements Testlet
 	}
 	*/
 
+        /* [CG 20110610]
+         * None of this is allowed because sh has to be the URLStreamHandler
+         * which originally created the URL else SecurityError.
+         * <p>MyURLStreamHandler was just a thin wrapper around URLStreamHandler
+         * so I don't know what these tests were supposed to show anyway ..
 	public void test_URLStreamHandler()
 	{
 		harness.checkPoint("URLStreamHandler");
@@ -250,7 +254,7 @@ public class URLTest implements Testlet
 					" exception should not be thrown here");
 		}
 	}
-
+      */
 
         public void test_cr601a() {
             String[][] s = {
@@ -501,7 +505,7 @@ public class URLTest implements Testlet
 		test_openStream();
 		test_sameFile();
 		//test_toString();
-		test_URLStreamHandler();
+		//test_URLStreamHandler();
                 test_cr601a();
                 test_cr601b();
 	}
