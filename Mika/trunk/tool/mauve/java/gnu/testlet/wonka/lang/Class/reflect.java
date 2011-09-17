@@ -270,6 +270,26 @@ public class reflect implements Testlet
 
     try
       {
+	Method[] ms = String.class.getMethods();
+	// There should be at least 56 public methods in String.
+	harness.check (ms.length > 55);
+        int nStatics = 0;
+        for (int i = 0; i < ms.length; ++i) {
+          if (Modifier.isStatic(ms[i].getModifiers())) {
+            ++nStatics;
+          }
+        }
+        // At least 11 should be static methods
+	harness.check (nStatics > 10);
+      }
+    catch (SecurityException se)
+      {
+	// One per check above.
+	harness.check (false);
+      }
+
+    try
+      {
 	Method[] ms = reflect_class.getMethods();
 	int expected =
 	  (6 /* from reflect.java; note that Testlet's method is also

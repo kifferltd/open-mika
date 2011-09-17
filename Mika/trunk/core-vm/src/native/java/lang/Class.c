@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011 by Chris   *
+* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -385,7 +385,6 @@ Class_get_constructors
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz = Class2clazz(thisClass);
   w_size   i;
-  w_size   numMethods = 0;
   w_int    numRelevantConstructors;
   w_method method;
   w_instance Constructor;
@@ -398,7 +397,6 @@ Class_get_constructors
   mustBeInitialized(clazzArrayOf_Constructor);
 
   if (clazz) {
-    numMethods = clazz->numInheritableMethods;
     if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
       return NULL;
     }
@@ -494,10 +492,13 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 
   fields = allocFifo(62);
   if(fields == NULL) {
+    throwOutOfMemoryError(thread, -1);
     return NULL;
   }
 
   if(addFieldsToFifo(clazz, fields, mtype)) {
+    throwOutOfMemoryError(thread, -1);
+    releaseFifo(fields);
     return NULL;
   }
 
@@ -506,14 +507,16 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
       int j;
       for (j = 0; j < clazz->numInterfaces; ++j) {
         if(addFieldsToFifo(clazz->interfaces[j],fields, PUBLIC)) {
-          return NULL;
+          throwOutOfMemoryError(thread, -1);
+          break;
         }  
       }
     } else {
       w_clazz current_clazz = getSuper(clazz);
       while (current_clazz) {
         if(addFieldsToFifo(current_clazz,fields, PUBLIC)) {
-          return NULL;
+          throwOutOfMemoryError(thread, -1);
+          break;
         }  
         current_clazz = getSuper(current_clazz);
       }
@@ -568,7 +571,6 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   w_clazz  super;
   w_int  i;
   w_size j;
-  w_int  numMethods = 0;
   w_int  numRelevantMethods;
   w_method method;
   w_instance Method;
@@ -581,7 +583,6 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
   mustBeInitialized(clazzArrayOf_Method);
 
   if (clazz) {
-    numMethods = clazz->numInheritableMethods;
     if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
       return NULL;
     }
@@ -603,14 +604,20 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
     woempa(1, "Type DECLARED: Scanning %K only\n", clazz);
     for (i = 0; i < (w_int)clazz->numDeclaredMethods; ++i) {
       method = &clazz->own_methods[i];
-      if (string_char(method->spec.name, 0) != '<' && isNotSet(method->flags, METHOD_IS_MIRANDA | METHOD_IS_PROXY | METHOD_IS_SYNTHETIC)) {
-        numRelevantMethods += 1;
-        woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
-        if (putFifo(method,relevantMethods) < 0) {
-          w_printf("No space to store relevant methods for Class/getMethods()\n");
-          throwOutOfMemoryError(thread, -1);
-          return NULL;
-        }
+      if (string_char(method->spec.name, 0) == '<') {
+        // <init> or <clinit>, ignore
+        continue;
+      }
+      if (isSet(method->flags, METHOD_IS_MIRANDA | METHOD_IS_PROXY | METHOD_IS_SYNTHETIC)) {
+        // not a "real" method, ignore
+        continue;
+      }
+      numRelevantMethods += 1;
+      woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
+      if (putFifo(method,relevantMethods) < 0) {
+        w_printf("No space to store relevant methods for Class/getMethods()\n");
+        throwOutOfMemoryError(thread, -1);
+        break;
       }
     }
   }
@@ -625,7 +632,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
           if (putFifo(method,relevantMethods) < 0) {
             w_printf("No space to store relevant methods for Class/getMethods()\n");
             throwOutOfMemoryError(thread, -1);
-            return NULL;
+            break;
           }
         }
       }
@@ -640,7 +647,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
             if (putFifo(method,relevantMethods) < 0) {
               w_printf("No space to store relevant methods for Class/getMethods()\n");
               throwOutOfMemoryError(thread, -1);
-              return NULL;
+              break;
             }
           }
         }
@@ -652,14 +659,24 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
         woempa(1, "               Scanning %K\n", super);
         for (i = 0; i < (w_int)super->numDeclaredMethods; ++i) {
           method = &super->own_methods[i];
-          if (string_char(method->spec.name, 0) != '<' && isSet(method->flags, ACC_PUBLIC) && isNotSet(method->flags, METHOD_IS_MIRANDA) && virtualLookup(method, clazz) == method) {
-            numRelevantMethods += 1;
-            woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
-            if (putFifo(method,relevantMethods) < 0) {
-              w_printf("No space to store relevant methods for Class/getMethods()\n");
-              throwOutOfMemoryError(thread, -1);
-              return NULL;
-            }
+          if (string_char(method->spec.name, 0) == '<') {
+            // <init> or <clinit>, ignore
+            continue;
+          }
+          if (isNotSet(method->flags, ACC_PUBLIC) || isSet(method->flags, METHOD_IS_MIRANDA)) {
+            // not public, ignore
+            continue;
+          }
+          if (isNotSet(method->flags, ACC_STATIC) && virtualLookup(method, clazz) != method) {
+            // ignore instance methods which are overridden in the target class
+            continue;
+          }
+          numRelevantMethods += 1;
+          woempa(1, "  Method %d: %m\n",numRelevantMethods,method);
+          if (putFifo(method,relevantMethods) < 0) {
+            w_printf("No space to store relevant methods for Class/getMethods()\n");
+            throwOutOfMemoryError(thread, -1);
+            break;
           }
         }
       }
