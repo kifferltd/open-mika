@@ -309,7 +309,22 @@ public class SMAbstractListTest implements Testlet
     	}
     catch(ConcurrentModificationException cme) { th.check(true, "next"); }
     try  {
+    /*
+     * [CG 20101226] Apache Harmony implementation fails this test because
+     * it doesn't take account of the extra element which was created after
+     * the iterator was created.  I think this is allowed, because the
+     * spec says "The behavior of an iterator is unspecified if the underlying
+     * collection is modified while the iteration is in progress in any way
+     * other than by calling [remove()]".
+     * It's true however that this method should not throw a
+     * ConcurrentModificationException: only next, remove, previous, set, and
+     * add do that:-
+     * http://download.oracle.com/javase/1.4.2/docs/api/java/util/AbstractList.html#modCount
+     *
+     * WAS: 
     	th.check(it.hasNext());
+     */
+    	it.hasNext();
     	}
     catch(ConcurrentModificationException cme) {     	
     	th.fail("should not throw a ConcurrentModificationException -- 3");
@@ -393,7 +408,11 @@ public class SMAbstractListTest implements Testlet
      	th.fail("should throw a IllegalStateException -- 2");
     }
     catch(IllegalStateException ise) { th.check(true, "caught exeption -- 5"); }
+    /*
+     * [CG 20101226] Both Harmony and RI fail this test - they throw
+     * ConcurrentModificationException, which seems reasonable to me.
     th.check("c".equals(li.previous()) , "checking previous element -- 3");
+     */
     li.set("new");
     th.check("new".equals(li.next()) , "validating set");
     li.set("not");
