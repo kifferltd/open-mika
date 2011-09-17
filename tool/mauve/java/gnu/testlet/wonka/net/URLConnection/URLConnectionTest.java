@@ -184,6 +184,7 @@ public class URLConnectionTest implements Testlet
       {
 	harness.fail("Error in test_streams  - 1 " + 
 			   " should not have raised  exception here " );
+        e.printStackTrace();
       }
 
     try {
