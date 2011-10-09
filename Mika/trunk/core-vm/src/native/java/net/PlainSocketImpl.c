@@ -248,6 +248,12 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
   
 }
 
+// Our signal handler doesn't actually do anything, it's just there so that
+// SIGUSR1 has the desired effect of interrupting accept() or read().
+static sigusr_handler(int sig) {
+  woempa(1, "Received signal %d\n", sig);
+}
+
 w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -256,6 +262,8 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   w_int timeout;
   w_int i;
   unsigned char c;
+
+  struct sigaction action, savedaction;
   
   woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
@@ -283,7 +291,10 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   /*
   ** All seems OK, let's read...
   */
-
+  action.sa_handler = sigusr_handler;
+  sigemptyset (&action.sa_mask);
+  action.sa_flags = 0;
+  sigaction(SIGUSR1, &action, &savedaction);
   timeout = getIntegerField(ThisImpl, F_PlainSocketImpl_timeout);
   woempa(2, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
 #ifdef UCLINUX
@@ -291,6 +302,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
 #else
   res = w_recv(sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
 #endif
+  sigaction(SIGUSR1, &savedaction, NULL);
   if (res == -1) {
     if( timeout == -1) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -429,7 +441,6 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
       memset(&sa4, 0, sizeof(sa4));
       sa4.sin_family = AF_INET;
       sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-      //w_printIntAsIpString(sa4.sin_addr.s_addr);
       sa4.sin_port = w_switchPortBytes(port);
       woempa(1, "INET: bind, port %d addr %x (%x)\n", sa4.sin_port, sa4.sin_addr.s_addr, getIntegerField(address, F_InetAddress_address));
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -457,7 +468,6 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
     memset(&sa4, 0, sizeof(sa4));
     sa4.sin_family = AF_INET;
     sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-    //w_printIntAsIpString(sa4.sin_addr.s_addr);
     sa4.sin_port = w_switchPortBytes(port);
     //w_comparePorts(sa.sin_port,port);     
     woempa(1, "INET: bind, port %d addr %x (%x)\n", sa4.sin_port, sa4.sin_addr.s_addr, getIntegerField(address, F_InetAddress_address));
@@ -572,13 +582,19 @@ int PlainSocketImpl_accept(JNIEnv* env , w_instance ThisImpl, w_instance newImpl
     struct sockaddr_in sa;
     w_int newsocket;
     socklen_t bytelen = sizeof (struct sockaddr_in);
+    struct sigaction action, savedaction;
   		
+    action.sa_handler = sigusr_handler;
+    sigemptyset (&action.sa_mask);
+    action.sa_flags = 0;
+    sigaction(SIGUSR1, &action, &savedaction);
     memset(&sa, 0, sizeof(sa)); //lets play safe
 #ifdef UCLINUX
     newsocket = w_accept(ThisImpl,sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
 #else
     newsocket = w_accept(sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
 #endif
+    sigaction(SIGUSR1, &savedaction, NULL);
     woempa(1, "newsocket = %d\n", newsocket);
   	
     //set the wotsit value to -1 or the valid socket descriptor
@@ -764,7 +780,7 @@ void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
     }
 
     longer.l_onoff = 0;
-    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(struct linger));
+    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(longer));
   }
   else {
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -773,7 +789,7 @@ void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
 
     longer.l_onoff = 1;
     longer.l_linger = ling;
-    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(struct linger));
+    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(longer));
   }
 }
 
@@ -834,7 +850,13 @@ void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_insta
   w_thread wt = w_threadFromThreadInstance(aThread);
   x_thread xt = wt->kthread;
   if (xt) {
-    x_thread_signal(xt, x_signal_1);
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      w_printf("Socket: signalling %t\n", wt);
+    }
+    x_status status = x_thread_signal(xt, x_signal_1);
+    if (status != xs_success) {
+      w_printf("WARNING: x_thread_signal returned %d\n", status);
+    }
   }
 }
 
