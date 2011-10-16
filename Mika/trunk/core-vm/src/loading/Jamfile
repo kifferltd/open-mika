@@ -34,7 +34,7 @@ SUBDIRHDRS += $(FS_TOP)/hal/hostos/$(HOSTOS)/include ;
 SUBDIRHDRS += $(FS_TOP)/include ;
 SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
 
-Library $(WONKA_LIB) : supers.c refer.c link.c verify.c initialize.c fastcall.c ;
+Library $(WONKA_LIB) : supers.c refer.c link.c verify.c initialize.c fastcall.c bytecode.c ;
 
 #
 # All generated files will end up in the output directory, also generated
