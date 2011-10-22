@@ -89,7 +89,7 @@ SOFTWARE.
 
 w_word verify_flags; // select classes to be verified, see verifier.h
 
-w_boolean verifyMethod(w_method method);
+w_boolean verifyMethod(w_method method, w_thread thread);
 
 /*
 ** Generate an instance of VerifyError using the name of the failing class
@@ -152,7 +152,7 @@ static w_int loadValueType(w_field f) {
 }
 
 /*
-** Load the class corresponding to the type of a field's value.
+** Load the class corresponding to the type of a method's parameters and return value.
 ** The result returned is CLASS_LOADING_xxxxx.
 */
 static w_int loadDescriptorTypes(w_method m) {
@@ -176,61 +176,15 @@ static w_int loadDescriptorTypes(w_method m) {
 /*
 ** Called from initializeClazz() to perform bytecode verification.
 ** Returns CLASS_LOADING_SUCCEEDED or CLASS_LOADING_FAILED.
-** Currently we resolve every damn class in sight before invoking the
-** verifier. This is excessive; the verifier should load classes as it
-** needs to. FIXME (Better still would be to use subclass constraints,
-** but that is music for times to come).
 */
 w_int verifyClazz(w_clazz clazz) {
   w_thread thread = currentWonkaThread;
   w_size i;
-  w_field f;
   w_method m;
   w_int result = CLASS_LOADING_DID_NOTHING;
-  w_instance exception = NULL;
 
   if (verbose_flags & VERBOSE_FLAG_LOAD) {
     w_printf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
-  }
-
-  for (i = 1; !exception && i < clazz->numConstants; ++i) { 
-    switch (clazz->tags[i]) { 
-      case CONSTANT_CLASS: 
-      case RESOLVING_CLASS: 
-        getClassConstant(clazz, i, thread); 
-        woempa(1, "Resolved Class constant[%d] of %k to %k\n", i, clazz, getResolvedClassConstant(clazz, i)); 
-        break; 
-       
-      case CONSTANT_FIELD: 
-      case RESOLVING_FIELD: 
-        f = getFieldConstant(clazz, i); 
-        break; 
-       
-      case CONSTANT_METHOD: 
-      case RESOLVING_METHOD: 
-        m = getMethodConstant(clazz, i); 
-        break; 
-       
-      case CONSTANT_IMETHOD: 
-      case RESOLVING_IMETHOD: 
-        m = getIMethodConstant(clazz, i); 
-        break; 
-       
-      default: 
-        ; 
-    } 
-
-    // HACK HACK HACK - ignore linkage errors
-    exception = exceptionThrown(thread);
-    if (exception && isSuperClass(clazzLinkageError, instance2clazz(exceptionThrown(thread)))) {
-      clearException(thread);
-      exception = NULL;
-    }
-  }
-
-  for (i = 0; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numFields; ++i) {
-    f = &clazz->own_fields[i];
-    result |= loadValueType(f);
   }
 
   for (i = 0; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numDeclaredMethods; ++i) {
@@ -239,7 +193,7 @@ w_int verifyClazz(w_clazz clazz) {
     if (verbose_flags & VERBOSE_FLAG_LOAD) {
       w_printf("Verify %k: verifying method %m\n", clazz, m);
     }
-    result |= verifyMethod(m) ? CLASS_LOADING_SUCCEEDED : CLASS_LOADING_FAILED;
+    result |= verifyMethod(m, thread) ? CLASS_LOADING_SUCCEEDED : CLASS_LOADING_FAILED;
   }
 
   return result;
@@ -822,6 +776,7 @@ void releaseMethodVerifier(v_MethodVerifier *mv) {
 #else
 #define VERIFY_ERROR(cstr) error_cstring = (cstr); goto verify_error
 #endif
+#define CHECK_FOR_EXCEPTION(t) if (exceptionThrown(t)) { goto error; }
 
 char* array_too_few_dims = (char*)"array type has too few dimensions";
 char* array_not_correct = (char*)"not an array of appropriate type";
@@ -855,6 +810,8 @@ char* lookupswitch_bad_operand = (char*)"lookupswitch with npairs < 0";
 char* lookupswitch_out_of_order = (char*)"lookupswitch match values out of order";
 char* member_not_static = (char*)"member is not static";
 char* member_is_static = (char*)"member is static";
+char* member_not_interface = (char*)"member is not interface";
+char* member_is_interface = (char*)"member is interface";
 char* multianewarray_dims_too_big = (char*)"multianewarray has dimensions greater than array class";
 char* multianewarray_dims_zero = (char*)"multianewarray has zero dimensions";
 char* newarray_bad_operand = (char*)"newarray operand not in the range [4,11]";
@@ -898,8 +855,13 @@ char* value_not_reference = (char*)"value is not a reference type";
 ** or the number of dimensions if it is an array class.
 ** Note: #dims can be > 255, the caller should check this.
 */
-static inline w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx) {
-  return getResolvedClassConstant(declaring_clazz, idx)->dims;
+static inline w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx, w_thread thread) {
+  w_clazz clazz =  getClassConstant(declaring_clazz, idx, thread);
+  if (exceptionThrown(thread)) {
+    return -1;
+  }
+
+  return clazz->dims;
  }
 
 /*
@@ -1000,9 +962,8 @@ static void copyBlock(v_BasicBlock *toBlock, v_BasicBlock *fromBlock, v_MethodVe
 ** IS_INSTRUCTION, WIDE_MODDED.
 ** If errors are found, an exception is raised and FALSE is returned.
 */
-static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
-  w_method method = mv->method;
-  w_ubyte *status_array = mv->status_array;
+static w_ubyte *identifyBoundaries(w_method method, w_thread thread) {
+  w_ubyte *status_array;
   w_size codelen = method->exec.code_length;
   w_code code = method->exec.code;
   w_boolean is_wide;
@@ -1024,6 +985,7 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
 #endif
   w_string method_name;
 
+  status_array = allocClearedMem(method->exec.code_length);
   woempa(1, "Identifying instruction and basic block boundaries in %M, codelen = %d\n", method, codelen);
   status_array[0] |= START_BLOCK;
   is_wide = FALSE;
@@ -1393,7 +1355,8 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
     case new:
       V_ASSERT(isClassConstant(declaring_clazz, idx), not_class_constant);
 
-      n = getClassConstantDims(declaring_clazz, idx);
+      n = getClassConstantDims(declaring_clazz, idx, thread);
+      CHECK_FOR_EXCEPTION(thread);
 
       V_ASSERT(!n, new_creates_array);
       // NOTE: Sun's spec imlies that we should check that the class is not
@@ -1407,7 +1370,7 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
     case multianewarray:
       V_ASSERT(isClassConstant(declaring_clazz, idx), not_class_constant);
 
-      n = getClassConstantDims(declaring_clazz, idx);
+      n = getClassConstantDims(declaring_clazz, idx, thread);
       ndims = code[pc + 3];
       V_ASSERT(ndims, multianewarray_dims_zero);
       V_ASSERT(n >= ndims, multianewarray_dims_too_big);
@@ -1475,14 +1438,15 @@ static w_boolean identifyBoundaries(v_MethodVerifier *mv) {
       status_array[pc] |= START_BLOCK;
 
       if (ex->type_index) {
-        w_clazz throwable_clazz = getResolvedClassConstant(declaring_clazz, ex->type_index);
+        w_clazz throwable_clazz = getClassConstant(declaring_clazz, ex->type_index, thread);
+        CHECK_FOR_EXCEPTION(thread);
         V_ASSERT(isSuperClass(clazzThrowable, throwable_clazz), catch_not_throwable);
       }
 
     }
   }
 
-  return TRUE;
+  return status_array;
 
 verify_error:
 #ifdef DEBUG
@@ -1491,7 +1455,10 @@ verify_error:
   throwException(currentWonkaThread, clazzVerifyError, "%k.%m pc %d (%s): %s", declaring_clazz, method, pc, opc2name(method->exec.code[pc]), error_cstring);
 #endif
 
-  return FALSE;
+error:
+  releaseMem(status_array);
+
+  return NULL;
 }
 #undef CHECK_LOCAL_INDEX	
 #undef CHECK_POOL_IDX
@@ -1650,7 +1617,10 @@ static void propagateReturnAddress(v_MethodVerifier *mv, w_size subr_index, w_si
       if (succ_kind == SUCC_NORMAL) {
         woempa(7, "NORMAL successor %d\n", succ_index);
         succBlock = getBasicBlock(mv, succ_index);
-        putFifo(succBlock, clone_fifo);
+        if (succBlock->return_address != return_address) {
+          woempa(7, "enqueueing block[%d]\n", succ_index);
+          putFifo(succBlock, clone_fifo);
+        }
       }
     }
 
@@ -1948,7 +1918,9 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
           exbb = getBasicBlock(mv, succ_index);
           setFlag(exbb->flags, EXCEPTION);
           if (ex->type_index) {
-            exbb->exception_type = getResolvedClassConstant(mv->method->spec.declaring_clazz, ex->type_index);
+            w_thread thread = currentWonkaThread;
+            exbb->exception_type = getClassConstant(mv->method->spec.declaring_clazz, ex->type_index, thread);
+            CHECK_FOR_EXCEPTION(thread);
             woempa(7, "block[%d] exception_type = %k\n", succ_index, exbb->exception_type);
           }
           else {
@@ -2010,6 +1982,7 @@ verify_error:
 #else
   throwException(currentWonkaThread, clazzVerifyError, "%k.%m pc %d (%s): %s", method->spec.declaring_clazz, method, pc, opc2name(method->exec.code[pc]), error_cstring);
 #endif
+error:;
 }
 
 /*
@@ -2609,7 +2582,7 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 /*
 ** Verify a basic block.
 */
-w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
+w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread thread) {
   w_method method = mv->method;
   w_ubyte *status_array = mv->status_array;
   w_code code = method->exec.code;
@@ -3347,8 +3320,12 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       break;
 
     case getstatic:
+woempa(7, "getstatic");
       idx = GET_INDEX2;
-      f = getResolvedFieldConstant(declaring_clazz, idx);
+woempa(7, "idx %d type %02x\n", idx, declaring_clazz->tags[idx]);
+      f = getFieldConstant(declaring_clazz, idx);
+woempa(7, "field %V\n", f);
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isSet(f->flags, ACC_STATIC), member_not_static);
       // TODO: check access?
       CLAZZ2TYPE(f->value_clazz, t);
@@ -3357,7 +3334,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case putstatic:
       idx = GET_INDEX2;
-      f = getResolvedFieldConstant(declaring_clazz, idx);
+      f = getFieldConstant(declaring_clazz, idx);
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isSet(f->flags, ACC_STATIC), member_not_static);
       // TODO: check access?
       if (f->value_clazz == clazz_long || f->value_clazz == clazz_double) {
@@ -3372,7 +3350,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case getfield:
       CHECK_STACK_SIZE(1);
       idx = GET_INDEX2;
-      f = getResolvedFieldConstant(declaring_clazz, idx);
+      f = getFieldConstant(declaring_clazz, idx);
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isNotSet(f->flags, ACC_STATIC), member_is_static);
       t = POP;
       V_ASSERT(IS_REFERENCE(t) && v_assignable2clazz(f->declaring_clazz, mv, &t), objectref_wrong_type);
@@ -3385,7 +3364,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case putfield:
       CHECK_STACK_SIZE(2);
       idx = GET_INDEX2;
-      f = getResolvedFieldConstant(declaring_clazz, idx);
+      f = getFieldConstant(declaring_clazz, idx);
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isNotSet(f->flags, ACC_STATIC), member_is_static);
       // TODO: check access?
       if (f->value_clazz == clazz_long || f->value_clazz == clazz_double) {
@@ -3402,9 +3382,18 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case invokevirtual:
     case invokespecial:
+      idx = GET_INDEX2;
+      m = getMethodConstant(declaring_clazz, idx);
+      V_ASSERT(isNotSet(m->spec.declaring_clazz->flags, ACC_INTERFACE), member_is_interface);
+      goto invoke_instance;
+
     case invokeinterface:
       idx = GET_INDEX2;
-      m = getResolvedMethodConstant(declaring_clazz, idx);
+      m = getIMethodConstant(declaring_clazz, idx);
+      V_ASSERT(isSet(m->spec.declaring_clazz->flags, ACC_INTERFACE), member_not_interface);
+
+    invoke_instance:
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isNotSet(m->flags, ACC_STATIC), member_is_static);
       // TODO: check access?
       woempa(7, "Method %m expects %d elements on stack\n", m, m->exec.arg_i);
@@ -3477,7 +3466,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case invokestatic:
       idx = GET_INDEX2;
-      m = getResolvedMethodConstant(declaring_clazz, idx);
+      m = getMethodConstant(declaring_clazz, idx);
+      CHECK_FOR_EXCEPTION(thread);
       V_ASSERT(isSet(m->flags, ACC_STATIC), invokestatic_not_static);
       // TODO: check access?
       woempa(1, "Method %m expects %d elements on stack\n", m, m->exec.arg_i);
@@ -3509,7 +3499,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case new:
       idx = GET_INDEX2;
       t.tinfo = TINFO_UNINIT;
-      clazz = getResolvedClassConstant(declaring_clazz, idx);
+      clazz = getClassConstant(declaring_clazz, idx, thread);
+      CHECK_FOR_EXCEPTION(thread);
       t.uninitpc = pushUninit(mv, pc);
       t.data.clazz = clazz;
       goto push_reference;
@@ -3524,7 +3515,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       idx = GET_INDEX2;
       CHECK_STACK_SIZE(1);
       V_ASSERT(POP_IS_INTEGER, count_not_integer);
-      aclazz = getResolvedClassConstant(declaring_clazz, idx);
+      aclazz = getClassConstant(declaring_clazz, idx, thread);
       t.tinfo = TINFO_CLASS;
       t.uninitpc = 0;
       t.data.clazz = getNextDimension(aclazz, aclazz->loader);
@@ -3533,7 +3524,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
     case arraylength:
       CHECK_STACK_SIZE(1);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && t.data.clazz->dims, value_not_array);
+      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || t.data.clazz->dims), value_not_array);
       goto push_integer;
 
     case athrow:
@@ -3550,8 +3541,12 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
       CHECK_STACK_SIZE(1);
       t = POP;
       V_ASSERT(IS_REFERENCE(t), value_not_reference);
-      CLAZZ2TYPE(getResolvedClassConstant(declaring_clazz, idx), t);
-      woempa(1, "checkcast to %k\n", t.data.clazz);
+      {
+        w_clazz target_clazz = getClassConstant(declaring_clazz, idx, thread);
+        CHECK_FOR_EXCEPTION(thread);
+        CLAZZ2TYPE(target_clazz, t);
+        woempa(1, "checkcast to %k\n", t.data.clazz);
+      }
       goto push_reference;
 
     case instanceof:
@@ -3571,7 +3566,8 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv) {
 
     case multianewarray:
       idx = GET_INDEX2;
-      aclazz = getResolvedClassConstant(declaring_clazz, idx);
+      aclazz = getClassConstant(declaring_clazz, idx, thread);
+      CHECK_FOR_EXCEPTION(thread);
       n = method->exec.code[pc + 3];
       CHECK_STACK_SIZE(n);
       V_ASSERT(aclazz->dims >= n, array_too_few_dims);
@@ -3600,6 +3596,7 @@ verify_error:
   throwException(currentWonkaThread, clazzVerifyError, "%k.%m pc %d (%s): %s", method->spec.declaring_clazz, method, pc, opc2name(method->exec.code[pc]), error_cstring);
 #endif
 
+error:
   return FALSE;
 }
 
@@ -3658,8 +3655,9 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
         return MERGE_DID_NOTHING;
       }
       if (old_type->data.clazz == clazz_void) {
-        woempa(7, "new class is void, leaving as is\n");
-        return MERGE_DID_NOTHING;
+        woempa(7, "old class is void, replacing by new\n");
+        *old_type = *new_type;
+        return MERGE_SUCCEEDED;
       }
       if (new_type->data.clazz == old_type->data.clazz) {
         woempa(7, "both are type %k, leaving as is\n", new_type->data.clazz);
@@ -3720,7 +3718,7 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
 
         // [CG 20070126] Don't fail yet, maybe the slot is never used
         // return MERGE_FAILED;
-
+        break;
       }
 
       return new_index == old_index ? MERGE_DID_NOTHING : MERGE_SUCCEEDED;
@@ -3825,7 +3823,7 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
 
 /*
 */
-w_boolean verifyMethod(w_method method) {
+w_boolean verifyMethod(w_method method, w_thread thread) {
   v_MethodVerifier mv;
   v_BasicBlock* thisBlock = NULL;
   v_BasicBlock* currentBlock = NULL;
@@ -3840,13 +3838,12 @@ w_boolean verifyMethod(w_method method) {
 
   mv.method = method;
   mv.code_length = method->exec.code_length;
-  mv.status_array = allocClearedMem(method->exec.code_length);
   mv.numBlocks = 0;
   mv.blocks = NULL;
   mv.unions = NULL;
 
-  result = identifyBoundaries(&mv);
-  if (result) {
+  mv.status_array = identifyBoundaries(method, thread);
+  if (mv.status_array) {
     identifyBasicBlocks(&mv);
 
     if (mv.blocks) {
@@ -3870,7 +3867,7 @@ w_boolean verifyMethod(w_method method) {
           setFlag(thisBlock->flags, VISITED);
           copyBlock(currentBlock, thisBlock, &mv);
 
-          result = verifyBasicBlock(currentBlock, &mv);
+          result = verifyBasicBlock(currentBlock, &mv, thread);
           if (!result) {
 
              goto exit_verify;
