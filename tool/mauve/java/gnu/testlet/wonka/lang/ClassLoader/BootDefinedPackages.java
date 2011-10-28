@@ -50,6 +50,7 @@ public class BootDefinedPackages implements Testlet
      * List of classes in each of the standard packages
      */
     static String standardPackagesClasses[] = {
+        /* Not in base Mika build
                                                "java.applet.Applet",
                                                "java.awt.color.CMMException",
                                                "java.awt.datatransfer.Clipboard",
@@ -67,18 +68,21 @@ public class BootDefinedPackages implements Testlet
                                                "java.awt.ActiveEvent",
                                                "java.beans.beancontext.BeanContext",
                                                "java.beans.AppletInitializer",
+        */
                                                "java.io.BufferedInputStream",
-                                               "java.lang.annotation.AnnotationFormatError",
+        //                                       "java.lang.annotation.AnnotationFormatError",
                                                "java.lang.ref.PhantomReference",
                                                "java.lang.reflect.AccessibleObject",
                                                "java.lang.AbstractMethodError",
                                                "java.math.BigDecimal",
                                                "java.net.Authenticator",
+        /*
                                                "java.nio.channels.spi.AbstractInterruptibleChannel",
                                                "java.nio.channels.AlreadyConnectedException",
                                                "java.nio.charset.spi.CharsetProvider",
                                                "java.nio.charset.CharacterCodingException",
                                                "java.nio.Buffer",
+       */
                                                "java.rmi.activation.Activatable",
                                                "java.rmi.dgc.DGC",
                                                "java.rmi.registry.LocateRegistry",
@@ -92,9 +96,9 @@ public class BootDefinedPackages implements Testlet
                                                "java.sql.Array",
                                                "java.text.Annotation",
                                                "java.util.jar.Attributes",
-                                               "java.util.logging.ConsoleHandler",
-                                               "java.util.prefs.AbstractPreferences",
-                                               "java.util.regex.Matcher",
+        //                                       "java.util.logging.ConsoleHandler",
+        //                                       "java.util.prefs.AbstractPreferences",
+        //                                       "java.util.regex.Matcher",
                                                "java.util.zip.Adler32",
                                                "java.util.AbstractCollection" };
 
