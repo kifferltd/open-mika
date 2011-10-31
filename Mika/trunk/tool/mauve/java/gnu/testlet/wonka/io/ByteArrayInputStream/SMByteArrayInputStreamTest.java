@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Small changes by Chris Gray 2011                                        *
 *                                                                         *
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
@@ -83,18 +84,6 @@ public class SMByteArrayInputStreamTest implements Testlet
 		th.fail("should throw NullPointerException");
     	}
     catch (NullPointerException ne) { th.check(true); }
-    try {	xbin = new SMExByteArrayInputStream(buffer,-10,15);
-    		th.fail("should throw an ArrayIndexOutOfBoundsException -- 1");
-    	}
-    catch (ArrayIndexOutOfBoundsException ne) { th.check(true); }
-    try {	xbin = new SMExByteArrayInputStream(buffer,60,10);
-    		th.fail("should throw an ArrayIndexOutOfBoundsException -- 2");
-    	}
-    catch (ArrayIndexOutOfBoundsException ne) { th.check(true); }
-    try {	xbin = new SMExByteArrayInputStream(buffer,5,-10);
-    		th.fail("should throw an ArrayIndexOutOfBoundsException -- 3");
-  	}
-    catch (ArrayIndexOutOfBoundsException ne) { th.check(true); }
 
     xbin = new SMExByteArrayInputStream(buffer, 5, 50);    th.check( xbin.get_buf() == buffer , "the stream doesn't use a copy");
     th.check( xbin.get_pos() == 5 , "position is at the begin of the array");
