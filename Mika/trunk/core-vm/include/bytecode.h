@@ -119,7 +119,26 @@ extern char* value_not_reference;
 
 #define V_ASSERT(cond,msg) if (!(cond)) { VERIFY_ERROR(msg); }
 
+/*
+ * Flags for instruction_length_and_features array below:
+ */
+#define INSTRUCTION_UNDEFINED   0x8000
+#define INSTRUCTION_CAN_BE_WIDE 0x1000
+#define INSTRUCTION_USES_VAR    0x0f00
+#define INSTRUCTION_USES_VAR_0  0x0800
+#define INSTRUCTION_USES_VAR_1  0x0100
+#define INSTRUCTION_USES_VAR_2  0x0200
+#define INSTRUCTION_USES_VAR_3  0x0300
+#define INSTRUCTION_USES_VAR_4  0x0400
+
 extern const w_ushort instruction_length_and_features[256];
+
+/*
+ ** Get the dimensionality of a class constant. Returns 0 if the class is scalar,
+ ** or the number of dimensions if it is an array class.
+ ** Note: #dims can be > 255, the caller should check this.
+ */
+extern w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx, w_thread thread);
 
 w_ubyte *identifyBoundaries(w_method method, w_thread thread);
 
