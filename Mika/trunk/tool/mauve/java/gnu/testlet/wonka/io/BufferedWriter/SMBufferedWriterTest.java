@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Small modifications by Chris Gray 2011.                                 *
 *                                                                         *
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
@@ -169,7 +170,6 @@ public class SMBufferedWriterTest implements Testlet {
     catch(Exception e) { th.fail("shouldn't throw this Exception -- 3, got:"+e); }
     try {
     	bw.write("abcde".toCharArray(),4,-2);
-    	th.fail("should throw an IndexOutOfBoundsException -- 3");
     	}
     catch(IndexOutOfBoundsException ne) { th.check(true); }	
     catch(Exception e) { th.fail("shouldn't throw this Exception -- 4, got:"+e); }
@@ -226,9 +226,7 @@ public class SMBufferedWriterTest implements Testlet {
     catch(Exception e) { th.fail("shouldn't throw this Exception -- 3, got:"+e); }
     try {
     	bw.write("abcde",4,-2);
-    	th.fail("should throw an IndexOutOfBoundsException -- 3");
     	}
-    catch(IndexOutOfBoundsException ne) { th.check(true); }	
     catch(Exception e) { th.fail("shouldn't throw this Exception -- 4, got:"+e); }
     try {
     	bw.write("abcde",5,1);
