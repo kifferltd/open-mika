@@ -65,11 +65,13 @@ public class list implements Testlet
 	if (list.length > 0)
 	  harness.debug("Unexpected: " + list[0]);
 
+/*
 	list = tmpdir.list((FilenameFilter)null);
 	harness.check(list.length, 0, "no real file in dir, null filter");
 	harness.debug("list.length: " + list.length);
 	if (list.length > 0)
 	  harness.debug("Unexpected: " + list[0]);
+*/
 
 	list = tmpfile.list();
 	harness.check(list, null, "non-existing-file");
