@@ -220,6 +220,9 @@ typedef struct v_Type
     /* clazz for TINFO_PRIMITIVE, TINFO_CLASS */
     w_clazz clazz;
     
+    /* dotified class name for TINFO_UNLOADED_CLASS */
+    w_string dotified;
+
     /* for TINFO_UNION we store an index onto mv->unions */
     w_size union_index;
   
@@ -256,6 +259,7 @@ typedef struct v_Union {
 #define TINFO_ADDR         1
 #define TINFO_PRIMITIVE    2
 #define TINFO_CLASS        4
+#define TINFO_UNLOADED_CLASS 8
 #define TINFO_UNINIT       16
 #define TINFO_UNINIT_SUPER 48
 #define TINFO_UNION        64
@@ -315,6 +319,10 @@ static void w_dump_type(const char *s, struct v_MethodVerifier *mv, v_Type t) {
 
   case TINFO_CLASS:
     woempa(DUMP_TYPE_LEVEL, "%s class %k\n", s, t.data.clazz);
+    break;
+
+  case TINFO_UNLOADED_CLASS:
+    woempa(DUMP_TYPE_LEVEL, "%s unloaded class %w\n", s, t.data.dotified);
     break;
 
   case TINFO_UNINIT:
@@ -421,6 +429,16 @@ typedef struct v_BasicBlock {
 #define SUCC_EXCEPTION 2
 #define SUCC_JSR 3
 #define SUCC_RET 4
+
+/*
+ * Ensure the index given for a local variable is within the method's locals
+ */
+#define CHECK_LOCAL_INDEX(_N) V_ASSERT((unsigned)(_N) < method->exec.local_i, bad_local_var)
+
+/*
+ * Ensure the index given for a constant is within the constant pool
+ */
+#define CHECK_POOL_INDEX(_N) V_ASSERT((unsigned)(_N) < declaring_clazz->numConstants, bad_constant_index)
 
 /*
  * Initialise the "special" type opjects such as v_type_null, v_type_int, ...
@@ -561,7 +579,6 @@ static void copyBlock(v_BasicBlock *toBlock, v_BasicBlock *fromBlock, v_MethodVe
 #define appendBlock(bb,mv) bb->own_index = sizeOfWordset(&(mv)->blocks); \
     addToWordset(&(mv)->blocks, (w_word)bb);
 
-
 /*
 ** Within a method verifier, find the index of the basic block which starts at 
 ** the (exact) given PC. Returns the index of the block or -1 if none found.
@@ -640,7 +657,7 @@ static w_boolean checkOpcodeArgs(w_method method, w_ubyte* status_array, w_threa
     switch(opcode) {
     case ldc:
       idx = code[pc + 1];
-      CHECK_POOL_IDX(idx);
+      CHECK_POOL_INDEX(idx);
       break;
 
     case ldc_w:
@@ -658,12 +675,12 @@ static w_boolean checkOpcodeArgs(w_method method, w_ubyte* status_array, w_threa
     case invokestatic:
     case invokespecial:
       idx = (code[pc + 1] << 8) | code[pc + 2];
-      CHECK_POOL_IDX(idx);
+      CHECK_POOL_INDEX(idx);
       break;
 
     case invokeinterface:
       idx = (code[pc + 1] << 8) | code[pc + 2];
-      CHECK_POOL_IDX(idx);
+      CHECK_POOL_INDEX(idx);
       V_ASSERT(code[pc + 3] != 0, invokeinterface_byte4_zero);
       // TODO: check == num params expected
       V_ASSERT(code[pc + 4] == 0, invokeinterface_byte5_nonzero);
@@ -1333,6 +1350,7 @@ static void identifyBasicBlocks(v_MethodVerifier *mv) {
           setFlag(exbb->flags, EXCEPTION);
           if (ex->type_index) {
             w_thread thread = currentWonkaThread;
+            V_ASSERT((unsigned)(ex->type_index) < method->spec.declaring_clazz->numConstants, bad_constant_index)
             exbb->exception_type = getClassConstant(mv->method->spec.declaring_clazz, ex->type_index, thread);
             CHECK_FOR_EXCEPTION(thread);
             woempa(7, "block[%d] exception_type = %k\n", succ_index, exbb->exception_type);
@@ -1544,9 +1562,17 @@ void listBasicBlocks(v_BasicBlock** blocks) {
   }
 }
 
+#define LOAD_TYPE(t,l) {\
+      w_clazz tclazz = namedClassMustBeLoaded(mv->method->spec.declaring_clazz->loader, (t)->data.dotified);\
+      if (!tclazz) goto l;\
+      (t)->tinfo = TINFO_CLASS;\
+      (t)->data.clazz = tclazz;\
+      /* TODO: probably deregisterString((t)->data.dotified); */\
+    }
+
 /*
 ** Test whether the type rhs can be assigned to a field or parameter of type
-** lhs, given as a w_clazz. Returns TRUE if assignme,t is possible, FALSE otherwise.
+** lhs, given as a w_clazz. Returns TRUE if assignment is possible, FALSE otherwise.
 */
 static w_boolean v_assignable2clazz(w_clazz lhs, v_MethodVerifier *mv, v_Type *rhs) {
   //woempa(7, "lhs: %k\n", lhs);
@@ -1555,8 +1581,18 @@ static w_boolean v_assignable2clazz(w_clazz lhs, v_MethodVerifier *mv, v_Type *r
   case TINFO_PRIMITIVE:
     return lhs == rhs->data.clazz || ((lhs == clazz_boolean || lhs == clazz_byte || lhs == clazz_short || lhs == clazz_char) && rhs->data.clazz == clazz_int);
 
+  case TINFO_UNLOADED_CLASS:
+    LOAD_TYPE(rhs, fail)
+    // fall through
+ 
   case TINFO_CLASS:
-    return rhs->data.clazz == clazz_void || isAssignmentCompatible(rhs->data.clazz, lhs);
+    if (rhs->data.clazz == clazz_void) {
+
+      return TRUE;
+
+    }
+
+    return isAssignmentCompatible(rhs->data.clazz, lhs);
 
   case TINFO_UNION:
     { v_Union *uni = getUnion(mv, rhs->data.union_index);
@@ -1576,11 +1612,10 @@ static w_boolean v_assignable2clazz(w_clazz lhs, v_MethodVerifier *mv, v_Type *r
 
       return TRUE;
     }
-
-  default:
-    return FALSE;
-
   }
+
+  fail:
+    return FALSE;
 }
 
 /*
@@ -1608,6 +1643,10 @@ static w_boolean v_assignable2type(v_Type *lhs, v_MethodVerifier *mv, v_Type *rh
   lhs_uni = getUnion(mv, lhs->data.union_index);
   n = lhs_uni->size;
   switch(rhs->tinfo) {
+  case TINFO_UNLOADED_CLASS:
+    LOAD_TYPE(rhs, fail)
+    // fall through
+ 
   case TINFO_CLASS:
     if (rhs->data.clazz == clazz_void) {
       woempa(1, "rhs is clazz_void, that's assignable to anything\n");
@@ -1648,11 +1687,10 @@ static w_boolean v_assignable2type(v_Type *lhs, v_MethodVerifier *mv, v_Type *rh
     }
 
     return TRUE;
-
-  default:
-    return FALSE;
-
   }
+
+  fail:
+    return FALSE;
 }
 
 /*
@@ -1915,6 +1953,10 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 
   w_dump_type("getElementType() array_type:", mv, type);
   switch(type.tinfo) {
+  case TINFO_UNLOADED_CLASS:
+    LOAD_TYPE(&type, fail)
+    // fall through
+ 
   case TINFO_CLASS:
     clazz = type.data.clazz;
     if (clazz->previousDimension) {
@@ -1956,6 +1998,9 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
   w_dump_type("getElementType() result:", mv, result);
 
   return result;
+
+fail:
+  return v_type_conflict;
 }
 
 #define CHECK_STACK_CAPACITY(n) V_ASSERT(block->stacksz + (n) <= method->exec.stack_i, stack_overflow)
@@ -1964,12 +2009,12 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 #define GET_INDEX (isSet(status_array[pc], WIDE_MODDED) ? GET_INDEX2 : GET_INDEX1)
 #define GET_INDEX1 (code[pc + 1])
 #define GET_INDEX2 ((code[pc + 1] << 8) | code[pc + 2])
-#define IS_REFERENCE(t) (t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION)
+#define IS_REFERENCE(t) (t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION)
 #define LOCAL_IS_DOUBLE(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_double)
 #define LOCAL_IS_FLOAT(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_float)
 #define LOCAL_IS_INTEGER(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_int)
 #define LOCAL_IS_LONG(idx) (block->locals[idx].tinfo == TINFO_PRIMITIVE && block->locals[idx].data.clazz == clazz_long)
-#define LOCAL_IS_REFERENCE(idx) ((block->locals[idx].tinfo == TINFO_CLASS ) || (block->locals[idx].tinfo == TINFO_UNINIT ) || (block->locals[idx].tinfo == TINFO_UNINIT_SUPER ) || (block->locals[idx].tinfo == TINFO_UNION))
+#define LOCAL_IS_REFERENCE(idx) ((block->locals[idx].tinfo == TINFO_UNLOADED_CLASS || block->locals[idx].tinfo == TINFO_CLASS ) || (block->locals[idx].tinfo == TINFO_UNINIT ) || (block->locals[idx].tinfo == TINFO_UNINIT_SUPER ) || (block->locals[idx].tinfo == TINFO_UNION))
 #define LOCAL_IS_RETURN_ADDRESS(idx,addr) (block->locals[idx].tinfo == TINFO_ADDR && block->locals[idx].data.retaddr == addr)
 #define PEEK block->opstack[block->stacksz - 1]
 #define PEEK2 block->opstack[block->stacksz - 2]
@@ -1977,6 +2022,7 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 #define PEEK_IS_FLOAT (PEEK.tinfo == TINFO_PRIMITIVE && PEEK.data.clazz == clazz_float)
 #define PEEK_IS_INTEGER TYPE_IS_INTEGER(PEEK)
 #define PEEK_IS_LONG (PEEK.tinfo == TINFO_SECOND_HALF && PEEK2.tinfo == TINFO_PRIMITIVE && PEEK2.data.clazz == clazz_long)
+#define PEEK_MUST_BE_LOADED {if (PEEK.tinfo == TINFO_UNLOADED_CLASS) LOAD_TYPE(&PEEK, error)}
 #define POP block->opstack[block->stacksz-- - 1]
 #define POP_IS_CLASS(c) (t = POP, t.tinfo == TINFO_CLASS && t.data.clazz == (c))
 #define POP_IS_DOUBLE ((void)POP, t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == clazz_double)
@@ -1985,6 +2031,7 @@ v_Type getElementType(v_MethodVerifier *mv, v_Type type) {
 #define POP_IS_LONG ((void)POP, t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == clazz_long)
 #define POP_IS_PRIMITIVE(c) (((c) == clazz_double || (c) == clazz_long ? (void)POP : (void)0), t = POP, t.tinfo == TINFO_PRIMITIVE && t.data.clazz == (c))
 #define POP_IS_REFERENCE (t = POP, IS_REFERENCE(t))
+#define POP_PRIMITIVE_ARRAY(p) {PEEK_MUST_BE_LOADED V_ASSERT(POP_IS_CLASS(atype2clazz[(p)]), array_not_correct)}
 #define PUSH(t) if (TYPE_IS_INTEGER(t)) { PUSH1(v_type_int); } else if ((t).tinfo == TINFO_PRIMITIVE) { if ((t).data.clazz == clazz_float) { PUSH1(t); } else { PUSH2(t); } } else { PUSH1(t); }
 #define PUSH1(t) CHECK_STACK_CAPACITY(1); block->opstack[block->stacksz++] = (t)
 #define PUSH2(t) CHECK_STACK_CAPACITY(2); block->opstack[block->stacksz++] = (t); block->opstack[block->stacksz++].tinfo = TINFO_SECOND_HALF
@@ -2175,30 +2222,31 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
     case iaload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_int]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_int);
       goto push_integer;
 
     case laload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_long]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_long);
       goto push_long;
 
     case faload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_float]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_float);
       goto push_float;
 
     case daload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_double]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_double);
       goto push_double;
 
     case aaload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
+      PEEK_MUST_BE_LOADED
       t = POP;
       V_ASSERT(IS_REFERENCE(t), array_not_correct);
       aType = getElementType(mv, t);
@@ -2210,6 +2258,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
     case baload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
+      PEEK_MUST_BE_LOADED
       t = POP;
       V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == atype2clazz[P_boolean] || t.data.clazz == atype2clazz[P_byte]), array_not_correct);
       goto push_integer;
@@ -2217,13 +2266,13 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
     case caload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_char]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_char);
       goto push_integer;
 
     case saload:
       CHECK_STACK_SIZE(2);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
-      V_ASSERT(POP_IS_CLASS(atype2clazz[P_short]), array_not_correct);
+      POP_PRIMITIVE_ARRAY(P_short);
       goto push_integer;
 
     case istore:
@@ -2304,7 +2353,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
       CHECK_STACK_SIZE(1);
       t = POP;
       w_dump_type("astore: popped", mv, t);
-      V_ASSERT(t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNINIT || t.tinfo == TINFO_UNINIT_SUPER || t.tinfo == TINFO_UNION || t.tinfo == TINFO_ADDR, value_not_correct);
+      V_ASSERT(t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNINIT || t.tinfo == TINFO_UNINIT_SUPER || t.tinfo == TINFO_UNION || t.tinfo == TINFO_ADDR, value_not_correct);
       STORE(t, idx);
       break;
 
@@ -2338,6 +2387,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
       w_dump_type("aastore value", mv, eType);
       V_ASSERT(IS_REFERENCE(eType), value_not_correct);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
+      PEEK_MUST_BE_LOADED
       t = POP;
       w_dump_type("aastore array", mv, t);
       V_ASSERT(IS_REFERENCE(t), array_not_correct);
@@ -2355,6 +2405,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
       CHECK_STACK_SIZE(3);
       V_ASSERT(POP_IS_INTEGER, value_not_correct);
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
+      PEEK_MUST_BE_LOADED
       t = POP;
       V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == atype2clazz[P_boolean] || t.data.clazz == atype2clazz[P_byte]), array_not_correct);
       break;
@@ -2372,6 +2423,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
 
     xastore_common:
       V_ASSERT(POP_IS_INTEGER, index_not_integer);
+      PEEK_MUST_BE_LOADED
       V_ASSERT(POP_IS_CLASS(aclazz), array_not_correct);
       break;
 
@@ -2719,6 +2771,7 @@ w_boolean verifyBasicBlock(v_BasicBlock *block, v_MethodVerifier *mv, w_thread t
       V_ASSERT(!clazzIsPrimitive(method->spec.return_type), return_not_match_type);
       t = POP;
       switch(t.tinfo) {
+      case TINFO_UNLOADED_CLASS:
       case TINFO_CLASS:
       case TINFO_UNION:
         V_ASSERT(v_assignable2clazz(method->spec.return_type, mv, &t), value_not_correct);
@@ -2758,7 +2811,7 @@ woempa(7, "field %V\n", f);
       }
       t = POP;
       woempa(1, "popped %d %p, field %v expects %k\n", t.tinfo, t.data.clazz, f, f->value_clazz);
-      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
+      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
       break;
 
     case getfield:
@@ -2788,10 +2841,10 @@ woempa(7, "field %V\n", f);
       }
       t = POP;
       w_dump_type("putfield: value =", mv, t);
-      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
+      V_ASSERT((t.tinfo == TINFO_PRIMITIVE || t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->value_clazz, mv, &t), value_not_correct);
       t = POP;
       w_dump_type("putfield: objectref =", mv, t);
-      V_ASSERT(((t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->declaring_clazz, mv, &t)) || (t.tinfo == TINFO_UNINIT_SUPER && isSuperClass(f->declaring_clazz, t.data.clazz)) , objectref_wrong_type);
+      V_ASSERT(((t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(f->declaring_clazz, mv, &t)) || (t.tinfo == TINFO_UNINIT_SUPER && isSuperClass(f->declaring_clazz, t.data.clazz)) , objectref_wrong_type);
       break;
 
     case invokevirtual:
@@ -2862,6 +2915,7 @@ woempa(7, "field %V\n", f);
         else { // someone else's constructor
           woempa(7, "invokespecial on constructor of non-superclass %k\n", m->spec.declaring_clazz);
           w_dump_type("objectref =", mv, t);
+
           if (t.tinfo == TINFO_UNINIT) {
             V_ASSERT(t.data.clazz == clazz_void || isAssignmentCompatible(t.data.clazz, m->spec.declaring_clazz), objectref_wrong_type);
             popUninit(mv, t.uninitpc, block);
@@ -2874,7 +2928,7 @@ woempa(7, "field %V\n", f);
       else {
         woempa(7, "normal invocation of method %m of %k\n", m, m->spec.declaring_clazz);
         w_dump_type("objectref =", mv, t);
-        V_ASSERT((t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(m->spec.declaring_clazz, mv, &t), objectref_wrong_type);
+        V_ASSERT((t.tinfo == TINFO_UNLOADED_CLASS || t.tinfo == TINFO_CLASS || t.tinfo == TINFO_UNION) && v_assignable2clazz(m->spec.declaring_clazz, mv, &t), objectref_wrong_type);
       }
       goto invoke_common;
 
@@ -2912,11 +2966,11 @@ woempa(7, "field %V\n", f);
 
     case new:
       idx = GET_INDEX2;
-      t.tinfo = TINFO_UNINIT;
       clazz = getClassConstant(declaring_clazz, idx, thread);
       CHECK_FOR_EXCEPTION(thread);
-      t.uninitpc = pushUninit(mv, pc);
       t.data.clazz = clazz;
+      t.tinfo = TINFO_UNINIT;
+      t.uninitpc = pushUninit(mv, pc);
       goto push_reference;
 
     case newarray:
@@ -2938,12 +2992,15 @@ woempa(7, "field %V\n", f);
     case arraylength:
       CHECK_STACK_SIZE(1);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || t.data.clazz->dims), value_not_array);
+      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || t.data.clazz->dims) || t.tinfo == TINFO_UNLOADED_CLASS && string_char(t.data.dotified, 0) == '[', value_not_array);
       goto push_integer;
 
     case athrow:
       CHECK_STACK_SIZE(1);
       V_ASSERT(IS_REFERENCE(PEEK),value_not_reference);
+      if (PEEK.tinfo == TINFO_UNLOADED_CLASS) {
+        LOAD_TYPE(&PEEK, error)
+      }
       if (PEEK.data.clazz != clazz_void) {
         V_ASSERT(isSet(PEEK.data.clazz->flags, CLAZZ_IS_THROWABLE),"not throwable");
       }
@@ -2952,10 +3009,25 @@ woempa(7, "field %V\n", f);
 
     case checkcast:
       idx = GET_INDEX2;
+      CHECK_POOL_INDEX(idx);
       CHECK_STACK_SIZE(1);
       t = POP;
       V_ASSERT(IS_REFERENCE(t), value_not_reference);
-      {
+      if ((declaring_clazz->tags[idx] & CONSTANT_STATE_MASK) == UNRESOLVED_CONSTANT) {
+        w_int utf8_index = declaring_clazz->values[idx];
+        CHECK_POOL_INDEX(utf8_index);
+        if ((declaring_clazz->tags[utf8_index] & 0x0f) == CONSTANT_UTF8) {
+          w_string name = resolveUtf8Constant(declaring_clazz, utf8_index);
+          w_string dotified = slashes2dots(name);
+        // TODO: deregisterString(name);
+          t.tinfo = TINFO_UNLOADED_CLASS;
+          t.uninitpc = 0;
+          t.data.dotified = dotified;
+        } else {
+          goto verify_error;
+        }
+      }
+      else { 
         w_clazz target_clazz = getClassConstant(declaring_clazz, idx, thread);
         CHECK_FOR_EXCEPTION(thread);
         CLAZZ2TYPE(target_clazz, t);
@@ -2980,15 +3052,34 @@ woempa(7, "field %V\n", f);
 
     case multianewarray:
       idx = GET_INDEX2;
-      aclazz = getClassConstant(declaring_clazz, idx, thread);
-      CHECK_FOR_EXCEPTION(thread);
+      CHECK_POOL_INDEX(idx);
+/*
+      if ((declaring_clazz->tags[idx] & CONSTANT_STATE_MASK) == UNRESOLVED_CONSTANT) {
+        w_int utf8_index = declaring_clazz->values[idx];
+        CHECK_POOL_INDEX(utf8_index);
+        if ((declaring_clazz->tags[utf8_index] & 0x0f) == CONSTANT_UTF8) {
+          w_string name = resolveUtf8Constant(declaring_clazz, utf8_index);
+          w_string dotified = slashes2dots(name);
+        // TODO: deregisterString(name);
+          t.tinfo = TINFO_CLASS;
+          t.uninitpc = 0;
+          t.data.dotified = dotified;
+        } else {
+          goto verify_error;
+        }
+      }
+      else { 
+*/
+        aclazz = getClassConstant(declaring_clazz, idx, thread);
+        CHECK_FOR_EXCEPTION(thread);
+        t.tinfo = TINFO_CLASS;
+        t.uninitpc = 0;
+        t.data.clazz = aclazz;
+//      }
       n = method->exec.code[pc + 3];
       CHECK_STACK_SIZE(n);
       V_ASSERT(aclazz->dims >= n, array_too_few_dims);
       block->stacksz -= n;
-      t.tinfo = TINFO_CLASS;
-      t.uninitpc = 0;
-      t.data.clazz = aclazz;
       goto push_reference;
 
     case goto_w:
@@ -3059,10 +3150,15 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
     }
     break;
 
+  case TINFO_UNLOADED_CLASS:
+    LOAD_TYPE(old_type, fail);
+    // fall through
+ 
   case TINFO_CLASS:
+    if (new_type->tinfo == TINFO_UNLOADED_CLASS) {
+      LOAD_TYPE(new_type, fail);
+    }
     if (new_type->tinfo == TINFO_CLASS) {
-      //w_clazz super;
-
       woempa(7, "Merging classes...\n");
       if (new_type->data.clazz == clazz_void) {
         woempa(7, "new class is void, leaving as is\n");
@@ -3077,6 +3173,7 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
         woempa(7, "both are type %k, leaving as is\n", new_type->data.clazz);
         return MERGE_DID_NOTHING;
       }
+
       if (isAssignmentCompatible(new_type->data.clazz, old_type->data.clazz)) {
         woempa(7, "new type %k is subclass of old type %k, leaving as is\n", new_type->data.clazz, old_type->data.clazz);
         return MERGE_DID_NOTHING;
@@ -3122,6 +3219,10 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
       w_size old_index = old_type->data.union_index;
       w_size new_index;
 
+      if (old_type->tinfo == TINFO_UNLOADED_CLASS) {
+        LOAD_TYPE(old_type, fail);
+      }
+
       if (new_type->tinfo == TINFO_CLASS) {
         new_index = mergeClassIntoUnion(mv, new_type->data.clazz, old_index);
       }
@@ -3154,6 +3255,9 @@ w_int mergeTypes(v_MethodVerifier *mv, v_Type *old_type, v_Type *new_type) {
   old_type->data.undef_kind = UNDEF_CONFLICT;
 
   return MERGE_SUCCEEDED;
+
+fail:
+  return MERGE_FAILED;
 }
 
 /*
@@ -3208,7 +3312,6 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
       result |= mergeTypes(mv, &old_block->locals[i], &new_block->locals[i]);
       if (result == MERGE_FAILED) {
 
-        // [CG 20070126] Unreachable now that mergeTypes() never returns MERGE_FAILED?
         return MERGE_FAILED;
 
       }
@@ -3221,7 +3324,6 @@ w_int mergeBlocks(v_MethodVerifier *mv, v_BasicBlock *old_block, v_BasicBlock *n
       result |= mergeTypes(mv, &old_block->opstack[i], &new_block->opstack[i]);
       if (result == MERGE_FAILED) {
 
-        // [CG 20070126] Unreachable now that mergeTypes() never returns MERGE_FAILED?
         return MERGE_FAILED;
 
       }
