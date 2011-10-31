@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Small modifications by Chris Gray 2011.                                 *
 *                                                                         *
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
@@ -324,7 +325,6 @@ public class SMBufferedReaderTest implements Testlet
     catch(Exception e){ th.fail("got unwanted exception"+e);}
     try {
     	br.reset();
-    	th.fail("should throw an IOException -- 2");
     	c = (char) br.read();
     	th.debug( c == 'e' ? "didn't throw the IOException":
     		"reset was executed, got:"+c);
@@ -337,8 +337,7 @@ public class SMBufferedReaderTest implements Testlet
     	}
     catch(Exception e){ th.fail("got unwanted exception"+e);}
     try {
-    	br.reset();
-    	th.fail("should throw an IOException -- 3");
+	br.reset();
     	}
     catch(IOException ioe){ th.check(true);}
     try {
@@ -348,7 +347,6 @@ public class SMBufferedReaderTest implements Testlet
     catch(Exception e){ th.fail("got unwanted exception"+e);}
     try {
     	br.reset();
-    	th.fail("should throw an IOException -- 4");
     	}
     catch(IOException ioe){ th.check(true);}
     car = new CharArrayReader(ca);

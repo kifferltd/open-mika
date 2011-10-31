@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Small modifications by Chris Gray 2011.                                 *
 *                                                                         *
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
@@ -57,7 +58,6 @@ public class SMBufferedOutputStreamTest implements Testlet
     th.checkPoint("BufferedOutputStream(java.io.OutputStream)");
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     SMExBufferedOutputStream xbuf = new SMExBufferedOutputStream(bos);
-    th.check( xbuf.getbuf().length == 512 , "checking default size" );
     th.check( xbuf.getcount() == 0 , "checking initial count" );
 /*
     try {
