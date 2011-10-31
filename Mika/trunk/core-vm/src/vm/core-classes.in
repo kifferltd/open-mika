@@ -731,6 +731,10 @@ java/net/SocketTimeoutException
 java/net/UnknownHostException
 # Force java.net.URL to be loaded by the native loader, otherwise SystemClassLoader deadlocks :-[
 java/net/URL
+# Ditto for Manifest, at least if verifier is enabled
+java/util/jar/Manifest
+java/util/jar/Manifest$Chunk
+#
 java/io/FileDescriptor
 	validFD			Z
 	fileName		Ljava/lang/String;
