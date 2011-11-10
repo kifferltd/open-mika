@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <stdio.h>
+#include <math.h>
 
 #include "core-classes.h"
 #include "math-classes.h"
@@ -19,67 +20,171 @@ typedef  union {
 } math_constant;
 
 
-void   Math_shrink_String(char* chars,  int retval) {
-  if(chars[retval] == 0) {
-    retval--;  
+int Math_shrink_String(char* chars,  int len) {
+  while (chars[len] == 0) {
+    len--;  
   }
-  while (chars[retval] == '0')  {
-     chars[retval--] = 0;
+  while (chars[len] == '0')  {
+     chars[len--] = 0;
   }
-  if(chars[retval] == '.') {
-    chars[retval+1] = '0';
+  if(chars[len] == '.') {
+    chars[++len] = '0';
   }
+
+  return len + 1;
+}
+
+int Math_truncate_String(char* chars) {
+  int len = strlen(chars);
+  int k;
+  int carry = 0;
+  char *point = strstr(chars, ".");
+
+  /*
+   * Exit without doing anything if no decimal point is present.
+   */ 
+  if (!point) {
+    return len;
+  }
+
+  k = len - 1;
+  if (chars[k] == '0') {
+    while (chars[k] == '0') {
+      len = k--;
+    }
+    goto postlude;
+  }
+
+  if (chars[k] == '.') {
+    k = k - 1;
+  }
+  carry = chars[len - 1] > '5' || chars[len - 1] == '5' && (chars[k] & 1);
+
+  len = len - 1;
+  k = len;
+  while (carry) {
+    if (k == 0) {
+      memmove(chars + 1, chars, len++);
+      chars[0] = '1';
+
+      goto postlude;
+    }
+    if (chars[k - 1] == '.') {
+      --k;
+    }
+
+    chars[k - 1] += carry;
+    if (chars[k - 1] > '9') {
+      chars[k - 1] = '0';
+      if (k-- == len) {
+        --len;
+      }
+    }
+    else {
+      carry = 0;
+    }
+
+  }
+
+postlude:
+  if (chars[len - 1] == '.') {
+    chars[len++] = '0';
+  }
+  chars[len] = 0;
+
+  return len;
 }
 
 
 w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_double value) {
   char chars[64];
-  int retval;
+  char trial[64];
+  int l;
   math_constant mc;
-  double d ;
-  char* pattern = "%.10f";
+  double d0, d1;
+  double diff0, diff1;
+  char* pattern = "%.17f";
 
 #ifdef ARM
   mc.wd = value<<32 | value>>32;
 #else
   mc.wd = value;
 #endif
-  d = mc.d;
+  d0 = mc.d;
  
-  retval = snprintf(chars, 64, pattern,d);
-  if (retval == -1 || retval >= 64) {
+  l = snprintf(chars, 64, pattern, d0);
+  if (l == -1 || l >= 64) {
      w_thread thread = JNIEnv2w_thread(env); 
      throwException(thread, clazzIllegalArgumentException, NULL);
-     printf("retval = %d when formatting D %g with '%s'\n",retval,d,pattern);
      return NULL;
   }
 
-  Math_shrink_String(chars, retval);
+  l = Math_shrink_String(chars, l);
+
+  strncpy(trial, chars, l + 1);
+  sscanf(chars, "%lf", &d1);
+  diff0 = fabsl(d0 - d1);
+  if (diff0 < d0 * 0.75e-15) diff0 = d0 * 0.75e-15;
+  diff1 = diff0;
+  while (TRUE) {
+    int l0 = Math_truncate_String(trial);
+    if (l0 >= l) {
+      break;
+    }
+
+    l = l0;
+    sscanf(trial, "%lf", &d1);
+    if (fabs(d0 - d1) > diff0) {
+      break;
+    }
+    strncpy(chars, trial, l + 1);
+  }
+
   return (*env)->NewStringUTF(env, chars);
 }
 
 w_instance MathHelper_static_floatToString(JNIEnv *env, w_instance myClazz, w_float value) {
   char chars[64];
-  int retval;
+  char trial[64];
+  int l;
   math_constant mc;
-  float f ;
-  char* pattern = "%.7f";
+  float f0, f1;
+  float diff0, diff1;
+  char* pattern = "%.9f";
 
   mc.wf = value;
-  f = mc.f;
-  retval = snprintf(chars, 64, pattern,f);
-
-  if (retval == -1 || retval >= 64) {
+  f0 = mc.f;
+  l = snprintf(chars, 64, pattern, f0);
+  if (l == -1 || l >= 64) {
      w_thread thread = JNIEnv2w_thread(env); 
      throwException(thread, clazzIllegalArgumentException, NULL);
-     printf("retval = %d when formatting F %g with '%s'\n",retval,f,pattern);
      return NULL;
   }
 
-  Math_shrink_String(chars, retval);
-  
+  l = Math_shrink_String(chars, l);
+
+  strncpy(trial, chars, l + 1);
+  sscanf(chars, "%f", &f1);
+  diff0 = fabsf(f0 - f1);
+  if (diff0 < f0 * 0.7e-7f) diff0 = f0 * 0.7e-7f;
+  diff1 = diff0;
+  while (TRUE) {
+    int l0 = Math_truncate_String(trial);
+    if (l0 == l) {
+      break;
+    }
+
+    l = l0;
+    sscanf(trial, "%f", &f1);
+    if (fabsf(f0 - f1) > diff0) {
+      break;
+    }
+    strncpy(chars, trial, l + 1);
+  }
+
   return (*env)->NewStringUTF(env, chars);
 }
+
 void init_math(void) {
   collectMathFixups();
   loadMathClasses();
