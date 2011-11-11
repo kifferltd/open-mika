@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
-* Embedded Java Solutions. All rights reserved.                           *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2011 by Chris Gray,   *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -259,46 +259,26 @@ void interpret_static_synchronized(w_frame caller, w_method method) {
 
 }
 
-#ifndef JSPOT
 static void trap(w_frame caller, w_method method) {
   woempa(9, "Trapped %M\n", method);
   wabort(ABORT_WONKA, "Trapped %M\n", method);
 }
-#endif
 
 void interpret_profiled(w_frame caller, w_method method) {
 
-#ifdef JSPOT
-  hs_method_invoke(method);
-  interpret(caller, method);
-  hs_method_return(method);
-#else
   trap(caller, method);
-#endif
 
 }
 
 void interpret_instance_synchronized_profiled(w_frame caller, w_method method) {
 
-#ifdef JSPOT
-  hs_method_invoke(method);
-  interprete_instance_synchronized(caller, method);
-  hs_method_return(method);
-#else
   trap(caller, method);
-#endif
 
 }
 
 void interpret_static_synchronized_profiled(w_frame caller, w_method method) {
 
-#ifdef JSPOT
-  hs_method_invoke(method);
-  interprete_static_synchronized(caller, method);
-  hs_method_return(method);
-#else
   trap(caller, method);
-#endif
 
 }
 
@@ -1375,11 +1355,7 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   w_int dispatcher_index;
  
   threadMustBeSafe(caller->thread);
-#ifdef JSPOT
-  dispatcher_index = 21;  // interprete_profiled
-#else
   dispatcher_index = 1;   // interprete
-#endif
   
   if (isSet(method->flags, ACC_SYNCHRONIZED)) {
     if (isSet(method->flags, ACC_STATIC)) {

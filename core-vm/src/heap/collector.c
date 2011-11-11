@@ -924,10 +924,6 @@ w_int markFrameReachable(w_frame frame, w_fifo fifo, w_word flag) {
   w_method method = frame->method;
   w_int      retcode;
 
-#ifdef JSPOT
-  w_instance * map;
-#endif
-
   if (method && isSet(method->flags, ACC_STATIC)) {
     woempa(1, "Frame %p is executing static method %m of %K, marking the latter\n", frame, method, method->spec.declaring_clazz);
     markClazzReachable(method->spec.declaring_clazz, fifo, flag);
@@ -949,50 +945,6 @@ w_int markFrameReachable(w_frame frame, w_fifo fifo, w_word flag) {
     item += 1;
   }
 
-#ifdef JSPOT
-  #ifdef DEBUG
-  /*
-  ** Ensure that we are in a safe state or bad things will
-  ** happen.
-  */
-
-  if (isSet(frame->thread->flags, WT_THREAD_NOT_GC_SAFE)) {
-    wabort(ABORT_WONKA, "attempt to mark frame %p while it is not in a safe state\n", frame);
-  }
-
-  if (thread->top && thread->top->method && (thread->top->method->flags & METHOD_IS_COMPILED)) {
-    wabort(ABORT_WONKA, "attempt to mark thread %p while the top-most frame %p is controlled by a JITed method\n", thread, thread->top);
-  }
-
-
-  woempa(8,"%p: scanning frame %p of method %M emitted by %M\n", frame->thread, frame, frame->method, (frame->previous ? frame->previous->method : NULL));
-
-  #endif
-
-  /*
-  ** Scan the stack maps emitted by j-spotted methods.
-  */
-  if (frame->flags & FRAME_STACKMAP) {
-    map = frame->map;
-    while (*map != (w_instance)42) {
-      if (*map != NULL) {
-        /*
-        ** Note that the woempa below helps to detect faulty stack map entries:
-        ** that is, Wonka will crash when it tries to print a non-reference.
-        */
-        woempa(9, "reference: %p at location %p of type %j\n", *map, map, *map);
-        
-        retcode = markInstance(*map, fifo, flag);
-        if (retcode < 0) {
-          return retcode;
-        }
-        queued += retcode;
-      }
-      map++;
-    }
-  }
-#endif
-  
   return queued;
 
 }

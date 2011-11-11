@@ -80,10 +80,6 @@
 // #define woempa(level, ...) _woempa(__FILE__, __FUNCTION__, __LINE__, level, __VA_ARGS__)
 void _woempa(const char *file, const char *function, int line, int level, const char *format, ...);
 
-#ifdef JSPOT
- #include "hotspot.h"
-#endif
-
 extern char * instruction2char[];
 extern w_hashtable lock_hashtable;
 

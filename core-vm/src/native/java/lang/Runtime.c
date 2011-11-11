@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2010 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2005, 2010, 2011 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -47,11 +47,6 @@
 #include "loading.h"
 #include "checks.h"
 #include "profile.h"
-
-#ifdef JSPOT
-  #include "node.h"
-  #include "statistics.h"
-#endif
 
 void histogram(void);
 void w_dump(const char *fmt, ... );
@@ -285,10 +280,6 @@ void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
   statistics_instances();
 #endif
 
-#ifdef JSPOT
-  statistics_dump();
-#endif
- 
 //  histogram();
   
 #if defined(LINUX) || defined(NETBSD)

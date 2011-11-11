@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2003, 2004, 2005, 2006 by Chris Gray, /k/ Embedded  *
-* Java Solutions.  All rights reserved.                                   *
+* Parts copyright (c) 2003, 2004, 2005, 2006, 2011 by Chris Gray,         *
+* /k/ Embedded Java Solutions.  All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -97,10 +97,6 @@ void initWonka(void) {
 #endif //ECOS
 #endif
   
-#ifdef JSPOT
-  w_void jspot_init(w_void);
-#endif
-  
 w_int testWonka(void);
 
 void startVFS(void) {
@@ -129,11 +125,6 @@ char            *awt_splash = NULL;
 int      jdwp_enabled = 0;
 char     *jdwp_args = NULL;
 void     print_jdwp_help(void);
-#endif
-
-#ifdef JSPOT
-  char *jspot_args = NULL;
-  void   jspot_help(void);
 #endif
 
 void args_read(void) {
@@ -226,18 +217,6 @@ void args_read(void) {
       woempa(7, "Found an unknown argument '%s', ignoring it\n", command_line_arguments[0]);
     }
 
-#ifdef JSPOT
-    
-    else if(strncmp(command_line_arguments[0], "-Wcompiler:", 11) == 0) {
-      woempa(7, "Found an Wcompiler argument `%s'\n", command_line_arguments[0] + 11);
-      jspot_args = (char *)&command_line_arguments[0][11];
-      if(strcmp(jspot_args, "help") == 0) {
-        jspot_help();
-      }
-    } 
-    
-#endif /* JSPOT */
-    
     else if(strncmp(command_line_arguments[0], "-Wrudolph:", 10) == 0) { 
       woempa(7, "Found a Wrudolph argument `%s'\n", command_line_arguments[0] + 10);
       awt_args = (char *)&command_line_arguments[0][10];
@@ -420,10 +399,6 @@ void startWonka(void* data) {
   registerDriver((w_driver)&deflate_driver);
 
   haveWonkaThreads = WONKA_TRUE;
-
-#ifdef JSPOT
-  jspot_init();
-#endif
 
   woempa(7, "Calling JNI_CreateJavaVM() ...\n");
   JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
