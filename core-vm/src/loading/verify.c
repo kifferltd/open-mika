@@ -201,37 +201,6 @@ w_int verifyClazz(w_clazz clazz) {
 }
 
 /*
- * Internal representation of a data type; may be undefined, a class (possibly
- * uninitialised or a primitive class), a union of classes, or a return address.
- */
-
-typedef struct v_Type
-{
-  /* Discriminator for the union below */
-  w_ushort tinfo;
-
-  /* sequence number for tinfo = TINFO_UNINIT, TINFO_UNINIT_SUPER */
-  w_ushort uninitpc;
-  
-  union {
-    /* more precision for TINFO_UNDEFINED, see UNDEF_... below */
-    w_size undef_kind;
-
-    /* clazz for TINFO_PRIMITIVE, TINFO_CLASS */
-    w_clazz clazz;
-    
-    /* dotified class name for TINFO_UNLOADED_CLASS */
-    w_string dotified;
-
-    /* for TINFO_UNION we store an index onto mv->unions */
-    w_size union_index;
-  
-    /* return address for TINFO_ADDR */
-    w_size retaddr;
-  } data;
-} v_Type;
-
-/*
  * Representation of a class union. Class unions are immutable; if we want to
  * extend one we create a new one and add more classes. All unions are stored
  * in the mv->unions wordset, and when we release the mv we release all the
@@ -283,8 +252,6 @@ typedef struct v_MethodVerifier {
   w_size code_length;
   /* Number of basic blocks */
   w_size numBlocks;
-  /* The blocks themselves - each entry in the wordset is a v_BasicBlock* */
-  w_wordset blocks;
   /* Class unions - each entry in the wordset is a v_Union* */
   w_wordset unions;
   /* Count of jsr/jsr_w instructions */
@@ -292,12 +259,12 @@ typedef struct v_MethodVerifier {
 } v_MethodVerifier;
 
 /*
-** Macro to retrieve the i'th basic block ftom mv->blocks
+** Macro to retrieve the i'th basic block from mv->method->exec.basicBlocks
 */
-#define getBasicBlock(mv,i) ((v_BasicBlock*)elementOfWordset(&((mv)->blocks),(i)))
+#define getBasicBlock(mv,i) ((v_BasicBlock*)elementOfWordset(&((mv)->method->exec.basicBlocks),(i)))
 
 /*
-** Macro to retrieve the i'th basic block ftom mv->blocks
+** Macro to retrieve the i'th union from mv->unions
 */
 #define getUnion(mv,i) ((v_Union*)elementOfWordset(&((mv)->unions),(i)))
 
@@ -372,65 +339,6 @@ static v_Type v_type_Class;
 static v_Type v_type_conflict;
 
 /*
- * Basic block information
- */
-typedef struct v_BasicBlock {
-  /* The method verifier to which this basic block belongs */
-  v_MethodVerifier *mv;
-  /* The index of this block within mv->blocks */
-  w_size own_index;
-  /* Address (pc) of first instruction of block */
-  w_ushort start_pc;
-  /* Address (pc) of last instruction of block */
-  w_ushort last_pc;
-
-  /* Block flags: CHANGED (needs to be re-evaluated), VISITED, etc.  */
-  w_word flags;
-  
-  /* Type of exception handled, if this is the first block of an exception handler */
-  w_clazz exception_type;
-
-  /* Return address, if this is the first block of a subroutine */
-  w_size return_address;
-
-  /* array of local variables */
-  v_Type*  locals;
-  w_size localsz;
-  
-  /* simulated operand stack */
-  v_Type*  opstack;
-  w_size stacksz;
-
-  /* The size of the successors[] array */
-  w_size max_successors;
-  /* Per basic block, an indication of whether the basic block is a successor */
-  /* of this block (see SUCC_... below). */
-  w_ubyte *successors;
-} v_BasicBlock;
-
-/* Flags for a basic block.  */
-/* The block needs to be (re-evaluated) */
-#define CHANGED     16
-/* The block has already been evaluated at least once */
-#define VISITED     32
-/* The block is reachable as part of the normal control flow */
-#define NORMAL      64
-/* The block is reachable via an exception handler */
-#define EXCEPTION  128
-/* The block is reachable via a jsr/jsr_w */
-#define SUBROUTINE 256
-
-/*
-** Kinds of successor; normal trannsfer of control, exception handler, or
-** subroutine.
-*/
-#define SUCC_NONE 0
-#define SUCC_NORMAL 1
-#define SUCC_EXCEPTION 2
-#define SUCC_JSR 3
-#define SUCC_RET 4
-
-/*
  * Ensure the index given for a local variable is within the method's locals
  */
 #define CHECK_LOCAL_INDEX(_N) V_ASSERT((unsigned)(_N) < method->exec.local_i, bad_local_var)
@@ -470,15 +378,15 @@ void initVerifier(void) {
 }
 
 /*
-** Release the memory used bu a method verifier and by all its adjuncts and
+** Release the memory used by a method verifier and by all its adjuncts and
 ** appertinances.
 */
 void releaseMethodVerifier(v_MethodVerifier *mv) {
-  if (mv->blocks) {
-    while (sizeOfWordset(&mv->blocks)) {
-      releaseMem((void*)takeLastFromWordset(&mv->blocks));
+  if (mv->method->exec.basicBlocks) {
+    while (sizeOfWordset(&mv->method->exec.basicBlocks)) {
+      releaseMem((void*)takeLastFromWordset(&mv->method->exec.basicBlocks));
     }
-    releaseWordset(&mv->blocks);
+    releaseWordset(&mv->method->exec.basicBlocks);
   }
   if (mv->unions) {
     while (sizeOfWordset(&mv->unions)) {
@@ -512,7 +420,7 @@ static v_BasicBlock* createBlock(v_MethodVerifier *mv) {
   }
 
   memptr = binfo + 1;
-  binfo->mv = mv;
+  binfo->method = mv->method;
   binfo->localsz = mv->method->exec.local_i;
 
   /* memory for locals */
@@ -574,10 +482,10 @@ static void copyBlock(v_BasicBlock *toBlock, v_BasicBlock *fromBlock, v_MethodVe
 }
 
 /*
-** Macro to append a basic block to the mv->blocks wordset
+** Macro to append a basic block to the mv->method->exec.basicBlocks wordset
 */
-#define appendBlock(bb,mv) bb->own_index = sizeOfWordset(&(mv)->blocks); \
-    addToWordset(&(mv)->blocks, (w_word)bb);
+#define appendBlock(bb,mv) bb->own_index = sizeOfWordset(&(mv)->method->exec.basicBlocks); \
+    addToWordset(&(mv)->method->exec.basicBlocks, (w_word)bb);
 
 /*
 ** Within a method verifier, find the index of the basic block which starts at 
@@ -935,7 +843,7 @@ static void addSuccessor(v_MethodVerifier *mv, w_size block_index, w_size succ_i
  
 /*
 ** Copy the subroutine consisting of block subr_index, its successors, etc.
-** into a new set of basic blocks appended to the end of mv->blocks
+** into a new set of basic blocks appended to the end of mv->method->exec.basicBlocks
 */
 static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
   w_size clone_index = mv->numBlocks;
@@ -1518,13 +1426,14 @@ verify_error:
 ** Print out the contents of a basic block.
 */
 void listBasicBlock(v_BasicBlock *block) {
-  w_size i;
+  w_size i, n;
 
   woempa(7, "  start_pc = %d\n", block->start_pc);
   woempa(7, "  last_pc  = %d\n", block->last_pc);
   woempa(7, "  flags  = %02x\n", block->flags);
   woempa(7, "  stacksz = %02x\n", block->stacksz);
-  for (i = 0; i < block->mv->numBlocks; ++i) {
+  n = sizeOfWordset(&block->method->exec.basicBlocks);
+  for (i = 0; i < n; ++i) {
     switch (block->successors[i]) {
     case SUCC_NONE:
       continue;
@@ -2992,7 +2901,7 @@ woempa(7, "field %V\n", f);
     case arraylength:
       CHECK_STACK_SIZE(1);
       t = POP;
-      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || t.data.clazz->dims) || t.tinfo == TINFO_UNLOADED_CLASS && string_char(t.data.dotified, 0) == '[', value_not_array);
+      V_ASSERT(t.tinfo == TINFO_CLASS && (t.data.clazz == clazz_void || t.data.clazz->dims) || (t.tinfo == TINFO_UNLOADED_CLASS && string_char(t.data.dotified, 0) == '['), value_not_array);
       goto push_integer;
 
     case athrow:
@@ -3355,13 +3264,13 @@ w_boolean verifyMethod(w_method method, w_thread thread) {
   mv.method = method;
   mv.code_length = method->exec.code_length;
   mv.numBlocks = 0;
-  mv.blocks = NULL;
+  mv.method->exec.basicBlocks = NULL;
   mv.unions = NULL;
 
     identifyBasicBlocks(&mv);
 
-    if (mv.blocks) {
-      // listBasicBlocks(mv.blocks);
+    if (mv.method->exec.basicBlocks) {
+      // listBasicBlocks(mv.method->exec.basicBlocks);
       result = loadInitialArgs(&mv);
       if (result) {
         thisBlock = getBasicBlock(&mv, 0);

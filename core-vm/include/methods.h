@@ -118,6 +118,7 @@ typedef struct w_MethodExec {
 // TODO Following are only used if either bytecode verification or new 
 // execution engine are used, we should have an ifdef for this.
   w_ubyte *status_array;   /* Per-byte flags showing instruction boundaries etc. */
+  w_wordset basicBlocks;   /* Each entry in the wordset is a v_BasicBlock* */
 #ifdef JAVA_PROFILE
   w_long bytecodes;
   w_word runs;
@@ -144,18 +145,6 @@ typedef struct w_Method {
 
   w_MethodExec exec;
 
-  #ifdef JSPOT
-    /*
-    ** The return address of a J-Spot compiled method.  
-    **   FIXME: as soon I figured out what new fields are required to 
-    **          support J-Spot compiled methods, I'll probably bundle
-    **          them in a seperate struct.
-    */
-  
-    w_word return_address;
-    int counter;
-  #endif
-    
 } w_Method;
 
 /*
