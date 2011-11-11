@@ -129,6 +129,7 @@
       <fileset dir="${math.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${awt.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${jar.dir}" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${max.dir}" excludes="com/**/,gnu/**,wonka/**"/>
     </javadoc>
  </target>
  
@@ -180,6 +181,9 @@
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
 
+    <!-- MikaMax only -->
+    <property name="max.dir" value="${basedir}/max/"/>
+
     <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
     <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.dir}:${security.provider.any.dir}"
                     value="${security.provider.dir}"/>
@@ -203,6 +207,9 @@
     <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
                target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${basedir}/vm-ext/comm/java/" condition="${JAVAX_COMM}"/>
+    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
+               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               srcdir="${max.dir}" condition="${MIKA_MAX}"/>
 
     <copy todir="${class.dir}">
       <fileset  dir="${vm.java.dir}">
@@ -266,30 +273,38 @@
     <property name="awk.out.dir" value="${jam.output.dir}mika/bin/"/>
     <mkdir dir="${awk.out.dir}"/>
     <property name="vm.src.dir" value="${basedir}/core-vm/src/vm/"/>
-    <doawk output="${awk.out.dir}core-classes.h" script="${awk.dir}core-classes-h.awk" 
+    <doawk output="${awk.out.dir}core-classes.h" script1="${awk.dir}core-classes-h.awk" 
+           script2="${awk.dir}common-classes-h.awk"
            input="${vm.src.dir}core-classes.in"/>
-    <doawk output="${awk.out.dir}core-classes.c" script="${awk.dir}core-classes-c.awk" 
+    <doawk output="${awk.out.dir}core-classes.c" script1="${awk.dir}core-classes-c.awk" 
+           script2="${awk.dir}common-classes-c.awk"
            input="${vm.src.dir}core-classes.in"/>
-    <doawk output="${awk.out.dir}unicode.c" script="${awk.dir}unicode.awk" 
+    <doawk output="${awk.out.dir}unicode.c" script1="${awk.dir}unicode.awk" 
            input="${vm.src.dir}UnicodeData-Latest.txt"
            args="-vblox=${UNICODE_SUBSETS}"/>
 
     <property name="math.in.dir" value="${vm.cmp.dir}math/${MATH}/"/>
-    <doawk output="${awk.out.dir}math-classes.h" script="${awk.dir}math-classes-h.awk" 
+    <doawk output="${awk.out.dir}math-classes.h" script1="${awk.dir}math-classes-h.awk" 
+           script2="${awk.dir}common-classes-h.awk"
            input="${math.in.dir}math-classes.in" condition="${MATH}" value="native"/>
-    <doawk output="${awk.out.dir}math-classes.c" script="${awk.dir}math-classes-c.awk" 
+    <doawk output="${awk.out.dir}math-classes.c" script1="${awk.dir}math-classes-c.awk" 
+           script2="${awk.dir}common-classes-c.awk"
            input="${math.in.dir}math-classes.in" condition="${MATH}" value="native"/>
 
     <property name="awt.in.dir" value="${vm.cmp.dir}awt/${AWT}/src/"/>
-    <doawk output="${awk.out.dir}awt-classes.h" script="${awk.dir}awt-classes-h.awk" 
+    <doawk output="${awk.out.dir}awt-classes.h" script1="${awk.dir}awt-classes-h.awk" 
+           script2="${awk.dir}common-classes-h.awk"
            input="${awt.in.dir}awt-classes.in" condition="${AWT}" value="rudolph"/>
-    <doawk output="${awk.out.dir}awt-classes.c" script="${awk.dir}awt-classes-c.awk" 
+    <doawk output="${awk.out.dir}awt-classes.c" script1="${awk.dir}awt-classes-c.awk" 
+           script2="${awk.dir}common-classes-c.awk"
            input="${awt.in.dir}awt-classes.in" condition="${AWT}" value="rudolph"/>
 
     <property name="xcomm.in.dir" value="${vm.ext.dir}comm/"/>
-    <doawk output="${awk.out.dir}uart-classes.h" script="${awk.dir}uart-classes-h.awk" 
+    <doawk output="${awk.out.dir}uart-classes.h" script1="${awk.dir}uart-classes-h.awk" 
+           script2="${awk.dir}common-classes-h.awk"
            input="${xcomm.in.dir}uart-classes.in" condition="${JAVAX_COMM}" value="true"/>
-    <doawk output="${awk.out.dir}uart-classes.c" script="${awk.dir}uart-classes-c.awk" 
+    <doawk output="${awk.out.dir}uart-classes.c" script1="${awk.dir}uart-classes-c.awk" 
+           script2="${awk.dir}common-classes-c.awk"
            input="${xcomm.in.dir}uart-classes.in" condition="${JAVAX_COMM}" value="true"/>
 </target>
 
@@ -313,7 +328,7 @@
     <property environment="env"/>
     <jamflags property="jam.flags"/>
     <property name="config.jam.flags" 
-              value="-sAWT=${AWT} -sMATH=${MATH} -sJAVAX_COMM=${JAVAX_COMM} ${DEBUG.FLAG} ${STATIC.FLAG} ${AWT.FLAGS}"/>
+              value="-sAWT=${AWT} -sMATH=${MATH} -sJAVAX_COMM=${JAVAX_COMM} -sMIKA_MAX=${MIKA_MAX} ${DEBUG.FLAG} ${STATIC.FLAG} ${AWT.FLAGS} "/>
     <property name="base.jam.flags"
               value="-sOROOT=${jam.output.dir} -sBINDIR=${release.dir}bin/ -sVERSION_STRING=${MIKA.VERSION} -sINSTALLTESTDIR=${test.release.dir}"/> 
     <echo message="jam.flags = ${jam.flags}"/>

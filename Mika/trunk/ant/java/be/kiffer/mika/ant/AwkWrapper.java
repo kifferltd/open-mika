@@ -47,7 +47,8 @@ import org.apache.tools.ant.Task;
  */
 public class AwkWrapper extends Task {
 
-  private String script;
+  private String script1;
+  private String script2;
   private String input;
   private String output;
   private String condition;
@@ -111,17 +112,31 @@ public class AwkWrapper extends Task {
   }
 
   /**
-   * @return Returns the script.
+   * @return Returns the script1.
    */
-  public final String getScript() {
-    return script;
+  public final String getScript1() {
+    return script1;
   }
 
   /**
-   * @param script The script to set.
+   * @param script The script1 to set.
    */
-  public final void setScript(String script) {
-    this.script = script;
+  public final void setScript1(String script) {
+    this.script1 = script;
+  }
+
+  /**
+   * @return Returns the script2.
+   */
+  public final String getScript2() {
+    return script2;
+  }
+
+  /**
+   * @param script The script2 to set.
+   */
+  public final void setScript2(String script) {
+    this.script2 = script;
   }
 
   /**
@@ -148,8 +163,9 @@ public class AwkWrapper extends Task {
     if(out.isFile()) {
       long time = out.lastModified();
       long in = new File(input).lastModified();
-      long scr = new File(script).lastModified();
-      if(time > in && time > scr) {
+      long scr1 = new File(script1).lastModified();
+      long scr2 = new File(script2).lastModified();
+      if(time > in && time > scr1 && time > scr2) {
         return;
       }
     }
@@ -162,10 +178,22 @@ public class AwkWrapper extends Task {
   }
 
   private void generateFile() throws IOException {
-    this.log("generating '"+output+"' from '"+input+"' using "+script);
-    Process proc = this.args == null ? 
-        Runtime.getRuntime().exec("awk -f "+script+" "+input):
-        Runtime.getRuntime().exec("awk -f "+script+" "+args+" "+input);
+    if (script2 == null) {
+      this.log("generating '"+output+"' from '"+input+"' using "+script1);
+    }
+    else {
+      this.log("generating '"+output+"' from '"+input+"' using "+script1 + " and " + script2);
+    }
+    String commandString = "awk -f " + script1;
+    if (script2 != null) {
+      commandString += " -f " + script2;
+    }    
+    if (args != null) {
+      commandString += " " + args;
+    }
+    commandString += " " + input;
+    this.log("command: " + commandString);
+    Process proc =  Runtime.getRuntime().exec(commandString);
     InputStream in = proc.getInputStream();
     OutputStream out = new FileOutputStream(output);
     byte[] bytes = new byte[2048];
@@ -187,11 +215,14 @@ public class AwkWrapper extends Task {
     if(!new File(input).isFile()) {
       throw new BuildException("input '"+input+"' doesn't point to a valid file");
     }
-    if(script == null) {
-      throw new BuildException("'script' file not set");
+    if(script1 == null) {
+      throw new BuildException("'script1' file not set");
     }
-    if(!new File(script).isFile()) {
-      throw new BuildException("script '"+script+"' doesn't point to a valid file");
+    if(!new File(script1).isFile()) {
+      throw new BuildException("script1 '"+script1+"' doesn't point to a valid file");
+    }
+    if(script2 != null && !new File(script2).isFile()) {
+      throw new BuildException("script1 '"+script1+"' doesn't point to a valid file");
     }
   }
 }
