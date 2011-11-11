@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.          *
+* Copyright (c) 2009, 2011 by Chris Gray, /k/ Embedded Java Solutions.    *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -45,5 +45,6 @@ public interface SecurityConfiguration {
    */
   public final boolean ENABLE_SECURITY_CHECKS = true;
 
+  public final String NAME = "fine";
 }
 
