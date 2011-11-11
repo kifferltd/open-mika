@@ -134,6 +134,96 @@ extern char* value_not_reference;
 extern const w_ushort instruction_length_and_features[256];
 
 /*
+ * Internal representation of a data type; may be undefined, a class (possibly
+ * uninitialised or a primitive class), a union of classes, or a return address.
+ */
+
+typedef struct v_Type
+{
+  /* Discriminator for the union below */
+  w_ushort tinfo;
+
+  /* sequence number for tinfo = TINFO_UNINIT, TINFO_UNINIT_SUPER */
+  w_ushort uninitpc;
+  
+  union {
+    /* more precision for TINFO_UNDEFINED, see UNDEF_... below */
+    w_size undef_kind;
+
+    /* clazz for TINFO_PRIMITIVE, TINFO_CLASS */
+    w_clazz clazz;
+    
+    /* dotified class name for TINFO_UNLOADED_CLASS */
+    w_string dotified;
+
+    /* for TINFO_UNION we store an index onto mv->unions */
+    w_size union_index;
+  
+    /* return address for TINFO_ADDR */
+    w_size retaddr;
+  } data;
+} v_Type;
+
+/*
+ * Basic block information
+ */
+typedef struct v_BasicBlock {
+  /* The method to which this basic block belongs */
+  w_method method;
+  /* The index of this block within method->exec.basicBlocks */
+  w_size own_index;
+  /* Address (pc) of first instruction of block */
+  w_ushort start_pc;
+  /* Address (pc) of last instruction of block */
+  w_ushort last_pc;
+
+  /* Block flags: CHANGED (needs to be re-evaluated), VISITED, etc.  */
+  w_word flags;
+  
+  /* Type of exception handled, if this is the first block of an exception handler */
+  w_clazz exception_type;
+
+  /* Return address, if this is the first block of a subroutine */
+  w_size return_address;
+
+  /* array of local variables */
+  v_Type*  locals;
+  w_size localsz;
+  
+  /* simulated operand stack */
+  v_Type*  opstack;
+  w_size stacksz;
+
+  /* The size of the successors[] array */
+  w_size max_successors;
+  /* Per basic block, an indication of whether the basic block is a successor */
+  /* of this block (see SUCC_... below). */
+  w_ubyte *successors;
+} v_BasicBlock;
+
+/* Flags for a basic block.  */
+/* The block needs to be (re-evaluated) */
+#define CHANGED     16
+/* The block has already been evaluated at least once */
+#define VISITED     32
+/* The block is reachable as part of the normal control flow */
+#define NORMAL      64
+/* The block is reachable via an exception handler */
+#define EXCEPTION  128
+/* The block is reachable via a jsr/jsr_w */
+#define SUBROUTINE 256
+
+/*
+** Kinds of successor; normal transfer of control, exception handler, or
+** subroutine.
+*/
+#define SUCC_NONE 0
+#define SUCC_NORMAL 1
+#define SUCC_EXCEPTION 2
+#define SUCC_JSR 3
+#define SUCC_RET 4
+
+/*
  ** Get the dimensionality of a class constant. Returns 0 if the class is scalar,
  ** or the number of dimensions if it is an array class.
  ** Note: #dims can be > 255, the caller should check this.
