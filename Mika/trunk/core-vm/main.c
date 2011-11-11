@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java               *
+* Parts copyright (c) 2009, 2011 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -116,9 +116,6 @@ const char *W_help_text =
   "  -Wlogfile=<file>    enable dumping the debug output to a file.\n"
   "  -Woempa=y|n         show debug output on stderr. (default: y)\n"
   "  -Wdebugfrom=<count> enable level 1 debugging from bytecode count\n"
-#endif
-#ifdef JSPOT
-  "  -Wcompiler:...      set compiler options. (use -Wcompiler:help for more info)\n"
 #endif
 #if defined(AWT_XSIM) || defined(AWT_NONE)
   "  -Wrudolph:<w>x<h>   change the geometry of the AWT window on X.\n"

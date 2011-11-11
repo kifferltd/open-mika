@@ -60,18 +60,10 @@ void systemGroupManagerEntry(void);
 #define STACK_FACTOR                        2
 static const w_int bytes_per_call        = 660;
 #elif defined(ARM)
- #if defined(JSPOT)
-  #define STACK_FACTOR                       5
- #else
-  #define STACK_FACTOR                       3
- #endif
+#define STACK_FACTOR                       3
 static const w_int bytes_per_call        = 660;
 #elif defined(ARMEL)
- #if defined(JSPOT)
-  #define STACK_FACTOR                       5
- #else
-  #define STACK_FACTOR                       3
- #endif
+#define STACK_FACTOR                       3
 static const w_int bytes_per_call        = 660;
 #elif defined(MIPS)
 #define STACK_FACTOR                        4
@@ -268,9 +260,6 @@ typedef struct w_Thread {
   ** The native part of a Wonka thread, it's kernel thread, the stack and it's size.
   */
 
-#ifdef JSPOT
-  int counter;
-#endif
 #ifdef JDWP
   volatile void *step;                // Current jdwp_step or NULL
 #endif
@@ -488,7 +477,7 @@ void _gcSafePoint(w_thread thread);
 
 /// Check that a w_thread pointer really does point to a w_Thread
 #ifdef RUNTIME_CHECKS
-static INLINE w_thread checkThreadPointer(w_thread t) {
+static w_thread checkThreadPointer(volatile w_thread t) {
   if (strncmp(t->label, "thread", 6)) {
     wabort(ABORT_WONKA, "%p is not a thread!\n", t);
   }
@@ -496,7 +485,8 @@ static INLINE w_thread checkThreadPointer(w_thread t) {
 }
 
 static w_thread  JNIEnv2w_thread(JNIEnv *env) {
-  return checkThreadPointer((w_thread)env);
+  void *p = env;
+  return checkThreadPointer((w_thread)p);
 }
 
 static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
