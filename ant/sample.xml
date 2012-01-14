@@ -38,9 +38,9 @@
   <target name="sample">
      <mkdir dir="${sample.class.dir}" />
      <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}"/>
-     <javac compiler="jikes" destdir="${sample.class.dir}" 
+     <javac destdir="${sample.class.dir}" 
             bootclasspath="${common.class.dir}"
-            target="1.3" debug="true" nowarn="true" failonerror="true"
+            source="1.4" target="1.4" debug="true" nowarn="true" failonerror="true"
             srcdir="${sample.dir}/apps/java/:${sample.dir}/metronome/"/>
 
      <jar destfile="${jarfile.dir}/mika-samples.jar" 

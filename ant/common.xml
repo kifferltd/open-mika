@@ -51,8 +51,8 @@
     <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
     <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.any.dir}"
                     value="${security.provider.dir}"/>
-     <javac compiler="jikes" destdir="${common.class.dir}" bootclasspath="${empty.dir}"
-            target="1.3" debug="true" nowarn="true" failonerror="true"
+     <javac destdir="${common.class.dir}" bootclasspath="${empty.dir}"
+            source="1.4" target="1.4" debug="true" nowarn="true" failonerror="true"
             srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}:${micro.io.dir}"/>
   </target>
 
