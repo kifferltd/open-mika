@@ -57,6 +57,7 @@ BEGIN {
   lastslash=0
   while(slash) { lastslash+=slash; rest=substr(fqn,lastslash+1); slash=index(rest,"/") }
   thisclazz=substr(fqn,lastslash+1)
+  gsub("\\$", "_dollar_", thisclazz)
   clazz[clazzcount]=thisclazz
   path[clazzcount]=substr(fqn,1,lastslash)
 
@@ -146,11 +147,13 @@ END {
   print "** which will be initialized to hold its slot number."
   print "*/"
   for(c = 1; c in clazz; ++c) {
+    basename = clazz[c]
+    gsub("_dollar_", "$", basename)
     print " "
-    printf "extern w_clazz clazz%s;\n",clazz[c]
+    printf "extern w_clazz clazz%s;\n",basename
     for(cf in offset) {
       split(cf,a,SUBSEP)
-      if(a[1]==clazz[c]) printf "extern w_int %s;\n",offset[cf]
+      if(a[1]==basename) printf "extern w_int %s;\n",offset[cf]
     }
   }
   print " "
