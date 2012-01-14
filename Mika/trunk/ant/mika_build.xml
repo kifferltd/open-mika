@@ -192,23 +192,23 @@
     <propertysetter property="jar.dirs" arg1="${JAR}" arg2="java" elsevalue="${vm.cmp.dir}jar/${JAR}/"
                     value="${vm.cmp.dir}jar/${JAR}/:${crypto.dir}"/>
 
-    <javac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
-           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <javac destdir="${class.dir}" bootclasspath="${empty.dir}"
+           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
            srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}"/>
 
-    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
-           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
+           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
            srcdir="${vm.ext.dir}beans/java/" condition="${JAVA_BEANS}"/>
 
-    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
-               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
+               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${crypto.dir}" condition="${JAVAX_CRYPTO}"/>
 
-    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
-               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
+               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${basedir}/vm-ext/comm/java/" condition="${JAVAX_COMM}"/>
-    <condjavac compiler="jikes" destdir="${class.dir}" bootclasspath="${empty.dir}"
-               target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
+               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${max.dir}" condition="${MIKA_MAX}"/>
 
     <copy todir="${class.dir}">
@@ -229,8 +229,8 @@
     <property name="micro.io.class.dir" value="${build.dir}/ext/microio"/>
     <property name="micro.io.dir" value="${basedir}/extension/microedition/io/"/>
     <mkdir dir="${micro.io.class.dir}"/>
-    <javac compiler="jikes" destdir="${micro.io.class.dir}" bootclasspath="${class.dir}"
-           target="1.3" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+    <javac destdir="${micro.io.class.dir}" bootclasspath="${class.dir}"
+           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
            srcdir="${micro.io.dir}java"/>
     <jar destfile="${release.ext.dir}/microedition-io.jar"
          manifest="${micro.io.dir}/micro-io.mf"
