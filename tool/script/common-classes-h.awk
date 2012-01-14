@@ -148,7 +148,6 @@ END {
   print "*/"
   for(c = 1; c in clazz; ++c) {
     basename = clazz[c]
-    gsub("_dollar_", "$", basename)
     print " "
     printf "extern w_clazz clazz%s;\n",basename
     for(cf in offset) {
