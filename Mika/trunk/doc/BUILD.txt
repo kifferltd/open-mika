@@ -1,5 +1,5 @@
 +-------------------------------------------------------------------------+
-| Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          |
+| Copyright (c) 2006, 2012 by Chris Gray, /k/ Embedded Java Solutions.    |
 | All rights reserved.                                                    |
 |                                                                         |
 | Redistribution and use in source and binary forms, with or without      |
@@ -30,10 +30,8 @@
 Building Mika
 =============
 
-Building mika is done by calling ant in the top directory of your source tree (you'll
-find a nice build.xml there). If you're unfamiliar to ant, I
-can recommend looking at 'http://ant.apache.org'. You'll find all the nice details on
-ant overthere.
+Building mika is done by calling ant in the top directory of your source tree.
+If you are not familiar with ant, consult the documentation at 'http://ant.apache.org'.
 
 There are 5 tasks which can be called directly with ant:
 
@@ -48,7 +46,7 @@ There are 5 tasks which can be called directly with ant:
    'ant -DPLATFORM=platform1,platform2,...'
 
 2. clean: clean will clean all generated files from a specific build. Example:
-   'ant -DPLATFORM=pc' will delete all files generated specific for the pc build.
+   'ant -DPLATFORM=pc' will delete all files generated specifically for the pc build.
 
 3. cleanall: as it says, cleanall will delete all generated files (no need to specify
    a PLATFORM here). 'ant cleanall' will do.
@@ -90,7 +88,7 @@ The other properties are:
 
 All of the mentioned properties can of course be specified on your commandline.
 By adding '-DAWT=none' for instance, you select the 'none' AWT implementation. Parameters
-past on the commandline take presedence over those in the configuration file.
+passed on the command line take precedence over those in the configuration file.
 
 
 Jamming mika
@@ -120,12 +118,18 @@ it will be overriden.
 Building mika for your platform
 ------------------------------- 
 
-There are a few basic configurations available for both ant and jam. Basicly those for pc. However there is
-also the default one. This makes a good starting point for building mika for your platform. If you check the 
-Configuration/platform dir you'll see more choices. It's quite easy to combine the default ant configuration
-with one of those jam files. Example: to build for a arm-linux platform you can type:
-ant -DPLATFORM=default -DJAM.PLATFORM=arm-linux
+There are a few basic configurations available for both ant and jam.  To make a
+build for your embedded platform, we recommend that you take one of the existing
+configurations which quite closely resembles your target and derive your own version.
+cd Configuration/ant/
+cp arm-linux mytarget
+vi mytarget
 
-Of course you can always edit the default ant config-file or copy it and make changes to your copy.
-
+You will probably want to do the same at the Configuration/platform level in order
+to adjust compiler flags etc..  Don't forget to change the JAM.PLATFORM line in the
+Configuration/ant file so that it links to the one in Configuration/platform.
+The "default" files document the various build-time variables, but we recommend 
+that you do not edit these files directly - all your changes should be in your own
+files.  That way it is much easier to keep track of which things you have changed and
+which you haven't. 
  

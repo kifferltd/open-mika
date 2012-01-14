@@ -30,6 +30,11 @@
 ###########################################################################
 
 #
+# If you are building Mika for your target, don't change the settings here:
+# create your own Configuration/platform/foo file and do it there instead.
+#
+
+#
 # Debug is set off per default.
 #
 
