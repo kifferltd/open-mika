@@ -29,13 +29,11 @@
 
 ECHO Configuring build for a MIPS cpu. ;
 
-CC = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-gcc ;
-AR = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-ar ru ;
-AS = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-as ;
-RANLIB = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-ranlib ;
-LINK = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-gcc ;
+CC = $(TOOLCHAIN_PREFIX)gcc ;
+AR = $(TOOLCHAIN_PREFIX)ar ru ;
+AS = $(TOOLCHAIN_PREFIX)as ;
+RANLIB = $(TOOLCHAIN_PREFIX)ranlib ;
+LINK = $(TOOLCHAIN_PREFIX)gcc ;
 
-LD_TOOL = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-ld ;
-AR_TOOL = /home/chris/OpenWrt-SDK-Linux-i686-1/staging_dir_mipsel/bin/mipsel-linux-uclibc-ar ;
-
-
+LD_TOOL = $(TOOLCHAIN_PREFIX)ld ;
+AR_TOOL = $(TOOLCHAIN_PREFIX)ar ;
