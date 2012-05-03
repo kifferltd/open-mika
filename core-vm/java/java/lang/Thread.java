@@ -118,6 +118,11 @@ public class Thread implements Runnable {
   private Throwable thrown;
   private boolean isDaemon; 
 
+  /**
+   * Link to a resource monitor on builds where this feature is enabled.
+   */
+  private Object resourceMonitor;
+
   private static void permissionCheck(String permission) {
     if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       SecurityManager sm = System.theSecurityManager;
