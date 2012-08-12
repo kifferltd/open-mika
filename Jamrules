@@ -60,7 +60,7 @@ if "$(WONKA_TOP)" = "." && $(HOSTOS) != winnt {
 CCFLAGS  = -m32 -Wall -Wsign-compare -Wshadow -Wpointer-arith -Wstrict-prototypes ;
 CCFLAGS += -Winline -DDEBUG_LEVEL=7 ;
 
-LINKFLAGS = +m32 ;
+LINKFLAGS = -m32 ;
 
 #
 # Read in the appropriate configuration files
