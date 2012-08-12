@@ -57,8 +57,10 @@ if "$(WONKA_TOP)" = "." && $(HOSTOS) != winnt {
 # Setup the baisc CCFLAGS. There will be flags appended in the config files.
 #
 
-CCFLAGS  = -Wall -Wsign-compare -Wshadow -Wpointer-arith -Wstrict-prototypes ;
+CCFLAGS  = -m32 -Wall -Wsign-compare -Wshadow -Wpointer-arith -Wstrict-prototypes ;
 CCFLAGS += -Winline -DDEBUG_LEVEL=7 ;
+
+LINKFLAGS = +m32 ;
 
 #
 # Read in the appropriate configuration files
@@ -244,6 +246,11 @@ if $(ENABLE_THREAD_RECYCLING) = true {
 
 if $(JAVAX_COMM) = true {
   CCFLAGS += -DJAVAX_COMM ;
+}
+
+if $(MIKA_MAX) = true {
+  CCFLAGS += -DMIKA_MAX ;
+  CCFLAGS += -DRESMON ;
 }
 
 if $(USE_APP_DIR) = true {
@@ -564,11 +571,22 @@ switch $(JDWP) {
   }
 }
 
-if $(USE_LIBFFI) = true {
+switch $(USE_LIBFFI) {
+  case true : {
     WONKA_INFO += "using libffi to call native code;" ;
-}
-else {
+  }
+  case false : {
     WONKA_INFO += "using own hacks to call native code;" ;
+  }
+}
+
+switch $(BYTECODE_VERIFIER) {
+  case true : {
+    WONKA_INFO += "bytecode verification is enabled;" ;
+  }
+  case false : {
+    WONKA_INFO += "bytecode verification is disabled;" ;
+  }
 }
 
 switch $(NETWORK) {
