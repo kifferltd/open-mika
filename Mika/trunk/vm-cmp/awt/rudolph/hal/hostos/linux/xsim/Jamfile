@@ -34,7 +34,7 @@ SUBDIRHDRS += $(OROOT)/awt/rudolph/bin ;
 SUBDIRHDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/include ;
 
 CCFLAGS += -I/usr/X11R6/include ;
-LINKFLAGS += -L/usr/X11R6/lib ;
+# LINKFLAGS += -L/usr/X11R6/lib ;
 LINKLIBS += -lX11 ;
 
 Library $(AWT_LIB) : rudolph.c keyboard.c ;
