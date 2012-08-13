@@ -145,6 +145,15 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   transient private static Component focusComponentPrev = null;
   boolean hasFocus;
   
+  // Component is focusable (Apache Harmony)
+  private boolean focusable;
+
+  // setFocusable has been called (Apache Harmony)
+  private boolean calledSetFocusable;
+
+  // setFocusable has been called (Apache Harmony)
+  private boolean overriddenIsFocusable = true;
+
   private FocusControl focusControl = FocusControlFactory.create();
   
   private DropTarget dropTarget;
@@ -428,6 +437,7 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public void removeNotify() {
+    moveFocus();
   }
 
   public synchronized void add(PopupMenu popup) {
@@ -486,11 +496,25 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
 	  FocusCycle.next(this);
   }
   
+    public void setFocusable(boolean focusable) {
+        boolean oldFocusable;
+        synchronized(lock) {
+            calledSetFocusable = true;
+            oldFocusable = this.focusable;
+            this.focusable = focusable;
+            if (!focusable) {
+                moveFocus();
+            }
+        }
+        //firePropertyChange("focusable", oldFocusable, focusable); //$NON-NLS-1$
+    }
+
   /**
    * @status not implemented
    * @remark not compliant with specifications
    */
   public boolean isFocusTraversable() {
+        overriddenIsFocusable = false;
 	  if(this.peer!=null)
 	  {
 		return this.peer.isFocusTraversable();
@@ -804,6 +828,7 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
 
   public void hide() {
     setVisible(false);
+    moveFocusOnHide();
   }
 
   public boolean isDisplayable() {
@@ -1060,5 +1085,76 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   {
       return null;
   }
+
+  // (from Apache Harmony)
+    /**
+     * This method is called when some property of a component changes, making
+     * it unfocusable, e. g. hide(), removeNotify(), setEnabled(false),
+     * setFocusable(false) is called, and therefore automatic forward focus
+     * traversal is necessary
+     */
+    void moveFocus() {
+        /* temporary solution for Rudolph */
+	  FocusCycle.next(this);
+        /*
+        ** Apache code
+        // don't use transferFocus(), but query focus traversal policy directly
+        // and if it returns null, transfer focus up cycle
+        // and find next focusable component there
+        KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        Container root = kfm.getCurrentFocusCycleRoot();
+        Component nextComp = this;
+        boolean success = !isFocusOwner();
+        while (!success) {
+            if (root != nextComp.getFocusCycleRootAncestor()) {
+                // component was probably removed from container
+                // so focus will be lost in some time
+                return;
+            }
+            nextComp = root.getFocusTraversalPolicy().getComponentAfter(root, nextComp);
+            if (nextComp == this) {
+                nextComp = null; // avoid looping
+            }
+            if (nextComp != null) {
+                success = nextComp.requestFocusInWindow();
+            } else {
+                nextComp = root;
+                root = root.getFocusCycleRootAncestor();
+                // if no acceptable component is found at all - clear global
+                // focus owner
+                if (root == null) {
+                    if (nextComp instanceof Window) {
+                        Window wnd = (Window) nextComp;
+                        wnd.setFocusOwner(null);
+                        wnd.setRequestedFocus(null);
+                    }
+                    kfm.clearGlobalFocusOwner();
+                    return;
+                }
+            }
+        }
+        */
+    }
+
+    /**
+     * For Container there's a difference between moving focus when being made
+     * invisible or made unfocusable in some other way, because when container
+     * is made invisible, component still remains visible, i. e. its hide() or
+     * setVisible() is not called.
+     */
+    void moveFocusOnHide() {
+        moveFocus();
+    }
+
+    /**
+     * @return true if focusability was explicitly set via a call to
+     *         setFocusable() or via overriding isFocusable() or
+     *         isFocusTraversable()
+     */
+    boolean isFocusabilityExplicitlySet() {
+        return calledSetFocusable || overriddenIsFocusable;
+    }
+
+
 }
 
