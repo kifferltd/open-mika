@@ -163,8 +163,8 @@ public class AwkWrapper extends Task {
     if(out.isFile()) {
       long time = out.lastModified();
       long in = new File(input).lastModified();
-      long scr1 = new File(script1).lastModified();
-      long scr2 = new File(script2).lastModified();
+      long scr1 = script1 == null ? 0 : new File(script1).lastModified();
+      long scr2 = script2 == null ? 0 : new File(script2).lastModified();
       if(time > in && time > scr1 && time > scr2) {
         return;
       }
