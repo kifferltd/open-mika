@@ -65,7 +65,7 @@ char * print_instance_short(char * buffer, int * remain, void * data, int w, int
   }
 
   temp = buffer;
-  nbytes = x_snprintf(temp, *remain, "%k@%16p", instance2clazz(instance), instance);
+  nbytes = x_snprintf(temp, *remain, "%k@%p", instance2clazz(instance), instance);
   *remain -= nbytes;
 
   return temp + nbytes;
@@ -470,9 +470,16 @@ void deleteGlobalReference(w_instance instance) {
 
 #define MIN_MIN_HEAP_FREE (256 * 1024)
 
+#ifdef RESMON
+w_hashtable resmon_memory_hashtable;
+#endif
+
 void startHeap() {
 
   lock_hashtable = ht_create((char*)"hashtable:locks", 131, NULL, NULL, 0, 0);
+#ifdef RESMON
+  resmon_memory_hashtable = ht_create("hashtable:resmon_memory", 13, NULL, NULL, 0, 0);
+#endif
 
   min_heap_free = x_mem_total() / 20;
   if (min_heap_free > MIN_MIN_HEAP_FREE) {
