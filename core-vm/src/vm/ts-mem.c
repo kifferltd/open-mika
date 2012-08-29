@@ -58,10 +58,12 @@ static void alloc_barrier(w_thread thread) {
 #ifdef RESMON
 extern w_hashtable resmon_memory_hashtable;
 extern w_boolean pre_alloc_check(w_thread thread, w_size nbytes);
+extern w_boolean pre_realloc_check(w_thread thread, w_size newbytes, w_size oldbytes);
 extern void post_alloc(w_thread thread, void *address);
 extern void pre_dealloc(w_thread thread, void *address, w_size nbytes);
 #else
 #define pre_alloc_check(t,n) TRUE
+#define pre_realloc_check(t,n,o) TRUE
 #define post_alloc(t,a)
 #define pre_dealloc(t,a,n)
 #endif
@@ -146,9 +148,8 @@ void * _reallocMem(void * block, w_size newsize) {
   oldsize = x_mem_size(oldchunk);
   gc_reclaim(newsize - oldsize, NULL);
 
-  if (pre_alloc_check(thread, newsize - oldsize)) {
+  if (pre_realloc_check(thread, newsize, oldsize)) {
     alloc_barrier(thread);
-    pre_dealloc(thread, oldchunk, 0);
     newchunk = x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize);
   }
   else {
@@ -505,7 +506,7 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, newsize, sizeof(w_Chunk) + newsize);
   gc_reclaim(newsize - oldsize, NULL);
 
-  if (pre_alloc_check(thread, newsize - oldsize)) {
+  if (pre_realloc_check(thread, newsize, oldsize)) {
     alloc_barrier(thread);
     x_mem_lock(x_eternal);
     newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);

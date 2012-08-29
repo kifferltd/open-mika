@@ -138,6 +138,7 @@ static void threadEntry(void * athread) {
 #endif
     enterUnsafeRegion(thread);
 
+    pre_thread_termination(thread);
     ht_erase(thread_hashtable,(w_word)thread->kthread);
     thread->state = wt_dead;
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
@@ -312,6 +313,10 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
   }
   threadMustBeSafe(current_thread);
 #endif
+
+  if (!pre_thread_start_check(current_thread, thisThread)) {
+    return xs_no_instance;
+  }
 
   // Need to do this before calling getXThreadFromPool, because that function
   // can put the thread on the wthread_fifo and then we're no longer in control (the
