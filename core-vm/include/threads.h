@@ -45,6 +45,14 @@
 #endif
 #endif
 
+#ifdef RESMON
+extern w_boolean pre_thread_start_check(w_thread creatorThread, w_instance newThreadInstance);
+extern void pre_thread_termination(w_thread thread);
+#else
+#define pre_thread_start_check(t,i) TRUE
+#define pre_thread_termination(t)
+#endif
+
 extern w_size numThreads;
 extern w_thread W_Thread_system;
 extern w_thread W_Thread_sysInit;
