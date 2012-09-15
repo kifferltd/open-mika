@@ -1,5 +1,5 @@
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-<!-- Copyright (c) 2007-2010 by Chris Gray, /k/ Embedded Java Solutions.     -->
+<!-- Copyright (c) 2007-2012 by Chris Gray, /k/ Embedded Java Solutions.     -->
 <!-- All rights reserved.                                                    -->
 <!--                                                                         -->
 <!-- Redistribution and use in source and binary forms, with or without      -->
@@ -31,17 +31,19 @@
   <property name="top.level.dir" value="../" />
   <property name="build.dir" value="${top.level.dir}build/common/"/>
   <property name="common.class.dir" value="${build.dir}class/"/>
+  <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+  <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
 
   <target name="compile-wre">
      <mkdir dir="${common.class.dir}" />
      <property name="top.level.dir" value="${basedir}/.." />
      <property name="vm.cmp.dir" value="${top.level.dir}/vm-cmp/"/>
-     <property name="math.dir" value="${vm.cmp.dir}math/java/java"/>
-     <property name="awt.dir" value="${vm.cmp.dir}awt/rudolph/java"/>
-     <property name="vm.java.dir" value="${top.level.dir}/core-vm/java"/>
-     <property name="security.dir" value="${vm.cmp.dir}security/none/java/"/>
-     <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
-    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
+     <property name="math.dir" value="${vm.cmp.dir}math/java/${java.version}"/>
+     <property name="awt.dir" value="${vm.cmp.dir}awt/rudolph/${java.version}"/>
+     <property name="vm.java.dir" value="${top.level.dir}/core-vm/${java.version}"/>
+     <property name="security.dir" value="${vm.cmp.dir}security/none/${java.version}/"/>
+     <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/${java.version}/"/>
      <property name="jar.dirs" value="${vm.cmp.dir}jar/none/"/>
      <property name="micro.io.dir" value="${top.level.dir}/extension/microedition/io/"/>
 
@@ -52,7 +54,7 @@
     <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.any.dir}"
                     value="${security.provider.dir}"/>
      <javac destdir="${common.class.dir}" bootclasspath="${empty.dir}"
-            source="1.4" target="1.4" debug="true" nowarn="true" failonerror="true"
+            source="${java.level}" target="${java.level}" debug="true" nowarn="true" failonerror="true"
             srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}:${micro.io.dir}"/>
   </target>
 

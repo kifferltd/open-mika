@@ -42,7 +42,6 @@
   <property name="release.ext.dir" value="${release.lib.dir}ext/"/>
   <property name="mika.bin.dir" value="${release.dir}bin/"/>
   <property name="log.dir" value="${build.dir}log/"/>
-  <property name="vm.java.dir" value="${basedir}/core-vm/java"/>
   <property name="vm.resource.dir" value="${basedir}/core-vm/resource/system"/>
   <property name="rudolph.resource.dir" value="${vm.cmp.dir}awt/rudolph/resource/"/>
   <property name="ant.dir" value="${basedir}/ant/"/>
@@ -83,18 +82,20 @@
   </target>
 
   <target name="source" depends="prepare,check-build-env">
-    <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
-    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
-    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
-    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
-    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
-    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+    <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+    <property name="crypto.dir" value="${vm.ext.dir}crypto/${java.version}/"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/${java.version}/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/${java.version}/"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/${java.version}"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/${java.version}"/>
     <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
 
     <jar destfile="${release.dir}/src.jar">
-      <fileset dir="${basedir}/vm-ext/comm/java"/>
+  <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
+      <fileset dir="${basedir}/vm-ext/comm/${java.version}"/>
       <fileset dir="${crypto.dir}"/>
-      <fileset dir="${vm.ext.dir}beans/java"/>
+      <fileset dir="${vm.ext.dir}beans/${java.version}"/>
       <fileset dir="${vm.java.dir}"/>
       <fileset dir="${security.dir}"/>
       <fileset dir="${security.provider.dir}"/>
@@ -108,6 +109,7 @@
   </target>
 
   <target name="gen.javadoc">
+  <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
     <javadoc packagenames="java.*,javax.*"
              destdir="${release.dir}doc"
              author="true"
@@ -119,9 +121,9 @@
          For more information please contact <a href="mailto:k-info@kiffer.be">k-info@kiffer.be</a>
          or <br>check our website <A HREF="http://www.k-embedded-java.com/">http://www.k-embedded-java.com/</A>
            ]]></bottom>
-      <fileset dir="${basedir}/vm-ext/comm/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${basedir}/vm-ext/comm/${java.version}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${crypto.dir}" excludes="com/**/,gnu/**,wonka/**"/>
-      <fileset dir="${vm.ext.dir}beans/java" excludes="com/**/,gnu/**,wonka/**"/>
+      <fileset dir="${vm.ext.dir}beans/${java.version}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${vm.java.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${security.dir}" excludes="com/**/,gnu/**,wonka/**"/>
       <fileset dir="${security.provider.dir}" excludes="com/**/,gnu/**,wonka/**"/>
@@ -174,12 +176,15 @@
   </target>
 
   <target name="build-wre">
-    <property name="crypto.dir" value="${vm.ext.dir}crypto/java/"/>
-    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/java/"/>
-    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/java/"/>
-    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/java/"/>
-    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/java"/>
-    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/java"/>
+    <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+    <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
+    <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
+    <property name="crypto.dir" value="${vm.ext.dir}crypto/${java.version}/"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/${java.version}/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/${java.version}/"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/${java.version}"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/${java.version}"/>
 
     <!-- MikaMax only -->
     <property name="max.dir" value="${basedir}/max/"/>
@@ -193,22 +198,22 @@
                     value="${vm.cmp.dir}jar/${JAR}/:${crypto.dir}"/>
 
     <javac destdir="${class.dir}" bootclasspath="${empty.dir}"
-           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
            srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}"/>
 
     <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
-           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${vm.ext.dir}beans/java/" condition="${JAVA_BEANS}"/>
+           source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           srcdir="${vm.ext.dir}beans/${java.version}/" condition="${JAVA_BEANS}"/>
 
     <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
-               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${crypto.dir}" condition="${JAVAX_CRYPTO}"/>
 
     <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
-               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-               srcdir="${basedir}/vm-ext/comm/java/" condition="${JAVAX_COMM}"/>
+               source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               srcdir="${basedir}/vm-ext/comm/${java.version}/" condition="${JAVAX_COMM}"/>
     <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
-               source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+               source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
                srcdir="${max.dir}" condition="${MIKA_MAX}"/>
 
     <copy todir="${class.dir}">
@@ -226,12 +231,14 @@
   </target>
 
   <target name="build-micro-io">
+    <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+    <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
     <property name="micro.io.class.dir" value="${build.dir}/ext/microio"/>
     <property name="micro.io.dir" value="${basedir}/extension/microedition/io/"/>
     <mkdir dir="${micro.io.class.dir}"/>
     <javac destdir="${micro.io.class.dir}" bootclasspath="${class.dir}"
-           source="1.4" target="1.4" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${micro.io.dir}java"/>
+           source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
+           srcdir="${micro.io.dir}${java.version}"/>
     <jar destfile="${release.ext.dir}/microedition-io.jar"
          manifest="${micro.io.dir}/micro-io.mf"
          basedir="${micro.io.class.dir}"/>
