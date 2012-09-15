@@ -230,7 +230,7 @@ public abstract class URLStreamHandler {
     protected void setURL(URL u, String protocol, String host, int port,
             String file, String ref) {
         if (this != u.strmHandler) {
-            throw new SecurityException();
+            throw new SecurityException(this + " is not strmHandler of " + u);
         }
         u.set(protocol, host, port, file, ref);
     }
