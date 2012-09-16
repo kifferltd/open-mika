@@ -2844,6 +2844,7 @@ public class DatagramChannelTest extends TestCase {
         connectWriteBuf(localAddr1, writeBuf);
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -2857,6 +2858,7 @@ public class DatagramChannelTest extends TestCase {
         connectWriteBuf(localAddr1, writeBuf);
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -2879,6 +2881,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -2903,6 +2906,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -2937,6 +2941,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3075,6 +3080,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3109,6 +3115,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3134,6 +3141,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3157,6 +3165,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3208,6 +3217,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3261,6 +3271,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3286,6 +3297,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3362,6 +3374,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3448,6 +3461,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3480,6 +3494,7 @@ public class DatagramChannelTest extends TestCase {
         datagramSocket1.close();
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3506,6 +3521,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3560,6 +3576,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3639,6 +3656,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3687,6 +3705,7 @@ public class DatagramChannelTest extends TestCase {
     // -------------------------------------------------------------------
     // test read and write
     // -------------------------------------------------------------------
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3740,6 +3759,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -3773,6 +3793,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -3805,6 +3826,7 @@ public class DatagramChannelTest extends TestCase {
                 targetArray, CAPACITY_NORMAL, "testReadWrite_Block_Normal");
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -3842,6 +3864,7 @@ public class DatagramChannelTest extends TestCase {
         closeBlockedReaderChannel2(targetBuf);
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -3898,6 +3921,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -3964,6 +3988,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -3993,6 +4018,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4032,6 +4058,7 @@ public class DatagramChannelTest extends TestCase {
         closeBlockedReaderChannel2(targetBuf);
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4068,6 +4095,7 @@ public class DatagramChannelTest extends TestCase {
         closeBlockedReaderChannel2(targetBuf);
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4135,6 +4163,7 @@ public class DatagramChannelTest extends TestCase {
 
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4197,6 +4226,7 @@ public class DatagramChannelTest extends TestCase {
     // -------------------------------------------------------------------
     // Test read and write in non-block mode.
     // -------------------------------------------------------------------
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4232,6 +4262,7 @@ public class DatagramChannelTest extends TestCase {
                 targetArray, CAPACITY_NORMAL, "testReadWrite_NonBlock_Normal");
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4267,6 +4298,7 @@ public class DatagramChannelTest extends TestCase {
                 targetArray, 8 * CAPACITY_1KB, "testReadWrite_NonBlock_8KB");
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4307,6 +4339,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4346,6 +4379,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4385,6 +4419,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4422,6 +4457,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargets({
         @TestTargetNew(
             level = TestLevel.PARTIAL_COMPLETE,
@@ -4461,6 +4497,7 @@ public class DatagramChannelTest extends TestCase {
         assertEquals(0, this.channel2.read(targetBuf));
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -4542,6 +4579,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
@@ -4615,6 +4653,7 @@ public class DatagramChannelTest extends TestCase {
         }
     }
 
+    /*
     @TestTargetNew(
         level = TestLevel.PARTIAL_COMPLETE,
         notes = "",
