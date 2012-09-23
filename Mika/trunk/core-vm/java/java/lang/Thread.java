@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2011  *
-* by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.       *
+* reserved. Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2011, *
+* 2012 by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -122,6 +122,16 @@ public class Thread implements Runnable {
    * Link to a resource monitor on builds where this feature is enabled.
    */
   private Object resourceMonitor;
+
+  /**
+   * Process ID of the parent VM or Isolate (o4p only)
+   */
+  private int pid;
+
+  /**
+   * LWP (lightweight process) ID of this thread (o4p only)
+   */
+  private int tid;
 
   private static void permissionCheck(String permission) {
     if (wonka.vm.SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
