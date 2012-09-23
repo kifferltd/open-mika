@@ -130,6 +130,11 @@ public abstract class ClassLoader {
   private String ownname;
 
   /**
+   * Set true iff this is one of systemClassLoader, extensionClassLoader, or applicationClassLoader.
+   */
+  private boolean systemDefined;
+
+  /**
    * Link to a resource monitor on builds where this feature is enabled.
    */
   private Object resourceMonitor;
@@ -147,7 +152,7 @@ public abstract class ClassLoader {
   }
 
   /**
-   ** Identify the most useful classloader availble - the applicationClassLoader
+   ** Identify the most useful classloader available - the applicationClassLoader
    ** if already defined, but failing that the extensionClassLoader or
    ** systemClassLoader.  Used to load resources (as opposed to classes)
    ** to avoid an infinite regress involving system.properties
@@ -162,6 +167,7 @@ public abstract class ClassLoader {
     }
     if (loader == null) {
       systemClassLoader = SystemClassLoader.getInstance();
+      systemClassLoader.systemDefined = true;
       loader = systemClassLoader;
     }
 
@@ -736,6 +742,7 @@ ClassFormatError
     }
 
     extensionClassLoader = wonka.vm.ExtensionClassLoader.getInstance(urls, SystemClassLoader.getInstance());
+    extensionClassLoader.systemDefined = true;
     installExtensionClassLoader(extensionClassLoader);
   }
 
@@ -796,6 +803,7 @@ ClassFormatError
     URL[] urls = getApplicationClasspath(classpath);
     ClassLoader parent = extensionClassLoader != null ? extensionClassLoader : SystemClassLoader.getInstance();
     applicationClassLoader = wonka.vm.ApplicationClassLoader.getInstance(urls, parent);
+    applicationClassLoader.systemDefined = true;
     installApplicationClassLoader(applicationClassLoader);
 
     if (System.systemProperties != null) {
@@ -846,7 +854,7 @@ ClassFormatError
    ** a class loader is a system class loader without triggering a security check.
    */
   static boolean isSystemClassLoader(ClassLoader cl) {
-    return cl == null || cl == systemClassLoader || cl == extensionClassLoader || cl == applicationClassLoader;
+    return cl == null || cl.systemDefined;
   }
 
   public native void enableResourceMonitoring(boolean enable);
