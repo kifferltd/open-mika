@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2011 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2011, 2012            *
+* by Chris Gray,  /k/ Embedded Java Solutions. All rights reserved.       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -794,8 +794,10 @@ static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w
   frame->auxstack_top = caller->auxstack_top;
 #ifdef TRACE_CLASSLOADERS
   { 
-    w_instance loader = method->spec.declaring_clazz->loader; 
-    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+    w_instance loader = isSet(method->flags, ACC_STATIC) 
+                        ? method->spec.declaring_clazz->loader
+                        : instance2clazz(frame->jstack_base[- method->exec.arg_i].c)->loader;
+    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
       frame->udcl = loader;
     }
     else {

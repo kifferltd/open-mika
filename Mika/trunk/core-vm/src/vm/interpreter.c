@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011 by Chris   *
-* * Gray, /k/ Embedded Java Solutions. All rights reserved.               *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2012      *
+*  by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -45,6 +45,7 @@
 
 #include "clazz.h"
 #include "constant.h"
+#include "core-classes.h"
 #include "descriptor.h"
 #include "exception.h"
 #include "fastcall.h"
@@ -847,8 +848,10 @@ void interpret(w_frame caller, w_method method) {
   frame->method = method;
 #ifdef TRACE_CLASSLOADERS
   { 
-    w_instance loader = method->spec.declaring_clazz->loader; 
-    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+    w_instance loader = isSet(method->flags, ACC_STATIC)
+                        ? method->spec.declaring_clazz->loader
+                        : instance2clazz(frame->jstack_base[0].c)->loader;
+    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
       frame->udcl = loader;
     }
     else {
@@ -4600,8 +4603,10 @@ w_frame pushFrame(w_thread thread, w_method method) {
     frame->flags = isSet(method->flags, ACC_NATIVE) ? FRAME_NATIVE : 0;
 #ifdef TRACE_CLASSLOADERS
   { 
-    w_instance loader = method->spec.declaring_clazz->loader; 
-    if (loader && isSet(instance2clazz(loader)->flags, CLAZZ_IS_UDCL)) {
+   // N.B. If method is virtual then the caller should overwrite the static udcl
+   // with the appropriate runtime one ...
+    w_instance loader = method->spec.declaring_clazz->loader;
+    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
       frame->udcl = loader;
     }
     else {

@@ -574,6 +574,15 @@ w_frame invoke(JNIEnv *env, w_method method, w_instance This, w_instance Argumen
   else {
     if (mustBeInitialized(method->spec.declaring_clazz) != CLASS_LOADING_FAILED) {
       if (! isSet(method->flags, ACC_STATIC)) {
+#ifdef TRACE_CLASSLOADERS
+        w_instance loader = instance2clazz(This)->loader;
+        if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
+          frame->udcl = loader;
+        }
+        else {
+          frame->udcl = frame->previous->udcl;
+        }
+#endif
         frame->jstack_top[0].c = (w_word) This;
         frame->jstack_top[0].s = stack_trace;
         frame->jstack_top += 1;
