@@ -587,7 +587,7 @@ static w_int releaseInstance(w_object object) {
     return 0;
 #endif
   }
-  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER | CLAZZ_IS_UDCL)) {
+  else if (isSet(clazz->flags, CLAZZ_IS_CLASSLOADER)) {
 #ifdef COLLECT_CLASSES_AND_LOADERS
     ClassLoader_destructor(instance);
 #else
