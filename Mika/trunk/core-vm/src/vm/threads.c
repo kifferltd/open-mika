@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 by   *
-* Chris Gray, /k/ Embedded Java Solutions. All rights reserved.           *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,     *
+* 2012 by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -31,6 +31,7 @@
 **************************************************************************/
 
 #include <string.h>
+#include <sys/syscall.h>
 
 #include "arrays.h"
 #include "core-classes.h"
@@ -374,7 +375,7 @@ void startInitialThreads(void* data) {
   woempa(9, "********* %d instances in use after initial loading. ************\n", instance_use);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    w_printf("Start %t: pid is %d\n", W_Thread_sysInit, getpid());
+    w_printf("Start %t: pid is %d lwp is %d\n", W_Thread_sysInit, getpid(), syscall(__NR_gettid));
   }
   mustBeInitialized(clazzString);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
@@ -464,7 +465,7 @@ void startInitialThreads(void* data) {
   }
   W_Thread_sysInit->state = wt_dead;
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    w_printf("Finish %t: pid was %d\n", W_Thread_sysInit, getpid());
+    w_printf("Finish %t: pid was %d lwp %d\n", W_Thread_sysInit, getpid(), syscall(__NR_gettid));
   }
 }
 

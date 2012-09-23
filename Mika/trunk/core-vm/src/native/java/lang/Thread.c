@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008, 2010, 2011 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2008, 2010, 2011, 2012 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -31,6 +31,7 @@
 **************************************************************************/
 
 #include <string.h>
+#include <sys/syscall.h>
 
 #include "core-classes.h"
 #include "debug.h"
@@ -110,9 +111,16 @@ static void threadEntry(void * athread) {
     }
 #endif
 
+#ifndef O4P
+#error This code needs to be modified for other host OSs
+#endif
+    w_int pid = getpid();
+    w_int tid = syscall(__NR_gettid);
+    setIntegerField(thread->Thread, F_Thread_pid, pid);
+    setIntegerField(thread->Thread, F_Thread_tid, tid);
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
-      w_printf("Start %t: pid is %d\n", thread, getpid());
+      w_printf("Start %t: pid is %d lwp %d\n", thread, pid, tid);
 #else
       w_printf("Start %t\n", thread);
 #endif
@@ -143,7 +151,7 @@ static void threadEntry(void * athread) {
     thread->state = wt_dead;
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
-      w_printf("Finish %t: pid was %d\n", thread, getpid());
+      w_printf("Finish %t: pid was %d lwp %d\n", thread, getpid(), syscall(__NR_gettid));
 #else
       w_printf("Finish %t\n", thread);
 #endif
@@ -376,9 +384,7 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
 
 void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable) {
 
-  w_thread thread = (w_thread) thisThread[F_Thread_wotsit];
-
-  thread = getWotsitField(thisThread, F_Thread_wotsit);
+  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
   if (!threadIsActive(thread)) {
     woempa(7, "Thread %t is already dying, ignoring %e\n", thread, Throwable);
     return;
