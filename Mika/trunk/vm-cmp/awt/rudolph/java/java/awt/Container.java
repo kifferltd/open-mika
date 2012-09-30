@@ -35,9 +35,19 @@ import java.awt.event.*;
 public class Container extends Component {
 
   private LayoutManager layoutManager;
-  private Vector componentVector;
+
+  private Vector children;
 
   ContainerListener containerListener;
+
+  boolean focusCycleRoot;
+
+  private boolean focusTraversalPolicyProvider;
+
+  private FocusTraversalPolicy focusTraversalPolicy;
+
+  boolean isRemoved; // set to true/false on removeNotify() enter/exit
+
 
   public Container() {
     // Assign default container size:
@@ -45,7 +55,7 @@ public class Container extends Component {
     height = 0;
 
     // Setup component vector:
-    componentVector = new Vector();
+    children = new Vector();
 
     // Set the default layout manager:
     layoutManager = new BorderLayout();
@@ -112,9 +122,10 @@ public class Container extends Component {
       throw new IllegalArgumentException("You can only add types derived from java.awt.Component.");
     }
 
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
 
-      // if(componentVector.contains(component)) {
+      // if(children.contains(component)) {
       //   return;
       // }
       
@@ -141,10 +152,10 @@ public class Container extends Component {
 
       // Add component to data structure, taking position into account:
       if (position == -1) {
-        componentVector.addElement(component);
+        children.addElement(component);
       }
       else {
-        componentVector.insertElementAt(component, position);
+        children.insertElementAt(component, position);
       }
 
       // Set parent:
@@ -180,6 +191,8 @@ public class Container extends Component {
       
       invalidateChildren();
 
+    } finally {
+      toolkit.unlockAWT();
     }
   }
   
@@ -187,7 +200,7 @@ public class Container extends Component {
     /*
     Component c;
     for (int i = 0; i < getComponentCount(); i++) {
-      c = (Component)componentVector.elementAt(i);
+      c = (Component)children.elementAt(i);
       c.addNotify();
     }
     */
@@ -199,20 +212,29 @@ public class Container extends Component {
  
   public void removeNotify() {
     Component c;
-
-    for (int i = 0; i < getComponentCount(); i++) {
-      c = (Component)componentVector.elementAt(i);
-      c.removeNotify();
+    toolkit.lockAWT();
+    try {
+      isRemoved = true;
+ 
+      for (int i = 0; i < getComponentCount(); i++) {
+        c = (Component)children.elementAt(i);
+        c.removeNotify();
+      }
+      super.removeNotify();
+    } finally {
+      isRemoved = false;
+      toolkit.unlockAWT();
     }
-
-    super.removeNotify();
   }
  
   public void doLayout() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (layoutManager != null) {
         layoutManager.layoutContainer(this);
       }
+    } finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -253,7 +275,7 @@ public class Container extends Component {
   }
 
   public Component getComponent(int index) {
-    return (Component)componentVector.elementAt(index);
+    return (Component)children.elementAt(index);
   }
   
   /**
@@ -269,12 +291,12 @@ public class Container extends Component {
   native public Component getComponentAt(Point point);
   
   public int getComponentCount() {
-    return componentVector.size();
+    return children.size();
   }
   
   public Component[] getComponents() {
-    Component[] components = new Component[this.componentVector.size()];
-    return (Component[])(this.componentVector.toArray(components));
+    Component[] components = new Component[this.children.size()];
+    return (Component[])(this.children.toArray(components));
   }
 
   public Insets getInsets() {
@@ -286,7 +308,8 @@ public class Container extends Component {
   }
 
   public Dimension getMaximumSize() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (maximumSize == null || valid == false) {
         if (layoutManager != null && layoutManager instanceof LayoutManager2) {
           maximumSize = ((LayoutManager2)layoutManager).maximumLayoutSize(this);
@@ -296,6 +319,8 @@ public class Container extends Component {
         }
       }
       return maximumSize;
+    } finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -305,7 +330,8 @@ public class Container extends Component {
    */
 
   public Dimension getMinimumSize() {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (minSize == null || valid == false) {
         if (layoutManager != null) {
           minSize = layoutManager.minimumLayoutSize(this);
@@ -315,6 +341,8 @@ public class Container extends Component {
         }
       }      
       return minSize;
+    } finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -328,7 +356,7 @@ public class Container extends Component {
     int i;
     
     for (i = 0; i < count; i++) {
-      c = (Component)componentVector.elementAt(i);
+      c = (Component)children.elementAt(i);
       
       Dimension s = c.getSize();  
       Dimension d = c.getMinimumSize();  
@@ -348,7 +376,8 @@ public class Container extends Component {
   }
 
   public Dimension getPreferredSize() {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (prefSize == null || valid == false) {
         if (layoutManager != null) {
           prefSize = layoutManager.preferredLayoutSize(this);
@@ -358,13 +387,15 @@ public class Container extends Component {
         }
       }
       return prefSize;
+    } finally {
+      toolkit.unlockAWT();
     }
   }
   
   void invalidateChildren() {
     Component c;
     for (int i = 0; i < getComponentCount(); i++) {
-      c = (Component)componentVector.elementAt(i);
+      c = (Component)children.elementAt(i);
       c.invalidate();
       if(c instanceof Container) {
         ((Container)c).invalidateChildren();
@@ -373,13 +404,16 @@ public class Container extends Component {
   }
   
   public void invalidate() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       super.invalidate();
       if (layoutManager != null) {
         if (layoutManager instanceof LayoutManager2) {
           ((LayoutManager2)layoutManager).invalidateLayout(this);
         }
       }
+    } finally {
+      toolkit.unlockAWT();
     }
   }
  
@@ -467,15 +501,16 @@ public class Container extends Component {
 
 
   private void removeComponent(Component component) {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
 
       // Remove component from layout manager (if any):
       if (layoutManager != null) {
         layoutManager.removeLayoutComponent(component);
       }
 
-      // Remove component from componentVector:
-      if (componentVector.removeElement(component)) {
+      // Remove component from children:
+      if (children.removeElement(component)) {
 
         // Set parent component to null:
         component.parent = null;
@@ -488,6 +523,8 @@ public class Container extends Component {
         // throw ContainerEvent to listener
         super.dispatchEventImpl(new ContainerEvent(this, ContainerEvent.COMPONENT_REMOVED, component));
       }
+    } finally {
+      toolkit.unlockAWT();
     }
   }
   
@@ -496,13 +533,13 @@ public class Container extends Component {
   }
 
   public void remove(int position) {
-    removeComponent((Component) componentVector.elementAt(position));
+    removeComponent((Component) children.elementAt(position));
   }
   
   public void removeAll() {
-    int size = componentVector.size();
+    int size = children.size();
     for (int i = 0; i < size; i++) {
-      removeComponent((Component) componentVector.elementAt(0));
+      removeComponent((Component) children.elementAt(0));
         // NOTE: we have to use "removeComponent()" rather than "remove()" because "remove()" can be overwritten.
     }
   }
@@ -524,12 +561,15 @@ public class Container extends Component {
   
   public void validate() {
     if (valid == false) {
-      synchronized (getTreeLock()) {
+      toolkit.lockAWT();
+      try {
         ((ContainerPeer)peer).beginValidate();
 
         validateTree();
 
         ((ContainerPeer)peer).endValidate();
+      } finally {
+        toolkit.unlockAWT();
       }
     }
   }
@@ -546,8 +586,8 @@ public class Container extends Component {
       layout();
 
       // Validate components of Container and validate nested Containers:
-      for (int i = 0; i < componentVector.size(); i++) {
-        ((Component)componentVector.elementAt(i)).validate();
+      for (int i = 0; i < children.size(); i++) {
+        ((Component)children.elementAt(i)).validate();
       } 
 
       // Tell the renderer we are done validating:
@@ -579,8 +619,8 @@ public class Container extends Component {
   
   void enableAllEvents() {
     eventsEnabled = true;
-    for (int i = 0; i < componentVector.size(); i++) {
-      Component c = (Component)componentVector.elementAt(i);
+    for (int i = 0; i < children.size(); i++) {
+      Component c = (Component)children.elementAt(i);
 
       if(c instanceof Container) {
         ((Container)c).enableAllEvents();
@@ -593,8 +633,8 @@ public class Container extends Component {
 
   void disableAllEvents() {
     eventsEnabled = false;
-    for (int i = 0; i < componentVector.size(); i++) {
-      Component c = (Component)componentVector.elementAt(i);
+    for (int i = 0; i < children.size(); i++) {
+      Component c = (Component)children.elementAt(i);
       if(c instanceof Container) {
         ((Container)c).disableAllEvents();
       }
@@ -623,5 +663,137 @@ public class Container extends Component {
   private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException {
     System.out.println("Not yet implemented");
   }
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+    public boolean isFocusCycleRoot(Container container) {
+      toolkit.lockAWT();
+      try {
+        if (focusCycleRoot && container == this) {
+          return true;
+        }
+        return super.isFocusCycleRoot(container);
+      } finally {
+        toolkit.unlockAWT();
+      }
+    }
+
+    public boolean isFocusCycleRoot() {
+        toolkit.lockAWT();
+        try {
+            return focusCycleRoot;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+   public final boolean isFocusTraversalPolicyProvider() {
+        return focusTraversalPolicyProvider;
+    }
+
+    public FocusTraversalPolicy getFocusTraversalPolicy() {
+        toolkit.lockAWT();
+        try {
+            if (isFocusTraversalPolicyProvider() || focusCycleRoot) {
+                if (isFocusTraversalPolicySet()) {
+                    return focusTraversalPolicy;
+                }
+                Container root = getFocusCycleRootAncestor();
+                return ((root != null) ? root.getFocusTraversalPolicy() : KeyboardFocusManager
+                        .getCurrentKeyboardFocusManager().getDefaultFocusTraversalPolicy());
+            }
+            return null;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public boolean isFocusTraversalPolicySet() {
+        toolkit.lockAWT();
+        try {
+            return focusTraversalPolicy != null;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public void setFocusTraversalPolicy(FocusTraversalPolicy policy) {
+        FocusTraversalPolicy oldPolicy;
+        toolkit.lockAWT();
+        try {
+            oldPolicy = focusTraversalPolicy;
+            focusTraversalPolicy = policy;
+        } finally {
+            toolkit.unlockAWT();
+        }
+        // TODO
+        // firePropertyChange("focusTraversalPolicy", oldPolicy, policy); //$NON-NLS-1$
+    }
+
+    public Set getFocusTraversalKeys(int id) {
+        toolkit.lockAWT();
+        try {
+            return super.getFocusTraversalKeys(id);
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public void transferFocusDownCycle() {
+        toolkit.lockAWT();
+        try {
+            if (isFocusCycleRoot()) {
+                KeyboardFocusManager kfm = KeyboardFocusManager
+                        .getCurrentKeyboardFocusManager();
+                Container root = kfm.getCurrentFocusCycleRoot();
+                FocusTraversalPolicy policy = getFocusTraversalPolicy();
+                if (root != this) {
+                    root = this;
+                    kfm.setGlobalCurrentFocusCycleRoot(root);
+
+                }
+                policy.getDefaultComponent(root).requestFocus();
+            }
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    /**
+     * Find which focus cycle root to take when doing keyboard focus traversal
+     * and focus owner is a container & focus cycle root itself.
+     * 
+     * @return
+     */
+    Container getFocusTraversalRoot() {
+        KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        Container root = kfm.getCurrentFocusCycleRoot();
+        Container container = this;
+        while ((root != container) && (container != null)) {
+            container = container.getFocusCycleRootAncestor();
+        }
+        return (container == root) ? root : null;
+    }
+
+
+    int getComponentIndex(Component comp) {
+        return children.indexOf(comp);
+    }
+
+
 
 }

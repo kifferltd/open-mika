@@ -1,70 +1,89 @@
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-**************************************************************************/
-
-
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Michael Danilov
+ */
 package java.awt.event;
+
+import java.awt.Component;
 
 public class FocusEvent extends ComponentEvent {
 
-  public static final int FOCUS_GAINED = 1004;
-  public static final int FOCUS_FIRST = 1004;
-  public static final int FOCUS_LAST = 1005;
-  public static final int FOCUS_LOST = 1005;
-  
-  protected boolean temporary;
-  
-  public FocusEvent(java.awt.Component source, int id) {
-    super(source, id);
-    temporary = false;
-  }
+    private static final long serialVersionUID = 523753786457416396L;
 
-  public FocusEvent(java.awt.Component source, int id, boolean temporary) {
-    super(source, id);
+    public static final int FOCUS_FIRST = 1004;
 
-    this.temporary = temporary;
-  }
+    public static final int FOCUS_LAST = 1005;
 
-  public boolean isTemporary() {
-    return this.temporary;
-  }  
+    public static final int FOCUS_GAINED = 1004;
 
-  /**
-   * Diagnostics
-   */
-  public String toString() {
-    String commandstring = "[Unknown command "+id+"]";
-    if(id == FOCUS_GAINED) {
-      commandstring = "[FOCUS_GAINED]";
+    public static final int FOCUS_LOST = 1005;
+
+    private boolean temporary;
+    private Component opposite;
+
+    public FocusEvent(Component source, int id) {
+        this(source, id, false);
     }
-    else if(id == FOCUS_LOST) {
-      commandstring = "[FOCUS_LOST]";
-    }
-    commandstring +=(temporary)?" temporary" : " permanent" ;
-    return getClass().getName() +commandstring+ source;
-  }
 
-  public String paramString() {
-    return getClass().getName() +"[Function id="+id+"] Temporary="+temporary+"from="+source;
-  }
+    public FocusEvent(Component source, int id, boolean temporary) {
+        this(source, id, temporary, null);
+    }
+
+    public FocusEvent(Component source, int id, boolean temporary, Component opposite) {
+        super(source, id);
+        this.temporary = temporary;
+        this.opposite = opposite;
+    }
+
+    public Component getOppositeComponent() {
+        return opposite;
+    }
+
+    public boolean isTemporary() {
+        return temporary;
+    }
+
+    public String paramString() {
+        /* The format is based on 1.5 release behavior 
+         * which can be revealed by the following code:
+         * 
+         * FocusEvent e = new FocusEvent(new Button("Button0"),
+         *       FocusEvent.FOCUS_GAINED, false, new Button("Button1"));
+         * System.out.println(e);
+         */
+
+        String idString = null;
+
+        switch (id) {
+        case FOCUS_GAINED:
+            idString = "FOCUS_GAINED"; //$NON-NLS-1$
+            break;
+        case FOCUS_LOST:
+            idString = "FOCUS_LOST"; //$NON-NLS-1$
+            break;
+        default:
+            idString = "unknown type"; //$NON-NLS-1$
+        }
+
+        return (idString +
+                (temporary ? ",temporary" : ",permanent") + //$NON-NLS-1$ //$NON-NLS-2$
+                ",opposite=" + opposite); //$NON-NLS-1$
+    }
+
 }
+

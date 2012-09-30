@@ -39,6 +39,7 @@ public class ActionEvent extends AWTEvent {
 
   String command;
   int modifiers;
+  long when;
 
   public ActionEvent(Object source, int id, String command) {
     this(source, id, command, 0);
@@ -48,6 +49,14 @@ public class ActionEvent extends AWTEvent {
     super(source, id);
 
     this.command = command;
+    this.modifiers = modifiers;
+  }
+
+  public ActionEvent(Object source, int id, String command, long when, int modifiers) {
+    super(source, id);
+
+    this.command = command;
+    this.when = when;
     this.modifiers = modifiers;
   }
 

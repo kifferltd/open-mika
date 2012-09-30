@@ -1,102 +1,97 @@
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
-
+/*
+ *  Licensed  to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Denis M. Kishenko
+ */
 package java.awt;
 
-public class Point implements java.io.Serializable {
+import java.awt.geom.Point2D;
+import java.io.Serializable;
 
-  private static final long serialVersionUID = -5276940640259749850L;
-  
-  public int x;
-  public int y;
+public class Point extends Point2D implements Serializable {
 
-  public Point() {
-    this(0, 0);
-  }
-  
-  public Point(Point p) {
-    this(p.x, p.y);
-  }
-  
-  public Point(int x, int y) {
-    this.x = x;
-    this.y = y;
-  }
-  
-  public boolean equals(Object object) {
-    if (object instanceof Point) {
-       Point point = (Point) object;
-       return (x == point.x) && (y == point.y);
+    private static final long serialVersionUID = -5276940640259749850L;
+
+    public int x;
+    public int y;
+
+    public Point() {
+        setLocation(0, 0);
     }
-    else {
-      return super.equals(object);
+
+    public Point(int x, int y) {
+        setLocation(x, y);
     }
-  }
-  
-  public Point getLocation() {
-    return new Point(x, y);
-  }
 
-  public double getX() {
-    return this.x;
-  }
+    public Point(Point p) {
+        setLocation(p.x, p.y);
+    }
 
-  public double getY() {
-    return this.y;
-  }
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+        if (obj instanceof Point) {
+            Point p = (Point)obj;
+            return x == p.x && y == p.y;
+        }
+        return false;
+    }
 
-  /**
-   * @status not implemented
-   * @remark not implemented
-   */ 
-  native public int hashCode();
-  
-  public void setLocation(int x, int y) {
-    this.x = x;
-    this.y = y;
-  }
-  
-  public void setLocation(Point point) {
-    setLocation(point.x, point.y);
-  }
-  
-  public String toString() {
-    return getClass().getName() + "[x = " + x + ", y = " + y + "]";
-  }
+    public String toString() {
+        return getClass().getName() + "[x=" + x + ",y=" + y + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
 
-  public void move(int x, int y) {
-    this.x = x;
-    this.y = y;
-  }
- 
-  public void translate(int x, int y) {
-    this.x += x;
-    this.y += y;
-  }
-    
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public Point getLocation() {
+        return new Point(x, y);
+    }
+
+    public void setLocation(Point p) {
+        setLocation(p.x, p.y);
+    }
+
+    public void setLocation(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void setLocation(double x, double y) {
+        x = x < Integer.MIN_VALUE ? Integer.MIN_VALUE : x > Integer.MAX_VALUE ? Integer.MAX_VALUE : x;
+        y = y < Integer.MIN_VALUE ? Integer.MIN_VALUE : y > Integer.MAX_VALUE ? Integer.MAX_VALUE : y;
+        setLocation((int)Math.round(x), (int)Math.round(y));
+    }
+
+    public void move(int x, int y) {
+        setLocation(x, y);
+    }
+
+    public void translate(int dx, int dy) {
+        x += dx;
+        y += dy;
+    }
+
 }
+
+

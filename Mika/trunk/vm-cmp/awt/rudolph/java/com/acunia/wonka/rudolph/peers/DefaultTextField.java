@@ -53,7 +53,8 @@ public class DefaultTextField extends DefaultTextComponent implements TextFieldP
   
   public Dimension getPreferredSize(int cols) {
     Dimension preferredSize;
-    synchronized(component.getTreeLock()) {
+    ToolkitBridge.staticLockAWT();
+    try {
       Font f = component.getFont();
       FontMetrics fm = getFontMetrics((f != null) ? f : Component.DEFAULT_FONT);
 
@@ -61,6 +62,8 @@ public class DefaultTextField extends DefaultTextComponent implements TextFieldP
       int cy = Math.max(10, fm.getHeight() + 4);
 
       preferredSize = new Dimension(cx, cy);
+    } finally {
+      ToolkitBridge.staticUnlockAWT();
     }
     return preferredSize;
   }

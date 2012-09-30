@@ -54,6 +54,9 @@ public class AWTEvent extends java.util.EventObject {
   protected int id;
   protected boolean consumed;
 
+  // Harmony special
+  boolean dispatchedByKFM;
+
   /****************************************************************/
   /** constructor */
   public AWTEvent(Object source, int id) {
@@ -86,6 +89,9 @@ public class AWTEvent extends java.util.EventObject {
     return consumed;
   }
 
+  public void setSource(Object newSource) {
+    source = newSource;
+  }
 
   /****************************************************************/
   /** Diagnostics */
@@ -102,4 +108,5 @@ public class AWTEvent extends java.util.EventObject {
   public String paramString() {
     return getClass().getName() +"[Function id="+id+"] from="+source;
   }
+
 }

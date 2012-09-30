@@ -1,5 +1,8 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
+* reserved.                                                               *
+* Parts copyright (c) 2012 by Chris Gray, /k/ Embedded Java Solutions.    *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -8,22 +11,22 @@
 *    notice, this list of conditions and the following disclaimer.        *
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
+*    nor the names of other contributors may be used to endorse or promote*
+*    products derived from this software without specific prior written   *
+*    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 package java.awt;
@@ -39,7 +42,7 @@ public class Window extends Container {
   private Vector windowList;
   private boolean showed;
   private Frame owner;
-  private Component focusOwner;
+  private transient Component focusOwner;
   private boolean disposed = false;
 
   public Window() {
@@ -53,7 +56,8 @@ public class Window extends Container {
 
   public void addNotify() {
     if(peer == null) {
-      peer = getToolkit().createWindow(this);
+System.out.println("Window: toolkit = " + toolkit);
+      peer = toolkit.createWindow(this);
     }
 
     if(notified == false) {
@@ -148,7 +152,8 @@ public class Window extends Container {
       return;
     }
 
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
     
       /*
       ** Hide the window:
@@ -176,6 +181,8 @@ public class Window extends Container {
 
       postWindowEvent(WindowEvent.WINDOW_CLOSED);
 
+    } finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -197,13 +204,14 @@ public class Window extends Container {
   }
  
   public Component getFocusOwner() {
-    return focusOwner;
+    toolkit.lockAWT();
+    try {
+      return isFocused() ? focusOwner : null;
+    } finally {
+        toolkit.unlockAWT();
+    }
   }
   
-  public Toolkit getToolkit() {
-    return Toolkit.getDefaultToolkit();
-  }
-
   public final String getWarningString() {
     return warningString;
   }
@@ -301,4 +309,145 @@ public class Window extends Container {
       w.disableAllEvents();
     } 
   }
+
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+  private boolean focusableWindowState = true;
+
+  private transient Component requestedFocus;
+
+  public final boolean isFocusableWindow() {
+       toolkit.lockAWT();
+        try {
+            return getFocusableWindowState()
+                    && (isActivateable() || getFrameDialogOwner().isShowing()
+                            && focusTraversalCycleNotEmpty());
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    final boolean isActivateable() {
+        return (this instanceof Frame) || (this instanceof Dialog)
+                // [CG 20120818] TODO || (this instanceof EmbeddedWindow);
+                ;
+    }
+
+    /**
+     * Gets the nearest ancestor "activateable" window which is typically Frame
+     * or Dialog
+     */
+    Window getFrameDialogOwner() {
+        for (Window o = this;; o = (Window) o.parent) {
+            if ((o == null) || o.isActivateable()) {
+                return o;
+            }
+        }
+    }
+
+    private boolean focusTraversalCycleNotEmpty() {
+        return getFocusTraversalPolicy().getFirstComponent(this) != null;
+    }
+
+    public boolean getFocusableWindowState() {
+        toolkit.lockAWT();
+        try {
+            return focusableWindowState;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public void setFocusableWindowState(boolean state) {
+        boolean oldState;
+        toolkit.lockAWT();
+        try {
+            oldState = focusableWindowState;
+            focusableWindowState = state;
+            // call cb here to make window natively non-focusable
+            /*
+            NativeWindow win = getNativeWindow();
+            if (win != null) {
+                win.setFocusable(state);
+            }
+            */
+            if (!state) {
+                moveFocusToOwner();
+            }
+        } finally {
+            toolkit.unlockAWT();
+        }
+        // TODO
+        // firePropertyChange("focusableWindowState", oldState, focusableWindowState); //$NON-NLS-1$
+    }
+
+    void setRequestedFocus(Component component) {
+        requestedFocus = component;
+    }
+
+    Component getRequestedFocus() {
+        return requestedFocus;
+    }
+
+    void setFocusOwner(Component owner) {
+        focusOwner = owner;
+    }
+
+   /**
+     * If this is a focused window then attempt to focus the most recently
+     * focused Component of this Window's owner or clear global focus owner if
+     * attempt fails
+     */
+    private void moveFocusToOwner() {
+        if (isFocused()) {
+            Component compToFocus = null;
+            for (Window wnd = getOwner(); wnd != null && compToFocus == null; wnd = wnd
+                    .getOwner()) {
+                compToFocus = wnd.getMostRecentFocusOwner();
+                if (compToFocus != null && !compToFocus.requestFocusImpl(false, true, false)) {
+                    compToFocus = null;
+                }
+            }
+            if (compToFocus == null) {
+                KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
+            }
+        }
+    }
+
+    public boolean isFocused() {
+        toolkit.lockAWT();
+        try {
+            return KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusedWindow() == this;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public Component getMostRecentFocusOwner() {
+        toolkit.lockAWT();
+        try {
+            // if the Window has never been focused, focus should be set to the
+            // Window's initial Component to focus
+            return (focusOwner != null) && (focusOwner != this) ? focusOwner
+                    : (isFocusableWindow() ? getFocusTraversalPolicy()
+                            .getInitialComponent(this) : null);
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
 }

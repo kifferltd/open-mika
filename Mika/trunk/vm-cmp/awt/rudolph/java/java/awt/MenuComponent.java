@@ -46,6 +46,8 @@ public abstract class MenuComponent implements java.io.Serializable {
 
   transient MenuComponentPeer peer;
 
+  final Toolkit toolkit = Toolkit.getDefaultToolkit();
+
   public MenuComponent() {
     addNotify();
   }
@@ -114,6 +116,24 @@ public abstract class MenuComponent implements java.io.Serializable {
   
   private void readObject(ObjectInputStream s) throws ClassNotFoundException, IOException {
   }
+
+    /**
+     * Hide all menu hierarchy
+     */
+    void endMenu() {
+        // [CG 20120818] TODO
+        // toolkit.dispatcher.popupDispatcher.deactivateAll();
+    }
+
+    /**
+     * Handle the mouse click or Enter key event on a menu's item 
+     * @param when - the event time
+     * @param modifiers - input event modifiers
+     */
+    void itemSelected(long when, int modifiers) {
+        endMenu();
+    }
+
 
 }
 

@@ -34,6 +34,7 @@ public class DefaultComponent implements ComponentPeer {
   static final int REFRESH_LOCAL = 1;
   static final int REFRESH_GLOBAL = 2;
   static boolean renderer = false;
+  private static Toolkit toolkit = Toolkit.getDefaultToolkit();
 
   Component component;
   
@@ -130,19 +131,22 @@ public class DefaultComponent implements ComponentPeer {
   }
   
   public boolean prepareImage(Image image, int w, int h, ImageObserver observer) {
-    return Toolkit.getDefaultToolkit().prepareImage(image, w, h, observer);
+    return toolkit.prepareImage(image, w, h, observer);
   }
 
   public void print(Graphics g) {
   }
 
   public void doRepaint() {
-    synchronized(component.getTreeLock()) {
+    ToolkitBridge.staticLockAWT();
+    try {
       Graphics g = getGraphics();
       if (g != null) {
         component.update(g);
         Toolkit.getDefaultToolkit().sync();
       }
+    } finally {
+      ToolkitBridge.staticUnlockAWT();
     }
   }
   
@@ -232,7 +236,8 @@ public class DefaultComponent implements ComponentPeer {
   }
 
   protected void refresh(int type) {
-    synchronized(component.getTreeLock()) {
+    ToolkitBridge.staticLockAWT();
+    try {
       /* Refresh component if required: */
       Container parent = component.getParent();
 
@@ -260,6 +265,8 @@ public class DefaultComponent implements ComponentPeer {
           tag(type, false);
         }
       }
+    } finally {
+      ToolkitBridge.staticUnlockAWT();
     }
   }
 

@@ -30,10 +30,35 @@ public abstract class InputEvent extends ComponentEvent {
   public static final int BUTTON2_MASK = 8;
   public static final int BUTTON3_MASK = 4;
   
+  public static final int ALT_GRAPH_MASK = 32;
   public static final int ALT_MASK = 8;
   public static final int META_MASK = 4;
   public static final int CTRL_MASK = 2;
   public static final int SHIFT_MASK = 1;
+
+  public static final int SHIFT_DOWN_MASK = 64;
+
+  public static final int CTRL_DOWN_MASK = 128;
+
+  public static final int META_DOWN_MASK = 256;
+
+  public static final int ALT_DOWN_MASK = 512;
+
+  public static final int BUTTON1_DOWN_MASK = 1024;
+
+  public static final int BUTTON2_DOWN_MASK = 2048;
+
+  public static final int BUTTON3_DOWN_MASK = 4096;
+
+  public static final int ALT_GRAPH_DOWN_MASK = 8192;
+
+  static final int MASKS = SHIFT_MASK | CTRL_MASK | META_MASK | ALT_MASK
+            | ALT_GRAPH_MASK | BUTTON1_MASK | BUTTON2_MASK | BUTTON3_MASK;
+
+  static final int DOWN_MASKS = SHIFT_DOWN_MASK | CTRL_DOWN_MASK
+            | META_DOWN_MASK | ALT_DOWN_MASK | ALT_GRAPH_DOWN_MASK
+            | BUTTON1_DOWN_MASK | BUTTON2_DOWN_MASK | BUTTON3_DOWN_MASK;
+
 
 
   /****************************************************************/
@@ -78,6 +103,15 @@ public abstract class InputEvent extends ComponentEvent {
   public long getWhen() {
     return timeStamp;
   }
+
+    public int getModifiersEx() {
+    	return modifiers & DOWN_MASKS;
+    }
+
+    public static String getModifiersExText(int modifiers) {
+        return MouseEvent.addMouseModifiersExText(
+                KeyEvent.getKeyModifiersExText(modifiers), modifiers);
+    }
 
   /****************************************************************/
   /**

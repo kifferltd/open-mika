@@ -28,6 +28,8 @@
 
 package java.awt;
 
+import java.awt.event.KeyEvent;
+
 public class MenuShortcut implements java.io.Serializable {
 
   /*
@@ -36,6 +38,18 @@ public class MenuShortcut implements java.io.Serializable {
 
   int key;
   boolean usesShift;
+
+  // From Apache Harmony
+  static boolean isShortcut(KeyEvent ke) {
+      return ke.isControlDown();
+  }
+
+  static MenuShortcut lookup(KeyEvent ke) {
+    if (ke.isControlDown()) {
+      return new MenuShortcut(ke.getKeyCode(), ke.isShiftDown());
+    }
+    return null;
+  }
 
   public MenuShortcut(int keyCode) {
     this(keyCode, false);

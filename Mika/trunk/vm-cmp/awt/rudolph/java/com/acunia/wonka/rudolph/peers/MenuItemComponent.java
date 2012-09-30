@@ -23,7 +23,15 @@
 
 package com.acunia.wonka.rudolph.peers;
 
-import java.awt.*;
+import java.awt.CheckboxMenuItem;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Menu;
+import java.awt.MenuItem;
 
 public class MenuItemComponent extends Component {
 
@@ -40,7 +48,8 @@ public class MenuItemComponent extends Component {
       preferredSize = new Dimension(20, 4);
     }
     else {
-      synchronized(getTreeLock()) {
+      ToolkitBridge.staticLockAWT();
+      try {
         Font f = menuitem.getFont();
         if(f != null) setFont(f);
         FontMetrics fm = getFontMetrics((f != null) ? f : Component.DEFAULT_FONT);
@@ -57,6 +66,8 @@ public class MenuItemComponent extends Component {
         }
         
         preferredSize = new Dimension(cx, cy);
+      } finally {
+        ToolkitBridge.staticUnlockAWT();
       }
     }
     return preferredSize;
