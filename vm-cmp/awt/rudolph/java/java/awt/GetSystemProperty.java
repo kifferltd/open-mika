@@ -39,29 +39,48 @@ import java.security.AccessController;
 class GetSystemProperty implements java.security.PrivilegedAction {
 
   static final Boolean HEADLESS;
+  static final Boolean INCREMENTAL_IMAGE_UPDATE;
+  static final String  TOOLKIT;
 
   private String key;
   private String dflt;
   private String value;
 
   /**
-   ** Our static initialiser fetches the java.awt.headless system property.
+   ** Our static initialiser fetches the java.awt.headless and 
+   ** awt.image.incrementaldraw system properties.
    */
   static {
     GetSystemProperty gsp;
-    String propertyValue;
+    GetSystemProperty idraw;
+    GetSystemProperty tk;
+    String idrawPropertyValue;
+    String gspPropertyValue;
+    String tkPropertyValue;
 
     if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
-      gsp = new GetSystemProperty("java.awt.headless","\n");
+      gsp = new GetSystemProperty("awt.headless","\n");
+      idraw = new GetSystemProperty("awt.image.incrementaldraw","\n");
+      tk = new GetSystemProperty("awt.toolkit","\n");
       AccessController.doPrivileged(gsp);
-      propertyValue = gsp.get();
+      AccessController.doPrivileged(idraw);
+      AccessController.doPrivileged(tk);
+      gspPropertyValue = gsp.get();
+      idrawPropertyValue = idraw.get();
+      tkPropertyValue = tk.get();
 
       gsp = null;
+      idraw = null;
+      tk = null;
     }
     else {
-      propertyValue = System.getProperty("java.awt.headless", "false");
+      gspPropertyValue = System.getProperty("awt.headless", "false");
+      idrawPropertyValue = System.getProperty("awt.image.incrementaldraw", "false");
+      tkPropertyValue = System.getProperty("awt.toolkit");
     }
-    HEADLESS = Boolean.valueOf(propertyValue);
+    HEADLESS = Boolean.valueOf(gspPropertyValue);
+    INCREMENTAL_IMAGE_UPDATE = Boolean.valueOf(idrawPropertyValue);
+    TOOLKIT = tkPropertyValue;
   }
 
   /**

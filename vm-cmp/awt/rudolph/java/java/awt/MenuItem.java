@@ -153,6 +153,18 @@ public class MenuItem extends MenuComponent {
     setEnabled(false);
   }
   
+  // From Apache Harmony
+  void itemSelected(long when, int modifiers) {
+    AWTEvent event = createEvent(when, modifiers);
+    toolkit.getSystemEventQueueImpl().postEvent(event);
+    super.itemSelected(when, modifiers);
+  }
+
+  AWTEvent createEvent(long when, int modifiers) {
+    return new ActionEvent(this, ActionEvent.ACTION_PERFORMED, getActionCommand(), when, modifiers);
+  }
+
+
   private void readObject(ObjectInputStream s) throws ClassNotFoundException, IOException {
   }
   

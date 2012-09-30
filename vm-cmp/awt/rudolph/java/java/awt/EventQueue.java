@@ -32,6 +32,7 @@
 
 package java.awt;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.EmptyStackException;
 import java.util.Stack;
@@ -88,14 +89,11 @@ public class EventQueue {
   public EventQueue() {
     // We create the queue even if queueing isn't enabled; makes life so much easier ...
     queue = new ArrayList();
-/*
-    if (!queueing_enabled) {
-      System.out.println(this + ": event queueing is disabled");
-    }
-    if (!coalescing_enabled) {
-      System.out.println(this + ": coalesceEvents() is disabled");
-    }
-*/
+  }
+
+  // used by Harmony?
+  EventQueue(Toolkit t) {
+    this();
   }
 
   /**
@@ -252,5 +250,50 @@ public class EventQueue {
     Dispatcher dispatcher = (Dispatcher)queueStack.pop();
     dispatcher.stop();
   }
+
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Michael Danilov, Pavel Dolgov
+ */
+      public static void invokeAndWait(Runnable runnable)
+            throws InterruptedException, InvocationTargetException {
+
+        if (isDispatchThread()) {
+            throw new Error();
+        }
+
+        final Toolkit toolkit = Toolkit.getDefaultToolkit();
+        final Object notifier = new Object();  //$NON-LOCK-1$
+        InvocationEvent event = new InvocationEvent(
+                toolkit, runnable, notifier, true);
+
+        synchronized (notifier) {
+            toolkit.getSystemEventQueueImpl().postEvent(event);
+            notifier.wait();
+        }
+
+        Exception exception = event.getException();
+
+        if (exception != null) {
+            throw new InvocationTargetException(exception);
+        }
+    }
+
+
 }
 

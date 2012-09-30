@@ -58,8 +58,8 @@ public class FocusCycle
 						
 		Container rootContainer = getRootContainer(currentComponent);
 		
-		synchronized(rootContainer.getTreeLock())
-		{
+		Toolkit.staticLockAWT();
+                try {
 			if(currentComponent.getParent()!=null)
 			{					
 				Component target = currentComponent;
@@ -109,6 +109,8 @@ public class FocusCycle
 			}
 			
 			return false;
+		} finally {
+		  Toolkit.staticUnlockAWT();
 		}		
 	}
 	
@@ -121,8 +123,8 @@ public class FocusCycle
 						
 		Container rootContainer = getRootContainer(currentComponent);
 		
-		synchronized(rootContainer.getTreeLock())
-		{
+		Toolkit.staticLockAWT();
+                try {
 			if(currentComponent.getParent()!=null)
 			{					
 				Component target = currentComponent;
@@ -171,6 +173,8 @@ public class FocusCycle
 			}
 			
 			return false;
+		} finally {
+		  Toolkit.staticUnlockAWT();
 		}		
 	}
 	
@@ -178,8 +182,8 @@ public class FocusCycle
 	{
 		Container rootContainer = getRootContainer(container);
 
-		synchronized(rootContainer.getTreeLock())
-		{		
+		Toolkit.staticLockAWT();
+                try {
 			for(int i=0;i<container.getComponentCount();i++) {
 				Component component = container.getComponent(i);
 				if(component.isFocusTraversable() && 
@@ -200,7 +204,9 @@ public class FocusCycle
 
 				}
 			}
-		}
+		} finally {
+		  Toolkit.staticUnlockAWT();
+		}		
 		
 		return false;
 	}
@@ -209,8 +215,8 @@ public class FocusCycle
 	{
 		Container rootContainer = getRootContainer(container);
 
-		synchronized(rootContainer.getTreeLock())
-		{				
+		Toolkit.staticLockAWT();
+                try {
 			for(int i=container.getComponentCount()-1;i>=0;i--) {
 				Component component = container.getComponent(i);
 				if(component.isFocusTraversable() && 
@@ -231,7 +237,9 @@ public class FocusCycle
 
 				}
 			}
-		}
+		} finally {
+		  Toolkit.staticUnlockAWT();
+		}		
 		
 		return false;
 	}	

@@ -1,78 +1,145 @@
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-**************************************************************************/
-
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Michael Danilov
+ */
 package java.awt.event;
 
 import java.awt.Window;
+import java.awt.Frame;
 
 public class WindowEvent extends ComponentEvent {
 
-  public static final int WINDOW_FIRST = 200;
-  public static final int WINDOW_OPENED = 200;
-  public static final int WINDOW_CLOSING = 201;
-  public static final int WINDOW_CLOSED = 202;
-  public static final int WINDOW_ICONIFIED = 203;
-  public static final int WINDOW_DEICONIFIED = 204;
-  public static final int WINDOW_ACTIVATED = 205;
-  public static final int WINDOW_DEACTIVATED = 206;
-  public static final int WINDOW_LAST = 206;
+    private static final long serialVersionUID = -1567959133147912127L;
 
-  public WindowEvent(java.awt.Window source, int id) {
-    super(source, id);
-  }
+    public static final int WINDOW_FIRST = 200;
 
-  public Window getWindow(){
-    return (Window)source;
-  }
+    public static final int WINDOW_OPENED = 200;
 
-  /**
-   * Diagnostics
-   */
-  public String toString() {
-    String commandstring = "[Unknown command "+id+"]";
-    if(id == WINDOW_OPENED) {
-      commandstring = "[WINDOW_OPENED]";
+    public static final int WINDOW_CLOSING = 201;
+
+    public static final int WINDOW_CLOSED = 202;
+
+    public static final int WINDOW_ICONIFIED = 203;
+
+    public static final int WINDOW_DEICONIFIED = 204;
+
+    public static final int WINDOW_ACTIVATED = 205;
+
+    public static final int WINDOW_DEACTIVATED = 206;
+
+    public static final int WINDOW_GAINED_FOCUS = 207;
+
+    public static final int WINDOW_LOST_FOCUS = 208;
+
+    public static final int WINDOW_STATE_CHANGED = 209;
+
+    public static final int WINDOW_LAST = 209;
+
+    private Window oppositeWindow;
+    private int oldState;
+    private int newState;
+
+    public WindowEvent(Window source, int id) {
+        this(source, id, null);
     }
-    else if(id == WINDOW_CLOSING) {
-      commandstring = "[WINDOW_CLOSING]";
+
+    public WindowEvent(Window source, int id, Window opposite) {
+        this(source, id, opposite, Frame.NORMAL, Frame.NORMAL);
     }
-    else if(id == WINDOW_CLOSED) {
-      commandstring = "[WINDOW_CLOSED]";
+
+    public WindowEvent(Window source, int id, int oldState, int newState) {
+        this(source, id, null, oldState, newState);
     }
-    else if(id == WINDOW_ICONIFIED) {
-      commandstring = "[WINDOW_ICONIFIED]";
+
+    public WindowEvent(Window source, int id, Window opposite, 
+                       int oldState, int newState) {
+        super(source, id);
+
+        oppositeWindow = opposite;
+        this.oldState = oldState;
+        this.newState = newState;
     }
-    else if(id == WINDOW_DEICONIFIED) {
-      commandstring = "[WINDOW_DEICONIFIED]";
+
+    public int getNewState() {
+        return newState;
     }
-    else if(id == WINDOW_ACTIVATED) {
-      commandstring = "[WINDOW_ACTIVATED]";
+
+    public int getOldState() {
+        return oldState;
     }
-    else if(id == WINDOW_DEACTIVATED) {
-      commandstring = "[WINDOW_DEACTIVATED]";
+
+    public Window getOppositeWindow() {
+        return oppositeWindow;
     }
-    return getClass().getName() +commandstring+source;
-  }
-  //public String paramString() {return super.paramString(); } // mapped to AWTEvent
+
+    public Window getWindow() {
+        return (Window) source;
+    }
+
+    public String paramString() {
+        /* The format is based on 1.5 release behavior 
+         * which can be revealed by the following code:
+         * 
+         * WindowEvent e = new WindowEvent(new Frame(), 
+         *          WindowEvent.WINDOW_OPENED); 
+         * System.out.println(e);
+         */
+
+        String typeString = null;
+
+        switch (id) {
+        case WINDOW_OPENED:
+            typeString = "WINDOW_OPENED"; //$NON-NLS-1$
+            break;
+        case WINDOW_CLOSING:
+            typeString = "WINDOW_CLOSING"; //$NON-NLS-1$
+            break;
+        case WINDOW_CLOSED:
+            typeString = "WINDOW_CLOSED"; //$NON-NLS-1$
+            break;
+        case WINDOW_ICONIFIED:
+            typeString = "WINDOW_ICONIFIED"; //$NON-NLS-1$
+            break;
+        case WINDOW_DEICONIFIED:
+            typeString = "WINDOW_DEICONIFIED"; //$NON-NLS-1$
+            break;
+        case WINDOW_ACTIVATED:
+            typeString = "WINDOW_ACTIVATED"; //$NON-NLS-1$
+            break;
+        case WINDOW_DEACTIVATED:
+            typeString = "WINDOW_DEACTIVATED"; //$NON-NLS-1$
+            break;
+        case WINDOW_GAINED_FOCUS:
+            typeString = "WINDOW_GAINED_FOCUS"; //$NON-NLS-1$
+            break;
+        case WINDOW_LOST_FOCUS:
+            typeString = "WINDOW_LOST_FOCUS"; //$NON-NLS-1$
+            break;
+        case WINDOW_STATE_CHANGED:
+            typeString = "WINDOW_STATE_CHANGED"; //$NON-NLS-1$
+            break;
+        default:
+            typeString = "unknown type"; //$NON-NLS-1$
+        }
+
+        return typeString + ",opposite=" + oppositeWindow + //$NON-NLS-1$
+                ",oldState=" + oldState + ",newState=" + newState; //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
 }
+

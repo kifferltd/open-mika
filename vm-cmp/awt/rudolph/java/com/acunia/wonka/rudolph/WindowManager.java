@@ -28,7 +28,12 @@
 
 package com.acunia.wonka.rudolph;
 
-import java.awt.*;
+import java.awt.Dialog;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Window;
 import java.util.*;
 import com.acunia.wonka.rudolph.peers.*;
 
@@ -57,7 +62,7 @@ public class WindowManager {
       return new Rectangle(x, y, w, h); 
     }
     if(!(win instanceof TaskBar)) {
-      Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+      Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
  
       int tl = TaskBar.getBarLocation();
 
@@ -81,7 +86,8 @@ public class WindowManager {
 
   public void setVisible(Window win, boolean visible) {
     if(!(win instanceof DecorationWindow) && !(win instanceof MenuWindow)) {
-      synchronized(win.getTreeLock()) {
+      Toolkit.staticLockAWT();
+      try {
         Decoration decoration = (Decoration)decorations.get(win);
         if(decoration != null) {
           decoration.top.setVisible(visible);
@@ -93,13 +99,16 @@ public class WindowManager {
         if(menubar != null) {
           menubar.getBarWindow().setVisible(visible);
         }
+      } finally {
+        Toolkit.staticUnlockAWT();
       }
     }
   }
 
   public void toBack(Window win) {
     if(!(win instanceof DecorationWindow) && !(win instanceof MenuWindow)) {
-      synchronized(win.getTreeLock()) {
+      Toolkit.staticLockAWT();
+      try {
         Decoration decoration = (Decoration)decorations.get(win);
         if(decoration != null) {
           decoration.top.toBack();
@@ -111,6 +120,8 @@ public class WindowManager {
         if(menubar != null) {
           menubar.getBarWindow().toBack();
         }
+      } finally {
+        Toolkit.staticUnlockAWT();
       }
     }
   }
@@ -124,7 +135,8 @@ public class WindowManager {
   
   public void toFront(Window win) {
     if(!(win instanceof DecorationWindow) && !(win instanceof MenuWindow)) {
-      synchronized(win.getTreeLock()) {
+      Toolkit.staticLockAWT();
+      try {
         Decoration decoration = (Decoration)decorations.get(win);
         if(decoration != null) {
           decoration.top.toFront();
@@ -136,6 +148,8 @@ public class WindowManager {
         if(menubar != null) {
           menubar.getBarWindow().toFront();
         }
+      } finally {
+        Toolkit.staticUnlockAWT();
       }
     }
     if(!(win instanceof TaskBar) && TaskBar.getTaskBar() != null) TaskBar.getTaskBar().toFront();
@@ -144,7 +158,8 @@ public class WindowManager {
   public void addWindow(Window win) {
     if(win instanceof DecorationWindow || win instanceof MenuWindow) return;
     if(!(win instanceof TaskBar)) { 
-      synchronized(win.getTreeLock()) {
+      Toolkit.staticLockAWT();
+      try {
         TaskBar.getTaskBar();
         if(windowList.size() == 0) {
           Dispatcher.getMainDispatcher().start();
@@ -156,6 +171,8 @@ public class WindowManager {
         if(win instanceof Dialog || win instanceof Frame) {
           addWindowDecorations(win);
         }
+      } finally {
+        Toolkit.staticUnlockAWT();
       }
     }
   }
@@ -163,7 +180,8 @@ public class WindowManager {
   public void removeWindow(Window win) {
     if(win instanceof DecorationWindow || win instanceof MenuWindow) return;
     if(!(win instanceof TaskBar)) { 
-      synchronized(win.getTreeLock()) {
+      Toolkit.staticLockAWT();
+      try {
         if(win instanceof Frame) {
           windowList.remove(win);
         }
@@ -174,6 +192,8 @@ public class WindowManager {
           Dispatcher.getMainDispatcher().stop();
           Painter.getInstance().stop();
         }
+      } finally {
+        Toolkit.staticUnlockAWT();
       }
     }
   }
@@ -183,7 +203,7 @@ public class WindowManager {
   }
 
   public void maximize(Window win) {
-    Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+    Dimension screen = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
     win.setSize(screen.width, screen.height);
   }
 

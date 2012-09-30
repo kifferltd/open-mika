@@ -94,6 +94,10 @@ java/awt/SystemColor
   windowText          Ljava/awt/SystemColor;
 java/awt/Color
   value               I
+java/awt/Synchronizer
+  clinit              ()V	Synchronizer_clinit
+  staticLockAWT       ()V	Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V	Synchronizer_staticUnlockAWT
 java/awt/Component
   wotsit              +
   x                   I
@@ -103,7 +107,6 @@ java/awt/Component
   valid               Z
   visible             Z
   eventsEnabled       Z
-  lock                Ljava/awt/Object;
   background          Ljava/awt/Color;
   foreground          Ljava/awt/Color;
   font                Ljava/awt/Font;
@@ -117,6 +120,10 @@ java/awt/Component
   keyListener         Ljava/awt/event/KeyListener;
   focusComponent      Ljava/awt/Component;
   focusComponentPrev  Ljava/awt/Component;
+# Slightly naughty: use the same native code as java/awt/Synchronizer
+com/acunia/wonka/rudolph/peers/ToolkitBridge
+  staticLockAWT       ()V	Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V	Synchronizer_staticUnlockAWT
 com/acunia/wonka/rudolph/peers/DefaultComponent
   wotsit              +
   component           Ljava/awt/Component;
@@ -232,10 +239,13 @@ com/acunia/wonka/rudolph/peers/DefaultWindow
   toBack0              ()V                            Window_toBack    
 com/acunia/wonka/rudolph/Toolkit
   t                    Lcom/acunia/wonka/rudolph/Toolkit
-  getSystemEventQueue  ()Ljava/awt/EventQueue;        Toolkit_getSystemEventQueue
+  getSystemEventQueueImpl  ()Ljava/awt/EventQueue;        Toolkit_getSystemEventQueue
   getScreenWidth       ()I                            Toolkit_getScreenWidth
   getScreenHeight      ()I                            Toolkit_getScreenHeight
   sync                 ()V                            Toolkit_sync
+# Slightly naughty: use the same native code as java/awt/Synchronizer
+  staticLockAWT       ()V				Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V				Synchronizer_staticUnlockAWT
 com/acunia/wonka/rudolph/BufferImageSource
   pixels               [I
   getImageData         (Lcom/acunia/wonka/rudolph/Image;)V   BufferImageSource_getImageData

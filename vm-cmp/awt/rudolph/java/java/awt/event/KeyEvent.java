@@ -24,6 +24,7 @@
 
 package java.awt.event;
 
+import java.awt.Toolkit;
 import java.util.Hashtable;
 
 public class KeyEvent extends InputEvent {
@@ -509,47 +510,36 @@ http://java.sun.com/j2se/1.4/docs/api/constant-values.html#java.awt.event.KeyEve
             || keyCode==VK_PAUSE);
   }
 
-
-  /**
-  **  code to System.properties text
-  */
-  public static String getKeyModifiersText(int keymodifiers) {
-    String modtext = new String();
-    boolean first = true;
-    if((keymodifiers & ALT_MASK)!=0) {
-      // alt key pressed
-      modtext+=System.getProperty("AWT.alt","Alt");
-      first = false;
-    }
-    if((keymodifiers & CTRL_MASK)!=0) {
-      // comma between first and next if needed
-      if(!first){
-         modtext+= ", ";
-      }
-      // alt key pressed
-      modtext+=System.getProperty("AWT.control","Ctrl");
-      first = false;
-    }
-    if((keymodifiers & META_MASK)!=0) {
-      // comma between first and next if needed
-      if(!first){
-         modtext+= ", ";
-      }
-      // alt key pressed
-      modtext+=System.getProperty("AWT.meta","Meta");
-      first = false;
-    }
-    if((keymodifiers & SHIFT_MASK)!=0) {
-      // comma between first and next if needed
-      if(!first){
-         modtext+= ", ";
-      }
-      // alt key pressed
-      modtext+=System.getProperty("AWT.shift","Shift");
-    }
-    return modtext;
+  public static String getKeyModifiersText(int modifiers) {
+    return getKeyModifiersExText(extractModifiers(modifiers));
   }
-  
+
+  static String getKeyModifiersExText(int modifiersEx) {
+    String text = ""; //$NON-NLS-1$
+
+    if ((modifiersEx & InputEvent.META_DOWN_MASK) != 0) {
+      text += Toolkit.getProperty("AWT.meta", "Meta"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.CTRL_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+              Toolkit.getProperty("AWT.control", "Ctrl"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.ALT_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+                    Toolkit.getProperty("AWT.alt", "Alt"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.SHIFT_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+                    Toolkit.getProperty("AWT.shift", "Shift"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.ALT_GRAPH_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+                    Toolkit.getProperty("AWT.altGraph", "Alt Graph"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    return text;
+  }
+
   public static String getKeyText(int keycode) {
     String keytext = System.getProperty("AWT.unknown","Unknown Keycode");
     if(key_props.get(new Integer(keycode)) != null) {
@@ -590,4 +580,31 @@ http://java.sun.com/j2se/1.4/docs/api/constant-values.html#java.awt.event.KeyEve
               " char="+keyChar+" modifiers="+modifiers+"]";
   }
   
+  // From Apache Harmony
+    private static int extractModifiers(int modifiers) {
+        int mod = 0;
+
+        if (((modifiers & SHIFT_MASK) != 0)
+                || ((modifiers & SHIFT_DOWN_MASK) != 0)) {
+            mod |= SHIFT_MASK | SHIFT_DOWN_MASK;
+        }
+        if (((modifiers & CTRL_MASK) != 0)
+                || ((modifiers & CTRL_DOWN_MASK) != 0)) {
+            mod |= CTRL_MASK | CTRL_DOWN_MASK;
+        }
+        if (((modifiers & META_MASK) != 0)
+                || ((modifiers & META_DOWN_MASK) != 0)) {
+            mod |= META_MASK | META_DOWN_MASK;
+        }
+        if (((modifiers & ALT_MASK) != 0) || ((modifiers & ALT_DOWN_MASK) != 0)) {
+            mod |= ALT_MASK | ALT_DOWN_MASK;
+        }
+        if (((modifiers & ALT_GRAPH_MASK) != 0)
+                || ((modifiers & ALT_GRAPH_DOWN_MASK) != 0)) {
+            mod |= ALT_GRAPH_MASK | ALT_GRAPH_DOWN_MASK;
+        }
+
+        return mod;
+    }
+
 }

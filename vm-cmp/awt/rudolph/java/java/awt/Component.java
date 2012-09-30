@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2004, 2009, 2012 by Chris Gray, /k/ Embedded Java   *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,7 +11,6 @@
 *    notice, this list of conditions and the following disclaimer.        *
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
 * 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
 *    nor the names of other contributors may be used to endorse or promote*
 *    products derived from this software without specific prior written   *
@@ -30,8 +29,28 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
+/*
+ *  Parts licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+
 package java.awt;
 
+import java.awt.image.ImageObserver;
+import java.io.Serializable;
 import java.util.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
@@ -46,17 +65,12 @@ import com.acunia.wonka.rudolph.FocusCycle;
 /**
  ** The parent class of all AWT components.
  */
-public abstract class Component implements java.awt.image.ImageObserver, MenuContainer, java.io.Serializable {
+public abstract class Component implements ImageObserver, MenuContainer, Serializable {
 
-  // Tree lock:
-  static private final Object lock;
+   private static final long serialVersionUID = -7644114512714619750L;
 
   // Counter
   static private int counter; 
-
-  static {
-    lock = new Object();
-  }
 
   // Default font on which we can fall-back:
   public static final Font DEFAULT_FONT = new Font("helvP08", Font.PLAIN, 8);
@@ -98,8 +112,12 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   // Notification:
   transient protected boolean notified = false;
 
+  int[] traversalIDs;
+
   //Locale:
   Locale locale;
+
+  private ComponentOrientation orientation;
 
   // Parent container:
   transient Container parent = null;
@@ -158,6 +176,20 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   
   private DropTarget dropTarget;
 
+  final transient Toolkit toolkit = Toolkit.getDefaultToolkit();
+
+  /**
+   * Possible keys are: FORWARD_TRAVERSAL_KEYS, BACKWARD_TRAVERSAL_KEYS,
+   * UP_CYCLE_TRAVERSAL_KEYS
+   */
+  private final Map traversalKeys = new HashMap();
+
+  static {
+    // hack to ensure Synchronizer.clinit() is called before any component is created
+    Synchronizer.staticLockAWT();
+    Synchronizer.staticUnlockAWT();
+  }
+
   public static void revertFocus() {
 	FocusCycle.prev(focusComponent);
   }
@@ -167,12 +199,23 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
   
   protected Component() {
+    toolkit.lockAWT();
+    try {
+      orientation = ComponentOrientation.UNKNOWN;
+      traversalIDs = this instanceof Container ? KeyboardFocusManager.contTraversalIDs : KeyboardFocusManager.compTraversalIDs;
+      for (int i = 0; i < traversalIDs.length; ++i) {
+        traversalKeys.put(new Integer(traversalIDs[i]), null);
+      }
+    } finally {
+      toolkit.unlockAWT();
+    }
+
     counter++;
     name = "Component" + counter;
 	
-	if(focusComponent==null) {
-		focusComponent = this;
-	}
+   if(focusComponent==null) {
+      focusComponent = this;
+   }
 	
     addNotify();
   }
@@ -186,9 +229,13 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public void setForeground(Color color) {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       this.foreground = color;
       peer.setForeground(color);
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -212,10 +259,14 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public synchronized void setFont(Font font) {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       this.font = font;
       valid = false;
       peer.setFont(font);
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -246,7 +297,8 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
 
   public void setBounds(int x, int y, int width, int height) {
    
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
 
       boolean l = (this.x != x || this.y != y) ? true : false;
       boolean s = (this.width != width || this.height != height) ? true : false;
@@ -272,6 +324,9 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
        
         peer.setBounds(x, y, width, height);
       }
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -344,20 +399,28 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public Dimension minimumSize() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (minSize == null || valid == false) {
         minSize = peer.getMinimumSize();
       }
       return minSize;
-     }
+    }
+    finally {
+      toolkit.unlockAWT();
+    }
   }
 
   public Dimension preferredSize() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (prefSize == null || valid == false) {
         prefSize = peer.getPreferredSize();
       }
       return prefSize;
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -374,14 +437,22 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public Point getLocation() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       return new Point(x, y);
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
   public Point getLocationOnScreen() {
-    synchronized (getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       return peer.getLocationOnScreen();
+    }
+    finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -456,10 +527,6 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
     
   }
 
-  public final Object getTreeLock() {
-    return lock;
-  }
-
   public void setLocale(java.util.Locale locale){
     this.locale = locale;
   }
@@ -496,17 +563,66 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
 	  FocusCycle.next(this);
   }
   
-    public void setFocusable(boolean focusable) {
-        boolean oldFocusable;
-        synchronized(lock) {
-            calledSetFocusable = true;
-            oldFocusable = this.focusable;
-            this.focusable = focusable;
-            if (!focusable) {
-                moveFocus();
-            }
-        }
+  void transferFocus(int dir) {
+    Container root = null;
+    if (this instanceof Container) {
+      Container cont = (Container) this;
+      if (cont.isFocusCycleRoot()) {
+          root = cont.getFocusTraversalRoot();
+      }
+    }
+    if (root == null) {
+      root = getFocusCycleRootAncestor();
+    }
+    // transfer focus up cycle if root is unreachable
+    Component comp = this;
+    while ((root != null)
+       && !(root.isFocusCycleRoot() && root.isShowing() && root.isEnabled() && root.isFocusable())) {
+      comp = root;
+      root = root.getFocusCycleRootAncestor();
+    }
+    if (root == null) {
+      return;
+    }
+    FocusTraversalPolicy policy = root.getFocusTraversalPolicy();
+    Component nextComp = null;
+    switch (dir) {
+      case KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS:
+        nextComp = policy.getComponentAfter(root, comp);
+        break;
+      case KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS:
+        nextComp = policy.getComponentBefore(root, comp);
+        break;
+    }
+    if (nextComp != null) {
+      nextComp.requestFocus(false);
+    }
+  }
+
+  public void setFocusable(boolean focusable) {
+    boolean oldFocusable;
+    toolkit.lockAWT();
+    try {
+      calledSetFocusable = true;
+      oldFocusable = this.focusable;
+      this.focusable = focusable;
+      if (!focusable) {
+        moveFocus();
+      }
+    }
+    finally {
+      toolkit.unlockAWT();
+    }
         //firePropertyChange("focusable", oldFocusable, focusable); //$NON-NLS-1$
+    }
+
+    public boolean isFocusable() {
+        toolkit.lockAWT();
+        try {
+            return isFocusTraversable();
+        } finally {
+            toolkit.unlockAWT();
+        }
     }
 
   /**
@@ -530,7 +646,8 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public void invalidate() {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (valid) {
         minSize = null;
         prefSize = null;
@@ -540,6 +657,8 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
           parent.invalidate();
         }
       }
+    } finally {
+      toolkit.unlockAWT();
     }
   }
 
@@ -784,7 +903,8 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
   }
 
   public void setVisible(boolean condition) {
-    synchronized(getTreeLock()) {
+    toolkit.lockAWT();
+    try {
       if (condition) {
         // Show component:
   
@@ -819,6 +939,9 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
           }
         }
       }
+    }
+    finally {
+        toolkit.unlockAWT();
     }
   }
 
@@ -1153,6 +1276,237 @@ public abstract class Component implements java.awt.image.ImageObserver, MenuCon
      */
     boolean isFocusabilityExplicitlySet() {
         return calledSetFocusable || overriddenIsFocusable;
+    }
+
+    public Container getFocusCycleRootAncestor() {
+      toolkit.lockAWT();
+      try {
+        for (Container c = parent; c != null; c = c.getParent()) {
+          if (c.isFocusCycleRoot()) {
+            return c;
+          }
+        }
+        return null;
+      } finally {
+        toolkit.unlockAWT();
+      }
+    }
+
+    public boolean isFocusCycleRoot(Container container) {
+      toolkit.lockAWT();
+      try {
+        return getFocusCycleRootAncestor() == container;
+      } finally {
+        toolkit.unlockAWT();
+      }
+    }
+
+   /**
+     * Gets only parent of a child component, but not owner of a window.
+     * 
+     * @return parent of child component, null if component is a top-level
+     *         (Window instance)
+     */
+    Container getRealParent() {
+        return (!(this instanceof Window) ? getParent() : null);
+    }
+
+    public Object getTreeLock() {
+      return toolkit.awtTreeLock;
+    }
+
+    /**
+     * @return true if component has a focusable peer
+     */
+    boolean isPeerFocusable() {
+        // The recommendations for Windows and Unix are that
+        // Canvases, Labels, Panels, Scrollbars, ScrollPanes, Windows,
+        // and lightweight Components have non-focusable peers,
+        // and all other Components have focusable peers.
+        if (this instanceof Canvas || this instanceof Label || this instanceof Panel
+                || this instanceof Scrollbar || this instanceof ScrollPane
+                || this instanceof Window || isLightweight()) {
+            return false;
+        }
+        return true;
+    }
+
+   public boolean isLightweight() {
+        toolkit.lockAWT();
+        try {
+            // [CG 20120818] fake it for now
+            return false;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    Window getWindowAncestor() {
+        Component par;
+        for (par = this; par != null && !(par instanceof Window); par = par.getParent()) {
+            ;
+        }
+        return (Window) par;
+    }
+
+    /**
+     * @Deprecated
+     */
+    public boolean postEvent(Event evt) {
+        boolean handled = handleEvent(evt);
+        if (handled) {
+            return true;
+        }
+        // propagate non-handled events up to parent
+        Component par = parent;
+        // try to call postEvent only on components which
+        // override any of deprecated method handlers
+        // while (par != null && !par.deprecatedEventHandler) {
+        // par = par.parent;
+        // }
+        // translate event coordinates before posting it to parent
+        if (par != null) {
+            evt.translate(x, y);
+            par.postEvent(evt);
+        }
+        return false;
+    }
+
+    boolean requestFocusImpl(boolean temporary, boolean crossWindow, boolean rejectionRecovery) {
+        if (!rejectionRecovery && isFocusOwner()) {
+            return true;
+        }
+        Window wnd = getWindowAncestor();
+        Container par = getRealParent();
+        if ((par != null) && par.isRemoved) {
+            return false;
+        }
+        if (!isShowing() || !isFocusable() || !wnd.isFocusableWindow()) {
+            return false;
+        }
+        return KeyboardFocusManager.getCurrentKeyboardFocusManager().requestFocus(this,
+                temporary, crossWindow, true);
+    }
+
+    public boolean isFocusOwner() {
+        toolkit.lockAWT();
+        try {
+            return KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner() == this;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public void transferFocusUpCycle() {
+        toolkit.lockAWT();
+        try {
+            KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+            Container root = kfm.getCurrentFocusCycleRoot();
+            
+            if(root == null) {
+                return;
+            }
+            
+            boolean success = false;
+            Component nextComp = null;
+            Container newRoot = root;
+            do {
+                nextComp = newRoot instanceof Window ? newRoot.getFocusTraversalPolicy()
+                        .getDefaultComponent(newRoot) : newRoot;
+                newRoot = newRoot.getFocusCycleRootAncestor();
+                if (nextComp == null) {
+                    break;
+                }
+                success = nextComp.requestFocusInWindow();
+                if (newRoot == null) {
+                    break;
+                }
+                kfm.setGlobalCurrentFocusCycleRoot(newRoot);
+            } while (!success);
+            if (!success && root != newRoot) {
+                kfm.setGlobalCurrentFocusCycleRoot(root);
+            }
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public void transferFocusBackward() {
+        toolkit.lockAWT();
+        try {
+            transferFocus(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS);
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public Set getFocusTraversalKeys(int id) {
+        toolkit.lockAWT();
+        try {
+            Integer kId = new Integer(id);
+            KeyboardFocusManager.checkTraversalKeysID(traversalKeys, kId);
+            Set keys = (Set) traversalKeys.get(kId);
+            if (keys == null && parent != null) {
+                keys = parent.getFocusTraversalKeys(id);
+            }
+            if (keys == null) {
+                keys = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                        .getDefaultFocusTraversalKeys(id);
+            }
+            return keys;
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+   /**
+     * "Recursive" isEnabled().
+     * 
+     * @return true if not only component itself is enabled but its heavyweight
+     *         parent is also "indirectly" enabled
+     */
+    boolean isIndirectlyEnabled() {
+        Component comp = this;
+        while (comp != null) {
+            if (!comp.isLightweight() && !comp.isEnabled()) {
+                return false;
+            }
+            comp = comp.getRealParent();
+        }
+        return true;
+    }
+
+   boolean isKeyEnabled() {
+        if (!isEnabled()) {
+            return false;
+        }
+        return isIndirectlyEnabled();
+    }
+
+    protected boolean requestFocusInWindow(boolean temporary) {
+        toolkit.lockAWT();
+        try {
+            Window wnd = getWindowAncestor();
+            if ((wnd == null) || !wnd.isFocused()) {
+                return false;
+            }
+            return requestFocusImpl(temporary, false, false);
+        } finally {
+            toolkit.unlockAWT();
+        }
+    }
+
+    public boolean requestFocusInWindow() {
+      return requestFocusInWindow(false);
+    }
+
+    protected boolean requestFocus(boolean temporary) {
+        toolkit.lockAWT();
+        try {
+            return requestFocusImpl(temporary, true, false);
+        } finally {
+            toolkit.unlockAWT();
+        }
     }
 
 

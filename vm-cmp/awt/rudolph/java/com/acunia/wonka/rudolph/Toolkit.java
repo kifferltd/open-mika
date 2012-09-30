@@ -28,6 +28,7 @@
 
 package com.acunia.wonka.rudolph;
 
+import java.awt.datatransfer.Clipboard;
 import java.awt.image.*;
 import java.awt.peer.*;
 import java.awt.dnd.peer.*;
@@ -35,6 +36,7 @@ import java.awt.dnd.*;
 import java.awt.*;
 import java.net.URL;
 import java.io.*;
+import java.util.Properties;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 // import java.util.*;
@@ -62,6 +64,10 @@ public class Toolkit extends java.awt.Toolkit {
   public static Toolkit getInstance() {
     return t;
   }
+
+  static final native void staticLockAWT();
+
+  static final native void staticUnlockAWT();
 
   public Toolkit() {
   }
@@ -95,7 +101,7 @@ public class Toolkit extends java.awt.Toolkit {
     return new DefaultChoice(choice);
   }
   
-  public ComponentPeer createComponent(Component component) {
+  protected ComponentPeer createComponent(Component component) {
     if (component instanceof Container) {
       return new DefaultContainer((Container)component);
     }
@@ -380,14 +386,6 @@ public class Toolkit extends java.awt.Toolkit {
   }
   
   /**
-   * @status  not implemented
-   * @remark  not implemented
-   */  
-  protected EventQueue getSystemEventQueueImpl() {
-    return null;
-  }
-
-  /**
    * @status  implemented
    * @remark  not yet according to specs. The observer isn't used yet.
    */  
@@ -406,12 +404,26 @@ public class Toolkit extends java.awt.Toolkit {
 
   public native void sync();
   
-  public final native EventQueue getSystemEventQueue();
+  public final native EventQueue getSystemEventQueueImpl();
   
   public DragSourceContextPeer createDragSourceContextPeer(DragGestureEvent dge) throws InvalidDnDOperationException{
     com.acunia.wonka.rudolph.peers.DefaultDragSourceContextPeer ddcp = new DefaultDragSourceContextPeer(dge);
     return ((DragSourceContextPeer) ddcp);
   }
 
+  public Clipboard getSystemClipboard() {
+    // TODO
+    return null;
+  }
+
+  public PrintJob getPrintJob(Frame frame, String title, Properties properties) {
+    // TODO
+    return null;
+  }
+
+  protected FontPeer getFontPeer(String a0, int a1) {
+    // TODO
+    return null;
+  }
 }
 

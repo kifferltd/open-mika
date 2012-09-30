@@ -63,6 +63,7 @@ public class GridBagLayout implements LayoutManager2, java.io.Serializable {
 
   private transient int rows = 0;
   private transient int cols = 0;
+  private transient Toolkit toolkit = Toolkit.getDefaultToolkit();
 
   /**
    * Method called when writing the serial form of an object of this class.
@@ -633,9 +634,9 @@ public class GridBagLayout implements LayoutManager2, java.io.Serializable {
     if (sizeflag != MINSIZE && sizeflag != PREFERREDSIZE) {
       throw new IllegalArgumentException("illegal parameter value"); // what else can I do?
     }
-    else {
 
-      synchronized (container.getTreeLock()) {
+      toolkit.lockAWT();
+      try {
 
         int ncols = 0;                  // current number of gridbag columns
         int nrows = 0;                  // current number of gridbag rows
@@ -1348,7 +1349,7 @@ public class GridBagLayout implements LayoutManager2, java.io.Serializable {
 
           }
 
-        }      // for (int i = 0; i < components.length; i++) {
+        }      // for (int i = 0; i < components.length; i++)
 
         // Overwrite the calculated values if overwrites for the widths and heights are given
 
@@ -1379,8 +1380,9 @@ public class GridBagLayout implements LayoutManager2, java.io.Serializable {
 
         return info;
 
+      } finally {
+        toolkit.unlockAWT();
       }
-    }
   }
 
   /**

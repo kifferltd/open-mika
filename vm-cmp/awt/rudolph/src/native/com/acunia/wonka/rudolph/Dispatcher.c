@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2004 by Chris Gray, /k/ Embedded Java     *
-* Solutions. All rights reserved.                                         *
+* reserved. Parts copyright (c) 2004, 2012 by Chris Gray, /k/ Embedded    *
+* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -88,7 +88,7 @@
 #endif
 #endif
 
-x_monitor tree_lock;
+// x_monitor tree_lock;
 
 extern char* awt_splash;
 
@@ -101,7 +101,6 @@ static void do_splashscreen(w_ubyte *scr, int w, int h);
 
 void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
   static int init = 1;
-  w_instance tlock = NULL;
   
   if (init == 1) {
     
@@ -111,17 +110,6 @@ void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
     
     init = 0;
 
-    /*
-    ** Initialize the lock:
-    */
-    
-    if (mustBeInitialized(clazzComponent) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.Component: %e", exceptionThrown(JNIEnv2w_thread(env)));
-    }
-
-    tlock = (w_instance)getStaticReferenceField(clazzComponent, F_Component_lock);
-    tree_lock = getMonitor(tlock);
-    
     defaultEventQueue = theEventQueue;
 
     /*
@@ -132,6 +120,10 @@ void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
       wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Toolkit: %e", exceptionThrown(JNIEnv2w_thread(env)));
     }
     
+    if (mustBeInitialized(clazzComponent) == CLASS_LOADING_FAILED) {
+      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.Component: %e", exceptionThrown(JNIEnv2w_thread(env)));
+    }
+
     if (mustBeInitialized(clazzSystemColor) == CLASS_LOADING_FAILED) {
       wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.SystemColor: %e", exceptionThrown(JNIEnv2w_thread(env)));
     }

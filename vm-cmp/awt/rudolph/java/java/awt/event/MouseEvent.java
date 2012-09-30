@@ -26,6 +26,7 @@ package java.awt.event;
 
 import java.awt.Component;
 import java.awt.Point;
+import java.awt.Toolkit;
 
 public class MouseEvent extends InputEvent {
 
@@ -55,6 +56,25 @@ public class MouseEvent extends InputEvent {
   //protected int InputEvent.modifiers;
   //protected long InputEvent.timeStamp;
   //protected boolean AWTEvent.consumed;
+
+  // From Apache harmony
+
+  static String addMouseModifiersExText(String text, int modifiersEx) {
+    if ((modifiersEx & InputEvent.BUTTON1_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+              Toolkit.getProperty("AWT.button1", "Button1"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.BUTTON2_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+              Toolkit.getProperty("AWT.button2", "Button2"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+    if ((modifiersEx & InputEvent.BUTTON3_DOWN_MASK) != 0) {
+      text += ((text.length() > 0) ? "+" : "") + //$NON-NLS-1$ //$NON-NLS-2$
+              Toolkit.getProperty("AWT.button3", "Button3"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    return text;
+  }
 
   /*****************************************************************/
   /**********************************************************************************************************************************/

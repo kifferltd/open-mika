@@ -54,6 +54,13 @@ public class Frame extends Window implements MenuContainer {
   public static final int W_RESIZE_CURSOR = 10;
   public static final int WAIT_CURSOR = 3;
   
+  public static final int NORMAL = 0;
+  public static final int ICONIFIED = 1;
+  public static final int MAXIMIZED_HORIZ = 2;
+  public static final int MAXIMIZED_VERT = 4;
+  public static final int MAXIMIZED_BOTH = 6;
+
+
   /*
   ** Fields needed for Serialization.
   */

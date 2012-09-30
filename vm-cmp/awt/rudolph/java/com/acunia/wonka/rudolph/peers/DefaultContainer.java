@@ -29,6 +29,8 @@ import java.awt.*;
 
 public class DefaultContainer extends DefaultComponent implements ContainerPeer {
 
+  private static Toolkit toolkit = Toolkit.getDefaultToolkit();
+
   private int cw;  // cached width
   private int ch;  // cached height
   boolean validate = false;
@@ -128,7 +130,8 @@ public class DefaultContainer extends DefaultComponent implements ContainerPeer 
   }
   
   public void doRepaint() {
-    synchronized(component.getTreeLock()) {
+    ToolkitBridge.staticLockAWT();
+    try {
       Graphics g = getGraphics();
       if (g != null) {
         component.update(g);
@@ -139,6 +142,8 @@ public class DefaultContainer extends DefaultComponent implements ContainerPeer 
         
         refresh(DefaultComponent.REFRESH_GLOBAL);
       }
+    } finally {
+      ToolkitBridge.staticUnlockAWT();
     }
   }
 }
