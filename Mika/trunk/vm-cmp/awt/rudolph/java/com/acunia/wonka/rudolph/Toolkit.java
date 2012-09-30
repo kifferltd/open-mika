@@ -35,6 +35,8 @@ import java.awt.dnd.*;
 import java.awt.*;
 import java.net.URL;
 import java.io.*;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 // import java.util.*;
 import java.util.zip.*;
 import com.acunia.wonka.rudolph.peers.*;
@@ -43,6 +45,12 @@ public class Toolkit extends java.awt.Toolkit {
 
   static {
     DefaultComponent.initRudolph();
+    AccessController.doPrivileged(new PrivilegedAction() {
+      public Object run() {
+        t = new Toolkit();
+        return null;
+      }
+    });
   }
 
   protected static Toolkit t;
@@ -52,9 +60,6 @@ public class Toolkit extends java.awt.Toolkit {
   protected BeepImpl beepImpl = BeepFactory.getInstance();
 
   public static Toolkit getInstance() {
-    if(t == null) {
-      t = new Toolkit();
-    }
     return t;
   }
 
