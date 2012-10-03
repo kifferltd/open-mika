@@ -83,6 +83,7 @@
 
   <target name="source" depends="prepare,check-build-env">
     <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+    <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
     <property name="crypto.dir" value="${vm.ext.dir}crypto/${java.version}/"/>
     <property name="security.dir" value="${vm.cmp.dir}security/${SECURITY}/${java.version}/"/>
     <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
