@@ -149,6 +149,22 @@
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>
+    <condition property="AWT_AND_BEANS">
+      <and>
+        <not><equals arg1="${AWT}" arg2="none"/></not>
+        <equals arg1="${JAVA_BEANS}" arg2="true"/>
+      </and>
+    </condition>
+    <condition property="AWT_OR_BEANS_BUT_NOT_BOTH">
+      <and>
+        <or>
+          <not><equals arg1="${AWT}" arg2="none"/></not>
+          <equals arg1="${JAVA_BEANS}" arg2="true"/>
+        </or>
+        <not><equals arg1="${AWT_AND_BEANS}" arg2="true"/></not>
+      </and>
+    </condition>
+    <fail message="If AWT=rudolph then JAVA_BEANS must be true and vv." if="AWT_OR_BEANS_BUT_NOT_BOTH"/>
     <condition property="JAVA2_SECURITY_BUT_NO_JARSIGNING">
       <and>
         <equals arg1="${SECURITY}" arg2="java2"/>
@@ -189,6 +205,10 @@
     <!-- MikaMax only -->
     <property name="max.dir" value="${basedir}/max/"/>
 
+    <!-- special case: if AWT != none ==> include java.beans -->
+    <propertysetter property="awt.dir" arg1="${AWT}" arg2="none" elsevalue="${vm.cmp.dir}awt/${AWT}/${java.version}:${vm.ext.dir}beans/${java.version}"
+                    value="${vm.cmp.dir}awt/${AWT}/${java.version}"/>
+
     <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
     <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.dir}:${security.provider.any.dir}"
                     value="${security.provider.dir}"/>
@@ -199,11 +219,7 @@
 
     <javac destdir="${class.dir}" bootclasspath="${empty.dir}"
            source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}"/>
-
-    <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
-           source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
-           srcdir="${vm.ext.dir}beans/${java.version}/" condition="${JAVA_BEANS}"/>
+           srcdir="${vm.java.dir}:${awt.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}"/>
 
     <condjavac destdir="${class.dir}" bootclasspath="${empty.dir}"
                source="${java.level}" target="${java.level}" debug="${JAVA_DEBUG}" nowarn="true" failonerror="true"
