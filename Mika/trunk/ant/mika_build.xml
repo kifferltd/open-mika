@@ -92,7 +92,6 @@
     <property name="jar.dir" value="${vm.cmp.dir}jar/${JAR}/"/>
 
     <jar destfile="${release.dir}/src.jar">
-  <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
       <fileset dir="${basedir}/vm-ext/comm/${java.version}"/>
       <fileset dir="${crypto.dir}"/>
       <fileset dir="${vm.ext.dir}beans/${java.version}"/>
