@@ -1,75 +1,63 @@
-/**************************************************************************
-* Copyright (c) 2003 by Acunia N.V. All rights reserved.                  *
-*                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
-*                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips-site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-**************************************************************************/
-
 /*
- * Implementation of PropertyChangeEvent for pmx-jrt-wonka
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
- * author Mark Anderson
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
  */
 
 package java.beans;
 
 import java.util.EventObject;
 
-public class PropertyChangeEvent extends EventObject
-{
+public class PropertyChangeEvent extends EventObject {
 
-    private String propertyName;
-    private Object oldValue;
-    private Object newValue;
-    private Object propagationId;
+    private static final long serialVersionUID = 7042693688939648123L;
 
-    public PropertyChangeEvent(Object source, String propertyName, Object oldValue, Object newValue)
-    {
-	super(source);
-	this.propertyName = propertyName;
-	this.oldValue = oldValue;
-	this.newValue = newValue;
-	this.propagationId = null;
+    String propertyName;
+
+    Object oldValue;
+
+    Object newValue;
+
+    Object propagationId;
+
+    public PropertyChangeEvent(Object source, String propertyName,
+            Object oldValue, Object newValue) {
+        super(source);
+
+        this.propertyName = propertyName;
+        this.oldValue = oldValue;
+        this.newValue = newValue;
     }
 
-    public Object getNewValue()
-    {
-	return newValue;
+    public String getPropertyName() {
+        return propertyName;
     }
 
-    public Object getOldValue()
-    {
-	return oldValue;
+    public void setPropagationId(Object propagationId) {
+        this.propagationId = propagationId;
     }
 
-    public Object getPropagationId()
-    {
-	return propagationId;
+    public Object getPropagationId() {
+        return propagationId;
     }
 
-    public void setPropagationId(Object propagationId)
-    {
-	this.propagationId = propagationId;
+    public Object getOldValue() {
+        return oldValue;
     }
 
-    public String getPropertyName()
-    {
-	return propertyName;
+    public Object getNewValue() {
+        return newValue;
     }
 }
+
