@@ -200,7 +200,6 @@
     <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
     <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/${java.version}/"/>
     <property name="math.dir" value="${vm.cmp.dir}math/${MATH}/${java.version}"/>
-    <property name="awt.dir" value="${vm.cmp.dir}awt/${AWT}/${java.version}"/>
 
     <!-- MikaMax only -->
     <property name="max.dir" value="${basedir}/max/"/>
