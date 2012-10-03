@@ -112,12 +112,14 @@ static void threadEntry(void * athread) {
 #endif
 
 #ifndef O4P
-#error This code needs to be modified for other host OSs
+#error TODO: This code needs to be modified for other host OSs
 #endif
     w_int pid = getpid();
     w_int tid = syscall(__NR_gettid);
+#ifdef RESMON
     setIntegerField(thread->Thread, F_Thread_pid, pid);
     setIntegerField(thread->Thread, F_Thread_tid, tid);
+#endif
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
       w_printf("Start %t: pid is %d lwp %d\n", thread, pid, tid);
