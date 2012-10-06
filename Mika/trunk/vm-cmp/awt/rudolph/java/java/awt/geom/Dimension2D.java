@@ -15,38 +15,32 @@
  *  limitations under the License.
  */
 /**
- * @author Alexey A. Petrenko
+ * @author Denis M. Kishenko
  */
-package java.awt;
+package java.awt.geom;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+public abstract class Dimension2D implements Cloneable {
 
-/**
- * Shape
- *
- */
-public interface Shape {
-    public boolean contains(double x, double y);
+    protected Dimension2D() {
+    }
 
-    public boolean contains(double x, double y, double w, double h);
+    public abstract double getWidth();
 
-    public boolean contains(Point2D point);
+    public abstract double getHeight();
 
-    public boolean contains(Rectangle2D r);
+    public abstract void setSize(double width, double height);
 
-    public Rectangle getBounds();
+    public void setSize(Dimension2D d) {
+        setSize(d.getWidth(), d.getHeight());
+    }
 
-    public Rectangle2D getBounds2D();
-
-    public PathIterator getPathIterator(AffineTransform at);
-
-    public PathIterator getPathIterator(AffineTransform at, double flatness);
-
-    public boolean intersects(double x, double y, double w, double h);
-
-    public boolean intersects(Rectangle2D r);
+    public Object clone() {
+        try {
+            return super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError();
+        }
+    }
 }
+
 

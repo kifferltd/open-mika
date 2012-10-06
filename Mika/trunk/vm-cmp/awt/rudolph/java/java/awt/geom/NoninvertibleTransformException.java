@@ -15,38 +15,18 @@
  *  limitations under the License.
  */
 /**
- * @author Alexey A. Petrenko
+ * @author Denis M. Kishenko
  */
-package java.awt;
+package java.awt.geom;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+public class NoninvertibleTransformException extends java.lang.Exception {
 
-/**
- * Shape
- *
- */
-public interface Shape {
-    public boolean contains(double x, double y);
+    private static final long serialVersionUID = 6137225240503990466L;
 
-    public boolean contains(double x, double y, double w, double h);
+    public NoninvertibleTransformException(String s) {
+        super(s);
+    }
 
-    public boolean contains(Point2D point);
-
-    public boolean contains(Rectangle2D r);
-
-    public Rectangle getBounds();
-
-    public Rectangle2D getBounds2D();
-
-    public PathIterator getPathIterator(AffineTransform at);
-
-    public PathIterator getPathIterator(AffineTransform at, double flatness);
-
-    public boolean intersects(double x, double y, double w, double h);
-
-    public boolean intersects(Rectangle2D r);
 }
+
 

@@ -19,34 +19,25 @@
  */
 package java.awt;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
 
 /**
- * Shape
+ * GraphicsConfigTemplate
  *
  */
-public interface Shape {
-    public boolean contains(double x, double y);
+public abstract class GraphicsConfigTemplate implements Serializable {
+    private static final long serialVersionUID = -8061369279557787079L;
 
-    public boolean contains(double x, double y, double w, double h);
+    public static final int PREFERRED = 2;
+    public static final int REQUIRED = 1;
+    public static final int UNNECESSARY = 3;
 
-    public boolean contains(Point2D point);
+    public GraphicsConfigTemplate() {
 
-    public boolean contains(Rectangle2D r);
+    }
 
-    public Rectangle getBounds();
+    public abstract GraphicsConfiguration getBestConfiguration(GraphicsConfiguration[] gc);
 
-    public Rectangle2D getBounds2D();
-
-    public PathIterator getPathIterator(AffineTransform at);
-
-    public PathIterator getPathIterator(AffineTransform at, double flatness);
-
-    public boolean intersects(double x, double y, double w, double h);
-
-    public boolean intersects(Rectangle2D r);
+    public abstract boolean isGraphicsConfigSupported(GraphicsConfiguration gc);
 }
 
