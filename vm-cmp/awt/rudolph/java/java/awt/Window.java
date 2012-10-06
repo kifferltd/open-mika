@@ -56,7 +56,6 @@ public class Window extends Container {
 
   public void addNotify() {
     if(peer == null) {
-System.out.println("Window: toolkit = " + toolkit);
       peer = toolkit.createWindow(this);
     }
 

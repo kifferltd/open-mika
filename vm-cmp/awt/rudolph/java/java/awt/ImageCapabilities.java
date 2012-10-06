@@ -16,37 +16,31 @@
  */
 /**
  * @author Alexey A. Petrenko
+ * Dumbed-down for JavaME by CG 20121006
  */
 package java.awt;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
-
 /**
- * Shape
+ * ImageCapabilities
  *
  */
-public interface Shape {
-    public boolean contains(double x, double y);
+public class ImageCapabilities implements Cloneable {
+    private final boolean accelerated;
 
-    public boolean contains(double x, double y, double w, double h);
+    public ImageCapabilities(boolean accelerated) {
+        this.accelerated = accelerated;
+    }
 
-    public boolean contains(Point2D point);
+    public Object clone() {
+        return new ImageCapabilities(accelerated);
+    }
 
-    public boolean contains(Rectangle2D r);
+    public boolean isAccelerated() {
+        return accelerated;
+    }
 
-    public Rectangle getBounds();
-
-    public Rectangle2D getBounds2D();
-
-    public PathIterator getPathIterator(AffineTransform at);
-
-    public PathIterator getPathIterator(AffineTransform at, double flatness);
-
-    public boolean intersects(double x, double y, double w, double h);
-
-    public boolean intersects(Rectangle2D r);
+    public boolean isTrueVolatile() {
+        return true;
+    }
 }
 

@@ -18,7 +18,7 @@
  * @author Igor V. Stolyarov
  */
 /**
- * [CH 20120815] hacked down to a stub.
+ * [CG 20120815] hacked down to a stub.
  */  
 
 package java.awt.image;

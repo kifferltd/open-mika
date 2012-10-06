@@ -15,38 +15,32 @@
  *  limitations under the License.
  */
 /**
- * @author Alexey A. Petrenko
+ * @author Denis M. Kishenko
+ * Dumbed-down for JavaME by CG 20121006
  */
-package java.awt;
+package java.awt.geom;
 
-import java.awt.geom.AffineTransform;
-import java.awt.geom.PathIterator;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+public interface PathIterator {
 
-/**
- * Shape
- *
- */
-public interface Shape {
-    public boolean contains(double x, double y);
+    public static final int WIND_EVEN_ODD = 0;
+    public static final int WIND_NON_ZERO = 1;
 
-    public boolean contains(double x, double y, double w, double h);
+    public static final int SEG_MOVETO  = 0;
+    public static final int SEG_LINETO  = 1;
+    public static final int SEG_QUADTO  = 2;
+    public static final int SEG_CUBICTO = 3;
+    public static final int SEG_CLOSE   = 4;
 
-    public boolean contains(Point2D point);
+    public int getWindingRule();
 
-    public boolean contains(Rectangle2D r);
+    public boolean isDone();
 
-    public Rectangle getBounds();
+    public void next();
 
-    public Rectangle2D getBounds2D();
+    public int currentSegment(float[] coords);
 
-    public PathIterator getPathIterator(AffineTransform at);
+    public int currentSegment(double[] coords);
 
-    public PathIterator getPathIterator(AffineTransform at, double flatness);
-
-    public boolean intersects(double x, double y, double w, double h);
-
-    public boolean intersects(Rectangle2D r);
 }
+
 

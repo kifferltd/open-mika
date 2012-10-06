@@ -10,6 +10,8 @@ import java.util.Locale;
 
 public class VixenGraphicsEnvironment extends GraphicsEnvironment {
 
+    private DefaultScreenDevice defaultScreenDevice = new DefaultScreenDevice();
+
     public Graphics2D createGraphics(BufferedImage bufferedImage) {
         throw new RuntimeException("not yet implemented");
     }
@@ -27,7 +29,7 @@ public class VixenGraphicsEnvironment extends GraphicsEnvironment {
     }
 
     public GraphicsDevice getDefaultScreenDevice() throws HeadlessException {
-        throw new RuntimeException("not yet implemented");
+      return defaultScreenDevice;
     }
 
     public GraphicsDevice[] getScreenDevices() throws HeadlessException {
