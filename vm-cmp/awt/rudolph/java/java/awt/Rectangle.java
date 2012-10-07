@@ -1,412 +1,301 @@
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Denis M. Kishenko
+ * Dumbed-down for JavaME by CG 20121006
+ */
 package java.awt;
 
-public class Rectangle implements Shape, java.io.Serializable {
+import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
 
-  private static final long serialVersionUID = -4345857070255674764L;
+public class Rectangle extends Rectangle2D implements Shape, Serializable {
 
-  /****************************************************************/
-  /**  public member variables
-  */
-  /****************************************************************/
-  public int x;
-  public int y;
-  public int width;
-  public int height;
+    private static final long serialVersionUID = -4345857070255674764L;
 
-  /****************************************************************/
-  /** Constructors
-  */
-  /****************************************************************/
+    public int x;
+    public int y;
+    public int width;
+    public int height;
 
-  /** void constructor  */
-  public Rectangle() {
-    this(0, 0, 0, 0);
-  }
-
-  /** full constructor  */
-  public Rectangle(int x, int y, int width, int height) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-  }
-
-  /****************************************************************/
-  /** full constructor from other classes  */
-  public Rectangle(Rectangle r) {
-    this(r.x, r.y, r.width, r.height);
-  }
-
-  public Rectangle(int width, int height) {
-    this(0, 0, width, height);
-  }
-
-  public Rectangle(Point p, Dimension d) {
-    this(p.x, p.y, d.width, d.height);
-  }
-    
-  public Rectangle(Point p) {
-    this(p.x, p.y, 0, 0);
-   }
-    
-  public Rectangle(Dimension d) {
-    this(0, 0, d.width, d.height);
-  }
-
-
-  /****************************************************************/
-  /**  'null' and equality functions
-  */
-  /****************************************************************/
-  public boolean isEmpty() {
-    return ((width <= 0) || (height <= 0));
-  }
-
-  public boolean equals(Object object) {
-    if(object instanceof Rectangle) {
-      Rectangle other = (Rectangle)object;
-      return(other.x == x && other.y == y && other.width == width && other.height == height);
-    }
-    return false;
-  }
-  /****************************************************************/
-  /** Data access
-  */
-  /****************************************************************/
-
-  public double getX() {
-    return x;
-  }
-
-  public double getY() {
-    return y;
-  }
-
-  public double getWidth() {
-    return width;
-  }
-
-  public double getHeight() {
-    return height;
-  }
-
-  /****************************************************************/
-  /** Boundaries
-  */
-  /****************************************************************/
-
-  public Rectangle getBounds() {
-    return new Rectangle(x, y, width, height);
-  }  
-
-  public void setBounds(Rectangle r) {
-    setBounds(r.x, r.y, r.width, r.height);
-  }
-
-  public void setBounds(int x, int y, int width, int height) {
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
- 
-  }  
-
-  /** @remark deprecated*/
-  public void reshape(int x, int y, int width, int height) {
-    setBounds(x, y, width, height);
-  }  
-
-  /** enlarge boundaries */
-  public void grow(int h, int v) {
-    x -= h;
-    width += h+h;
-    y -= v;
-    height -= v+v;
-  }
-
-  /****************************************************************/
-  /** Starting point
-  */
-  /****************************************************************/
-  public Point getLocation() {
-    return new Point(x, y);
-  }  
-
-  public void setLocation(Point p) {
-    setLocation(p.x, p.y);
-  }  
-
-  public void setLocation(int x, int y) {
-    this.x = x;
-    this.y = y;
-  }  
-
-  /** move Starting point   */
-  public void translate(int x, int y) {
-    this.x += x;
-    this.y += y;
-  }  
-
-  /** @remark deprecated*/
-  public void move(int x, int y) {
-    this.x = x;
-    this.y = y;
-  }  
-
-  /****************************************************************/
-  /** Rectangle size
-  */
-  /****************************************************************/
-  public Dimension getSize() {
-    return new Dimension(width, height);
-  }  
-
-  public void setSize(Dimension d) {
-    resize(d.width, d.height);
-  }  
-
-  public void setSize(int width, int height) {
-    resize(width, height);
-  }  
-
-  /** deprecated  */
-  public void resize(int width, int height) {
-    this.width = width;
-    this.height = height;
-  }  
-
-  /****************************************************************/
-  /** Containing function
-  */
-  /****************************************************************/
-  public boolean contains(Point p) {
-    return contains(p.x, p.y);
-  }
-  
-  public boolean contains(int x, int y) {
-    if ((x >= this.x) && (x < this.x + this.width) && (y >= this.y) && (y < this.y + this.height)) {
-      return true;
-    }
-    else {
-      return false;
-    }
-  }
-
-  /** @remark  since java 1.3 */
-  public boolean contains(Rectangle other) {
-    // calculate distance from x/y
-    // => distance from other rectangle end (other.x+other.w) to this rectangle start (x). Must be in range (0 --- w)
-    int distance = other.x + other.width -x;
-    if(distance < 0 || distance > width) {
-      return false;
-    }
-    //id for vertical bounds
-    distance = other.y + other.height -y;
-    if(distance < 0 || distance > height) {
-      return false;
-    }
-    // => distance from other rectangle start (other.x) to this rectangle start (x). Must be in range (0 --- w)
-    distance = other.x - x;
-    if(distance < 0 || distance > width) {
-      return false;
-    }
-    //id for vertical bounds
-    distance = other.y - y;
-    if(distance < 0 || distance > height) {
-      return false;
-    }
-    return true;
-  }
-
-  /** @remark  since java 1.3 */
-  public boolean contains(int other_x, int other_y, int other_width, int other_height) {
-    int distance = other_x + other_width -x;
-    if(distance < 0 || distance > width) {
-      return false;
-    }
-    //id for vertical bounds
-    distance = other_y + other_height -y;
-    if(distance < 0 || distance > height) {
-      return false;
-    }
-    // => distance from other rectangle start (other.x) to this rectangle start (x). Must be in range (0 --- w)
-    distance = other_x - x;
-    if(distance < 0 || distance > width) {
-      return false;
-    }
-    //id for vertical bounds
-    distance = other_y - y;
-    if(distance < 0 || distance > height) {
-      return false;
-    }
-    return true;
-  }
-   
-  /*
-  ** inside is deprecated.
-  */
-  
-  public boolean inside(int x, int y) {
-    if ((x >= this.x) && (x < this.x + this.width) && (y >= this.y) && (y < this.y + this.height)) {
-      return true;
-    }
-    else {
-      return false;
-    }
-  }
-
-  /****************************************************************/
-  /** Enlarge current rectangle to contain given Point
-  */
-  /****************************************************************/
-  public void add(int newx, int newy) {
-    if(newx < x) {
-      width = width + x - newx;
-      x = newx;
-    }
-    else if(newx > (x + width)) {
-      width = newx - x;
+    public Rectangle() {
+        setBounds(0, 0, 0, 0);
     }
 
-    if(newy < y) {
-      height = height + y - newy;
-      y = newy;
-    }
-    else if(newy > (y + height)) {
-      height = newy - y;
-    }
-  }
-
-  /**
-   * @remark  instead of masking to add(x,y), this is written directly
-   */
-  public void add(Point pt) {
-    if(pt.x < x) {
-      width = width + x - pt.x;
-      x = pt.x;
-    }
-    else if(pt.x > (x + width)) {
-      width = pt.x - x;
+    public Rectangle(Point p) {
+        setBounds(p.x, p.y, 0, 0);
     }
 
-    if(pt.y < y) {
-      height = height + y - pt.y;
-      y = pt.y;
-    }
-    else if(pt.y > (y + height)) {
-      height = pt.y - y;
-    }
-  }
-
-  /****************************************************************/
-  /** Enlarge current rectangle to contain given rectangle
-  */
-  /****************************************************************/
-  public void add(Rectangle other) {
-    int newx0 = (other.x < x)? other.x : x;
-    int newx1 = ((other.x + other.width) > (x + width))? other.x + other.width : x+width;
-    int newy0 = (other.y < y)? other.y : y;
-    int newy1 = ((other.y + other.height) > (y + height))? other.y + other.height : y+height;
-
-    x = newx0;
-    width = newx1 - newx0;
-    y = newy0;
-    height = newy1 - newy0;
-  }
-
-  /****************************************************************/
-  /** Intersection of two rectangles
-  */
-  /****************************************************************/
-  /**
-   * @status  not implemented
-   * @remark  not implemented
-   */  
-  public boolean intersects(Rectangle other){
-    if((other.x + other.width) < x) {
-      return false;
-    }
-    if((x + width) < other.x) {
-      return false;
-    }
-    if((other.y + other.height) < y) {
-      return false;
-    }
-    if((y + height) < other.y) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * @status  not implemented
-   * @remark  not implemented
-   */  
-  /** Rectangle c = a & b (note that the original rectangle remains unchanged)*/
-  public Rectangle intersection(Rectangle other) {
-    int newx0 = (other.x > x)? other.x : x;
-    int newx1 = ((other.x + other.width) < (x + width))? other.x + other.width : x+width;
-    if(newx0>newx1) {
-      return new Rectangle();
-    }
-    int newy0 = (other.y > y)? other.y : y;
-    int newy1 = ((other.y + other.height) < (y + height))? other.y + other.height : y+height;
-    if(newy0>newy1) {
-      return new Rectangle();
+    public Rectangle(Point p, Dimension d) {
+        setBounds(p.x, p.y, d.width, d.height);
     }
 
-    return new Rectangle(newx0, newy0, newx1 - newx0, newy1 - newy0);
-  }
+    public Rectangle(int x, int y, int width, int height) {
+        setBounds(x, y, width, height);
+    }
 
-  /****************************************************************/
-  /** union of two rectangles
-  */
-  /****************************************************************/
-  /** Rectangle c = a U b (note that the original rectangle remains unchanged)*/
-  public Rectangle union(Rectangle other) {
-    int newx0 = (other.x < x)? other.x : x;
-    int newx1 = ((other.x + other.width) > (x + width))? other.x + other.width : x+width;
-    int newy0 = (other.y < y)? other.y : y;
-    int newy1 = ((other.y + other.height) > (y + height))? other.y + other.height : y+height;
+    public Rectangle(int width, int height) {
+        setBounds(0, 0, width, height);
+    }
 
-    return new Rectangle(newx0, newy0, newx1 - newx0, newy1 - newy0);
-  }
+    public Rectangle(Rectangle r) {
+        setBounds(r.x, r.y, r.width, r.height);
+    }
 
+    public Rectangle(Dimension d) {
+        setBounds(0, 0, d.width, d.height);
+    }
 
+    public double getX() {
+        return x;
+    }
 
-  /****************************************************************/
-  /** Diagnostics
-  */
-  /****************************************************************/
-  public String toString() {
-    return getClass().getName() + "[x = " + x + ", y = " + y + ", width = " + width + ", height = " + height + "]";
-  }
+    public double getY() {
+        return y;
+    }
+
+    public double getHeight() {
+        return height;
+    }
+
+    public double getWidth() {
+        return width;
+    }
+
+    public boolean isEmpty() {
+        return width <= 0 || height <= 0;
+    }
+
+    public Dimension getSize() {
+        return new Dimension(width, height);
+    }
+
+    public void setSize(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    public void setSize(Dimension d) {
+        setSize(d.width, d.height);
+    }
+
+    public Point getLocation() {
+        return new Point(x, y);
+    }
+
+    public void setLocation(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void setLocation(Point p) {
+        setLocation(p.x, p.y);
+    }
+
+    /**
+     * @deprecated
+     */
+    public void move(int x, int y) {
+        setLocation(x, y);
+    }
+
+    public void setRect(double x, double y, double width, double height) {
+        int x1 = (int)Math.floor(x);
+        int y1 = (int)Math.floor(y);
+        int x2 = (int)Math.ceil(x + width);
+        int y2 = (int)Math.ceil(y + height);
+        setBounds(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    /**
+     * @deprecated
+     */
+    public void resize(int width, int height) {
+        setBounds(x, y, width, height);
+    }
+
+    /**
+     * @deprecated
+     */
+    public void reshape(int x, int y, int width, int height) {
+        setBounds(x, y, width, height);
+    }
+
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, width, height);
+    }
+
+    public Rectangle2D getBounds2D() {
+        return getBounds();
+    }
+
+    public void setBounds(int x, int y, int width, int height) {
+        this.x = x;
+        this.y = y;
+        this.height = height;
+        this.width = width;
+    }
+
+    public void setBounds(Rectangle r) {
+        setBounds(r.x, r.y, r.width, r.height);
+    }
+
+    public void grow(int dx, int dy) {
+        x -= dx;
+        y -= dy;
+        width += dx + dx;
+        height += dy + dy;
+    }
+
+    public void translate(int mx, int my) {
+        x += mx;
+        y += my;
+    }
+
+    public void add(int px, int py) {
+        int x1 = Math.min(x, px);
+        int x2 = Math.max(x + width, px);
+        int y1 = Math.min(y, py);
+        int y2 = Math.max(y + height, py);
+        setBounds(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    public void add(Point p) {
+        add(p.x, p.y);
+    }
+
+    public void add(Rectangle r) {
+        int x1 = Math.min(x, r.x);
+        int x2 = Math.max(x + width, r.x + r.width);
+        int y1 = Math.min(y, r.y);
+        int y2 = Math.max(y + height, r.y + r.height);
+        setBounds(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    public boolean contains(int px, int py) {
+        if (isEmpty()) {
+            return false;
+        }
+        if (px < x || py < y) {
+            return false;
+        }
+        px -= x;
+        py -= y;
+        return px < width && py < height;
+    }
+
+    public boolean contains(Point p) {
+        return contains(p.x, p.y);
+    }
+
+    public boolean contains(int rx, int ry, int rw, int rh) {
+        return contains(rx, ry) && contains(rx + rw - 1, ry + rh - 1);
+    }
+
+    public boolean contains(Rectangle r) {
+        return contains(r.x, r.y, r.width, r.height);
+    }
+
+    /**
+     * @deprecated
+     */
+    public boolean inside(int px, int py) {
+        return contains(px, py);
+    }
+
+    public Rectangle2D createIntersection(Rectangle2D r) {
+        if (r instanceof Rectangle) {
+            return intersection((Rectangle) r);
+        }
+        Rectangle2D dst = new Rectangle2D.Double();
+        Rectangle2D.intersect(this, r, dst);
+        return dst;
+    }
+
+    public Rectangle intersection(Rectangle r) {
+        int x1 = Math.max(x, r.x);
+        int y1 = Math.max(y, r.y);
+        int x2 = Math.min(x + width, r.x + r.width);
+        int y2 = Math.min(y + height, r.y + r.height);
+        return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    public boolean intersects(Rectangle r) {
+        return !intersection(r).isEmpty();
+    }
+
+    public int outcode(double px, double py) {
+        int code = 0;
+
+        if (width <= 0) {
+            code |= OUT_LEFT | OUT_RIGHT;
+        } else
+            if (px < x) {
+                code |= OUT_LEFT;
+            } else
+                if (px > x + width) {
+                    code |= OUT_RIGHT;
+                }
+
+        if (height <= 0) {
+            code |= OUT_TOP | OUT_BOTTOM;
+        } else
+            if (py < y) {
+                code |= OUT_TOP;
+            } else
+                if (py > y + height) {
+                    code |= OUT_BOTTOM;
+                }
+
+        return code;
+    }
+
+    public Rectangle2D createUnion(Rectangle2D r) {
+        if (r instanceof Rectangle) {
+            return union((Rectangle)r);
+        }
+        Rectangle2D dst = new Rectangle2D.Double();
+        Rectangle2D.union(this, r, dst);
+        return dst;
+    }
+
+    public Rectangle union(Rectangle r) {
+        Rectangle dst = new Rectangle(this);
+        dst.add(r);
+        return dst;
+    }
+
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+        if (obj instanceof Rectangle) {
+            Rectangle r = (Rectangle)obj;
+            return r.x == x && r.y == y && r.width == width && r.height == height;
+        }
+        return false;
+    }
+
+    public String toString() {
+        // The output format based on 1.5 release behaviour. It could be obtained in the following way
+        // System.out.println(new Rectangle().toString())
+        return getClass().getName() + "[x=" + x + ",y=" + y + //$NON-NLS-1$ //$NON-NLS-2$
+            ",width=" + width + ",height=" + height + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
+
 }
+
