@@ -1,302 +1,325 @@
-/**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/**
+ * @author Denis M. Kishenko
+ * Dumbed-down for JavaME by CG 20121006
+ */
 package java.awt;
 
-/****************************************************************************************************************************************/
-/**
-* Polygon class
-* Note that the actual drawing of the polygon is done in the functions drawPolygon and fillPolygon of java.awt.Graphics
-*/
-/****************************************************************************************************************************************/
-public class Polygon implements Shape, java.io.Serializable {
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.PathIterator;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
+import java.util.NoSuchElementException;
 
-  private static final long serialVersionUID = -6460061437900069969L;
+public class Polygon implements Shape, Serializable {
 
-/**  Protected variable fectangle bounds: accessible through getBounds */
-  protected Rectangle bounds;
-  
-/**
-* Public variables
-*/
+    private static final long serialVersionUID = -6460061437900069969L;
 
-  public int xpoints[];
-  public int ypoints[];
-  public int npoints;
-
-/**  Access Polygon.bounds. For more security send a copy of the value to avoid manipulation of the boundaries from outside */
-  public Rectangle getBounds() {return new Rectangle(bounds);}
-/**  deprecated */
-  public Rectangle getBoundingBox() {return new Rectangle(bounds);}
-
-  private boolean[] isPeak;
-
-/****************************************************************************************************************************************/
-/**
-* full constructor
-*/
-  public Polygon(int[] x, int[] y, int size) {
-    if (size < 0)
-      throw new NegativeArraySizeException();
-    else if (size ==0){
-      npoints=0;
-      xpoints = new int[1];
-      ypoints = new int[1];
-      bounds = new Rectangle();
-      isPeak = new boolean[1];
-    }
-    else if (size ==1){
-      npoints=0;
-      xpoints = new int[1];
-      ypoints = new int[1];
-      bounds = new Rectangle();
-      if(x.length>=1)
-      {
-        xpoints[0]=x[0];
-        bounds.x=x[0];
-      }
-      else
-        xpoints[0]=0;
-      
-      if(y.length>=1)
-      {
-        ypoints[0]=y[0];
-        bounds.y=y[0];
-      }
-      else
-        ypoints[0]=0;
-      
-      isPeak = new boolean[1];
-      isPeak[0]=true;
-    }
-    else  {
-      //variables
-      npoints=size;
-      xpoints = new int[size];
-      ypoints = new int[size];
-       isPeak = new boolean[size];
-      bounds = new Rectangle(x[0],y[0],x[0],y[0]);
-      
-      xpoints[0]=x[0];
-      ypoints[0]=y[0];
-      //assign x-values and calculate horizontal boundaries
-      for(int i=1; i<npoints && i<x.length; i++)
-      {
-        xpoints[i]=x[i];
-        if(x[i]<bounds.x)
-          bounds.x = x[i];
-        else if(x[i]>bounds.width)
-          bounds.width = x[i];
-      }
-      //in calculations above, we used 'width' as an absolute position for simplicity => convert to true width
-      bounds.width-=bounds.x;
-      //assign y-values and calculate vertical boundaries
-      for(int i=1; i<npoints && i<y.length; i++)
-      {
-        ypoints[i]=y[i];
-        if(y[i]<bounds.y)
-          bounds.y= y[i];
-        else if(y[i]>bounds.height)
-          bounds.height = y[i];
-      }
-      //idem as above: 'height' value to true height
-      bounds.height-=bounds.y;
-      
-      // calculate peeks
-      size--; //int lastsize =npoint-1;
-      //first point
-       isPeak[0]= ((ypoints[0]<ypoints[size] && ypoints[0]<ypoints[1]) || (ypoints[0]>ypoints[size] && ypoints[0]>ypoints[1]));
-        //next&previous are both bigger or both smaller
-      //in between
-      for(int i=1; i<size; i++)
-        isPeak[i]= ((ypoints[i]<ypoints[i-1] && ypoints[i]<ypoints[i+1]) || (ypoints[i]>ypoints[i-1] && ypoints[i]>ypoints[i+1]));
-      //last point
-      isPeak[size]=((ypoints[size]<ypoints[size-1] && ypoints[size]<ypoints[0])||(ypoints[size]>ypoints[size-1] && ypoints[size]>ypoints[0]));
-      
-    }
-      
-  }
+    /**
+     * The points buffer capacity
+     */
+    private static final int BUFFER_CAPACITY = 4;
     
-/**
-*  Default constructor
-*/
-  public Polygon()  { this(null,null,0); }
+    public int npoints;
+    public int[] xpoints;
+    public int[] ypoints;
+    protected Rectangle bounds;
+    private boolean[] isPeak;
 
-/****************************************************************************************************************************************/
-/**
-* Add a point to the polygon point array
-*/
-  public void addPoint(int x, int y) {
-    if(npoints==0)
-    {
-      //xpoints = new int[1]; //already done above
-      xpoints[0]=x;
-      //ypoints = new int[1]; //already done above
-      ypoints[0]=y;
-      //isPeak = new boolean[1];
-      isPeak[0]=true;
-      bounds.setBounds(x,y,0,0);
-      npoints=1;
-    }
-    else if(npoints==1)
-    {
-      //bounds.x= xpoints[0] //already done above
-      //bounds.y= ypoints[0] //already done above
-      xpoints = new int[2];
-      xpoints[0]=bounds.x;
-      xpoints[1]=x;
-      ypoints = new int[2];
-      ypoints[0]=bounds.y;
-      ypoints[1]=y;
-      isPeak = new boolean[2];
-      isPeak[0]=true;
-      isPeak[1]=true;
-      //bounds
-      if(x<bounds.x)
-      {
-        bounds.width=bounds.x-x;
-        bounds.x=x;
-      }
-      else
-        bounds.width=x-bounds.x;
+    /*
+     * Polygon path iterator  
+     */
+    class Iterator implements PathIterator {
 
-      if(y<bounds.y)
-      {
-        bounds.height=bounds.y-y;
-        bounds.y=y;
-      }
-      else
-        bounds.height=y-bounds.y;
-
-      npoints=2;
-    }
-    else
-    {
-      //new arrays of size npoints+1
-      int[] swapx = new int[npoints + 1];
-      int[] swapy = new int[npoints + 1];
-      boolean[] peaks = new boolean[npoints + 1];
-
-      //bounds
-      if(x<bounds.x)
-      {
-        bounds.width=bounds.width+bounds.x-x;
-        bounds.x=x;
-      }
-      else if(x>(bounds.x+bounds.width) )
-        bounds.width=x-bounds.x;
+        /**
+         * The source Polygon object
+         */
+        public Polygon p;
         
-      if(y<bounds.y)
-      {
-        bounds.height=bounds.width+bounds.y-y;
-        bounds.y=y;
-      }
-      else if(y>(bounds.y+bounds.height) )
-        bounds.height=y-bounds.y;
+        /**
+         * The path iterator transformation
+         */
+        public AffineTransform t;
+        
+        /**
+         * The current segment index
+         */
+        public int index;
 
-      // copy values into new array
-      for(int i=0;i<npoints;i++)
-      {
-        swapx[i]=xpoints[i];
-        swapy[i]=ypoints[i];
-        peaks[i]=isPeak[i];
-      }
-      //add new values and swap
-      swapx[npoints]=x;
-      swapy[npoints]=y;
-      // calculate if... new point makes previous last point now become a peek
-      peaks[npoints-1]=((swapy[npoints-2]>swapy[npoints-1] && y>swapy[npoints-1])||(swapy[npoints-2]<swapy[npoints-1] && y<swapy[npoints-1]));
-      // calculate if... new point is a peek in itselves
-      peaks[npoints]=((y>swapy[npoints-1] && y>swapy[0]) || (y<swapy[npoints-1] && y<swapy[0]));
-      // calculate if... new point makes first point now become a peek
-      peaks[0]=((swapy[1]>swapy[0] && y>swapy[0]) || (swapy[1]<swapy[0] && y<swapy[0]));
+        /**
+         * Constructs a new Polygon.Iterator for given polygon and transformation
+         * @param l - the source Line2D object
+         * @param at - the AffineTransform object to apply rectangle path
+         */
+        public Iterator(AffineTransform at, Polygon p) {
+            this.p = p;
+            this.t = at;
+            if (p.npoints == 0) {
+                index = 1;
+            }
+        }
 
-      xpoints = swapx;
-      ypoints = swapy;
-      isPeak = peaks;
-      npoints++;
+        public int getWindingRule() {
+            return WIND_EVEN_ODD;
+        }
+
+        public boolean isDone() {
+            return index > p.npoints;
+        }
+
+        public void next() {
+            index++;
+        }
+
+        public int currentSegment(double[] coords) {
+            if (isDone()) {
+                // awt.110=Iterator out of bounds
+                throw new NoSuchElementException("Iterator out of bounds");
+            }
+            if (index == p.npoints) {
+                return SEG_CLOSE;
+            }
+            coords[0] = p.xpoints[index];
+            coords[1] = p.ypoints[index];
+            if (t != null) {
+                t.transform(coords, 0, coords, 0, 1);
+            }
+            return index == 0 ? SEG_MOVETO : SEG_LINETO;
+        }
+
+        public int currentSegment(float[] coords) {
+            if (isDone()) {
+                // awt.110=Iterator out of bounds
+                throw new NoSuchElementException("Iterator out of bounds");
+            }
+            if (index == p.npoints) {
+                return SEG_CLOSE;
+            }
+            coords[0] = p.xpoints[index];
+            coords[1] = p.ypoints[index];
+            if (t != null) {
+                t.transform(coords, 0, coords, 0, 1);
+            }
+            return index == 0 ? SEG_MOVETO : SEG_LINETO;
+        }
     }
-//System.out.println("added ("+x+","+y+"), new size "+npoints+", new bounds "+bounds);
-  }
 
-
-
-
-/****************************************************************************************************************************************/
-/**
-* Translate all points by the given amount
-*/
-  public void translate(int offsetx, int offsety) {
-    for (int i = 0; i < npoints; i++) {
-      xpoints[i] += offsetx;
-      ypoints[i] += offsety;
+    public Polygon() {
+        xpoints = new int[BUFFER_CAPACITY];
+        ypoints = new int[BUFFER_CAPACITY];
     }
-    bounds.translate(offsetx, offsety);
-  }
 
-/****************************************************************************************************************************************/
-/**
-* Check if given point inside polygon
-* TODO: call native check in analogy to g.fillPolygon algorithm
-*/
-  public boolean contains(Point p) { return contains(p.x, p.y); }
+    public Polygon(int[] xpoints, int[] ypoints, int npoints) {
+        if (npoints > xpoints.length || npoints > ypoints.length) {
+            // awt.111=Parameter npoints is greater than array length
+            throw new IndexOutOfBoundsException("Parameter npoints is greater than array length");
+        }
+        if (npoints < 0) {
+            // awt.112=Negative number of points
+            throw new NegativeArraySizeException("Negative number of points");
+        }
+        this.npoints = npoints;
+        this.xpoints = new int[npoints];
+        this.ypoints = new int[npoints];
+        System.arraycopy(xpoints, 0, this.xpoints, 0, npoints);
+        System.arraycopy(ypoints, 0, this.ypoints, 0, npoints);
+    }
 
-  public boolean contains(int x, int y) {
-    if(!bounds.contains(x,y))
-      return false;
-    //else
-    int intersections=0;
-    int last=npoints-1;  //for ease of calculation
+    public void reset() {
+        npoints = 0;
+        bounds = null;
+        isPeak = null;
+    }
+
+    public void invalidate() {
+        bounds = null;
+        isPeak = null;
+    }
+
+    public void addPoint(int px, int py) {
+        if (npoints == xpoints.length) {
+            int[] tmp;
+
+            tmp = new int[xpoints.length + BUFFER_CAPACITY];
+            System.arraycopy(xpoints, 0, tmp, 0, xpoints.length);
+            xpoints = tmp;
+
+            tmp = new int[ypoints.length + BUFFER_CAPACITY];
+            System.arraycopy(ypoints, 0, tmp, 0, ypoints.length);
+            ypoints = tmp;
+        }
+
+        xpoints[npoints] = px;
+        ypoints[npoints] = py;
+        npoints++;
+
+        bounds = null;
+        isPeak = null;
+    }
+
+    public Rectangle getBounds() {
+        if (bounds != null) {
+            return bounds;
+        }
+        if (npoints == 0) {
+            return new Rectangle();
+        }
+
+        isPeak = new boolean[npoints];
+        int bx1 = xpoints[0];
+        int by1 = ypoints[0];
+        int bx2 = bx1;
+        int by2 = by1;
+
+        for (int i = 1; i < npoints; i++) {
+            int x = xpoints[i];
+            int y = ypoints[i];
+            if (x < bx1) {
+                bx1 = x;
+            } else if (x > bx2) {
+                bx2 = x;
+            }
+            if (y < by1) {
+                by1 = y;
+            } else if (y > by2) {
+                by2 = y;
+            }
+        }
+
+       int last = npoints - 1;
+       // first point
+       isPeak[0] = (ypoints[0]<ypoints[last] && ypoints[0]<ypoints[1]) || (ypoints[0]>ypoints[last] && ypoints[0]>ypoints[1]);
+
+       for (int i=1; i<last; i++) {
+         isPeak[i] = ((ypoints[i]<ypoints[i-1] && ypoints[i]<ypoints[i+1]) || (ypoints[i]>ypoints[i-1] && ypoints[i]>ypoints[i+1]));
+       }
+
+       isPeak[last] = ((ypoints[last]<ypoints[last-1] && ypoints[last]<ypoints[0])||(ypoints[last]>ypoints[last-1] && ypoints[last]>ypoints[0]));
+
+        return bounds = new Rectangle(bx1, by1, bx2 - bx1, by2 - by1);
+    }
+
+    /**
+     * @deprecated
+     */
+    public Rectangle getBoundingBox() {
+        return getBounds();
+    }
+
+    public Rectangle2D getBounds2D() {
+        return getBounds().getBounds2D();
+    }
+
+    public void translate(int mx, int my) {
+        for (int i = 0; i < npoints; i++) {
+            xpoints[i] += mx;
+            ypoints[i] += my;
+        }
+        if (bounds != null) {
+            bounds.translate(mx, my);
+        }
+    }
+
+    /**
+     * @deprecated
+     */
+    public boolean inside(int x, int y) {
+        return contains((double) x, (double) y);
+    }
+
+    public boolean contains(int x, int y) {
+        return contains((double) x, (double) y);
+    }
+
+    public boolean contains(double x, double y) {
+        // Harmony code
+        // return Crossing.isInsideEvenOdd(Crossing.crossShape(this, x, y));
+
+        // Based on Rudolph
+        if (bounds == null) {
+            getBounds();
+        }
+
+        if (!bounds.contains(x,y)) {
+            return false;
+        }
+
+        int intersections=0;
+        int last=npoints-1;  //for ease of calculation
     
-    // count intersections bigger then x0
-    // line from <this> to next point
-    for(int i=0; i<last;i++)
-    {
-      if ((y==ypoints[i] && !isPeak[i] && xpoints[i]>x)
-            || (ypoints[i]<y && ypoints[i+1]>y && x<(xpoints[i]+(xpoints[i+1]-xpoints[i])*(y-ypoints[i])/(ypoints[i+1]-ypoints[i])) )
-              || (ypoints[i]>y && ypoints[i+1]<y && x<(xpoints[i]+(xpoints[i+1]-xpoints[i])*(y-ypoints[i])/(ypoints[i+1]-ypoints[i])) ) )
-        intersections++;
+        // count intersections bigger then x0
+        // line from <this> to next point
+        for(int i=0; i<last;i++) {
+            if ((y==ypoints[i] && !isPeak[i] && xpoints[i]>x)
+                || (ypoints[i]<y && ypoints[i+1]>y && x<(xpoints[i]+(xpoints[i+1]-xpoints[i])*(y-ypoints[i])/(ypoints[i+1]-ypoints[i])) )
+                || (ypoints[i]>y && ypoints[i+1]<y && x<(xpoints[i]+(xpoints[i+1]-xpoints[i])*(y-ypoints[i])/(ypoints[i+1]-ypoints[i])) ) )
+            intersections++;
+        }
+        // last line from last to first point
+        if ((y==ypoints[last] && !isPeak[last] && xpoints[last]>x)
+              ||(ypoints[last]<y && ypoints[0]>y && x<(xpoints[last]+(xpoints[0]-xpoints[last])*(y-ypoints[last])/(ypoints[0]-ypoints[last])) )
+              ||(ypoints[last]>y && ypoints[0]<y && x<(xpoints[last]+(xpoints[0]-xpoints[last])*(y-ypoints[last])/(ypoints[0]-ypoints[last]))))
+            intersections++;
+   
+        return (intersections%2>0);
     }
-    // last line from last to first point
-    if ((y==ypoints[last] && !isPeak[last] && xpoints[last]>x)
-          ||(ypoints[last]<y && ypoints[0]>y && x<(xpoints[last]+(xpoints[0]-xpoints[last])*(y-ypoints[last])/(ypoints[0]-ypoints[last])) )
-            ||(ypoints[last]>y && ypoints[0]<y && x<(xpoints[last]+(xpoints[0]-xpoints[last])*(y-ypoints[last])/(ypoints[0]-ypoints[last]))))
-        intersections++;
-    
-    return (intersections%2>0);
-  }
 
-  public boolean inside(int x, int y) {
-    return contains(x, y);
-  }
-  
-  public String toString() {
-    return getClass().getName() +" number of points: " + npoints; 
-  }
+    public boolean contains(double x, double y, double width, double height) {
+        // TODO
+        // int cross = Crossing.intersectShape(this, x, y, width, height);
+        // return cross != Crossing.CROSSING && Crossing.isInsideEvenOdd(cross);
+        throw new RuntimeException("Not yet implemented");
+    }
+
+    public boolean intersects(double x, double y, double width, double height) {
+        // TODO
+        // int cross = Crossing.intersectShape(this, x, y, width, height);
+        // return cross == Crossing.CROSSING || Crossing.isInsideEvenOdd(cross);
+        throw new RuntimeException("Not yet implemented");
+    }
+
+    public boolean contains(Rectangle2D rect) {
+        return contains(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+    }
+
+    public boolean contains(Point point) {
+        return contains(point.getX(), point.getY());
+    }
+
+    public boolean contains(Point2D point) {
+        return contains(point.getX(), point.getY());
+    }
+
+    public boolean intersects(Rectangle2D rect) {
+        return intersects(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+    }
+
+    public PathIterator getPathIterator(AffineTransform t) {
+        return new Iterator(t, this);
+    }
+
+    public PathIterator getPathIterator(AffineTransform t, double flatness) {
+        return new Iterator(t, this);
+    }
 
 }
+
