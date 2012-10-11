@@ -383,6 +383,17 @@ void startInitialThreads(void* data) {
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
   setReferenceField(I_Thread_sysInit, getStringInstance(string_sysThread), F_Thread_name);
   setBooleanField(I_Thread_sysInit, F_Thread_started, TRUE);
+#ifdef RESMON
+#ifndef O4P
+#error TODO: This code needs to be modified for other host OSs
+#endif
+  {
+    w_int pid = getpid();
+    w_int tid = syscall(__NR_gettid);
+    setIntegerField(I_Thread_sysInit, F_Thread_pid, pid);
+    setIntegerField(I_Thread_sysInit, F_Thread_tid, tid);
+  }
+#endif
 
 /*
 ** First we gather the command line arguments (if any: in the embedded case
