@@ -21,15 +21,15 @@ public class DefaultGraphicsConfiguration extends GraphicsConfiguration {
         throw new RuntimeException("not yet implemented");
   }
 
+  public BufferedImage createCompatibleImage(int width, int height, int transparency) {
+        throw new RuntimeException("not yet implemented");
+  }
+
   public VolatileImage createCompatibleVolatileImage(int width, int height) {
         throw new RuntimeException("not yet implemented");
   }
 
-  public VolatileImage createCompatibleVolatileImage(int width, int height, ImageCapabilities caps) throws AWTException {
-        throw new RuntimeException("not yet implemented");
-  }
-
-  public BufferedImage createCompatibleImage(int width, int height, int transparency) {
+  public VolatileImage createCompatibleVolatileImage(int width, int height, int transparency) {
         throw new RuntimeException("not yet implemented");
   }
 

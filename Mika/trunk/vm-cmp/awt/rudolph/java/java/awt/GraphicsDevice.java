@@ -25,7 +25,7 @@ package java.awt;
 // import org.apache.harmony.awt.internal.nls.Messages;
 
 public abstract class GraphicsDevice {
-    // private DisplayMode displayMode;
+    private DisplayMode displayMode;
 
     private Window fullScreenWindow = null;
 
@@ -48,7 +48,7 @@ public abstract class GraphicsDevice {
     ***************************************************************************/
 
     protected GraphicsDevice() {
-        // displayMode = new DisplayMode(0, 0, DisplayMode.BIT_DEPTH_MULTI, DisplayMode.REFRESH_RATE_UNKNOWN);
+        displayMode = new DisplayMode(0, 0, DisplayMode.BIT_DEPTH_MULTI, DisplayMode.REFRESH_RATE_UNKNOWN);
     }
 
 
@@ -78,18 +78,18 @@ public abstract class GraphicsDevice {
         return 0;
     }
 
-    // public GraphicsConfiguration getBestConfiguration(GraphicsConfigTemplate gct) {
-    //     return gct.getBestConfiguration(getConfigurations());
-    // }
+    public GraphicsConfiguration getBestConfiguration(GraphicsConfigTemplate gct) {
+        return gct.getBestConfiguration(getConfigurations());
+    }
 
-    // public DisplayMode getDisplayMode() {
-    //     return displayMode;
-    // }
+    public DisplayMode getDisplayMode() {
+        return displayMode;
+    }
 
-    // public DisplayMode[] getDisplayModes() {
-    //     DisplayMode []dms = {displayMode};
-    //     return  dms;
-    // }
+    public DisplayMode[] getDisplayModes() {
+        DisplayMode []dms = {displayMode};
+        return  dms;
+    }
 
     public Window getFullScreenWindow() {
         return fullScreenWindow;
@@ -103,8 +103,8 @@ public abstract class GraphicsDevice {
         return false;
     }
 
-    // public void setDisplayMode(DisplayMode dm) {
-    //         throw new UnsupportedOperationException("Display mode change not supported"); //$NON-NLS-1$
+    public void setDisplayMode(DisplayMode dm) {
+        throw new UnsupportedOperationException("Display mode change not supported"); //$NON-NLS-1$
         /* Apache Harmony
         if (!isDisplayChangeSupported()) {
             // awt.122=Does not support display mode changes
@@ -121,7 +121,7 @@ public abstract class GraphicsDevice {
         // awt.123=Unsupported display mode: {0}
         throw new IllegalArgumentException(Messages.getString("awt.123", dm)); //$NON-NLS-1$
         */
-    // }
+    }
 
     public void setFullScreenWindow(Window w) {
         if (w == null) {
