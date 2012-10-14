@@ -26,16 +26,15 @@
 # $Id: Jamfile,v 1.2 2006/09/14 13:44:14 cvsroot Exp $
 #
 
-SubDir WONKA_TOP vm-cmp awt rudolph src native ;
+SubDir WONKA_TOP vm-cmp awt rudolph src native be kiffer vixen ;
 
 LOCATE_TARGET = $(OROOT)/awt/rudolph/bin ;
 
 SUBDIRHDRS += $(OROOT)/awt/rudolph/bin ;   
 SUBDIRHDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/include ;   
 SUBDIRHDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/include/font ;
+SUBDIRHDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/hostos/$(HOSTOS)/include ;
+SUBDIRHDRS += $(WONKA_TOP)/vm-cmp/awt/rudolph/hal/pixels/$(AWT_PIXELFORMAT) ;
 
-Library $(AWT_LIB) : Rudolph.c canvas.c registry.c varia.c ;
+Library $(AWT_LIB) : DefaultGraphicsConfiguration.c ;
 
-SubInclude WONKA_TOP vm-cmp awt rudolph src native java awt ;
-SubInclude WONKA_TOP vm-cmp awt rudolph src native be kiffer vixen ;
-SubInclude WONKA_TOP vm-cmp awt rudolph src native com acunia wonka rudolph ;

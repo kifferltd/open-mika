@@ -250,3 +250,8 @@ com/acunia/wonka/rudolph/BufferImageSource
   pixels               [I
   getImageData         (Lcom/acunia/wonka/rudolph/Image;)V   BufferImageSource_getImageData
 java/awt/Window
+#
+be/kiffer/vixen/DefaultGraphicsConfiguration
+  getWidth	()I	DefaultgraphicsConfiguration_getWidth
+  getHeight	()I	DefaultgraphicsConfiguration_getHeight
+  getType	()I	DefaultgraphicsConfiguration_getType

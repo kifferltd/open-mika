@@ -18,7 +18,7 @@ public class DefaultGraphicsConfiguration extends GraphicsConfiguration {
   }
 
   public BufferedImage createCompatibleImage(int width, int height) {
-        throw new RuntimeException("not yet implemented");
+    return new BufferedImage(width, height, getType());
   }
 
   public BufferedImage createCompatibleImage(int width, int height, int transparency) {
@@ -60,5 +60,12 @@ public class DefaultGraphicsConfiguration extends GraphicsConfiguration {
   public ImageCapabilities getImageCapabilities() {
         throw new RuntimeException("not yet implemented");
   }
+
+  private native int getWidth();
+
+  private native int getHeight();
+
+  private native int getType();
+
 }
 
