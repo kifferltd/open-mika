@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Modified by Chris Gray 2012.                                            *
 *                                                                         *
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
@@ -92,5 +93,21 @@ typedef unsigned int r_Tag;
 
 // Disabling this saves a bit of code size, but not much
 #define AWT_VIRTUAL_SCREEN_SUPPORT
+
+// Return code values for java.awt.image.BufferedImage.getType()
+#define AWT_IMAGE_TYPE_CUSTOM           0
+#define AWT_IMAGE_TYPE_INT_RGB          1
+#define AWT_IMAGE_TYPE_INT_ARGB         2
+#define AWT_IMAGE_TYPE_INT_ARGB_PRE     3
+#define AWT_IMAGE_TYPE_INT_BGR          4
+#define AWT_IMAGE_TYPE_3BYTE_BGR        5
+#define AWT_IMAGE_TYPE_4BYTE_ABGR       6
+#define AWT_IMAGE_TYPE_4BYTE_ABGR_PRE   7
+#define AWT_IMAGE_TYPE_USHORT_565_RGB   8
+#define AWT_IMAGE_TYPE_USHORT_555_RGB   9
+#define AWT_IMAGE_TYPE_BYTE_GRAY        10
+#define AWT_IMAGE_TYPE_USHORT_GRAY      11
+#define AWT_IMAGE_TYPE_BYTE_BINARY      12
+#define AWT_IMAGE_TYPE_BYTE_INDEXED     13
 
 #endif

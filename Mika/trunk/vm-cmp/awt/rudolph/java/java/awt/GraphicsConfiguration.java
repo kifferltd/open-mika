@@ -94,5 +94,6 @@ public abstract class GraphicsConfiguration {
     public ImageCapabilities getImageCapabilities() {
         return new ImageCapabilities(false);
     }
+
 }
 
