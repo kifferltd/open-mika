@@ -58,9 +58,9 @@ public abstract class GraphicsDevice {
     *
     ***************************************************************************/
 
-    // public abstract GraphicsConfiguration[] getConfigurations();
+    public abstract GraphicsConfiguration[] getConfigurations();
 
-    // public abstract GraphicsConfiguration getDefaultConfiguration();
+    public abstract GraphicsConfiguration getDefaultConfiguration();
 
     public abstract String getIDstring();
 

@@ -16,10 +16,19 @@
  */
 /**
  * @author Alexey A. Petrenko
+ * @author Chris Gray
  */
 package java.awt;
 
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.VolatileImage;
+
 public abstract class GraphicsConfiguration {
+
+    private static ImageCapabilities defaultImageCapabilities;
+
    /***************************************************************************
     *
     *  Constructors
@@ -29,5 +38,50 @@ public abstract class GraphicsConfiguration {
     protected GraphicsConfiguration() {
     }
 
+    public abstract GraphicsDevice getDevice();
+
+    public abstract BufferedImage createCompatibleImage(int arg0, int arg1);
+
+    public VolatileImage createCompatibleImage(int arg0, int arg1, int arg2) {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1) {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, int arg2) {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, ImageCapabilities arg2) throws java.awt.AWTException {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, ImageCapabilities arg2, int arg3) throws java.awt.AWTException {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public abstract ColorModel getColorModel(int i);
+
+    public abstract ColorModel getColorModel();
+
+    public abstract AffineTransform getDefaultTransform();
+
+    public abstract AffineTransform getNormalizingTransform();
+
+    public abstract Rectangle getBounds();
+
+    public BufferCapabilities getBufferCapabilities() {
+      throw new RuntimeException("not yet implemented");
+    }
+
+    public ImageCapabilities getImageCapabilities() {
+      if (defaultImageCapabilities == null) {
+//        defaultImageCapabilities = new ImageCapabilities(0);
+      }
+      
+      return defaultImageCapabilities;
+    }
 }
 
