@@ -1,5 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Minor additions Chris Gray 2012.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -30,6 +31,7 @@ package com.acunia.wonka.rudolph;
 
 import java.awt.image.*;
 import java.awt.*;
+import java.text.AttributedCharacterIterator;
 
 public class Graphics extends java.awt.Graphics {
 
@@ -128,8 +130,13 @@ public class Graphics extends java.awt.Graphics {
     }
   }
   
+  public void drawString(AttributedCharacterIterator iterator, int x, int y) {
+    throw new RuntimeException("not yet implemented");
+  }
+
   native public void drawRoundRect(int x, int y, int width, int height, int arcWidth, int arcHeight);
   native public void drawString(String string, int x, int y);
+
   native public void fillOval(int x, int y, int w, int h);
   native public void fillPolygon(int[] x, int[] y, int n);
   native public void fillRect(int x, int y, int w, int h);

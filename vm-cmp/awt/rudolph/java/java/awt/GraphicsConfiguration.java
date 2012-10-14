@@ -38,50 +38,61 @@ public abstract class GraphicsConfiguration {
     protected GraphicsConfiguration() {
     }
 
-    public abstract GraphicsDevice getDevice();
+   /***************************************************************************
+    *
+    *  Abstract methods
+    *
+    ***************************************************************************/
 
-    public abstract BufferedImage createCompatibleImage(int arg0, int arg1);
+    public abstract BufferedImage createCompatibleImage(int width, int height);
 
-    public VolatileImage createCompatibleImage(int arg0, int arg1, int arg2) {
-      throw new RuntimeException("not yet implemented");
-    }
+    public abstract BufferedImage createCompatibleImage(int width, int height, int transparency);
 
-    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1) {
-      throw new RuntimeException("not yet implemented");
-    }
+    public abstract VolatileImage createCompatibleVolatileImage(int width, int height);
 
-    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, int arg2) {
-      throw new RuntimeException("not yet implemented");
-    }
+    public abstract VolatileImage createCompatibleVolatileImage(int width, int height, int transparency);
 
-    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, ImageCapabilities arg2) throws java.awt.AWTException {
-      throw new RuntimeException("not yet implemented");
-    }
-
-    public VolatileImage createCompatibleVolatileImage(int arg0, int arg1, ImageCapabilities arg2, int arg3) throws java.awt.AWTException {
-      throw new RuntimeException("not yet implemented");
-    }
-
-    public abstract ColorModel getColorModel(int i);
+    public abstract Rectangle getBounds();
 
     public abstract ColorModel getColorModel();
+
+    public abstract ColorModel getColorModel(int transparency);
 
     public abstract AffineTransform getDefaultTransform();
 
     public abstract AffineTransform getNormalizingTransform();
 
-    public abstract Rectangle getBounds();
+    public abstract GraphicsDevice getDevice();
+
+    /***************************************************************************
+    *
+    *  Public methods
+    *
+    ***************************************************************************/
+
+    public VolatileImage createCompatibleVolatileImage(int width, int height, ImageCapabilities caps) throws java.awt.AWTException {
+        VolatileImage res = createCompatibleVolatileImage(width, height);
+        if (!res.getCapabilities().equals(caps)) {
+            throw new AWTException("cannot create VolatileImage with specified capabilities");
+        }
+        return res;
+    }
+
+    public VolatileImage createCompatibleVolatileImage(int width, int height, ImageCapabilities caps, int transparency) throws java.awt.AWTException {
+        VolatileImage res = createCompatibleVolatileImage(width, height, transparency);
+        if (!res.getCapabilities().equals(caps)) {
+            throw new AWTException("cannot create VolatileImage with specified capabilities");
+        }
+        return res;
+    }
 
     public BufferCapabilities getBufferCapabilities() {
-      throw new RuntimeException("not yet implemented");
+        return new BufferCapabilities(new ImageCapabilities(false), new ImageCapabilities(false),
+                BufferCapabilities.FlipContents.UNDEFINED);
     }
 
     public ImageCapabilities getImageCapabilities() {
-      if (defaultImageCapabilities == null) {
-//        defaultImageCapabilities = new ImageCapabilities(0);
-      }
-      
-      return defaultImageCapabilities;
+        return new ImageCapabilities(false);
     }
 }
 
