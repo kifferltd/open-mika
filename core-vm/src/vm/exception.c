@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2010, 2011 by Chris Gray,         *
+* Parts copyright (c) 2004, 2005, 2006, 2010, 2011, 2012 by Chris Gray,   *
 * /k/ Embedded  Java Solutions. All rights reserved.                      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -143,10 +143,12 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
       }
       thread->exception = oome;
       removeLocalReference(thread, oome);
-      if (thread->Thread && size >= 0) {
-        enterSafeRegion(thread);
-        addDetailMessageToOOME(thread, oome, size);
-        enterUnsafeRegion(thread);
+      if (thread->Thread) {
+        if (size >= 0) {
+          enterSafeRegion(thread);
+          addDetailMessageToOOME(thread, oome, size);
+          enterUnsafeRegion(thread);
+        }
       }
       else {
         bootstrap_exception = oome;
@@ -162,13 +164,44 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
     wabort(ABORT_WONKA, "Out of memory!");
   }
 }
+
+void _throwOutOfMemoryError_unsafe(w_thread thread, w_int size, const char *file, const char *function, const int line) {
+  w_instance oome;
+
+    if (!thread) {
+      wabort(ABORT_WONKA, "Out of memory!");
+    }
+
+    threadMustBeUnsafe(thread);
+    woempa(9,"FREE MEMORY %i TOTAL MEMORY %i\n",x_mem_avail(),  x_mem_total());
+    if (instance2clazz(exceptionThrown(thread)) == clazzOutOfMemoryError) {
+      woempa(9, "Second or subsequent OutOfMemoryError thrown in %t at line %d in %s (%s)\n", thread, line, function, file);
+    }
+    else if(!exceptionThrown(thread)) {
+      woempa(9, "First OutOfMemoryError thrown in %t at line %d in %s (%s)\n", thread, line, function, file);
+      setFlag(thread->flags, WT_THREAD_THROWING_OOME);
+      oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
+      if (!oome) {
+        wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
+      }
+      thread->exception = oome;
+      removeLocalReference(thread, oome);
+      if (!thread->Thread) {
+        bootstrap_exception = oome;
+      }
+      unsetFlag(thread->flags, WT_THREAD_THROWING_OOME);
+    }
+    else {
+    woempa(9, "OutOfMemoryError thrown when %e already pending - ignoring OutOfMemoryError at line %d in %s (%s)\n", exceptionThrown(thread), line, function, file);
+    }
+}
 #else
 void _throwOutOfMemoryError(w_thread thread, w_int size) {
   w_instance oome;
 
   threadMustBeSafe(thread);
   if (thread) {
-    w_boolean was_unsafe = enterUnsafeRegion(thread);
+    enterUnsafeRegion(thread);
 
     if (instance2clazz(exceptionThrown(thread)) != clazzOutOfMemoryError) {
       setFlag(thread->flags, WT_THREAD_THROWING_OOME);
@@ -178,18 +211,42 @@ void _throwOutOfMemoryError(w_thread thread, w_int size) {
       }
       thread->exception = oome;
       removeLocalReference(thread, oome);
-      if (thread->Thread && size >= 0) {
-        enterSafeRegion(thread);
-        addDetailMessageToOOME(thread, oome, size);
-        enterUnsafeRegion(thread);
+      if (thread->Thread) {
+        if (size >= 0) {
+          enterSafeRegion(thread);
+          addDetailMessageToOOME(thread, oome, size);
+          enterUnsafeRegion(thread);
+        }
       }
       else {
         bootstrap_exception = oome;
       }
       unsetFlag(thread->flags, WT_THREAD_THROWING_OOME);
-      if (!was_unsafe) {
-        enterSafeRegion(thread);
+      enterSafeRegion(thread);
+    }
+    // else ignore, exception already pending
+  }
+  else {
+    wabort(ABORT_WONKA, "Out of memory!");
+  }
+}
+
+void _throwOutOfMemoryError_unsafe(w_thread thread, w_int size) {
+  w_instance oome;
+
+  if (thread) {
+    if (instance2clazz(exceptionThrown(thread)) != clazzOutOfMemoryError) {
+      setFlag(thread->flags, WT_THREAD_THROWING_OOME);
+      oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
+      if (!oome) {
+        wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
       }
+      thread->exception = oome;
+      removeLocalReference(thread, oome);
+      if (!thread->Thread) {
+        bootstrap_exception = oome;
+      }
+      unsetFlag(thread->flags, WT_THREAD_THROWING_OOME);
     }
     // else ignore, exception already pending
   }

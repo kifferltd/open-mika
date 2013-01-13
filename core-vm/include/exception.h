@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2006, 2007, 2010 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Parts copyright (c) 2006, 2007, 2010, 2012 by Chris Gray, /k/ Embedded  *
+* Java Solutions.  All rights reserved.                                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -69,9 +69,13 @@ void throwException(w_thread thread, w_clazz clazz, char * format, ...);
 #ifdef DEBUG
 #define throwOutOfMemoryError(t,n) _throwOutOfMemoryError(t, n, __FILE__, __FUNCTION__, __LINE__)
 void _throwOutOfMemoryError(w_thread, w_int size, const char *file, const char *function, const int line);
+#define throwOutOfMemoryError_unsafe(t,n) _throwOutOfMemoryError_unsafe(t, n, __FILE__, __FUNCTION__, __LINE__)
+void _throwOutOfMemoryError_unsafe(w_thread, w_int size, const char *file, const char *function, const int line);
 #else
 #define throwOutOfMemoryError(t,n) _throwOutOfMemoryError(t, n)
 void _throwOutOfMemoryError(w_thread, w_int);
+#define throwOutOfMemoryError_unsafe(t,n) _throwOutOfMemoryError_unsafe(t, n)
+void _throwOutOfMemoryError_unsafe(w_thread, w_int);
 #endif
 
 void throwLocalException(w_thread sender, w_clazz exception, const char *file, const char *function, int line, const char *fmt, ...);
