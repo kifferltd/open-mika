@@ -2,7 +2,7 @@
 #define _WMATH_H
 
 /****************************************************************************
-* Copyright (c) 2005 by Chris Gray, /k/ Embedded Java Solutions.            *
+* Copyright (c) 2005, 2013 by Chris Gray, /k/ Embedded Java Solutions.      *
 ****************************************************************************/
 
 /*
@@ -14,6 +14,33 @@
 
 #ifndef NULL
 #define NULL ((void*)0)
+#endif
+
+/*
+ *  Stephane, Acreo Swedish ICT
+ *  2012-11-27
+ *  On openWRT/MIPS, it seems that isnanf doesn't exist. Instead, math.h defines
+ *  isnan as a macro that gets replaced by __isnan, __isnanf or isnanl depending
+ *  on the size of x.
+ *  Anyway, no isnanf means that we get declare implicitely isnanf here, then
+ *  get a linkage error.
+ * 
+ *  Same problem with nan and nanf...
+ * 
+ */
+#ifndef isnanf
+#warning "Stephane: isnanf does not exist!"
+#define isnanf(x) __isnanf(x)
+#endif
+
+#ifndef nan
+#warning "Stephane: nan does not exist!"
+#define nan(x) FP_NAN
+#endif
+
+#ifndef nanf
+#warning "Stephane: nanf does not exist!"
+#define nanf(x) FP_NAN
 #endif
 
 /*
@@ -250,6 +277,22 @@ static inline wfp_float64 wfp_float64_cos( wfp_float64 d) {
 
 static inline wfp_float64 wfp_float64_tan( wfp_float64 d) {
   return isnan(d) ? nan(NULL) : tan(d);
+}
+
+static inline wfp_float64 wfp_float64_exp(wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : exp(d);
+}
+
+static inline wfp_float64 wfp_float64_log(wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : log(d);
+}
+
+static inline wfp_float64 wfp_float64_asin(wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : asin(d);
+}
+
+static inline wfp_float64 wfp_float64_atan(wfp_float64 d) {
+  return isnan(d) ? nan(NULL) : atan(d);
 }
 #endif
 
