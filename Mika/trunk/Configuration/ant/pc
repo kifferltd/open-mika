@@ -1,6 +1,6 @@
 ###########################################################################
-# Copyright (c) 2003, 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   #
-# Solutions.  All rights reserved.                                        #
+# Copyright (c) 2003, 2004, 2005, 2006, 2013 by Chris Gray, /k/ Embedded  #
+# Java Solutions.  All rights reserved.                                   #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -37,9 +37,10 @@
 JAM.PLATFORM=pc
 
 #
-# No AWT for this one.
+# No AWT for this one, and hence no beans neither.
 #
 AWT=none
+JAVA_BEANS=false
 
 #
 # Define your security level: either java2 or none.
@@ -75,7 +76,6 @@ MATH=native
 # packages. All of those classes are compiled in the wre.jar
 # expect for micro_io, that's a jar on it's own.
 #
-JAVA_BEANS=true
 JAVAX_COMM=true
 JAVAX_CRYPTO=true
 MICRO_IO=true

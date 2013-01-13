@@ -149,22 +149,23 @@
     <propertychecker property="JAR" values="none|java"/>
     <propertychecker property="MATH" values="native|java"/>
     <propertychecker property="AWT" values="none|rudolph"/>
-    <condition property="AWT_AND_BEANS">
+    <condition property="AWT_AND_BEANS" value="true" else="false">
       <and>
         <not><equals arg1="${AWT}" arg2="none"/></not>
         <equals arg1="${JAVA_BEANS}" arg2="true"/>
       </and>
     </condition>
-    <condition property="AWT_OR_BEANS_BUT_NOT_BOTH">
-      <and>
-        <or>
-          <not><equals arg1="${AWT}" arg2="none"/></not>
-          <equals arg1="${JAVA_BEANS}" arg2="true"/>
-        </or>
-        <not><equals arg1="${AWT_AND_BEANS}" arg2="true"/></not>
-      </and>
-    </condition>
-    <fail message="If AWT=rudolph then JAVA_BEANS must be true and vv." if="AWT_OR_BEANS_BUT_NOT_BOTH"/>
+    <fail message="If AWT=rudolph then JAVA_BEANS must be true and vv.">
+      <condition>
+        <and>
+          <or>
+            <not><equals arg1="${AWT}" arg2="none"/></not>
+            <equals arg1="${JAVA_BEANS}" arg2="true"/>
+          </or>
+          <equals arg1="${AWT_AND_BEANS}" arg2="false"/>
+        </and>
+      </condition>
+    </fail>
     <condition property="JAVA2_SECURITY_BUT_NO_JARSIGNING">
       <and>
         <equals arg1="${SECURITY}" arg2="java2"/>
