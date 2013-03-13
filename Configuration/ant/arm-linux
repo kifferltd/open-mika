@@ -44,7 +44,7 @@ MATH=java
 # packages. All of those classes are compiled in the wre.jar
 # expect for micro_io, that's a jar on it's own.
 #
-JAVA_BEANS=true
+JAVA_BEANS=false
 JAVAX_COMM=true
 JAVAX_CRYPTO=true
 MICRO_IO=true
