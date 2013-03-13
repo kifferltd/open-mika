@@ -8,7 +8,7 @@ SHARED_OBJECTS = true ;
 
 HOSTOS = linux ;
 CPU = armel ;
-TOOLCHAIN_PREFIX = arm-none-linux-gnueabi- ;
+TOOLCHAIN_PREFIX = arm-linux-gnueabi- ;
 SCHEDULER = o4p ;
 
 CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
