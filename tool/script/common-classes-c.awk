@@ -7,16 +7,14 @@
 # two or more fields -> field or method
 
 /^[a-zA-Z]/ {
-  ++count
-
   fqn=$1
   slash=index(fqn,"/")
   lastslash=0
   while(slash) { lastslash+=slash; rest=substr(fqn,lastslash+1); slash=index(rest,"/") }
   thisclazz=substr(fqn,lastslash+1)
   gsub("\\$", "_dollar_", thisclazz)
-  clazz[count]=thisclazz
-  path[count]=substr(fqn,1,lastslash)
+  clazz[fqn]=thisclazz
+  path[fqn]=substr(fqn,1,lastslash)
 
   l=length(thisclazz)
   if(l>4&&(l-index(thisclazz,"Error")==4)) likelyerrors=thisclazz" "likelyerrors
@@ -51,7 +49,7 @@
 END {
 
   print " "
-  for (c = 1; c in clazz; ++c) {
+  for (c in clazz) {
     printf "w_clazz clazz%s;\n",clazz[c]
   }
   print  " "
@@ -79,7 +77,7 @@ END {
   print " "
 
   printf "/*\n** Wotsit functions for %s-classes\n*/\n\n", module
-  for(c = 1; c in clazz; ++c) {
+  for(c in clazz) {
     thisclazz = clazz[c];
     mcount = 0;
     for (m in methods) {
@@ -149,7 +147,7 @@ END {
   print "  w_fixup fixup2;"
   print "} classmap[] = {"
   ccount = 0
-  for(c = 1; c in clazz; ++c) {
+  for(c in clazz) {
     basename = clazz[c]
     thisclazz = basename
     gsub("_dollar_", "$", basename)
