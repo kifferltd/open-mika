@@ -41,10 +41,12 @@
     <taskdef name="propertysetter" classname="be.kiffer.mika.ant.PropertySetter"
              classpath="${tools.dir}/ant-mika.jar"/>
     <property name="vm.cmp.dir" value="${top.level.dir}/vm-cmp/"/>
+    <property name="vm.ext.dir" value="${top.level.dir}/vm-ext/"/>
     <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
     <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
     <property name="math.dir" value="${vm.cmp.dir}math/java/${java.version}"/>
     <property name="awt.dir" value="${vm.cmp.dir}awt/rudolph/${java.version}"/>
+    <property name="beans.dir" value="${vm.ext.dir}beans/${java.version}"/>
     <property name="vm.java.dir" value="${top.level.dir}/core-vm/${java.version}"/>
     <property name="security.dir" value="${vm.cmp.dir}security/none/${java.version}/"/>
     <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
@@ -57,7 +59,7 @@
                     value="${security.provider.dir}"/>
      <javac destdir="${common.class.dir}" bootclasspath="${empty.dir}"
             source="${java.level}" target="${java.level}" debug="true" nowarn="true" failonerror="true"
-            srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}:${micro.io.dir}"/>
+            srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}:${beans.dir}:${micro.io.dir}"/>
   </target>
 
   <target name="clean">
