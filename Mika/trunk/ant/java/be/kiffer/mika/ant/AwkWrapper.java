@@ -1,5 +1,5 @@
 /**
- * Copyright  (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.
+ * Copyright  (c) 2006, 2012, 2013 by Chris Gray, /k/ Embedded Java Solutions.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,8 @@ public class AwkWrapper extends Task {
 
   private String script1;
   private String script2;
-  private String input;
+  private String input1;
+  private String input2;
   private String output;
   private String condition;
   private String value;
@@ -84,17 +85,31 @@ public class AwkWrapper extends Task {
   }
 
   /**
-   * @return Returns the input.
+   * @return Returns the input1.
    */
-  public final String getInput() {
-    return input;
+  public final String getInput1() {
+    return input1;
   }
 
   /**
-   * @param input The input to set.
+   * @param input1 The input to set.
    */
-  public final void setInput(String input) {
-    this.input = input;
+  public final void setInput1(String input) {
+    this.input1 = input;
+  }
+
+  /**
+   * @return Returns the input2.
+   */
+  public final String getInput2() {
+    return input2;
+  }
+
+  /**
+   * @param input The input2 to set.
+   */
+  public final void setInput2(String input) {
+    this.input2 = input;
   }
 
   /**
@@ -162,10 +177,11 @@ public class AwkWrapper extends Task {
     File out = new File(output);
     if(out.isFile()) {
       long time = out.lastModified();
-      long in = new File(input).lastModified();
+      long in1 = input1 == null ? 0 : new File(input1).lastModified();
+      long in2 = input2 == null ? 0 : new File(input2).lastModified();
       long scr1 = script1 == null ? 0 : new File(script1).lastModified();
       long scr2 = script2 == null ? 0 : new File(script2).lastModified();
-      if(time > in && time > scr1 && time > scr2) {
+      if(time > in1 && time > in2 && time > scr1 && time > scr2) {
         return;
       }
     }
@@ -178,12 +194,15 @@ public class AwkWrapper extends Task {
   }
 
   private void generateFile() throws IOException {
-    if (script2 == null) {
-      this.log("generating '"+output+"' from '"+input+"' using "+script1);
+    String inputs = input1;
+    if (input2 != null) {
+      inputs = inputs + " and " + input2;
     }
-    else {
-      this.log("generating '"+output+"' from '"+input+"' using "+script1 + " and " + script2);
+    String scripts = script1;
+    if (script2 != null) {
+      scripts = scripts + " and " + script2;
     }
+    this.log("generating '"+output+"' from '"+inputs+"' using "+scripts);
     String commandString = "awk -f " + script1;
     if (script2 != null) {
       commandString += " -f " + script2;
@@ -191,7 +210,10 @@ public class AwkWrapper extends Task {
     if (args != null) {
       commandString += " " + args;
     }
-    commandString += " " + input;
+    commandString += " " + input1;
+    if (input2 != null) {
+      commandString += " " + input2;
+    }    
     this.log("command: " + commandString);
     Process proc =  Runtime.getRuntime().exec(commandString);
     InputStream in = proc.getInputStream();
@@ -209,11 +231,11 @@ public class AwkWrapper extends Task {
     if(output == null) {
       throw new BuildException("'output' file not set");
     }
-    if(input == null) {
-      throw new BuildException("'input' file not set");
+    if(input1 == null) {
+      throw new BuildException("'input1' file not set");
     }
-    if(!new File(input).isFile()) {
-      throw new BuildException("input '"+input+"' doesn't point to a valid file");
+    if(!new File(input1).isFile()) {
+      throw new BuildException("input '"+input1+"' doesn't point to a valid file");
     }
     if(script1 == null) {
       throw new BuildException("'script1' file not set");
