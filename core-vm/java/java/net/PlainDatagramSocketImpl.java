@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2007, 2013 by Chris Gray, /k/ Embedded Java         *
+* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -69,11 +69,17 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   /**
    * Receive the datagram packet.
    */
-  protected void receive(DatagramPacket p) throws IOException{
-     synchronized(p){
-       int ip = _receive(p);
-       p.setAddress(InetAddress.createInetAddress(ip));
-     }
+  protected void receive(DatagramPacket p) throws IOException {
+    synchronized(p){
+      try {
+        SocketUsers.put(this, Thread.currentThread());
+        int ip = _receive(p);
+        p.setAddress(InetAddress.createInetAddress(ip));
+      }
+      finally {
+        SocketUsers.remove(this);
+      }
+    }
   }
 
   private native int _receive(DatagramPacket p) throws IOException;
@@ -116,7 +122,15 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
   /**
    * Close the socket.
    */
-  protected synchronized native void close();
+  protected void close() {
+    Thread t = SocketUsers.get(this);
+    _close();
+    if (t != null) {
+      signal(t);
+    }
+  }
+
+  protected synchronized native void _close();
 
   /**
    * Set the TTL (time-to-live) option.
@@ -243,6 +257,7 @@ class PlainDatagramSocketImpl extends DatagramSocketImpl {
 
   protected native void finalize();
 
+  private native void signal(Thread t);
   // sock is the filedesc of the socket
   private static native int getBindAddress(int sock) throws SocketException ;
   private static native int optLinger(int sock, int value) throws SocketException ; // value == -1 if get is wanted ...
