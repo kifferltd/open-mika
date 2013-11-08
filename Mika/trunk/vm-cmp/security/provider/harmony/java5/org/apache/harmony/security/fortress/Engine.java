@@ -25,7 +25,7 @@ package org.apache.harmony.security.fortress;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 
-import org.apache.harmony.security.Util;
+import org.apache.harmony.security.internal.nls.Messages;
 
 
 /**
@@ -37,6 +37,10 @@ public class Engine {
 
     // Service name
     private String serviceName;
+
+    // for getInstance(String algorithm, Object param) optimization:
+    // previous result
+    private Provider.Service returnedService;
 
     // previous parameter
     private String lastAlgorithm;
@@ -81,20 +85,29 @@ public class Engine {
         Provider.Service serv;
 
         if (algorithm == null) {
-            throw new NoSuchAlgorithmException("null algorithm name");
+            throw new NoSuchAlgorithmException(Messages.getString("security.149")); //$NON-NLS-1$
         }
         Services.refresh();
-        if (Services.isEmpty()) {
-            throw new NoSuchAlgorithmException(serviceName + " " + algorithm + " : no implementation found");
+        if (returnedService != null
+                && algorithm.equalsIgnoreCase(lastAlgorithm)
+                && refreshNumber == Services.refreshNumber) {
+            serv = returnedService;
+        } else {
+            if (Services.isEmpty()) {
+                throw new NoSuchAlgorithmException(Messages.getString("security.14A", //$NON-NLS-1$
+                        serviceName, algorithm));
+            }
+            serv = Services.getService(new StringBuffer(128)
+                    .append(serviceName).append(".").append( //$NON-NLS-1$
+                            algorithm.toUpperCase()).toString());
+            if (serv == null) {
+                throw new NoSuchAlgorithmException(Messages.getString("security.14A", //$NON-NLS-1$
+                        serviceName, algorithm));
+            }
+            returnedService = serv;
+            lastAlgorithm = algorithm;
+            refreshNumber = Services.refreshNumber;
         }
-        serv = Services.getService(new StringBuffer(128)
-                .append(serviceName).append(".").append( //$NON-NLS-1$
-                        Util.toUpperCase(algorithm)).toString());
-        if (serv == null) {
-            throw new NoSuchAlgorithmException(serviceName + " " + algorithm + " : no implementation found");
-        }
-        lastAlgorithm = algorithm;
-        refreshNumber = Services.refreshNumber;
         spi = serv.newInstance(param);
         this.provider = serv.getProvider();
     }
@@ -114,15 +127,16 @@ public class Engine {
 
         Provider.Service serv = null;
         if (algorithm == null) {
-            throw new NoSuchAlgorithmException(serviceName + " : algorithm is null");
+            throw new NoSuchAlgorithmException(
+                    Messages.getString("security.14B", serviceName)); //$NON-NLS-1$
         }
         serv = provider.getService(serviceName, algorithm);
         if (serv == null) {
-                throw new NoSuchAlgorithmException(serviceName + " " + algorithm + " : no implementation found");
+            throw new NoSuchAlgorithmException(Messages.getString("security.14A", //$NON-NLS-1$
+                    serviceName, algorithm));
         }
         spi = serv.newInstance(param);
         this.provider = provider;
     }
 
 }
-
