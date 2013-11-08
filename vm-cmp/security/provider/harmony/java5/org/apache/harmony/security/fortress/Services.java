@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.harmony.security.Util;
-
 
 /**
  * This class contains information about all registered providers and preferred
@@ -46,7 +44,11 @@ public class Services {
 
     // The HashMap that contains information about preferred implementations for
     // all serviceName.algName in the registered providers
-    private static final Map services = new HashMap(512);
+    // BEGIN android-changed
+    // set the initial size to 600 so we don't grow to 1024 by default because
+    // initialization adds a few entries more than the growth threshold.
+    private static final Map<String, Provider.Service> services = new HashMap<String, Provider.Service>(600);
+    // END android-changed
 
     // Need refresh flag
     private static boolean needRefresh; // = false;
@@ -54,16 +56,16 @@ public class Services {
     /**
      * Refresh number
      */
-    static int refreshNumber = 1;
+    public static int refreshNumber = 1;
 
     // Registered providers
-    private static final List providers = new ArrayList(20);
+    private static final List<Provider> providers = new ArrayList<Provider>(20);
 
     // Hash for quick provider access by name
-    private static final Map providersNames = new HashMap(20);
+    private static final Map<String, Provider> providersNames = new HashMap<String, Provider>(20);
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 loadProviders();
                 return null;
@@ -78,7 +80,7 @@ public class Services {
         ClassLoader cl = ClassLoader.getSystemClassLoader();
         Provider p;
 
-        while ((providerClassName = Security.getProperty("security.provider." 
+        while ((providerClassName = Security.getProperty("security.provider." //$NON-NLS-1$
                 + i++)) != null) {
             try {
                 p = (Provider) Class
@@ -87,10 +89,8 @@ public class Services {
                 providers.add(p);
                 providersNames.put(p.getName(), p);
                 initServiceInfo(p);
-            } catch (ClassNotFoundException e) { // ignore Exceptions
-            } catch (IllegalAccessException e) {
-			} catch (InstantiationException e) {
-			}
+            } catch (Exception e) { // ignore
+            }
         }
         Engine.door.renumProviders();
     }
@@ -101,7 +101,7 @@ public class Services {
      * @return
      */
     public static Provider[] getProviders() {
-        return (Provider[])providers.toArray(new Provider[providers.size()]);
+        return providers.toArray(new Provider[providers.size()]);
     }
 
     /**
@@ -109,8 +109,8 @@ public class Services {
      * 
      * @return
      */
-    public static List getProvidersList() {
-        return new ArrayList(providers);
+    public static List<Provider> getProvidersList() {
+        return new ArrayList<Provider>(providers);
     }
 
     /**
@@ -123,7 +123,7 @@ public class Services {
         if (name == null) {
             return null;
         }
-        return (Provider)providersNames.get(name);
+        return providersNames.get(name);
     }
 
     /**
@@ -150,7 +150,7 @@ public class Services {
      * @param providerNumber
      */
     public static void removeProvider(int providerNumber) {
-        Provider p = (Provider)providers.remove(providerNumber - 1);
+        Provider p = providers.remove(providerNumber - 1);
         providersNames.remove(p.getName());
         setNeedRefresh();
     }
@@ -168,19 +168,19 @@ public class Services {
         String alias;
         StringBuffer sb = new StringBuffer(128);
 
-        for (Iterator it1 = p.getServices().iterator(); it1.hasNext();) {
-            serv = (Provider.Service)it1.next();
+        for (Iterator<Provider.Service> it1 = p.getServices().iterator(); it1.hasNext();) {
+            serv = it1.next();
             type = serv.getType();
             sb.delete(0, sb.length());
             key = sb.append(type).append(".").append( //$NON-NLS-1$
-                    Util.toUpperCase(serv.getAlgorithm())).toString();
+                    serv.getAlgorithm().toUpperCase()).toString();
             if (!services.containsKey(key)) {
                 services.put(key, serv);
             }
-            for (Iterator it2 = Engine.door.getAliases(serv); it2.hasNext();) {
-                alias = (String)it2.next();
+            for (Iterator<String> it2 = Engine.door.getAliases(serv); it2.hasNext();) {
+                alias = it2.next();
                 sb.delete(0, sb.length());
-                key = sb.append(type).append(".").append(Util.toUpperCase(alias)) //$NON-NLS-1$
+                key = sb.append(type).append(".").append(alias.toUpperCase()) //$NON-NLS-1$
                         .toString();
                 if (!services.containsKey(key)) {
                     services.put(key, serv);
@@ -196,8 +196,8 @@ public class Services {
      */
     public static void updateServiceInfo() {
         services.clear();
-        for (Iterator it = providers.iterator(); it.hasNext();) {
-            initServiceInfo((Provider)it.next());
+        for (Iterator<Provider> it = providers.iterator(); it.hasNext();) {
+            initServiceInfo(it.next());
         }
         needRefresh = false;
     }
@@ -219,7 +219,7 @@ public class Services {
      * @return
      */
     public static Provider.Service getService(String key) {
-        return (Provider.Service)services.get(key);
+        return services.get(key);
     }
 
     /**
@@ -228,9 +228,9 @@ public class Services {
     // FIXME remove debug function
     public static void printServices() {
         refresh();
-        Set s = services.keySet();
-        for (Iterator i = s.iterator(); i.hasNext();) {
-            String key = (String)i.next();
+        Set<String> s = services.keySet();
+        for (Iterator<String> i = s.iterator(); i.hasNext();) {
+            String key = i.next();
             System.out.println(key + "=" + services.get(key)); //$NON-NLS-1$
         }
     }
@@ -254,4 +254,3 @@ public class Services {
         }
     }
 }
-
