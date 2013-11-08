@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2007, 2008, 2009 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Parts copyright (c) 2004, 2007, 2008, 2009, 2013 by Chris Gray,         *
+* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -38,6 +38,12 @@
 #include "fields.h"
 #include "exception.h"
 #include "network.h"
+
+// Our signal handler doesn't actually do anything, it's just there so that
+// SIGUSR1 has the desired effect of interrupting accept() or read().
+static sigusr_handler(int sig) {
+  woempa(1, "Received signal %d\n", sig);
+}
 
 /**
 ** PlainDatagramSocketImpl use calls to functions defined by network.h. All these calls work with a descriptor
@@ -215,6 +221,7 @@ int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_instanc
     }  	  	  	
     else {
       struct sockaddr_in sa;
+      struct sigaction action, savedaction;
       w_instance Buffer = getReferenceField(packet, F_DatagramPacket_bytes);
       w_sbyte *buffer = instance2Array_byte(Buffer);
       w_int result = instance2Array_length(Buffer);
@@ -228,9 +235,14 @@ int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_instanc
         return 0;
       }
      	
+      action.sa_handler = sigusr_handler;
+      sigemptyset (&action.sa_mask);
+      action.sa_flags = 0;
+      sigaction(SIGUSR1, &action, &savedaction);
       memset(&sa,0,sizeof(sa));
       buffer += offset;
       result = w_recvfrom(sock, buffer, (w_word)length, MSG_NOSIGNAL, (struct sockaddr*)&sa, &len, getIntegerField(ThisImpl, F_PlainDatagramSocketImpl_timeout),ThisImpl);
+      sigaction(SIGUSR1, &savedaction, NULL);
       woempa (6, "socketfd = %d, receive result = %d\n", sock, result);
      	
       if (result == -1) {
@@ -519,3 +531,18 @@ void PlainDatagramSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_i
       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
 }
+
+void PlainDatagramSocketImpl_signal(JNIEnv *env, w_instance thisPlainDatagramSocketImpl, w_instance aThread) {
+  w_thread wt = w_threadFromThreadInstance(aThread);
+  x_thread xt = wt->kthread;
+  if (xt) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      w_printf("Socket: signalling %t\n", wt);
+    }
+    x_status status = x_thread_signal(xt, x_signal_1);
+    if (status != xs_success) {
+      w_printf("WARNING: x_thread_signal returned %d\n", status);
+    }
+  }
+}
+
