@@ -1,6 +1,6 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2010 by Chris Gray, /k/ Embedded Java         *
+* Parts copyright (c) 2004, 2010, 2013 by Chris Gray, /k/ Embedded Java   *
 * Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -138,34 +138,12 @@ void initModules() {
 void *loadModule(char *name, char *path) {
   char *filename = NULL;
   void *handle = NULL;
-  int  offset;
   char *orig_ld = NULL;
   char *ld_start = NULL;
   char *ld_end;
   char *ld_segment;
   char *chptr;
   char *libPath = NULL;
-
-  x_mutex_lock(handles_mutex, x_eternal);
-  if (!handles) {
-    woempa(7, "No handles array allocated yet, allocating array of 10\n");
-    handles = x_mem_alloc(10 * sizeof(void *));
-    current = handles;
-    offset = 0;
-  }
-  else {
-    offset = current - handles;
-    if((offset % 10) == 0) {
-      woempa(7, "Size of handles array is now %d, expanding to %d\n", offset, offset + 10);
-      handles = x_mem_realloc(handles, (offset + 10) * sizeof(void *));
-      if (!handles) {
-        wabort(ABORT_WONKA, "Unable to allocate memory for native library handles!");
-      }
-      current = handles + offset;
-    }
-  }
-  *current++ = (void*)-1; // placeholder, overwritten later
-  x_mutex_unlock(handles_mutex);
 
   if(name) {
   // 'name' is non-null, must search path
@@ -226,9 +204,26 @@ void *loadModule(char *name, char *path) {
   }
   
   if(handle) {
+  int  offset;
     x_mutex_lock(handles_mutex, x_eternal);
-    // Careful! 'handles' could have been realloc'd by another thread
-    handles[offset] = handle;
+  if (!handles) {
+    woempa(7, "No handles array allocated yet, allocating array of 10\n");
+    handles = x_mem_alloc(10 * sizeof(void *));
+    current = handles;
+    offset = 0;
+  }
+  else {
+    offset = current - handles;
+    if((offset % 10) == 0) {
+      woempa(7, "Size of handles array is now %d, expanding to %d\n", offset, offset + 10);
+      handles = x_mem_realloc(handles, (offset + 10) * sizeof(void *));
+      if (!handles) {
+        wabort(ABORT_WONKA, "Unable to allocate memory for native library handles!");
+      }
+      current = handles + offset;
+    }
+  }
+  *current++ = handle;
     x_mutex_unlock(handles_mutex);
     woempa(7, "Added handle %p to list, now have %d entries\n", handle, current - handles);
     callOnLoad(handle);
@@ -256,16 +251,16 @@ void unloadModule(void *handle) {
 
 void *lookupModuleSymbol(char *name) {
   void *symbol = NULL;
-  void **check = handles;
+  void **check;
 
   woempa(9, "%s\n", name);
 
+  x_mutex_lock(handles_mutex, x_eternal);
+  check = handles;
   while(symbol == NULL && check != current) {
     symbol = dlsym(*check++, name);
-    if (!symbol) {
-      woempa(9, "symbol: %s, dlerror() : %s\n", name, dlerror());
-    }
   }
+  x_mutex_unlock(handles_mutex);
   
   return symbol;
 }
