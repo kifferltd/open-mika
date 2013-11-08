@@ -1,8 +1,8 @@
 /**************************************************************************
 * Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
 * reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010, 2011            *
-* by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.        *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2009, 2010, 2011, 2012,     *
+* 2013 by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -423,10 +423,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
     chunk = NULL;
   }
 
-  if (chunk) {
-    post_alloc(thread, chunk);
-  }
-  else {
+  if (!chunk) {
     x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes\n", rsize);
 
@@ -437,6 +434,7 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
     return NULL;
   }
 
+  post_alloc(thread, chunk);
   woempa(1,"%s.%d: Allocated %d bytes at %p\n", file, line, rsize, chunk);
   prepareChunk(chunk, rsize, file, line);  
   x_mem_unlock();
