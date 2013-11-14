@@ -10,7 +10,7 @@
 # Define your Jam configuration. A file with the same name
 # should be found in Configuration/platform
 #
-JAM.PLATFORM=mips-uclinux
+JAM.PLATFORM=mips-linux
 
 #
 # No AWT for this one.
