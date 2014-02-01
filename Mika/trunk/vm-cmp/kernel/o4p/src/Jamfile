@@ -42,6 +42,9 @@ Library $(OSWALD_LIB) : o4p.c ;
 Library $(OSWALD_LIB) : debug.c dump.c monitor.c mutex.c ;
 Library $(OSWALD_LIB) : queue.c thread.c time.c ;
 switch $(HOSTOS) {
+  case android : {
+    Library $(OSWALD_LIB) : mem.c ;
+  }
   case netbsd : {
     Library $(OSWALD_LIB) : mem.c ;
   }
