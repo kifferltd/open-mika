@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,     *
-* 2012 by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.   *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012,     *
+* 2014 by Chris Gray, KIFFER Ltd. All rights reserved.                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #include <string.h>
@@ -114,7 +111,7 @@ x_monitor xthreads_monitor;
 #endif // ENABLE_THREAD_RECYCLING
 
 static const char *unborn_thread_report(x_thread);
-static const char *dying_thread_report(x_thread);
+//static const char *dying_thread_report(x_thread);
 
 #define SYSTEM_STACK_SIZE 65536
 
@@ -127,7 +124,7 @@ static const char *dying_thread_report(x_thread);
 #else
 static char ur_thread_stack[SYSTEM_STACK_SIZE];
 #endif
-static x_Thread ur_thread_x_Thread;
+x_Thread ur_thread_x_Thread;
 
 /*
 ** Allocate and clear out the necessary fields for a new thread structure.
@@ -197,74 +194,6 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   return newthread;
 }
 
-void terminateThread(w_thread thread) {
-
-  w_string name;
-
-#ifndef ENABLE_THREAD_RECYCLING
-  x_status status = xs_success;
-  void * result;
-
-  if (thread->kthread) {
-    status = x_thread_join(thread->kthread, &result, 100);
-  }
-
-  if (status == xs_success || status == xs_no_instance) {
-    woempa(1, "Join status %s\n", x_status2char(status));
-  }
-//#ifdef O4P
-  else if (status == xs_bad_state) {
-    // Something else trying to join this thread, but it's always our job
-    // to clean up. Just wait a bit and carry on.
-    while (status == xs_bad_state) {
-      w_printf("Join status %s - waiting 1 sec and try again\n", x_status2char(status));
-      x_thread_sleep(x_millis2ticks(1000));
-      status = x_thread_join(thread->kthread, &result, 100);
-    }
-  }
-//#endif
-  else {
-    wabort(ABORT_WONKA, "Join status %s\n", x_status2char(status));
-  }
-
-  woempa(1,"Cleaning up %t\n", thread);
-  if (thread->kthread) {
-    status = x_thread_delete(thread->kthread);
-    if (status != xs_success) {
-      wabort(ABORT_WONKA, "Thread delete status %s\n", x_status2char(status));
-    }
- 
-    thread->kthread->xref = NULL;
-    thread->kthread->report = dying_thread_report;
-  }
-  woempa(1,"Cleaned up %t\n", thread);
-
-  if (thread->kthread == &ur_thread_x_Thread) {
-    woempa(9,"This is the ur-thread, so I won't releaseMem memory that wasn't allocMem'd.\n");
-  }
-  else {
-    if (thread->kthread) {
-      releaseMem(thread->kthread);
-      thread->kthread = NULL;
-    }  
-    if (thread->kstack) {
-      releaseMem(thread->kstack);
-      thread->kstack = NULL;
-    }  
-  }
-#endif
-
-  name = thread->name;
-  if (name) {
-    deregisterString(name);
-    thread->name = NULL;
-  }
-  // TODO: delete mutex
-
-  releaseMem(thread);
-
-}
-
 void addThreadCount(w_thread thread) {
   if (!thread->isDaemon) {
     nondaemon_thread_count += 1;
@@ -320,7 +249,7 @@ static const char *unborn_thread_report(x_thread x) {
   return "Thread not yet started";
 }
 
-static const char *dying_thread_report(x_thread x) {
+const char *dying_thread_report(x_thread x) {
   return "Thread returning to Saturn";
 }
 
