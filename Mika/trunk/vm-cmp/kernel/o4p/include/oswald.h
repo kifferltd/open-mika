@@ -125,6 +125,15 @@ const char * x_state2char(x_thread thread);
 #define TF_RECEIVING          0x00400000 /* Thread blocked receiving on a queue */
 #define TF_SENDING            0x00800000 /* Thread blocked sending on a queue */
 
+/*
+ * Flags used when recycling kernel threads within the Java VM */
+#define TF_LIFETIME_LSB       0x01000000 /* Least-significant bit of lifetime counter */
+#define TF_LIFETIME_MASK      0xff000000 /* Mask for lifetime counter */
+#define TF_LIFETIME_SHIFT     24         /* Shift for lifetime counter */
+#define setLifetime(x, n)     ((x->flags) |= ((n) << TF_LIFETIME_SHIFT))
+#define getLifetime(x)        (((x->flags) & TF_LIFETIME_MASK) >> TF_LIFETIME_SHIFT)
+#define useLifetime(x)        ((x->flags) -= TF_LIFETIME_LSB)
+
 #define isSet(x, flag)            ((x) & (flag))
 #define isNotSet(x, flag)         (!isSet((x), (flag)))
 #define setFlag(x, flag)          ((x) |= (flag))
