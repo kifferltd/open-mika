@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008, 2010, 2011, 2012 by Chris Gray,         *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Copyright (c) 2004, 2008, 2010, 2011, 2012, 2014 by Chris Gray,         *
+* KIFFER Ltd. All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #include <string.h>
@@ -56,6 +53,8 @@ static jclass   class_Thread;
 static jmethodID run_method;
 
 extern const char *dumpThread(x_thread);
+
+static volatile w_int numberOfThreadInstances;
 
 w_instance Thread_currentThread(JNIEnv *env, w_instance ThreadClass) {
 
@@ -95,7 +94,16 @@ static void threadEntry(void * athread) {
   }
 
 #ifdef ENABLE_THREAD_RECYCLING
-  while (TRUE) {
+  // TODO - we give each thread a lifetime of sqrt(N + 20), where n is the number of 
+  // instances of Thread currently existing.  Anyone have a better idea?
+  int lifetime = (numberOfThreadInstances + 20) / 2;
+  lifetime = (lifetime + (numberOfThreadInstances + 20) / lifetime) / 2;
+  lifetime = (lifetime + (numberOfThreadInstances + 20) / lifetime) / 2;
+  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+    w_printf("there are %d Thread instances outstanding, allocating lifetime %d to kthread %p\n", numberOfThreadInstances, lifetime, kthread);
+  }
+  setLifetime(kthread, lifetime);
+  while (getLifetime(kthread)) {
 #endif
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
       w_printf("starting %t using kthread %p\n", thread, kthread);
@@ -162,26 +170,33 @@ static void threadEntry(void * athread) {
     enterSafeRegion(thread);
 
 #ifdef ENABLE_THREAD_RECYCLING
-    {
-      x_monitor_eternal(xthreads_monitor);
-      woempa(7, "%t ->kthread was %p, setting to NULL\n", thread, kthread);
-      kthread->xref = NULL;
+    x_monitor_eternal(xthreads_monitor);
+    woempa(7, "%t ->kthread was %p, setting to NULL\n", thread, kthread);
+    kthread->xref = NULL;
+    if (thread->Thread) {
+      thread->Thread = NULL;
+    }
+
+    useLifetime(kthread);
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("kthread %p has %d lives remaining\n", kthread, getLifetime(kthread));
+    }
+    if (getLifetime(kthread)) {
+      // detach the kthread from the thread. Note that if the kthread is EOL then we leave
+      // the link in place so that Thread_destructor can perform clean-up.
       thread->kthread = NULL;
-      if (thread->Thread) {
-        clearWotsitField(thread->Thread, F_Thread_wotsit);
-        thread->Thread = NULL;
-      }
       thread = NULL;
+
       putFifo(kthread, xthread_fifo);
       if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-        w_printf("added kthread %p to native thread pool, now contains %d xthreads\n", kthread, occupancyOfFifo(xthread_fifo));
+        w_printf("added kthread %p to native thread pool, now contains %d kthreads\n", kthread, occupancyOfFifo(xthread_fifo));
       }
       while (!(thread = kthread->xref)) {
         x_monitor_wait(xthreads_monitor, x_eternal);
       }
-      x_monitor_exit(xthreads_monitor);
     }
-   }
+    x_monitor_exit(xthreads_monitor);
+  }
 #endif
 }
 
@@ -235,13 +250,53 @@ void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGr
 
   }
 
- newthread->state = wt_unstarted;
+  ++numberOfThreadInstances;
+  newthread->state = wt_unstarted;
 
+}
+
+void cleanUpNativeThread(x_thread kthread) {
+
+  x_status status = xs_success;
+  void * result;
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+    w_printf("cleaning up kthread %p\n", kthread);
+  }
+  status = x_thread_join(kthread, &result, 100);
+
+  if (status == xs_success || status == xs_no_instance) {
+    woempa(1, "Join status %s\n", x_status2char(status));
+  }
+// [CG 20140201 I don't think we ever see xs_bad_state]
+//  else if (status == xs_bad_state) {
+//    // Something else trying to join this thread, but it's always our job
+//    // to clean up. Just wait a bit and carry on.
+//    while (status == xs_bad_state) {
+//      w_printf("Join status %s - waiting 1 sec and try again\n", x_status2char(status));
+//      x_thread_sleep(x_millis2ticks(1000));
+//      status = x_thread_join(kthread, &result, 100);
+//    }
+//  }
+  else {
+    wabort(ABORT_WONKA, "Join status %s\n", x_status2char(status));
+  }
+
+  status = x_thread_delete(kthread);
+  if (status != xs_success) {
+    wabort(ABORT_WONKA, "Thread delete status %s\n", x_status2char(status));
+  }
+ 
+  kthread->xref = NULL;
+  kthread->report = dying_thread_report;
 }
 
 void Thread_destructor(w_instance thisThread) {
   w_thread thread;
 
+  if (numberOfThreadInstances > 0) {
+    --numberOfThreadInstances;
+  }
 #ifdef ENABLE_THREAD_RECYCLING
   x_monitor_eternal(xthreads_monitor);
 #endif
@@ -251,7 +306,36 @@ void Thread_destructor(w_instance thisThread) {
     thread->Thread = NULL;
     woempa(7, "Destroying %t\n", thread);
     if (isNotSet(thread->flags, WT_THREAD_IS_NATIVE)) {
-      terminateThread(thread);
+  w_string name;
+  x_thread kthread = thread->kthread;
+
+  if (kthread) {
+    cleanUpNativeThread(kthread);
+  }
+  woempa(1,"Cleaned up %t\n", thread);
+
+  if (kthread == &ur_thread_x_Thread) {
+    woempa(9,"This is the ur-thread, so I won't releaseMem memory that wasn't allocMem'd.\n");
+  }
+  else {
+    if (kthread) {
+      releaseMem(kthread);
+      thread->kthread = NULL;
+    }  
+    if (thread->kstack) {
+      releaseMem(thread->kstack);
+      thread->kstack = NULL;
+    }  
+  }
+
+  name = thread->name;
+  if (name) {
+    deregisterString(name);
+    thread->name = NULL;
+  }
+  // TODO: delete mutex ???
+
+  releaseMem(thread);
       clearWotsitField(thisThread, F_Thread_wotsit);
     }
   }
@@ -296,7 +380,7 @@ w_boolean getXThreadFromPool(w_instance thisThread) {
   kthread->report = running_thread_report;
   addThreadCount(wthread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    w_printf("Binding %t to kthread %p, native thread pool now contains %d xthreads\n", wthread, kthread, occupancyOfFifo(xthread_fifo));
+    w_printf("Binding %t to kthread %p, native thread pool now contains %d kthreads\n", wthread, kthread, occupancyOfFifo(xthread_fifo));
   }
   x_monitor_notify_all(xthreads_monitor);
   x_monitor_exit(xthreads_monitor);
