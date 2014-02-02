@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011      *
-* by Chris Gray, /k/ Embedded Java Solutions. All rights reserved.        *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2014      *
+* by Chris Gray, KIFFER Ltd. All rights reserved.                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #ifndef _THREADS_H
@@ -63,11 +60,7 @@ extern w_method deregisterThread_method;
 
 void systemGroupManagerEntry(void);
 
-#if defined(UNC20)
-// Try to reduce space used by stacks on this platform
-#define STACK_FACTOR                        2
-static const w_int bytes_per_call        = 660;
-#elif defined(ARM)
+#if defined(ARM)
 #define STACK_FACTOR                       3
 static const w_int bytes_per_call        = 660;
 #elif defined(ARMEL)
@@ -546,7 +539,9 @@ void removeThreadCount(w_thread thread);
 
 extern w_int nondaemon_thread_count;
 extern w_boolean system_init_thread_started;
+extern x_Thread ur_thread_x_Thread;
 
+extern const char *dying_thread_report(x_thread);
 extern const char *running_thread_report(x_thread);
 extern char * print_thread_short(char*, int*, void*, int w, int p, unsigned int f);
 extern char * print_thread_long(char*, int*, void*, int w, int p, unsigned int f);
@@ -577,11 +572,6 @@ inline static void popLocalReference(w_frame frame) {
 */
 
 void setUpRootFrame(w_thread new);
-
-/*
- * Terminate a Wonka thread.
- */
-void terminateThread(w_thread thread);
 
 /*
  * Definitions used by Object.wait and Thread.sleep; three weeks corresponds to
