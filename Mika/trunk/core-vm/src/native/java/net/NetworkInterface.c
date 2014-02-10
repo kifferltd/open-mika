@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Parts copyright (c) 2004, 2007, 2013, 2014 by Chris Gray, KIFFER Ltd.   *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2007 by Chris Gray, /k/ Embedded Java         *
-* Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+* may be used to endorse or promote products derived from this software   *
+* without specific prior written permission.                              *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN     *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 #include <string.h>
@@ -75,27 +72,49 @@ w_int NetworkInterface_getAddressDevice(JNIEnv* env , w_instance ThisImpl, w_ins
 }
 
 w_void NetworkInterface_getInterfaces(JNIEnv* env , w_instance ThisClass, w_instance list) {
-  struct ifconf lc;
+  jmethodID mid = (*env)->GetStaticMethodID(env, ThisClass, "addToList","(Ljava/util/Vector;ILjava/lang/String;)V");
+  struct ifreq *ifr;
+  struct ifconf ifc;
   int fd;
+  int n;
 
-  memset(&lc, 0, sizeof(struct ifconf));
-  fd = socket(PF_INET, SOCK_STREAM, 0);
-  if(ioctl(fd, SIOCGIFCONF, &lc) !=-1 && lc.ifc_len > 0) {
-    lc.ifc_req = allocClearedMem(lc.ifc_len * sizeof(struct ifreq));
-    if(lc.ifc_req != NULL) {
-      if(ioctl(fd, SIOCGIFCONF, &lc) !=-1) {
-        int i;
-        jmethodID mid = (*env)->GetStaticMethodID(env, ThisClass, "addToList","(Ljava/util/Vector;ILjava/lang/String;)V");
-        if(mid == NULL) {
-          woempa(9,"Didn't find addToList method");
-        }
-        for(i=0 ; (i < lc.ifc_len) &&  strlen(lc.ifc_req[i].ifr_name); i++) {
-          struct sockaddr_in* addr = (struct sockaddr_in*) &lc.ifc_req[i].ifr_addr;
-          (*env)->CallStaticVoidMethod(env, ThisClass, mid, list,  ntohl(addr->sin_addr.s_addr),
-                                      (*env)->NewStringUTF(env, lc.ifc_req[i].ifr_name));
-        }
-      }
-    }
+  if (mid == NULL) {
+    wabort(ABORT_WONKA, "NetworkInterface.getNetworkInterfaces: couldn't find addToList method");
+  }
+  memset(&ifc, 0, sizeof(struct ifconf));
+  ifc.ifc_ifcu.ifcu_req = NULL;
+  ifc.ifc_len = 0;
+
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) {
+    wabort(ABORT_WONKA, "NetworkInterface.getNetworkInterfaces: unable to open socket");
+  }
+
+  if (ioctl(fd, SIOCGIFCONF, &ifc) < 0 || ifc.ifc_len <= 0) {
+    wabort(ABORT_WONKA, "NetworkInterface.getNetworkInterfaces: 1st SIOCGIFCONF failed");
+  }
+
+  // allocate double just in case someone created more interfaces already
+  ifr = allocMem(ifc.ifc_len * 2);
+  if (ifr == NULL) {
+    woempa(9, "Unable to allocMem for SIOCGIFCONF\n");
+    return;
+  }
+
+  ifc.ifc_ifcu.ifcu_req = ifr;
+  if (ioctl(fd, SIOCGIFCONF, &ifc) < 0) {
+    wabort(ABORT_WONKA, "NetworkInterface.getNetworkInterfaces: 2nd SIOCGIFCONF failed");
   }
   close(fd);
+
+  struct ifreq *cursor = ifr;
+  n = ifc.ifc_len / sizeof(struct ifreq);
+  while (n--) {
+    struct sockaddr_in *addr = (struct sockaddr_in *)&cursor->ifr_addr;
+    (*env)->CallStaticVoidMethod(env, ThisClass, mid, list,  ntohl(addr->sin_addr.s_addr),
+                                      (*env)->NewStringUTF(env, cursor->ifr_name));
+    cursor++;
+   }
+
+  releaseMem(ifr);
 }
