@@ -57,7 +57,7 @@ extern "C" {
 #endif
 
 /* Specify which architecture libffi is configured for. */
-#define X86
+#define ARM
 
 /* ---- System configuration information --------------------------------- */
 
