@@ -3,13 +3,11 @@ LICENSE.txt file for Mika
 
 Parts of the Mika source code are derived from the Wonka project, and are
 copyright Punch Telematix. Other parts have been developed by Chris Gray
-trading as /k/ Embedded Java Solutions. Both the Punch Telematix portions
-(since 10 July 2007) and the /k/ Embedded Java Solutions portions (since 
-8 September 2006) are licensed under the Mika BSD License, see below.
+trading as /k/ Embedded Java Solutions or by Kiffer Ltd. Both the Punch Telematix portions
+(since 10 July 2007) and the /k/ Embedded Java Solutions and Kiffer Ltd portions are licensed under the Mika BSD License, see below.
 This license applies to all files marked as being copyright Punch Telematix,
-/k/ Embedded Java Solutions or ACUNIA NV, even if the copyright header does
-not explicitly state this (we are in the process of updating the copyright
-headers). 
+/k/ Embedded Java Solutions, Kiffer Ltd or ACUNIA NV, even if the copyright header does
+not explicitly state this. 
 
 Parts of the class libraries are taken from the Classpath project, and
 are covered by the Classpath license (GPL + exception). This applies to
