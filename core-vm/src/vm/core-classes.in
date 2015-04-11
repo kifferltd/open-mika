@@ -101,6 +101,7 @@ wonka/vm/Heartbeat
 	collectTimeOffset	()V	Heartbeat_static_collectTimeOffset
 	getTimeOffset		()J	Heartbeat_static_getTimeOffset
 wonka/vm/Init
+	getNextAssertionFlag	()Ljava/lang/String;	Init_static_getNextAssertionFlag
 wonka/vm/JDWP
 	refsToClassLoaders	Ljava/util/Vector;
 	isEnabled		()Z		JDWP_static_isEnabled

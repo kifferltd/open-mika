@@ -36,7 +36,7 @@ if $(JDWP) = true {
   SUBDIRHDRS += $(WONKA_TOP)/vm-ext/jpda/jdwp/include ;
 }
 
-Library $(WONKA_LIB) : Finalizer.c GarbageCollector.c Heartbeat.c JDWP.c ;
+Library $(WONKA_LIB) : Finalizer.c GarbageCollector.c Heartbeat.c Init.c JDWP.c ;
 Library $(WONKA_LIB) : SystemClassLoader.c NativeLibrary.c NativeProcess.c ;
 Library $(WONKA_LIB) : ArrayUtil.c Wonka.c ;
 

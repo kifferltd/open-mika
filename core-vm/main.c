@@ -81,6 +81,8 @@ const char *general_help_text =
   "           (to execute a jar file)\n"
   " options:\n"
   "   -cp -classpath <classpath>   set search path for classes and resources\n"
+  "   -ea -enableassertions        enable assertions in application classes\n"
+  "   -esa -enablesystemassertions enable assertions in system classes (ignored)\n"
   "   -D<name>=<value>             set a system property\n"
 #ifdef USE_BYTECODE_VERIFIER
   "   -noverify                    do not verify any classes\n"

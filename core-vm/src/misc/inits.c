@@ -38,6 +38,7 @@
 #include "descriptor.h"
 #include "device.h"
 #include "exception.h"
+#include "fifo.h"
 #include "methods.h"
 #include "driver_virtual.h"
 #include "file_driver.h"
@@ -66,6 +67,7 @@ char *fsroot = NULL;
 
 extern x_Mutex woempaMutex;
 extern char *command_line_path;
+extern w_fifo assertions_fifo;
 
 #ifdef NATIVE_FP
 wfp_float32 F_NAN;
@@ -241,6 +243,30 @@ void args_read(void) {
       woempa(7, "Found a -Wpedantic argument\n");
       pedantic = WONKA_TRUE;
     }
+    else if(strcmp(command_line_arguments[0], "-ea") == 0
+         || strcmp(command_line_arguments[0], "-enableassertions") == 0
+         || strncmp(command_line_arguments[0], "-ea:", 4) == 0
+         || strncmp(command_line_arguments[0], "-enableassertions:", 18) == 0) {
+      woempa(7, "Found a -ea argument\n");
+      putFifo(command_line_arguments[0], assertions_fifo);
+    }
+    else if(strcmp(command_line_arguments[0], "-da") == 0
+         || strcmp(command_line_arguments[0], "-disableassertions") == 0
+         || strncmp(command_line_arguments[0], "-da:", 4) == 0
+         || strncmp(command_line_arguments[0], "-disableassertions", 18) == 0) {
+      woempa(7, "Found a -da argument\n");
+      putFifo(command_line_arguments[0], assertions_fifo);
+    }
+    else if(strcmp(command_line_arguments[0], "-esa") == 0
+         || strcmp(command_line_arguments[0], "-enablesystemassertions") == 0) {
+      woempa(7, "Found a -esa argument\n");
+      // silently ignore it, we have no system assertions
+    }
+    else if(strcmp(command_line_arguments[0], "-dsa") == 0
+         || strcmp(command_line_arguments[0], "-disablesystemassertions") == 0) {
+      woempa(7, "Found a -dsa argument\n");
+      // silently ignore it, we have no system assertions
+    }
     else if(strncmp(command_line_arguments[0], "-", 1) == 0) {
       woempa(7, " Unrecognized option: %s\n", command_line_arguments[0]);
 
@@ -367,6 +393,7 @@ void startWonka(void* data) {
   ** Here we start routines that require a valid heap (for malloc) to
   ** be set up...
   */
+  assertions_fifo = allocFifo(30);
 
   args_read();
 

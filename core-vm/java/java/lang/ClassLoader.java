@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Parts copyright (c) 2009, 2010, 2015 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2009, 2010 by Chris Gray, /k/ Embedded Java         *
-* Solutions.  All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 package java.lang;
@@ -42,6 +39,7 @@ import java.security.ProtectionDomain;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -69,31 +67,71 @@ public abstract class ClassLoader {
   static ClassLoader systemClassLoader;
 
   /**
+   ** Support for Assertions.
+   */
+  class AssertionStatus {
+    /** The default assertion status.
+     */
+    private boolean dflt;
+
+    /** The assertion status which has been specified for various packages. 
+     ** Maps String(package name) -> Boolean (assertion status).
+     */
+    private Map pkg = new HashMap();
+
+    /** The assertion status which has been specified for various classes. 
+     ** Maps String(fq class name) -> Boolean (assertion status).
+     */
+    private Map clazz = new HashMap();
+
+    void setDefault(boolean enabled) {
+      dflt = enabled;
+    }
+
+    Boolean getDefaultStatus() {
+      return Boolean.valueOf(dflt);
+    }
+
+    Boolean getPackageStatus(String packageName) {
+      String prefix = packageName;
+      Object status = pkg.get(packageName);
+      while (status == null) {
+        int lastDot = prefix.lastIndexOf('.');
+        if (lastDot < 0) {
+          break;
+        }
+        prefix = prefix.substring(0, lastDot);
+        status = pkg.get(prefix);
+      }
+      return (Boolean) status;
+    }
+
+    void setForPackage(String packageName, boolean enabled) {
+      pkg.put(packageName, new Boolean(enabled));
+    }
+
+    Boolean getClassStatus(String className) {
+      return (Boolean) clazz.get(className);
+    }
+
+    void setForClass(String className, boolean enabled) {
+      clazz.put(className, new Boolean(enabled));
+    }
+
+    void clear() {
+      dflt = false;
+      pkg = new HashMap();
+      clazz = new HashMap();
+    }
+  }
+
+  /**
    ** The default protection domain.  Has a CodeSource of (null,null)
    ** and default Permissions.
    */
   private static ProtectionDomain defaultProtectionDomain;
 
-  /** The default assertion status for this class loader - can be set by 
-   ** command line or by the set*AssertionStatus methods of this class.
-   ** Package-protected so that it can be read by Class.desiredAssertionStatus().
-   ** N.B. The assertion status mechanism is not yet implemented!
-   */
-  boolean defaultAssertionStatus;
-
-  /** The assertion status which has been specified for various packages. 
-   ** Maps String(package name) -> Boolean (assertion status).
-   ** Package-protected so that it can be read by Class.desiredAssertionStatus().
-   ** N.B. The assertion status mechanism is not yet implemented!
-   */
-  HashMap packageAssertionStatus;
-
-  /** The assertion status which has been specified for various classes. 
-   ** Maps String(package name) -> Boolean (assertion status).
-   ** Package-protected so that it can be read by Class.desiredAssertionStatus().
-   ** N.B. The assertion status mechanism is not yet implemented!
-   */
-  HashMap classAssertionStatus;
+  AssertionStatus assertionStatus = new AssertionStatus();
 
   /** The packages which have been defined by this ClassLoader.
    ** Only includes those for which a definePackage() was done.
@@ -816,30 +854,69 @@ ClassFormatError
    ** and the default.
    */
   public void clearAssertionStatus() {
-    defaultAssertionStatus = false;
-    packageAssertionStatus = null;
-    classAssertionStatus = null;
+    assertionStatus.clear();
   }
 
   /**
-   ** Set the default assertion status.
+   * Sets the default assertion status for this class loader. This setting
+   * determines whether classes loaded by this class loader and initialized
+   * in the future will have assertions enabled or disabled by default. This
+   * setting may be overridden on a per-package or per-class basis by invoking
+   * setPackageAssertionStatus(String, boolean) or
+   * setClassAssertionStatus(String, boolean).
    */
   public void setDefaultAssertionStatus(boolean enabled) {
-    defaultAssertionStatus = enabled;
+    assertionStatus.setDefault(enabled);
   }
 
   /**
-   ** Set the assertion status for a package, by name.
+   * Sets the package-default assertion status for the named
+   * package in this class loader.  The package-default assertion status
+   * determines the assertion status for classes loaded by this class loader
+   * and initialized in the future which belong to the named package or any
+   * of its &ldquo;subpackages&rdquo;.
+   * <p>A subpackage of a package named p is any package whose name begins
+   * with "p.". For example, javax.swing.text is a subpackage of javax.swing,
+   * and both java.util and java.lang.reflect are subpackages of java.
+   * <p>In the event that multiple package defaults apply to a given class,
+   * the package default pertaining to the most specific package takes
+   * precedence over the others. For example, if javax.lang and
+   * javax.lang.reflect both have package defaults associated with them, the
+   * latter package default applies to classes in javax.lang.reflect. 
+   * <p>Package defaults take precedence over the class loader's default
+   * assertion status, and may be overridden on a per-class basis by invoking
+   * the setClassAssertionStatus method.
+   *
+   * @param packageName the name of the package whose default assertion
+   *        status  is to be set.
+   * @param enabled true if classes loaded by this class loader
+   *        and belonging to the named package and its subpackages will
+   *        henceforth have assertions enabled by default, false if they will
+   *        have assertions disabled by default.
    */
   public void setPackageAssertionStatus(String packageName, boolean enabled) {
-    packageAssertionStatus.put(packageName, new Boolean(enabled));
+    assertionStatus.setForPackage(packageName, enabled);
   }
 
   /**
-   ** Set the assertion status for a specific class, by name.
+   * Sets the desired assertion status for the named top-level class in this
+   * class loader and any nested classes contained therein. This setting takes
+   * precedence over the class loader's default assertion status, and over any
+   * applicable per-package default. This method has no effect if the named
+   * class has already been initialized. (Once a class is initialized, its
+   * assertion status cannot change.)
+   * <p>
+   * If the named class is not a top-level class, this invocation will have
+   * no effect on the actual assertion status of any class.
+   *
+   * @param className the fully qualified class name of the top-level class
+   * whose default assertion status  is to be set.
+   * @param enabled true if the named class will have assertions enabled 
+   * when (and if) it is initialized, false if it will
+   *        have assertions disabled by default.
    */
   public void setClassAssertionStatus(String className, boolean enabled) {
-    classAssertionStatus.put(className, new Boolean(enabled));
+    assertionStatus.setForClass(className, enabled);
   }
 
   /**

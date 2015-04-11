@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2008, 2009 by /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2008, 2009, 2015 by KIFFER Ltd.  All rights reserved.     *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 package wonka.vm;
@@ -39,6 +35,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Properties;
@@ -211,6 +208,58 @@ final class Init {
   }
 
   /**
+   * Process the command-line flags related to runtime assertions.
+   * We already checked in init.c that the flag is one of -ea, -da,
+   * -enable[system]assertions, -disable[system]assertions, optionally
+   * followed by a colon and some more stuff (not yet checked).
+   */
+  private static void processAssertions(ClassLoader l) {
+    String flag = getNextAssertionFlag();
+    while (flag != null) {
+      boolean enabled = flag.startsWith("-e");
+      int colon = flag.indexOf(':');
+      boolean global = colon < 0;
+      boolean pkg = !global && flag.endsWith("...");
+      boolean system;
+      switch (colon >= 0 ? colon : flag.length()) {
+      case 3:
+        // -ea/-da
+        system = false;
+        break;
+      case 4:
+        // -esa/-dsa
+        system = true;
+        break;
+      default:
+        int n = flag.indexOf("system");
+        system = n >= 0 && (global || n < colon);  
+      }
+      if (system) {
+        // ignore for now, we don't have any assertions is system code
+      }
+      else {
+        if (global) {
+          l.setDefaultAssertionStatus(enabled);
+        }
+        else if (pkg) {
+          String name = flag.substring(colon + 1, flag.length() - 3);
+          l.setPackageAssertionStatus(name, enabled);
+        }
+        else {
+          String name = flag.substring(colon + 1);
+          l.setClassAssertionStatus(name, enabled);
+        }
+      }
+      flag = getNextAssertionFlag();
+    }
+  }
+
+  /**
+   * Get the next command-line flag from the list created by init.c
+   */
+  private static native String getNextAssertionFlag();
+
+  /**
    ** This function is invoked directly when the VM is created.  First we 
    ** parse the command line to extract the name of the starting class and
    ** any changes to system properties; the remaining arguments will be passed
@@ -264,6 +313,7 @@ final class Init {
     }
 
     application_class_loader = (URLClassLoader)ClassLoader.getSystemClassLoader();
+    processAssertions(application_class_loader);
     
     Thread.currentThread().setContextClassLoader(application_class_loader);
     
