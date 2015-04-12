@@ -1,5 +1,5 @@
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-<!-- Copyright (c) 2007, 2009, 2013 by Chris Gray, /k/ Embedded Java Solutions. -->
+<!-- Copyright (c) 2007, 2009, 2013, 2015 by Chris Gray, KIFFER Ltd.         -->
 <!-- All rights reserved.                                                    -->
 <!--                                                                         -->
 <!-- Redistribution and use in source and binary forms, with or without      -->
@@ -10,15 +10,15 @@
 <!-- 2. Redistributions in binary form must reproduce the above copyright    -->
 <!--    notice, this list of conditions and the following disclaimer in the  -->
 <!--    documentation and/or other materials provided with the distribution. -->
-<!-- 3. Neither the name of /k/ Embedded Java Solutions nor the names of     -->
-<!--    other contributors may be used to endorse or promote products        -->
-<!--    derived from this software without specific prior written permission.-->
+<!-- 3. Neither the name of KIFFER Ltd nor the names of other contributors   -->
+<!--    may be used to endorse or promote products derived from this         -->
+<!--    software without specific prior written permission.                  -->
 <!--                                                                         -->
 <!-- THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          -->
 <!-- WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    -->
 <!-- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    -->
-<!-- IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  -->
-<!-- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     -->
+<!-- IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR        -->
+<!-- ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR                -->
 <!-- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    -->
 <!-- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         -->
 <!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   -->
@@ -38,8 +38,6 @@
   <property name="empty.dir" value="${build.dir}empty/"/>
   <property name="release.dir" value="${basedir}/release/${ANT.PLATFORM}/"/>
   <property name="test.release.dir" value="${basedir}/release/test/${ANT.PLATFORM}/"/>
-  <property name="release.lib.dir" value="${release.dir}lib/mika/"/>
-  <property name="release.ext.dir" value="${release.lib.dir}ext/"/>
   <property name="mika.bin.dir" value="${release.dir}bin/"/>
   <property name="log.dir" value="${build.dir}log/"/>
   <property name="vm.resource.dir" value="${basedir}/core-vm/resource/system"/>
@@ -75,6 +73,8 @@
     <echo message="Platform = '${ANT.PLATFORM}'"/>
     <mkdir dir="${class.dir}"/>
     <mkdir dir="${empty.dir}"/>
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <property name="release.ext.dir" value="${release.dir}${release.lib.subdir}ext/" />
     <mkdir dir="${release.ext.dir}"/>
     <property name="JAVA_DEBUG" value="false" />
     <antcall target="arg.check"/>
@@ -195,6 +195,9 @@
   </target>
 
   <target name="build-wre">
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <property name="release.lib.dir" value="${release.dir}${release.lib.subdir}" />
+    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
     <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
     <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
     <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
@@ -236,7 +239,7 @@
         <include name="**/*.properties"/>
       </fileset>
     </copy>
-    <jar destfile="${release.lib.dir}/wre.jar"
+    <jar destfile="${release.lib.dir}/${release.classlib.name}"
          manifest="${basedir}/core-vm/resource/wre.mf"
          basedir="${class.dir}"/>
   </target>
@@ -246,6 +249,8 @@
   </target>
 
   <target name="build-micro-io">
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <property name="release.ext.dir" value="${release.dir}${release.lib.subdir}ext/" />
     <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
     <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
     <property name="micro.io.class.dir" value="${build.dir}/ext/microio"/>
@@ -261,6 +266,8 @@
 
   <!-- copy all resources to release.lib.dir + helper targets-->
   <target name="copy-resources">
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <property name="release.lib.dir" value="${release.dir}${release.lib.subdir}" />
     <copy todir="${release.lib.dir}">
       <fileset  dir="${vm.resource.dir}"/>
     </copy>
@@ -268,6 +275,8 @@
   </target>
 
   <target name="copy-rudolph-files">
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <property name="release.lib.dir" value="${release.dir}${release.lib.subdir}" />
     <copy todir="${release.lib.dir}">
       <fileset  dir="${rudolph.resource.dir}" excludes="font/*complete.pcf">
         <include name="*"/>
@@ -365,13 +374,15 @@
     <mkdir dir="${test.release.dir}"/>
 
     <antcall target="run-awk" />
+    <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
+    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
     <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
     <property environment="env"/>
     <jamflags property="jam.flags"/>
     <property name="config.jam.flags" 
               value="-sAWT=${AWT} -sMATH=${MATH} -sJAVAX_COMM=${JAVAX_COMM} -sMIKA_MAX=${MIKA_MAX} ${DEBUG.FLAG} ${STATIC.FLAG} ${AWT.FLAGS} "/>
     <property name="base.jam.flags"
-              value="-sOROOT=${jam.output.dir} -sBINDIR=${release.dir}bin/ -sVERSION_STRING=${MIKA.VERSION} -sINSTALLTESTDIR=${test.release.dir}"/> 
+              value="-sOROOT=${jam.output.dir} -sBINDIR=${release.dir}bin/ -sVERSION_STRING=${MIKA.VERSION} -sBOOTCLASSDIR=${release.lib.subdir} -sBOOTCLASSFILE=${release.classlib.name} -sINSTALLTESTDIR=${test.release.dir}"/> 
     <echo message="jam.flags = ${jam.flags}"/>
     <echo message="config.jam.flags = ${config.jam.flags}"/>
     <echo message="base.jam.flags = ${base.jam.flags}"/>
