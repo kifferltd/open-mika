@@ -30,6 +30,7 @@
 **************************************************************************/
 
 #include "oswald.h"
+#include <sys/syscall.h>
 
 int num_x_threads = 0;
 pthread_key_t x_thread_key;
@@ -91,7 +92,10 @@ int mapPriority(int policy, unsigned int requested) {
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
   max = sched_get_priority_max(policy);
   min = sched_get_priority_min(policy);
-  if (min < 0 && max < 0) {
+  if (policy == SCHED_OTHER) {
+    result = -20 + (requested * 40) / NUM_PRIORITIES;
+  }
+  else if (min < 0 && max < 0) {
     result = min + ((min - max) * ((NUM_PRIORITIES - 1)-requested) / NUM_PRIORITIES);
   }
   else {
@@ -252,6 +256,10 @@ void *start_routine(void *thread_ptr) {
     loempa(7,"Native thread %p starting\n", thread);
   }
   pthread_setspecific(x_thread_key, thread);
+#ifdef LINUX
+  thread->o4p_thread_tid = syscall(__NR_gettid);
+  int rc = setpriority(PRIO_PROCESS, 0, mapPriority(thread->o4p_thread_schedPolicy, thread->o4p_thread_priority));
+#endif
 
   thread->state = xt_ready;
 
@@ -374,10 +382,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->o4p_thread_sched.sched_priority = mapPriority(thread->o4p_thread_schedPolicy, priority);
 #endif
 
-// Try something new for a start, otherwise we are unable to implement join
-// We have to join thread explicitly now when we delete them
-// This didn't seem to work anyway (zombies all over the place)
-//     pthread_attr_setdetachstate(&thread->attributes, PTHREAD_CREATE_DETACHED);
    thread->o4p_thread_argument = entry_input;
 
    loempa(2, "x_thread_create: setting up pthread stack\n");

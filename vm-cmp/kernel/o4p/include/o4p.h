@@ -64,6 +64,7 @@
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 /*
 ** OS Specific stuff...
@@ -206,6 +207,7 @@ typedef struct x_Thread {
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
 
   struct sched_param    o4p_thread_sched;       /* Scheduling policy, incl.  priority level. */
+  w_int                 o4p_thread_tid;         /* Thread-specific PID (linux only) */
   int                   o4p_thread_schedPolicy; /* SCHED_FIFO or SCHED_RR */
 #endif
 
