@@ -1,0 +1,4 @@
+*.class
+*.out
+build/**
+release/**
