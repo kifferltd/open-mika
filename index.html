@@ -31,9 +31,53 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h3>
-<a id="welcome-to-open-mika" class="anchor" href="#welcome-to-open-mika" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to Open Mika</h3>
-      </section>
+         <h2><a href="https://github.com/kifferltd/open-mika/"></a>Open Mika</a></h2>
+<p><strong>Open Mi<em>k</em>a</strong> is an open-source Java runtime dedicated to supporting the OSGi RFC 26 Foundation Execution Environment. It is characterised by a small footprint both in terms of the executable size of the runtime itself (&lt;2MB for both VM and class libraries, in the &ldquo;headless&rdquo; version) and in terms of the external libraries used (libc and on Linux libpthread). The BSD-style licence is equally lightweight in the obligations it places on the redistributor; the source code may be modified or extra libraries may be linked in without the obligation to provide source code to end users.</p>
+<p>Because of the deliberate restriction to OSGi RFC 26, currently Mika does not support Java 5 language features such as generics. A version with Java 5 support is in preparation, but initially this will only be available as part of the <strong>Mi<em>k</em>a Ma<em>x</em></strong> product. Support is provided for JNI on Linux and on those uClinux targets which support the use of shared libraries.</p>
+<p>A number of features can be selected at the time of building Mika: by omitting unneeded features a smaller (and in some cases faster) Mika binary can be created.</p>
+<dl><dt>AWT options </dt><dd>
+<ul>
+<li>None - no AWT is provided. </li>
+<li>Framebuffer - writes directly to the Linux framebuffer device </li>
+<li>X11 - opens an X11 frame and uses it as a &ldquo;virtual framebuffer&rdquo; (primarily intended for development purposes). </li>
+</ul>
+</dd><dt>Jarfile verification options </dt><dd>
+<ul>
+<li>None - no verification is performed. </li>
+<li>Java - Jarfile verification is performed in Java code. </li>
+<li>Native - Jarfile verification is performed in Native code (not yet available). </li>
+</ul>
+</dd><dt>Bytecode options </dt><dd>
+<ul>
+<li>False - no verification is performed. </li>
+ <li>True - Bytecode verification is performed. </li>
+</ul>
+</dd><dt>Security options </dt><dd>
+<ul>
+<li>None - no security checks are performed. </li>
+<li>Coarse - security checks are performed by invoking a user-supplied security manager. </li>
+<li>Fine - security checks are performed by directly invoking the built-in AccessController. </li>
+</ul>
+</dd><dt>Optional libraries </dt><dd>
+<ul>
+<li><code>java.beans</code> - a minimal implementation suitable for use on an embedded client machine. For a full implementation it is better to adopt code from another project such as Apache Harmony. </li>
+<li><code>javax.comm</code> - an implementation for Linux/uClinux, covering serial ports only (no parallel port support). </li>
+</ul>
+</dd></dl>
+<h3>Supported platforms</h3>
+<p>The standard Mika codebase can be compiled and run directly on the following platforms, using a suitable gcc-based cross-compiler:</p>
+<dl><dd>
+<ul>
+<li>CPU architectures: ARM (arm7tdmi, arm9, xscale; ...), MIPS (e.g. bcm63xx), PowerPC, x86 (32-bit mode only).</li>
+<li>Operating Systems: Linux, uClinux.</li>
+</ul>
+</dd></dl>
+<p>Porting to other 32-bit CPU architectures and operating systems is certainly possible, but you would be well advised to contact <span style="color:red">KIFFER</span> for support.</p>
+<h3>License</h3>
+<p>The<strong> Mi<em>k</em>a</strong>-specific source code is covered by a BSD-style license, which allows modified versions to be distributed without an obligation to supply source code. Some classes are derived from the <a href="http://www.gnu.org/software/classpath/">GNU Classpath</a> project, and these are covered by the <a href="http://www.gnu.org/software/classpath/license.html">Classpath &ldquo;GPL with linking exception&rdquo; license</a>. Other classes are derived from the <a href="http://harmony.apache.org/">Apache Harmony</a> project and are covered by <a href="http://harmony.apache.org/license.html">ASL 2.0</a>.</p>
+<p>Our aim is that <strong>Mi<em>k</em>a</strong> can safely be linked with native code libraries without endangering confidential or proprietary information that these may contain.
+  
+</section>
     </div>
 
     <!-- FOOTER  -->
