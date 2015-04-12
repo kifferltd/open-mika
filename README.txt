@@ -87,13 +87,14 @@ More details on building with various options mika can be found in doc/BUILD.txt
 Running mika
 ============
 
-After succesfully building mika for you platform, you'll see a platform directory in release.
-Let's return to our example: we just compiled mika by calling: 'ant -DPLATFORM=pc'.
-A directory pc was created in release. It contains the binary files needed to run mika.
-'bin' contains the executable, while lib/mika stores java classes (wre.jar) as well as
-some properties and resources. The command line of mika works very much alike the Sun
-Java one. calling './release/pc/bin/mika -cp . HelloWord' causes for helloworld.class to be 
-loaded from . More info on mika's commandline can be found in doc/COMMAND_LINE.txt
+After succesfully building mika for you platform, you'll see a directory 
+under the 'release' directory with the same name as your platform, e.g.
+'release/pc'.  This contains the binary files needed to run mika;
+'bin' contains the executable, while 'lib/mika' stores java classes
+(wre.jar) plus some properties and resources. The command line of mika works
+pretty much like the Sun/Oracle one, for example calling 
+   ./release/pc/bin/mika -cp . HelloWord
+causes HelloWorld.class to be executed . More info on mika's commandline can be found in doc/COMMAND_LINE.txt
 
 
 
