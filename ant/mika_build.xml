@@ -394,7 +394,12 @@
       <env key="WONKA_TOP" value="${basedir}"/>
       <env key="PATH" path="${current.toolchain}:${env.PATH}"/>
     </exec>
+    <condcall target="rename-executable" condition="${LAYOUT}" value="jre"/>
     <gzip src="${log.file}" destfile="${log.dir}/build-${ANT.PLATFORM}.log.gz"/>
     <delete file="${log.file}"/>
+  </target>
+
+  <target name="rename-executable">
+    <move file="${release.dir}bin/mika" tofile="${release.dir}bin/java"/>
   </target>
 </project>
