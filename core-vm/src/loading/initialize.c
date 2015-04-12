@@ -284,6 +284,9 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
       woempa(1, "Initializing superclass[%d] (%k) of %k\n", i - 1, clazz->supers[i - 1], clazz);
       result |= mustBeInitialized(clazz->supers[i - 1]);
       if (result == CLASS_LOADING_FAILED) {
+        if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+          w_printf("Initialize %w: initialization of superclass %w returned CLASS_LOADING_FAILED\n", clazz->dotified, clazz->supers[i-1]->dotified);
+        }
 
         return CLASS_LOADING_FAILED;
 
@@ -321,6 +324,9 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
       initializeStaticFields(thread, clazz);
       if (clazz->clinit) {
         woempa(1, "Class %k has <clinit> method %m, so let's run it.\n", clazz, clazz->clinit);
+        if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+          w_printf("Initialize %w: executing <clinit>\n", clazz->dotified);
+        }
         frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         deactivateFrame(frame, NULL);
         cleanUpClinit(clazz->clinit);
@@ -330,6 +336,9 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
   }
 
   if (exceptionThrown(thread)) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Initialize %w: <clinit> threw %e\n", clazz->dotified, exceptionThrown(thread));
+      }
     w_instance exception = exceptionThrown(thread);
 
     if(isAssignmentCompatible(instance2object(exception)->clazz, clazzException)) {
@@ -358,6 +367,9 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   if (exceptionThrown(thread)) {
     woempa(9, "Eh? Exception '%e' already pending in mustBeInitialized(%K)\n", exceptionThrown(thread), clazz);
+    if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+      w_printf("Initialize %w: %e already pending\n", clazz->dotified);
+    }
 
     return CLASS_LOADING_FAILED;
 
@@ -413,6 +425,9 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   default: // broken/garbage class
   // TODO - is the right thing to throw?
+    if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+      w_printf("Initialize %w: class is already flagged as broken: %w\n", clazz->dotified, clazz->failure_message);
+    }
     throwException(thread, clazzNoClassDefFoundError, "%k : %w", clazz, clazz->failure_message);
 
     return CLASS_LOADING_FAILED;
@@ -450,6 +465,9 @@ w_int mustBeInitialized(w_clazz clazz) {
 
     x_monitor_eternal(clazz->resolution_monitor);
     if (result == CLASS_LOADING_FAILED) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
+        w_printf("Initialize %w: initializeClazz returned CLASS_LOADING_FAILED\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
@@ -460,6 +478,9 @@ w_int mustBeInitialized(w_clazz clazz) {
     }
 
     if(exceptionThrown(thread)) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Initialize %w: initializeClazz threw %e\n", clazz->dotified, exceptionThrown(thread));
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;

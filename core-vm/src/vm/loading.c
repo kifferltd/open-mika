@@ -389,7 +389,7 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   }
 
   if (current && getClazzState(current) == CLAZZ_STATE_BROKEN) {
-    throwException(thread, clazzNoClassDefFoundError, "%w", current->failure_message);
+    throwException(thread, clazzNoClassDefFoundError, "%k failed to load : %w", current, current->failure_message);
     result = CLASS_LOADING_FAILED;
   }
 

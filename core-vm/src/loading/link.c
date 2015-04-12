@@ -113,6 +113,9 @@ w_int mustBeLinked(w_clazz clazz) {
 
   while(state == CLAZZ_STATE_LINKING) {
     if(clazz->resolution_thread == thread) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Link %w: failed\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Linking of %k failed", clazz);
       saveFailureMessage(thread, clazz);
@@ -146,6 +149,9 @@ w_int mustBeLinked(w_clazz clazz) {
 #endif
     clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Link %w: linkClazz returned CLASS_LOADING_FAILED\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);
@@ -156,6 +162,9 @@ w_int mustBeLinked(w_clazz clazz) {
     }
 
     if(exceptionThrown(thread)) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Link %w: linkClazz threw %e\n", clazz->dotified, exceptionThrown(thread));
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;

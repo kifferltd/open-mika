@@ -184,7 +184,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   w_int   i;
   w_int   j;
   w_int   n;
-  w_clazz interfaze;
+  w_clazz super;
   w_int   result = CLASS_LOADING_DID_NOTHING;
 
   n = 0;
@@ -209,24 +209,24 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
 
     }
 #endif
-    interfaze = getClassConstant(clazz, clazz->temp.interface_index[i], thread);
-    if(interfaze == NULL){
+    super = getClassConstant(clazz, clazz->temp.interface_index[i], thread);
+    if(super == NULL){
 
       return CLASS_LOADING_FAILED;
 
     }
 
 #ifndef NO_HIERARCHY_CHECKS
-    if (interfaze == clazz) {
+    if (super == clazz) {
       throwException(thread, clazzClassCircularityError, "Class %k is its own superinterface", clazz);
 
       return CLASS_LOADING_FAILED;
 
     }
 
-    if (isNotSet(interfaze->flags, ACC_PUBLIC) && !sameRuntimePackage(clazz, interfaze)) {
+    if (isNotSet(super->flags, ACC_PUBLIC) && !sameRuntimePackage(clazz, super)) {
       woempa(9, "Violation of J+JVM Constraint 4.1.?\n");
-      throwException(thread, clazzIncompatibleClassChangeError, "Superinterface %k of %k is not accessible", interfaze, clazz);
+      throwException(thread, clazzIncompatibleClassChangeError, "Superinterface %k of %k is not accessible", super, clazz);
 
       return CLASS_LOADING_FAILED;
 
@@ -237,7 +237,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
       wabort(ABORT_WONKA, "Class %k has too many superinterfaces", clazz);
     }
 
-    result = mustBeSupersLoaded(interfaze);
+    result = mustBeSupersLoaded(super);
     if (result == CLASS_LOADING_FAILED || exceptionThrown(thread)) {
 
       return CLASS_LOADING_FAILED;
@@ -245,21 +245,21 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
     }
 
 #ifndef NO_HIERARCHY_CHECKS
-    if (isNotSet(clazz->flags, CLAZZ_IS_TRUSTED) && isNotSet(interfaze->flags, ACC_INTERFACE)) {
+    if (isNotSet(clazz->flags, CLAZZ_IS_TRUSTED) && isNotSet(super->flags, ACC_INTERFACE)) {
       woempa(9, "Violation of J+JVM Constraint 4.1.?, item ? / 4.1.?, item ?\n");
-      throwException(thread, clazzIncompatibleClassChangeError, "Superinterface %k of %k is not an interface", interfaze, clazz);
+      throwException(thread, clazzIncompatibleClassChangeError, "Superinterface %k of %k is not an interface", super, clazz);
 
       return CLASS_LOADING_FAILED;
 
     }
 #endif
 
-    if (addInterface(interfaze, clazz->interfaces, &n)) {
+    if (addInterface(super, clazz->interfaces, &n)) {
       ++clazz->numDirectInterfaces;
-      woempa(1, "Added superinterface %k to %k\n", interfaze, clazz);
+      woempa(7, "Added superinterface %k to %k\n", super, clazz);
     }
     else {
-      woempa(1, "Ignored duplicate superinterface %k of %k\n", interfaze, clazz);
+      woempa(1, "Ignored duplicate superinterface %k of %k\n", super, clazz);
     }
     if (exceptionThrown(thread)) {
       break;
@@ -268,17 +268,17 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
 
   /*
   ** In the second pass, we append all non-duplicate interfaces inherited from
-  ** the direct superinterfaces.
+  ** the direct superinterfaces and from the direct superclass.
   */
   for (i = 0; i < clazz->numDirectInterfaces; ++i) {
-    interfaze = clazz->interfaces[i];
+    super = clazz->interfaces[i];
 
-    for (j = 0; j < interfaze->numInterfaces; ++j) {
-      if (addInterface(interfaze->interfaces[j], clazz->interfaces, &n)) {
-        woempa(1, "Added supersuperinterface %k to %k\n", interfaze->interfaces[j], clazz);
+    for (j = 0; j < super->numInterfaces; ++j) {
+      if (addInterface(super->interfaces[j], clazz->interfaces, &n)) {
+        woempa(7, "Added supersuperinterface %k to %k\n", super->interfaces[j], clazz);
       }
       else {
-        woempa(1, "Ignored duplicate supersuperinterface %k of %k\n", interfaze->interfaces[j], clazz);
+        woempa(1, "Ignored duplicate supersuperinterface %k of %k\n", super->interfaces[j], clazz);
       }
     }
     if (exceptionThrown(thread)) {
@@ -287,7 +287,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   }
 
   clazz->numInterfaces = n;
-  woempa(1, "Class %k has total of %d superinterfaces, of which %d direct\n", clazz, n, clazz->numDirectInterfaces);
+  woempa(7, "Class %k has total of %d superinterfaces, of which %d direct\n", clazz, n, clazz->numDirectInterfaces);
   if (clazz->temp.interface_index) {
     releaseMem(clazz->temp.interface_index);
   }
@@ -411,6 +411,9 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 #endif
     clazz->resolution_thread = NULL;
     if (result == CLASS_LOADING_FAILED) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Supers %w: failed to load super class(es)\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       x_monitor_notify_all(clazz->resolution_monitor);

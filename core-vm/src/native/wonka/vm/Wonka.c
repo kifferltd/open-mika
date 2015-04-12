@@ -765,6 +765,9 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
     if (strstr(verbose_cstring, "gc")) {
       verbose_flags |= VERBOSE_FLAG_GC;
     }
+    if (strstr(verbose_cstring, "init")) {
+      verbose_flags |= VERBOSE_FLAG_INIT;
+    }
     if (strstr(verbose_cstring, "load")) {
       verbose_flags |= VERBOSE_FLAG_LOAD;
     }

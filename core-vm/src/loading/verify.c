@@ -184,14 +184,14 @@ w_int verifyClazz(w_clazz clazz) {
   w_method m;
   w_int result = CLASS_LOADING_DID_NOTHING;
 
-  if (verbose_flags & VERBOSE_FLAG_LOAD) {
+  if (verbose_flags & VERBOSE_FLAG_INIT) {
     w_printf("Verify %k: loading all classes referenced by %k\n", clazz, clazz);
   }
 
   for (i = 0; result != CLASS_LOADING_FAILED && !exceptionThrown(thread) && i < clazz->numDeclaredMethods; ++i) {
     m = &clazz->own_methods[i];
     result |= loadDescriptorTypes(m);
-    if (verbose_flags & VERBOSE_FLAG_LOAD) {
+    if (verbose_flags & VERBOSE_FLAG_INIT) {
       w_printf("Verify %k: verifying method %m\n", clazz, m);
     }
     result |= verifyMethod(m, thread) ? CLASS_LOADING_SUCCEEDED : CLASS_LOADING_FAILED;

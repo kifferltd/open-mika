@@ -879,6 +879,9 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   while(state == CLAZZ_STATE_REFERENCING) {
     if(clazz->resolution_thread == thread) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Reference %w: referencing failed\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Refering %k failed", clazz);
       saveFailureMessage(thread, clazz);
@@ -928,10 +931,16 @@ w_int mustBeReferenced(w_clazz clazz) {
     clazz->resolution_thread = NULL;
 
     if (result == CLASS_LOADING_FAILED) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Reference %w: referenceClazz returned CLASS_LOADING_FAILED\n", clazz->dotified);
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
     }
     else if(exceptionThrown(thread)) {
+      if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
+        w_printf("Reference %w: referenceClazz threw %e\n", clazz->dotified, exceptionThrown(thread));
+      }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
       result = CLASS_LOADING_FAILED;
