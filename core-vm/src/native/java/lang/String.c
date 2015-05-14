@@ -900,7 +900,7 @@ w_instance String_toUpperCase(JNIEnv *env, w_instance This, w_instance Locale) {
     }
     string = unicode2String(buffer, string_length(this));
     if (string) {
-      result = getStringInstance(string);
+      result = newStringInstance(string);
     // string is now registered twice, which is once too many
       deregisterString(string);
     }
@@ -928,7 +928,7 @@ w_instance String_toLowerCase(JNIEnv *env, w_instance This, w_instance Locale) {
     }
     string = unicode2String(buffer, string_length(this));
     if (string) {
-      result = getStringInstance(string);
+      result = newStringInstance(string);
       deregisterString(string);
     }
     releaseMem(buffer);
@@ -960,7 +960,7 @@ w_instance String_replace(JNIEnv *env, w_instance This, w_char oldChar, w_char n
     }
     result = unicode2String(buffer, string_length(this));
     if (result) {
-      Result = getStringInstance(result);
+      Result = newStringInstance(result);
       deregisterString(result);
     }
     releaseMem(buffer);
@@ -1012,7 +1012,7 @@ w_instance String_concat(JNIEnv *env, w_instance This, w_instance String) {
       }
       result = unicode2String(buffer, string_length(this) + string_length(string));
       if (result) {
-        Result = getStringInstance(result);
+        Result = newStringInstance(result);
         deregisterString(result);
       }
       releaseMem(buffer);
@@ -1057,7 +1057,7 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
       releaseMem(buffer);
     }
     if (subString) {
-      SubString = getStringInstance(subString);
+      SubString = newStringInstance(subString);
       deregisterString(subString);
     woempa(1, "Result is %w\n", subString);
     } 
@@ -1155,7 +1155,7 @@ w_instance String_trim(JNIEnv *env, w_instance This) {
       if (leading != (w_int)string_length(this)) {
         result = unicode2String(buffer + leading, string_length(this) - trailing - leading);
         if (result) {
-          Result = getStringInstance(result);
+          Result = newStringInstance(result);
           deregisterString(result);
         }
       }
@@ -1176,7 +1176,7 @@ w_instance String_static_valueOf_char(JNIEnv *env, w_instance stringClass, w_cha
 
   string = unicode2String(&c, 1);
   if (string) {
-    result = getStringInstance(string);
+    result = newStringInstance(string);
     // string is now registered twice, which is once too many
     deregisterString(string);
   }
