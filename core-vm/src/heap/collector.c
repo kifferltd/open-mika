@@ -929,7 +929,10 @@ w_int markFrameReachable(w_frame frame, w_fifo fifo, w_word flag) {
     markClazzReachable(method->spec.declaring_clazz, fifo, flag);
   }
   item = (volatile w_slot) frame->jstack_base;
-  while (item < (volatile w_slot) frame->jstack_top) {
+  while (item <= (volatile w_slot) frame->auxstack_base) {
+    if (item == frame->jstack_top) {
+      item = frame->auxstack_top + 1;
+    }
     if (item->s == stack_trace && item->c) {
       child_instance = (w_instance) item->c;
       if (child_instance != thisThread) {
