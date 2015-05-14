@@ -108,8 +108,8 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -141,8 +141,8 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -184,9 +184,9 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   newchunk->line = line;
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining += oldsize;
   heap_remaining -= newsize;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -215,8 +215,8 @@ void *_x_mem_alloc(w_size size) {
   newchunk->size = size;
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -242,8 +242,8 @@ void *_x_mem_calloc(w_size size) {
   newchunk->size = size;
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining -= size + sizeof(o4p_Memory_Chunk);
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -277,9 +277,9 @@ void *_x_mem_realloc(void *old, w_size size) {
 
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining += oldsize;
   heap_remaining -= newsize;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
