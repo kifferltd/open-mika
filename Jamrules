@@ -124,12 +124,12 @@ switch $(CPU) {
   }
   case x86 : {
     CCFLAGS += -DX86 ;
+    LINKFLAGS = -m32 ;
   }
 }
 
 if $(HOSTOS) = linux {
   CCFLAGS += -DHAVE_TIMEDWAIT ;
-  LINKFLAGS = -m32 ;
 }
 
 if $(HOSTOS) = android {

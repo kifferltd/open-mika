@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by         *
-* Chris Gray,  /k/ Embedded Java Solutions. All rights reserved.          *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2015 by         *
+* Chris Gray, KIFFER Ltd. All rights reserved.                            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #include <string.h>
@@ -780,7 +777,7 @@ void deregisterString(w_string string) {
 
 /*
 ** If the w_string referenced by theString has no canonical instance, record
-** 'theString' as the cononical instance and return it as the result. If the
+** 'theString' as the canonical instance and return it as the result. If the
 ** w_string already has a canonical instance, return the canonical instance.
 ** The caller of this function must own the lock on string_hashtable(!).
 */
@@ -1121,6 +1118,11 @@ w_instance newStringInstance(w_string s) {
 
 }
 
+/**
+ * Get  the interned instance of String corresponding to w_string s: if no such
+ * interned instance exists then it will be created.
+ * The caller must be in the "GC safe" state.
+ */
 w_instance getStringInstance(w_string s) {
   w_thread thread = currentWonkaThread;
   w_string r;
@@ -1128,11 +1130,6 @@ w_instance getStringInstance(w_string s) {
   w_instance canonical;
   w_word *flagsptr;
 
-  /*
-  ** The story so far:
-  ** - we could be anywhere in a GC cycle, (mark, sweep, complete)
-  ** - w_string r will not be reclaimed, because it is registered to us
-  */
   threadMustBeSafe(thread);
   r = registerString(s);
   ht_lock(string_hashtable);
