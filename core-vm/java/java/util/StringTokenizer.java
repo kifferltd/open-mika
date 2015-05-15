@@ -1,173 +1,213 @@
-/**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
-**************************************************************************/
-
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package java.util;
 
+/**
+ * Breaks a string into tokens; new code should probably use {@link String#split}.
+ *
+ * <blockquote>
+ * <pre>
+ * // Legacy code:
+ * StringTokenizer st = new StringTokenizer("a:b:c", ":");
+ * while (st.hasMoreTokens()) {
+ * System.err.println(st.nextToken());
+ * }
+ *
+ * // New code:
+ * for (String token : "a:b:c".split(":")) {
+ * System.err.println(token);
+ * }
+ * </pre>
+ * </blockquote>
+ *
+ * @since 1.0
+ */
 public class StringTokenizer implements Enumeration {
+  private String string;
+  private String delimiters;
+  private boolean returnDelimiters;
+  private int position;
 
-  private String base;
-  private String delimeted;
-  private int delimeter;
-
-  private boolean delimTokens;
-
-  private int index=0;
-
-  public StringTokenizer(String str){
-    this(str, " \t\n\r" , false);
+  /**
+   * Constructs a new {@code StringTokenizer} for the parameter string using
+   * whitespace as the delimiter. The {@code returnDelimiters} flag is set to
+   * {@code false}.
+   *
+   * @param string
+   * the string to be tokenized.
+   */
+  public StringTokenizer(String string) {
+    this(string, " \t\n\r\f", false);
   }
 
-  public StringTokenizer(String str, String delim){
-    this(str, delim, false);
+  /**
+   * Constructs a new {@code StringTokenizer} for the parameter string using
+   * the specified delimiters. The {@code returnDelimiters} flag is set to
+   * {@code false}. If {@code delimiters} is {@code null}, this constructor
+   * doesn't throw an {@code Exception}, but later calls to some methods might
+   * throw a {@code NullPointerException}.
+   *
+   * @param string
+   * the string to be tokenized.
+   * @param delimiters
+   * the delimiters to use.
+   */
+  public StringTokenizer(String string, String delimiters) {
+    this(string, delimiters, false);
   }
 
-  public StringTokenizer(String str, String delim, boolean returnTokens){
-    this.base = str;
-    this.delimTokens = returnTokens;
-    setDelimeters(delim);
+  /**
+   * Constructs a new {@code StringTokenizer} for the parameter string using
+   * the specified delimiters, returning the delimiters as tokens if the
+   * parameter {@code returnDelimiters} is {@code true}. If {@code delimiters}
+   * is null this constructor doesn't throw an {@code Exception}, but later
+   * calls to some methods might throw a {@code NullPointerException}.
+   *
+   * @param string
+   * the string to be tokenized.
+   * @param delimiters
+   * the delimiters to use.
+   * @param returnDelimiters
+   * {@code true} to return each delimiter as a token.
+   */
+  public StringTokenizer(String string, String delimiters,
+      boolean returnDelimiters) {
+    if (string == null) {
+      throw new NullPointerException("string == null");
   }
-
-  public int countTokens(){
-    int delimeted_length = delimeted.length();
-    if (index >= delimeted_length){
-        return 0;
-    }
-    if (delimeter == -1){
-        return 1;
-    }
-    int count = 0;
-    if(delimTokens){
-      int prev = index-1;
-      int pos = delimeted.indexOf(delimeter, index);
-      while (pos != -1){
-         count++;
-         if (pos - prev > 1){
-           count++;
-         }
-         prev = pos;
-         pos = delimeted.indexOf(delimeter, pos+1);
-      }
-      if (prev < delimeted_length-1 & (prev != index-1 | count == 0)){
-        count++;
-      }
-    }else{
-      int pos = delimeted.indexOf(delimeter, index);
-      int prev = index-1;
-      while (pos != -1){
-         if(pos - prev > 1){
-           count++;
-         }
-         prev = pos;
-         pos = delimeted.indexOf(delimeter, pos+1);
-      }
-      if (prev < delimeted_length-1 & (prev != index-1 | count == 0)){
-        count++;
-      }
-    }
-    return count;
-  }
-
-  public boolean hasMoreElements(){
-    return hasMoreTokens();
-  }
-
-  public boolean hasMoreTokens(){
-    char delim[] = delimeted.toCharArray();
-    int delimeted_length = delim.length;
-    int idx = index;
-    if (!delimTokens && delimeter != -1){
-      while(idx < delimeted_length && delim[idx] == delimeter){
-        idx++;
-      }
-    }
-    index = idx;
-    return idx < delimeted_length;
-  }
-
-  public Object nextElement(){
-    return nextToken();
-  }
-
-  public String nextToken(){
-    char delim[] = delimeted.toCharArray();
-    int delimeted_length = delim.length;
-    int idx = index;
-    
-    if(delimeter != -1){
-      
-      if (!delimTokens) {
-        while(idx < delimeted_length && delim[idx] == delimeter){
-          idx++;
-        }
-      }
-
-      if (idx < delimeted_length) {
-        int pos = idx;
-        idx = delimeted.indexOf(delimeter, idx);
-        if (pos == idx){
-          idx++;
-        }
-        else if (idx == -1){
-          idx = delimeted_length;
-        }
-        index = idx;
-        return base.substring(pos, idx);
-      }
-    }
-    else {
-      if(idx < delimeted_length) {
-        index = delimeted_length;
-        return base;
-      }
-    }
-    throw new NoSuchElementException();
-  }
-
-  public String nextToken(String delim){
-    setDelimeters(delim);
-    return nextToken();
-  }
-
-  private void setDelimeters(String delim){
-    int delim_length = delim.length();
-    if(delim_length == 0){
-      delimeter = -1;
-    } else{
-      char dlm = delim.charAt(0);
-      delimeter = dlm;
-      base = base.substring(index);
-      delimeted = base;
-      index = 0;
-      for (int i=1 ; i < delim_length ; i++){
-        delimeted = delimeted.replace(delim.charAt(i) , dlm);
-      }
-    }
-  }
-
+this.string = string;
+this.delimiters = delimiters;
+this.returnDelimiters = returnDelimiters;
+this.position = 0;
 }
+/**
+* Returns the number of unprocessed tokens remaining in the string.
+*
+* @return number of tokens that can be retreived before an {@code
+* Exception} will result from a call to {@code nextToken()}.
+*/
+public int countTokens() {
+int count = 0;
+boolean inToken = false;
+for (int i = position, length = string.length(); i < length; i++) {
+if (delimiters.indexOf(string.charAt(i), 0) >= 0) {
+if (returnDelimiters)
+count++;
+if (inToken) {
+count++;
+inToken = false;
+}
+} else {
+inToken = true;
+}
+}
+if (inToken)
+count++;
+return count;
+}
+/**
+* Returns {@code true} if unprocessed tokens remain. This method is
+* implemented in order to satisfy the {@code Enumeration} interface.
+*
+* @return {@code true} if unprocessed tokens remain.
+*/
+public boolean hasMoreElements() {
+return hasMoreTokens();
+}
+/**
+* Returns {@code true} if unprocessed tokens remain.
+*
+* @return {@code true} if unprocessed tokens remain.
+*/
+public boolean hasMoreTokens() {
+if (delimiters == null) {
+throw new NullPointerException("delimiters == null");
+}
+int length = string.length();
+if (position < length) {
+if (returnDelimiters)
+return true; // there is at least one character and even if
+// it is a delimiter it is a token
+// otherwise find a character which is not a delimiter
+for (int i = position; i < length; i++)
+if (delimiters.indexOf(string.charAt(i), 0) == -1)
+return true;
+}
+return false;
+}
+/**
+* Returns the next token in the string as an {@code Object}. This method is
+* implemented in order to satisfy the {@code Enumeration} interface.
+*
+* @return next token in the string as an {@code Object}
+* @throws NoSuchElementException
+* if no tokens remain.
+*/
+public Object nextElement() {
+return nextToken();
+}
+/**
+* Returns the next token in the string as a {@code String}.
+*
+* @return next token in the string as a {@code String}.
+* @throws NoSuchElementException
+* if no tokens remain.
+*/
+public String nextToken() {
+if (delimiters == null) {
+throw new NullPointerException("delimiters == null");
+}
+int i = position;
+int length = string.length();
+if (i < length) {
+if (returnDelimiters) {
+if (delimiters.indexOf(string.charAt(position), 0) >= 0)
+return String.valueOf(string.charAt(position++));
+for (position++; position < length; position++)
+if (delimiters.indexOf(string.charAt(position), 0) >= 0)
+return string.substring(i, position);
+return string.substring(i);
+}
+while (i < length && delimiters.indexOf(string.charAt(i), 0) >= 0)
+i++;
+position = i;
+if (i < length) {
+for (position++; position < length; position++)
+if (delimiters.indexOf(string.charAt(position), 0) >= 0)
+return string.substring(i, position);
+return string.substring(i);
+}
+}
+throw new NoSuchElementException();
+}
+/**
+* Returns the next token in the string as a {@code String}. The delimiters
+* used are changed to the specified delimiters.
+*
+* @param delims
+* the new delimiters to use.
+* @return next token in the string as a {@code String}.
+* @throws NoSuchElementException
+* if no tokens remain.
+*/
+public String nextToken(String delims) {
+this.delimiters = delims;
+return nextToken();
+}
+}
+
