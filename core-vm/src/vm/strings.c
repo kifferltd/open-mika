@@ -796,19 +796,6 @@ w_instance internString(w_thread thread, w_instance theString) {
 }
 
 /*
-** If theString is the canonical entry for the w_string it references, remove
-** the reference to it as canonical instance. The caller of this function must
-** own the lock on string_hashtable(!).
-*/
-void uninternString(w_thread thread, w_instance theString) {
-  w_string s = String2string(theString);
-  
-  if (s && s->interned == theString) {
-    s->interned = NULL;
-  }
-}
-
-/*
 ** The compare function for the string hashtable.
 */
 

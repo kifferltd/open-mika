@@ -570,7 +570,12 @@ static w_int releaseInstance(w_object object) {
 //  woempa(1, "(GC) Releasing %p (object %p) = %k flags %s\n", (char *)instance, object, clazz, printFlags(object->flags));
 
   if (clazz == clazzString && getWotsitField(instance, F_String_wotsit)) {
-    woempa(3, "Deferring sweeping of %j (%w)\n", instance, instance[F_String_wotsit]);
+    w_string s = getWotsitField(instance, F_String_wotsit);
+    if (s && s->interned == instance) {
+      s->interned = NULL;
+      woempa(3, "Uninterned %j (%w)\n", instance, s);
+    }
+    woempa(3, "Deferring sweeping of %j (%w)\n", instance, s);
     if (putFifo(instance, dead_string_fifo) < 0) {
       wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
     };
@@ -1649,6 +1654,19 @@ static void thread_iteration(w_word key, w_word value, void * arg1, void *arg2) 
   }
 }
 
+#ifdef MONITOR_STRING_HASHTABLE
+w_int total_bytes;
+w_int total_references;
+w_int total_ref_bytes;
+
+static void stringstats(w_word key, w_word value) {
+  w_string s = (w_string) key;
+  total_bytes += string_length(s);
+  total_references += s->refcount;
+  total_ref_bytes += s->refcount * string_length(s);
+}
+#endif
+
 /*
  * In the Mark phase, we first mark all the (transient) `roots':
  *  - system thread group (and hence all threads)
@@ -1747,7 +1765,18 @@ w_int markPhase(void) {
 
   miniSweepReferences();
 
-  //printf("Leaving mark phase, ticks = %d\n", x_time_get() - gc_start_ticks);
+#ifdef MONITOR_STRING_HASHTABLE
+  w_printf("string_hashtable contains %d entries\n", string_hashtable->occupancy);
+  total_bytes = 0;
+  total_references = 0;
+  total_ref_bytes = 0;
+  ht_lock(string_hashtable);
+  ht_every(string_hashtable, stringstats);
+  ht_unlock(string_hashtable);
+  w_printf("total of %d references > %d per string\n", total_references, total_references / string_hashtable->occupancy);
+  w_printf("total bytes stored = %d, reference-weighted = %d\n", total_bytes, total_ref_bytes);
+#endif
+
   return marked;
 
 }
@@ -1857,7 +1886,6 @@ static w_int collect_dead_strings(void) {
     w_string string = getWotsitField(instance, F_String_wotsit);
     if (string) {
       if (checkStrongRefs(instance2object(instance))) {
-        uninternString(sweeping_thread, instance);
         clearWotsitField(instance, F_String_wotsit);
         deregisterString(string);
         bytes += reallyReleaseInstance(instance2object(instance));
