@@ -1457,6 +1457,11 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
 */
 
 void deregisterClazz(w_clazz clazz, w_instance loader) {
+  if (!clazz->dotified) {
+    // class has no name yet, cannot possibly be registered
+    return;
+  }
+
   w_clazz  existing;
   w_hashtable hashtable = loader2loaded_classes(loader);
 
