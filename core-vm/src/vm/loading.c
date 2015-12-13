@@ -310,14 +310,14 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
   if (!result || getClazzState(result) < CLAZZ_STATE_LOADED) {
-    result = allocMem(sizeof(w_UnloadedClazz));
+    result = allocClearedMem(sizeof(w_UnloadedClazz));
     if (!result) {
       wabort(ABORT_WONKA, "Unable to allocate new UnloadedClazz\n");
     }
 
     result->dotified = registerString(name);
     result->label    = (char *)"clazz(unloaded)";
-    result->flags    = 0; 
+    //result->flags    = 0; 
     result->loader   = initiating_loader;
 
     result = registerUnloadedClazz(result);
@@ -1171,9 +1171,13 @@ void saveFailureMessage(w_thread thread, w_clazz clazz) {
       w_instance detailMessage = getReferenceField(exception, F_Throwable_detailMessage);
       if (detailMessage) {
         clazz->failure_message = registerString(String2string(detailMessage));
+        return;
       }
     }
   }
+
+  // to avoid a segfault when we try to incorporate the message into a NoClassDefFound Error
+  clazz->failure_message = registerString(string_NULL);
 }
 
 
