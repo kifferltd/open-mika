@@ -56,25 +56,29 @@ w_word pal[256];
 
 // these functions accept signed numbers, but DONT work correctly on them !!
 // calculate ceil(c / 8)
-inline w_int ceil_div8(w_int c) {
+/* omitting 'inline' as gcc (5.2.1) is choking on it */
+w_int ceil_div8(w_int c) {
   if ((c & 0x7) == 0) return c >> 3;
   else return (c >> 3) + 1;
 }
 
 // calculate ceil(c / 4)
-inline w_int ceil_div4(w_int c) {
+/* omitting 'inline' as gcc (5.2.1) is choking on it */
+w_int ceil_div4(w_int c) {
   if ((c & 0x3) == 0) return c >> 2;
   else return (c >> 2) + 1;
 }
 
 // calculate ceil(c / 2)
-inline w_int ceil_div2(w_int c) {
+/* omitting 'inline' as gcc (5.2.1) is choking on it */
+w_int ceil_div2(w_int c) {
   if ((c & 0x1) == 0) return c >> 1;
   else return (c >> 1) + 1;
 }
 
 // calculate ceil(c / 1) (trivial case)
-inline w_int ceil_div1(w_int c) {
+/* omitting 'inline' as gcc (5.2.1) is choking on it */
+w_int ceil_div1(w_int c) {
   return c;
 }
 
@@ -341,6 +345,8 @@ w_ubyte interlace_col_offs[7] = { 0, 4, 0, 2, 0, 1, 0 };
 w_ubyte interlace_col_inc[7] = { 8, 8, 4, 4, 2, 2, 1 };
 
 typedef w_int (*interlace_div)(w_int);
+/* This is presumably what gcc (5.2.1) is choking on if the functions are declared as inline. */
+/* Frankly I can't blame gcc from being grumpy about this ... */
 interlace_div interlace_width_div[7] = { ceil_div8, ceil_div8, ceil_div4, ceil_div4, ceil_div2, ceil_div2, ceil_div1 };
 
 // process interlaced scanlines, do the filtering and the bitrate conversion
