@@ -488,7 +488,17 @@ public class InetAddress implements Serializable {
   private static native String getLocalName();
 
   public static InetAddress getByAddress(byte[] addr) throws UnknownHostException{
-    return null;
+    final String hostname = (addr[0] & 0xff) + "." + (addr[1] & 0xff) + "." + (addr[2] & 0xff) + "." + (addr[3] & 0xff);
+    synchronized(positive_cache) {
+      IAddrCacheEntry cached = (IAddrCacheEntry)positive_cache.get(hostname);
+      if(cached != null){
+
+        return cached.addr;
+
+      }
+    }
+
+    return new Inet4Address(hostname, positive_cache_ttl);
   }
 
   public static InetAddress getByAddress(String host, byte[] addr) throws UnknownHostException {
