@@ -170,7 +170,9 @@ public class Throwable implements java.io.Serializable {
         StackTraceElement[] st = new StackTraceElement[getStackTraceLength()];
 
         for (int i = 0; i < st.length; ++i) {
-            nextStackTrace(st[i]);
+             StackTraceElement element = new StackTraceElement();
+             nextStackTrace(element);
+             st[i] = element;
         }
 
         return st;
