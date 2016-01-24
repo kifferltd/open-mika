@@ -708,6 +708,8 @@ java/net/PlainSocketImpl
 	getRcvBuf		()I	PlainSocketImpl_getRcvBuf
 	setRcvBuf		(I)V	PlainSocketImpl_setRcvBuf
 	getSndBuf		()I	PlainSocketImpl_getSndBuf
+        getLocal4Address	()I	PlainSocketImpl_getLocal4Address
+        getLocal6Address	([B)V	PlainSocketImpl_getLocal6Address
 	setSndBuf		(I)V	PlainSocketImpl_setSndBuf
 	getIpTos		()I	PlainSocketImpl_getIpTos
 	setIpTos		(I)V	PlainSocketImpl_setIpTos

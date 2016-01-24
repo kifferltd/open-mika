@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Copyright (c) 2004, 2007, 2008, 2009, 2015 by Chris Gray, KIFFER Ltd.   *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2007, 2008, 2009 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #include <string.h>
@@ -409,6 +406,9 @@ void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int uda
   }
 }
 
+// TODO rewrite this using getaddrinfo(), see example at
+// https://beej.us/guide/bgnet/output/html/multipage/bindman.html
+
 void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
 
   w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_localAddress); 
@@ -455,8 +455,10 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
       memset(&sa6, 0, sizeof(sa6));
       sa6.sin6_family = AF_INET6;
       sa6.sin6_port = w_switchPortBytes(port);
-// FIXME - in6addr_any not known on uClinux, and code is WOOTed anyhow ...
-//      sa6.sin6_addr = in6addr_any;  /* WOOT -> Should get the address */
+      // TODO - test this!!!
+      w_instance ipaddressInstance = getReferenceField(address, F_Inet6Address_ipaddress);
+      w_byte *ipaddressBytes = instance2Array_byte(ipaddressInstance);
+      memcpy(&sa6.sin6_addr, ipaddressBytes, 16);
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: binding (IPv6)\n");
       }
@@ -492,8 +494,9 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
       return;
     }
 
-    if (port == 0) {
 #ifdef PF_INET6
+    // TODO is this port == 0 check really necessary?
+    if (port == 0) {
       if (!(getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6))) { 
         socklen_t namelen = sizeof(sa4);
         res = w_getsockname(sock , (struct sockaddr*)&sa4 , &namelen);
@@ -515,7 +518,9 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
           port = w_switchPortBytes(sa6.sin6_port);
         }
       }
+    }  	
 #else
+    if (port == 0) {
       socklen_t namelen = sizeof(sa4);
       res = w_getsockname(sock , (struct sockaddr*)&sa4 , &namelen);
       if (res == -1) {
@@ -526,8 +531,8 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
         port = w_switchPortBytes(sa4.sin_port);
         //w_comparePorts(sa4.sin_port,port);        
       }
-#endif
     }  	
+#endif
     setIntegerField(ThisImpl, F_SocketImpl_localport, port);
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d bind succeeded, port = %d\n", sock, port);
@@ -860,4 +865,19 @@ void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_insta
   }
 }
 
+int PlainSocketImpl_getLocal4Address(JNIEnv *env, w_instance thisPlainSocketImpl) {
+    w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
+    struct sockaddr_in sa4;
+    socklen_t addressLength = sizeof(sa4);
+    getsockname(sock, (struct sockaddr*)&sa4, &addressLength);
+    return ntohl(sa4.sin_addr.s_addr);
+}
+
+void PlainSocketImpl_getLocal6Address(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance outputByteArray) {
+    w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
+    struct sockaddr_in6 sa6;
+    socklen_t addressLength = sizeof(sa6);
+    getsockname(sock, (struct sockaddr*)&sa6, &addressLength);
+    memcpy(instance2Array_byte(outputByteArray), &sa6.sin6_addr, 16);
+}
 
