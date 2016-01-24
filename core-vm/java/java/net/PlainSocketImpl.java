@@ -273,7 +273,7 @@ class PlainSocketImpl extends SocketImpl {
       SocketUsers.put(this, Thread.currentThread());
       nativeCreate();
       nativeBind();
-      nativeConnect();
+      nativeConnect(0);
       register();
     }
     finally {
@@ -290,10 +290,9 @@ class PlainSocketImpl extends SocketImpl {
       if (address instanceof Inet6Address) {
         ipv6 = true;
       }
-      this.timeout = timeout;
       nativeCreate();
       nativeBind();
-      nativeConnect();
+      nativeConnect(timeout);
     }
     catch (ClassCastException cce) {
       throw new SocketException();
@@ -390,7 +389,7 @@ class PlainSocketImpl extends SocketImpl {
   private native void setIpTos(int tos) throws SocketException;
   private native int getLocal4Address() throws SocketException;
   private native void getLocal6Address(byte[] output) throws SocketException;
-  protected synchronized native void nativeConnect() throws IOException;
+  protected synchronized native void nativeConnect(int timeout) throws IOException;
   protected synchronized native void nativeBind() throws IOException;
   protected synchronized native void nativeListen(int backlog) throws IOException;
 

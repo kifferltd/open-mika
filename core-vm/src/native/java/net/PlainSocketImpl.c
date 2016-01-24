@@ -115,7 +115,7 @@ void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
   }
 }
 
-void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
+void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
 
   w_instance address = getReferenceField(ThisImpl, F_SocketImpl_address); 
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
@@ -188,7 +188,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
     sa_size = sizeof(struct sockaddr_in);
 #endif
 
-    res = w_connect (sock, sa, sa_size);
+    res = w_connect (sock, sa, sa_size, timeout);
     woempa (6,"socketfd = %d, connect result = %d\n",sock, res);
 
     if (res == -1) {
@@ -196,7 +196,12 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: connection failed: %s\n", strerror(errno));
       }
-      throwException(JNIEnv2w_thread(env), clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
+      if (errno == ETIMEDOUT) {
+        throwException(JNIEnv2w_thread(env), clazzSocketTimeoutException, NULL);
+      }
+      else {
+        throwException(JNIEnv2w_thread(env), clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
+      }
       return;
     }
 

@@ -726,7 +726,7 @@ java/net/PlainSocketImpl
         available       	()I	PlainSocketImpl_available
         nativeBind            	()V	PlainSocketImpl_bind
         _close           	()V	PlainSocketImpl_close
-        nativeConnect         	()V	PlainSocketImpl_connect
+        nativeConnect         	(I)V	PlainSocketImpl_connect
 	getSocket		()I	PlainSocketImpl_getSocket
 	signal			(Ljava/lang/Thread;)V	PlainSocketImpl_signal
 java/net/ConnectException                                         
