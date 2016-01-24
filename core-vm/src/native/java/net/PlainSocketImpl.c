@@ -121,7 +121,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
 
   if (!address) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, "address field is NULL");
+    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
   }
   else {
     struct sockaddr * sa = NULL;
@@ -270,7 +270,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
   if (! byteArray) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, "buffer is NULL");
+    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
     return -1;
   }
   else {
@@ -421,7 +421,7 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
   w_thread thread = JNIEnv2w_thread(env);
   
   if (! address) {
-    throwException(thread, clazzNullPointerException, "address is NULL");
+    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
   }
   else {
     struct sockaddr * sa = NULL;
