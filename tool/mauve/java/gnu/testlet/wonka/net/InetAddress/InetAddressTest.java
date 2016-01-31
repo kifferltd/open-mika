@@ -113,7 +113,7 @@ public class InetAddressTest implements Testlet
     // hpjavux
     InetAddress addr3 = null;
     try {
-      addr3 = InetAddress.getByName("wonka.acunia.com");
+      addr3 = InetAddress.getByName("kiffer.ltd.uk");
       harness.check(true);
     }
     catch ( UnknownHostException e ){
@@ -123,12 +123,12 @@ public class InetAddressTest implements Testlet
     }
  
  
-    harness.check(addr3.getHostName().equals("wonka.acunia.com") ,"Error : test_Basics failed - 11 " +
+    harness.check(addr3.getHostName().equals("kiffer.ltd.uk") ,"Error : test_Basics failed - 11 " +
 			 " the hostname returned is not correct." );
 
     String toStr = addr3.toString();
     String toStr1 = addr3.getHostAddress();
-    harness.check(toStr.equals("wonka.acunia.com/"+toStr1),"Error : test_Basics failed - 12 " +
+    harness.check(toStr.equals("kiffer.ltd.uk/"+toStr1),"Error : test_Basics failed - 12 " +
 			 " the host address returned is not correct." );
 
     if (true) {	// 1.1 features not implemented

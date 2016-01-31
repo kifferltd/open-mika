@@ -135,7 +135,7 @@ static inline int w_socket(int x,int y,int z)	{
   return -1;
 }
 
-static inline int w_connect(int s, void *a, socklen_t l) {
+static inline int w_connect(int s, void *a, socklen_t l, int timeout) {
   return -1;
 }
 	

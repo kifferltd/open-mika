@@ -141,7 +141,7 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
     */
     
     woempa(7, "Connecting socket %d\n", sock);
-    rc = w_connect(sock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
+    rc = w_connect(sock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in), 0);
     woempa(7, "connect() return code = %d\n", rc);
     
   }

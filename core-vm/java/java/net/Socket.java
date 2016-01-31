@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2015 by Chris Gray, KIFFER Ltd.               *
+* Copyright (c) 2007, 2009, 2015, 2016 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -35,8 +35,8 @@ public class Socket {
 
   private static SocketImplFactory factory=null;
 
-  SocketImpl socket;   //default acces for communication with serverSocket
-  private InetAddress local=null;
+  SocketImpl socket;
+  private InetAddress local;
   boolean bound;
   boolean inputShut;
   boolean outputShut;
@@ -171,6 +171,7 @@ public class Socket {
       return;
     }
      socket.close();
+     local = InetAddress.allZeroAddress;
      socket = null;
   }
 
@@ -193,8 +194,10 @@ public class Socket {
   }
 
   public InetAddress getLocalAddress() {
+System.out.println("isBound(): " + isBound());
     if (!isBound()) {
       try {
+System.out.println("not bound: " + InetAddress.getByAddress(new byte[4]));
         return InetAddress.getByAddress(new byte[4]);
       }
       catch(UnknownHostException e){
@@ -206,6 +209,7 @@ public class Socket {
     if (local == null) {
       try {
         local = (InetAddress) socket.getOption(SocketOptions.SO_BINDADDR);
+System.out.println("socket.getOption(SocketOptions.SO_BINDADDR) returned: " + socket.getOption(SocketOptions.SO_BINDADDR));
       }
       catch(SocketException e){
         e.printStackTrace();

@@ -115,16 +115,16 @@ public class AcuniaInetAddressTest implements Testlet
      failByName("192.168.  8.  2","Name tag no spaces");
      failByName("195.0.76.33    ","Name tag no spaces");
      failByName("    195.0.76.33","Name tag no spaces");
-     failByName("wonka.acunia. com","no spaces allowed");
-     failByName(" wonka.acunia.com","no spaces allowed");
-     failByName("wonka.acuni a.com","no spaces allowed");
-     failByName("wonka.acunia.com ","no spaces allowed");
+     failByName("kiffer.ltd. uk","no spaces allowed");
+     failByName(" kiffer.ltd.uk","no spaces allowed");
+     failByName("kiffer.lt d.uk","no spaces allowed");
+     failByName("kiffer.ltd.uk ","no spaces allowed");
 
     try
     {
       harness.checkPoint("InetAddress getByName(random adress))");
       testAddressData(InetAddress.getByName("127.0.0.1")); //self
-      testAddressData(InetAddress.getByName("wonka.acunia.com")); //www
+      testAddressData(InetAddress.getByName("kiffer.ltd.uk")); //www
     }
     catch(Exception e)
     {
@@ -225,16 +225,19 @@ public class AcuniaInetAddressTest implements Testlet
       harness.checkPoint("Testing HashCode : local to self");
       checkEquality(InetAddress.getLocalHost(), local, true);
 
+/*
+ * Doesn't work any more: one hostname yields 134.58.64.12 and the other 134.58.64.12
       harness.checkPoint("Testing HashCode : addresses to self");
       checkEquality(InetAddress.getByName("www.kuleuven.ac.be"),InetAddress.getByName("www.kuleuven.ac.be"),true );
       checkEquality(InetAddress.getByName("www.kuleuven.ac.be"),InetAddress.getByName("www.kul.be"),false );
+*/
 
       harness.checkPoint("Testing HashCode : local to definite other addresses");
       checkHashCodes(InetAddress.getByName("195.0.76.33"),local);
-      checkHashCodes(InetAddress.getByName("wonka.acunia.com"),local );
+      checkHashCodes(InetAddress.getByName("kiffer.ltd.uk"),local );
 
       harness.checkPoint("Testing HashCode : definite different addresses");
-      checkHashCodes(InetAddress.getByName("wonka.acunia.com"),InetAddress.getByName("www.kul.be"));
+      checkHashCodes(InetAddress.getByName("kiffer.ltd.uk"),InetAddress.getByName("www.kul.be"));
       checkHashCodes(InetAddress.getByName("194.7.211.212"),InetAddress.getByName("195.0.76.33"));
     }
     catch(Exception e)

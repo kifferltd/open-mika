@@ -1,6 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* Parts copyright (c) 2005, 2009, 2016 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -11,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 package java.net;
@@ -102,7 +100,7 @@ public final class Inet6Address extends InetAddress implements Serializable {
   }
 
   public boolean isMulticastAddress () {
-    return false;
+    return ipaddress[0] == -1;
   }
 
   public String getCanonicalHostName() {
@@ -110,39 +108,58 @@ public final class Inet6Address extends InetAddress implements Serializable {
   }
 
   public boolean isAnyLocalAddress() {
-    return false;
+    for (int i = 0; i < 16; i++) {
+      if (ipaddress[i] != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public boolean isLinkLocalAddress() {
-    return false;
+   return ipaddress[0] == -2 && (ipaddress[1] & 0xc0) == 0x80;
   }
 
   public boolean isLoopbackAddress() {
-    return false;
+    for (int i = 0; i < 15; i++) {
+      if (ipaddress[i] != 0) {
+        return false;
+      }
+    }
+    return ipaddress[15] == 1;
   }
 
   public boolean isMCGlobal() {
-    return false;
+   return ipaddress[0] == -1 && (ipaddress[1] & 0x0f) == 0x0e;
   }
 
   public boolean isMCLinkLocal() {
-    return false;
+   return ipaddress[0] == -1 && (ipaddress[1] & 0x0f) == 2;
   }
 
   public boolean isMCNodeLocal() {
-    return false;
+   return ipaddress[0] == -1 && (ipaddress[1] & 0x0f) == 1;
   }
 
   public boolean isMCOrgLocal() {
-    return false;
+   return ipaddress[0] == -1 && (ipaddress[1] & 0x0f) == 8;
   }
 
   public boolean isMCSiteLocal() {
-    return false;
+   return ipaddress[0] == -1 && (ipaddress[1] & 0x0f) == 5;
   }
 
   public boolean isSiteLocalAddress() {
-    return false;
+   return ipaddress[0] == -2 && (ipaddress[1] & 0xc0) == 0xc0;
+  }
+
+  public boolean isIPvCompatibleAddress() {
+    for (int i = 0; i < 12; i++) {
+      if (ipaddress[i] != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static String IPtoIPString(byte[] address) {

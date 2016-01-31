@@ -2,7 +2,7 @@
 #define _NETWORK_H
 
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Copyright (c) 2015 by Chris Gray, KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,26 +12,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
-
-/*
-** $Id: network.h,v 1.8 2006/10/04 14:24:20 cvsroot Exp $
-*/
 
 #include <netinet/tcp.h>
 #include <sys/types.h>
@@ -41,6 +37,7 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 
@@ -76,12 +73,90 @@ static inline int w_switchPortBytes(int port){
 /* ---- BLOCKING VERSION ...     ---- */
 
 #define w_socket(x,y,z)		socket(x,y,z)
-#define w_connect(s,a,l)	connect(s,a,l) 
 #define w_socketclose(s)   	close((int)s)
 #define w_send(s,b,l,f)    	send(s,b,l,f)
 /* [CG 20040329] Replaced by inline function (v.i.)
 #define w_recv(T,s,b,l,f, timeout)    	recv(s,b,l,f)
 */
+
+/*
+ * If a timeout is specified then we have to do a lot of fancy stuff
+ * instead of just forwarding to connect(s,a,l)
+ */
+static inline int w_connect(int s, void *a, size_t l, int t) {
+    if (t == 0) {
+        return connect(s, a, l);
+    }
+
+    // Get and save the current socket flags
+    int flags = fcntl(s, F_GETFL, 0);
+    if (flags < 0) {
+      return flags;
+    }
+
+    // Temporarily set the socket non-blocking
+    if(fcntl(s, F_SETFL, flags | O_NONBLOCK) < 0) {
+        return -1;
+    }
+
+    // Now connect to it
+    int rc = connect(s, (struct sockaddr *)a, l);
+    if (rc < 0 && errno != EINPROGRESS) {
+      return -1;
+    }
+
+    // If rc == 0 we connected immediately (e.g. loopback), skip the next bit
+    if (rc) {
+      fd_set rset, wset;
+      struct timeval tv;
+
+      FD_ZERO(&rset);
+      FD_SET(s, &rset);
+      wset = rset;
+      tv.tv_sec = t / 1000;
+      tv.tv_usec = (t % 1000) * 1000;
+
+      // Now we perform a select with timeout to see if we can read or write.
+      // The call will only return once the connect has succeeded or failed.
+      rc = select(s + 1, &rset, &wset, NULL, &tv);
+
+      // Failure -> connection failed
+      if (rc < 0) {
+          return -1;
+      }
+
+      // Zero -> timeout
+      if (rc == 0) {
+          errno = ETIMEDOUT;
+          return -1;
+      }
+
+      
+      // If we are really connected then read or write should be possible
+      if (FD_ISSET(s, &rset) || FD_ISSET(s, &wset)) {
+        // Check errno to be sure, because select is like that
+        int error = 0;
+        int errlen = sizeof(error);
+        if (getsockopt(s, SOL_SOCKET, SO_ERROR, &error, &errlen) < 0) {
+          return -1;
+        }
+        if (error) {
+          errno = error;
+          return -1;
+        }
+      } else {
+        return -1;
+      }
+
+    }
+
+    // Restore the current socket flags
+    if (fcntl(s, F_SETFL, flags) < 0) {
+      return -1;
+    }
+
+    return 0;
+}
 
 /*
  * If recv is interrupted before any data read, restart it.
@@ -220,7 +295,7 @@ static inline int w_socket(int domain, int type, int protocol)	{
 ** by 'a' (which has length 'l'). This is allowed to take "forever",
 ** TODO: see if it make sense within the java.net API to apply a timeout here.
 */
-static inline int w_connect(int s, const struct sockaddr *a, socklen_t l){
+static inline int w_connect(int s, const struct sockaddr *a, socklen_t l, int timeout){
 	int retval = x_connect(s,a,l);
   if(retval == -1 && errno == EINPROGRESS){
     woempa(7,"connecting in progress\n");

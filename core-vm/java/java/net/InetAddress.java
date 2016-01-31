@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2015 by Chris Gray, KIFFER Ltd.         *
+* Copyright (c) 2007, 2009, 2015, 2016 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -42,8 +42,10 @@
 
 package java.net;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Enumeration;
@@ -268,7 +270,12 @@ public class InetAddress implements Serializable {
   String hostName;
 
   /**
-   ** Dotted-string form of 'address'.
+   * Canonical host name (lazy look-up)
+   */
+  transient String canonicalHostName;
+
+  /**
+   ** Dotted-string form of 'address'.  Also ised as a lock object for lazily looking up canonicalHostName.
    */
   transient String ipAddressString;
 
@@ -470,6 +477,35 @@ public class InetAddress implements Serializable {
   }
 */
 
+    /**
+     * Returns the fully qualified hostname corresponding to this IP address.
+     */
+    public synchronized String getCanonicalHostName() {
+        if (canonicalHostName != null) {
+            return canonicalHostName;
+        }
+
+        /*
+         * Hack to get the most likely IP address for a  given hostname.
+         * We use ping(8) for this because it is available just about anywhere;
+         * if we used a more "appropriate" tool like nslookup or dig or ...
+         * then we would need a fall-back for when it is not available.
+         * TODO: replace with some pukka native code.
+         */
+        try {
+            final Process p = Runtime.getRuntime().exec("ping -c1 -w1 " + getLocalName());
+            final String firstLineOfOutput = new BufferedReader(new InputStreamReader(p.getInputStream())).readLine();
+            final int leftParen = firstLineOfOutput.indexOf("(");
+            final int rightParen = firstLineOfOutput.indexOf(")");
+            final String ip = firstLineOfOutput.substring(rightParen + 1, leftParen);
+            canonicalHostName = null; // TODO
+            //return getHostByAddrImpl(this).hostName;
+        } catch (Exception ex) {
+            return getHostAddress();
+        }
+        return canonicalHostName;
+    }
+ 
   /**
   ** should only be called when ipAddressString is not null
   */
@@ -485,62 +521,268 @@ public class InetAddress implements Serializable {
   */
   private static native String getLocalName();
 
-  public static InetAddress getByAddress(byte[] addr) throws UnknownHostException{
-    final String hostname = (addr[0] & 0xff) + "." + (addr[1] & 0xff) + "." + (addr[2] & 0xff) + "." + (addr[3] & 0xff);
-    synchronized(positive_cache) {
-      IAddrCacheEntry cached = (IAddrCacheEntry)positive_cache.get(hostname);
-      if(cached != null){
+/* Remaining code adapted from Harmony/Android code by Chris Gray 2016 */
 
-        return cached.addr;
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
-      }
+    /**
+     * Equivalent to {@code getByAddress(null, ipAddress)}. Handy for addresses with
+     * no associated hostname.
+     */
+    public static InetAddress getByAddress(byte[] ipAddress) throws UnknownHostException {
+        return getByAddress(null, ipAddress, 0);
     }
 
-    return new Inet4Address(hostname, positive_cache_ttl);
-  }
+    /**
+     * Returns an {@code InetAddress} corresponding to the given network-order
+     * bytes {@code ipAddress} and {@code scopeId}.
+     *
+     * <p>For an IPv4 address, the byte array must be of length 4.
+     * For IPv6, the byte array must be of length 16. Any other length will cause an {@code
+     * UnknownHostException}.
+     *
+     * <p>No reverse lookup is performed. The given {@code hostName} (which may be null) is
+     * associated with the new {@code InetAddress} with no validation done.
+     *
+     * <p>(Note that numeric addresses such as {@code "127.0.0.1"} are names for the
+     * purposes of this API. Most callers probably want {@link #getAllByName} instead.)
+     *
+     * @throws UnknownHostException if {@code ipAddress} is null or the wrong length.
+     */
+    public static InetAddress getByAddress(String hostName, byte[] ipAddress) throws UnknownHostException {
+        return getByAddress(hostName, ipAddress, 0);
+    }
 
-  public static InetAddress getByAddress(String host, byte[] addr) throws UnknownHostException {
-    return null;
-   }
+    private static InetAddress getByAddress(String hostName, byte[] ipAddress, int scopeId) throws UnknownHostException {
+        if (ipAddress == null) {
+            throw new UnknownHostException("ipAddress == null");
+        }
+        if (ipAddress.length == 4) {
+            return new Inet4Address((byte[]) ipAddress.clone(), hostName, positive_cache_ttl);
+        } else if (ipAddress.length == 16) {
+            final String dotted = (ipAddress[0] & 0xff) + "." + (ipAddress[1] & 0xff) + "." + (ipAddress[2] & 0xff) + "." + (ipAddress[3] & 0xff);
+            synchronized(positive_cache) {
+              IAddrCacheEntry cached = (IAddrCacheEntry)positive_cache.get(dotted);
+              if(cached != null){
 
-  public String getCanonicalHostName() {
-    return null;
-  }
+                return cached.addr;
 
-  public boolean isAnyLocalAddress() {
-    return false;
-  }
+              }
+            }
 
-  public boolean isLinkLocalAddress() {
-    return false;
-  }
+            // First check to see if the address is an IPv6-mapped
+            // IPv4 address. If it is, then we can make it a IPv4
+            // address, otherwise, we'll create an IPv6 address.
+            if (isIPv4MappedAddress(ipAddress)) {
+                return new Inet4Address(ipv4MappedToIPv4(ipAddress), hostName, positive_cache_ttl);
+            } else {
+               // FIXME hacked to fit Mika's Inet6Address constructor
+               //   return new Inet6Address((byte[]) ipAddress.clone(), hostName, scopeId, positive_cache_ttl);
+               StringBuffer sb = new StringBuffer(Integer.toHexString((ipAddress[0] & 0xff) * 256 + (ipAddress[1] & 0xff)));
+               for (int i = 2; i < 16; i += 2) {
+                 sb.append(':');
+                 sb.append(Integer.toHexString((ipAddress[i] & 0xff) * 256 + (ipAddress[i + 1] & 0xff)));
+               }
+               return new Inet6Address(sb.toString());
+            }
+        } else {
+            throw badAddressLength(ipAddress);
+        }
+    }
 
-  public boolean isLoopbackAddress() {
-    return false;
-  }
+    private static UnknownHostException badAddressLength(byte[] bytes) throws UnknownHostException {
+        StringBuffer sb = new StringBuffer("Address is neither 4 or 16 bytes: [");
+        sb.append(bytes.length == 0 ? "<empty>" : Integer.toString(bytes[0] & 0xff));
+        for (int i = 1; i < bytes.length; ++i) {
+          sb.append(", ");
+          sb.append(bytes[i] & 0xff);
+        }
+        sb.append(']');
+        throw new UnknownHostException("Address is neither 4 or 16 bytes: " + sb);
+    }
 
-  public boolean isMCGlobal() {
-    return false;
-  }
+    private static boolean isIPv4MappedAddress(byte[] ipAddress) {
+        // Check if the address matches ::FFFF:d.d.d.d
+        // The first 10 bytes are 0. The next to are -1 (FF).
+        // The last 4 bytes are varied.
+        if (ipAddress == null || ipAddress.length != 16) {
+            return false;
+        }
+        for (int i = 0; i < 10; i++) {
+            if (ipAddress[i] != 0) {
+                return false;
+            }
+        }
+        if (ipAddress[10] != -1 || ipAddress[11] != -1) {
+            return false;
+        }
+        return true;
+    }
 
-  public boolean isMCLinkLocal() {
-    return false;
-  }
+    private static byte[] ipv4MappedToIPv4(byte[] mappedAddress) {
+        byte[] ipv4Address = new byte[4];
+        for (int i = 0; i < 4; i++) {
+            ipv4Address[i] = mappedAddress[12 + i];
+        }
+        return ipv4Address;
+    }
 
-  public boolean isMCNodeLocal() {
-    return false;
-  }
+    /**
+     * Returns whether this is a wildcard address or not. This implementation
+     * returns always {@code false}.
+     *
+     * @return {@code true} if this instance represents a wildcard address,
+     *         {@code false} otherwise.
+     */
+    public boolean isAnyLocalAddress() {
+        return false;
+    }
 
-  public boolean isMCOrgLocal() {
-    return false;
-  }
+    /**
+     * Returns whether this address is a link-local address or not. This
+     * implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 link-local addresses are FE80::0 through to
+     * FEBF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF.
+     * <p>
+     * There are no valid IPv4 link-local addresses.
+     *
+     * @return {@code true} if this instance represents a link-local address,
+     *         {@code false} otherwise.
+     */
+    public boolean isLinkLocalAddress() {
+        return false;
+    }
 
-  public boolean isMCSiteLocal() {
-    return false;
-  }
+    /**
+     * Returns whether this address is a loopback address or not. This
+     * implementation returns always {@code false}. Valid IPv4 loopback
+     * addresses are 127.d.d.d The only valid IPv6 loopback address is ::1.
+     *
+     * @return {@code true} if this instance represents a loopback address,
+     *         {@code false} otherwise.
+     */
+    public boolean isLoopbackAddress() {
+        return false;
+    }
 
-  public boolean isSiteLocalAddress() {
-    return false;
-  }
+    /**
+     * Returns whether this address is a global multicast address or not. This
+     * implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 link-global multicast addresses are FFxE:/112 where x is a set
+     * of flags, and the additional 112 bits make up the global multicast
+     * address space.
+     * <p>
+     * Valid IPv4 global multicast addresses are between: 224.0.1.0 to
+     * 238.255.255.255.
+     *
+     * @return {@code true} if this instance represents a global multicast
+     *         address, {@code false} otherwise.
+     */
+    public boolean isMCGlobal() {
+        return false;
+    }
+
+    /**
+     * Returns whether this address is a link-local multicast address or not.
+     * This implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 link-local multicast addresses are FFx2:/112 where x is a set
+     * of flags, and the additional 112 bits make up the link-local multicast
+     * address space.
+     * <p>
+     * Valid IPv4 link-local addresses are between: 224.0.0.0 to 224.0.0.255
+     *
+     * @return {@code true} if this instance represents a link-local multicast
+     *         address, {@code false} otherwise.
+     */
+    public boolean isMCLinkLocal() {
+        return false;
+    }
+
+    /**
+     * Returns whether this address is a node-local multicast address or not.
+     * This implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 node-local multicast addresses are FFx1:/112 where x is a set
+     * of flags, and the additional 112 bits make up the node-local multicast
+     * address space.
+     * <p>
+     * There are no valid IPv4 node-local multicast addresses.
+     *
+     * @return {@code true} if this instance represents a node-local multicast
+     *         address, {@code false} otherwise.
+     */
+    public boolean isMCNodeLocal() {
+        return false;
+    }
+
+    /**
+     * Returns whether this address is a organization-local multicast address or
+     * not. This implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 organization-local multicast addresses are FFx8:/112 where x
+     * is a set of flags, and the additional 112 bits make up the
+     * organization-local multicast address space.
+     * <p>
+     * Valid IPv4 organization-local addresses are between: 239.192.0.0 to
+     * 239.251.255.255
+     *
+     * @return {@code true} if this instance represents a organization-local
+     *         multicast address, {@code false} otherwise.
+     */
+    public boolean isMCOrgLocal() {
+        return false;
+    }
+
+    /**
+     * Returns whether this address is a site-local multicast address or not.
+     * This implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 site-local multicast addresses are FFx5:/112 where x is a set
+     * of flags, and the additional 112 bits make up the site-local multicast
+     * address space.
+     * <p>
+     * Valid IPv4 site-local addresses are between: 239.252.0.0 to
+     * 239.255.255.255
+     *
+     * @return {@code true} if this instance represents a site-local multicast
+     *         address, {@code false} otherwise.
+     */
+    public boolean isMCSiteLocal() {
+        return false;
+    }
+
+    /**
+     * Returns whether this address is a site-local address or not. This
+     * implementation returns always {@code false}.
+     * <p>
+     * Valid IPv6 site-local addresses are FEC0::0 through to
+     * FEFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF.
+     * <p>
+     * There are no valid IPv4 site-local addresses.
+     *
+     * @return {@code true} if this instance represents a site-local address,
+     *         {@code false} otherwise.
+     */
+    public boolean isSiteLocalAddress() {
+        return false;
+    }
 
 }
