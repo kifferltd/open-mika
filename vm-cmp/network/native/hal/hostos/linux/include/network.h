@@ -122,13 +122,13 @@ static inline int w_connect(int s, void *a, size_t l, int t) {
 
       // Failure -> connection failed
       if (rc < 0) {
-          return -1;
+          goto close_and_fail;
       }
 
       // Zero -> timeout
       if (rc == 0) {
           errno = ETIMEDOUT;
-          return -1;
+          goto close_and_fail;
       }
 
       
@@ -138,24 +138,28 @@ static inline int w_connect(int s, void *a, size_t l, int t) {
         int error = 0;
         int errlen = sizeof(error);
         if (getsockopt(s, SOL_SOCKET, SO_ERROR, &error, &errlen) < 0) {
-          return -1;
+          goto close_and_fail;
         }
         if (error) {
           errno = error;
-          return -1;
+          goto close_and_fail;
         }
       } else {
-        return -1;
+        goto close_and_fail;
       }
 
     }
 
     // Restore the current socket flags
     if (fcntl(s, F_SETFL, flags) < 0) {
-      return -1;
+      goto close_and_fail;
     }
 
     return 0;
+
+close_and_fail:
+    close(s);
+    return -1;
 }
 
 /*
