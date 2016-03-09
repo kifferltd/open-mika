@@ -74,15 +74,12 @@ public class Deflater {
 	
 	public Deflater() {
 		this(DEFAULT_COMPRESSION , false);
-//System.out.println("Deflater: created with default algorithm");
 	}
 	public Deflater(int lvl) {
 	        this(lvl, false);
 	}
 	public Deflater(int lvl, boolean noHeader) {
  		level = (9 < lvl || lvl < 0) ? DEFAULT_COMPRESSION : lvl;
-//System.out.println("Deflater: created with compression level " + lvl + (noHeader ? " without " : " with ") + "header");
-level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		create();	
     this.noHeader = noHeader;
 	}
@@ -121,7 +118,6 @@ level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  	}
  	
  	public synchronized void setLevel(int lvl){
-//System.out.println("Deflater: setting compression level to "+ lvl);
  		if (9 < lvl || lvl < 0) {
  		 	throw new IllegalArgumentException();	
  		}
@@ -137,7 +133,6 @@ level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  	}	
 
  	public synchronized void setInput(byte[] buf, int off, int len){
-//System.out.println("Deflater: setInput(" + buf + ", " + off + ", " + len + ")");
  	  adler.update(buf,off,len);
  	  totalIn += len;
  	  _setInput(buf, off, len);
@@ -155,10 +150,8 @@ level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 **  checksum = these five bits are set the 2 bytes are divisable by 31
 */
  	public synchronized int deflate(byte[] buf, int off, int len){
-//System.out.println("Deflater: deflate(" + buf + ", " + off + ", " + len + ")");
  	  int tot = 0;
  	  if(len == 0){
-//System.out.println("Deflater: deflate() returns 0");
  	    return 0;
  	  }
  	  if (totalOut < 6 && !noHeader){
@@ -179,7 +172,6 @@ level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  	    }
  	  }
  	  int rd  = _deflate(buf, off, len);
-    //System.out.println("deflated "+rd+" bytes");
  	
  	  tot += rd;
  	  len -=rd;
@@ -191,26 +183,21 @@ level = 0; // TESTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           intToBytes((int)adler.getValue(), headerDict, 2);
         }
         rd = (4 > len ? len : 4);
-   	    //System.out.println("writing trailing adler "+rd);
         System.arraycopy(headerDict, finished, buf, off, rd);
         tot+=rd; 	   	
       }
  	  }
  	  totalOut += tot;
-    //System.out.println("deflate returning "+tot+" bytes");
-//System.out.println("Deflater: deflate() returns " + tot);
  	  return tot;
  	}
  	
  	public synchronized void reset(){
-//System.out.println("Deflater: reset");
  	  totalIn=0;
 	  totalOut=0;
 	  dictadler=0;
 	  nativeReset();
  	}
  	public synchronized void setDictionary(byte [] buf, int off, int len){
-    //System.out.println("Deflater: setDictionary(" + buf + ", " + off + ", " + len + ")");
  	  if(finished < 2){
    	  Adler32 ad = new Adler32();
  	    ad.update(buf,off,len);
