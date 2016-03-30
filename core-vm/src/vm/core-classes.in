@@ -496,9 +496,6 @@ java/util/Arrays
   fill          ([ZZ)V       fill_bool
   fill          ([BB)V       fill_byte
   fill          ([BIIB)V     fill_byte_range
-java/util/Date
- 	millisSince1jan1970  J
-	create_ymdhms	(IIIIII)V		Date_create_ymdhms
 java/util/Vector
 	elementData	[Ljava/lang/Object;
 	elementCount	I
