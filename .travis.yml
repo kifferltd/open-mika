@@ -1,5 +1,10 @@
 language: java
 
+addons:
+  apt:
+    packages:
+    - bjam
+
 install: ant -DPLATFORM=pc -DLAYOUT=jre
 
 jdk:
