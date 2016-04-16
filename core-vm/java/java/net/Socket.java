@@ -194,10 +194,8 @@ public class Socket {
   }
 
   public InetAddress getLocalAddress() {
-System.out.println("isBound(): " + isBound());
     if (!isBound()) {
       try {
-System.out.println("not bound: " + InetAddress.getByAddress(new byte[4]));
         return InetAddress.getByAddress(new byte[4]);
       }
       catch(UnknownHostException e){
@@ -209,7 +207,6 @@ System.out.println("not bound: " + InetAddress.getByAddress(new byte[4]));
     if (local == null) {
       try {
         local = (InetAddress) socket.getOption(SocketOptions.SO_BINDADDR);
-System.out.println("socket.getOption(SocketOptions.SO_BINDADDR) returned: " + socket.getOption(SocketOptions.SO_BINDADDR));
       }
       catch(SocketException e){
         e.printStackTrace();
