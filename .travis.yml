@@ -1,5 +1,6 @@
 language: java
-install: ant deps
+
+install: ant -DPLATFORM=pc -DLAYOUT=jre
 
 jdk:
 - openjdk7
