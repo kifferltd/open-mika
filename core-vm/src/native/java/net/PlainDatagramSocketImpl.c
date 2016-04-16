@@ -247,7 +247,7 @@ int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_instanc
      	
       if (result == -1) {
         if (len) { 		     		
-          throwException(JNIEnv2w_thread(env), clazzIOException, NULL);
+          throwException(JNIEnv2w_thread(env), clazzIOException, strerror(errno));
         }
      	else {
           woempa(9,"ERROR receive timed out \n");
