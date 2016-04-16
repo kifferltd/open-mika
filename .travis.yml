@@ -5,7 +5,7 @@ addons:
     packages:
     - bjam
 
-install: ant -DPLATFORM=pc -DLAYOUT=jre
+install: ant -Djam.exec=bjam -DPLATFORM=pc -DLAYOUT=jre
 
 jdk:
 - openjdk7
