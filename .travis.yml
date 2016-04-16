@@ -3,9 +3,9 @@ language: java
 addons:
   apt:
     packages:
-    - libboost-dev
+    - ftjam
 
-install: ant -Djam.exec=bjam -DPLATFORM=pc -DLAYOUT=jre
+install: ant -DPLATFORM=pc -DLAYOUT=jre
 
 jdk:
 - openjdk7
