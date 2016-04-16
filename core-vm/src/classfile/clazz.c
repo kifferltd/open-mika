@@ -1444,7 +1444,7 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
     }
   }
   ht_unlock(hashtable);
-  woempa(7, "Returning %K (%p)\n", result);
+  woempa(7, "Returning %K\n", result);
   if (loader) {
     notifyMonitor(loader, TRUE);
   }
