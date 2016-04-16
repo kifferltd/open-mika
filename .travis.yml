@@ -1,0 +1,15 @@
+language: java
+install: ant deps
+
+jdk:
+- openjdk7
+
+branches:
+  only:
+  - master
+
+notifications:
+  email:
+  - chris.gray@kiffer.ltd.uk
+
+
