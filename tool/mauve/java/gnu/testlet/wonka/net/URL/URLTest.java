@@ -259,97 +259,79 @@ public class URLTest implements Testlet
         public void test_cr601a() {
             String[][] s = {
 
-                // tests 0..3
-                {"file:////c:/pub/files/foobar.txt",
-                 "file://c:/pub/files/foobar.txt",
-                 "",
-                 "//c:/pub/files/foobar.txt"},
-
-                // tests 4..7
+                // tests 1..2
                 {"file:///c:/pub/files/foobar.txt",
                  "file:/c:/pub/files/foobar.txt",
                  "",
                  "/c:/pub/files/foobar.txt"},
 
-                // tests 8..11
+                // tests 3..4
                 {"file://hpjavaux/c:/pub/files/foobar.txt",
                  "file://hpjavaux/c:/pub/files/foobar.txt",
                  "hpjavaux",
                  "/c:/pub/files/foobar.txt"},
 
-                // tests 12..15
+                // tests 5..6
                 {"file://c:/pub/files/foobar.txt",
                  "file://c/pub/files/foobar.txt",
                  "c",
                  "/pub/files/foobar.txt"},
 
-                // tests 16..19
+                // tests 7..8
                 {"file:/c:/pub/files/foobar.txt",
                  "file:/c:/pub/files/foobar.txt",
                  "",
                  "/c:/pub/files/foobar.txt"},
 
-                // tests 20..23
-                {"file:c:/pub/files/foobar.txt",
-                 "file:/c:/pub/files/foobar.txt",
-                 "",
-                 "/c:/pub/files/foobar.txt"},
-
-                // tests 24..27
-                {"file:////hpjavant/bgee/foobar.txt",
-                 "file://hpjavant/bgee/foobar.txt",
-                 "",
-                 "//hpjavant/bgee/foobar.txt"},
-
-                // tests 28..31
+                // tests 11..12
                 {"file:///hpjavant/bgee/foobar.txt",
                  "file:/hpjavant/bgee/foobar.txt",
                  "",
                  "/hpjavant/bgee/foobar.txt"},
 
-                // tests 32..35
+                // tests 13..14
                 {"file://hpjavant/bgee/foobar.txt",
                  "file://hpjavant/bgee/foobar.txt",
                  "hpjavant",
                  "/bgee/foobar.txt"},
 
-                // tests 36..39
+                // tests 15..16
                 {"file:/hpjavant/bgee/foobar.txt",
                  "file:/hpjavant/bgee/foobar.txt",
                  "",
                  "/hpjavant/bgee/foobar.txt"},
 
-                // tests 40..43
+                // tests 17..18
                 {"file://hpjavaux//hpjavant/bgee/foobar.txt",
                  "file://hpjavaux//hpjavant/bgee/foobar.txt",
                  "hpjavaux",
                  "//hpjavant/bgee/foobar.txt"},
 
-                // tests 44..47
+                // tests 19..20
                 {"file://hpjavaux/bgee/foobar.txt",
                  "file://hpjavaux/bgee/foobar.txt",
                  "hpjavaux",
                  "/bgee/foobar.txt"},
 
-                // tests 48..51
+                // tests 21..22
                 {"file://hpjavaux/c:/pubs/files/foobar.txt",
                  "file://hpjavaux/c:/pubs/files/foobar.txt",
                  "hpjavaux",
                  "/c:/pubs/files/foobar.txt"},
 
-                // tests 52..55
+                // tests 23..24
                 {"file://bg710571//hpjavant/bgee/foobar.txt",
                  "file://bg710571//hpjavant/bgee/foobar.txt",
                  "bg710571",
                  "//hpjavant/bgee/foobar.txt"},
 
-                // tests 56..59
+                // tests 25..27
                 {"file://bg710571/bgee/foobar.txt",
                  "file://bg710571/bgee/foobar.txt",
                  "bg710571",
                  "/bgee/foobar.txt"},
 
-                // tests 60..63
+                // tests 28..29
                 {"file://bg710571/c:/pubs/files/foobar.txt",
                  "file://bg710571/c:/pubs/files/foobar.txt",
                  "bg710571",
@@ -374,103 +356,91 @@ public class URLTest implements Testlet
         public void test_cr601b() {
             String[][] s = {
 
-                // tests 0..3
+                // tests 1..3
                 {"////", "c:/pub/files/foobar.txt",
                  "file://////c:/pub/files/foobar.txt",
                  "////",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 4..7
+                 // tests 4..6
                 {"///", "c:/pub/files/foobar.txt",
                  "file://///c:/pub/files/foobar.txt",
                  "///",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 8..11
+                 // tests 7..9
                 {"//", "c:/pub/files/foobar.txt",
                  "file:////c:/pub/files/foobar.txt",
                  "//",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 12..15
+                 // tests 10..12
                 {"/", "c:/pub/files/foobar.txt",
                  "file:///c:/pub/files/foobar.txt",
                  "/",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 16..19
+                 // tests 13..15
                 {"", "c:/pub/files/foobar.txt",
                  "file:c:/pub/files/foobar.txt",
                  "",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 20..23
+                 // tests 16..18
                 {"hpjavaux", "c:/pub/files/foobar.txt",
                  "file://hpjavauxc:/pub/files/foobar.txt",
                  "hpjavaux",
                  "c:/pub/files/foobar.txt"},
 
-                 // tests 24..27
-                {null, "c:/pub/files/foobar.txt",
-                 "file:c:/pub/files/foobar.txt",
-                 "null",
-                 "c:/pub/files/foobar.txt"},
-
-                 // tests 28..31
+                 // tests 19..21
                 {"////", "//hpjavant/bgee/foobar.txt",
                  "file:////////hpjavant/bgee/foobar.txt",
                  "////",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 32..35
+                 // tests 22..24
                 {"///", "//hpjavant/bgee/foobar.txt",
                  "file:///////hpjavant/bgee/foobar.txt",
                  "///",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 36..39
+                 // tests 25..27
                 {"//", "//hpjavant/bgee/foobar.txt",
                  "file://////hpjavant/bgee/foobar.txt",
                  "//",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 40..43
+                 // tests 28..30
                 {"/", "//hpjavant/bgee/foobar.txt",
                  "file://///hpjavant/bgee/foobar.txt",
                  "/",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 44..47
+                 // tests 31..33
                 {"", "//hpjavant/bgee/foobar.txt",
                  "file://hpjavant/bgee/foobar.txt",
                  "",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 48..51
+                 // tests 34..36
                 {"hpjavaux", "//hpjavant/bgee/foobar.txt",
                  "file://hpjavaux//hpjavant/bgee/foobar.txt",
                  "hpjavaux",
                  "//hpjavant/bgee/foobar.txt"},
 
-                 // tests 52..55
-                {null, "//hpjavant/bgee/foobar.txt",
-                 "file://hpjavant/bgee/foobar.txt",
-                 "null",
-                 "//hpjavant/bgee/foobar.txt"},
-
-                 // tests 56..59
+                 // tests 37..39
                 {"hpjavant", "/bgee/foobar.txt",
                  "file://hpjavant/bgee/foobar.txt",
                  "hpjavant",
                  "/bgee/foobar.txt"},
 
-                 // tests 60..63
+                 // tests 40..42
                 {"hpjavant", "/home/bgee/foobar.txt",
                  "file://hpjavant/home/bgee/foobar.txt",
                  "hpjavant",
                  "/home/bgee/foobar.txt"},
 
-                 // tests 64..67
+                 // tests 43..45
                 {"hpjavaux", "/home/bgee/foobar.txt",
                  "file://hpjavaux/home/bgee/foobar.txt",
                  "hpjavaux",
