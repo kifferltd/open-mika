@@ -937,6 +937,8 @@ w_int markFrameReachable(w_frame frame, w_fifo fifo, w_word flag) {
   while (item <= (volatile w_slot) frame->auxstack_base) {
     if (item == frame->jstack_top) {
       item = frame->auxstack_top + 1;
+      // repeat test, because auxstack_top + 1 could be past end of frame if auxstack is empty
+      continue;
     }
     if (item->s == stack_trace && item->c) {
       child_instance = (w_instance) item->c;
@@ -1522,6 +1524,9 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 }
 #endif
 
+static w_size blocking_start;
+static w_size blocking_end;
+
 static void prepreparation(w_thread thread) {
   x_status status;
 
@@ -1529,12 +1534,19 @@ static void prepreparation(w_thread thread) {
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
+  blocking_start = x_time_get();
   x_monitor_eternal(safe_points_monitor);
+  blocking_end = x_time_get();
+  //w_printf("waited %d msec to get safe_points_monitor\n", blocking_end - blocking_start);
+  blocking_start = blocking_end;
 #ifdef JDWP
   while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
     woempa(7, "JDWP is blocking all threads, not possible to run yet.\n");
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
   }
+  blocking_end = x_time_get();
+  //w_printf("waited %d msec because blocked by JDWP\n", blocking_end - blocking_start);
+  blocking_start = blocking_end;
 #endif
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
   setFlag(blocking_all_threads, BLOCKED_BY_GC);
@@ -1542,8 +1554,11 @@ static void prepreparation(w_thread thread) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
   }
+  blocking_end = x_time_get();
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
+  //w_printf("waited %d msec for all threads to enter safe point\n", blocking_end - blocking_start);
+  blocking_start = blocking_end;
   woempa(7, "%t: finished locking other threads\n", marking_thread);
 #ifdef TRACE_MEM_ALLOC
   _heapCheck("collector.c", 1571);
@@ -1554,12 +1569,18 @@ static void prepreparation(w_thread thread) {
 static void postmark(w_thread thread) {
   x_thread_priority_set(thread->kthread, thread->kpriority);
 
+  blocking_end = x_time_get();
+  //w_printf("spent %d msec in prepare/mark\n", blocking_end - blocking_start);
+  blocking_start = blocking_end;
   woempa(7, "%t: start unlocking other threads\n", marking_thread);
   x_monitor_eternal(safe_points_monitor);
   woempa(2, "postmark: %t setting blocking_all_threads to 0\n", marking_thread);
   unsetFlag(blocking_all_threads, BLOCKED_BY_GC);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
+  blocking_end = x_time_get();
+  //w_printf("waited %d msec to remove blocking flag", blocking_end - blocking_start);
+  blocking_start = blocking_end;
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
   x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
@@ -2424,7 +2445,7 @@ void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
   sweeping_thread = NULL;
   memory_total = x_mem_total() - min_heap_free;
   memory_load_factor = 1;
-  reclaim_threshold = memory_total / 3;
+  reclaim_threshold = memory_total;
 #ifndef THREAD_SAFE_FIFOS
   finalizer_fifo_mutex = &finalizer_fifo_Mutex;
   x_mutex_create(finalizer_fifo_mutex);
