@@ -790,6 +790,7 @@ void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
     }
 
     longer.l_onoff = 0;
+    longer.l_linger = 0;
     setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(longer));
   }
   else {
@@ -799,7 +800,7 @@ void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
 
     longer.l_onoff = 1;
     longer.l_linger = ling;
-    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(longer));
+    setOption(thread, thisImpl, SOL_SOCKET, SO_LINGER, &longer, sizeof(struct linger));
   }
 }
 
