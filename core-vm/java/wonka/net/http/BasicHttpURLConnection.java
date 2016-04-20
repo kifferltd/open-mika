@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2008, 2009, 2011 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Copyright (c) 2005, 2008, 2009, 2011, 2016 by Chris Gray, KIFFER Ltd.   *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,19 +10,18 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR        *
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR                *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT       *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;         *
+ OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF            *
 * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
@@ -39,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.jar.Attributes;
@@ -72,6 +71,15 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     private static final String OPTIONS = "OPTIONS";
 
     private static final String TRACE = "TRACE";
+
+    private static final String ACCEPT_ENCODING_PROPERTY = "Accept-Encoding";
+    private static final String AUTHORIZATION_PROPERTY = "Authorization";
+    private static final String CONNECTION_PROPERTY = "Connection";
+    private static final String CONTENT_LENGTH_PROPERTY = "Content-Length";
+    private static final String HOST_PROPERTY = "Host";
+    private static final String IF_MODIFIED_SINCE_PROPERTY = "If-Modified-Since";
+    private static final String PROXY_AUTHORIZATION_PROPERTY = "Proxy-Authorization";
+    private static final String USER_AGENT_PROPERTY = "User-Agent";
 
   /**
    ** If set to <code>true</code>, cache the proxy user name and password
@@ -214,16 +222,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   private OutputStream out;
     
-  
-  /**
-   ** The request headers, as a Map from key to value.
-   */
-  private Map requestHeaders;
-
   /**
    ** The status line (e.g. "HTTP 200 OK") received from the server.
    */
   private String responseLine;
+
+  /**
+   ** The request headers, as a Map from key to value.
+   ** Only valid after <code>connect()</code>.
+   */
+  private Map requestHeaders;
 
   /**
    ** The response headers, as a Map from key to value.
@@ -261,15 +269,20 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   private boolean responseParsed;
 
   /**
+   ** True iff we inserted an Accept-Encoding: gzip header.
+   */
+
+  private boolean autogzip;
+
+  /**
    ** Number of reconnects (redirections or authorisation attempts) so far.
    */
   private int reconnectCount;
 
   /**
    ** Prepare the connection (we only connect later, "lazily").
-   ** The <var>requestHeaders</var> are pre-loaded with:
+   ** The <var>requestProperties</var> are pre-loaded with:
    ** <ul>
-   ** <li><code>accept-encoding=gzip</code>
    ** <li><code>host=<own hostname>[:port]</code>
    ** <li><code>user-agent=Mika-HTTP</code>
    ** </ul>
@@ -280,10 +293,8 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     if (!CACHE_PROXY_AUTH || !newProxyHost.equalsIgnoreCase(proxyHost)) {
       setProxyFields();
     }
-    requestHeaders = new Attributes();
-    requestHeaders.put(new Attributes.Name("accept-encoding"),"gzip");
-    requestHeaders.put(new Attributes.Name("host"),url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
-    requestHeaders.put(new Attributes.Name("user-agent"),"Mika-HTTP");
+    setRequestProperty(HOST_PROPERTY, url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
+    setRequestProperty(USER_AGENT_PROPERTY,"Mika-HTTP");
     requestContentLength = -1;
     instanceFollowRedirects = defaultFollowRedirects;
   }
@@ -395,6 +406,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       socket.setSoTimeout(timeout);
       in = new BufferedInputStream(socket.getInputStream(),4096);
       out = socket.getOutputStream();
+      requestHeaders = getRequestProperties();
       connected = true;
     }
 
@@ -418,7 +430,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       }
 
       if(PUT.equals(method) || POST.equals(method)){
-        out.write(getRequestLine().getBytes());
+        out.write(getRequestLine(requestHeaders).getBytes());
         sendPartialHeaders(out);
         doOutput = true;
         requestSent = true;
@@ -449,9 +461,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
       while (true) {
         if (responseCode == HTTP_UNAUTHORIZED) {
-          String challenge = internal_getResponseProperty("www-authenticate");
+          String challenge = (String) responseHeaders.get("WWW-Authenticate");
           if (challenge == null) {
-            throw new ProtocolException("HTTP_UNAUTHORIZED response contained no www-authenticate header");
+            throw new ProtocolException("HTTP_UNAUTHORIZED response contained no WWW-Authenticate header");
           }
           else if (getAuthorisation(challenge.trim(), url.toString(), hostAddr, url.getPort())) {
             debug("HTTP: retrying with authorization");
@@ -465,9 +477,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
           }
         }
         else if (responseCode == HTTP_PROXY_AUTH && usingProxy()) {
-          String challenge = internal_getResponseProperty("proxy-authenticate");
+          String challenge = (String) responseHeaders.get("Proxy-Authenticate");
           if (challenge == null) {
-            throw new ProtocolException("HTTP_PROXY_AUTH response contained no proxy-authenticate header");
+            throw new ProtocolException("HTTP_PROXY_AUTH response contained no Proxy-Authenticate header");
           }
           else if (getAuthorisation(challenge.trim(), "Proxy", getProxyAddr(), getProxyPort())) {
             debug("HTTP: retrying with proxy authorization");
@@ -536,7 +548,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       return null;
     }
 
-    return internal_getResponseProperty(name);
+    return (String) responseHeaders.get(normaliseName(name));
   }
 
   /**
@@ -630,10 +642,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     connect();
-    if (!requestSent) {
-      doRequest();
-    }
-
+    doRequest();
 
     if (!(out instanceof HttpOutputStream)) {
       out = new HttpOutputStream(out, requestContentLength);
@@ -643,37 +652,24 @@ public class BasicHttpURLConnection extends HttpURLConnection {
   }
 
   /**
-   ** Get the value of the request header named <var>name</var>.
+   ** Check whether a response header is present.
    */
-  public String getRequestProperty(String key){
-    return internal_getRequestProperty(key);
+  private boolean internal_checkResponsePropertyPresent (String key) {
+    return responseHeaders.get(normaliseName(key)) != null;  
   }
 
   /**
-   ** Version for internal use within this class.
+   ** Check whether a response header is present and has a given value.
    */
-  private String internal_getRequestProperty (String key) {
-    return (String) requestHeaders.get(new Attributes.Name(key));  
-  }
-
-  /**
-   ** Get the value of the response header named <var>name</var>.
-   */
-  private String internal_getResponseProperty (String key) {
-    return (String) responseHeaders.get(normaliseName(key));  
-  }
-
-  /**
-   ** Version for internal use within this class.
-   */
-  private boolean internal_checkResponseProperty (String key, String value) {
+  private boolean internal_checkResponsePropertyValue (String key, String value) {
     String rawValue = (String) responseHeaders.get(normaliseName(key));  
 
     return rawValue != null && rawValue.equalsIgnoreCase(value);  
   }
 
   /**
-   ** Convert a name to "normalised form", in which the first letter is upper
+   ** Convert a name to "normalised form", in which the first letter, and
+   ** the first letter after each embedded hyphen, are upper
    ** case and all others are lower case. This conversion should always be
    ** performed before using a String as key into <code>responseHeaders</code>.
    */
@@ -686,6 +682,9 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         ++i;
         sb.setCharAt(i, Character.toUpperCase(sb.charAt(i)));
       }
+      else if (sb.charAt(i) == 'w' && sb.charAt(i - 1) == 'W') {
+        sb.setCharAt(i, 'W');
+      }
     }
 
     return sb.toString();
@@ -697,7 +696,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   public void setIfModifiedSince(long time){
     super.setIfModifiedSince(time);
-    requestHeaders.put(new Attributes.Name("if-modified-since"), dateFormatter.format(new Date(time)));
+    setRequestProperty(IF_MODIFIED_SINCE_PROPERTY, dateFormatter.format(new Date(time)));
+  }
+
+  /**
+   ** Get the request header named <var>name</var>.
+   ** Must be called before <code>connect()</code>, which is stupid.
+   */
+  public String getRequestProperty(String name){
+    String norm = normaliseName(name);
+    return super.getRequestProperty(norm);
   }
 
   /**
@@ -705,11 +713,11 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** Must be called before <code>connect()</code>.
    */
   public void setRequestProperty(String name, String value){
-    String lc = name.toLowerCase();
-    if ("content-length".equals(lc)) {
+    String norm = normaliseName(name);
+    if (CONTENT_LENGTH_PROPERTY.equals(norm)) {
       requestContentLength = Integer.parseInt(value);
     }
-    requestHeaders.put(new Attributes.Name(lc), value);
+    super.setRequestProperty(norm, value);
   }
 
   /**
@@ -743,7 +751,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** <li>Carriage return, line feed.
    ** </ul>
    */
-  private String getRequestLine(){
+  private String getRequestLine(Map requestHeaders){
     StringBuffer requestLine = new StringBuffer(method);
 
     requestLine.append(' ');
@@ -789,26 +797,29 @@ public class BasicHttpURLConnection extends HttpURLConnection {
 
   /**
    ** <p>Marshal the request headers into a String.
-   ** <p>If the followibng headers are provided by the client they are ignored:
+   ** <p>If the followinng headers are provided by the client they are ignored:
    ** <ul>
    ** <li><code>Connection</code>
-   ** <li><code>Accept-encoding</code>
    ** </ul>
-   ** <p>We always add three headers:
+   ** <p>We always add two headers:
    ** <ul>
    ** <li><code>Connection: close</code>
-   ** <li><code>Accept-encoding: gzip</code>
    ** <li><code>Date: </code><i>current date and time</i>
    ** </ul>
-   ** <p>If a proxy is being used and proxyUser is non-empty, we also add 
+   ** <p>The following headers will also be added if needed:
+   ** <ul>
+   ** <li>If a proxy is being used and proxyUser is non-empty, we add 
    ** a proxy authentication header.
+   ** <li>If a challenge was received, we add basic authentication.
+   ** <li>If no Accept-Encoding header was supplied, we add one for gzip.
+   ** </ul>
    */
-  private String getRequestHeaders() throws UnknownHostException {
-    addProxyAuthenticationHeader();	
-    addBasicAuthenticationHeader();	
+  private String getRequestHeaders(Map requestHeaders) throws UnknownHostException {
+    addProxyAuthenticationHeader(requestHeaders);
+    addBasicAuthenticationHeader(requestHeaders);
+    addAcceptEncodingGzipHeader(requestHeaders);
     StringBuffer request = new StringBuffer(1024);
     request.append("Connection: close\r\n");
-    request.append("Accept-encoding: gzip\r\n");
     request.append("Date: ");
     dateFormatter.format(new Date(), request, new java.text.FieldPosition(0));
     request.append("\r\n");
@@ -818,19 +829,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       Map.Entry entry = (Map.Entry)it.next();
       Object key = entry.getKey();
       try {
-        skip = ((String)key).equalsIgnoreCase("connection")
-            || ((String)key).equalsIgnoreCase("accept-encoding");
+        skip = ((String)key).equalsIgnoreCase("connection");
       }
       catch (ClassCastException cce) {
         skip = false;
       }
       if (!skip) {
-        int here = request.length();
         request.append(key);
         request.append(": ");
-        request.append(entry.getValue());
+        request.append(formatHeaderValue(entry.getValue()));
         request.append("\r\n");
-        request.setCharAt(here, Character.toUpperCase(request.charAt(here)));
       }
     }
 	
@@ -847,12 +855,23 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** If we have basic credentials for this protection space, add basic 
    ** authentication headers to the request headers held in <var>buffer</var>.
    */
-  private void addBasicAuthenticationHeader() throws UnknownHostException {
+  private void addBasicAuthenticationHeader(Map headers) throws UnknownHostException {
     if (realm != null) {
       String credentials = (String)basicCredentials.get(hostAddr + ":" + realm);
       if (credentials != null) {
-        requestHeaders.put(new Attributes.Name("authorization"), "Basic " + credentials);
+        addHeader(headers, AUTHORIZATION_PROPERTY, "Basic " + credentials);
       }
+    }
+  }
+
+  /**
+   ** If no Accept-Encoding header is present, add one with parameter "gzip"
+   ** and set the <var>autogzip</var> flag. 
+   */
+  private void addAcceptEncodingGzipHeader(Map headers) throws UnknownHostException {
+    if (GET.equals(method) && headers.get(ACCEPT_ENCODING_PROPERTY) == null) {
+      addHeader(headers, ACCEPT_ENCODING_PROPERTY, "gzip");
+      autogzip = true;
     }
   }
 
@@ -860,7 +879,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** If a proxy is being used and proxyUser is non-empty, add proxy 
    ** authentication headers to the request headers held in <var>buffer</var>.
    */
-  private void addProxyAuthenticationHeader() throws UnknownHostException {
+  private void addProxyAuthenticationHeader(Map headers) throws UnknownHostException {
     if (usingProxy() && proxyUser != null && proxyUser.length() > 0) {
       //int port = 
       getProxyPort();
@@ -871,9 +890,15 @@ public class BasicHttpURLConnection extends HttpURLConnection {
       StringBuffer buffer = new StringBuffer(64);
       buffer.append("Basic ");
       buffer.append(Base64Encoder.encode(unencoded.toString()));
-      requestHeaders.put(new Attributes.Name("proxy-authorization"), buffer.toString());
+      addHeader(headers, PROXY_AUTHORIZATION_PROPERTY, buffer.toString());
     }	  
   }  
+
+  private void addHeader(Map headers, String name, String value) {
+        List values = new ArrayList(1);
+        values.add(value);
+        headers.put(name, values);
+  }
 
   /**
    ** Send the headers for [the first chunk of] a PUT/POST request.
@@ -883,22 +908,22 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    */
   private void sendPartialHeaders(OutputStream out) throws IOException {
     StringBuffer request = new StringBuffer(1024);
-    requestHeaders.remove(new Attributes.Name("connection"));
-    request.append("Connection: close\r\n"); //connection will be closed after the response
-    addProxyAuthenticationHeader();	
-    addBasicAuthenticationHeader();	
+    Map temp = new HashMap(requestHeaders);
+    temp.remove(CONNECTION_PROPERTY);
+    request.append(CONNECTION_PROPERTY + ": close\r\n"); //connection will be closed after the response
+    addProxyAuthenticationHeader(temp);
+    addBasicAuthenticationHeader(temp);
+    addAcceptEncodingGzipHeader(temp);
     request.append("Date: ");
     dateFormatter.format(new Date(), request, new java.text.FieldPosition(0));
     request.append("\r\n");
-    Iterator it = requestHeaders.entrySet().iterator();
+    Iterator it = temp.entrySet().iterator();
     while(it.hasNext()){
       Map.Entry entry = (Map.Entry)it.next();
-      int here = request.length();
-      request.append(normaliseName(entry.getKey().toString()));
+      request.append(entry.getKey().toString());
       request.append(": ");
-      request.append(entry.getValue());
+      request.append(formatHeaderValue(entry.getValue()));
       request.append("\r\n");
-      request.setCharAt(here, Character.toUpperCase(request.charAt(here)));
     }
 	
     if (verbose) {
@@ -911,6 +936,19 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     out.write(decoder.cToB(chars,0,length));
   }
 
+  private String formatHeaderValue(Object value) {
+      List list = (List) value;
+      if (list == null || list.size() == 0) {
+          return "";
+      }
+      StringBuffer sb = new StringBuffer((String) list.get(0));
+      for (int i = 1; i < list.size(); ++i) {
+          sb.append(',');
+          sb.append(list.get(i));
+      }
+      return sb.toString();
+  }
+ 
   /**
    * Add username:password to the table as an authorisation for addr:realm.
    */
@@ -982,9 +1020,10 @@ public class BasicHttpURLConnection extends HttpURLConnection {
    ** headers except Content-Length.
    */
   private void requestGET() throws IOException {
-    requestHeaders.remove(new Attributes.Name("content-length"));
-    out.write(getRequestLine().getBytes());
-    out.write(getRequestHeaders().getBytes());
+    Map temp = new HashMap(requestHeaders);
+    temp.remove(new Attributes.Name(CONTENT_LENGTH_PROPERTY));
+    out.write(getRequestLine(temp).getBytes());
+    out.write(getRequestHeaders(temp).getBytes());
     doOutput = false;
   }
 
@@ -1014,7 +1053,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     try {
-      if(probeStatusLine()){
         responseParsed = true;
         String line = readLine(false);
         responseLine = line;
@@ -1066,7 +1104,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
           line = readLine(true);
           debug("HTTP:           " + line);
         }
-      }
 
     }
     catch(RuntimeException rt){
@@ -1075,14 +1112,16 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     // TODO: should this code be moved to checkConnection()?
-    if(internal_checkResponseProperty("Transfer-encoding", "chunked")){
+    if(internal_checkResponsePropertyValue("Transfer-encoding", "chunked")){
       in = new ChunkedInputStream(in);
       debug("HTTP: switched to chunked input");
     }
 
     // TODO: should this code be moved to checkConnection()?
-    if(internal_checkResponseProperty("Content-encoding", "gzip")){
+    if(autogzip && internal_checkResponsePropertyValue("Content-encoding", "gzip")){
       in = new GZIPInputStream(in);
+      responseHeaders.remove("Content-encoding");  
+      responseHeaders.remove("Content-length");  
       debug("HTTP: gunzipping input");
     }
 
@@ -1091,7 +1130,7 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         responseParsed = false;
         parseResponse();
     }
-    else if (((responseCode==HTTP_MOVED_PERM) || (responseCode==HTTP_MOVED_TEMP) || (responseCode==HTTP_SEE_OTHER)) && instanceFollowRedirects) {
+    else if (((responseCode==HTTP_MOVED_PERM) || (responseCode==HTTP_MOVED_TEMP) || (responseCode==HTTP_SEE_OTHER)) && instanceFollowRedirects && ++reconnectCount < MAX_RECONNECTS) {
       if (!(GET == method || HEAD == method)) {
         if (responseCode == HTTP_SEE_OTHER) {
           method = GET;
@@ -1101,29 +1140,34 @@ public class BasicHttpURLConnection extends HttpURLConnection {
         }
       }
 
-      String location = internal_getResponseProperty("location").trim();
+      String location = (String) responseHeaders.get("Location");
       debug("HTTP: redirecting to " + location);
       if(location==null) {
         throw new IOException("HTTP redirect (" + responseCode + ") has no 'Location' header.");
       }
 
-      this.url = new URL(location);
-      // [CG 20071216] Fix problem reported by K. Pauls when visiting sf.net,
-      // I don't see where it says we have to this but it seems reasonable
-      requestHeaders.put(new Attributes.Name("host"),url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
-
-      reconnect();
+      this.url = new URL(location.trim());
+      disconnect();
+      setRequestProperty(HOST_PROPERTY, url.getHost()+(url.getPort()== -1 ? "" : ":"+String.valueOf(url.getPort())));
+      requestSent = false;
+      responseParsed = false;
+      if (++reconnectCount < MAX_RECONNECTS) {
+        connect();
+        doRequest();
+      }
     }
   }
 
   boolean reconnect() throws IOException {
     disconnect();
+    requestSent = false;
     responseParsed = false;
     if (++reconnectCount >= MAX_RECONNECTS) {
       return false;
     }
 
     connect();
+    doRequest();
 
     return true;
   }
@@ -1147,29 +1191,6 @@ public class BasicHttpURLConnection extends HttpURLConnection {
     }
 
     throw new IOException("Server returned HTTP response code " + responseCode + " for " + method + " to " + url);
-  }
-
-  /**
-  ** Check if the first bytes begin with "HTTP/", otherwise we are dealing
-  ** with an "HTTP/0.9" response. Needs <var>in</var> to support <code>mark()/reset()</code>.
-  ** @return	true if this is a HTTP/1.0 or HTTP/1.1 response, false otherwise.
-  */
-  private boolean probeStatusLine() throws IOException {
-    connect();
-    byte[] bytes = new byte[8];
-    // [CG 20090226] Guard against close() in another thread
-    InputStream local_in = in;
-    local_in.mark(8);
-    int len = local_in.read(bytes);
-    local_in.reset();
-    if(len < 8){
-      return false;
-    }
-    if (! "HTTP/".equals(new String(bytes, 0, 5))) {
-      return false;
-    }
-
-    return true;
   }
 
   /**
