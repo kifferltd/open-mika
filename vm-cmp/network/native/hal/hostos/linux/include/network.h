@@ -136,7 +136,7 @@ static inline int w_connect(int s, void *a, size_t l, int t) {
       if (FD_ISSET(s, &rset) || FD_ISSET(s, &wset)) {
         // Check errno to be sure, because select is like that
         int error = 0;
-        int errlen = sizeof(error);
+        unsigned int errlen = sizeof(error);
         if (getsockopt(s, SOL_SOCKET, SO_ERROR, &error, &errlen) < 0) {
           goto close_and_fail;
         }
