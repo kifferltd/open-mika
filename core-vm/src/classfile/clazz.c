@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 by   *
-* Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.          *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2016 by   *
+* KIFFER Ltd.  All rights reserved.                                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -428,37 +425,44 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
  ** Check cafebabe and spec version.
  ** 'bar' should be set to the start of the classfile, and will be rewound
  ** to there on exit.
- ** Returns TRUE for success, FALSE for failure.
+ ** Returns NULL for success, an error string for failure.
+ ** Caller is responsible for deallocating the error string after use.
  */ 
-static w_boolean pre_check_header(w_clazz clazz, w_bar bar) {
+static char* pre_check_header(w_clazz clazz, w_bar bar) {
   u4 cafebabe;
+  w_int errlen;
 
   if (bar_avail(bar) < 24) {
-    woempa(9, "Class file too short, only %d bytes\n", bar_avail(bar));
+    char *header_error = allocMem(80);
+    errlen = x_snprintf(header_error, 80, "Class file too short, only %d bytes < 24\n" , bar_avail(bar));
+    woempa(9, header_error);
 
-    return FALSE;
+    return header_error;
   }
 
   cafebabe = get_u4(bar);
 
   if (cafebabe != 0xcafebabe) {
-    woempa(9, "Uh oh, cafebabe is called `%08x' today\n", cafebabe);
+    char *header_error = allocMem(80);
+    errlen = x_snprintf(header_error, 80, "Bad magic number, is %08x should be cafebabe\n" , cafebabe);
+    woempa(9, header_error);
 
-    return FALSE;
+    return header_error;
   }
 
   clazz->cminor = get_u2(bar);
   clazz->cmajor = get_u2(bar);
   w_word version = (clazz->cmajor << 16) | clazz->cminor;
   if (version < MIN_VERSION || version > MAX_VERSION) {
-    woempa(9, "bad class file version `%08x', should be between %08x and %08x inclusive\n", version, MIN_VERSION, MAX_VERSION);
-    woempa(9, "bad class file version `%d.%d'\n", clazz->cmajor, clazz->cminor);
+    char *header_error = allocMem(80);
+    errlen = x_snprintf(header_error, 80, "Bad class file version %08x, should be between %08x and %08x\n" , version, MIN_VERSION, MAX_VERSION);
+    woempa(9, header_error);
 
-    return FALSE;
+    return header_error;
   }
   bar_seek(bar, 0);
 
-  return TRUE;
+  return NULL;
 }
 
 
@@ -484,7 +488,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
   // We do this in two passes, because in theory forward references are possible.
   for (i = 1; ok && i < n; ) {
     if (bar_avail(bar) < 3) {
-      throwException(thread, clazzClassFormatError, "Less than 3 bytes remaining at start of constant[%d]", i);
+      throwException(thread, clazzClassFormatError, "%w: Less than 3 bytes remaining at start of constant[%d]", clazz->dotified, i);
       ok = FALSE;
     }
     tag = get_u1(bar);
@@ -494,7 +498,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
         length = get_u2(bar);
         if (length) {
           if (bar_avail(bar) < length) {
-            throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
+            throwException(thread, clazzClassFormatError, "%w: Insufficient bytes remaining for UTF8 constant[%d]", clazz->dotified, i);
             ok = FALSE;
           }
           bar_skip(bar, length);
@@ -505,7 +509,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_CLASS:
       case CONSTANT_STRING:
         if (bar_avail(bar) < 2) {
-          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for CLASS/STRING constant[%d]", i);
+          throwException(thread, clazzClassFormatError, "%w: Insufficient bytes remaining for CLASS/STRING constant[%d]", clazz->dotified, i);
           ok = FALSE;
         }
         bar_skip(bar, 2);
@@ -519,7 +523,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_IMETHOD:
       case CONSTANT_NAME_AND_TYPE:
         if (bar_avail(bar) < 4) {
-          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for constant[%d]", i);
+          throwException(thread, clazzClassFormatError, "%w: Insufficient bytes remaining for constant[%d]", i);
           ok = FALSE;
         }
         bar_skip(bar, 4);
@@ -529,7 +533,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_LONG:
       case CONSTANT_DOUBLE:
         if (bar_avail(bar) < 8) {
-          throwException(thread, clazzClassFormatError, "Insufficient bytes remaining for UTF8 constant[%d]", i);
+          throwException(thread, clazzClassFormatError, "%w: Insufficient bytes remaining for UTF8 constant[%d]", clazz->dotified, i);
           ok = FALSE;
         }
         bar_skip(bar, 8);
@@ -537,7 +541,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
         break;
 
       default:
-        throwException(thread, clazzClassFormatError, "Illegal constant type tag %d", tag);
+        throwException(thread, clazzClassFormatError, "%w: Illegal constant type tag %d", clazz->dotified, tag);
         ok = FALSE;
     }
   }
@@ -559,7 +563,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_STRING:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          throwException(thread, clazzClassFormatError, "Class constant[%d] references non-utf8 constant[%d]", i, val);
+          throwException(thread, clazzClassFormatError, "%w: Class constant[%d] references non-utf8 constant[%d]", clazz->dotified, i, val);
           ok = FALSE;
         }
         ++i;
@@ -576,12 +580,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_IMETHOD:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_CLASS) {
-          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-class constant[%d]", i, val);
+          throwException(thread, clazzClassFormatError, "%w: Member constant[%d] references non-class constant[%d]", clazz->dotified, i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_NAME_AND_TYPE) {
-          throwException(thread, clazzClassFormatError, "Member constant[%d] references non-name & type constant[%d]", i, val);
+          throwException(thread, clazzClassFormatError, "%w: Member constant[%d] references non-name & type constant[%d]", clazz->dotified, i, val);
           ok = FALSE;
         }
         ++i;
@@ -590,12 +594,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
       case CONSTANT_NAME_AND_TYPE:
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
+          throwException(thread, clazzClassFormatError, "%w: Name & type constant[%d] references non-utf8 constant[%d]", clazz->dotified, i, val);
           ok = FALSE;
         }
         val = get_u2(bar);
         if (val == 0 || val >= n || tags[val] != CONSTANT_UTF8) {
-          throwException(thread, clazzClassFormatError, "Name & type constant[%d] references non-utf8 constant[%d]", i, val);
+          throwException(thread, clazzClassFormatError, "%w: Name & type constant[%d] references non-utf8 constant[%d]", clazz->dotified, i, val);
           ok = FALSE;
         }
         ++i;
@@ -629,7 +633,7 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type, w_th
   w_int length;
 
   if (bar_avail(bar) < 2) {
-    throwException(thread, clazzClassFormatError, "Class file too short for %s attribute count", type);
+    throwException(thread, clazzClassFormatError, "%w: Class file too short for %s attribute count", clazz->dotified, type);
 
     return FALSE;
   }
@@ -639,21 +643,21 @@ static w_boolean pre_check_attributes(w_clazz clazz, w_bar bar, char *type, w_th
 
   for (i = 0; i < n; ++i) {
     if (bar_avail(bar) < 6) {
-      throwException(thread, clazzClassFormatError, "Less than 6 bytes remaining at start of %s attribute[%d]", type, i);
+      throwException(thread, clazzClassFormatError, "%w: Less than 6 bytes remaining at start of %s attribute[%d]", clazz->dotified, type, i);
 
       return FALSE;
     }
 
     val = get_u2(bar);
     if (clazz->tags[val] != CONSTANT_UTF8) {
-      throwException(thread, clazzClassFormatError, "%s attribute[%d] references non-utf8 constant[%d]", type, i, val);
+      throwException(thread, clazzClassFormatError, "%w: %s attribute[%d] references non-utf8 constant[%d]", clazz->dotified, type, i, val);
 
       return FALSE;
     }
     length = get_u4(bar);
     woempa(1, "Attribute[%d] length = %d\n", i, length);
     if (bar_avail(bar) < length) {
-      throwException(thread, clazzClassFormatError, "Less than <attribute length> bytes remaining");
+      throwException(thread, clazzClassFormatError, "%w: Less than <attribute length> bytes remaining", clazz->dotified);
 
       return FALSE;
     }
@@ -955,7 +959,7 @@ static w_boolean post_checks(w_clazz clazz, w_string name, w_thread thread) {
     result = check_field(clazz, &clazz->own_fields[i]);
   }
   if (!result) {
-    throwException(thread, clazzClassFormatError, "bad flags in field[%d]", i);
+    throwException(thread, clazzClassFormatError, "%w: bad flags in field[%d]", clazz->dotified, i);
 
     return FALSE;
   }
@@ -963,7 +967,7 @@ static w_boolean post_checks(w_clazz clazz, w_string name, w_thread thread) {
     result = check_method(clazz, &clazz->own_methods[i]);
   }
   if (!result) {
-    throwException(thread, clazzClassFormatError, "bad flags in method[%d]", i);
+    throwException(thread, clazzClassFormatError, "%w: bad flags in method[%d]", clazz->dotified, i);
 
     return FALSE;
   }
@@ -1633,7 +1637,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
     w_size n = get_u2(s);
     if (n * 8 + 2 != attribute_length) {
       if (thread) {
-        throwException(thread, clazzClassFormatError, "InnerClasses attribute has wrong length");
+        throwException(thread, clazzClassFormatError, "%w: InnerClasses attribute has wrong length", clazz->dotified);
       }
 
       return;
@@ -1738,11 +1742,15 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   setClazzState(clazz, CLAZZ_STATE_LOADING);
 
 #ifndef NO_FORMAT_CHECKS
-  if (!trusted && !pre_check_header(clazz, bar)) {
-    throwException(thread, clazzClassFormatError, "error in class file header");
-    destroyClazz(clazz);
+  if (!trusted) {
+    char *header_error = pre_check_header(clazz, bar);
+    if (header_error) {
+      throwException(thread, clazzClassFormatError, "Error in header of class file `%w': %s", name, header_error);
+      deregisterString(header_error);
+      destroyClazz(clazz);
 
-    return NULL;
+      return NULL;
+    }
   }
 #endif
 
