@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2008, 2009, 2016 by Chris Gray, KIFFER Ltd.               *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,19 +10,18 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR        *
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR                *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT       *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;         *
+* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF           *
 * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
@@ -199,6 +197,7 @@ x_long x_time_now_millis() {
   struct timeval tv;
   x_long result;
 
+// TODO could be time to start using clock_gettime(CLOCK_MONOTONIC, ...)?
   gettimeofday(&tv, NULL);
   result = (x_long)tv.tv_sec * 1000;
   result += ((x_long)tv.tv_usec + 500) / 1000;
@@ -209,22 +208,23 @@ x_long x_time_now_millis() {
 void x_now_plus_ticks(x_long ticks, struct timespec *ts)
 {
   // volatile 'coz I don't trust gcc any further than I can throw it
-  volatile x_long msec, sec; 
-  struct timeval now;
+  volatile x_long usec; 
+  struct timeval now, diff, result;
 
-  msec =  x_ticks2millis(ticks);
+  usec =  x_ticks2usecs(ticks);
 
-  sec = msec / 1000;
-  msec %= 1000;
+  diff.tv_sec = usec / 1000000;
+  diff.tv_usec = usec % 1000000;
+//printf("diff sec = %d, usec = %d\n", diff.tv_sec, diff.tv_usec);
 
+// TODO could be time to start using clock_gettime(CLOCK_MONOTONIC, ...)?
   gettimeofday(&now, NULL);
-  ts->tv_sec = now.tv_sec + sec;
-  ts->tv_nsec = ((now.tv_usec / 1000) + msec) * 1000000;
-
-  while (ts->tv_nsec >= 1000000000) {
-    ts->tv_nsec -= 1000000000;
-    ts->tv_sec++;
-  }
+//printf("now  sec = %d, usec = %d\n", now.tv_sec, now.tv_usec);
+  timeradd(&now, &diff, &result);
+//printf("result = %d %d\n", result.tv_sec, result.tv_usec);
+  ts->tv_sec = result.tv_sec;
+  ts->tv_nsec = result.tv_usec * 1000;
+//printf("   -> %d %d\n", ts->tv_sec, ts->tv_nsec);
 }
 
 x_boolean x_deadline_passed(struct timespec *ts) {
@@ -240,22 +240,23 @@ x_sleep x_time_get() {
 }
 
 /*
-** Functions for time calculations, mainly copied from oswald
+** Functions for time calculations
 */
 
-static const x_size ticks_compensation = 2;
-
 /*
-** Return a compensated number of ticks for a number of seconds.
+** Return a number of ticks for a number of seconds.
 */
 
 x_size x_seconds2ticks(x_size seconds) {
-  return (x_size) ((seconds * 1000) / (x_size) (usecs_per_tick / 1000) - ticks_compensation);
+  if (usecs_per_tick < 1000000) {
+    return (x_size) ((seconds * 1000000) / (x_size) usecs_per_tick);
+  }
+  return (x_size) ((seconds * 1000) / (x_size) (usecs_per_tick / 1000));
 }
 
 /*
 ** Return the number of milliseconds corresponding to a number of ticks.
-** Uncompensated rounded downwards, , can be zero.
+** Rounded downwards, can be zero.
 */
 x_long x_ticks2millis(x_long ticks) {
   x_long msecs = ticks * (usecs_per_tick / 1000);
@@ -268,28 +269,37 @@ x_long x_ticks2millis(x_long ticks) {
 }
 
 /*
-** Return an number of ticks for a number of milliseconds.
-** The result is uncompensated, but is always at least 1.
+** Return an number of ticks for a number of milliseconds (max = 2000000000).
+** The result is always at least 1.
 */
 x_size x_millis2ticks(x_size millis) {
 
-  x_size ticks = (millis / (x_size) (usecs_per_tick / 1000));
-  
+  x_size num = millis;
+  x_size dem = (x_size) usecs_per_tick;
+//printf("%d 000 / %d\n", num, dem);
+  while (num > 2000000 && dem > 10) {
+    num /= 10;
+    dem /= 10;
+//printf("%d 000 / %d\n", num, dem);
+  }
+  x_size ticks = 1000 * num / dem;
+//printf("%d\n", ticks);
+ 
   return ticks ? ticks : 1;
   
 }
 
 /*
 ** Return the number of microseconds corresponding to a number of ticks.
-** Uncompensated, can be zero.
+** Can return zero.
 */
-x_size x_ticks2usecs(x_size ticks) {
-  return (usecs_per_tick * ticks);
+x_long x_ticks2usecs(x_size ticks) {
+  return ((x_long)usecs_per_tick * (x_long)ticks);
 }
 
 /*
 ** Return an number of ticks for a number of microseconds.
-** The result is uncompensated, but is always at least 1.
+** The result is always at least 1.
 */
 x_size x_usecs2ticks(x_size usecs) {
   return (usecs < usecs_per_tick) ? 1 : ((x_size)(usecs / usecs_per_tick));
