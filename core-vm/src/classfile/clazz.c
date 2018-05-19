@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2016 by   *
-* KIFFER Ltd.  All rights reserved.                                       *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2016,     *
+* 2018 by KIFFER Ltd.  All rights reserved.                               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -430,11 +430,10 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
  */ 
 static char* pre_check_header(w_clazz clazz, w_bar bar) {
   u4 cafebabe;
-  w_int errlen;
 
   if (bar_avail(bar) < 24) {
     char *header_error = allocMem(80);
-    errlen = x_snprintf(header_error, 80, "Class file too short, only %d bytes < 24\n" , bar_avail(bar));
+    x_snprintf(header_error, 80, "Class file too short, only %d bytes < 24\n" , bar_avail(bar));
     woempa(9, header_error);
 
     return header_error;
@@ -444,7 +443,7 @@ static char* pre_check_header(w_clazz clazz, w_bar bar) {
 
   if (cafebabe != 0xcafebabe) {
     char *header_error = allocMem(80);
-    errlen = x_snprintf(header_error, 80, "Bad magic number, is %08x should be cafebabe\n" , cafebabe);
+    x_snprintf(header_error, 80, "Bad magic number, is %08x should be cafebabe\n" , cafebabe);
     woempa(9, header_error);
 
     return header_error;
@@ -455,7 +454,7 @@ static char* pre_check_header(w_clazz clazz, w_bar bar) {
   w_word version = (clazz->cmajor << 16) | clazz->cminor;
   if (version < MIN_VERSION || version > MAX_VERSION) {
     char *header_error = allocMem(80);
-    errlen = x_snprintf(header_error, 80, "Bad class file version %08x, should be between %08x and %08x\n" , version, MIN_VERSION, MAX_VERSION);
+    x_snprintf(header_error, 80, "Bad class file version %08x, should be between %08x and %08x\n" , version, MIN_VERSION, MAX_VERSION);
     woempa(9, header_error);
 
     return header_error;
@@ -1746,7 +1745,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
     char *header_error = pre_check_header(clazz, bar);
     if (header_error) {
       throwException(thread, clazzClassFormatError, "Error in header of class file `%w': %s", name, header_error);
-      deregisterString(header_error);
       destroyClazz(clazz);
 
       return NULL;
