@@ -143,11 +143,11 @@ void createVerifyError(w_clazz failing_clazz, char *msg, w_string str) {
 /*
 ** Load the class corresponding to the type of a field's value.
 ** The result returned is CLASS_LOADING_xxxxx.
-*/
 static w_int loadValueType(w_field f) {
   woempa(7, "Value type of %v = %K\n", f, f->value_clazz);
   return mustBeLoaded(&f->value_clazz);
 }
+*/
 
 /*
 ** Load the class corresponding to the type of a method's parameters and return value.
@@ -846,21 +846,25 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
   w_size clone_index = mv->numBlocks;
   w_size result = mv->numBlocks;
   w_size limit = mv->numBlocks;
-  w_size orig_index;
   w_size succ_index;
-  w_ubyte last_opcode;
   v_BasicBlock *origBlock;
   v_BasicBlock *succBlock;
   v_BasicBlock *cloneBlock;
   w_fifo clone_fifo = allocFifo(30);
   w_ubyte *mapping = allocClearedMem(mv->numBlocks);
+#ifdef DEBUG
+  w_ubyte last_opcode;
+  w_size orig_index;
+#endif
 
   woempa(7, "Subroutine begins with block[%d], enqueueing that block\n", subr_index);
   origBlock = getBasicBlock(mv, subr_index);
   putFifo(origBlock, clone_fifo);
   while ((origBlock = getFifo(clone_fifo))) {
+#ifdef DEBUG
     orig_index = origBlock->own_index;
     woempa(7, "Dequeued block[%d]\n", orig_index);
+#endif
     cloneBlock = createBlock(mv);
     if (!cloneBlock) {
       wabort(ABORT_WONKA, "No space to clone block\n");
@@ -869,9 +873,11 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
     appendBlock(cloneBlock, mv);
     ++clone_index;
     woempa(7, "Copied block[%d] to become block[%d], incremented numBlocks to %d\n", orig_index, clone_index - 1, clone_index);
+#ifdef DEBUG
     last_opcode = mv->method->exec.code[origBlock->last_pc];
     woempa(7, "Last opcode is %s\n", opc2name(last_opcode));
     woempa(7, "Checking successors of block[%d]\n", orig_index);
+#endif
     for (succ_index = 0; succ_index < result; ++succ_index) {
       w_ubyte succ_kind = origBlock->successors[succ_index];
 
@@ -924,19 +930,23 @@ static w_size cloneSubroutine(v_MethodVerifier *mv, w_size subr_index) {
 */
 static void propagateReturnAddress(v_MethodVerifier *mv, w_size subr_index, w_size return_address) {
   w_size limit = mv->numBlocks;
-  w_size orig_index;
   w_size succ_index;
   v_BasicBlock *origBlock;
   v_BasicBlock *succBlock;
   w_fifo clone_fifo = allocFifo(30);
+#ifdef DEBUG
+  w_size orig_index;
+#endif
 
   woempa(7, "Subroutine begins with block[%d], enqueueing that block\n", subr_index);
   origBlock = getBasicBlock(mv, subr_index);
   putFifo(origBlock, clone_fifo);
   while ((origBlock = getFifo(clone_fifo))) {
+#ifdef DEBUG
     orig_index = origBlock->own_index;
     woempa(7, "Dequeued block[%d]\n", orig_index);
     woempa(7, "Set return address of block[%d] to %d\n", orig_index, return_address);
+#endif
     origBlock->return_address = return_address;
     woempa(7, "Checking successors of block[%d]\n", orig_index);
 
@@ -3252,7 +3262,6 @@ w_boolean verifyMethod(w_method method, w_thread thread) {
   v_BasicBlock* successorBlock = NULL;
   w_size block_index;
   w_size successor_index;
-  w_ubyte last_opcode;
   w_ubyte succ_kind;
   w_boolean result;
 
@@ -3294,7 +3303,6 @@ w_boolean verifyMethod(w_method method, w_thread thread) {
 
           }
 
-          last_opcode = method->exec.code[thisBlock->last_pc];
           /* Scan the "normal" successors */
           for (successor_index = 0; successor_index < mv.numBlocks; ++successor_index) {
             succ_kind = thisBlock->successors[successor_index];

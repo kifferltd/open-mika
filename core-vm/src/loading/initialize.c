@@ -358,7 +358,6 @@ w_int mustBeInitialized(w_clazz clazz) {
   w_int    n;
   w_int    state = getClazzState(clazz);
   w_int    result = CLASS_LOADING_DID_NOTHING;
-  x_status monitor_status;
 
   threadMustBeSafe(thread);
 
@@ -435,7 +434,7 @@ w_int mustBeInitialized(w_clazz clazz) {
   state = getClazzState(clazz);
 
   while(state == CLAZZ_STATE_INITIALIZING) {
-    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 

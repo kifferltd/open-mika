@@ -53,7 +53,6 @@ w_int mustBeLinked(w_clazz clazz) {
   w_thread thread = currentWonkaThread;
   w_int    state = getClazzState(clazz);
   w_int    result = CLASS_LOADING_DID_NOTHING;
-  x_status monitor_status;
 
 #ifdef RUNTIME_CHECKS
   threadMustBeSafe(thread);
@@ -120,7 +119,7 @@ w_int mustBeLinked(w_clazz clazz) {
 
       return CLASS_LOADING_FAILED;
     }
-    monitor_status = x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 

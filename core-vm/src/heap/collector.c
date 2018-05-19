@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011      *
-* by Chris Gray, /k/ Embedded Java Solutions.  All rights reserved.       *
+* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,     *
+* 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN     *
+* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
 **************************************************************************/
 
 #define PRINTRATE 10
@@ -1528,8 +1525,6 @@ static w_size blocking_start;
 static w_size blocking_end;
 
 static void prepreparation(w_thread thread) {
-  x_status status;
-
   woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
@@ -1542,7 +1537,7 @@ static void prepreparation(w_thread thread) {
 #ifdef JDWP
   while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
     woempa(7, "JDWP is blocking all threads, not possible to run yet.\n");
-    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
   }
   blocking_end = x_time_get();
   //w_printf("waited %d msec because blocked by JDWP\n", blocking_end - blocking_start);
@@ -1552,7 +1547,7 @@ static void prepreparation(w_thread thread) {
   setFlag(blocking_all_threads, BLOCKED_BY_GC);
   while (number_unsafe_threads > 0) {
     woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
-    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
   }
   blocking_end = x_time_get();
   x_monitor_notify_all(safe_points_monitor);
@@ -2131,10 +2126,11 @@ w_size sweep(w_int target) {
 #endif
         do_collect = 1;
         if (isSet(object->clazz->flags, CLAZZ_IS_THREAD)) {
-          w_thread thread = getWotsitField(object->fields, F_Thread_wotsit);
 
 #ifdef ENABLE_THREAD_RECYCLING
+          getWotsitField(object->fields, F_Thread_wotsit);
 #else
+          w_thread thread = getWotsitField(object->fields, F_Thread_wotsit);
           if (thread) {
             if (thread->state != wt_dead && thread->state != wt_unstarted) {
               woempa(9, "Hold on a moment - thread '%t' is still running...\n", thread);
@@ -2256,12 +2252,9 @@ volatile w_int reclaim_accumulator = 0;
 #endif
 
 void registerReclaimCallback(w_reclaim_callback callback) {
-
-  x_status status;
-
   if (!reclaim_listener_monitor) {
     reclaim_listener_monitor = &reclaim_listener_Monitor;
-    status = x_monitor_create(reclaim_listener_monitor);
+    x_monitor_create(reclaim_listener_monitor);
   }
 
   while (!enter_reclaim_listener_monitor()) {
