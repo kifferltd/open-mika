@@ -557,10 +557,9 @@ static void reallyResolveClassConstant(w_clazz clazz, w_ConstantType *c, w_Const
 */
 void waitForClassConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
   w_thread   thread = currentWonkaThread;
-  x_status   status;
 
   while (*c == RESOLVING_CLASS) {
-    status = x_monitor_wait(clazz->resolution_monitor, 2);
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -775,10 +774,9 @@ static void reallyResolveFieldConstant(w_clazz clazz, w_ConstantType *c, w_Const
 */
 void waitForFieldConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
   w_thread   thread = currentWonkaThread;
-  x_status   status;
 
   while (*c == RESOLVING_FIELD) {
-    status = x_monitor_wait(clazz->resolution_monitor, 2);
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -956,10 +954,9 @@ static void reallyResolveMethodConstant(w_clazz clazz, w_ConstantType *c, w_Cons
 */
 void waitForMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
   w_thread   thread = currentWonkaThread;
-  x_status   status;
 
   while (*c == RESOLVING_METHOD) {
-    status = x_monitor_wait(clazz->resolution_monitor, 2);
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (*c == COULD_NOT_RESOLVE) {
@@ -1130,10 +1127,9 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
 */
 void waitForIMethodConstant(w_clazz clazz, w_ConstantType *c, w_ConstantValue *v) {
   w_thread   thread = currentWonkaThread;
-  x_status   status;
 
   while (*c == RESOLVING_IMETHOD) {
-    status = x_monitor_wait(clazz->resolution_monitor, 2);
+    x_monitor_wait(clazz->resolution_monitor, 2);
   }
 
   if (*c == COULD_NOT_RESOLVE) {
