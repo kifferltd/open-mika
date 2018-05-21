@@ -149,7 +149,7 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   command->command = cmd;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    char *contents = bytes2hex((*gb)->contents, (*gb)->occupancy);
+    char *contents = bytes2hex((w_ubyte*) (*gb)->contents, (*gb)->occupancy);
 
     w_printf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], swap_int(command->length), contents);
     releaseMem(contents);
@@ -412,7 +412,7 @@ void jdwp_dispatcher() {
           }
           else {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-              char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
+              char *contents = bytes2hex((w_ubyte*) cmd->data, swap_int(cmd->length) - 11);
 
               w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], swap_int(cmd->length), contents);
               releaseMem(contents);
@@ -428,7 +428,7 @@ void jdwp_dispatcher() {
           }
           else {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-              char *contents = bytes2hex(cmd->data, swap_int(cmd->length) - 11);
+              char *contents = bytes2hex((w_ubyte*) cmd->data, swap_int(cmd->length) - 11);
 
               w_printf("JDWP: Received command id %d, command set: 64 (Event),  command: 100 (Composite),  length: %d, contents: %s\n", swap_int(cmd->id), swap_int(cmd->length), contents);
               releaseMem(contents);
@@ -613,7 +613,7 @@ w_ubyte *jdwp_string2JNI(w_string string) {
 */
 
 w_ubyte *jdwp_cstring2JNI(w_ubyte *string) {
-  w_int    length = strlen(string);
+  w_int    length = strlen((char*) string);
   w_ubyte  *jni = allocClearedMem((w_word)(length + 50));
   w_ubyte  *iter = jni;
   w_int    i;

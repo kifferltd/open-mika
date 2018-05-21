@@ -1,7 +1,7 @@
 /**************************************************************************
 * Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2006, 2009 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Parts copyright (c) 2004, 2006, 2009, 2018 by Chris Gray, KIFFER Ltd.   *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,22 +11,22 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
+* 3. Neither the name of Punch Telematix or of KIFFER Ltd nor the names   *
+*    other contributors may be used to endorse or promote products        *
+*    derived from this software without specific prior written            *
 *    permission.                                                          *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL PUNCH TELEMATIX, KIFFER LTD OR OTHER CONTRIBUTORS     *
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,     *
+* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT    *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR      *
+* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
+* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,       *
+* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
 **************************************************************************/
 
 #include "clazz.h"
@@ -365,7 +365,7 @@ w_void jdwp_send_event(jdwp_event event, w_grobag *data) {
   jdwp_put_u4(&command_grobag, (w_word)event->eventID);
   // event specific data
   if (data && (*data) && (*data)->occupancy) {
-    jdwp_put_bytes(&command_grobag, (*data)->contents, (w_size)(*data)->occupancy);
+    jdwp_put_bytes(&command_grobag, (w_ubyte*) (*data)->contents, (w_size)(*data)->occupancy);
     (*data)->occupancy = 0;
   }
   jdwp_send_command(&command_grobag, jdwp_cmdset_event, jdwp_event_composite);
@@ -489,15 +489,15 @@ void jdwp_breakpoint_set(jdwp_event event) {
 */
 
 void jdwp_breakpoint_clear(jdwp_event event) {
-  w_method             method;
+  //w_method             method;
   
   woempa(9, "--== Clearing a breakpoint ==--\n");
 
   /*
   ** Get the method out of the event->breakpoint.
-  */
-
+     Resut is not used?
   method = event->point.break_point->location.method;
+  */
 
   /*
   ** Put the original opcode back where it belongs.
@@ -583,7 +583,7 @@ void jdwp_single_step_clear(jdwp_event event) {
     if (modifier->mod_kind == 10) {
       thread = modifier->condition.step.thread;
       woempa(7, "Clearing steppoint in thread '%t'\n", thread);
-      step = thread->step;
+      step = (jdwp_step) thread->step;
       releaseMem(step);
       thread->step = NULL;
 
@@ -1108,11 +1108,11 @@ void jdwp_event_vm_start(w_instance threadID) {
 */
 
 void jdwp_event_step(w_thread thread) {
-  jdwp_step step = thread->step;
+  jdwp_step step = (jdwp_step) thread->step;
   jdwp_event event = step->event;
   w_instance instance = thread->Thread;
-  jdwp_event_modifier  modifier;
-  w_int                go_ahead;
+//  jdwp_event_modifier  modifier;
+//  w_int                go_ahead;
   w_grobag             gb = NULL;
   
   /*
@@ -1267,6 +1267,7 @@ void jdwp_internal_suspend_all(void) {
     woempa(7, "GC/JITC is blocking all threads, not possible to suspend VM yet.\n");
     status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
   }
+  (void)status;
   woempa(2, "JDWP: setting blocking_all_threads to BLOCKED_BY_JDWP\n");
   setFlag(blocking_all_threads, BLOCKED_BY_JDWP);
 

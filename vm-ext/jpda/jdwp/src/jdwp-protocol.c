@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (C) 2006, 2009 by Chris Gay, /k/ Embedded Java Solutions.     *
+* Copyright (C) 2006, 2009, 2018 by Chris Gray, KIFFER Ltd.               *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -10,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
-* THIS SOFTWARE IS PROVIDED BY /K/ EMBEDDED JAVA SOLUTIONS AND OTHER      *
-* CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,*
-* BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND       *
-* FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL     *
-* /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY     *
-* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
-* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
-* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
-* POSSIBILITY OF SUCH DAMAGE.                                             *
+* THIS SOFTWARE IS PROVIDED BY KIFFER LTD AND OTHERCONTRIBUTORS ``AS IS'' *
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,   *
+* THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR  *
+* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL KIFFER LTD OR OTHER          *
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY     *
+* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING *
+* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
 #include "hashtable.h"
@@ -214,7 +213,7 @@ w_string jdwp_get_string(char *buffer, w_size *offset) {
   woempa(7, "length = %d\n", len);
   jdwp_get_bytes_here(buffer, offset, len, bytes);
   bytes[len] = 0;
-  result = utf2String(bytes, (w_int)len);
+  result = utf2String((char *)bytes, (w_int)len);
   releaseMem(bytes);
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     w_printf("JDWP: get string = %w\n", result);
@@ -225,7 +224,7 @@ w_string jdwp_get_string(char *buffer, w_size *offset) {
 
 void jdwp_get_location_here(char *buffer, w_size *offset, jdwp_location location) {
   jdwp_get_u1(buffer, offset);
-  jdwp_get_clazz(buffer, offset);
+  (void)jdwp_get_clazz(buffer, offset);
   location->method = jdwp_get_method(buffer, offset);
   i_get_u4(buffer, offset); // skip MS 4 bytes
   location->pc = i_get_u4(buffer, offset);
@@ -280,7 +279,7 @@ void jdwp_put_objectref(w_grobag *gb, w_instance instance) {
 
 void jdwp_put_bytes(w_grobag *gb, w_ubyte *b, w_size l) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-    char *contents = bytes2hex((char*)b, l);
+    char *contents = bytes2hex(b, l);
     w_printf("JDWP: put bytes = %s\n", contents);
     releaseMem(contents);
   }
@@ -325,10 +324,10 @@ void jdwp_put_location(w_grobag *gb, jdwp_location location) {
 ** where the 'x' are hex digits. The memory for the string is allocated
 ** using allocMem, and the caller should free it using releaseMem.
 */
-char *bytes2hex(char *bytes, w_size length) {
+char *bytes2hex(w_ubyte *bytes, w_size length) {
   char *buffer = allocMem(length * 3 + 1);
   char *toptr = buffer;
-  char *fromptr = bytes;
+  w_ubyte *fromptr = bytes;
   w_size i;
 
   for (i = 0; i < length; ++i) {
@@ -354,7 +353,7 @@ void jdwp_send_reply(w_int id, w_grobag *gb, w_int error) {
   reply->err2 = error & 0x00FF;
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     if (length) {
-      char *contents = bytes2hex((*gb)->contents, length);
+      char *contents = bytes2hex((w_ubyte*)(*gb)->contents, length);
 
       w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d, contents:%s\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length), contents);
       releaseMem(contents);

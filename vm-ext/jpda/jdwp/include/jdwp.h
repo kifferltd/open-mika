@@ -619,7 +619,7 @@ extern void jdwp_disconnect_dt_socket(void);
 ** where the 'x' are hex digits. The memory for the string is allocated
 ** using allocMem, and the caller should free it using releaseMem.
 */
-extern char *bytes2hex(char *bytes, w_size length);
+extern char *bytes2hex(w_ubyte *bytes, w_size length);
 
 /*
 ** The following static const indicates if JDWP was enabled or not. 
