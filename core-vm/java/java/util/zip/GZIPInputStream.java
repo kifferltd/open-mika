@@ -85,12 +85,12 @@ public class GZIPInputStream extends InflaterInputStream  {
 			long value = ((0x0ff&(char)trailer[0])) + ((0x0ff &(char)trailer[1])<<8) +
 				 ((0x0ff&(char)trailer[2])<<16) + ((0x0ff &(char)trailer[3])<<24);
 			if ((int)value != (int)crc.getValue()) {
-			 	throw new IOException();
+			 	throw new IOException("CRC " + Integer.toHexString((int) value) + " != " + Integer.toHexString((int) crc.getValue()));
 			}
 			value = (0x0ff&(char)trailer[4]) + ((0x0ff &(char)trailer[5])<<8) +
 				 ((0x0ff&(char)trailer[6])<<16) + ((0x0ff &(char)trailer[7])<<24);			
 			if ((int)value != inf.getTotalOut()) {
-			 	throw new IOException();
+			 	throw new IOException("out " + Integer.toHexString((int) value) + " != " + Integer.toHexString((int) inf.getTotalOut()));
 			}
 		}
 		return ret;
