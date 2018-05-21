@@ -599,7 +599,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
     throwException(thread,clazzIllegalArgumentException,NULL);
   }
 
-  if (testForInterrupt(thread) || millis == 0) {
+  if (testForInterrupt(thread) || millis == 0 && (nanos / 1000) < HOST_TIMER_GRANULARITY) {
     return;
   }
 
@@ -623,7 +623,10 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   }
 
   if (millis) {
-    x_thread_sleep(x_millis2ticks(millis));
+    x_thread_sleep(x_millis2ticks((x_size)millis));
+  }
+  else if (nanos) {
+    x_thread_sleep(x_usecs2ticks(nanos / 1000));
   }
   thread->state = wt_ready;
   testForInterrupt(thread);
