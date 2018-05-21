@@ -215,7 +215,7 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
 
       for(env1 = environ; *env1; env1++) {
         *env3 = *env1;
-        for(env2 = (char **)env; *env2; env2++) {
+        for(env2 = (char **)env; *env2; env2++, env3++) {
           if((int)*env2 != 0x01) {
             int j = (int)(strchr(*(char **)env1, '=') - *env1);
             int k = (int)(strchr(*(char **)env2, '=') - *env2);
@@ -225,7 +225,6 @@ w_void* host_exec(char **cmd, char **env, char *path, w_int* retpid) {
             }
           }
         }
-        *env3++;
       }
 
       for(env2 = (char **)env; *env2; env2++) {
