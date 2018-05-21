@@ -137,6 +137,9 @@ void fastcall_init_tables() {
   w_string no_args_int = cstring2String("()I", 3);
   w_string clazz_name_String = cstring2String("java/lang/String", 16);
   w_string init = cstring2String("<init>", 6);
+#ifdef NATIVE_MATH
+  w_string double_double = cstring2String("(D)D", 4);
+#endif
 
   clazz_name_Character = cstring2String("java/lang/Character", 19);
   clazz_name_Hashtable = cstring2String("java/util/Hashtable", 19);
