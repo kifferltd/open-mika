@@ -387,8 +387,9 @@
     <echo message="config.jam.flags = ${config.jam.flags}"/>
     <echo message="base.jam.flags = ${base.jam.flags}"/>
 
+    <property name="JAM_EXEC" value="jam"/>
     <property name="log.file" value="${log.dir}/build-${ANT.PLATFORM}.log"/>
-    <exec dir="${basedir}" executable="jam"
+    <exec dir="${basedir}" executable="${JAM_EXEC}"
           failonerror="true" output="${log.file}" append="false">
       <arg line="${jam.flags} ${config.jam.flags} ${base.jam.flags} install"/>
       <env key="WONKA_TOP" value="${basedir}"/>
