@@ -34,6 +34,7 @@
 #include <time.h>
 #endif
 
+#include <sys/types.h>
 #include "argument.h" 
 #include "misc.h"
 #include "oswald.h"
