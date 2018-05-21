@@ -172,7 +172,7 @@ void Object_wait(JNIEnv *env, w_instance thisObject, w_long millis, w_int nanos)
   }
 
   if (!sleep_ticks) {
-    sleep_ticks = x_millis2ticks((w_size)millis);
+    sleep_ticks = x_usecs2ticks((w_size)(millis * 1000 + nanos / 1000));
   }
   if (sleep_ticks) {
     waitMonitor(thisObject, sleep_ticks);
