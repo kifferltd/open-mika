@@ -424,7 +424,7 @@ switch $(SCHEDULER) {
   }
 
   case * : {
-    EXIT "Please configure SCHEDULER = oswald|o4p in the Wonka configuration." ;
+    EXIT "Please configure SCHEDULER = oswald|o4p in the Mika configuration." ;
   }
 }
 
@@ -454,7 +454,7 @@ switch $(AWT) {
   }
 
   case * : {
-    EXIT "Please configure AWT = rudolph|none in the Wonka configuration." ;
+    EXIT "Please configure AWT = rudolph|none in the Mika configuration." ;
   }
 
 }
@@ -469,7 +469,7 @@ switch $(FILESYSTEM) {
   }
 
   case * : {
-    EXIT "Please configure FILESYSTEM = native|vfs in the Wonka configuration." ;
+    EXIT "Please configure FILESYSTEM = native|vfs in the Mika configuration." ;
   }
 
 }
@@ -510,7 +510,7 @@ switch $(NETWORK) {
   }
 
   case * : {
-    EXIT "Please configure NETWORK = native|none in the Wonka configuration." ;
+    EXIT "Please configure NETWORK = native|none in the Mika configuration." ;
   }
 
 }
