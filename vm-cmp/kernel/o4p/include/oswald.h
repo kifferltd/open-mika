@@ -224,7 +224,7 @@ x_sleep x_time_get(void);
 x_size x_millis2ticks(x_size millis);
 x_long x_ticks2millis(x_long millis);
 x_size x_seconds2ticks(x_size seconds);
-x_size x_ticks2usecs(x_size ticks);
+x_long x_ticks2usecs(x_size ticks);
 x_size x_usecs2ticks(x_size usecs);
 
 

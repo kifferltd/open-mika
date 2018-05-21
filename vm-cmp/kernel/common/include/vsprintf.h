@@ -46,7 +46,7 @@
 ** Format routines, first we define the type for the format callback function.
 */
 
-typedef char * (*x_fcb)(char * buffer, int * remain, void * arg, int width, int prec, unsigned int flags);
+typedef char * (*x_fcb)(char * buffer, x_size * remain, void * arg, int width, int prec, unsigned int flags);
 
 x_int x_vsnprintf(char * buf, x_size bufsize, const char *fmt, va_list args);
 x_int x_snprintf(char * buf, x_size bufsize, const char *fmt, ...);

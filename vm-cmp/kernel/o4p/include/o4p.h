@@ -327,7 +327,7 @@ typedef struct o4p_Memory_Chunk {
 #define MAX_SINGLE_ALLOC  8*1024*1024
 #endif
 
-x_size x_ticks2usecs(x_size ticks);
+x_long x_ticks2usecs(x_size ticks);
 
 /**
  * Add the length of time represented by 'ticks' to the current system time,

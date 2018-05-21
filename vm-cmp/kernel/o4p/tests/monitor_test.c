@@ -39,10 +39,10 @@ static x_sleep second;
 /*
 ** We check if we got out of the waiting list in correct time, but when we have
 ** thread dumping enabled in the init thread, this can take too much time. We then
-** set the following to false to indicate that it is not a real failure.
+** set the following to FALSE to indicate that it is not a real failure.
 */
 
-static const x_boolean wait_ticks_fail = true;
+static const x_boolean wait_ticks_fail = TRUE;
 
 /*
 ** The native implementation of our old faithfull Carillon. This code uses a single
@@ -416,7 +416,7 @@ static void laydown_fork(t_fork afork) {
     
 }
 
-static x_boolean report = true;
+static x_boolean report = TRUE;
 static x_int num_reports = 0;
 
 static void Philosopher(void *p) {
@@ -461,7 +461,7 @@ static void Philosopher(void *p) {
     if (report) {
      // oempa("Thread %p stack: used %d of %d bytes, %d bytes left.\n", x_thread_current(), stack_used, stack_size, stack_left);
       oempa("Philosopher %p has eaten %d plates (max = %d, min = %d, ratio = %d)\n", x_thread_current(), phil->plates, max_plates, min_plates, ratio);
-      report = false;      
+      report = FALSE;      
       num_reports += 1;
     }      
 
@@ -536,7 +536,7 @@ static void Dining_Philosophers(void *t) {
       initialized = 1;
     }
     x_thread_sleep(second * 2);
-    report = true;
+    report = TRUE;
   }
   
 }
@@ -1456,7 +1456,7 @@ static void monitor_fsm(void * t) {
   x_int check_counter = 0;
   x_int check_max = 0;
   x_status status;
-  //x_boolean do_stop = false;
+  //x_boolean do_stop = FALSE;
   
   while (1) {
     //x_assert(critical_status == 0);
@@ -1523,7 +1523,7 @@ static void monitor_fsm(void * t) {
     for (i = 0; i < num_fsm_threads; i++) {
       if (mt_Threads[i].thread->a_prio != mt_Threads[i].prio) {
         oempa("State %d: assigned priority of thread %d has changed from %d to %d!\n", fsm_state, i + 1, mt_Threads[i].prio, mt_Threads[i].thread->a_prio);
-        do_stop = true;
+        do_stop = TRUE;
       }
     }
 

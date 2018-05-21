@@ -37,27 +37,27 @@
 ** to 'false' and select each test individually.
 */
 
-static x_boolean       do_all = false;
+static x_boolean       do_all = FALSE;
 
-static x_boolean   do_monitor = true;
+static x_boolean   do_monitor = TRUE;
 #if 0
-static x_boolean     do_timer = false;
-static x_boolean     do_mutex = false;
-static x_boolean    do_thread = false;
-static x_boolean    do_atomic = false;
-static x_boolean     do_queue = false;
+static x_boolean     do_timer = FALSE;
+static x_boolean     do_mutex = FALSE;
+static x_boolean    do_thread = FALSE;
+static x_boolean    do_atomic = FALSE;
+static x_boolean     do_queue = FALSE;
 #endif
-static x_boolean       do_sem = false;
+static x_boolean       do_sem = FALSE;
 #if 0
-static x_boolean    do_memory = false;
-static x_boolean     do_block = false;
-static x_boolean       do_map = false;
-static x_boolean   do_signals = false;
-static x_boolean   do_modules = false;
-static x_boolean do_exception = false;
-static x_boolean      do_list = false;
-static x_boolean     do_stack = false;
-static x_boolean      do_join = false;
+static x_boolean    do_memory = FALSE;
+static x_boolean     do_block = FALSE;
+static x_boolean       do_map = FALSE;
+static x_boolean   do_signals = FALSE;
+static x_boolean   do_modules = FALSE;
+static x_boolean do_exception = FALSE;
+static x_boolean      do_list = FALSE;
+static x_boolean     do_stack = FALSE;
+static x_boolean      do_join = FALSE;
 #endif
 
 /*

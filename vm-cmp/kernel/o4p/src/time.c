@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2008, 2009, 2016 by Chris Gray, KIFFER Ltd.               *
+* Copyright (c) 2008, 2009, 2016, 2018 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
