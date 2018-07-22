@@ -5,6 +5,8 @@ addons:
     packages:
     - libc6-dev
 
+compiler : gcc
+
 install: ant -DPLATFORM=pc -DLAYOUT=jre -DBUILD_TOOL=make || cat build/pc/log/build-pc.log
 
 script: release/pc/bin/mika -jar release/test/mauve-suite.jar
