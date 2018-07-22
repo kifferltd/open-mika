@@ -567,7 +567,7 @@ objdirlist += $(objdir)/fp/$(FLOATING_POINT)
 objdirlist += $(objdir)/math/$(MATH)
 objdirlist += $(objdir)/network/$(NETWORK)
 
-.PHONY : mika echo builddir clean test common-test scheduler-test
+.PHONY : mika echo builddir install clean test common-test scheduler-test
 
 mika : echo builddir kernel core-vm
 
@@ -589,23 +589,27 @@ builddir :
 	@mkdir -p $(gendir)
 
 kernel : kcommon 
-	make -C vm-cmp/kernel/$(SCHEDULER) $(MAKECMDGOALS)
+	make -C vm-cmp/kernel/$(SCHEDULER) 
 
 kcommon :
-	make -C vm-cmp/kernel/common $(MAKECMDGOALS)
+	make -C vm-cmp/kernel/common 
 
 comm :
 ifeq ($(JAVAX_COMM), true)
-	make -C vm-ext/comm $(MAKECMDGOALS)
+	make -C vm-ext/comm 
 endif
 
 max :
 ifeq ($(MIKA_MAX), true)
-	make -C max/src/native/mika/max $(MAKECMDGOALS)
+	make -C max/src/native/mika/max 
 endif
 
 core-vm : comm max 
-	make -C core-vm $(MAKECMDGOALS)
+	make -C core-vm 
+
+install : mika
+	@echo "Installing mika binary in ${INSTALL_DIR}"
+	cp core-vm/mika ${INSTALL_DIR}
 
 clean :
 	@rm -rf $(gendir)

@@ -35,6 +35,12 @@
 #
 
 #
+# Define the tool to be used to build the mika executable. May be "jam" or "make",
+# currently jam is the default.
+#
+BUILD_TOOL=jam
+
+#
 # Debug is set off per default.
 #
 
