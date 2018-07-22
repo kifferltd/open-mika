@@ -3,7 +3,7 @@ language: java
 addons:
   apt:
     packages:
-    - ftjam
+    - libc6-dev
 
 install: ant -DPLATFORM=pc -DLAYOUT=jre -DBUILD_TOOL=make || cat build/pc/log/build-pc.log
 
