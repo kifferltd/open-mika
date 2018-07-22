@@ -366,9 +366,9 @@
     <flag property="DEBUG" flag="DEBUG.FLAG"/>
     <flag property="STATIC" flag="STATIC.FLAG"/>
     <flag property="AWT_DEF" flag="AWT.FLAGS"/>
-    <exec executable="svnversion" outputproperty="svn.revision">
-      <arg value="."/>
-      <arg value="-n"/>
+    <exec executable="bash" outputproperty="git.revision">
+      <arg value="-c"/>
+      <arg value="git log -1 | awk '/commit/ {print $NF}"/>
     </exec>
 
     <mkdir dir="${log.dir}"/>
@@ -379,7 +379,7 @@
     <antcall target="run-awk" />
     <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
     <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
-    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
+    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${git.revision}&quot;"/>
     <property environment="env"/>
     <jamflags property="jam.flags"/>
     <property name="config.jam.flags" 
@@ -408,9 +408,9 @@
     <flag property="DEBUG" flag="DEBUG.FLAG"/>
     <flag property="STATIC" flag="STATIC.FLAG"/>
     <flag property="AWT_DEF" flag="AWT.FLAGS"/>
-    <exec executable="svnversion" outputproperty="svn.revision">
-      <arg value="."/>
-      <arg value="-n"/>
+    <exec executable="svnversion" outputproperty="git.revision">
+      <arg value="-c"/>
+      <arg value="git log -1 | awk '/commit/ {print $NF}"/>
     </exec>
 
     <mkdir dir="${log.dir}"/>
@@ -420,16 +420,17 @@
 
     <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
     <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
-    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${svn.revision}&quot;"/>
+    <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${git.revision}&quot;"/>
     <property environment="env"/>
 
     <property name="MAKE_EXEC" value="make"/>
     <property name="log.file" value="${log.dir}/build-${ANT.PLATFORM}.log"/>
     <exec dir="${basedir}" executable="${MAKE_EXEC}"
           failonerror="true" output="${log.file}" append="false">
-      <arg line="PLATFORM=pc MATH=native"/>
+      <arg line="PLATFORM=pc MATH=native install"/>
       <env key="WONKA_TOP" value="${basedir}"/>
       <env key="PATH" path="${current.toolchain}:${env.PATH}"/>
+      <env key="INSTALL_DIR" value="${mika.bin.dir}"/>
     </exec>
     <condcall target="rename-executable" condition="${LAYOUT}" value="jre"/>
     <gzip src="${log.file}" destfile="${log.dir}/build-${ANT.PLATFORM}.log.gz"/>
