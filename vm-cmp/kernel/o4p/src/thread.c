@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2008, 2010, 2016 by Chris Gray, KIFFER Ltd.         *
+* Copyright (c) 2007, 2008, 2010, 2016, 2018 by Chris Gray, KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -256,7 +256,8 @@ void *start_routine(void *thread_ptr) {
   pthread_setspecific(x_thread_key, thread);
 #ifdef LINUX
   thread->o4p_thread_tid = syscall(__NR_gettid);
-  int rc = setpriority(PRIO_PROCESS, 0, mapPriority(thread->o4p_thread_schedPolicy, thread->o4p_thread_priority));
+// TODO test return code!
+  setpriority(PRIO_PROCESS, 0, mapPriority(thread->o4p_thread_schedPolicy, thread->o4p_thread_priority));
 #endif
 
   thread->state = xt_ready;
@@ -666,7 +667,7 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
   x_thread joiner = x_thread_current();
   struct timespec one_tick_ts;
 #ifdef HAVE_TIMEDWAIT
-  struct timeval end;
+  struct timespec end;
 #endif
 
   if (!joinee->state) {

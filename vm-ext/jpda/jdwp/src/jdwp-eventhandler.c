@@ -186,8 +186,6 @@ void jdwp_dealloc_event(jdwp_event event) {
   releaseMem(event);
 }
  
-void jdwp_single_step_clear(jdwp_event event);
-
 /*
 ** Clear all events.
 */
