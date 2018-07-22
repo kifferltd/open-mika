@@ -7,6 +7,8 @@ addons:
 
 install: ant -DPLATFORM=pc -DLAYOUT=jre -DBUILD_TOOL=make || cat build/pc/log/build-pc.log
 
+script: release/pc/bin/mika -jar release/test/mauve-suite.jar
+
 jdk:
 - openjdk7
 
