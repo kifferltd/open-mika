@@ -5,7 +5,7 @@ addons:
     packages:
     - ftjam
 
-install: ant -DPLATFORM=pc -DLAYOUT=jre -DBUILD_TOOL=make
+install: ant -DPLATFORM=pc -DLAYOUT=jre -DBUILD_TOOL=make || cat build/pc/log/build-pc.log
 
 jdk:
 - openjdk7
