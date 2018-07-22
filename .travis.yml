@@ -3,7 +3,7 @@ language: C
 addons:
   apt:
     packages:
-    - libc6-dev
+    - libc6-dev-i386
 
 compiler : gcc
 
