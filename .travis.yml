@@ -3,6 +3,7 @@ language: C
 addons:
   apt:
     packages:
+    - gcc-multilib
     - libc6-dev-i386
 
 compiler : gcc
