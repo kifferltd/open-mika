@@ -8,7 +8,7 @@ addons:
 
 compiler : gcc
 
-install: ant -DPLATFORM=pc -DBUILD_TOOL=make || cat build/pc/log/build-pc.log
+install: ant -DPLATFORM=pc -DBUILD_TOOL=make tests || cat build/pc/log/build-pc.log
 
 script: release/pc/bin/mika -jar release/test/mauve-suite.jar
 
