@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/kifferltd/open-mika.svg?branch=master)](https://travis-ci.org/kifferltd/open-mika)
+
+```
 +-------------------------------------------------------------------------+
 | Copyright (c) 2015 by Chris Gray, Kiffer Ltd.  All rights reserved.     |
 |                                                                         |
@@ -25,6 +28,7 @@
 | IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      |
 | POSSIBILITY OF SUCH DAMAGE.                                             |
 +-------------------------------------------------------------------------+
+```
 
 Open Mika Jvm
 =============
