@@ -164,15 +164,15 @@ public class ClassTest implements Cloneable, java.io.Serializable, Testlet
 
 	harness.checkPoint("test_primitiveTypes java.lang.Boolean.TYPE is primitive");
 	cls = java.lang.Boolean.TYPE;
-	harness.check(cls.isPrimitive() == true);
+	harness.check(cls.isPrimitive());
 
 	harness.checkPoint("test_primitiveTypes java.lang.Double.TYPE is primitive");
 	cls = java.lang.Double.TYPE;
-	harness.check(cls.isPrimitive() == true);
+	harness.check(cls.isPrimitive());
 
 	harness.checkPoint("test_primitiveTypes java.lang.Void.TYPE is primitive");
 	cls = java.lang.Void.TYPE;
-	harness.check(cls.isPrimitive() == true);
+	harness.check(cls.isPrimitive());
 
 	harness.checkPoint("test_primitiveTypes java.lang.Object is not primitive");
 	try {

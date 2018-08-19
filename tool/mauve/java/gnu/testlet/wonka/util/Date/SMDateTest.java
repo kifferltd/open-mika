@@ -148,6 +148,11 @@ public class SMDateTest implements Testlet
           th.fail("should throw NullPointerException");
         }
     catch (NullPointerException ne) { th.check(true); }
+
+   Date d5 = new Date(2011, 5, 21);
+   Date d6 = new Date(2015, 1, 21);
+   th.check(d6.after(d5));
+   th.check(!d5.after(d6));
     	
   }
 

@@ -65,7 +65,7 @@ class MulticastClient extends Thread {
         socket.close();
 
       } catch (Exception e) {
-        System.out.println("Client run failed");
+        System.out.println("Client run failed - " + e.getMessage());
         e.printStackTrace();
       }
     }
