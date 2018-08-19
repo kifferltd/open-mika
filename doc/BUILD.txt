@@ -1,5 +1,5 @@
 +-------------------------------------------------------------------------+
-| Copyright (c) 2006, 2012 by Chris Gray, /k/ Embedded Java Solutions.    |
+| Copyright (c) 2006, 2012, 2018 by Chris Gray, KIFFER Ltd.               |
 | All rights reserved.                                                    |
 |                                                                         |
 | Redistribution and use in source and binary forms, with or without      |
@@ -10,20 +10,20 @@
 | 2. Redistributions in binary form must reproduce the above copyright    |
 |    notice, this list of conditions and the following disclaimer in the  |
 |    documentation and/or other materials provided with the distribution. |
-| 3. Neither the name of /k/ Embedded Java Solutions nor the names of     |
-|    other contributors may be used to endorse or promote products        |
-|    derived from this software without specific prior written permission.|
+| 3. Neither the name of KIFFER Ltd nor the names of other contributors   |
+|    may be used to endorse or promote products derived from this         |
+|    software without specific prior written permission.                  |
 |                                                                         |
 | THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          |
 | WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    |
 | MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    |
-| IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  |
-| LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     |
-| CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    |
-| SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         |
-| BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   |
-| WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    |
-| OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  |
+| IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    |
+| DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      |
+| DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       |
+| GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           |
+| INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    |
+| IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         |
+| OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN     |
 | IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           |
 +-------------------------------------------------------------------------+
 
@@ -60,16 +60,18 @@ There are 5 tasks which can be called directly with ant:
 Customizing your build
 ----------------------
 
-As you can see sometimes (task 1 and 2) you need to specify a platform. A valid PLATFORM points to 
-a file with the same name in Configuration/ant. These files define ant configuration for
-specific setups and are used for building mika (the clean can offcourse live without that configuration). 
+As you can see sometimes (task 1 and 2) you need to specify a platform.
+A valid PLATFORM points to a file with the same name in Configuration/ant.
+These files define ant configuration for specific setups and are used for
+building mika (the clean can off course live without that configuration). 
 They should contains at least the following properties:
 SECURITY, JAR, MATH, JAVA_BEANS, AWT, DEBUG, JAVAX_CRYPTO, JAVAX_COMM, AWT_DEF, 
-STATIC, JAM.PLATFORM, JAVA_DEBUG and UNICODE_SUBSETS. If you read the TREE-LAYOUT.txt, you'll 
-notice that most of these properties map onto an extension, vm-extension or -component.
-For vm- and reguler extensions (JAVA_BEANS, JAVAX_CRYPTO, JAVAX_COMM and MICRO_IO) the value 
-is true or false. For the vm-components (SECURITY, JAR,MATH and AWT) the value is one of the
-components as mentioned in TREE-LAYOUT.txt.
+STATIC, JAM.PLATFORM, JAVA_DEBUG and UNICODE_SUBSETS.
+If you read the TREE-LAYOUT.txt, you'll notice that most of these properties
+map onto an extension, vm-extension or vm-component.
+For vm- and regular extensions (JAVA_BEANS, JAVAX_CRYPTO, JAVAX_COMM and
+MICRO_IO) the value is true or false. For the vm-components (SECURITY, JAR,
+MATH and AWT) the value is one of the components as mentioned in TREE-LAYOUT.txt.
 
 The other properties are:
 * AWT_DEF: values: a file in Configuration/awt. This should only be defined when AWT is rudolph.
@@ -87,32 +89,53 @@ The other properties are:
 * DEBUG: values: true or false. It enables the native debug.
 
 All of the mentioned properties can of course be specified on your commandline.
-By adding '-DAWT=none' for instance, you select the 'none' AWT implementation. Parameters
-passed on the command line take precedence over those in the configuration file.
+By adding '-DAWT=none' for instance, you select the 'none' AWT implementation.
+Parameters passed on the command line take precedence over those in the
+configuration file.
 
 
 Jamming mika
 ------------
 
-Despate all the nice features ant has, it not suited well to compile and link native libraries/binaries.
-Currently 'jam' is being used as build tool for the native parts. Until recently we had custom jam
-version (the acunia-jam) to build the whole of mika but any version should do. For instance FT-Jam (or freetype jam).
+Despite all the nice features ant has, it not suited well to compile and link
+native libraries/binaries.  Currently 'jam' is being used as build tool for the
+native parts; any Jam variant should work, e.g. FT-Jam (or freetype jam).
 
-The configuration for jam is a bit less easy then the ant one. 'jam' will start of reading the configartion
-file defined by JAM.PLATFORM. It will take the file with same name in the Configuration/platform directory.
-The platform definition should/will define a CPU and HOSTOS. These values are used to find and read files in
-Configuration/cpu and Configuration/host. These files define the toolchain to use and extra compilerflags.
-The last step is to read the Configuration/wonka/default file. When selecting AWT=rudolph the jam build will also
-read (or at least try to read) the file defined by AWT_DEF from the directory Configuration/awt.
-When defining TOOL_CONFIG, jam will also read that file from Configuration/tool. When defined this file will be read
-as the last one in the chain. Take note: Jam allows previously defined settings to be overriden. 
-To find a out which properties are available and what they mean, please read Configuration/wonka/default.
+The configuration for jam is a bit less easy then the ant one.
+'jam' will start of reading the configuration file defined by JAM.PLATFORM.
+It will take the file with same name in the Configuration/platform directory.
+The platform definition should/will define a CPU and HOSTOS.
+These values are used to find and read files in Configuration/cpu and
+Configuration/host. These files define the toolchain to use and extra
+compiler flags.
+The last step is to read the Configuration/wonka/default file.
+When selecting AWT=rudolph the jam build will also read (or at least try to)
+the file defined by AWT_DEF from the directory Configuration/awt.
+When defining TOOL_CONFIG, jam will also read that file from Configuration/tool.
+When defined this file will be read as the last one in the chain.
+Take note: Jam allows previously defined settings to be overriden. 
+To find a out which properties are available and what they mean,
+please read Configuration/wonka/default.
 
-As mention earlier, both the STATIC and DEBUG flag are not used by ant by only passed to the jam commandline. In general
-all properties added to the ant command (using -D) which start with JAM.xxx=yyy will be passed to jam as
--sxxx=yyy. So specifying -DJAM.DEBUG=true would do the same as -DDEBUG=true, but it could confuse the build if
-you start using both. But keep in mind that if one of the configurations file also defines a commandline one, 
-it will be overriden.
+As mention earlier, both the STATIC and DEBUG flag are not used by ant but are
+only passed to the jam commandline. In general all properties added to the ant
+command (using -D) which start with JAM.xxx=yyy will be passed to jam as
+-sxxx=yyy. So specifying -DJAM.DEBUG=true would do the same as -DDEBUG=true,
+but it could confuse the build if you start using both.
+But keep in mind that if one of the configurations file also defines a
+command line one, it will be overriden.
+
+
+Make-ing mika
+------------
+
+Work is in progress to replace Jam by Make for the building of the native code.
+Currently this only works for the following platforms:  
+  pc
+
+To use GNU Make instead of Jam; add '-DBUILD_TOOL=make' to the command line,
+e.g.  
+  ant -DPLATFORM=pc -DBUILD_TOOL=make
 
 
 Building mika for your platform
