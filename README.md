@@ -30,40 +30,38 @@
 +-------------------------------------------------------------------------+
 ```
 
-Open Mika Jvm
-=============
+# Open Mika Jvm
 
 This file contains a short overview on how to run and build Open Mika. 
 For more detailed information please see the 'doc' dirctory.
 
-Build machine
-=============
+## Build machine
 
-The build system is designed to run on x86-linux machine.
+The build system is designed to run on x86-linux machine,
+but it can also be run self-hosted if your target machine
+has enough memory etc. to perform the compilation.
 Most of the major linux flavors should enable you to compile
 and run mika. 
 
-System requirements
-===================
+## Build system requirements
 
-1. ant: The main mika build system uses ant to build mika.
-   use version 1.6.2 or up.
+1. ant: The main mika build system uses ant to build mika.  
+   Use version 1.6.2 or up.
 2. a java runtime environment: since ant is written in java you'll
    need a jre capable of running ant
-3. jam: Ft-jam works well. 
+3. jam: Ft-jam works well, _or_ GNU make (see below). 
 4. Gnu awk (gawk)
-5. a gcc toolchain for your target platform.
+5. a gcc cross-compiling toolchain for your target platform.
 6. When using AWT on your pc, you'll also need the X11 development environment.
 
-Note: depending on your setup, you might need to add entry for java and ant to your PATH.
+Note: depending on your setup, you might need to add entries for java and ant to your PATH.
 
-Building mika
-=============
+## Building mika
 
-Building mika is done by calling ant in the same directory as this file is (the
-build.xml is next to this README.txt file). 
+Building mika is done by calling ant in the same directory as this file is in
+(the build.xml is next to this README.txt file). 
 
-There are 5 tasks which can be called directly with ant
+There are 5 tasks which can be called directly with ant :
 
 1. main: this is the main build task. This is also the default task run by ant.
    However just typing 'ant' will fail since the build needs to know for what
@@ -88,8 +86,18 @@ There are 5 tasks which can be called directly with ant
 
 More details on building with various options mika can be found in doc/BUILD.txt
 
-Running mika
-============
+### Compiling with make or jam
+
+Traditionally the native part of Mika has been built using Jam, but we are
+in the process of developing a parallel system using GNU Make. This does not
+yet work for all build options, but the intention is that soon the Makefiles
+will be able to do everything which is now done by Jam and that GNU Make will
+replace Jam (and probably also Ant) as the primary build tool.
+
+To build for a PC Linux target using the Makefiles, use the command
+```ant -DPLATFORM=pc -DBUILD_TOOL=make```
+
+## Running mika
 
 After succesfully building mika for you platform, you'll see a directory 
 under the 'release' directory with the same name as your platform, e.g.
@@ -97,7 +105,7 @@ under the 'release' directory with the same name as your platform, e.g.
 'bin' contains the executable, while 'lib/mika' stores java classes
 (wre.jar) plus some properties and resources. The command line of mika works
 pretty much like the Sun/Oracle one, for example calling 
-   ./release/pc/bin/mika -cp . HelloWord
+```./release/pc/bin/mika -cp . HelloWord```
 causes HelloWorld.class to be executed . More info on mika's commandline can be found in doc/COMMAND_LINE.txt
 
 
