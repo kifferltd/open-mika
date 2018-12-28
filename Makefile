@@ -358,25 +358,25 @@ ifeq ($(HOSTOS), winnt)
 endif
 
 ifdef CCLASSPATH
-  WONKA_INFO += "runtime classpath is $(CCLASSPATH);"
+  WONKA_INFO += runtime classpath is $(CCLASSPATH);
 endif
 
 ifeq ($(FILESYSTEM), vfs)
-  WONKA_INFO += "using own virtual filesystem\;"
+  WONKA_INFO += using own virtual filesystem\;
   export fsinc = $(MIKA_TOP)/vm-cmp/fs/include
 endif
  
 ifeq ($(FILESYSTEM), native)
-  WONKA_INFO += 'using host OS filesystem, with virtual root at $(FSROOT);'
+  WONKA_INFO += using host OS filesystem, with virtual root at $(FSROOT)\;
   export fsinc = $(MIKA_TOP)/vm-cmp/fs/$(FILESYSTEM)/hal/hostos/$(HOSTOS)/include
 endif
 
 ifeq ($(JAVA5_SUPPORT), true)
-  WONKA_INFO += "with Java5 support;"
+  WONKA_INFO += with Java5 support\;
 endif
 
 ifeq ($(JAVA5_SUPPORT), false )
-  WONKA_INFO += "no Java5 support;"
+  WONKA_INFO += no Java5 support\;
 endif
 
 ifeq ($(JDWP), true)
