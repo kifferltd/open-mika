@@ -163,7 +163,7 @@ END {
   print ""
 
   printf "void collect%sFixups() {\n", Module
-  print  "  char *cname;"
+  print  "  const char *cname;"
   print  "  w_string slashed, dotified;"
   print  "  int i;"
   printf "  for (i = 0; i < %d; ++i) {\n", ccount
@@ -189,7 +189,7 @@ END {
   print  "}"
   print  ""
 
-  printf "w_clazz loadOne%sClass(char *name) {\n", Module
+  printf "w_clazz loadOne%sClass(const char *name) {\n", Module
   print  "  w_string dotified;"
   print  "  w_clazz clazz;"
   print  "  dotified = slashes2dots(cstring2String(name, strlen(name)));"

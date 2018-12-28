@@ -1,6 +1,5 @@
 ###########################################################################
-# Copyright (c) 2008, 2009, 2010, 2011, 2013, 2018 by KIFFER Ltd.         #
-# All rights reserved.                                                    #
+# Copyright (c) 2018 by KIFFER Ltd. All rights reserved.                  #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -314,6 +313,14 @@ java/lang/StringBuffer
 	count			I
         createFromString        (Ljava/lang/String;)V                           StringBuffer_createFromString
         append                  (Ljava/lang/String;)Ljava/lang/StringBuffer;    StringBuffer_append_String
+        substring               (II)Ljava/lang/String;                          StringBuffer_substring
+        ensureCapacity          (I)V                                            StringBuffer_ensureCapacity
+	toString		()Ljava/lang/String;				StringBuffer_toString
+java/lang/StringBuilder
+	value			[C
+	count			I
+        createFromString        (Ljava/lang/String;)V                           StringBuffer_createFromString
+        append                  (Ljava/lang/String;)Ljava/lang/StringBuilder;    StringBuffer_append_String
         substring               (II)Ljava/lang/String;                          StringBuffer_substring
         ensureCapacity          (I)V                                            StringBuffer_ensureCapacity
 	toString		()Ljava/lang/String;				StringBuffer_toString
@@ -828,4 +835,5 @@ java/security/Security
 java/security/Security$SecurityProperties
 java/security/SecurityPermission
 java/util/jar/Attributes$Name
+
 

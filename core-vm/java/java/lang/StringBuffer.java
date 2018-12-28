@@ -37,8 +37,8 @@ public final class StringBuffer implements java.io.Serializable, CharSequence {
 
   private static final long serialVersionUID = 3388685877147921107L;
 
-  private char[] value;
-  private int count;
+  char[] value;
+  int count;
   //private boolean shared;
 
   public StringBuffer() {
