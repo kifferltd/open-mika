@@ -40,7 +40,7 @@
   <target name="tool">
     <mkdir dir="${tools.class.dir}" />
     <mkdir dir="${test.dir}" />
-    <subant target="compile-mre" antfile="common.xml" buildpath="${ant.dir}">
+    <subant target="compile-mcl" antfile="common.xml" buildpath="${ant.dir}">
       <property name="SECURITY" value="none"/>
       <property name="SECURITY_PROVIDER" value="none"/>
     </subant>
