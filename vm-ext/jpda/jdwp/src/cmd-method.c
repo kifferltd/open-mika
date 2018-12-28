@@ -135,7 +135,7 @@ w_void jdwp_method_var_table(jdwp_command_packet cmd) {
 
       for (i = 0; i < n; i++) {
         w_string name = method->exec.debug_info->localVars[i].name;
-        w_string desc = method->exec.debug_info->localVars[i].desc;
+        w_string desc = method->exec.debug_info->localVars[i].desc_or_sig;
         w_ubyte *string;
         w_int length;
 
