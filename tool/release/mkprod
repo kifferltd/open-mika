@@ -176,7 +176,7 @@ mv src open-wonka
 # clean-up complete open-wonka
 
 rm -rf open-wonka/class
-rm open-wonka/wre.jar
+rm open-wonka/mcl.jar
 rm open-wonka/compiler/none/src/libcompiler.a
 
 # test src product

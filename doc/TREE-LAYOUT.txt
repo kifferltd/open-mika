@@ -95,15 +95,15 @@ Contains documentation.
 6. 'extension'
 --------------
 
-The extension dir contains stand alone optinal extensions. That they have no need to be in the wre.jar or
+The extension dir contains stand alone optional extensions. They have no need to be in the mcl.jar or
 the mika binary and can be left out if unneeded. For now it only contains 'microedition', the javax.microedition.io
 package of mika. 
 
 7. 'vm-ext'
 -----------
 
-'vm-ext' or vm-extensions are optoinal packages. They are different from 'extension' in the sense that their classfile
-are added to the wre.jar and native part are linked into the main binary file.
+'vm-ext' or vm-extensions are optional packages. They are different from 'extension' in the sense that their classfile
+are added to the mcl.jar and native part are linked into the main binary file.
 We have following vm-extensions:
 * comm: a javax.comm implementation
 * beans: the java.beans package is setup to be optional.

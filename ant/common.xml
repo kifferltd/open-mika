@@ -35,7 +35,7 @@
   <property name="top.level.dir" value="${basedir}/.." />
   <property name="tools.dir" value="${top.level.dir}/build/tools/"/>
 
-  <target name="compile-wre">
+  <target name="compile-mcl">
     <mkdir dir="${common.class.dir}" />
     <mkdir dir="${empty.dir}" />
     <taskdef name="propertysetter" classname="be.kiffer.mika.ant.PropertySetter"

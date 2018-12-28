@@ -103,7 +103,7 @@ After succesfully building mika for you platform, you'll see a directory
 under the 'release' directory with the same name as your platform, e.g.
 'release/pc'.  This contains the binary files needed to run mika;
 'bin' contains the executable, while 'lib/mika' stores java classes
-(wre.jar) plus some properties and resources. The command line of mika works
+(e.g. mcl.jar) plus some properties and resources. The command line of mika works
 pretty much like the Sun/Oracle one, for example calling 
 ```./release/pc/bin/mika -cp . HelloWord```
 causes HelloWorld.class to be executed . More info on mika's commandline can be found in doc/COMMAND_LINE.txt

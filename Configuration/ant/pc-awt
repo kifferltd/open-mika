@@ -83,7 +83,7 @@ MATH=native
 #
 # The following packages are optional. If you don't need them
 # you can leave them out. 'true = in' and false means no such 
-# packages. All of those classes are compiled in the wre.jar
+# packages. All of those classes are compiled in the mcl.jar
 # expect for micro_io, that's a jar on it's own.
 #
 JAVA_BEANS=true

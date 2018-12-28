@@ -37,7 +37,7 @@
 
   <target name="sample">
      <mkdir dir="${sample.class.dir}" />
-     <subant target="compile-wre" antfile="common.xml" buildpath="${ant.dir}"/>
+     <subant target="compile-mcl" antfile="common.xml" buildpath="${ant.dir}"/>
      <javac destdir="${sample.class.dir}" 
             bootclasspath="${common.class.dir}"
             source="1.4" target="1.4" debug="true" nowarn="true" failonerror="true"

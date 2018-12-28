@@ -91,7 +91,7 @@ endif
 #
 # If the hostos filesystem is used then when Mika is run it will translate
 # the prefix '{}/' attached to any path into $(FSROOT); e.g. the path
-# will be translated to $(FSROOT)/system/wre.jar.
+# will be translated to $(FSROOT)/system/mcl.jar.
 # FSROOT may be an absolute or a relative path; if relative it is interpreted 
 # relative to the location of the Mika binary (args[0]), not the current 
 # directory of the shell from which Mika was launched.
@@ -117,7 +117,7 @@ ifndef BOOTCLASSDIR
   export BOOTCLASSDIR  = "lib/mika"
 endif
 ifndef BOOTCLASSFILE
-  export BOOTCLASSFILE = "wre.jar"
+  export BOOTCLASSFILE = "mcl.jar"
 endif
 
 ifndef TESTDIR

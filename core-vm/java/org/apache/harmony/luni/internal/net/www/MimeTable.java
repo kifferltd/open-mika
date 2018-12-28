@@ -94,7 +94,7 @@ public class MimeTable implements FileNameMap {
      * expected locations, namely:
      * <ul><li>{java.home}/lib/mika/content-types.properties
      *     <li>system resource "wonka.net.MimeTypeMap.properties"
-     *     (normally present in the <code>wre.jar</code> file).
+     *     (normally present in the <code>mcl.jar</code> file).
      * </ul>
      * 
      * @return the InputStream, or null if none.

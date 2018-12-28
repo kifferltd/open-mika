@@ -360,7 +360,7 @@ public final class NewSystemClassLoader extends ClassLoader {
 
   /**
    ** Enter the standard packages into the `packages' hashtable.
-   ** TODO: get this info from wre.jar or our defined classes.
+   ** TODO: get this info from mcl.jar or our defined classes.
    */
   private void defineStandardPackages() {
     definePackage("com.acunia.device","","","","","","",null);

@@ -88,7 +88,7 @@ FILESYSTEM default = native ;
 #
 # If the hostos filesystem is used then when Mika is run it will translate
 # the prefix '{}/' attached to any path into $(FSROOT); e.g. the path
-# will be translated to $(FSROOT)/system/wre.jar.
+# will be translated to $(FSROOT)/system/mcl.jar.
 # FSROOT may be an absolute or a relative path; if relative it is interpreted 
 # relative to the location of the Mika binary (args[0]), not the current 
 # directory of the shell from which Mika was launched.
@@ -109,7 +109,7 @@ FSROOT default = ../ ;
 #
 
 BOOTCLASSDIR  default = "lib/mika" ;
-BOOTCLASSFILE default = "wre.jar" ;
+BOOTCLASSFILE default = "mcl.jar" ;
 
 TESTDIR default = "test" ;
 INSTALLTESTDIR  default = $(OROOT)/$(TESTDIR) ;

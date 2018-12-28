@@ -1,5 +1,5 @@
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
-<!-- Copyright (c) 2007, 2009, 2013, 2015 by Chris Gray, KIFFER Ltd.         -->
+<!-- Copyright (c) 2007, 2009, 2013, 2015, 2018 by Chris Gray, KIFFER Ltd.   -->
 <!-- All rights reserved.                                                    -->
 <!--                                                                         -->
 <!-- Redistribution and use in source and binary forms, with or without      -->
@@ -78,7 +78,7 @@
     <mkdir dir="${release.ext.dir}"/>
     <property name="JAVA_DEBUG" value="false" />
     <antcall target="arg.check"/>
-    <antcall target="build-wre"/>
+    <antcall target="build-mcl"/>
     <antcall target="build-ext"/>
     <condcall target="jam-mika" condition="${BUILD_TOOL}" value="jam"/>
     <condcall target="make-mika" condition="${BUILD_TOOL}" value="make"/>
@@ -197,10 +197,10 @@
     <fail message="Please specify a AWT_DEF config. example: xsim,fdev" if="AWT.DEF.MISSING"/>
   </target>
 
-  <target name="build-wre">
+  <target name="build-mcl">
     <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
     <property name="release.lib.dir" value="${release.dir}${release.lib.subdir}" />
-    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
+    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="mcl.jar"/>
     <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
     <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
     <property name="vm.java.dir" value="${basedir}/core-vm/${java.version}"/>
@@ -243,7 +243,7 @@
       </fileset>
     </copy>
     <jar destfile="${release.lib.dir}/${release.classlib.name}"
-         manifest="${basedir}/core-vm/resource/wre.mf"
+         manifest="${basedir}/core-vm/resource/mcl.mf"
          basedir="${class.dir}"/>
   </target>
 
@@ -378,7 +378,7 @@
 
     <antcall target="run-awk" />
     <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
-    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
+    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="mcl.jar"/>
     <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${git.revision}&quot;"/>
     <property environment="env"/>
     <jamflags property="jam.flags"/>
@@ -419,7 +419,7 @@
     <mkdir dir="${test.release.dir}"/>
 
     <propertysetter property="release.lib.subdir" arg1="${LAYOUT}" arg2="jre" value="lib/" elsevalue="lib/mika/"/>
-    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="wre.jar"/>
+    <propertysetter property="release.classlib.name" arg1="${LAYOUT}" arg2="jre" value="rt.jar" elsevalue="mcl.jar"/>
     <property name="MIKA.VERSION" value="&quot;Snapshot_${ANT.PLATFORM}_${git.revision}&quot;"/>
     <property environment="env"/>
 
@@ -427,7 +427,7 @@
     <property name="log.file" value="${log.dir}/build-${ANT.PLATFORM}.log"/>
     <exec dir="${basedir}" executable="${MAKE_EXEC}"
           failonerror="true" output="${log.file}" append="false">
-      <arg line="PLATFORM=pc MATH=native install"/>
+      <arg line="PLATFORM=${JAM.PLATFORM} MATH=native install"/>
       <env key="WONKA_TOP" value="${basedir}"/>
       <env key="PATH" path="${current.toolchain}:${env.PATH}"/>
       <env key="INSTALL_DIR" value="${mika.bin.dir}"/>

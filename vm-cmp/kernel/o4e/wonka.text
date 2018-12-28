@@ -169,7 +169,7 @@ and then link into wonka. Kinky not?
 
 1. jam -sHOSTOS=ecos -sWONKA_CONFIG=ecos [-sOTHER_STUFF] install
 
-All the libraries will be made, the classes and the wre.jar. But the 
+All the libraries will be made, the classes and the mcl.jar. But the 
 process will fail because image.a (the filesystem archive) doesn't 
 exist just yet. Don't panic, this is normal...
 
