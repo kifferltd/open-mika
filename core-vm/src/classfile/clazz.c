@@ -1045,6 +1045,7 @@ static void parseFieldAttribute(w_field field, w_bar s) {
 #ifdef JAVA5
   else if (attributeName == string_Signature) {
     field->signature = resolveUtf8Constant(field->declaring_clazz, get_u2(s));
+w_printf("Field %w of %k has signature %w\n", field->name, field->declaring_clazz, field->signature);
   }
   else if (attributeName == string_RuntimeVisibleAnnotations) {
     // TODO - store the annotation VMS-SE5.0-Ch4-ClassFile.pdf p.147
@@ -1376,6 +1377,7 @@ static void parseMethodAttribute(w_method method, w_bar s) {
 #ifdef JAVA5
   else if (attributeName == string_Signature) {
     method->spec.signature = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
+w_printf("Method %w of %k has signature %w\n", method->spec.name, method->spec.declaring_clazz, method->spec.signature);
   }
   else if (attributeName == string_RuntimeVisibleAnnotations) {
     // TODO - store annotation VMS-SE5.0-Ch4-ClassFile.pdf p.147
@@ -1767,6 +1769,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
 
 #ifdef JAVA5
     clazz->signature = resolveUtf8Constant(clazz, get_u2(s));
+w_printf("Class %k has signature %w\n", clazz, clazz->signature);
     woempa(1, "Signature = %w\n", clazz->signature);
 #endif
   }
