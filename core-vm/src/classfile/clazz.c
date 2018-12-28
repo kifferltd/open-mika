@@ -1042,11 +1042,14 @@ static void parseFieldAttribute(w_field field, w_bar s) {
   if (attributeName == string_ConstantValue) {
     field->initval = get_u2(s);
   }
-  else if (attributeName == string_Signature) {
 #ifdef JAVA5
+  else if (attributeName == string_Signature) {
     field->signature = resolveUtf8Constant(field->declaring_clazz, get_u2(s));
-#endif
   }
+  else if (attributeName == string_RuntimeVisibleAnnotations) {
+    // TODO - store the annotation VMS-SE5.0-Ch4-ClassFile.pdf p.147
+  }
+#endif
   else {
     /*
     ** Unknown attributes are silently ignored.
@@ -1346,6 +1349,7 @@ static void parseMethodAttribute(w_method method, w_bar s) {
       }
     }
   }
+#ifdef JAVA5
   else if (attributeName == string_LocalVariableTypeTable) {
     if (!use_method_debug_info || !parseLocalVarTypes(method, s)) {
       attribute_count = get_u2(s);
@@ -1358,6 +1362,7 @@ static void parseMethodAttribute(w_method method, w_bar s) {
       }
     }
   }
+#endif
   else if (attributeName == string_LineNumberTable) {
 
     if (!use_method_debug_info || !parseLineNumbers(method, s)) {
@@ -1368,11 +1373,17 @@ static void parseMethodAttribute(w_method method, w_bar s) {
       }
     }
   }
-  else if (attributeName == string_Signature) {
 #ifdef JAVA5
+  else if (attributeName == string_Signature) {
     method->spec.signature = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
-#endif
   }
+  else if (attributeName == string_RuntimeVisibleAnnotations) {
+    // TODO - store annotation VMS-SE5.0-Ch4-ClassFile.pdf p.147
+  }
+  else if (attributeName == string_RuntimeVisibleParameterAnnotations) {
+    // TODO - store annotation VMS-SE5.0-Ch4-ClassFile.pdf p.153
+  }
+#endif
   else {
     woempa(1, "Unknown/ignored attribute '%w'\n", attributeName);
     for (i=0;(u4)i<attribute_length;++i) {
@@ -1740,7 +1751,6 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
       return;
     }
 
-    // TODO : do something with this attribute
 #ifdef JAVA5
     clazz->temp.enclosing_class_index = get_u2(s);
     clazz->temp.enclosing_method_index = get_u2(s);
@@ -1749,7 +1759,7 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
   else if (attributeName == string_Signature) {
     if (clazz->cmajor < 49) {
       if (thread) {
-        throwException(thread, clazzClassFormatError, "EnclosingMethod class attribute requires class file version 49 or higher");
+        throwException(thread, clazzClassFormatError, "Signature class attribute requires class file version 49 or higher");
       }
 
       return;
@@ -1758,6 +1768,19 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
 #ifdef JAVA5
     clazz->signature = resolveUtf8Constant(clazz, get_u2(s));
     woempa(1, "Signature = %w\n", clazz->signature);
+#endif
+  }
+  else if (attributeName == string_RuntimeVisibleAnnotations) {
+    if (clazz->cmajor < 49) {
+      if (thread) {
+        throwException(thread, clazzClassFormatError, "string_RuntimeVisibleAnnotations class attribute requires class file version 49 or higher");
+      }
+
+      return;
+    }
+
+#ifdef JAVA5
+    // TODO - store annotation VMS-SE5.0-Ch4-ClassFile.pdf p.147
 #endif
   }
 #ifdef SUPPORT_BYTECODE_SCRAMBLING

@@ -1,5 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018 by   *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018 by         *
 * KIFFER Ltd. All rights reserved.                                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -36,6 +36,9 @@
 #include "oswald.h"
 #include "threads.h"
 #include "wordset.h"
+#ifdef JAVA5
+#include "annotations.h"
+#endif
 
 /*
 ** If CLASSES_HAVE_INSTANCE_CACHE is defined each class will have a cache
@@ -396,6 +399,12 @@ void startClasses(void);
 ** The caller must own the instance lock on 'loader'.
 */
 w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader);
+
+/**
+** Deregister clazz 'clazz' from the loaded_classes_hashtable of 'loader'.
+** The caller must own the instance lock on 'loader'.
+*/
+void deregisterClazz(w_clazz clazz, w_instance loader);
 
 /*
 ** Destroy a w_clazz structure, cleaning up all its ramifications.

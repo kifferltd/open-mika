@@ -328,6 +328,8 @@ extern w_string string_LineNumberTable;
 extern w_string string_LocalVariableTable;
 extern w_string string_LocalVariableTypeTable;
 extern w_string string_Reference;
+extern w_string string_RuntimeVisibleAnnotations;
+extern w_string string_RuntimeVisibleParameterAnnotations;
 extern w_string string_Signature;
 extern w_string string_SourceFile;
 extern w_string string_Synthetic;

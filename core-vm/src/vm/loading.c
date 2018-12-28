@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010 by Chris   *
-* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018            *
+* by KIFFER Ltd.  All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -116,6 +113,8 @@ w_string string_LineNumberTable;
 w_string string_LocalVariableTable;
 w_string string_LocalVariableTypeTable;
 w_string string_Reference;
+w_string string_RuntimeVisibleAnnotations;
+w_string string_RuntimeVisibleParameterAnnotations;
 w_string string_Signature;
 w_string string_SourceFile;
 w_string string_Synthetic;
@@ -344,8 +343,8 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_int     result = CLASS_LOADING_DID_NOTHING;
   w_clazz   current = *clazzptr;
   w_int     state = getClazzState(current);
-  x_monitor monitor;
-  x_status  status;
+//  x_monitor monitor;
+//  x_status  status;
 
   threadMustBeSafe(thread);
 
@@ -400,7 +399,7 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
 }
 
 static void loaded_class_iterator(w_word key, w_word value) {
-  w_string name = (w_string) key;
+//  w_string name = (w_string) key;
   w_clazz clazz = (w_clazz)value;
   if (!clazz->loader) {
     clazz->loader = systemClassLoader;
@@ -411,7 +410,7 @@ static void loaded_class_iterator(w_word key, w_word value) {
 ** Fix system_loaded_class_hashtable so that every class which currently
 ** has its loader set to null points to systemClassLoader instead.
 */
-static void patchLoadedClasses() {
+static void patchLoadedClasses(void) {
   ht_every(system_loaded_class_hashtable, loaded_class_iterator);
 }
   
@@ -552,8 +551,8 @@ static w_int maxdims;
 
 static w_int skipped;
 
-static w_boolean attach_class_iteration(void * name, void * cl) {
-  w_clazz clazz = cl;
+static void attach_class_iteration(w_word name, w_word cl) {
+  w_clazz clazz = (w_clazz)(void*)cl;
 
   if (clazz->dims > maxdims) {
     ++skipped;
@@ -561,8 +560,6 @@ static w_boolean attach_class_iteration(void * name, void * cl) {
   else if (!clazz->Class) {
     attachClassInstance(clazz, NULL);
   }
-
-  return TRUE;
 }
 
 static void attach_class_instances(void) {
@@ -570,7 +567,7 @@ static void attach_class_instances(void) {
   skipped = system_loaded_class_hashtable->occupancy;
   while (skipped) {
     skipped = 0;
-    ht_iterate(system_loaded_class_hashtable, attach_class_iteration, NULL, NULL);
+    ht_every(system_loaded_class_hashtable, attach_class_iteration);
     ++maxdims;
   }
 }
@@ -672,6 +669,8 @@ void startLoading(void) {
   string_LocalVariableTable = cstring2String("LocalVariableTable", 18);
   string_LocalVariableTypeTable = cstring2String("LocalVariableTypeTable", 22);
   string_Reference = cstring2String("java/lang/ref/Reference", 23);
+  string_RuntimeVisibleAnnotations = cstring2String("RuntimeVisibleAnnotations", 25);
+  string_RuntimeVisibleParameterAnnotations = cstring2String("RuntimeVisibleParameterAnnotations", 34);
   string_Signature = cstring2String("Signature", 9);
   string_SourceFile = cstring2String("SourceFile", 10);
   string_Synthetic = cstring2String("Synthetic", 9);
@@ -1347,7 +1346,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
       }
     }  
     if(prevname == NULL && length > 1) {    
-      char* result;
+      //char* result;
       if (length > 3 && namebuff[1] == 'L' && namebuff[2] != '[' && namebuff[length-1] == ';') {
         prevname = unicode2String(namebuff + 2, length - 3);
       } else {
@@ -1396,7 +1395,7 @@ w_clazz namedArrayClassMustBeLoaded(w_instance initiating_loader, w_string name)
 ** and contains only ISO Latin 1 characters.
 */
 w_boolean namedClassIsSystemClass(w_string name) {
-  w_ubyte *ch;
+  char *ch;
 
   if (!string_is_latin1(name)) {
     woempa(1, "'%w' is not Latin-1 => not a system class\n", name);
@@ -1405,13 +1404,13 @@ w_boolean namedClassIsSystemClass(w_string name) {
 
   }
 
-  ch = name->contents.bytes;
+  ch = (char*)name->contents.bytes;
   while (*ch == '[') ++ch;
 
   woempa(1, "Length %d, prefix %c%c%c%c%c%c\n", string_length(name) - (ch - name->contents.bytes), ch[0], ch[1], ch[2], ch[3], ch[4], ch[5]);
-  if (((int)string_length(name) > (ch - name->contents.bytes) + 5 && strncmp(ch, "java.", 5) == 0)
+  if (((int)string_length(name) > (ch - (char*)name->contents.bytes) + 5 && strncmp(ch, "java.", 5) == 0)
     ||
-      ((int)string_length(name) > (ch - name->contents.bytes) + 6 && strncmp(ch, "wonka.", 6) == 0)
+      ((int)string_length(name) > (ch - (char*)name->contents.bytes) + 6 && strncmp(ch, "wonka.", 6) == 0)
     || strncmp(ch, "boolean", string_length(name)) == 0
     || strncmp(ch, "byte", string_length(name)) == 0
     || strncmp(ch, "short", string_length(name)) == 0
