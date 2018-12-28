@@ -109,11 +109,14 @@ w_string string_Code;
 w_string string_serialVersionUID;
 w_string string_InnerClasses;
 w_string string_Deprecated;
+w_string string_EnclosingMethod;
 w_string string_Exceptions;
 w_string string_InnerClasses;
 w_string string_LineNumberTable;
 w_string string_LocalVariableTable;
+w_string string_LocalVariableTypeTable;
 w_string string_Reference;
+w_string string_Signature;
 w_string string_SourceFile;
 w_string string_Synthetic;
 #ifdef SUPPORT_BYTECODE_SCRAMBLING
@@ -664,9 +667,12 @@ void startLoading(void) {
   string_InnerClasses = cstring2String("InnerClasses", 12);
   string_Deprecated = cstring2String("Deprecated", 10);
   string_Exceptions = cstring2String("Exceptions", 10);
+  string_Exceptions = cstring2String("EnclosingMethod", 15);
   string_LineNumberTable = cstring2String("LineNumberTable", 15);
   string_LocalVariableTable = cstring2String("LocalVariableTable", 18);
+  string_LocalVariableTypeTable = cstring2String("LocalVariableTypeTable", 22);
   string_Reference = cstring2String("java/lang/ref/Reference", 23);
+  string_Signature = cstring2String("Signature", 9);
   string_SourceFile = cstring2String("SourceFile", 10);
   string_Synthetic = cstring2String("Synthetic", 9);
 

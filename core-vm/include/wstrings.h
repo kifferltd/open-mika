@@ -321,11 +321,14 @@ extern w_string string_EMPTY;
 extern w_string string_Code;
 extern w_string string_ConstantValue;
 extern w_string string_Deprecated;
+extern w_string string_EnclosingMethod;
 extern w_string string_Exceptions;
 extern w_string string_InnerClasses;
 extern w_string string_LineNumberTable;
 extern w_string string_LocalVariableTable;
+extern w_string string_LocalVariableTypeTable;
 extern w_string string_Reference;
+extern w_string string_Signature;
 extern w_string string_SourceFile;
 extern w_string string_Synthetic;
 #ifdef SUPPORT_BYTECODE_SCRAMBLING

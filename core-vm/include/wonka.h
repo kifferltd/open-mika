@@ -197,20 +197,19 @@ typedef unsigned int                w_flags;
 #define ACC_FINAL                   0x00000010
 #define ACC_SYNCHRONIZED            0x00000020
 #define ACC_SUPER                   0x00000020
+// for fields only
 #define ACC_VOLATILE                0x00000040
 #define ACC_TRANSIENT               0x00000080
+// for methods only
+#define ACC_BRIDGE                  0x00000040
+#define ACC_VARARGS                 0x00000080
 #define ACC_NATIVE                  0x00000100
 #define ACC_INTERFACE               0x00000200
 #define ACC_ABSTRACT                0x00000400
 #define ACC_STRICT                  0x00000800
 #define ACC_SYNTHETIC               0x00001000
-// for later maybe ...
-#ifdef JAVA6
 #define ACC_ANNOTATION              0x00002000
-#endif
-#ifdef JAVA5
 #define ACC_ENUM                    0x00004000
-#endif
 #define ACC_FLAGS                   0x00007fff
 
 /*

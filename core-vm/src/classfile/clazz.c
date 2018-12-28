@@ -848,6 +848,12 @@ static w_boolean check_field(w_clazz clazz, w_field f) {
     if ((flags & (ACC_FINAL | ACC_VOLATILE)) == (ACC_FINAL | ACC_VOLATILE)) {
       return FALSE;
     }
+
+  }
+
+  // ACC_ENUM is only allowed from major version 49 on
+  if (clazz->cmajor < 49 && (flags & ACC_ENUM)) {
+    return FALSE;
   }
 
   // Spec says to silently ignore ConstantValue if field not static
@@ -943,6 +949,10 @@ static w_boolean check_method(w_clazz clazz, w_method m) {
   // TODO: <clinit> must be static, <init> not. Both have return type void.
   // And <init> should not have ACC_FINAL set.
 
+  if (isSet(flags, ACC_BRIDGE | ACC_VARARGS) && clazz->cmajor < 49) {
+    return FALSE;
+  }
+
   return TRUE;
 }
 
@@ -1031,6 +1041,11 @@ static void parseFieldAttribute(w_field field, w_bar s) {
 
   if (attributeName == string_ConstantValue) {
     field->initval = get_u2(s);
+  }
+  else if (attributeName == string_Signature) {
+#ifdef JAVA5
+    field->signature = resolveUtf8Constant(field->declaring_clazz, get_u2(s));
+#endif
   }
   else {
     /*
@@ -1169,20 +1184,26 @@ static void parseMethodCode(w_method method, w_bar s) {
   }
 }
 
-static w_boolean parseLocalVars(w_method method, w_bar s) {
+static w_methodDebugInfo ensureMethodDebugInfo(w_method method) {
   w_methodDebugInfo debug_info = method->exec.debug_info;
-  w_int attribute_count;
-  w_int i;
-
   if (!debug_info) {
     debug_info = allocClearedMem(sizeof(w_MethodDebugInfo));
     method->exec.debug_info = debug_info;
     if (!debug_info) {
       printf("No space for method debug info!n");
-
-      return FALSE;
-
     }
+  }
+
+  return debug_info;
+}
+
+static w_boolean parseLocalVars(w_method method, w_bar s) {
+  w_methodDebugInfo debug_info = ensureMethodDebugInfo(method);
+  w_int attribute_count;
+  w_int i;
+
+  if (!debug_info) {
+      return FALSE;
   }
 
   attribute_count = get_u2(s);
@@ -1190,19 +1211,56 @@ static w_boolean parseLocalVars(w_method method, w_bar s) {
   if (attribute_count > 0) {
     debug_info->localVars = allocMem(attribute_count * sizeof(w_LocalVar));
     if (!debug_info->localVars) {
-      wabort(ABORT_WONKA, "No space for local vars\n");
+      printf("No space for LocalVariableTable!n");
+      releaseMem(debug_info);
+
+      return FALSE;
     }
     for (i = 0; i < attribute_count; i++) {
       debug_info->localVars[i].start_pc = get_u2(s);
       debug_info->localVars[i].length = get_u2(s);
       debug_info->localVars[i].name = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
-      debug_info->localVars[i].desc = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
+      debug_info->localVars[i].desc_or_sig = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
       debug_info->localVars[i].slot = get_u2(s);
     }
   }
 
   return TRUE;
 }
+
+#ifdef JAVA5
+// TODO extract common code from parseLocalVars
+static w_boolean parseLocalVarTypes(w_method method, w_bar s) {
+  w_methodDebugInfo debug_info = ensureMethodDebugInfo(method);
+  w_int attribute_count;
+  w_int i;
+
+  if (!debug_info) {
+      return FALSE;
+  }
+
+  attribute_count = get_u2(s);
+  debug_info->numLocalVarTypes = attribute_count;
+  if (attribute_count > 0) {
+    debug_info->localVarTypes = allocMem(attribute_count * sizeof(w_LocalVar));
+    if (!debug_info->localVarTypes) {
+      printf("No space for LocalVariableTypesTable!n");
+      releaseMem(debug_info);
+
+      return FALSE;
+    }
+    for (i = 0; i < attribute_count; i++) {
+      debug_info->localVarTypes[i].start_pc = get_u2(s);
+      debug_info->localVarTypes[i].length = get_u2(s);
+      debug_info->localVarTypes[i].name = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
+      debug_info->localVarTypes[i].desc_or_sig = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
+      debug_info->localVarTypes[i].slot = get_u2(s);
+    }
+  }
+
+  return TRUE;
+}
+#endif
 
 static w_boolean parseLineNumbers(w_method method, w_bar s) {
   w_methodDebugInfo debug_info = method->exec.debug_info;
@@ -1288,6 +1346,18 @@ static void parseMethodAttribute(w_method method, w_bar s) {
       }
     }
   }
+  else if (attributeName == string_LocalVariableTypeTable) {
+    if (!use_method_debug_info || !parseLocalVarTypes(method, s)) {
+      attribute_count = get_u2(s);
+      for (i = 0; i < attribute_count; i++) {
+        get_u2(s);
+        get_u2(s);
+        get_u2(s);
+        get_u2(s);
+        get_u2(s);
+      }
+    }
+  }
   else if (attributeName == string_LineNumberTable) {
 
     if (!use_method_debug_info || !parseLineNumbers(method, s)) {
@@ -1297,6 +1367,11 @@ static void parseMethodAttribute(w_method method, w_bar s) {
         get_u2(s);
       }
     }
+  }
+  else if (attributeName == string_Signature) {
+#ifdef JAVA5
+    method->spec.signature = resolveUtf8Constant(method->spec.declaring_clazz, get_u2(s));
+#endif
   }
   else {
     woempa(1, "Unknown/ignored attribute '%w'\n", attributeName);
@@ -1656,6 +1731,35 @@ static void parseClassAttribute(w_thread thread, w_clazz clazz, w_bar s) {
 
     }
   }
+  else if (attributeName == string_EnclosingMethod) {
+    if (clazz->cmajor < 49) {
+      if (thread) {
+        throwException(thread, clazzClassFormatError, "EnclosingMethod class attribute requires class file version 49 or higher");
+      }
+
+      return;
+    }
+
+    // TODO : do something with this attribute
+#ifdef JAVA5
+    clazz->temp.enclosing_class_index = get_u2(s);
+    clazz->temp.enclosing_method_index = get_u2(s);
+#endif
+  }
+  else if (attributeName == string_Signature) {
+    if (clazz->cmajor < 49) {
+      if (thread) {
+        throwException(thread, clazzClassFormatError, "EnclosingMethod class attribute requires class file version 49 or higher");
+      }
+
+      return;
+    }
+
+#ifdef JAVA5
+    clazz->signature = resolveUtf8Constant(clazz, get_u2(s));
+    woempa(1, "Signature = %w\n", clazz->signature);
+#endif
+  }
 #ifdef SUPPORT_BYTECODE_SCRAMBLING
   else if (attributeName == string_be_kiffer_Scrambled) {
     clazz->flags |= CLAZZ_IS_SCRAMBLED;
@@ -1767,6 +1871,24 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_remainder(clazz, bar, thread)) {
     destroyClazz(clazz);
+
+    return NULL;
+  }
+
+  if (clazz->flags & ACC_ENUM) {
+    if (clazz->cmajor < 49) {
+      if (thread) {
+        throwException(thread, clazzClassFormatError, "Enums require class file version 49 or higher");
+      }
+
+      return NULL;
+    }
+  }
+
+  if ((clazz->flags & ACC_ANNOTATION) && !(clazz->flags & ACC_INTERFACE)) {
+    if (thread) {
+      throwException(thread, clazzClassFormatError, "Annotation class must have ACC_INTERFACE set");
+    }
 
     return NULL;
   }

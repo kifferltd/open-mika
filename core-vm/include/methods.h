@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2011 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Parts copyright (c) 2011, 2018 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #ifndef _METHODS_H
@@ -52,16 +48,22 @@ typedef struct w_LocalVar {
   w_ushort start_pc;       /* This var is valid from start_pc (inclusive) */
   w_ushort length;         /* to start_pc+length (exclusive)              */
   w_string name;           /* Name of this variable                       */
-  w_string desc;           /* Descriptor of this variable                 */
+  w_string desc_or_sig;    /* Descriptor (Loc.Var.Table) or signature     */
+                           /* signature (Loc.Var.TypeTable) of this var   */
   w_ushort slot;           /* Slot number of this var within frame        */
   w_ushort dummy;
 } w_LocalVar;
 
 typedef struct w_MethodDebugInfo {
-  w_short numLocalVars;    /* Number of local variable records            */
   w_short numLineNums;     /* Number of line number records               */
-  w_LocalVar *localVars;   /* Local variable record array                 */
+  w_short numLocalVars;    /* Number of local variable records            */
+#ifdef JAVA5
+  w_short numLocalVarTypes;/* Number of local variable type records       */
+  w_ushort dummy;
+#endif
   w_LineNum *lineNums;     /* Line number record array                    */
+  w_LocalVar *localVars;   /* Local variable record array                 */
+  w_LocalVar *localVarTypes; /* Local variable type record array          */
 } w_MethodDebugInfo;
 
 typedef struct w_MethodDebugInfo *w_methodDebugInfo;
@@ -97,6 +99,9 @@ typedef struct w_MethodSpec {
   w_string name;            /* Method name                                 */
   w_clazz *arg_types;       /* Types of arguments, null-terminated         */
   w_clazz  return_type;     /* Return type                                 */
+#ifdef JAVA5
+  w_string signature;       /* Method signature (Java5 and higher)         */
+#endif
 } w_MethodSpec;
 
 typedef struct w_MethodExec {
