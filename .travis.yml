@@ -8,10 +8,10 @@ addons:
 
 compiler : gcc
 
-install: (ant -DPLATFORM=pc -DBUILD_TOOL=make && ant -DPLATFORM=pc -DBUILD_TOOL=make tests) || cat build/pc/log/build-pc.log
+install: (ant -DPLATFORM=pc-awt -DBUILD_TOOL=make && ant -DPLATFORM=pc-awt -DBUILD_TOOL=make tests) || cat build/pc/log/build-pc.log
 
 script: 
-  - xvfb-run --server-args="-screen 0 1024x768x24" release/pc/bin/mika -jar release/test/mauve-suite.jar
+  - xvfb-run --server-args="-screen 0 1024x768x24" release/pc-awt/bin/mika -jar release/test/mauve-suite.jar
 
 jdk:
 - openjdk7
