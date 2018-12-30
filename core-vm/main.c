@@ -133,17 +133,17 @@ VERSION_STRING " (compiled on " __DATE__ " " __TIME__ ")\n";
 
 const char *info_help_text = 
   "Version: " VERSION_STRING " (compiled on " __DATE__ " " __TIME__ ")\n"
-  "VM options: " WONKA_INFO "\n"
+//  "VM options: " WONKA_INFO "\n"
   "Default heap size: " DEFAULT_HEAP_SIZE "\n"
   "Default Java stack size: " DEFAULT_STACK_SIZE "\n"
-  "AWT options: " AWT_INFO "\n"
+//  "AWT options: " AWT_INFO "\n"
 #ifdef O4P
   "O4P options: " O4P_INFO "\n"
 #endif
 #ifdef OSWALD
   "OSwald options: " OSWALD_INFO "\n"
 #endif
-  "Build host: " BUILD_HOST 
+//  "Build host: " BUILD_HOST 
   "\n";
 
 const char *help_texts[8];
