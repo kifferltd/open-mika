@@ -6,6 +6,7 @@ addons:
     - gcc-multilib
     - libc6-dev-i386
     - libx11-dev
+    - ia32-libs
 
 compiler : gcc
 
