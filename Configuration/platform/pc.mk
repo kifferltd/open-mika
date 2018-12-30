@@ -8,6 +8,7 @@ export USE_LIBFFI = true
 export BYTECODE_VERIFICATION = true
 
 export FLOATING_POINT = hauser
+export MATH = native
 export SHARED_OBJECTS = true
 
 export HOSTOS = linux
