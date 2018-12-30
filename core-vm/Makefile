@@ -111,7 +111,7 @@ filesystem :
 network :
 	make -C ../vm-cmp/network/$(NETWORK) $(MAKECMDGOALS)
 
-awt : $(gendir)/core-classes.h
+awt : core-vm $(gendir)/core-classes.h
 	make -C ../vm-cmp/awt/$(AWT) $(MAKECMDGOALS)
 
 tool :
