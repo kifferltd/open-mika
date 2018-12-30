@@ -27,8 +27,6 @@
 ###########################################################################
 
 
-AWT_TOP = $(MIKA_TOP)/vm-cmp/awt/none
-
 CFLAGS += -I $(MIKA_TOP)/core-vm/include
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
@@ -37,15 +35,10 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(AWT_TOP)/hal/hostos/linux/include
 
 sources = noawt.c
-awtobjdir = $(objdir)/awt/native
 objects=$(patsubst %.c, $(awtobjdir)/%.o, $(sources))
 
 .PHONY : mika
-mika : $(awtobjdir) $(objects)
-
-$(awtobjdir) :
-	@echo Creating $(awtobjdir)
-	@mkdir -p $(awtobjdir)
+mika : $(objects)
 
 $(objects) : $(awtobjdir)/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@

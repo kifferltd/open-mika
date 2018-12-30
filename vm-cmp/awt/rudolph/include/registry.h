@@ -33,8 +33,10 @@
 ** Debug functions:
 */
 
+#ifdef DEBUG
 inline char *registry_spaces(w_int depth);
 w_void registry_dump(r_canvas canvas, w_int depth);
+#endif
 
 /*
 ** Canvas creation functions:

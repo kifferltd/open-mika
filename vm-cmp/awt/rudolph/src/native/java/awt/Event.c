@@ -374,7 +374,6 @@ static void addFocusEvent(r_component source, r_event event) {
   if (source && (getReferenceField(source->instance, F_Component_focusListener) || isAssignmentCompatible(instance2clazz(source->instance), clazzWindow))) {
 
     static jmethodID method = NULL;
-    w_thread thread = currentWonkaThread;
     JNIEnv *env = w_thread2JNIEnv(thread);
     w_instance focusEvent;
 

@@ -52,9 +52,7 @@ export libdir = $(builddir)/lib
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
 ifeq "$(AWT)" "rudolph"
-  echo "AWT_DEF = " '$(AWT_DEF)' 
-  echo "AWT_DEVICE = " $(AWT_DEVICE) 
-  include $(MIKA_TOP)/Configuration/awt/$(AWT_DEF)
+  include $(MIKA_TOP)/Configuration/awt/$(AWT_DEF).mk
 else ifneq "$(AWT)" "none"
   $(error AWT must be rudolph or none, not $(AWT))
 endif
@@ -120,7 +118,6 @@ else
   BUILD_HOST = <unknown>
 endif
 
-FONTDIR = "$(BOOTCLASSDIR)/font"
 
 CFLAGS += -DBOOTCLASSDIR=\"{}/$(BOOTCLASSDIR)\"
 CFLAGS += -DBOOTCLASSFILE=\"$(BOOTCLASSFILE)\"
@@ -297,13 +294,14 @@ export kernobjdir = $(objdir)/kernel/$(SCHEDULER)
 # Print out the configuration settings.
 #
 
-ifeq ($(AWT), rudolph)
+ifeq "$(AWT)" "rudolph"
   ifeq "$(AWT_DEVICE)" "none"
     CFLAGS += -DAWT_NONE
   else ifeq "$(AWT_DEVICE)" "fdev"
     CFLAGS += -DAWT_FDEV -DAWT_PIXELFORMAT_$(AWT_PIXELFORMAT)
   else ifeq "$(AWT_DEVICE)" "xsim"
     CFLAGS += -DAWT_XSIM
+    LDFLAGS += -lX11
   else
     $(error AWT_DEVICE must be fdev, xsim, or none)
   endif
@@ -484,24 +482,24 @@ ifneq ($(UPTIME_LIMIT), none)
   WONKA_INFO += will exit automatically after $(UPTIME_LIMIT) seconds\;
 endif
 
-ifeq ($(AWT), rudolph)
+ifeq "$(AWT)" "rudolph"
     AWT_INFO = Rudolph AWT\;
 
-    ifeq ($(AWT_DEVICE), none)
+    ifeq "$(AWT_DEVICE)" "none"
         AWT_INFO += no visual display\;
     endif
-    ifeq ($(AWT_DEVICE), fdev)
+    ifeq "$(AWT_DEVICE)" "fdev"
         AWT_INFO += frame buffer display\;
     endif
-    ifeq ($(AWT_DEVICE), xsim)
+    ifeq "$(AWT_DEVICE)" "xsim"
         AWT_INFO += display is X window\;
     endif
 
-    ifeq ($(AWT_GIF_SUPPORT) true)
+    ifeq "$(AWT_GIF_SUPPORT)" "true"
       AWT_INFO += GIF support enabled\;
     endif
 
-    ifeq ($(AWT_JPEG_SUPPORT), true)
+    ifeq "$(AWT_JPEG_SUPPORT)" "true"
       AWT_INFO += JPEG support enabled\;
     endif
 endif
@@ -562,12 +560,17 @@ export gendir = $(builddir)/../common/generated
 
 CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 
+# TODO objdirlist not used anywhere?
+objdirlist += $(objdir)/awt/$(AWT)
 objdirlist += $(objdir)/filesystem/$(FILESYSTEM)
 objdirlist += $(objdir)/fp/$(FLOATING_POINT)
 objdirlist += $(objdir)/math/$(MATH)
 objdirlist += $(objdir)/network/$(NETWORK)
 
-.PHONY : mika echo builddir install clean test common-test scheduler-test
+export CFLAGS
+export LDFLAGS
+
+.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test
 
 mika : echo builddir kernel core-vm
 
@@ -576,6 +579,7 @@ echo :
 	@echo "CPU =" $(CPU)
 	@echo "HOSTOS =" $(HOSTOS)
 	@echo "SCHEDULER =" $(SCHEDULER)
+	@echo "AWT =" $(AWT)
 	@echo "CFLAGS =" $(CFLAGS)
 	@echo "LDFLAGS =" $(LDFLAGS)
 	@echo "SHARED_OBJECTS =" $(SHARED_OBJECTS)

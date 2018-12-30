@@ -51,7 +51,7 @@
 ** this one in C.  [TODO]
 */
 
-inline char *registry_spaces(w_int depth) {
+char *registry_spaces(w_int depth) {
   const char *spaces = "                                        ";  // 40 spaces
   return (char *)(spaces + strlen(spaces) - (2 * depth));
 }

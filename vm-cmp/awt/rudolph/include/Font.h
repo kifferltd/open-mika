@@ -115,6 +115,7 @@ typedef struct r_Font {
 } r_Font;
 
 w_void Font_init(JNIEnv *env, jclass clazz);
+w_void Font_initialize(const char *name, const char *file);
 w_void Font_readFile(char *name, char *path);
 w_void Font_readData(char *name, char **lines);
 r_font Font_getFont(char *name, int style, int size);

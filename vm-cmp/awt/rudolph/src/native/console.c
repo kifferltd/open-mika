@@ -195,7 +195,7 @@ w_driver_status con_write(w_device device, w_ubyte *bytes, w_int length, w_int *
       w = Font_getCStringWidth(cons->font, rem_bytes, (int)this_time);
     }
 
-    Font_drawStringAligned(cons->buffer, cons->font, cons->x, 0, screen->width - cons->x, cons->font->size * 2, cstring2String(W_Thread_system, rem_bytes, this_time), R_WHITE, (unsigned int)ALIGNMENT_LEFT);
+    Font_drawStringAligned(cons->buffer, cons->font, cons->x, 0, screen->width - cons->x, cons->font->size * 2, cstring2String(rem_bytes, this_time), R_WHITE, (unsigned int)ALIGNMENT_LEFT);
 
     cons->x += w;
     if ((w_int)(rem_bytes - bytes + this_time) < length) {

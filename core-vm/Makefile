@@ -46,7 +46,7 @@ endif
 
 CFLAGS += -I $(gendir)
 CFLAGS += -L $(libdir)
-LDFLAGS += -lmika -loswald -lpthread
+LDFLAGS += -lmika -loswald -lawt -lpthread
 
 # 
 # Add the dl library if we want to be able to load shared libraries.
@@ -76,6 +76,12 @@ ifeq ($(SHARED_OBJECTS), true)
   LDFLAGS += -ldl
 endif
 
+ifeq "$(AWT)" "rudolph"
+  ifeq "$(AWT_DEVICE)" "xsim"
+    LDFLAGS += -lX11
+  endif
+endif
+
 ifeq ($(MAPFILE), true)
   LDFLAGS += -Wl,--cref,-Map,$(OROOT)/map
 endif
@@ -89,7 +95,7 @@ endif
 
 .PHONY : awt filesystem network fp jpda math security core-vm generated
 
-mika : main.o $(MIKA_LIB) $(OSWALD_LIB)
+mika : main.o $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
 	$(CC) -o mika main.o $(CFLAGS) $(LDFLAGS)
 
 main.o : main.c
