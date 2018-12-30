@@ -34,7 +34,7 @@
 # Define your Jam configuration. A file with the same name
 # should be found in Configuration/platform
 #
-JAM.PLATFORM=pc
+JAM.PLATFORM=pc-awt
 
 #
 # The awt is provided by rudolph and configured as xsim
