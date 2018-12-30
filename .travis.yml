@@ -11,10 +11,7 @@ compiler : gcc
 install: (ant -DPLATFORM=pc -DBUILD_TOOL=make && ant -DPLATFORM=pc -DBUILD_TOOL=make tests) || cat build/pc/log/build-pc.log
 
 script: 
-  - release/pc/bin/mika -jar release/test/mauve-suite.jar
-  - echo Test Result Summary
-  - echo ===================
-  - cat results
+  - xvfb-run --server-args="-screen 0 1024x768x24" release/pc/bin/mika -jar release/test/mauve-suite.jar
 
 jdk:
 - openjdk7
