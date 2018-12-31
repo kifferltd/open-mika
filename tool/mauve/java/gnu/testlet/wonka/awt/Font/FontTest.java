@@ -1,6 +1,8 @@
 /**************************************************************************
 * Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
 *                                                                         *
+* Modified Chris Gray 2018.
+*
 * This software is copyrighted by and is the sole property of Acunia N.V. *
 * and its licensors, if any. All rights, title, ownership, or other       *
 * interests in the software remain the property of Acunia N.V. and its    *
@@ -314,23 +316,28 @@ public class FontTest implements Testlet
 
   /**
    * tests general method hashCode() and hasCode()
+   * CG : fixed this code to (1) use fonts that are really likely to be
+   * present, and (2) not make unwarranted assumptions about how the hash
+   * code is calculated.
    */
-  void testHashCode()
-    {
+  void testHashCode() {
     harness.checkPoint("hashCode()int");
 
-    Font fnt1 = new Font("DialogInput", Font.PLAIN, 12);
-    Font fnt2 = new Font("SansSerif", Font.PLAIN, 12);
+    Font fnt1 = new Font("Courier", Font.PLAIN, 12);
     int h1=fnt1.hashCode();
-    int h2= (new String("DialogInput" + Font.PLAIN + 12)).hashCode();
-    harness.check(fnt1.hashCode(), h1, "hashCode()int");
-    harness.check(fnt2.hashCode() != h1, "hashCode()int");
-    harness.check(fnt1.hashCode() != fnt2.hashCode(), "hashCode()int");
-    harness.check(h1, h2, "hashCode()int");
-
-    //harness.debug((new Font("DialogInput", Font.PLAIN, 12)).toString());
-    //harness.debug((new Font("SansSerif", Font.PLAIN, 12)).toString());
+    Font fnt2 = new Font("Helvetica", Font.PLAIN, 12);
+    int h2=fnt2.hashCode();
+    if (fnt1.equals(fnt2)) {
+      System.err.println("Warning : " + getClass() + ".testHashCode() : both font constructors returned the same font!");
+      System.err.println("          Using new Font(\"Courier\", Font.PLAIN, 12) and new Font(\"Courier\", Font.PLAIN, 12)");
+      System.err.println("          Got " + fnt1 + " and " + fnt2);
+      harness.check(h1, h2, "hashCode()int");
     }
+    else {
+      /* CG just check that different fonts give different hash codes */
+      harness.check(h1 != h2, "hashCode()int");
+    }
+  }
 
   /**
    * tests getPeer() : peers are not implemented in rudolph
