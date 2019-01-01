@@ -25,7 +25,7 @@
 /* $Id: nomouse.c,v 1.1 2005/06/14 08:48:24 cvs Exp $ */
 
 /* 
- * N.B. this code is duplicated in vm-cmp/awt/rudolph/hal/hostos/linux/fdev/nomouse.c
+ * N.B. this code is duplicated from vm-cmp/awt/rudolph/hal/hostos/linux/none/nomouse.c
  */
 
 void mouse_set_path(char *s) {
@@ -43,3 +43,4 @@ void mouse_flush(void) {
 
 void mouse_close(void) {
 }
+

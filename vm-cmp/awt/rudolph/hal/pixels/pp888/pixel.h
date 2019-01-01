@@ -80,6 +80,9 @@ pixelcopyline(w_ubyte *dstline, w_ubyte *srcline, int dstx, int srcx, int pixlen
     memcpy(dstline + pixels2bytes(dstx), srcline + pixels2bytes(srcx), pixels2bytes(pixlen));
 }
 
+// TODO Bit of a guess
+#define AWT_IMAGE_TYPE AWT_IMAGE_TYPE_3BYTE_BGR
+
 #endif
 
 

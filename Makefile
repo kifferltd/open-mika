@@ -305,6 +305,8 @@ ifeq "$(AWT)" "rudolph"
   ifeq "$(AWT_DEVICE)" "none"
     CFLAGS += -DAWT_NONE
   else ifeq "$(AWT_DEVICE)" "fdev"
+# TODO check that AWT_PIXELFORMAT is one of c332 c555 c565 g4 pp888
+# TODO check that AWT_MOUSE is one of touchscreen ps2mouse none
     CFLAGS += -DAWT_FDEV -DAWT_PIXELFORMAT_$(AWT_PIXELFORMAT)
   else ifeq "$(AWT_DEVICE)" "xsim"
     CFLAGS += -DAWT_XSIM
