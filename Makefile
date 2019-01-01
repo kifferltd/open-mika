@@ -47,8 +47,15 @@ export AR
 export tooldir = $(MIKA_TOP)/tool
 export scriptdir = $(tooldir)/script
 export builddir = $(MIKA_TOP)/build/$(PLATFORM)
-export objdir = $(builddir)/obj
 export libdir = $(builddir)/lib
+export objdir = $(builddir)/obj
+
+export awtobjdir = $(objdir)/awt/$(AWT)
+export filesystemobjdir = $(objdir)/filesystem/$(FILESYSTEM)
+export fpobjdir = $(objdir)/fp/$(FLOATING_POINT)
+export mathobjdir = $(objdir)/math/$(MATH)
+export networkobjdir = $(objdir)/network/$(NETWORK)
+
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
 ifeq "$(AWT)" "rudolph"
@@ -556,7 +563,7 @@ ifeq ($(SCHEDULER), oswald)
   CFLAGS += -DOSWALD_INFO=\"" $(OSWALD_INFO) "\"
 endif
 
-export gendir = $(builddir)/../common/generated
+export gendir = $(builddir)/generated
 
 CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 
@@ -586,6 +593,18 @@ echo :
 
 builddir :
 	@echo "Creating " $(objdir)
+	@mkdir -p $(objdir)
+	@echo "Creating " awtobjdir
+	@mkdir -p $(awtobjdir)
+	@echo "Creating " filesystemobjdir
+	@mkdir -p $(filesystemobjdir)
+	@echo "Creating " fpobjdir
+	@mkdir -p $(fpobjdir)
+	@echo "Creating " mathobjdir
+	@mkdir -p $(mathobjdir)
+	@echo "Creating " networkobjdir
+	@mkdir -p $(networkobjdir)
+	@echo "Creating " generatedobjdir
 	@mkdir -p $(objdir)/generated
 	@echo "Creating " $(libdir)
 	@mkdir -p $(libdir)

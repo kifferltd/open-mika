@@ -27,21 +27,23 @@
 ###########################################################################
 
 export AWT_TOP = $(MIKA_TOP)/vm-cmp/awt/rudolph
-export awtobjdir = $(objdir)/vm-cmp/awt
 
 CFLAGS += -DFONTDIR=\"{}/$(BOOTCLASSDIR)/font\"
 CFLAGS += $(AWT_TOP)/include
 
-.PHONY : mika clean
-mika : $(awtobjdir)
+.PHONY : mika subdirs clean
+mika : $(AWT_LIB) 
+
+subdirs :
 	make -C $(AWT_TOP)/src mika
 	make -C $(AWT_TOP)/hal/hostos/$(HOSTOS) mika
+
+$(AWT_LIB) : subdirs
+	@echo "Archiving object files from directory $(awtobjdir)"
+	$(AR) $@ $(awtobjdir)/*.o
+	ranlib $@
 
 clean :
 	make -C $(AWT_TOP)/src clean
 	make -C $(AWT_TOP)/hal/hostos/$(HOSTOS) clean
-
-$(awtobjdir) :
-	@echo Creating $(awtobjdir)
-	@mkdir -p $(awtobjdir)
 

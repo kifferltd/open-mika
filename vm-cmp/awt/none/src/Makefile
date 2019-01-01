@@ -34,22 +34,17 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 #CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/linux/include
 CFLAGS += -I $(AWT_TOP)/hal/hostos/linux/include
 
-awtobjdir = $(objdir)/vm-cmp/awt
 sources = noawt.c
 objects=$(patsubst %.c, $(awtobjdir)/%.o, $(sources))
 
 .PHONY : mika
-mika : $(awtobjdir) $(AWT_LIB)
+mika : $(AWT_LIB)
 
 $(objects) : $(awtobjdir)/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 
-
-$(awtobjdir) :
-	@echo Creating $(awtobjdir)
-	@mkdir -p $(awtobjdir)
 
 $(AWT_LIB) : $(objects)
 	@echo "Archiving object files from directory $(awtobjdir)"
