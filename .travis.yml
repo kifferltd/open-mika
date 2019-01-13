@@ -3,25 +3,22 @@ language: C
 addons:
   apt:
     packages:
-    - gcc-multilib
-    - libc6-dev-i386
-    - libx11-dev:i386
-    - libx11-6:i386
+    - gcc-arm-linux-gnueabi
+    - qemu-user
 
 compiler : gcc
 
-install: ((ant -DPLATFORM=pc -DBUILD_TOOL=make && ant -DPLATFORM=pc -DBUILD_TOOL=make tests) && ( (ant -DPLATFORM=pc-awt -DBUILD_TOOL=make && ant -DPLATFORM=pc-awt -DBUILD_TOOL=make tests) || cat build/pc-awt/log/build-pc-awt.log)) || cat build/pc/log/build-pc.log
+install: ant -DPLATFORM=arm-linux -DBUILD_TOOL=make && ant -DPLATFORM=arm-linux -DBUILD_TOOL=make tests || cat build/arm-linux/log/build-arm-linux.log
 
 script:
-  - release/pc/bin/mika -jar release/test/mauve-suite.jar
-  - xvfb-run --server-args="-screen 0 1024x768x24" release/pc-awt/bin/mika -jar release/test/mauve-suite.jar
+  - qemu-arm -L /usr/arm-linux-gnueabi release/arm-linux/bin/mika -jar release/test/mauve-suite.jar
 
 jdk:
 - openjdk7
 
 branches:
   only:
-  - master
+  - build.armel
 
 notifications:
   email:
