@@ -4,6 +4,7 @@ addons:
   apt:
     packages:
     - gcc-arm-linux-gnueabi
+    - libc6-dev-armel-cross
     - qemu-user
 
 compiler : gcc
