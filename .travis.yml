@@ -6,6 +6,7 @@ addons:
     - gcc-arm-linux-gnueabi
     - libc6-dev-armel-cross
     - qemu-user
+    - libffi7_3.3~rc0-7_armel
 
 compiler : gcc
 
