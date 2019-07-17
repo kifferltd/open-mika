@@ -651,7 +651,7 @@ clean :
 	-make -C vm-cmp/security/provider/any/src/native/wonka/security clean
 	-make -C vm-cmp/math/$(MATH) clean
 	-make -C vm-ext/comm clean
-	-make -C core-vm/adt clean
+	-make -C core-vm clean
 	-make -C max/src/native/mika/max clean
 
 test : scheduler-test

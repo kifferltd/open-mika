@@ -103,7 +103,7 @@ main.o : main.c
 $(MIKA_LIB) : awt filesystem network fp jpda math security core-vm generated 
 	@echo "Archiving object files from directories $(wildcard $(objdir)/core-vm/*) $(wildcard $(objdir)/vm-cmp/*) $(wildcard $(objdir)/vm-ext/*) $(objdir)/generated"
 	$(AR) $@ $(foreach dir, $(wildcard $(objdir)/core-vm/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-cmp/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-ext/*), $(wildcard $(dir)/*.o)) $(wildcard $(objdir)/generated/*.o)
-	ranlib $@
+	$(RANLIB) $@
 
 filesystem :
 	make -C ../vm-cmp/fs/$(FILESYSTEM) $(MAKECMDGOALS)
@@ -150,4 +150,14 @@ endif
 	make -C src $(MAKECMDGOALS)
 	make -C hal $(MAKECMDGOALS)
 
+clean:
+	rm main.o
+	make -C ../vm-cmp/awt/$(AWT) $(MAKECMDGOALS)
+	make -C ../vm-cmp/fp/$(FLOATING_POINT) $(MAKECMDGOALS)
+	make -C ../vm-cmp/fs/$(FILESYSTEM) $(MAKECMDGOALS)
+	make -C ../vm-cmp/network/$(NETWORK) $(MAKECMDGOALS)
+# TODO: we probably only need this if SECURITY_PROVIDER is not 'none'
+	make -C ../vm-cmp/security/provider/any/src/native/wonka/security $(MAKECMDGOALS)
+	make -C ../vm-ext/jpda $(MAKECMDGOALS)
+	make -C tool $(MAKECMDGOALS)
 
