@@ -115,7 +115,7 @@ z_zipFile parseZipFile(char *path);
 ** Get a pointer to one zip entry (file or directory) within a zipfile which
 ** has been parsed using parseZipFile().
 */
-z_zipEntry findZipEntry(z_zipFile dir, w_byte *name);
+z_zipEntry findZipEntry(z_zipFile dir, char *name);
 
 /*
 ** Uncompress (or un-store) the data associated with a zip entry (which must be

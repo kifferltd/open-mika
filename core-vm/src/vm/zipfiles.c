@@ -610,7 +610,7 @@ void releaseZipFile(z_zipFile zf) {
     
 }
 
-z_zipEntry findZipEntry(z_zipFile dir, w_byte *name) {
+z_zipEntry findZipEntry(z_zipFile dir, char *name) {
   return (z_zipEntry)ht_read(dir->ht, (w_word)name);
 }
 
@@ -702,13 +702,13 @@ w_int quickInflate(w_ubyte* c_data, w_size c_size, w_ubyte* u_data, w_size u_siz
   w_inflate_control unzipper = allocInflateControl();
   w_int result = 1;
   if (unzipper == NULL) {
-    errmsg = "Out of Memory";
+    *errmsg = "Out of Memory";
   } else {
     inflate_control_setInput(unzipper, c_data, c_size, clone);
     inflate_control_inflate(unzipper);
-    result = u_size != inflate_control_getbytes_from_queue(unzipper, u_data, u_size);
+    result = u_size != (w_size)inflate_control_getbytes_from_queue(unzipper, u_data, u_size);
     if(result) {
-      errmsg = "Not enough data";
+      *errmsg = "Not enough data";
     }
     releaseInflateControl(unzipper);
   }
