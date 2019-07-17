@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2019 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -41,7 +42,7 @@ subdirs :
 $(AWT_LIB) : subdirs
 	@echo "Archiving object files from directory $(awtobjdir)"
 	$(AR) $@ $(awtobjdir)/*.o
-	ranlib $@
+	$(RANLIB) $@
 
 clean :
 	make -C $(AWT_TOP)/src clean
