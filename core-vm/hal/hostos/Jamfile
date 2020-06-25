@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2015 by KIFFER Ltd. All rights reserved.                  #
+# Copyright (c) 2015, 2016 by KIFFER Ltd. All rights reserved.            #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -36,6 +36,9 @@ switch $(HOSTOS) {
     SubInclude WONKA_TOP core-vm hal hostos posix ;
   }
   case netbsd : {
+    SubInclude WONKA_TOP core-vm hal hostos posix ;
+  }
+  case win64 : {
     SubInclude WONKA_TOP core-vm hal hostos posix ;
   }
 }
