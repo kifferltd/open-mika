@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2019 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2019, 2020 by Chris Gray, KIFFER Ltd.                     #
+#  All rights reserved.                                                   #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -37,6 +38,7 @@ export SHARED_OBJECTS = true
 
 export HOSTOS = linux
 export CPU = armel
+export TOOLCHAIN = gcc
 export TOOLCHAIN_PREFIX = arm-linux-gnueabi-
 export SCHEDULER = o4p
 

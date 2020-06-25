@@ -1,0 +1,9 @@
+ECHO Configuring build to run Wonka on a Win64 host. ;
+
+#
+# We define __NO_STRING_INLINES since we otherwise
+# get compiler warnings that result in errors because of the -Werror flag.
+#
+
+CCFLAGS += -D__NO_STRING_INLINES -DLINUX ; 
+

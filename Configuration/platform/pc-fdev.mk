@@ -22,7 +22,7 @@ export ENABLE_THREAD_RECYCLING = true
 
 # if AWT=rudolph then AWT_DEF must also be specified
 export AWT=rudolph
-export AWT_DEF=xsim
+export AWT_DEF=fdev
 # when AWT = rudolph, AWT_DEVICE can have values 'fdev' for frame buffer
 # or 'xsim' for simulation under X; AWT_PIXELFORMAT can take the following
 # values:      c565 : 16-bit color
@@ -31,7 +31,7 @@ export AWT_DEF=xsim
 # and AWT_INVERSENIBBLES and AWT_INVERSEDISPLAY handle various display driver
 # characteristics, see the source for more details.
 #
-export AWT_DEVICE = xsim ;
+export AWT_DEVICE = fdev ;
 export AWT_PIXELFORMAT = c555 ;
 export AWT_INVERSENIBBLES default = false ;
 export AWT_INVERSEDISPLAY default = false ;
@@ -43,7 +43,7 @@ export CCFLAGS += -DRUDOLPH_DEFAULT_FRAME_TITLE='\"Mika\"' ;
 #
 export CCFLAGS += -DRUDOLPH_DEFAULT_FRAME_WIDTH=720 ;
 export CCFLAGS += -DRUDOLPH_DEFAULT_FRAME_HEIGHT=420 ;
-export CCFLAGS += -D_POSIX_C_SOURCE=200809L;
 
 TOOLCHAIN_PREFIX = /usr/bin/
+
 

@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2020 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -34,6 +35,7 @@ export MIKA_TOP = $(PWD)
 
 include ./Configuration/platform/$(PLATFORM).mk
 include ./Configuration/cpu/$(CPU).mk
+include ./Configuration/toolchain/$(TOOLCHAIN).mk
 include ./Configuration/host/$(HOSTOS).mk
 include ./Configuration/mika/default.mk
 
@@ -71,14 +73,15 @@ else
 endif
 export LIBPREFIX
 
-CFLAGS_cpu__arm = -DARM
-CFLAGS_cpu__armel = -DARMEL
-CFLAGS_cpu__mips = -DMIPS
-CFLAGS_cpu__ppc = -DPPC
-CFLAGS_cpu__sh4 = -DSH4
-CFLAGS_cpu__x86 = -DX86
+# CFLAGS_cpu__arm = -DARM
+# CFLAGS_cpu__armel = -DARMEL
+# CFLAGS_cpu__mips = -DMIPS
+# CFLAGS_cpu__ppc = -DPPC
+# CFLAGS_cpu__sh4 = -DSH4
+# CFLAGS_cpu__x86 = -DX86
+# CFLAGS_cpu__x86-clang = -DX86
 
-CFLAGS += $(CFLAGS_cpu__$(CPU))
+# CFLAGS += $(CFLAGS_cpu__$(CPU))
 
 ifeq ($(CPU),x86)
   LDFLAGS = -m32
@@ -586,6 +589,7 @@ mika : echo builddir kernel core-vm
 echo :
 	@echo "Building Mika for platform '$(PLATFORM)'"
 	@echo "CPU =" $(CPU)
+	@echo "TOOLCHAIN =" $(TOOLCHAIN)
 	@echo "HOSTOS =" $(HOSTOS)
 	@echo "SCHEDULER =" $(SCHEDULER)
 	@echo "AWT =" $(AWT)

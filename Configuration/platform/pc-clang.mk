@@ -13,7 +13,7 @@ export SHARED_OBJECTS = true
 
 export HOSTOS = linux
 export CPU = x86
-export TOOLCHAIN = gcc
+export TOOLCHAIN = clang
 export SCHEDULER = o4p
 
 export CFLAGS += -m32
@@ -22,5 +22,6 @@ export JDWP = true
 export ENABLE_THREAD_RECYCLING = true
 
 TOOLCHAIN_PREFIX = /usr/bin/
+
 
 

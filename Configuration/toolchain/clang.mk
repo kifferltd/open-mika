@@ -1,6 +1,5 @@
 ###########################################################################
-# Copyright (c) 2019, 2020 by Chris Gray, KIFFER Ltd.                     #
-# All rights reserved.                                                    #
+# Copyright (c) 2020 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -27,6 +26,13 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-CFLAGS += -DARMEL
-
+export CC = $(TOOLCHAIN_PREFIX)clang
+export AR = $(TOOLCHAIN_PREFIX)ar ru
+export AR_TOOL = $(TOOLCHAIN_PREFIX)ar
+export AS = $(TOOLCHAIN_PREFIX)as
+export RANLIB = $(TOOLCHAIN_PREFIX)ranlib
+export LINK = $(TOOLCHAIN_PREFIX)clang
+export LD = $(TOOLCHAIN_PREFIX)ld
+export LD_TOOL = $(TOOLCHAIN_PREFIX)ld
+export STRIP = $(TOOLCHAIN_PREFIX)strip
 

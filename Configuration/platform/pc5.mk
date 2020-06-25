@@ -8,7 +8,7 @@ export USE_LIBFFI = true
 export BYTECODE_VERIFICATION = true
 
 export FLOATING_POINT = hauser
-export MATH = native
+export MATH = java
 export SHARED_OBJECTS = true
 
 export HOSTOS = linux
@@ -21,6 +21,9 @@ export CFLAGS += -DSTORE_METHOD_DEBUG_INFO
 export JDWP = true
 export ENABLE_THREAD_RECYCLING = true
 
+export JAVA5_SUPPORT = true
+
 TOOLCHAIN_PREFIX = /usr/bin/
+
 
 
