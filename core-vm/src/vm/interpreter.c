@@ -395,8 +395,8 @@ static void do_drem(w_Slot**);
 static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
   frame->jstack_top = tos;
-  woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
-//  w_printf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+  woempa(9, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+  if (woempa_bytecodecount > 1000000) w_printf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
   if (!threadIsUnsafe(frame->thread)) { 
     wabort(ABORT_WONKA, "GC_UNSAFE not set at offset[%d] (%s) of %M\n", current - frame->method->exec.code, opcode_names[*current], frame->method);
@@ -803,6 +803,8 @@ void interpret(w_frame caller, w_method method) {
   const w_frame frame = &theFrame;
   const w_thread thread = caller->thread;
   const w_clazz cclazz = method->spec.declaring_clazz;
+// disable use of register variables for now
+#ifdef USE_REGISTERS
 #if defined(X86)
   register w_code current asm ("%ebx") = method->exec.code;
   register void ** jumps = codeJumpTable;
@@ -812,6 +814,10 @@ void interpret(w_frame caller, w_method method) {
 #else
   register w_code current = method->exec.code;
   register void ** jumps = codeJumpTable;
+#endif
+#else
+  w_code current = method->exec.code;
+  void ** jumps = codeJumpTable;
 #endif
   w_Slot *tos;
 #ifdef CACHE_TOS
