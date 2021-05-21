@@ -34,6 +34,9 @@ export OSWALD_TEST = o4ftests
 export MIKA_TOP
 export PLATFORM
 
+# a bit OTT :-) -- TODO revisit this
+export CFLAGS += -Wno-everything
+
 export CFLAGS += -I $(OSWALD_TOP)/include
 export CFLAGS += -I $(COMMON_TOP)/include
 
