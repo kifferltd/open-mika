@@ -1,0 +1,257 @@
+###########################################################################
+# Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      #
+#                                                                         #
+# This software is copyrighted by and is the sole property of Acunia N.V. #
+# and its licensors, if any. All rights, title, ownership, or other       #
+# interests in the software remain the property of Acunia N.V. and its    #
+# licensors, if any.                                                      #
+#                                                                         #
+# This software may only be used in accordance with the corresponding     #
+# license agreement. Any unauthorized use, duplication, transmission,     #
+#  distribution or disclosure of this software is expressly forbidden.    #
+#                                                                         #
+# This Copyright notice may not be removed or modified without prior      #
+# written consent of Acunia N.V.                                          #
+#                                                                         #
+# Acunia N.V. reserves the right to modify this software without notice.  #
+#                                                                         #
+#   Acunia N.V.                                                           #
+#   Philips site 5, box 3       info@acunia.com                           #
+#   3001 Leuven                 http://www.acunia.com                     #
+#   Belgium - EUROPE                                                      #
+#                                                                         #
+# Modifications copyright (c) 2005, 2006 by Chris Gray, /k/ Embedded Java #
+# Solutions. Permission is hereby granted to reproduce, modify, and       #
+# distribute these modifications under the terms of the Wonka Public      #
+# Licence.                                                                #
+#                                                                         #
+###########################################################################
+
+#
+# $Id: awt-classes.in,v 1.4 2006/05/27 20:29:50 cvs Exp $
+# 
+# For information on the format of this file, see core-classes.in
+#
+com/acunia/wonka/rudolph/AWTControl
+  enable              ()V                             AWTControl_enable
+  disable             ()V                             AWTControl_disable
+com/acunia/wonka/rudolph/JPEGImageSource
+  width               I
+  height              I
+  pixels              [I
+  readImage           ([B)V                           JPEGImageSource_readImage
+com/acunia/wonka/rudolph/PNGImageSource
+  width               I
+  height              I
+  pixels              [I
+  readImage           ([B)V                           PNGImageSource_readImage
+com/acunia/wonka/rudolph/GIFImageSource
+  width               I
+  height              I
+  readImage           ([B)V                           GIFImageSource_readImage
+  copyFrame           (Lcom/acunia/wonka/rudolph/GIFFrame;)V GIFImageSource_copyFrame
+com/acunia/wonka/rudolph/Image
+  wotsit              +
+  height              I
+  width               I
+  pixels              [C
+  alpha               [C
+  flags               I
+  filename            Ljava/lang/String;
+  producer            Ljava/awt/image/ImageProducer;
+  component           Ljava/awt/Component;
+  getGraphics         ()Ljava/awt/Graphics;           Image_getGraphics
+  createImage         ()V                             Image_createImage
+  do_conversion       ([B[CLjava/awt/image/IndexColorModel;IIIIII)V  Image_conversion_index
+  do_conversion       ([I[CLjava/awt/image/DirectColorModel;IIIIII)V Image_conversion_direct
+  finalize0           ()V                             Image_finalize0
+  convertRGB          (III)I                          Image_convertRGB
+  setPixel            (IIII)V                         Image_setPixel
+com/acunia/wonka/rudolph/AppletAudioClip
+  play                ([B)V                           AppletAudioClip_play
+  decode                ([B)[B                        AppletAudioClip_decode
+com/acunia/wonka/rudolph/Painter
+  paint               ()V                             Painter_paint
+com/acunia/wonka/rudolph/Dispatcher
+  init                (Ljava/awt/EventQueue;)V        Dispatcher_init
+com/acunia/wonka/rudolph/Scanner
+  init                (Ljava/lang/String;)V           Scanner_init
+  poll                (Ljava/awt/Window;)V            Scanner_poll
+  drain               ()V                             Scanner_drain
+  shutdown            ()V                             Scanner_shutdown
+java/util/EventObject
+  source              Ljava/lang/Object;
+java/awt/AWTEvent
+  id                  I
+java/awt/CheckboxGroup
+java/awt/SystemColor
+  control             Ljava/awt/SystemColor;
+  controlText         Ljava/awt/SystemColor;
+  controlShadow       Ljava/awt/SystemColor;
+  controlDkShadow     Ljava/awt/SystemColor;
+  controlHighlight    Ljava/awt/SystemColor;
+  window              Ljava/awt/SystemColor;
+  windowText          Ljava/awt/SystemColor;
+java/awt/Color
+  value               I
+java/awt/Synchronizer
+  clinit              ()V	Synchronizer_clinit
+  staticLockAWT       ()V	Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V	Synchronizer_staticUnlockAWT
+java/awt/Component
+  wotsit              +
+  x                   I
+  y                   I
+  width               I
+  height              I
+  valid               Z
+  visible             Z
+  eventsEnabled       Z
+  background          Ljava/awt/Color;
+  foreground          Ljava/awt/Color;
+  font                Ljava/awt/Font;
+  peer                Lcom/acunia/wonka/rudolph/peers/DefaultComponent;
+  DEFAULT_FONT        Ljava/awt/Font;
+  componentListener   Ljava/awt/event/ComponentListener;
+  mouseListener       Ljava/awt/event/MouseListener;
+  mouseMotionListener Ljava/awt/event/MouseMotionListener;
+  focusListener       Ljava/awt/event/FocusListener;
+  actionListener      Ljava/awt/event/ActionListener;
+  keyListener         Ljava/awt/event/KeyListener;
+  focusComponent      Ljava/awt/Component;
+  focusComponentPrev  Ljava/awt/Component;
+# Slightly naughty: use the same native code as java/awt/Synchronizer
+com/acunia/wonka/rudolph/peers/ToolkitBridge
+  staticLockAWT       ()V	Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V	Synchronizer_staticUnlockAWT
+com/acunia/wonka/rudolph/peers/DefaultComponent
+  wotsit              +
+  component           Ljava/awt/Component;
+  tag                 (IZ)V                           Component_tag
+  createPeer          ()V                             Component_createPeer
+  createImage         (II)Ljava/awt/Image;            Component_createImage
+  getGraphics         ()Ljava/awt/Graphics;           Component_getGraphics
+  finalize            ()V                             Component_finalize
+  getAbsX             ()I                             Component_getAbsX
+  getAbsY             ()I                             Component_getAbsY
+com/acunia/wonka/rudolph/peers/DefaultContainer
+  createPeer          (Z)V                            Container_createPeer
+  scale               (II)V                           Container_scale
+  addComponent        (Ljava/awt/Component;I)V        Container_addComponent
+  addContainer        (Ljava/awt/Component;I)V        Container_addContainer
+  removeComponent     (Ljava/awt/Component;)V         Container_removeComponent
+java/awt/event/InputEvent
+  modifiers           I
+  timeStamp           J
+java/awt/event/MouseEvent
+  x                   I
+  y                   I
+  clickCount          I
+java/awt/event/KeyEvent
+  keyCode             I
+  keyChar             C
+java/awt/event/ActionEvent
+java/awt/event/FocusEvent
+java/awt/EventQueue
+  nativeAWTEvent      Ljava/awt/AWTEvent;
+java/awt/Font
+  wotsit              +
+  PLAIN               I
+  BOLD                I
+  ITALIC              I
+  name                Ljava/lang/String;
+  size                I
+  style               I
+  family              Ljava/lang/String;
+  create              (Ljava/lang/String;II)V         Font_create
+  addFont             (Ljava/lang/String;Ljava/lang/String;)V  Font_initialize
+java/awt/FontMetrics
+  font                Ljava/awt/Font;
+  getHeight           ()I                             FontMetrics_getHeight
+  getAscent           ()I                             FontMetrics_getAscent
+  getDescent          ()I                             FontMetrics_getDescent
+  getLeading          ()I                             FontMetrics_getLeading
+  getMaxAscent        ()I                             FontMetrics_getMaxAscent
+  getMaxDescent       ()I                             FontMetrics_getMaxDescent
+  getMaxAdvance       ()I                             FontMetrics_getMaxAdvance
+  charWidth           (I)I                            FontMetrics_charWidth
+  stringWidth         (Ljava/lang/String;)I           FontMetrics_stringWidth
+com/acunia/wonka/rudolph/Graphics
+  wotsit               +
+  component            Ljava/awt/Component;
+  foreground           Ljava/awt/Color;
+  background           Ljava/awt/Color;
+  font                 Ljava/awt/Font;
+  ox                   I
+  oy                   I
+  cx                   I
+  cy                   I
+  cw                   I
+  ch                   I
+  copyArea             (IIIIII)V                      Graphics_copyArea
+  getBufferWidth       ()I                            Graphics_getBufferWidth
+  getBufferHeight      ()I                            Graphics_getBufferHeight
+  drawLine             (IIII)V                        Graphics_drawLine
+  drawArc2             (IIIIIIII)V                    Graphics_drawArc2
+  drawOval             (IIII)V                        Graphics_drawOval
+  drawPolygon          ([I[II)V                       Graphics_drawPolygon
+  drawRoundRect        (IIIIII)V                      Graphics_drawRoundRect
+  drawString           (Ljava/lang/String;II)V        Graphics_drawString
+  fillPolygon          ([I[II)V                       Graphics_fillPolygon
+  fillRect             (IIII)V                        Graphics_fillRect
+  fillArc2             (IIIIIIII)V                    Graphics_fillArc2
+  fillRoundRect        (IIIIII)V                      Graphics_fillRoundRect
+  fillOval             (IIII)V                        Graphics_fillOval
+  drawImage            (Ljava/awt/Image;IILjava/awt/image/ImageObserver;)Z                         Graphics_drawImage1
+  drawImage            (Ljava/awt/Image;IILjava/awt/Color;Ljava/awt/image/ImageObserver;)Z         Graphics_drawImage2
+  drawImage            (Ljava/awt/Image;IIIILjava/awt/image/ImageObserver;)Z                       Graphics_drawImage3
+  drawImage            (Ljava/awt/Image;IIIILjava/awt/Color;Ljava/awt/image/ImageObserver;)Z       Graphics_drawImage4
+  drawImage            (Ljava/awt/Image;IIIIIIIILjava/awt/image/ImageObserver;)Z                   Graphics_drawImage5
+  drawImage            (Ljava/awt/Image;IIIIIIIILjava/awt/Color;Ljava/awt/image/ImageObserver;)Z   Graphics_drawImage6
+java/awt/image/IndexColorModel
+  reds                 [B
+  greens               [B
+  blues                [B
+  alphas               [B
+  internal             [I
+  trans                I
+  size                 I
+  fill_internal        ()V   IndexColorModel_fill_internal
+java/awt/image/DirectColorModel
+  rmask                I
+  gmask                I
+  bmask                I
+  amask                I
+  rmaskbits            I
+  gmaskbits            I
+  bmaskbits            I
+  amaskbits            I
+  rmaskpos             I
+  gmaskpos             I
+  bmaskpos             I
+  amaskpos             I
+com/acunia/wonka/rudolph/peers/DefaultScrollPane
+  setViewport          (Ljava/awt/Component;IIII)V    ScrollPane_setViewport
+com/acunia/wonka/rudolph/peers/DefaultWindow
+  disposePeer          ()V                            Window_disposePeer
+  relocatePeer         ()V                            Window_relocatePeer
+  toFront0             ()V                            Window_toFront
+  toBack0              ()V                            Window_toBack    
+com/acunia/wonka/rudolph/Toolkit
+  t                    Lcom/acunia/wonka/rudolph/Toolkit
+  getSystemEventQueueImpl  ()Ljava/awt/EventQueue;        Toolkit_getSystemEventQueue
+  getScreenWidth       ()I                            Toolkit_getScreenWidth
+  getScreenHeight      ()I                            Toolkit_getScreenHeight
+  sync                 ()V                            Toolkit_sync
+# Slightly naughty: use the same native code as java/awt/Synchronizer
+  staticLockAWT       ()V				Synchronizer_staticLockAWT
+  staticUnlockAWT     ()V				Synchronizer_staticUnlockAWT
+com/acunia/wonka/rudolph/BufferImageSource
+  pixels               [I
+  getImageData         (Lcom/acunia/wonka/rudolph/Image;)V   BufferImageSource_getImageData
+java/awt/Window
+#
+be/kiffer/vixen/DefaultGraphicsConfiguration
+  getWidth	()I	DefaultgraphicsConfiguration_getWidth
+  getHeight	()I	DefaultgraphicsConfiguration_getHeight
+  getType	()I	DefaultgraphicsConfiguration_getType

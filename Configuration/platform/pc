@@ -1,0 +1,20 @@
+CPU_MIPS = 1000 ;
+DEFAULT_HEAP_SIZE default = 64M ;
+USE_NATIVE_MALLOC = true ;
+USE_LIBFFI = true ;
+BYTECODE_VERIFICATION = true ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = true ;
+
+HOSTOS = linux ;
+CPU = x86 ;
+SCHEDULER = o4p ;
+
+CCFLAGS += -m32 ;
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+JDWP = true ;
+ENABLE_THREAD_RECYCLING = true ;
+
+TOOLCHAIN_PREFIX = /usr/bin/ ;
+

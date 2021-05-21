@@ -1,0 +1,176 @@
++-------------------------------------------------------------------------+
+| Copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.          |
+| All rights reserved.                                                    |
+|                                                                         |
+| Redistribution and use in source and binary forms, with or without      |
+| modification, are permitted provided that the following conditions      |
+| are met:                                                                |
+| 1. Redistributions of source code must retain the above copyright       |
+|    notice, this list of conditions and the following disclaimer.        |
+| 2. Redistributions in binary form must reproduce the above copyright    |
+|    notice, this list of conditions and the following disclaimer in the  |
+|    documentation and/or other materials provided with the distribution. |
+| 3. Neither the name of /k/ Embedded Java Solutions nor the names of     |
+|    other contributors may be used to endorse or promote products        |
+|    derived from this software without specific prior written permission.|
+|                                                                         |
+| THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          |
+| WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    |
+| MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    |
+| IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  |
+| LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     |
+| CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    |
+| SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         |
+| BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   |
+| WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    |
+| OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  |
+| IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           |
++-------------------------------------------------------------------------+
+
+The Mika source tree layout
+===========================
+
+The source tree contains many subdirectories with all of them specific meanings.
+The subdirectories containing sources (see below) all follow the same layout.
+
+* src/: contains the c source-files
+* include/: for all the neat header files.
+* hal: the 'host abstraction layer' or basicly all cpu and os dependent source and
+  files. They are always structered like:
+  - cpu    - xxx - include
+                 - src
+           - yyy - include
+                 - src
+  - hostos - zzz - include 
+                 - src
+  - hostos - www - include 
+                 - src
+* java/: contain the java source of this component.
+
+Occasionally there are some other directories like resource. The
+names of these directories should be self exploratory.
+
+1. the 'ant' directory
+----------------------
+
+The ant directory contains more xml files. This way all build logic 
+for each subcomponent is grouped in one file, leaving the main build.xml
+lightweigth and easy to read. The java directory contains custom ant task
+to help build mika. 
+
+The following xml are used
+
+* build.xml: build the custom ant tasks.
+* common.xml: bundles some target used by the other xml files.
+* sample.xml: builds the test samples.
+* tool.xml: builds the AppletViewer, the VisualTestEngine and the
+  mauve-tests (more info on those can be found in TESTS.txt).
+* mika_build.xml: by far the biggest of the xmls files, but then of course
+  it contains all the build logic to build mika.
+
+2. 'CHANGES'
+------------
+
+Legacy from the early Acunia days. Not maintainded anymore.
+
+3. 'Configuration'
+------------------
+
+The configuration contains the configuration files for both ant and jam.
+For more info on how to use them, please read BUILD.txt
+
+4. 'core-vm'
+------------
+
+As the name hints, this is the main source directory. It follows the source layout
+as explained above. The 'src' groups the source files in meaningfull subparts like
+loading, heap, etc. The 'native' holds the implementation of the native java methods.
+They are stored in directories according to their java package.
+
+5. 'doc'
+--------
+
+Contains documentation.
+
+6. 'extension'
+--------------
+
+The extension dir contains stand alone optional extensions. They have no need to be in the mcl.jar or
+the mika binary and can be left out if unneeded. For now it only contains 'microedition', the javax.microedition.io
+package of mika. 
+
+7. 'vm-ext'
+-----------
+
+'vm-ext' or vm-extensions are optional packages. They are different from 'extension' in the sense that their classfile
+are added to the mcl.jar and native part are linked into the main binary file.
+We have following vm-extensions:
+* comm: a javax.comm implementation
+* beans: the java.beans package is setup to be optional.
+* cypto: the javax.crypto package.
+* jpda: the java platform debugger architecture. This package is not complete yet, but we're working hard
+  to get the 'jdwp' working (so it can be used for instance from within eclipse).
+
+8. 'vm-cmp'
+-----------
+
+'vm-cmp' or vm-components are always part of the vm, but have different implementations. So one implementation
+of every vm component will be in mika. We currently have the following components:
+* awt: mika has two awt implementation:
+  - rudolph: mainly designed to run on top of framebuffer, but with some limited X extension
+  - none: if you don't need awt, you can reduce the mika footprint by leaving the awt out.
+* fp: floating point.
+  - hauser: don't use hardware floating points, but use a software implementation.
+  - native: native floating points lets the compiler choose, how to handle floating point calculation.
+* fs: filesystem
+  - native: maps all calls filesystem call the native (hostos) api's.
+  - vfs.save: legacy code. 
+* jar: Jar Verification: this defines how to handle the verification of jar file.
+  - java: does the verification in java.
+  - none: accepts all jars without verifying.
+* kernel: this defines internal threading and memory allocation
+  - oswald: is basicly an thread scheduling implementation. However due to changes concerning errno in
+    libc, it's gotten out of use. The oswald api serves as reference for other threading implementations
+  - o4p: maps the threading api on top of pthreads.
+  - o4e and o4w are/were student projects for mapping threading api on eCos and WinCE, but they are not
+    maintained.
+  - common: common files for all kernel implementations.
+* math: this small component handles the formatting of floating points to strings
+  - java: pure java implementation
+  - native: uses c-functions to achive the formatting.
+* security: defines the level of security.
+  - none
+  - fine
+  - coarse
+* network: defines the implentation of the network layer (see package java.net).
+  - none: no network support.
+  - native: network support mapped on the native network Api
+
+Note: The 'extension', 'vm-ext' and 'vm-cmp' subdirectories are all source directories, with the
+forementioned layout.
+
+9. 'sample'
+-----------
+
+This directory contains some sample application.
+
+10. 'tool'
+----------
+
+This directorie contains mostly extra build tools. Files and scripts to
+support ant and jam. However the of the subdirs aren't:
+* appletviewer: A simple appletviewer.
+* visualtestengine: this is used for doing awt testing. It is a test framework with
+  a lot of test classes.
+* mauve: This directory contains a subset of the mauve test framework as well as
+  some home written test.
+
+For more info on those see the TESTS.txt file.
+
+
+11. 'build' & 'release'
+-----------------------
+
+The build and release directories are created by ant during the build process.
+The build directory will store all intermediate results, while release will store
+ready to use components. For more info read BUILD.txt 

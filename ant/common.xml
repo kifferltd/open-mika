@@ -1,0 +1,72 @@
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<!-- Copyright (c) 2007-2015 by Chris Gray, Kiffer Ltd.                      -->
+<!-- All rights reserved.                                                    -->
+<!--                                                                         -->
+<!-- Redistribution and use in source and binary forms, with or without      -->
+<!-- modification, are permitted provided that the following conditions      -->
+<!-- are met:                                                                -->
+<!-- 1. Redistributions of source code must retain the above copyright       -->
+<!--    notice, this list of conditions and the following disclaimer.        -->
+<!-- 2. Redistributions in binary form must reproduce the above copyright    -->
+<!--    notice, this list of conditions and the following disclaimer in the  -->
+<!--    documentation and/or other materials provided with the distribution. -->
+<!-- 3. Neither the name of Kiffer Ltd nor the names of other contributors   -->
+<!--    may be used to endorse or promote products derived from this         -->
+<!--    software without specific prior written permission.                  -->
+<!--                                                                         -->
+<!-- THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          -->
+<!-- WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    -->
+<!-- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    -->
+<!-- IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    -->
+<!-- DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      -->
+<!-- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       -->
+<!-- GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           -->
+<!-- BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   -->
+<!-- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    -->
+<!-- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  -->
+<!-- IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           -->
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<project name="mika-common" default="fail" basedir=".">
+  <property name="top.level.dir" value="../" />
+  <property name="build.dir" value="${top.level.dir}build/common/"/>
+  <property name="common.class.dir" value="${build.dir}class/"/>
+  <property name="empty.dir" value="${build.dir}empty/"/>
+  <property name="top.level.dir" value="${basedir}/.." />
+  <property name="tools.dir" value="${top.level.dir}/build/tools/"/>
+
+  <target name="compile-mcl">
+    <mkdir dir="${common.class.dir}" />
+    <mkdir dir="${empty.dir}" />
+    <taskdef name="propertysetter" classname="be.kiffer.mika.ant.PropertySetter"
+             classpath="${tools.dir}/ant-mika.jar"/>
+    <property name="vm.cmp.dir" value="${top.level.dir}/vm-cmp/"/>
+    <property name="vm.ext.dir" value="${top.level.dir}/vm-ext/"/>
+    <propertysetter property="java.version" arg1="${JAVA5}" arg2="true" value="java5" elsevalue="java"/>
+    <propertysetter property="java.level" arg1="${JAVA5}" arg2="true" value="1.5" elsevalue="1.4"/>
+    <property name="math.dir" value="${vm.cmp.dir}math/java/${java.version}"/>
+    <property name="awt.dir" value="${vm.cmp.dir}awt/rudolph/${java.version}"/>
+    <property name="beans.dir" value="${vm.ext.dir}beans/${java.version}"/>
+    <property name="vm.java.dir" value="${top.level.dir}/core-vm/${java.version}"/>
+    <property name="security.dir" value="${vm.cmp.dir}security/none/${java.version}/"/>
+    <property name="security.provider.dir" value="${vm.cmp.dir}security/provider/${SECURITY_PROVIDER}/${java.version}/"/>
+    <property name="security.provider.any.dir" value="${vm.cmp.dir}security/provider/any/${java.version}/"/>
+    <property name="jar.dirs" value="${vm.cmp.dir}jar/none/"/>
+    <property name="micro.io.dir" value="${top.level.dir}/extension/microedition/io/"/>
+
+    <!-- special case: if SECURITY_PROVIDER != none ==> include java.security.cert etc. -->
+    <propertysetter property="security.provider.dirs" arg1="${SECURITY_PROVIDER}" arg2="none" elsevalue="${security.provider.any.dir}"
+                    value="${security.provider.dir}"/>
+     <javac destdir="${common.class.dir}" bootclasspath="${empty.dir}"
+            source="${java.level}" target="${java.level}" debug="true" nowarn="true" failonerror="true"
+            srcdir="${vm.java.dir}:${security.dir}:${security.provider.dirs}:${jar.dirs}:${math.dir}:${awt.dir}:${beans.dir}:${micro.io.dir}"/>
+  </target>
+
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+  </target>
+
+  <target name="fail">
+    <fail message="please provide a target when using this xml file"/>
+  </target>
+</project>

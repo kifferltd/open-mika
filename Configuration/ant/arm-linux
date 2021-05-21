@@ -1,0 +1,68 @@
+#
+# This file should be formatted as a valid java.properties file.
+#
+
+#
+# Define your Jam configuration. A file with the same name
+# should be found in Configuration/platform
+#
+JAM.PLATFORM=arm-linux
+
+AWT=none
+
+#
+# Define your security level: either java2 or none.
+# If java2 is selected, a jarfile verification implementation must be selected
+# (JAR!=none)).
+#
+SECURITY=none
+
+#
+# Define your security provider: currently either harmony or none.
+# Note that it can make sense to have a security provider even when SECURITY
+# is set to 'none', for example in order to be able to perform encryption.
+#
+SECURITY_PROVIDER=none
+
+#
+# Allows you to enable jarfile verification.
+# none: no jar verification
+# java: jarfile verification is done in java
+#       In this case a SECURITY_PROVIDER must be specified.
+#
+JAR=none
+
+#
+# Defines how some of the java.lang.Math methods are handled.
+# Either native or java.
+#
+MATH=java
+
+#
+# The following packages are optional. If you don't need them
+# you can leave them out. 'true = in' and false means no such 
+# packages. All of those classes are compiled in the mcl.jar
+# expect for micro_io, that's a jar on it's own.
+#
+JAVA_BEANS=false
+JAVAX_COMM=true
+JAVAX_CRYPTO=true
+MICRO_IO=true
+
+#
+# enables debug information in the java classes (this values is passed to
+# java compiler). 
+#
+JAVA_DEBUG=true
+
+#
+# By default code will be generated in unicode.c to cover only ISO 8859-1.
+# Specify a colon-separated list of subset numbers to extend Unicode coverage
+# to one or more subsets of Unicode: see tool/script/unicode.awk for details.
+# Specify 999 to get complete Unicode coverage.  Characters from non-included
+# subsets will be treated by Mika as undefined.
+#
+UNICODE_SUBSETS=0 
+
+
+

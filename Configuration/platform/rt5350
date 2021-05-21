@@ -1,0 +1,21 @@
+AWT = none ;
+CPU_MIPS = 300 ;
+DEFAULT_HEAP_SIZE = 32M ;
+MATH = java ;
+USE_NATIVE_MALLOC = true ;
+
+FLOATING_POINT = hauser ;
+SHARED_OBJECTS = true ;
+TOOLCHAIN_PREFIX = ~/openwrt/staging_dir/toolchain-mipsel_24kec+dsp_gcc-4.8-linaro_uClibc-0.9.33.2/bin/mipsel-openwrt-linux- ;
+
+CPU = mips ;
+HOSTOS = linux ;
+SCHEDULER = o4p ;
+
+CCFLAGS += -DSTORE_METHOD_DEBUG_INFO ;
+JDWP = true ;
+
+HAVE_TIMEDWAIT = true ;
+USE_NANO_SLEEP = true ;
+HOST_TIMER_GRANULARITY = 1000 ;
+
