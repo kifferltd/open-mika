@@ -34,7 +34,7 @@ CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/o4f/include
 
 LDFLAGS += /home/chris/github/imsys-mika/build/im4000/lib/liboswald.a
-LDFLAGS += /home/chris/imsys-phabricator/sw-isal-system/build/lib/libisal-system.a
+LDFLAGS += $(MIKA_TOP)/../sw-isal-system/build/lib/libisal-system.a
 #LDFLAGS += -loswald -lcommon
 LDFLAGS += -L $(libdir)
 

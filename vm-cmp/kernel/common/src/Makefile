@@ -35,10 +35,10 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/hal/host/$(HOSTOS)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/hal/cpu/$(CPU)/include
-CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Source/include
-CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Demo/Imsys_ISAL
-CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL
-CFLAGS += -I /home/chris/imsys-phabricator/sw-isal-system/include
+CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Source/include
+CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Demo/Imsys_ISAL
+CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL
+CFLAGS += -I $(MIKA_TOP)/../sw-isal-system/include
 
 .PHONY : mika
 mika: $(kernobjdir) $(objects)

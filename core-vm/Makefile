@@ -33,9 +33,9 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/network/native/hal/hostos/$(HOSTOS)/include
 CFLAGS += -I $(MIKA_TOP)/vm-ext/jpda/jdwp/include
-#CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Source/include
-#CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Demo/Imsys_ISAL
-#CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL
+#CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Source/include
+#CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Demo/Imsys_ISAL
+#CFLAGS += -I $(MIKA_TOP)/../sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL
 
 ifeq ($(HOSTOS), linux)
   CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/posix/include
