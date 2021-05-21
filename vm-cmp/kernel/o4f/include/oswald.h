@@ -33,6 +33,7 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
+#include "FreeRTOS.h"
 #include "xmisc.h"
 
 #define NUM_PRIORITIES     64
@@ -42,7 +43,6 @@ typedef int32_t      x_boolean;
 typedef u_int8_t     x_ubyte;
 typedef u_int32_t    x_time;
 typedef u_int32_t    x_size;
-typedef u_int32_t    x_sleep;
 typedef u_int32_t    x_word;
 typedef u_int32_t    x_uword;
 typedef int32_t      x_int;
@@ -52,7 +52,6 @@ typedef int           x_boolean;
 typedef unsigned char x_ubyte;
 typedef unsigned int  x_time;
 typedef unsigned int  x_size;
-typedef unsigned long x_sleep;
 typedef unsigned int  x_word;
 typedef unsigned int  x_uword;
 typedef signed int    x_int;
@@ -64,6 +63,8 @@ typedef struct x_Monitor *      x_monitor;
 typedef struct x_Thread *       x_thread;
 typedef struct x_Sem *          x_sem;
 typedef struct x_Mutex *        x_mutex;
+
+typedef TickType_t   x_sleep;
 
 typedef const char * (*x_report)(x_thread thread);  /* report generator */
 

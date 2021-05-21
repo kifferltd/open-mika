@@ -37,14 +37,24 @@ x_size heap_remaining;
 x_size min_heap_bytes;
 x_size max_heap_bytes;
 
-x_Monitor memory_Monitor;
+static SemaphoreHandle_t memoryMutex;
 
 x_status x_mem_lock(x_sleep timeout) {
-  return x_monitor_enter(&memory_Monitor, timeout);
+  printf("x_mem_lock(%d ticks)\n", timeout);
+  switch(xSemaphoreTake(memoryMutex, timeout)) {
+    case pdPASS:  return xs_success;
+    case pdFAIL:  return xs_no_instance;
+    default :     return xs_unknown;
+ }
 }
 
 x_status x_mem_unlock() {
-  return x_monitor_exit(&memory_Monitor);
+  printf("x_mem_unlock()\n");
+  switch (xSemaphoreGive(memoryMutex)) {
+    case pdPASS: return xs_success;
+    case pdFAIL: return xs_not_owner;
+    default :     return xs_unknown;
+  }
 }
 
 const char *magic = "This memory is valid.";
@@ -71,7 +81,7 @@ void x_mem_init(void) {
   memory_sentinel->check = (char*)magic;
 #endif
 
-  x_monitor_create(&memory_Monitor);
+  memoryMutex = xSemaphoreCreateRecursiveMutex();
 }
 
 #ifdef DEBUG
@@ -314,7 +324,7 @@ x_status x_mem_walk(x_sleep timeout, x_boolean (*callback)(void * mem, void * ar
   o4f_memory_chunk cursor;
   o4f_memory_chunk next;
   
-  status = x_monitor_enter(&memory_Monitor, timeout);
+  status = x_mem_lock(timeout);
   if (status != xs_success) {
     return status;
   }
@@ -332,7 +342,7 @@ x_status x_mem_walk(x_sleep timeout, x_boolean (*callback)(void * mem, void * ar
     }
   }
 
-  status = x_monitor_exit(&memory_Monitor);
+  status = x_mem_unlock();
 
   return status;
 }
@@ -342,7 +352,7 @@ x_status x_mem_scan(x_sleep timeout, x_word tag, x_boolean (*callback)(void * me
   o4f_memory_chunk cursor;
   o4f_memory_chunk next;
   
-  status = x_monitor_enter(&memory_Monitor, timeout);
+  status = x_mem_lock(timeout);
   if (status != xs_success) {
     return status;
   }
@@ -363,7 +373,7 @@ x_status x_mem_scan(x_sleep timeout, x_word tag, x_boolean (*callback)(void * me
     }
   }
 
-  status = x_monitor_exit(&memory_Monitor);
+  status = x_mem_unlock();
 
   return status;
 }

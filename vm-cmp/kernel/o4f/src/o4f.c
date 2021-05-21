@@ -132,7 +132,7 @@ x_status x_oswald_init(x_size max_heap, x_size millis) {
   o4fe->status = O4F_ENV_STATUS_NORMAL;
   vTaskStartScheduler();
 
-  /* just for the compiler, in fact we whould never get here */
+  /* just for the compiler, in fact we would never get here */
   return xs_success;
 }
 
