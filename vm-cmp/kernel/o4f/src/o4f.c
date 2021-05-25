@@ -50,18 +50,6 @@ static int init_task_seq;
 void *start_routine(void *thread_ptr);
 
 /*
-** This function is called once for setting up the Oswald emulation environment.
-** It is called from main, before going to x_os_main. It prepares the
-** linked list of timers and threads. If not called explicitly, the default
-** policy is used (which is the best for the OS), so only call this when you
-** know what you are doing.
-*/
-
-void setScheduler(int scheduler) {
-  o4fe->scheduler = scheduler;
-}
-
-/*
 ** Initialize the emulation environment.
 */
 
@@ -72,15 +60,13 @@ static void oswaldEnvInit(void) {
   o4fe = &theEnvironment;
   
   o4fe->threads = NULL;
-  o4fe->staticMemory = malloc(STATIC_MEMORY_SIZE);
+//  o4fe->staticMemory = malloc(STATIC_MEMORY_SIZE);
   o4fe->status = O4F_ENV_STATUS_INIT;
   o4fe->timer_ticks = 0;
 
-// N.B. xSemaphoreCreateBinary() creates the semaphore in the "locked" state
-  o4fe->timer_lock = xSemaphoreCreateBinary();
-
 // N.B. xSemaphoreCreateMutex() creates the mutex in the "free" state
   o4fe->loempa_mutex = xSemaphoreCreateMutex();
+  o4fe->timer_mutex = xSemaphoreCreateBinary();
   o4fe->threads_mutex = xSemaphoreCreateMutex();
 
 }
@@ -88,13 +74,12 @@ static void oswaldEnvInit(void) {
 static SemaphoreHandle_t Scheduler_Mutex;
 
 void x_scheduler_disable(void) {
-  o4f_abort(O4F_ABORT_THREAD, "Don't use x_scheduler_disable, it doesn't work!", 0);
-  // TODO
+  vTaskSuspendAll();
 }
 
 void x_scheduler_enable(void) {
-  o4f_abort(O4F_ABORT_THREAD, "Don't use x_scheduler_disable, it doesn't work!", 0);
-  // TODO
+// TODO check return code
+  xTaskResumeAll();
 }
 
 extern x_size heap_size; 
@@ -103,31 +88,22 @@ extern x_size heap_remaining;
 // TODO decide on a value
 #define INITIAL_THREAD_PRIORITY 2
 
-static void x_setup_kernel(x_size millis) {
-
-  x_thread thread;
-
-  oswaldEnvInit();
-
-// Let the application set itself up. Any threads created here will only start to execute when vTaskStartScheduler is called.
-
-  x_os_main(command_line_argument_count, command_line_arguments, o4fe->staticMemory);
-
-  printf("heap size = %d millis = %d\n", heap_size, millis);
-  heap_remaining = heap_size;
-  x_mem_init();
-  x_setup_timers(millis);
-} 
-
 extern x_size max_heap_bytes;
 
 x_status x_oswald_init(x_size max_heap, x_size millis) {
   heap_size = max_heap;
   max_heap_bytes = max_heap;
-  x_setup_kernel(millis);
+  oswaldEnvInit();
+
+// Let the application set itself up. Any threads created here will only start to execute when vTaskStartScheduler is called.
+
+  x_os_main(command_line_argument_count, command_line_arguments);
+
+  heap_remaining = heap_size;
+  x_mem_init();
+  x_setup_timers(millis);
 
   printf("= = = M I K A   S T A R T E D = = =\r\n\r\n");
-  printf("DEBUG_LEVEL = %d\r\n", DEBUG_LEVEL);
 
   o4fe->status = O4F_ENV_STATUS_NORMAL;
   vTaskStartScheduler();

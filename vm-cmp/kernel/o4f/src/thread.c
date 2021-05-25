@@ -36,6 +36,7 @@ static int num_started = 0;
 static int num_deleted = 0;
 
 static int task_seq;
+
 /*
 ** The different thread states written as character strings and the function to
 ** get them in an appropriate way.
@@ -119,9 +120,11 @@ void threadRegister(x_thread xnew) {
   volatile x_thread current;
 
   current = NULL;
-  res = xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY);
-  if (res != pdPASS) {
-    o4f_abort(O4F_ABORT_BAD_STATUS, "xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY)", res);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    res = xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY);
+    if (res != pdPASS) {
+      o4f_abort(O4F_ABORT_THREAD, "threadRegister: xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY) failed", res);
+    }
   }
 
   xnew->o4f_thread_next = NULL;
@@ -140,12 +143,14 @@ void threadRegister(x_thread xnew) {
   }
 
   if (current == NULL) {
-    o4f_abort(O4F_ABORT_THREAD, "no thread to register", 0);
+    o4f_abort(O4F_ABORT_THREAD, "threadRegister: no thread to register", 0);
   }
 
   num_x_threads += 1;
 
-  xSemaphoreGive(o4fe->threads_mutex);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    xSemaphoreGive(o4fe->threads_mutex);
+  }
 }
 
 /*
@@ -158,10 +163,11 @@ void threadUnregister(x_thread thread) {
   x_thread current;
   x_thread previous;
 
-   configDBGMSG("threadUnregister: taking threads_mutex semaphore\n");
-  res = xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY);
-  if (res != pdPASS) {
-    o4f_abort(O4F_ABORT_BAD_STATUS, "xSemaphoreTake()", res);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    res = xSemaphoreTake(o4fe->threads_mutex, portMAX_DELAY);
+    if (res != pdPASS) {
+      o4f_abort(O4F_ABORT_THREAD, "threadUnregister: xSemaphoreTake() failed", res);
+    }
   }
 
   previous = NULL;
@@ -176,7 +182,7 @@ void threadUnregister(x_thread thread) {
     /*
     ** This shouldn't happen.
     */
-    o4f_abort(O4F_ABORT_THREAD, "Thread not found!", 0);
+    o4f_abort(O4F_ABORT_THREAD, "threadUnregister: Thread not found!", 0);
   }
   else if (previous != NULL) {
     /*
@@ -195,8 +201,9 @@ void threadUnregister(x_thread thread) {
 
   num_deleted += 1;
 
-   configDBGMSG("threadUnregister: giving threads_mutex semaphore\n");
-  xSemaphoreGive(o4fe->threads_mutex);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    xSemaphoreGive(o4fe->threads_mutex);
+  }
 
 //  loempa(9, "Thread unregistered, %d deleted %d started...\n", num_deleted, num_started);
 }
@@ -262,15 +269,15 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    int status = 0;
    x_status rval = xs_success;
 
-   loempa(2, "x_thread_create\n");
+   loempa(2, "x_thread_create %d\n", task_seq+1);
    printf("x_thread_create(thread %p, entry function %p, entry params %p, stack start %p, stack depth %d, priority %d, flags %08x\n", thread, entry_function, entry_input, stack_start, stack_size, priority, flags);
    if (thread == NULL) {
-     loempa(9, "Thread is null\n");
+     loempa(9, "Thread is %p\n", thread);
      return xs_bad_argument;
    }
 
    if (entry_function == NULL) {
-     loempa(9, "Entry function is null\n");
+     loempa(9, "Entry function is %p\n", entry_function);
      return xs_bad_argument;
    }
 
@@ -282,7 +289,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    if (stack_start) {
      printf("O4F WARNING: stack_start is non-NULL (%p), but x_thread_create ignores stack_start\n", stack_start);
    }
-   loempa(2, "x_thread_create: setting up FreeRTOS task\n");
+   loempa(2, "x_thread_create: setting up FreeRTOS task %s\n", "");
    configDBGMSG("x_thread_create: setting up FreeRTOS task\n");
    thread->task_function = entry_function;
    thread->waiting_on = NULL;
@@ -294,7 +301,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
 
    thread->task_parameters = entry_input;
 
-   loempa(2, "x_thread_create: registering FreeRTOS task\n");
+   loempa(2, "x_thread_create: registering FreeRTOS task %s\n", "");
    configDBGMSG("x_thread_create: registering FreeRTOS task\n");
    threadRegister(thread);
 
@@ -308,18 +315,15 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      printf("x_thread_create: setting state to xt_ready\n");
      thread->state = xt_ready;
      thread->flags = 0; // WAS: 1
-     //snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
-     thread->name[0] = 0;
+     snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
+     //thread->name[0] = 0;
      printf("creating task %s with priority %d for thread %p\n", thread->name, thread->task_priority, thread);
      status = xTaskCreate(start_routine, thread->name, configMINIMAL_STACK_SIZE * 4, (void *)thread, thread->task_priority, &thread->handle);
      printf("x_thread_create: xTaskCreate status = %d\n", status);
-/*
-  
      vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
      if (status != pdPASS) {
-       o4f_abort(O4F_ABORT_BAD_STATUS, "xTaskCreate()", status);
+       o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
       }
-*/
    }
 
    return rval;
@@ -334,13 +338,13 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
  */
 
 x_status x_thread_attach_current(x_thread thread) {
-   loempa(2, "x_thread_attach_current\n");
+   loempa(2, "x_thread_attach_current(%p)\n", thread);
    if (thread == NULL) {
-     loempa(9, "Thread is null\n");
+     loempa(9, "Thread is %p\n", thread);
      return xs_bad_argument;
    }
 
-   loempa(2, "x_thread_attach_current: setting up x_thread\n");
+   loempa(2, "x_thread_attach_current: setting up x_thread\ %sn", "");
    thread->task_function = NULL;
 
    thread->handle = xTaskGetCurrentTaskHandle();
@@ -362,9 +366,9 @@ x_status x_thread_attach_current(x_thread thread) {
  */
 
 x_status x_thread_detach(x_thread thread) {
-   loempa(2, "x_thread_detach\n");
+   loempa(2, "x_thread_detach(%p)\n", thread);
    if (thread == NULL) {
-     loempa(9, "Thread is null\n");
+     loempa(9, "Thread is %p\n", thread);
      return xs_bad_argument;
    }
 
@@ -440,19 +444,20 @@ x_status x_thread_resume(x_thread thread) {
   if (thread->state == xt_newborn) {
     int status;
 
-    loempa(2, "Starting new born thread.\n");
+    loempa(2, "Starting new born thread %p\n", thread);
     thread->state = xt_ready;
     status = xTaskCreate(start_routine, "thread", 256, (void *)thread, 2, &thread->handle);
     if (status == ENOMEM) {
        return xs_no_mem;
     }
     else if (status != 0) {
-      o4f_abort(O4F_ABORT_BAD_STATUS, "xTaskCreate returned error status", status);
+      o4f_abort(O4F_ABORT_THREAD, "xTaskCreate() failed", status);
       return xs_no_instance;
     }
   }
   else {
     thread->state = xt_ready;
+    vTaskResume(thread->handle);
   }
   
   return retValue;
@@ -503,11 +508,10 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
 x_status x_thread_suspend(x_thread thread) {  
   x_status retValue = xs_success;
 
-  o4f_abort(O4F_ABORT_THREAD, "DONT USE THIS, IS NOT EVEN WORKING A BIT", 0);
-
   thread->state = xt_suspended;
+  vTaskSuspend(thread->handle);
 
-  return retValue;
+  return xs_success;
 }
 
 x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
@@ -531,6 +535,10 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
          break;
        }
 
+// vTaskDelay(1) will block the calling state for 1 tick,
+// vTaskDelay(0) is equivalent to taskYIELD(), which means
+// that it will not yield to a lower-priority task ...
+// so we use a1-tick delay if the target task has lower priority.
        taskYIELD();
      }
   }
@@ -542,7 +550,7 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
          break;
        }
 
-       taskYIELD();
+       vTaskDelay(joinee->task_priority < joiner->task_priority);
      } while (!x_deadline_passed(&end));
   }
 
@@ -565,11 +573,9 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
 */
 
 x_status x_thread_wakeup(x_thread thread) {
-  x_status result = xs_success;
-
-// TODO somehow bypass the timer
-  
-  return result;
+  xTaskNotify(thread->handle, 0, eNoAction);
+ 
+  return xs_success;
 }
 
 x_status x_thread_stop_waiting(x_thread thread) {
@@ -584,7 +590,7 @@ x_status x_thread_stop_waiting(x_thread thread) {
 }
 
 x_status x_thread_signal(x_thread thread, w_int signum) {
-// TODO do we even need this?
-      return xs_success;
+  o4f_abort(O4F_ABORT_THREAD, "function x_thread_signal() is not implemented", 0);
+  return xs_unknown;
 }
 

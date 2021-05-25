@@ -84,12 +84,13 @@ typedef struct x_Queue {
 } x_Queue;
 
 typedef struct x_Monitor {
-  SemaphoreHandle_t   mon_mutex;
+  SemaphoreHandle_t owner_mutex;
   volatile w_int    count;
   volatile int      magic;
   volatile x_thread owner;
-  volatile void    *interrupted;
   volatile int      n_waiting;
+  QueueHandle_t     interrupted;
+  SemaphoreHandle_t waiter_sem;
 } x_Monitor;
 
 #define SR_NO_MESSAGE       1
@@ -141,10 +142,9 @@ static inline x_long x_systime_get(void) {
 typedef struct O4fEnv {
   int scheduler;
   int status;
-  void *staticMemory;                    /* memory used to fake Oswald's static allocation thang */
   x_thread threads;                      /* pointer to first element in linked list of threads */
   SemaphoreHandle_t threads_mutex;           
-  SemaphoreHandle_t timer_lock;           
+  SemaphoreHandle_t timer_mutex;           
   SemaphoreHandle_t loempa_mutex;
   volatile w_size timer_ticks; /* the number of ticks passed since we 'booted' */
   FILE *log;

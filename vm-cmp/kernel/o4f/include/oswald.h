@@ -102,7 +102,7 @@ const char * x_state2char(x_thread thread);
 ** however long it takes.
 */
 #define x_no_wait 0
-#define x_eternal 0xffffffff
+#define x_eternal portMAX_DELAY
 
 #include "o4f.h"
 #include "vsprintf.h"
@@ -136,10 +136,6 @@ const char * x_state2char(x_thread thread);
 #define unsetFlag(x, flag)        ((x) &= ~(flag))
 #define maskFlags(m, f)           ((m) & (f))
 
-/*
-** In the real Oswald these calls disable/reenable the scheduler.  
-** What we do is to lock a global mutex, which should be close enough.
-*/
 void x_scheduler_disable(void);
 void x_scheduler_enable(void);
 
@@ -211,8 +207,6 @@ x_size x_usecs2ticks(x_size usecs);
 /*
 ** The Oswald memory API.
 */
-x_status x_mem_lock(x_sleep timeout);
-x_status x_mem_unlock(void);
 
 void x_mem_init(void);
 #ifdef DEBUG
@@ -257,9 +251,6 @@ x_boolean x_mem_is_block(void * mem);
 
 x_long x_time_now_millis(void);
 
-void * x_alloc_static_mem(void * memory, x_size size);
-
-
 /*
 ** Don't use the memory monitor directly: always call x_memory_lock/unlock.
 ** We make the monitor visible here for debugging purposes only.
@@ -270,7 +261,8 @@ extern x_monitor memory_monitor;
 ** This is the entry point which the OS will call when it has completed
 ** its own internal initialisation.
 */
-x_ubyte* x_os_main(int argc, char** argv, x_ubyte *first_unused_memory);
+//x_ubyte* x_os_main(int argc, char** argv, x_ubyte *first_unused_memory);
+x_ubyte* x_os_main(int argc, char** argv);
 
 /*
 ** Call this from main() to start up oswald.
@@ -293,7 +285,7 @@ void x_dump_monitor_if_locked(char *, x_monitor);
 #ifdef DEBUG
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 7
 #endif
 
 void _loempa(const char *function, const int line, const int level, const char *fmt, ...);

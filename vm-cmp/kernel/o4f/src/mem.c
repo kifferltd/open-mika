@@ -39,21 +39,23 @@ x_size max_heap_bytes;
 
 static SemaphoreHandle_t memoryMutex;
 
-x_status x_mem_lock(x_sleep timeout) {
-  printf("x_mem_lock(%d ticks)\n", timeout);
-  switch(xSemaphoreTake(memoryMutex, timeout)) {
-    case pdPASS:  return xs_success;
-    case pdFAIL:  return xs_no_instance;
-    default :     return xs_unknown;
- }
+static inline x_status x_mem_lock(x_sleep timeout) {
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    switch(xSemaphoreTake(memoryMutex, timeout == x_eternal ? portMAX_DELAY : timeout)) {
+      case pdPASS:  return xs_success;
+      case pdFAIL:  return xs_no_instance;
+      default :     return xs_unknown;
+    }
+  }
 }
 
-x_status x_mem_unlock() {
-  printf("x_mem_unlock()\n");
-  switch (xSemaphoreGive(memoryMutex)) {
-    case pdPASS: return xs_success;
-    case pdFAIL: return xs_not_owner;
-    default :     return xs_unknown;
+static inline x_status x_mem_unlock() {
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    switch (xSemaphoreGive(memoryMutex)) {
+      case pdPASS: return xs_success;
+      case pdFAIL: return xs_not_owner;
+      default :    return xs_unknown;
+    }
   }
 }
 
@@ -479,9 +481,3 @@ w_size x_mem_total() {
   return heap_size; 
 }
 
-/*
-** Fake implementation of bogus function
-*/
-void * x_alloc_static_mem(void * memory, w_size size) {
-  return calloc((size+7)/8, 8);
-}

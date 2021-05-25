@@ -34,8 +34,8 @@
 
 x_size usecs_per_tick;
 
-void x_setup_timers(x_size millis) {
-  usecs_per_tick = millis * 1000;
+void x_setup_timers(x_size millis_per_tick) {
+  usecs_per_tick = millis_per_tick * 1000;
 }
 
 x_long x_time_now_millis() {

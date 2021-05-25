@@ -69,16 +69,20 @@ void _loempa(const char *function, const int line, const int level, const char *
   char buffer[BSIZE];
   x_size i;
 
-  BaseType_t rc = xSemaphoreTake(o4fe->loempa_mutex, portMAX_DELAY);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    BaseType_t rc = xSemaphoreTake(o4fe->loempa_mutex, portMAX_DELAY);
 // TODO check rc
+  }
 
   printf(buffer, BSIZE, "OS %35s %4d: ", function, line);
   va_start(ap, fmt);
   printf(buffer + i, BSIZE - i, fmt, ap);
   va_end(ap);
 
-  rc = xSemaphoreGive(o4fe->loempa_mutex);
+  if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
+    BaseType_t rc = xSemaphoreGive(o4fe->loempa_mutex);
 // TODO check rc
+  }
 
 }
 
