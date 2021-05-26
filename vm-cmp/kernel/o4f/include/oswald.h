@@ -261,8 +261,7 @@ extern x_monitor memory_monitor;
 ** This is the entry point which the OS will call when it has completed
 ** its own internal initialisation.
 */
-//x_ubyte* x_os_main(int argc, char** argv, x_ubyte *first_unused_memory);
-x_ubyte* x_os_main(int argc, char** argv);
+void x_os_main(int argc, char** argv);
 
 /*
 ** Call this from main() to start up oswald.
