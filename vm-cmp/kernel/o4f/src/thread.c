@@ -243,8 +243,9 @@ void start_routine(void *thread_ptr) {
   }
 
   thread->state = xt_ended;
-  vTaskDelete(NULL);
   printf("exit start_routine(%p)\n");
+  vTaskDelete(NULL);
+  vTaskSuspend(NULL);
 }
 
 /*

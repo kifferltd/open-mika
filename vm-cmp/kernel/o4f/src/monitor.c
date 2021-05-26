@@ -42,7 +42,7 @@ x_status x_monitor_create(x_monitor monitor) {
   memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
 // N.B. this creates the semaphore in the locked state
-  monitor->waiter_sem = xSemaphoreCreate(MONITOR_MAX_THREADS, sizeof(x_thread));
+  monitor->waiter_sem = xSemaphoreCreateCounting(MONITOR_MAX_THREADS, 0);
 // N.B. this creates the mutex in the free state
 // The Nutex doesn't need to be recursive, because we do our own counting
   monitor->owner_mutex = xSemaphoreCreateMutex();

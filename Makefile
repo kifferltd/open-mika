@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020 by Chris Gray, KIFFER Ltd.                     #
+# Copyright (c) 2018, 2020, 2021 by Chris Gray, KIFFER Ltd.               #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -39,7 +39,7 @@ include ./Configuration/toolchain/$(TOOLCHAIN).mk
 include ./Configuration/host/$(HOSTOS).mk
 include ./Configuration/mika/default.mk
 
-export VERSION_STRING ?= 1.4.7_TEST
+export VERSION_STRING ?= "IM4000 test build 1.4.2-$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)"
 export AWT_DEF ?= none
 export CPU
 export HOSTOS
@@ -594,11 +594,16 @@ export LDFLAGS
 
 mika : echo builddir kernel core-vm
 
-echo :
-	@echo "Building Mika for platform '$(PLATFORM)'"
+kecho :
+	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"
 	@echo "CPU =" $(CPU)
 	@echo "TOOLCHAIN =" $(TOOLCHAIN)
 	@echo "HOSTOS =" $(HOSTOS)
+	@echo "CFLAGS =" $(CFLAGS)
+	@echo "LDFLAGS =" $(LDFLAGS)
+
+echo : kecho
+	@echo "Building Mika for platform '$(PLATFORM)'"
 	@echo "SCHEDULER =" $(SCHEDULER)
 	@echo "AWT =" $(AWT)
 	@echo "CFLAGS =" $(CFLAGS)
@@ -627,10 +632,10 @@ builddir :
 	@echo "Creating " $(gendir)
 	@mkdir -p $(gendir)
 
-kernel : kcommon 
+kernel : kecho builddir kcommon 
 	make -C vm-cmp/kernel/$(SCHEDULER) 
 
-kcommon :
+kcommon : echo builddir
 	make -C vm-cmp/kernel/common 
 
 comm :
