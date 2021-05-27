@@ -26,13 +26,13 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              #
 ###########################################################################
 
-# ECHO Configuring build to run Mika on a Linux host. ;
+# ECHO Configuring build to run Mika on a FreeRTOS host. ;
 
 #
 # We define __NO_STRING_INLINES since we otherwise
 # get compiler warnings that result in errors because of the -Werror flag.
 #
 
-export CFLAGS += -D__NO_STRING_INLINES -DLINUX 
+export CFLAGS += -D__NO_STRING_INLINES 
 
 
