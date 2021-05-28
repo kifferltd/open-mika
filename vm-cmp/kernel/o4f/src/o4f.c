@@ -103,7 +103,7 @@ x_status x_oswald_init(x_size max_heap, x_size millis) {
   x_mem_init();
   x_setup_timers(millis);
 
-  printf("= = = M I K A   S T A R T E D = = =\r\n\r\n");
+  printf("= = = O S W A L D   S T A R T E D = = =\r\n\r\n");
 
   o4fe->status = O4F_ENV_STATUS_NORMAL;
   vTaskStartScheduler();

@@ -211,7 +211,6 @@ void threadUnregister(x_thread thread) {
 void start_routine(void *thread_ptr) {
   x_thread thread;
 
-  printf("enter start_routine(%p)\n", thread_ptr);
   num_started += 1;
   thread = (x_thread )thread_ptr;
   if (thread->xref) {
@@ -221,7 +220,7 @@ void start_routine(void *thread_ptr) {
     loempa(7,"Native thread %p starting\n", thread);
   }
 // TODO 
-// WAS :  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
+  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
 // TODO set priority
 
   thread->state = xt_ready;
@@ -232,9 +231,7 @@ void start_routine(void *thread_ptr) {
   else {
     loempa(7,"Native thread %p started\n", thread);
   }
-  printf("calling task_function\n");
   (*(x_entry)thread->task_function)(thread->task_parameters);
-  printf("returned from task_function\n");
   if (thread->xref) {
     loempa(7,"Mika thread %t returned normally\n", thread->xref);
   }
@@ -243,11 +240,32 @@ void start_routine(void *thread_ptr) {
   }
 
   thread->state = xt_ended;
-  printf("exit start_routine(%p)\n");
   vTaskDelete(NULL);
   vTaskSuspend(NULL);
 }
 
+static void dumpTaskState(x_thread thread) {
+   switch(eTaskGetState(thread->handle)) {
+      case eRunning :
+         printf( "Task %s is the current Running task\n", thread->name);
+         break;
+      case eReady :
+         printf( "Task %s is Ready to run\n", thread->name);
+         break;
+      case  eBlocked :
+         printf( "Task %s is Blocked\n", thread->name);
+         break;
+      case eSuspended :
+         printf( "Task %s is Suspended\n", thread->name);
+         break;
+      case eDeleted :
+         printf( "Task %s has been Deleted\n", thread->name);
+         break;
+      default:
+         printf("Task %s has unknown state %d\n", thread->name);
+   }
+}
+   
 /*
  * Prototype:
  *   x_status x_thread_create(x_thread thread_ptr,
@@ -270,8 +288,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    int status = 0;
    x_status rval = xs_success;
 
-   loempa(2, "x_thread_create %d\n", task_seq+1);
-   printf("x_thread_create(thread %p, entry function %p, entry params %p, stack start %p, stack depth %d, priority %d, flags %08x\n", thread, entry_function, entry_input, stack_start, stack_size, priority, flags);
+   loempa(2, "x_thread_create(thread %p, entry function %p, entry params %p, stack start %p, stack depth %d, priority %d, flags %08x)\n", thread, entry_function, entry_input, stack_start, stack_size, priority, flags);
    if (thread == NULL) {
      loempa(9, "Thread is %p\n", thread);
      return xs_bad_argument;
@@ -291,7 +308,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      printf("O4F WARNING: stack_start is non-NULL (%p), but x_thread_create ignores stack_start\n", stack_start);
    }
    loempa(2, "x_thread_create: setting up FreeRTOS task %s\n", "");
-   configDBGMSG("x_thread_create: setting up FreeRTOS task\n");
    thread->task_function = entry_function;
    thread->waiting_on = NULL;
    thread->waiting_with = 0;
@@ -303,25 +319,19 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->task_parameters = entry_input;
 
    loempa(2, "x_thread_create: registering FreeRTOS task %s\n", "");
-   configDBGMSG("x_thread_create: registering FreeRTOS task\n");
    threadRegister(thread);
 
-   printf("x_thread_create: thread flags = %d\n", flags);
    if (flags & TF_SUSPENDED) {
-     printf("x_thread_create: setting state to xt_newborn\n");
      thread->state = xt_newborn;
      thread->flags = 0;
    }
    else {
-     printf("x_thread_create: setting state to xt_ready\n");
      thread->state = xt_ready;
      thread->flags = 0; // WAS: 1
      snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
      //thread->name[0] = 0;
-     printf("creating task %s with priority %d for thread %p\n", thread->name, thread->task_priority, thread);
-     status = xTaskCreate(start_routine, thread->name, configMINIMAL_STACK_SIZE * 4, (void *)thread, thread->task_priority, &thread->handle);
-     printf("x_thread_create: xTaskCreate status = %d\n", status);
-     vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
+     status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
+     //vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
      if (status != pdPASS) {
        o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
       }
