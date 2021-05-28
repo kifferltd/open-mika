@@ -63,25 +63,21 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
 
 ssize_t write(int fd, const void *buf, size_t count);
 
-void _loempa(const char *function, const int line, const int level, const char *fmt, ...) {
+void _loempa(const char *file, const char *function, const int line, const int level, const char *fmt, ...) {
 
   va_list ap;
-  char buffer[BSIZE];
-  x_size i;
 
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
-    BaseType_t rc = xSemaphoreTake(o4fe->loempa_mutex, portMAX_DELAY);
-// TODO check rc
+    vTaskSuspendAll();
   }
 
-  printf(buffer, BSIZE, "OS %35s %4d: ", function, line);
+  printf("OSWALD %s %s.%d: ", file, function, line);
   va_start(ap, fmt);
-  printf(buffer + i, BSIZE - i, fmt, ap);
+  vprintf(fmt, ap);
   va_end(ap);
 
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
-    BaseType_t rc = xSemaphoreGive(o4fe->loempa_mutex);
-// TODO check rc
+    xTaskResumeAll();
   }
 
 }

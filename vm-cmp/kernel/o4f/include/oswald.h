@@ -287,21 +287,21 @@ void x_dump_monitor_if_locked(char *, x_monitor);
 #define DEBUG_LEVEL 7
 #endif
 
-void _loempa(const char *function, const int line, const int level, const char *fmt, ...);
+void _loempa(const char *file, const char *function, const int line, const int level, const char *fmt, ...);
 
 static const int loempa_trigger = DEBUG_LEVEL;
 
 #define loempa(level, format, ...) {                          \
-  /*if (level >= loempa_trigger) { */                              \
-    _loempa(__FUNCTION__, __LINE__, level, format, __VA_ARGS__);       \
-  /*}  */                                                          \
+  if (level >= loempa_trigger) {                               \
+    _loempa(__FILE_NAME__, __func__, __LINE__, level, format, __VA_ARGS__);       \
+  }                                                            \
 }
 
 static const x_boolean debug = true;
 
 #else /* No DEBUG */
 
-#define loempa(level, format, a...)
+#define loempa(level, format, ...)
 static const x_boolean debug = false;
 
 #endif /* DEBUG */
