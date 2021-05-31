@@ -55,17 +55,11 @@ void *start_routine(void *thread_ptr);
 
 static void oswaldEnvInit(void) {
 
-  static O4fEnv theEnvironment;
+  static O4fEnv theEnvironment = { O4F_ENV_STATUS_INIT };
   
   o4fe = &theEnvironment;
-  
-  o4fe->threads = NULL;
-//  o4fe->staticMemory = malloc(STATIC_MEMORY_SIZE);
-  o4fe->status = O4F_ENV_STATUS_INIT;
-  o4fe->timer_ticks = 0;
 
 // N.B. xSemaphoreCreateMutex() creates the mutex in the "free" state
-  o4fe->loempa_mutex = xSemaphoreCreateMutex();
   o4fe->timer_mutex = xSemaphoreCreateBinary();
   o4fe->threads_mutex = xSemaphoreCreateMutex();
 
