@@ -171,7 +171,7 @@ typedef void(*x_entry)(void* arg);
 x_status x_thread_create(x_thread thread, x_entry entry_function, void* entry_input, void *stack_start, x_size stack_size, x_size priority, x_word flags);
 x_status x_thread_delete(x_thread thread);
 x_size x_thread_priority_get(x_thread thread);
-x_int x_thread_priority_set(x_thread thread, x_size new_priority);
+x_size x_thread_priority_set(x_thread thread, x_size new_priority);
 x_status x_thread_resume(x_thread thread);
 x_status x_thread_sleep(x_sleep timer_ticks);
 x_status x_thread_suspend(x_thread thread);

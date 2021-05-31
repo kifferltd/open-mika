@@ -60,16 +60,12 @@ void x_now_plus_ticks(x_long ticks, struct timespec *ts)
 
   diff.tv_sec = usec / 1000000;
   diff.tv_usec = usec % 1000000;
-//printf("diff sec = %d, usec = %d\n", diff.tv_sec, diff.tv_usec);
 
 // TODO could be time to start using clock_gettime(CLOCK_MONOTONIC, ...)?
   gettimeofday(&now, NULL);
-//printf("now  sec = %d, usec = %d\n", now.tv_sec, now.tv_usec);
   timeradd(&now, &diff, &result);
-//printf("result = %d %d\n", result.tv_sec, result.tv_usec);
   ts->tv_sec = result.tv_sec;
   ts->tv_nsec = result.tv_usec * 1000;
-//printf("   -> %d %d\n", ts->tv_sec, ts->tv_nsec);
 }
 
 x_boolean x_deadline_passed(struct timespec *ts) {
@@ -121,14 +117,11 @@ x_size x_millis2ticks(x_size millis) {
 
   x_size num = millis;
   x_size dem = (x_size) usecs_per_tick;
-//printf("%d 000 / %d\n", num, dem);
   while (num > 2000000 && dem > 10) {
     num /= 10;
     dem /= 10;
-//printf("%d 000 / %d\n", num, dem);
   }
   x_size ticks = 1000 * num / dem;
-//printf("%d\n", ticks);
  
   return ticks ? ticks : 1;
   

@@ -214,10 +214,10 @@ void start_routine(void *thread_ptr) {
   num_started += 1;
   thread = (x_thread )thread_ptr;
   if (thread->xref) {
-    loempa(7,"Mika thread %t starting\n", thread->xref);
+    loempa(2,"Mika thread %t starting\n", thread->xref);
   }
   else {
-    loempa(7,"Native thread %p starting\n", thread);
+    loempa(2,"Native thread %p starting\n", thread);
   }
 // TODO 
   vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
@@ -226,17 +226,17 @@ void start_routine(void *thread_ptr) {
   thread->state = xt_ready;
 
   if (thread->xref) {
-    loempa(7,"Mika thread %t started\n", thread->xref);
+    loempa(2,"Mika thread %t started\n", thread->xref);
   }
   else {
-    loempa(7,"Native thread %p started\n", thread);
+    loempa(2,"Native thread %p started\n", thread);
   }
   (*(x_entry)thread->task_function)(thread->task_parameters);
   if (thread->xref) {
-    loempa(7,"Mika thread %t returned normally\n", thread->xref);
+    loempa(2,"Mika thread %t returned normally\n", thread->xref);
   }
   else {
-    loempa(7,"Native thread %p returned normally\n", thread);
+    loempa(2,"Native thread %p returned normally\n", thread);
   }
 
   thread->state = xt_ended;
@@ -429,10 +429,17 @@ x_status x_thread_delete(x_thread thread) {
  *   highest priority level. 
  */
  
-w_int x_thread_priority_set(x_thread thread, w_size new_priority) {
-  w_int old_priority = (int) thread->task_priority;
+x_size x_thread_priority_set(x_thread thread, w_size new_priority) {
+  x_size old_priority = thread->task_priority;
 
-  // TODO
+  if (new_priority >= NUM_PRIORITIES) {
+    loempa(9, "x_thread_priority_set(): priority %d is out of range, ignoring\n", new_priority);
+  }
+  else {
+    // map 0 (highest priority) to (configMAX_PRIORITIES – 1), (NUM_PRIORITIES - 1) to 1
+    thread->task_priority = configMAX_PRIORITIES - 1 - ((configMAX_PRIORITIES - 2)*new_priority/NUM_PRIORITIES);
+printf("oswald priority %d maps to FreeRTOS priority %d of %d\n", new_priority, thread->task_priority, configMAX_PRIORITIES);
+  }
 
   return old_priority;
 
