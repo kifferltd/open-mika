@@ -27,9 +27,6 @@
 **************************************************************************/
 
 #include "oswald.h"
-// TODO use a Queue?
-//#include "wordset.h"
-//#include "semphr.h"
 
 #define MONITOR_MAX_THREADS 100
 
@@ -44,7 +41,7 @@ x_status x_monitor_create(x_monitor monitor) {
 // N.B. this creates the semaphore in the locked state
   monitor->waiter_sem = xSemaphoreCreateCounting(MONITOR_MAX_THREADS, 0);
 // N.B. this creates the mutex in the free state
-// The Nutex doesn't need to be recursive, because we do our own counting
+// The mutex doesn't need to be recursive, because we do our own counting
   monitor->owner_mutex = xSemaphoreCreateMutex();
 
   loempa(2, "Monitor at %p has mutex %p\n", monitor, &monitor->owner_mutex);
@@ -116,11 +113,11 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       return xs_no_instance;
 
     default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTakeRecursive() returned unknown code", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTake() returned unknown code", retcode);
 
   }
 
-  return -1; // (unreachable)
+  return xs_unknown; // (unreachable)
 }
 
 /*
@@ -128,7 +125,7 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
 */
 x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   x_thread current = x_thread_current();
-  x_status status = xs_success;
+  x_sleep expiry_ticks = timeout + xTaskGetTickCount();
   BaseType_t retcode; 
 
   if (monitor->owner != current) {
@@ -145,6 +142,7 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 
   monitor->owner = NULL;
   monitor->count = 0;
+  loempa(2, "Thread %p is waiting on monitor %p until tick %d\n", current, monitor, expiry_ticks);
 
   monitor->n_waiting++;
   loempa(2, "Now there are %d threads waiting on  monitor %p\n", monitor->n_waiting, monitor);
@@ -152,27 +150,40 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 // TODO we need to release owner_mutex and block on waiter_sem,
 // BUT if any other thread aquires owner_mutex and then issues a notify,
 // the behavour must be as if this thread were already blocked on waiter_sem.
-// The Plan is that the notifying thread will Give monitor->waiter_sem n_waiting times,
+// The Plan Is that the notifying thread will Give monitor->waiter_sem n_waiting times,
 // so if this thread did not yet Take the monitor then there will be one Give "in the bank".
   retcode = xSemaphoreGive(monitor->owner_mutex);
   if (retcode != pdPASS) {
+      // The only reason to fail is if we are not the owner, bu this should never happen
       o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreGive() failed", retcode);
   }
 
 // normally we will block here, UNLESS another thread snuck in and already called x_monitor_notify
-  retcode = xSemaphoreTake(monitor->waiter_sem, portMAX_DELAY);
+  retcode = xSemaphoreTake(monitor->waiter_sem, timeout);
+
+  switch (retcode) {
+    case pdPASS: 
+      if (monitor->magic != 0xf1e2d3c4) {
+        return xs_deleted;
+      }
+      // fall through to re-acquire the mutex
+      break;
+
+    case pdFAIL:
+      return xs_no_instance;
+
+    default:
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreTake() returned unknown code", retcode);
+  }
+
+  // somebody gave the semaphore, time to re-acquire the mutex
+  int remaining = expiry_ticks - xTaskGetTickCount();
+  retcode = xSemaphoreTake(monitor->owner_mutex, remaining == (x_sleep) remaining ? (x_sleep) remaining : 0);
+  unsetFlag(current->flags, TF_TIMEOUT);
 
   switch (retcode) {
     case pdPASS: {
-      monitor->n_waiting--;
-      if (monitor->magic != 0xf1e2d3c4) {
-        xSemaphoreGiveRecursive(monitor->owner_mutex);
-        return xs_deleted;
-      }
-      status = xs_success;
-
-      unsetFlag(current->flags, TF_TIMEOUT);
-
+      // The monitor was free and we just acquired it.
       monitor->owner = current;
       monitor->count = current->waiting_with;
       loempa(2, "Thread %p has re-acquired monitor %p with count %i\n", current, monitor, monitor->count);
@@ -188,31 +199,31 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
       return xs_no_instance;
 
     default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreTakeRecursive() returned unknown code", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTake() returned unknown code", retcode);
   }
 
-  return status;
+  return xs_unknown; // (unreachable)
 }
 
 /*
 ** Notify one thread waiting on a monitor
 */
 x_status x_monitor_notify(x_monitor monitor) {
-  if (monitor->n_waiting == 0) {
+  if (monitor->n_waiting-- == 0) {
     loempa(2, "Thread %p would notify one thread of monitor %p, but no thread is waiting\n", monitor, x_thread_current());
 
     return xs_no_instance;
   }
 
   loempa(2, "Thread %p is notifying one thread of monitor %p\n", monitor, x_thread_current());
-  BaseType_t retcode = xSemaphoreGiveRecursive(monitor->owner_mutex);
+  BaseType_t retcode = xSemaphoreGive(monitor->waiter_sem);
   switch (retcode) {
     case pdPASS:
       return xs_success;
     case pdFAIL:
       return xs_not_owner;
     default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_notify: xSemaphoreGiveRecursive() returned unknown code", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGive() failed with return code", retcode);
   }
 }
 
@@ -221,9 +232,10 @@ x_status x_monitor_notify(x_monitor monitor) {
 */
 x_status x_monitor_notify_all(x_monitor monitor) {
   
-  while (0 < monitor->n_waiting--) {
+  while (monitor->n_waiting) {
+    loempa(2, "notiying 1 thread of %d\n", monitor->n_waiting);
     x_status status = x_monitor_notify(monitor);
-    if (status != xs_success) {
+    if (status != xs_success && status != xs_no_instance) {
       return status;
     }
   }
@@ -246,14 +258,14 @@ x_status x_monitor_exit(x_monitor monitor) {
   if (monitor->count == 0) {
     monitor->owner = NULL;
 
-    BaseType_t retcode = xSemaphoreGiveRecursive(monitor->owner_mutex);
+    BaseType_t retcode = xSemaphoreGive(monitor->owner_mutex);
     switch (retcode) {
       case pdPASS:
         loempa(2, "Thread %p no longer owns monitor %p, count now 0\n", current, monitor);
         return xs_success;
 
       default:
-        o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGiveRecursive() failed with return code", retcode);
+        o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGive() failed with return code", retcode);
         return xs_unknown;
     }
   }
