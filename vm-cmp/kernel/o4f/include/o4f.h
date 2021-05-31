@@ -88,7 +88,7 @@ typedef struct x_Monitor {
   volatile w_int    count;
   volatile int      magic;
   volatile x_thread owner;
-  volatile int      n_waiting;
+  volatile x_size   n_waiting;
   QueueHandle_t     interrupted;
   SemaphoreHandle_t waiter_sem;
 } x_Monitor;
@@ -140,12 +140,11 @@ static inline x_long x_systime_get(void) {
 #define O4F_ENV_STATUS_NORMAL   1
 
 typedef struct O4fEnv {
-  int scheduler;
   int status;
+  int scheduler;
   x_thread threads;                      /* pointer to first element in linked list of threads */
   SemaphoreHandle_t threads_mutex;           
   SemaphoreHandle_t timer_mutex;           
-  SemaphoreHandle_t loempa_mutex;
   volatile w_size timer_ticks; /* the number of ticks passed since we 'booted' */
   FILE *log;
 } O4fEnv;
