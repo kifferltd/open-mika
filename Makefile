@@ -29,7 +29,7 @@
 
 CFLAGS = -g
 CFLAGS += -Wall -Wsign-compare -Wshadow -Wpointer-arith
-CFLAGS += -Wstrict-prototypes -Winline -DDEBUG_LEVEL=7
+CFLAGS += -Wstrict-prototypes -Wformat -Winline -DDEBUG_LEVEL=7
 
 export MIKA_TOP = $(PWD)
 
