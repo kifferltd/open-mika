@@ -39,14 +39,16 @@ export SHARED_OBJECTS = false
 export HOSTOS = freertos
 export CPU = im4000
 export TOOLCHAIN = clang
-export TOOLCHAIN_PREFIX = /home/chris/imsys-phabricator/tool-llvm/build/bin/
+export TOOLCHAIN_PREFIX = $(IMSYS_TOOLDIR)/
 export SCHEDULER = o4f
 
-CFLAGS += --target=imsys -mcpu=im4000   -D__imsysisal__ -misal-internals -misac -misab   -fPIC -misal-phase1 -misal-phase1only   -D__imsysisal_phase1__
-CFLAGS += -nostdlib -I/home/chris/imsys-phabricator/sw-newlib/newlib/libc/include/ -DSTORE_METHOD_DEBUG_INFO
-LDFLAGS += -L/home/chris/libffi-armel-linux-eabi/libffi-master/arm-unknown-linux-gnueabi/.libs/
+CFLAGS += --target=imsys -mcpu=im4000 -D__imsysisal__ -misal-internals -misac -misab -fPIC
+ifeq ($(ISALFEATURE),0)
+  CFLAGS += -misal
+else ifeq ($(ISALFEATURE),1)
+  CFLAGS += -misal-phase1 -misal-phase1only -D__imsysisal_phase1__
+else
+  $(error UNKNOWN ISALFEATURE)
+endif
+CFLAGS += -nostdlib -I$(NEWLIB_INCLUDE_DIR) -I$(ISAL_SYSTEM_INCLUDE_DIR) -I$(FREERTOS_KERNEL_INCLUDE_DIR) -I$(FREERTOS_PORT_INCLUDE_DIR) -I$(FREERTOS_APP_INCLUDE_DIR) -DSTORE_METHOD_DEBUG_INFO
 export JDWP = true
-
-
-
-
