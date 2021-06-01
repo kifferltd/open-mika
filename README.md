@@ -36,10 +36,7 @@
 First compile o4f (Oswald For FreeRTOS) as follows:
 ```sw-open-mika$ make MATH=native PLATFORM=im4000 kernel ```
 
-Then copy the resulting  file to the Demo/Imsys_Mika directory:
-```sw-open-mika$ cp build/im4000/lib/liboswald.a ../sw-freertos/FreeRTOS/Demo/Imsys_Mika ```
-
-Build the Imsys_Mika Demo:
+Then build the Imsys_Mika Demo:
 ```sw-freertos/FreeRTOS/Demo/Imsys_Mika$ ./build.sh```
 
 The test executables are created in the ```build/``` directory:
