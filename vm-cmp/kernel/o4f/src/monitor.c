@@ -30,6 +30,9 @@
 
 #define MONITOR_MAX_THREADS 100
 
+#define ADD_TICKS(a,b) ((a) == x_eternal || (b) == x_eternal ? x_eternal : (a) + (b))
+#define SUBTRACT_TICKS(a,b) ((a) == x_eternal ? x_eternal : (a) - (b))
+
 /*
 ** Initialise a new monitor.
 */
@@ -38,8 +41,7 @@ x_status x_monitor_create(x_monitor monitor) {
 
   memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
-// N.B. this creates the semaphore in the locked state
-  monitor->waiter_sem = xSemaphoreCreateCounting(MONITOR_MAX_THREADS, 0);
+  monitor->waiter_queue = xQueueCreate(MONITOR_MAX_THREADS, sizeof(TaskHandle_t));
 // N.B. this creates the mutex in the free state
 // The mutex doesn't need to be recursive, because we do our own counting
   monitor->owner_mutex = xSemaphoreCreateMutex();
@@ -72,7 +74,7 @@ x_status x_monitor_delete(x_monitor monitor) {
   if (monitor->owner)  {
     o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: monitor is in use", 0);
   }
-  vSemaphoreDelete(monitor->waiter_sem);
+  vQueueDelete(monitor->waiter_queue);
   vSemaphoreDelete(monitor->owner_mutex);
 
   loempa(2, "Monitor at %p deleted\n", monitor);
@@ -125,7 +127,7 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
 */
 x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   x_thread current = x_thread_current();
-  x_sleep expiry_ticks = timeout + xTaskGetTickCount();
+  x_sleep expiry_ticks = ADD_TICKS(timeout, xTaskGetTickCount());
   BaseType_t retcode; 
 
   if (monitor->owner != current) {
@@ -142,42 +144,31 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 
   monitor->owner = NULL;
   monitor->count = 0;
+
+  retcode = xQueueSendToBack(monitor->waiter_queue, current->handle, 0);
+  if (retcode != pdPASS) {
+    // probably the queue is full
+    return xs_no_instance;
+  }
   loempa(2, "Thread %p is waiting on monitor %p until tick %d\n", current, monitor, expiry_ticks);
+  loempa(2, "Now there are %d threads waiting on monitor %p\n", uxQueueMessagesWaiting(monitor->waiter_queue), monitor);
 
-  monitor->n_waiting++;
-  loempa(2, "Now there are %d threads waiting on  monitor %p\n", monitor->n_waiting, monitor);
-
-// TODO we need to release owner_mutex and block on waiter_sem,
-// BUT if any other thread aquires owner_mutex and then issues a notify,
-// the behavour must be as if this thread were already blocked on waiter_sem.
-// The Plan Is that the notifying thread will Give monitor->waiter_sem n_waiting times,
-// so if this thread did not yet Take the monitor then there will be one Give "in the bank".
   retcode = xSemaphoreGive(monitor->owner_mutex);
   if (retcode != pdPASS) {
-      // The only reason to fail is if we are not the owner, bu this should never happen
+      // The only reason to fail is if we are not the owner, but this should never happen
       o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreGive() failed", retcode);
   }
 
 // normally we will block here, UNLESS another thread snuck in and already called x_monitor_notify
-  retcode = xSemaphoreTake(monitor->waiter_sem, timeout);
+  uint32_t old_count = ulTaskNotifyTake(pdFALSE, timeout );
 
-  switch (retcode) {
-    case pdPASS: 
-      if (monitor->magic != 0xf1e2d3c4) {
-        return xs_deleted;
-      }
-      // fall through to re-acquire the mutex
-      break;
-
-    case pdFAIL:
-      return xs_no_instance;
-
-    default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreTake() returned unknown code", retcode);
+  if (monitor->magic != 0xf1e2d3c4) {
+    return xs_deleted;
   }
 
+  loempa(2, "Thread %p has been notified on monitor %p, count was %d\n", current, monitor, old_count);
   // somebody gave the semaphore, time to re-acquire the mutex
-  int remaining = expiry_ticks - xTaskGetTickCount();
+  x_sleep remaining = SUBTRACT_TICKS(expiry_ticks, xTaskGetTickCount());
   retcode = xSemaphoreTake(monitor->owner_mutex, remaining == (x_sleep) remaining ? (x_sleep) remaining : 0);
   unsetFlag(current->flags, TF_TIMEOUT);
 
@@ -209,22 +200,22 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 ** Notify one thread waiting on a monitor
 */
 x_status x_monitor_notify(x_monitor monitor) {
-  if (monitor->n_waiting-- == 0) {
-    loempa(2, "Thread %p would notify one thread of monitor %p, but no thread is waiting\n", monitor, x_thread_current());
-
-    return xs_no_instance;
-  }
-
-  loempa(2, "Thread %p is notifying one thread of monitor %p\n", monitor, x_thread_current());
-  BaseType_t retcode = xSemaphoreGive(monitor->waiter_sem);
+  TaskHandle_t handle;
+  BaseType_t retcode = xQueueReceive(monitor->waiter_queue, &handle, 0);
   switch (retcode) {
     case pdPASS:
-      return xs_success;
-    case pdFAIL:
-      return xs_not_owner;
+      break;
+    case errQUEUE_EMPTY:
+      loempa(2, "Thread %p would notify one thread of monitor %p, but no thread is waiting\n", monitor, x_thread_current());
+      return xs_no_instance;
+
     default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGive() failed with return code", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_notify: xQueueReceive() failed with return code", retcode);
   }
+  loempa(2, "Thread %p is notifying a thread of monitor %p\n", monitor, x_thread_current());
+  xTaskNotifyGive(handle);
+
+  return xs_success;
 }
 
 /*
@@ -232,8 +223,8 @@ x_status x_monitor_notify(x_monitor monitor) {
 */
 x_status x_monitor_notify_all(x_monitor monitor) {
   
-  while (monitor->n_waiting) {
-    loempa(2, "notiying 1 thread of %d\n", monitor->n_waiting);
+  while (uxQueueMessagesWaiting(monitor->waiter_queue)) {
+    loempa(2, "notifying 1 thread of %d\n", uxQueueMessagesWaiting(monitor->waiter_queue));
     x_status status = x_monitor_notify(monitor);
     if (status != xs_success && status != xs_no_instance) {
       return status;
@@ -254,6 +245,7 @@ x_status x_monitor_exit(x_monitor monitor) {
     return xs_not_owner;
   }
 
+  xTaskNotifyStateClear(current->handle);
   monitor->count -= 1;
   if (monitor->count == 0) {
     monitor->owner = NULL;
@@ -280,16 +272,8 @@ x_status x_monitor_stop_waiting(x_monitor monitor, x_thread thread) {
   if (thread->waiting_on && thread->waiting_on == monitor) {
     loempa(2, "Thread %p will stop thread %p from waiting on monitor %p\n", x_thread_current(), thread, monitor);
 
-    BaseType_t retcode = xTaskNotify(thread->handle, 0, eNoAction);
-    monitor->n_waiting--;
-    switch (retcode) {
-      case pdPASS: 
-        return xs_success;
-      case pdFAIL:
-        return xs_no_instance;
-      default:
-        o4f_abort(O4F_ABORT_MONITOR, "x_monitor_stop_waiting: xTaskNotify() returned unknown code", retcode);
-    }
+    xTaskNotifyGive(thread->handle);
+    // TODO the task handle is still in the queue, one day it will get a spurious notification
   }
 
   return xs_no_instance;

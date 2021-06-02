@@ -88,9 +88,8 @@ typedef struct x_Monitor {
   volatile w_int    count;
   volatile int      magic;
   volatile x_thread owner;
-  volatile x_size   n_waiting;
+  QueueHandle_t     waiter_queue;
   QueueHandle_t     interrupted;
-  SemaphoreHandle_t waiter_sem;
 } x_Monitor;
 
 #define SR_NO_MESSAGE       1
