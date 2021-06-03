@@ -34,7 +34,10 @@
 # HOW TO RUN THE OSWALD TESTS
 
 First compile o4f (Oswald For FreeRTOS) as follows:
-```sw-open-mika$ make MATH=native PLATFORM=im4000 kernel ```
+```
+sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Demo/Imsys_Mika/` -DCMAKE_BUILD_TYPE=Debug ..
+sw-open-mika/build$ cmake --build .
+```
 
 Then build the Imsys_Mika Demo:
 ```sw-freertos/FreeRTOS/Demo/Imsys_Mika$ ./build.sh```
@@ -120,12 +123,3 @@ under the 'release' directory with the same name as your platform, e.g.
 pretty much like the Sun/Oracle one, for example calling 
 ```./release/pc/bin/mika -cp . HelloWord```
 causes HelloWorld.class to be executed . More info on mika's commandline can be found in doc/COMMAND_LINE.txt
-
-
-
- 
- 
-
- 
-   
-

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# NOTE: Actual script is executed in the build directory,
+# which should be sw-open-mika/build.
+
+# Absolute path to the toolchain
+export IMSYS_TOOLDIR=@IMSYS_CLANG_DIR@/bin
+
+# Absolute path to newlib include directory
+export NEWLIB_INCLUDE_DIR=@IMSYS_NEWLIB_INCLUDE_DIR@
+
+# Absolute path to system assembler include directory
+# (macros.s for phase1)
+export ISAL_SYSTEM_INCLUDE_DIR=@IMSYS_ISAL_SYSTEM_INCLUDE_DIR@
+
+# Absolute path to FreeRTOS standard kernel include directory
+export FREERTOS_KERNEL_INCLUDE_DIR=@IMSYS_FREERTOS_KERNEL_INCLUDE_DIR@
+
+# Absolute path to FreeRTOS port directory
+# (portmacro.h)
+export FREERTOS_PORT_INCLUDE_DIR=@IMSYS_FREERTOS_PORT_INCLUDE_DIR@
+
+# Absolute path to FreeRTOS application directory
+# (FreeRTOSConfig.h)
+export FREERTOS_APP_INCLUDE_DIR=@IMSYS_FREERTOS_APP_INCLUDE_DIR@
+
+# How to build: release, debug
+export BUILDMODE=@CMAKE_BUILD_TYPE@
+
+# ISAL feature phase to target. 0 means complete ISA.
+export ISALFEATURE=@IMSYS_ISAL_PHASE@
+
+################################################################################
+
+MAKEFLAGS="MATH=native PLATFORM=im4000"
+
+# Disable case-sensitive matching for the following string comparisons.
+SHELLNOCASEMATCH=$(shopt -p nocasematch; true)
+shopt -s nocasematch
+
+case $BUILDMODE in
+    "release") ;;
+    "debug") MAKEFLAGS+=" DEBUG=true";;
+    *) echo "UNKNOWN BUILDMODE"; exit -1;;
+esac
+
+case $ISALFEATURE in
+    0) ;;
+    1) ;;
+    *) echo "UNKNOWN ISALFEATURE"; exit -1;;
+esac
+
+# Restore original setting.
+$SHELLNOCASEMATCH
+
+pushd ..
+make ${MAKEFLAGS} kernel
+popd
