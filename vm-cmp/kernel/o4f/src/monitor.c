@@ -223,15 +223,19 @@ x_status x_monitor_notify(x_monitor monitor) {
 */
 x_status x_monitor_notify_all(x_monitor monitor) {
   
+  x_status status =  xs_success;
+  UBaseType_t old_priority = uxTaskPriorityGet(NULL);
+  vTaskPrioritySet(NULL, config_MAX_PRIORITIES - 1);
   while (uxQueueMessagesWaiting(monitor->waiter_queue)) {
     loempa(2, "notifying 1 thread of %d\n", uxQueueMessagesWaiting(monitor->waiter_queue));
-    x_status status = x_monitor_notify(monitor);
+    status = x_monitor_notify(monitor);
     if (status != xs_success && status != xs_no_instance) {
-      return status;
+      break;
     }
   }
+  vTaskPrioritySet(NULL, old_priority);
 
-  return xs_success;
+  return status;
 }
 
 /*
