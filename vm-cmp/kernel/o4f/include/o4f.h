@@ -59,6 +59,17 @@ extern int num_x_threads;
 #define S_FIFO  SCHED_FIFO
 #define S_OTHER SCHED_OTHER
 
+#define FAKE_MAX_TASK_PRIORITY
+
+#ifdef FAKE_MAX_TASK_PRIORITY
+#define MAX_TASK_PRIORITY 100
+#else
+#define MAX_TASK_PRIORITY (configMAX_PRIORITIES - 1)
+#endif
+
+#define ADD_TICKS(a,b) ((a) == x_eternal || (b) == x_eternal ? x_eternal : (a) + (b))
+#define SUBTRACT_TICKS(a,b) ((a) == x_eternal ? x_eternal : (a) - (b))
+
 /*
 ** The OSWALD default number of microseconds per timer interrupt. 
 */

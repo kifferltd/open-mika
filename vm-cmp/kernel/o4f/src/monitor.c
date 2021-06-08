@@ -30,17 +30,6 @@
 
 #define MONITOR_MAX_THREADS 100
 
-#define FAKE_MAX_TASK_PRIORITY
-
-#ifdef FAKE_MAX_TASK_PRIORITY
-#define MAX_TASK_PRIORITY 100
-#else
-#define MAX_TASK_PRIORITY (configMAX_PRIORITIES - 1)
-#endif
-
-#define ADD_TICKS(a,b) ((a) == x_eternal || (b) == x_eternal ? x_eternal : (a) + (b))
-#define SUBTRACT_TICKS(a,b) ((a) == x_eternal ? x_eternal : (a) - (b))
-
 /*
 ** Initialise a new monitor.
 */
