@@ -33,14 +33,11 @@
 
 # HOW TO RUN THE OSWALD TESTS
 
-First compile o4f (Oswald For FreeRTOS) as follows:
+Compile o4f (Oswald For FreeRTOS) as follows:
 ```
 sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Demo/Imsys_Mika/` -DCMAKE_BUILD_TYPE=Debug ..
 sw-open-mika/build$ cmake --build .
 ```
-
-Then build the Imsys_Mika Demo:
-```sw-freertos/FreeRTOS/Demo/Imsys_Mika$ ./build.sh```
 
 The test executables are created in the ```build/``` directory:
 ```sw-freertos/FreeRTOS/Demo/Imsys_Mika$ ls build
