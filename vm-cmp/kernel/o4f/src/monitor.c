@@ -30,6 +30,14 @@
 
 #define MONITOR_MAX_THREADS 100
 
+#define FAKE_MAX_TASK_PRIORITY
+
+#ifdef FAKE_MAX_TASK_PRIORITY
+#define MAX_TASK_PRIORITY 100
+#else
+#define MAX_TASK_PRIORITY (configMAX_PRIORITIES - 1)
+#endif
+
 #define ADD_TICKS(a,b) ((a) == x_eternal || (b) == x_eternal ? x_eternal : (a) + (b))
 #define SUBTRACT_TICKS(a,b) ((a) == x_eternal ? x_eternal : (a) - (b))
 
@@ -145,7 +153,7 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   monitor->owner = NULL;
   monitor->count = 0;
 
-  retcode = xQueueSendToBack(monitor->waiter_queue, current->handle, 0);
+  retcode = xQueueSendToBack(monitor->waiter_queue, &current->handle, 0);
   if (retcode != pdPASS) {
     // probably the queue is full
     return xs_no_instance;
@@ -225,7 +233,7 @@ x_status x_monitor_notify_all(x_monitor monitor) {
   
   x_status status =  xs_success;
   UBaseType_t old_priority = uxTaskPriorityGet(NULL);
-  vTaskPrioritySet(NULL, config_MAX_PRIORITIES - 1);
+  vTaskPrioritySet(NULL, MAX_TASK_PRIORITY);
   while (uxQueueMessagesWaiting(monitor->waiter_queue)) {
     loempa(2, "notifying 1 thread of %d\n", uxQueueMessagesWaiting(monitor->waiter_queue));
     status = x_monitor_notify(monitor);
