@@ -21,14 +21,23 @@ configure_file (${IMSYS_MIKA_SOURCE_DIR}/build-imsys.sh.in ${IMSYS_MIKA_BUILD_DI
 set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_SOURCE_DIR}/core-vm/include)
 set (IMSYS_MIKA_LIB_DIR ${IMSYS_MIKA_BUILD_DIR}/im4000/lib)
 set (IMSYS_MIKA_OSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
-set (IMSYS_MIKA_ALL_LIBS ${IMSYS_MIKA_OSWALD_FILE})
 
-add_custom_command ( OUTPUT ${IMSYS_MIKA_ALL_LIBS}
+# Dummy output which is never actually produced. Anything that depends on
+# this will always be rebuilt.
+add_custom_command(
+    OUTPUT always_rebuild
+    COMMAND cmake -E echo # as close to a no-op as cmake has
+    )
+
+add_custom_command ( OUTPUT
+                         ${IMSYS_MIKA_OSWALD_FILE}
                      COMMAND ${IMSYS_MIKA_BUILD_DIR}/build-imsys.sh
+                     DEPENDS always_rebuild # Always call the build script
 )
 
 add_custom_target (imsys-mika-build ALL
-    DEPENDS ${IMSYS_MIKA_ALL_LIBS}
+    DEPENDS
+        ${IMSYS_MIKA_OSWALD_FILE}
 )
 
 # Make variables and targets available in parent scope if exists
