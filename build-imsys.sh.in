@@ -38,12 +38,16 @@ MAKEFLAGS="MATH=native PLATFORM=im4000"
 SHELLNOCASEMATCH=$(shopt -p nocasematch; true)
 shopt -s nocasematch
 
+# FIXME: Can these different modes be controlled from here?
 case $BUILDMODE in
-    "release") ;;
     "debug") MAKEFLAGS+=" DEBUG=true";;
+    "minsizerel") ;;
+    "release") ;;
+    "relwithdebinfo") MAKEFLAGS+=" DEBUG=true";;
     *) echo "UNKNOWN BUILDMODE"; exit -1;;
 esac
 
+# NOTE: Feature-related flags are set in the platform file according to ISALFEATURE.
 case $ISALFEATURE in
     0) ;;
     1) ;;
