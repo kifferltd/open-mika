@@ -38,7 +38,7 @@
 #include "heap.h"
 #include "methods.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "driver_byteserial.h"
 #include "sio.h"
 

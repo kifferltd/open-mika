@@ -29,7 +29,7 @@
 #include "arrays.h"        // instance2Array_*
 #include "hashtable.h"     // ht_register
 #include "wstrings.h"      // cstring2String()
-#include "threads.h"       // currentWonkaThread
+#include "mika_threads.h"       // currentWonkaThread
 
 #include "awt-classes.h"
 #include "rudolph.h"       // defaultToolkit

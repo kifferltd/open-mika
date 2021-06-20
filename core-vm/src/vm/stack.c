@@ -46,7 +46,7 @@
 #include "wstrings.h"
 #include "locks.h"
 #include "heap.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 #include <assert.h>
 

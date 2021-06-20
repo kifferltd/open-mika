@@ -34,7 +34,7 @@
 #include "core-classes.h"
 #include "exec.h"
 #include "fields.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "exception.h"
 #include "arrays.h"
 #include "wstrings.h"

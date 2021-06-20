@@ -29,7 +29,7 @@
 
 #include "ts-mem.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "oswald.h"
 #include "loading.h"
 #include "awt-classes.h"

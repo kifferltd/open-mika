@@ -30,7 +30,7 @@
 #define _LOCKS_H
 
 #include "oswald.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
 ** initLocks is called during initialisation of Wonka.

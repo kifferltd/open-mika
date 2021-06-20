@@ -35,7 +35,7 @@
 #include "heap.h"
 #include "loading.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wstrings.h"
 
 #ifdef RESMON

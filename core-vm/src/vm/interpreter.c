@@ -64,7 +64,7 @@
 #include "methods.h"
 #include "opcodes.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "checks.h"
 #include "jdwp.h"
 #include "jdwp_events.h"

@@ -43,7 +43,7 @@
 #include "arrays.h"
 #include "interpreter.h"
 #include "checks.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "heap.h"
 #include "ts-mem.h"
 #include "reflection.h"

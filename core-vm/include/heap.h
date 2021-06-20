@@ -234,7 +234,7 @@ inline static volatile w_word* instance2flagsptr(w_instance instance) {
 
 #define instance2flags(ins) (*instance2flagsptr(ins))
 
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
 ** To set a reference field of an array, always use this function, which 

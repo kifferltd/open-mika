@@ -43,7 +43,7 @@
 #include "methods.h"
 #include "wmath.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "chars.h"
 
 /*

@@ -37,7 +37,7 @@
 #include "jni.h"
 #include "loading.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wordset.h"
 #include "fields.h"
 #include "methods.h"

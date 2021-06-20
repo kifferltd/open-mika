@@ -38,7 +38,7 @@
 #include "clazz.h"
 #include "descriptor.h"
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 
 char * print_field_short(char * buffer, int * remain, void * data, int w, int p, unsigned int f) {

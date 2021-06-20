@@ -34,7 +34,7 @@
 #define _TS_MEM_H
 
 #include "oswald.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 
 /*

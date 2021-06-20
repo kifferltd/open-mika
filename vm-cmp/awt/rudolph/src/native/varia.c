@@ -27,7 +27,7 @@
 ** $Id: varia.c,v 1.2 2005/06/14 09:46:04 cvs Exp $ 
 */
 
-#include "threads.h"    // currentWonkaThread
+#include "mika_threads.h"    // currentWonkaThread
 #include "wstrings.h"   // w_string
 
 #include "awt-classes.h"

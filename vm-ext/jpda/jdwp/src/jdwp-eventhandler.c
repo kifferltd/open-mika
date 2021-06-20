@@ -41,7 +41,7 @@
 #include "jdwp-protocol.h"
 #include "methods.h"
 #include "oswald.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 #include "wstrings.h"
 

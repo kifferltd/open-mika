@@ -35,7 +35,7 @@
 
 #include "awt-classes.h"  // F_Component_*, F_Graphics_*
 #include "fields.h"
-#include "threads.h"       // currentWonkaThread
+#include "mika_threads.h"       // currentWonkaThread
 #include "heap.h"
 #include "arrays.h"        // Array stuff
 

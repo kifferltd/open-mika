@@ -36,7 +36,7 @@
 #include "loading.h"
 #include "methods.h"
 #include "opcodes.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "ts-mem.h"
 #include "wonka.h"
 #include "wordset.h"

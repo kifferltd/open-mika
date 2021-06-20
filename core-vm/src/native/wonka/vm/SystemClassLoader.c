@@ -38,7 +38,7 @@
 #include "ts-mem.h"
 #include "oswald.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "jni.h"
 
 extern Wonka_InitArgs *system_vm_args;

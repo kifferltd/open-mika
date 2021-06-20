@@ -28,7 +28,7 @@
 
 #include "oswald.h"
 #include "rudolph.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 x_Monitor Tree_lock;
 x_monitor tree_lock;

@@ -28,7 +28,7 @@
 
 #include "wonka.h"
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 #include "vfs.h"
 #include "e2fs_prototypes.h"

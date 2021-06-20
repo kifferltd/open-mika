@@ -44,7 +44,7 @@
 #include "fastcall.h"
 #include "ts-mem.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "Math.h"
 
 static void copyChars(w_char * dst, w_char * src, w_size num) {

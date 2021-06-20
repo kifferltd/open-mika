@@ -39,7 +39,7 @@
 #include "heap.h"
 #include "loading.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "ts-mem.h"
 #include "descriptor.h"
 

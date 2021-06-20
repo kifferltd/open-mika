@@ -37,7 +37,7 @@
 
 #include "clazz.h"
 #include "core-classes.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wstrings.h"
 
 #ifdef UPTIME_LIMIT

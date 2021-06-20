@@ -70,7 +70,7 @@
 #include "methods.h"
 #include "descriptor.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
 ** Convert a pointer into the method code to a PC.

@@ -67,7 +67,7 @@ from the X Consortium.
 
 #include <unistd.h>
 #include <errno.h>
-#include "threads.h"      // currentWonkaThread
+#include "mika_threads.h"      // currentWonkaThread
 #include "ts-mem.h"       // allocMem(), releaseMem()
 #include "fontmisc.h"
 #include "bufio.h"

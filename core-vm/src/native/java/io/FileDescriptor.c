@@ -30,7 +30,7 @@
 **************************************************************************/
 
 #include "core-classes.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "vfs.h"
 #include "wonka.h"
 #include "wstrings.h"

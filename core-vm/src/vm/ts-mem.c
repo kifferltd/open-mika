@@ -37,7 +37,7 @@
 #include "hashtable.h"
 #endif
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "oswald.h"
 #include "exception.h"
 

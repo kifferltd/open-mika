@@ -34,7 +34,7 @@
 #include "clazz.h"
 #include "heap.h"
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wstrings.h"
 #include "arrays.h"
 #include "exception.h"

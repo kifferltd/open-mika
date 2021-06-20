@@ -49,7 +49,7 @@
 #include "methods.h"
 #include "misc.h"
 #include "opcodes.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wstrings.h"
 #include "calls.h"
 #include "fastcall.h"

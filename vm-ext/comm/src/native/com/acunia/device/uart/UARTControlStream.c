@@ -34,7 +34,7 @@
 #include "hashtable.h"
 #include "loading.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "arrays.h"
 #include "ts-mem.h"
 #include "driver_byteserial.h"

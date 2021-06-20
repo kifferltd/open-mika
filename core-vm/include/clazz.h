@@ -34,7 +34,7 @@
 #include "wonka.h"
 #include "hashtable.h"
 #include "oswald.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wordset.h"
 #ifdef JAVA5
 #include "annotations.h"

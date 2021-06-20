@@ -40,7 +40,7 @@
 #include "fields.h"
 #include "heap.h"
 #include "loading.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "methods.h"
 #include "wstrings.h"
 

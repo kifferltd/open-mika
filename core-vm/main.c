@@ -33,7 +33,7 @@
 #include "misc.h"
 #include "oswald.h"
 #include "network.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 #ifdef JAVAX_COMM
 #include "driver_byteserial.h"

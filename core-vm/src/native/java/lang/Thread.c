@@ -35,7 +35,7 @@
 #include "jdwp.h"
 #include "jdwp_events.h"
 #include "locks.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wstrings.h"
 
 #ifdef JDWP

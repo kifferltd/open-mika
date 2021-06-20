@@ -46,7 +46,7 @@
 #include "ts-mem.h"
 #include "oswald.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonkatime.h"
 
 w_long System_static_currentTimeMillis(JNIEnv *env, w_instance classSystem) {

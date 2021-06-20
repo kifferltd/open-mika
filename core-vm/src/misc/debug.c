@@ -39,7 +39,7 @@
 #include "loading.h"
 #include "methods.h"
 #include "oswald.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "ts-mem.h"
 #include "vfs.h"
 #include "vfs_fcntl.h"

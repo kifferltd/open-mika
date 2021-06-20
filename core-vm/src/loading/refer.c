@@ -39,7 +39,7 @@
 #include "loading.h"
 #include "methods.h"
 #include "reflection.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
 ** The ``referenced'' state is defined by Staerk, Schmid & Boerger as follows:

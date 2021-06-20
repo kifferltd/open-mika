@@ -38,7 +38,7 @@
 #include "ieee754.h"
 #include "ts-mem.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "descriptor.h"
 
 #define STRING_HASHTABLE_SIZE                         719

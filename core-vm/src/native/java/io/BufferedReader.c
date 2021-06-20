@@ -40,7 +40,7 @@
 #include "jni.h"
 #include "locks.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 static jclass   class_BufferedReader;
 static jmethodID updateBuffer_method;

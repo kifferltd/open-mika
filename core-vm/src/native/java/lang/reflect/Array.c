@@ -41,7 +41,7 @@
 #include "ts-mem.h"
 #include "reflection.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "exception.h"
 
 w_instance Array_static_get(JNIEnv *env, w_instance Class, w_instance Array, w_int idx) {

@@ -46,7 +46,7 @@
 #include "heap.h"
 #include "interpreter.h"
 #include "loading.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wmath.h"
 #include "wstrings.h"
 #include "checks.h"

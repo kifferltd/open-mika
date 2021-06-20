@@ -35,7 +35,7 @@
 #include "awt-classes.h"
 #include "arrays.h"
 #include "fields.h"
-//#include "threads.h"       // currentWonkaThread
+//#include "mika_threads.h"       // currentWonkaThread
 //#include "ts-mem.h"        // allocMem(), releaseMem()
 //#include "heap.h"
 

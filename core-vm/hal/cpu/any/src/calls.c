@@ -36,7 +36,7 @@
 #include "heap.h"
 #include "jni.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 
 typedef w_long (w_fun)(JNIEnv*, w_instance, ...);

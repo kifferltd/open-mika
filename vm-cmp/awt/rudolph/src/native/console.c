@@ -29,7 +29,7 @@
 
 #include "wstrings.h"
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "canvas.h"
 #include "console.h"
 #include "platform.h"

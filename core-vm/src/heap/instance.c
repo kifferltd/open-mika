@@ -43,7 +43,7 @@
 #include "list.h"
 #include "ts-mem.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wordset.h"
 
 extern w_hashtable lock_hashtable;

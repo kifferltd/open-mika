@@ -42,7 +42,7 @@ static x_sleep second;
 #endif
 
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
 ** The stack size for our memory tester threads.

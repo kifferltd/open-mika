@@ -75,7 +75,7 @@ in this Software without prior written authorization from the X Consortium.
  * decompress - cat a compressed file
  */
 
-#include "threads.h"      // currentWonkaThread
+#include "mika_threads.h"      // currentWonkaThread
 #include "ts-mem.h"       // allocMem(), releaseMem()
 #include "fontmisc.h"
 #include "bufio.h"

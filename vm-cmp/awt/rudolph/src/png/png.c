@@ -33,7 +33,7 @@
 #include <string.h>
 
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 #include "deflate_driver.h"
 #include "wpng.h"

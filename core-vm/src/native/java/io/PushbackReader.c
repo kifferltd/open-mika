@@ -36,7 +36,7 @@
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 static jclass   class_Reader;
 static jmethodID read_method;

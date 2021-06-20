@@ -59,7 +59,7 @@
 #include "clazz.h"
 #include "core-classes.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 #include "exception.h"
 

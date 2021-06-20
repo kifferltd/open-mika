@@ -32,7 +32,7 @@
 #include "constant.h"
 #include "exception.h"
 #include "loading.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 /*
  * If NO_FORMAT_CHECKS is defined, no code to check class file format will

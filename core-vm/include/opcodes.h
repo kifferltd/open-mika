@@ -33,7 +33,7 @@
 ** $Id: opcodes.h,v 1.6 2006/04/19 21:24:54 cvs Exp $
 */
 
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 
 #define nop				0x00

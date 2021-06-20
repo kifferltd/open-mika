@@ -30,7 +30,7 @@
 #include "core-classes.h"
 #include "wstrings.h"
 #include "wonka.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 w_instance
 Etc_getPlatform (JNIEnv *env, w_instance classEtc) {

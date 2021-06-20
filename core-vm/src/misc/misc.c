@@ -36,7 +36,7 @@
 
 #include "misc.h"
 #include "ts-mem.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 void dumpfile ( w_byte *filename, w_byte *data, w_size count)
 {

@@ -34,7 +34,7 @@
 #include "core-classes.h"
 #include "fields.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 
 w_instance SecurityManager_getClassContext(JNIEnv *env, w_instance thisSecurityManger) {
 

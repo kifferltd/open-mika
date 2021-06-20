@@ -36,7 +36,7 @@
 #include "heap.h"
 #include "ts-mem.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "driver_byteserial.h"
 
 /*

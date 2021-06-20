@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "threads.h"
+#include "mika_threads.h"
 #include "wonka.h"
 
 /**

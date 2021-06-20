@@ -37,7 +37,7 @@
 #include "arrays.h"
 #include "exception.h"
 #include "heap.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "network.h"
 
 w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){

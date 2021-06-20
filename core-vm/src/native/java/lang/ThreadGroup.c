@@ -40,7 +40,7 @@
 #include "loading.h"
 #include "methods.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "ts-mem.h"
 
 void

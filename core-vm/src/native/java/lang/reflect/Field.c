@@ -40,7 +40,7 @@
 #include "descriptor.h"
 #include "clazz.h"
 #include "arrays.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "heap.h"
 #include "ts-mem.h"
 #include "reflection.h"

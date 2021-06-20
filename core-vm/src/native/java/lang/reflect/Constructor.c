@@ -38,7 +38,7 @@
 #include "reflection.h"
 #include "wstrings.h"
 #include "methods.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "heap.h"
 #include "loading.h"
 #include "exception.h"

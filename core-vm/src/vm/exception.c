@@ -41,7 +41,7 @@
 #include "oswald.h"
 #include "Throwable.h"
 #include "wstrings.h"
-#include "threads.h"
+#include "mika_threads.h"
 #include "fields.h"
 #include "ts-mem.h"
 #include "methods.h"
