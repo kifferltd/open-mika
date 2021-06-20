@@ -376,9 +376,8 @@ void registerExternals(void) {
 ** start our initial threads.
 */
 
-w_ubyte* x_os_main(int argument_count, char ** arguments, w_ubyte* FirstUnusedMemory) {
+void x_os_main(int argument_count, char ** arguments) {
   initWonka();
-  return FirstUnusedMemory;
 }
 
 #ifndef O4P
