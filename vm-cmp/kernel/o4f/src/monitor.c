@@ -201,10 +201,8 @@ x_status x_monitor_notify(x_monitor monitor) {
   BaseType_t retcode = xQueueReceive(monitor->waiter_queue, &handle, 0);
   switch (retcode) {
     case pdPASS:
-      break;
     case errQUEUE_EMPTY:
-      loempa(2, "Thread %p would notify one thread of monitor %p, but no thread is waiting\n", monitor, x_thread_current());
-      return xs_no_instance;
+      break;
 
     default:
       o4f_abort(O4F_ABORT_MONITOR, "x_monitor_notify: xQueueReceive() failed with return code", retcode);
