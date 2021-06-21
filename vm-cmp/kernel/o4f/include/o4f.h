@@ -95,13 +95,18 @@ typedef struct x_Queue {
 } x_Queue;
 
 typedef struct x_Monitor {
-  SemaphoreHandle_t owner_mutex;
+  volatile x_size   magic;
   volatile w_int    count;
-  volatile int      magic;
   volatile x_thread owner;
+  SemaphoreHandle_t owner_mutex;
   QueueHandle_t     waiter_queue;
   QueueHandle_t     interrupted;
 } x_Monitor;
+
+typedef struct x_Mutex {
+  volatile x_size   magic;
+  SemaphoreHandle_t owner_mutex;
+} x_Mutex;
 
 #define SR_NO_MESSAGE       1
 #define SR_SUSPEND          2
