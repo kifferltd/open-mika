@@ -30,7 +30,7 @@
 export CPU_MIPS = 200
 export DEFAULT_HEAP_SIZE default = 16M
 export USE_NATIVE_MALLOC = true
-export USE_LIBFFI = true
+export USE_LIBFFI = false
 
 export AWT = none
 export FLOATING_POINT = hauser
