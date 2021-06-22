@@ -9,6 +9,12 @@ endif ()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE)
 
+if (NOT IMSYS_MIKA_REBUILD)
+    set (IMSYS_MIKA_REBUILD Always)
+endif ()
+
+string(TOUPPER "${IMSYS_MIKA_REBUILD}" IMSYS_MIKA_REBUILD)
+
 set (IMSYS_ISAL_PHASE 1 CACHE STRING "ISAL implementation phase")
 
 set (IMSYS_MIKA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -24,17 +30,27 @@ set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_SOURCE_DIR}/core-vm/include)
 set (IMSYS_MIKA_LIB_DIR ${IMSYS_MIKA_BUILD_DIR}/im4000/lib)
 set (IMSYS_MIKA_OSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
 
-# Dummy output which is never actually produced. Anything that depends on
-# this will always be rebuilt.
-add_custom_command(
-    OUTPUT always_rebuild
-    COMMAND cmake -E echo # as close to a no-op as cmake has
-    )
+if (${IMSYS_MIKA_REBUILD} STREQUAL ALWAYS)
+    # Dummy output which is never actually produced. Anything that depends on
+    # this will always be rebuilt.
+    add_custom_command(
+        OUTPUT always_rebuild
+        COMMAND cmake -E echo # as close to a no-op as cmake has
+        )
+    # Make the build script depend on this to always call it.
+    set (IMSYS_MIKA_BUILD_DEP always_rebuild)
+elseif (${IMSYS_MIKA_REBUILD} STREQUAL NEVER)
+    # Do not define dependency for the build script,
+    # it will be called only if at least one output library file is missing.
+    set (IMSYS_MIKA_BUILD_DEP "")
+else ()
+    message(SEND_ERROR "Unexpected rebuild mode (IMSYS_MIKA_REBUILD)")
+endif ()
 
 add_custom_command ( OUTPUT
                          ${IMSYS_MIKA_OSWALD_FILE}
                      COMMAND ${IMSYS_MIKA_BUILD_DIR}/build-imsys.sh
-                     DEPENDS always_rebuild # Always call the build script
+                     DEPENDS ${IMSYS_MIKA_BUILD_DEP}
 )
 
 add_custom_target (imsys-mika-build ALL
@@ -47,6 +63,8 @@ get_directory_property(hasParent PARENT_DIRECTORY)
 if (hasParent)
     set (IMSYS_MIKA_SOURCE_DIR ${IMSYS_MIKA_SOURCE_DIR} PARENT_SCOPE)
     set (IMSYS_MIKA_BUILD_DIR ${IMSYS_MIKA_BUILD_DIR} PARENT_SCOPE)
+
+    set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_INCLUDE_DIR} PARENT_SCOPE)
 
     add_library (imsys-mika-oswald STATIC IMPORTED GLOBAL)
     target_include_directories (imsys-mika-oswald INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})

@@ -35,13 +35,15 @@
 
 Compile o4f (Oswald For FreeRTOS) as follows:
 ```
-sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-freertos/FreeRTOS/Demo/Imsys_Mika/` -DCMAKE_BUILD_TYPE=Debug ..
+sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/portable/Imsys/ISAL` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/vendors/imsys/boards/embla/imsys` -DCMAKE_BUILD_TYPE=Debug ..
 sw-open-mika/build$ cmake --build .
 ```
 
+The CMake wrapper executes the build script every time by default, which can be avoided by defining `IMSYS_MIKA_REBUILD=Never`. The build script will be called in that case only when at least one generated Open-Mika library is missing.
+
 The test executables are created in the ```build/``` directory:
-```sw-freertos/FreeRTOS/Demo/Imsys_Mika$ ls build
-CMakeCache.txt  CMakeFiles  cmake_install.cmake  demo.elf  demo.gpx  Makefile```
+```sw-imsys-freertos/build/vendors/imsys/im4000/test/mika$ ls
+CMakeFiles  Makefile  cmake_install.cmake  demo.gpx  demo.out```
 
 # Open Mika Jvm
 
