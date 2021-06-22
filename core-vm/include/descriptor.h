@@ -1,5 +1,7 @@
 /**************************************************************************
 * Copyright (c) 2001, 2002 by Punch Telematix. All rights reserved.       *
+* Parts copyright (c) 2021 by Chris Gray, Kiffer Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -16,8 +18,8 @@
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
+* IN NO EVENT SHALL PUNCH TELEMATIX, KIFFER LTD, OR OTHER CONTRIBUTORS    *
+* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR  *
 * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
 * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
 * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
@@ -35,6 +37,7 @@
 extern const char primitive2char[];
 extern const char *primitive2name[];
 extern w_clazz primitive2clazz[];
+extern w_instance primitive2classInstance[];
 extern const unsigned char primitive2bits[];
 extern const unsigned char primitive2words[];
 extern w_clazz primitive2wrapper[];
