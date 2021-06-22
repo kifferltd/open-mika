@@ -163,7 +163,7 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
       case 'J':
         temp_string = unicode2String(&desc_chars[*start - dims - 1], dims + 1);
         if (!temp_string) {
-          wabort(ABORT_WONKA, "Unable to create temp_string\n");
+          wabort(ABORT_WONKA, "Unable to create %s\n", "temp_string");
         }
         result = identifyClazz(temp_string, NULL);
         break;
@@ -183,12 +183,12 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
         }
         desc_string = unicode2String(&desc_chars[*start - dims - 1], k - *start + dims + 2);
         if (!desc_string) {
-          wabort(ABORT_WONKA, "Unable to create desc_string\n");
+          wabort(ABORT_WONKA, "Unable to create %s\n", "desc_string");
         }
         *start = k + 1;
         temp_string = slashes2dots(desc_string);
         if (!temp_string) {
-          wabort(ABORT_WONKA, "Unable to dotify desc\n");
+          wabort(ABORT_WONKA, "Unable to dotify %s\n", "desc");
         }
         result = identifyClazz(temp_string, loader);
         deregisterString(desc_string);
@@ -197,7 +197,7 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
       default:
         temp_string = unicode2String(&desc_chars[*start - dims - 1], dims + 1);
         if (!temp_string) {
-          wabort(ABORT_WONKA, "Unable to create temp_string\n");
+          wabort(ABORT_WONKA, "Unable to create %s\n", "temp_string");
         }
 
         return NULL;
@@ -259,11 +259,11 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
 
         temp_string = unicode2String(&desc_chars[*start], k - *start);
         if (!temp_string) {
-          wabort(ABORT_WONKA, "Unable to create temp_string\n");
+          wabort(ABORT_WONKA, "Unable to create %s\n", "temp_string");
         }
         dotified = slashes2dots(temp_string);
         if (!dotified) {
-          wabort(ABORT_WONKA, "Unable to dotify desc\n");
+          wabort(ABORT_WONKA, "Unable to dotify %s\n", "desc");
         }
         result = identifyClazz(dotified, loader);
         deregisterString(dotified);
@@ -292,40 +292,40 @@ w_string clazz2desc(w_clazz clazz) {
   woempa(1, "Class %k\n", clazz);
   if (isSet(clazz->flags, CLAZZ_IS_PRIMITIVE)) {
     if (clazz == clazz_boolean) {
-      woempa(1, "Descriptor is 'Z'\n");
+      woempa(1, "Descriptor is '%c'\n", 'Z');
       return cstring2String("Z", 1);
     }
     else if (clazz == clazz_char) {
-      woempa(1, "Descriptor is 'C'\n");
+      woempa(1, "Descriptor is '%c'\n", 'C');
       return cstring2String("C", 1);
     }
     else if (clazz == clazz_float) {
-      woempa(1, "Descriptor is 'F'\n");
+      woempa(1, "Descriptor is '%c'\n", 'F');
       return cstring2String("F", 1);
     }
     else if (clazz == clazz_double) {
-      woempa(1, "Descriptor is 'D'\n");
+      woempa(1, "Descriptor is '%c'\n", 'D');
       return cstring2String("D", 1);
     }
     else if (clazz == clazz_byte) {
-      woempa(1, "Descriptor is 'B'\n");
+      woempa(1, "Descriptor is '%c'\n", 'B');
       return cstring2String("B", 1);
     }
     else if (clazz == clazz_short) {
-      woempa(1, "Descriptor is 'D'\n");
+      woempa(1, "Descriptor is '%c'\n", 'S');
       return cstring2String("S", 1);
     }
     else if (clazz == clazz_int) {
-      woempa(1, "Descriptor is 'I'\n");
+      woempa(1, "Descriptor is '%c'\n", 'I');
       return cstring2String("I", 1);
     }
     else if (clazz == clazz_long) {
-      woempa(1, "Descriptor is 'J'\n");
+      woempa(1, "Descriptor is '%c'\n", 'J');
       return cstring2String("J", 1);
     }
     else {
       woempa(1, "Descriptor is 'V'\n");
-      return cstring2String("V", 1);
+      woempa(1, "Descriptor is '%c'\n", 'V');
     }
   }
   else if (string_char(clazz->dotified, 0) == '[') {
@@ -341,7 +341,7 @@ w_string clazz2desc(w_clazz clazz) {
     w_string s;
 
     if (!buffer) {
-      wabort(ABORT_WONKA, "Unable to allocate buffer\n");
+      wabort(ABORT_WONKA, "Unable to allocate %s\n", "buffer");
     }
     buffer[0] = 'L';
     for (i = 0; i < l; ++i) {
@@ -351,7 +351,7 @@ w_string clazz2desc(w_clazz clazz) {
     buffer[i + 1] = ';';
     s = unicode2String(buffer, l + 2);
     if (!s) {
-      wabort(ABORT_WONKA, "Unable to create s\n");
+      wabort(ABORT_WONKA, "Unable to create %s\n", "s");
     }
     releaseMem(buffer);
 
