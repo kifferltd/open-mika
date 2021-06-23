@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -35,7 +35,7 @@
 #include "exception.h"
 #include "fastcall.h"
 #include "loading.h"
-#include "Math.h"
+#include "mikaMath.h"
 #include "descriptor.h"
 #include "fields.h"
 #include "heap.h"
