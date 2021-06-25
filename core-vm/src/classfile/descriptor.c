@@ -139,16 +139,15 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
   w_size   dims = 0;
   w_size   k;
 
-    desc_chars = alloca(string_length(descriptor) * sizeof(w_char));
+    desc_chars = allocMem(string_length(descriptor) * sizeof(w_char));
     w_string2chars(descriptor, desc_chars);
     dims = 0;
     while (string_char(descriptor, *start) == '[') {
       ++dims;
       ++*start;
       if (*start >= end) {
-
-        return NULL;
-
+        woempa(9, "descriptor %w ends with '[' !\n", descriptor);
+        break;
       }
     }
     if (dims) {
@@ -177,9 +176,8 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
           ++k;
         }
         if (k == end) {
-
-          return NULL;
-
+          woempa(9, "descriptor %w lacks final ';' !\n", descriptor);
+          break;
         }
         desc_string = unicode2String(&desc_chars[*start - dims - 1], k - *start + dims + 2);
         if (!desc_string) {
@@ -195,13 +193,7 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
         break;
   
       default:
-        temp_string = unicode2String(&desc_chars[*start - dims - 1], dims + 1);
-        if (!temp_string) {
-          wabort(ABORT_WONKA, "Unable to create %s\n", "temp_string");
-        }
-
-        return NULL;
-
+        woempa(9, "Illegal char %c\n", string_char(descriptor, *start-1));
       }
       deregisterString(temp_string);
     }
@@ -252,9 +244,8 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
           ++k;
         }
         if (k == end) {
-
-          return NULL;
-
+          woempa(9, "descriptor %w lacks final ';' !\n", descriptor);
+          break;
         }
 
         temp_string = unicode2String(&desc_chars[*start], k - *start);
@@ -273,11 +264,9 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
 
       default:
         woempa(9, "Illegal char %c\n", string_char(descriptor, *start-1));
-
-        return NULL;
-
       }
     }
+    releaseMem(desc_chars);
 
   if (result && getClazzState(result) == CLAZZ_STATE_UNLOADED) {
     result = registerUnloadedClazz(result);
