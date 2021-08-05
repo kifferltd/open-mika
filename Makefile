@@ -68,6 +68,8 @@ export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 ifeq ($(HOSTOS), freertos)
   CFLAGS += -I $(IMSYS_NEWLIB_INCLUDE_DIR) -I $(IMSYS_FREERTOS_KERNEL_INCLUDE_DIR) -I $(IMSYS_FREERTOS_APP_INCLUDE_DIR) -I $(IMSYS_ISAL_SYSTEM_INCLUDE_DIR) -I $(IMSYS_FREERTOS_PORT_INCLUDE_DIR)
+# HACK
+  CFLAGS += -I /home/chris/imsys-phabricator/sw-imsys-freertos/vendors/imsys/im4000/test/mika-2-hello-world
 endif
 
 ifeq "$(AWT)" "rudolph"
@@ -148,6 +150,10 @@ CFLAGS += -DVERSION_STRING=\"$(VERSION_STRING)\"
 
 ifeq ($(JAVA5_SUPPORT), true)
   CFLAGS += -DJAVA5
+endif
+
+ifeq ($(JNI), true)
+  CFLAGS += -DJNI
 endif
 
 ifeq ($(JDWP), true)
@@ -596,6 +602,7 @@ objdirlist += $(objdir)/network/$(NETWORK)
 
 export CFLAGS
 export LDFLAGS
+export JNI
 
 .PHONY : mika core-vm echo builddir install clean test common-test scheduler-test
 

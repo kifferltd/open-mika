@@ -58,5 +58,5 @@ esac
 $SHELLNOCASEMATCH
 
 pushd ..
-make ${MAKEFLAGS} kernel
+make ${MAKEFLAGS} mika
 popd
