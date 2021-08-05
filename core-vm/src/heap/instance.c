@@ -461,13 +461,17 @@ void newGlobalReference(w_instance instance) {
 
   found =
 #endif
+#ifdef JNI
     (w_instance) ht_register(globals_hashtable, (w_word)instance);
   woempa(1, "%s global reference to instance %p.\n", found ? "further" : "new", instance);
+#endif
 
 }
 
 void deleteGlobalReference(w_instance instance) {
+#ifdef JNI
   ht_deregister(globals_hashtable, (w_word)instance);
+#endif
 }
 
 #define MIN_MIN_HEAP_FREE (256 * 1024)

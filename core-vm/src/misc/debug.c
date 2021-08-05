@@ -481,7 +481,8 @@ void w_dump_locks(void) {
   x_dump_monitor("  Lock hashtable monitor : ", &lock_hashtable->monitor);
   x_dump_monitor("String hashtable monitor : ", &string_hashtable->monitor);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);
-  x_dump_monitor("          Memory monitor : ", memory_monitor);
+// FIXME - freertos port does not use a monitor for this
+//  x_dump_monitor("          Memory monitor : ", memory_monitor);
   x_dump_monitor("              GC monitor : ", gc_monitor);
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
   x_dump_monitor("            AWT treelock : ", tree_lock);
@@ -641,7 +642,9 @@ void w_dump_meminfo(void) {
   w_dump("\n");
 }
 
+#ifdef JNI
 extern w_hashtable globals_hashtable;
+#endif
 
 void w_dump_info() {
   w_dump("\n");
@@ -653,7 +656,9 @@ void w_dump_info() {
 #ifdef DUMP_CLASSLOADERS
   w_dump_classloaders();
 #endif
+#ifdef JNI
   w_dump(" Global References: %d\n\n",globals_hashtable->occupancy);
+#endif
   w_dump_meminfo();
 #ifdef ENABLE_THREAD_RECYCLING
   w_dump(" Number of native threads in pool: %d\n\n", occupancyOfFifo(xthread_fifo));

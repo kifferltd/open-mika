@@ -1708,6 +1708,7 @@ w_int markPhase(void) {
   w_int      retcode;
   w_int      marked = 0;
 
+#ifdef JNI
   woempa(7, "(GC) Marking globals hashtable.\n");
   temp_fifo = ht_list_keys(globals_hashtable);
   if (!temp_fifo) {
@@ -1726,6 +1727,7 @@ w_int markPhase(void) {
     marked += retcode;
   }
   releaseFifo(temp_fifo);
+#endif
 
   woempa(7, "(GC) Marking thread hashtable.\n");
   ht_iterate(thread_hashtable, thread_iteration, NULL, NULL);
