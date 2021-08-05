@@ -163,6 +163,14 @@ x_status x_queue_send(x_queue queue, void *src_msg, x_sleep waittime);
 x_status x_queue_flush(x_queue queue, void(*do_this)(void *data));
 
 /*
+** x_mutex_... primitives.
+*/
+x_status x_mutex_create(x_mutex mutex);
+x_status x_mutex_delete(x_mutex mutex);
+x_status x_mutex_lock(x_mutex mutex, x_sleep timeout);
+x_status x_mutex_unlock(x_mutex mutex);
+
+/*
 ** x_thread_... primitives.
 */
 
@@ -225,6 +233,12 @@ void *_x_mem_realloc(void *old, x_size size);
 #define x_mem_realloc(old,bytes) _x_mem_realloc((old), (bytes))
 #endif
 void x_mem_free(void*);
+x_status x_mem_lock(x_sleep timeout);
+x_status x_mem_unlock();
+
+// only exposed so that dump.c can say who owns it - do not use directly
+// TODO create a function to get the owner as an x_thread
+SemaphoreHandle_t memoryMutex;
 
 /*
 ** Unconditionally walk all blocks in memory, calling a callback on each one.
