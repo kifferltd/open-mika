@@ -401,7 +401,7 @@ char * print_string(char * buffer, int * remain, void * s, w_int width, w_int pr
 /*
 ** Mutex required for mutual exclusion to the string pool.
 */
-x_mutex string_mutex;
+//x_mutex string_mutex;
 
 #endif /* _WSTRINGS_H */
 

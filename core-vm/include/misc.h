@@ -43,6 +43,8 @@ void *loadModule(char *, char *);
 void unloadModule(void*);
 void *lookupModuleSymbol(char *);
 //extern char *loading_problem;
+void init_extensions(void);
+
 
 #if defined(LINUX) || defined(NETBSD)
 #ifndef __uClinux__

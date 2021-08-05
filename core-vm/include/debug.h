@@ -167,4 +167,9 @@ void w_printf(const char *format, ...);
 #define DUMP_CLASSES
 #define DUMP_CLASSLOADERS
 
+extern char *woempa_dump_file;
+extern int woempa_stderr;
+extern int woempa_bytecodecount;
+extern int woempa_bytecodetrigger;
+
 #endif /* _DEBUG_H */

@@ -165,11 +165,6 @@ w_clazz loadNonBootstrapClass(w_instance classLoader, w_string name);
 void startLoading(void);
 
 /*
-** Name of the zipfile which contains the bootstrap classes, as a C string.
-*/
-char     *zipname;
-
-/*
 ** Set the system class loader to 'scl'.  From this point on classes on
 ** the bootstrap class path will be loaded by scl, not by loadBootstrapClass.
 */
