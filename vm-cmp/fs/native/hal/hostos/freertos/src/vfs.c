@@ -31,3 +31,20 @@
 char *current_working_dir;
 char *current_root_dir;
 
+void init_vfs(void) {
+  #ifdef FS_NON_BLOCKING
+    woempa(9, "init_vfs  -> Using native filesystem (NON-BLOCKING)\n"); 
+  #else
+    woempa(9, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
+  #endif
+  cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
+  current_working_dir = getcwd(cwdbuffer, MAX_CWD_SIZE);
+  if (!current_working_dir) {
+    woempa(9, "getcwd returned NULL, errono = %d\n", errno);
+  }
+  current_working_dir = reallocMem(cwdbuffer, strlen(cwdbuffer) + 1);
+  current_root_dir = fsroot;
+  woempa(9, "current dir  : %s\n", current_working_dir);
+  woempa(9, "current root : %s\n", current_root_dir);
+}
+
