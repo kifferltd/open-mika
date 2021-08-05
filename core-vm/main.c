@@ -467,6 +467,7 @@ int main(int argc, char * argv[]) {
   x_oswald_init(max_heap_size, tick_millis);
   // Hm. We get here for O4P, but not for OSwald. This needs to change.
 
+#ifdef O4P
 #ifdef USE_NANOSLEEP
   ts.tv_sec = 1;
   ts.tv_nsec = 0;
@@ -479,6 +480,7 @@ int main(int argc, char * argv[]) {
     usleep(1000000);
 #endif
   }
+#endif
 
   return 0;
 

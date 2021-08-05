@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,7 +27,10 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = chars.c checks.c dates.c dispatcher.c exception.c fields.c interpreter.c jni.c loading.c locks.c md5.c methods.c opcodes.c package.c reflection.c sha.c stack.c strings.c threads.c ts-mem.c warrays.c wonky.c zipfiles.c
+sources = chars.c checks.c dates.c dispatcher.c exception.c fields.c interpreter.c loading.c locks.c md5.c methods.c opcodes.c package.c reflection.c sha.c stack.c strings.c threads.c ts-mem.c warrays.c wonky.c zipfiles.c
+ifeq ($(JNI), true)
+sources += jni.c
+endif
 
 # TODO core-classes.in !!!
 # TODO UnicodeData-Latest.txt -> Library $(UNICODE_LIB) : $(OROOT)/mika/bin/unicode.c ;

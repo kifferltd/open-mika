@@ -1407,7 +1407,7 @@ w_boolean namedClassIsSystemClass(w_string name) {
   ch = (char*)name->contents.bytes;
   while (*ch == '[') ++ch;
 
-  woempa(1, "Length %d, prefix %c%c%c%c%c%c\n", string_length(name) - (ch - name->contents.bytes), ch[0], ch[1], ch[2], ch[3], ch[4], ch[5]);
+  woempa(1, "Length %d, prefix %c%c%c%c%c%c\n", string_length(name) - (ch - (char*)name->contents.bytes), ch[0], ch[1], ch[2], ch[3], ch[4], ch[5]);
   if (((int)string_length(name) > (ch - (char*)name->contents.bytes) + 5 && strncmp(ch, "java.", 5) == 0)
     ||
       ((int)string_length(name) > (ch - (char*)name->contents.bytes) + 6 && strncmp(ch, "wonka.", 6) == 0)

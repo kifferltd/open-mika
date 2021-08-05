@@ -32,8 +32,10 @@
 #include "core-classes.h"
 #include "debug.h"
 #include "exception.h"
+#ifdef JDWP
 #include "jdwp.h"
 #include "jdwp_events.h"
+#endif
 #include "locks.h"
 #include "mika_threads.h"
 #include "wstrings.h"
@@ -108,9 +110,11 @@ static void threadEntry(void * athread) {
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
       w_printf("starting %t using kthread %p\n", thread, kthread);
     }
+#ifdef JDWP
     if(jpda_hooks) {
       jdwp_event_thread_start(thread);
     }
+#endif
     oldthread = (w_thread)ht_write(thread_hashtable, (w_word)kthread, (w_word)thread);
 
 #ifdef RUNTIME_CHECKS
@@ -479,9 +483,11 @@ void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable) {
 
   throwExceptionInstance(thread, Throwable);
 
+#ifdef JDWP
   if(jpda_hooks) {
     jdwp_event_thread_end(thread);
   }
+#endif
   
   x_thread_wakeup(thread->kthread);
   if (threadState(thread) == wt_waiting) {

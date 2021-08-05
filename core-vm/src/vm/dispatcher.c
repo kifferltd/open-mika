@@ -57,6 +57,7 @@
 extern w_hashtable lock_hashtable;
 extern w_clazz clazzLinkageError;
 
+#ifdef JNI
 static char *mangleName(w_word start, w_word stop, w_string source, char *destination) {
 
   char *iter = destination;
@@ -179,6 +180,7 @@ void searchNativeMethod(w_method method) {
   releaseMem(jni_short);
   releaseMem(jni_long);
 }
+#endif
 
 void initialize_dispatcher(w_frame caller, w_method method) {
 
@@ -742,8 +744,10 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   w_int i;
 
   if (method->exec.function.void_fun == NULL) {
+#ifdef JNI
     woempa(9, "Oh deary me: method %M has no code -> Trying to look it up\n", method);
     searchNativeMethod(method);
+#endif
     if (method->exec.function.void_fun == NULL) {
       woempa(9, "Oh deary me: method %M has no code...\n", method);
       throwException(caller->thread, clazzLinkageError, "native method %M has no code...\n", method);

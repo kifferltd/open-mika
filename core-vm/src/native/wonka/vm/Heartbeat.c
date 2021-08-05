@@ -1,7 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2002, 2003 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2005, 2008 by Chris Gray, /k/ Embedded Java         *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,28 +9,31 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
- 
+
+// TODO - use a HAL to abstract over OS
+
+#ifndef FREERTOS
 #ifdef USE_NANOSLEEP
 #include <time.h>
 #else
 #include <sys/time.h>
+#endif
 #endif
 
 #include "clazz.h"
@@ -56,6 +57,10 @@ static w_thread *chain;
 static w_int chain_length;
 static w_thread *checked;
 static w_int checked_length;
+
+static w_long system_time_offset;
+static w_boolean collecting;
+static w_boolean inited;
 
 #ifdef ACADEMIC_LICENCE
 #include <stdio.h>
@@ -262,16 +267,19 @@ w_void Heartbeat_setThread(JNIEnv *env, w_instance thisObject, w_instance thread
   heartbeat_thread = ((w_thread)getWotsitField(thread, F_Thread_wotsit))->kthread;
 }
 
+#ifdef FREERTOS
+
+void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+  x_thread_sleep(x_millis2ticks(millis));
+}
+
+#else
+
 #ifdef USE_NANOSLEEP
 static struct timespec ts;
 #endif
 static struct timeval before;
 static struct timeval now;
-static w_boolean collecting;
-static w_boolean inited;
-
-// Volatile 'coz gcc might screw up otherwise
-volatile w_long system_time_offset;
 
 void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
   long micros = millis * 1000;
@@ -304,6 +312,8 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
     }
   }
 }
+
+#endif
 
 void Heartbeat_static_collectTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
   collecting = TRUE;

@@ -290,7 +290,7 @@ w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathStri
   w_thread   thread = JNIEnv2w_thread(env);
   w_string   libpath = NULL;
   w_ubyte *  path = NULL;
-  void *     handle;
+  void *     handle = NULL;
   w_int      i;
   
   if(libpathString) {
@@ -303,6 +303,7 @@ w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathStri
     x_snprintf(path, i, "%w", libpath);
   }
 
+#ifdef JNI
   woempa(7, "Calling loadModule ...\n");
   handle = loadModule(NULL, path);
   if (handle) {
@@ -315,6 +316,7 @@ w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathStri
     }
     throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: path = '%w' dlerror = %s", libpath, loading_problem);
   }
+#endif
 
   if(path) releaseMem(path);
 
@@ -335,7 +337,7 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
   w_string   libpath = NULL;
   w_ubyte *  name = NULL;
   w_ubyte *  path = NULL;
-  void *     handle;
+  void *     handle = NULL;
   w_int      i;
   
   if(libnameString) {
@@ -358,6 +360,7 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
     x_snprintf(path, i, "%w", libpath);
   }
 
+#ifdef JNI
   woempa(7, "Calling loadModule ...\n");
   handle = loadModule(name, path);
   if (handle) {
@@ -370,6 +373,7 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
     }
     throwException(thread, clazzUnsatisfiedLinkError, "Error when loading library: name = '%w', path = '%w' dlerror = %s", libname, libpath, loading_problem);
   }
+#endif
 
   if(name) releaseMem(name);
   if(path) releaseMem(path);

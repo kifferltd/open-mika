@@ -47,13 +47,21 @@ endif
 ifeq ($(HOSTOS), freertos)
   CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/freertos/include
   CFLAGS += -nostdlib
+  CFLAGS += -DFREERTOS
 else
   CFLAGS += -lpthread
 endif
 
 CFLAGS += -I $(gendir)
-CFLAGS += -L $(libdir)
-LDFLAGS += -lmika -loswald -lawt
+ifeq ($(HOSTOS), freertos)
+# to be honest these are really more about clang linker than freertos
+  LDFLAGS += $(libdir)/libmika.a $(libdir)/liboswald.a $(libdir)/libawt.a
+  LDFLAGS += -fuse-ld=lld 
+  LDFLAGS += -ferror-limit=0
+else
+  CFLAGS += -L $(libdir)
+  LDFLAGS += -lmika -loswald -lawt
+endif
 
 # 
 # Add the dl library if we want to be able to load shared libraries.
@@ -103,7 +111,9 @@ endif
 .PHONY : awt filesystem network fp jpda math security core-vm generated
 
 mika : main.o $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
-	$(CC) -o mika main.o $(CFLAGS) $(LDFLAGS)
+	@echo "LDFLAGS = $(LDFLAGS)"
+	$(CC) -o mika main.o $(LDFLAGS)
+# WAS:	$(CC) -o mika main.o $(CFLAGS) $(LDFLAGS)
 
 main.o : main.c
 

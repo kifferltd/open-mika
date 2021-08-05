@@ -2250,7 +2250,6 @@ w_field getField(w_clazz clazz, w_string name) {
 ** as after the bootstrap phase every clazz gets a Class instance attached
 ** as soon as it is created.
 */
-#ifdef RUNTIME_CHECKS
 w_instance clazz2Class(w_clazz clazz) {
   w_instance Class;
 
@@ -2265,7 +2264,6 @@ w_instance clazz2Class(w_clazz clazz) {
 
   return Class;
 }
-#endif
 
 /*
 ** Get a copy of a reference field of a class

@@ -63,8 +63,10 @@
 #include "wstrings.h"
 #include "mika_threads.h"
 #include "checks.h"
+#ifdef JDWP
 #include "jdwp.h"
 #include "jdwp_events.h"
+#endif
 
 /*
 ** If CACHE_TOS is defined, we carry forward the top element of the stack in a

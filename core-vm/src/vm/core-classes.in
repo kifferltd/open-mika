@@ -629,10 +629,11 @@ wonka/vm/Etc
 	setAllTriggerLevel (I)V			Etc_static_setAllTriggerLevel
         woempa		(ILjava/lang/String;)V	Etc_static_woempa
         heapCheck       ()V			Etc_static_heapCheck
-wonka/vm/NativeThread
-wonka/vm/NativeLibrary
-	handle		I
-	finalize	()V			NativeLibrary_finalize
+# TODO turn these off if JNI is not enabled
+# wonka/vm/NativeThread
+# wonka/vm/NativeLibrary
+# 	handle		I
+# 	finalize	()V			NativeLibrary_finalize
 wonka/vm/SystemClassLoader
   getBootclasspath	()Ljava/lang/String;	SystemClassLoader_getBootclasspath
   setSystemClassLoader	(Lwonka/vm/SystemClassLoader;)V	 SystemClassLoader_setSystemClassLoader
@@ -785,29 +786,31 @@ java/io/RandomAccessFile
         length                  ()J                     RandomAccessFile_length
         setLength               (J)V                    RandomAccessFile_setLength
         close                   ()V                     RandomAccessFile_close
-wonka/vm/ProcessInfo
-  wotsit	+
-  id		I
-  destroyed	Z
-  cleanUp	()V		ProcessInfo_cleanUp
-  destroy	()V		ProcessInfo_destroy
-  nativeReturnValue (I)V	ProcessInfo_setReturnValue
-wonka/vm/ProcessMonitor
-  returnvalue	I
-  nativeExec    ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Lwonka/vm/ProcessInfo;  NativeProcess_exec
-  waitForAllProcesses	()I	ProcessMonitor_WaitForAll
-wonka/vm/ProcessInputStream
-  info   	Lwonka/vm/ProcessInfo;
-  input      	Z
-  available    ()I    	ProcessInputStream_available
-  read         ()I    	ProcessInputStream_read
-  read         ([BII)I  ProcessInputStream_read_Array
-#  nativeClose  ()V	ProcessInputStream_close
-wonka/vm/ProcessOutputStream
-  info   	Lwonka/vm/ProcessInfo;
-  write        (I)V   	ProcessOutputStream_write
-  write        ([BII)V	ProcessOutputStream_write_Array
-  nativeClose  ()V	ProcessOutputStream_close
+# TODO turn these off if JNI is not enabled
+# wonka/vm/ProcessInfo
+#   wotsit	+
+#   id		I
+#   destroyed	Z
+#   cleanUp	()V		ProcessInfo_cleanUp
+#   destroy	()V		ProcessInfo_destroy
+#   nativeReturnValue (I)V	ProcessInfo_setReturnValue
+# wonka/vm/ProcessMonitor
+#   returnvalue	I
+#   nativeExec    ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Lwonka/vm/ProcessInfo;  NativeProcess_exec
+#   waitForAllProcesses	()I	ProcessMonitor_WaitForAll
+# TODO turn these off if JNI is not enabled
+# wonka/vm/ProcessInputStream
+#   info   	Lwonka/vm/ProcessInfo;
+#   input      	Z
+#   available    ()I    	ProcessInputStream_available
+#   read         ()I    	ProcessInputStream_read
+#   read         ([BII)I  ProcessInputStream_read_Array
+# #  nativeClose  ()V	ProcessInputStream_close
+# wonka/vm/ProcessOutputStream
+#   info   	Lwonka/vm/ProcessInfo;
+#   write        (I)V   	ProcessOutputStream_write
+#   write        ([BII)V	ProcessOutputStream_write_Array
+#   nativeClose  ()V	ProcessOutputStream_close
 java/lang/Package
 # only needed if JAR=java (i.e. Jarfile verification is enabled)
 # TODO: find a way not to load these if JAR=none
