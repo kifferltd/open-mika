@@ -35,8 +35,7 @@ CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Demo/Imsys_ISAL
 CFLAGS += -I ~/imsys-phabricator/sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL/
 CFLAGS += -I ~/imsys-phabricator/sw-isal-system/include
 
-# leave out dump.c, mutex.c, and queue.c for now
-sources = o4f.c debug.c mem.c monitor.c thread.c time.c
+sources = o4f.c debug.c dump.c mem.c monitor.c mutex.c queue.c thread.c time.c
 
 objects=$(patsubst %.c, $(kernobjdir)/%.o, $(sources))
 

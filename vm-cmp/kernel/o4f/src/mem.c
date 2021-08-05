@@ -37,9 +37,9 @@ x_size heap_remaining;
 x_size min_heap_bytes;
 x_size max_heap_bytes;
 
-static SemaphoreHandle_t memoryMutex;
+SemaphoreHandle_t memoryMutex;
 
-static inline x_status x_mem_lock(x_sleep timeout) {
+inline x_status x_mem_lock(x_sleep timeout) {
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
     switch(xSemaphoreTake(memoryMutex, timeout == x_eternal ? portMAX_DELAY : timeout)) {
       case pdPASS:  return xs_success;
@@ -49,7 +49,7 @@ static inline x_status x_mem_lock(x_sleep timeout) {
   }
 }
 
-static inline x_status x_mem_unlock() {
+inline x_status x_mem_unlock() {
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
     switch (xSemaphoreGive(memoryMutex)) {
       case pdPASS: return xs_success;

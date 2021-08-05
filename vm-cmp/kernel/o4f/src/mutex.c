@@ -60,7 +60,7 @@ x_status x_mutex_delete(x_mutex mutex) {
 
   vSemaphoreDelete(mutex->owner_mutex);
 
-  return x_success;
+  return xs_success;
 }
 
 /*
