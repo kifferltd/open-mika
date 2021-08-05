@@ -51,4 +51,9 @@ else
   $(error UNKNOWN ISALFEATURE)
 endif
 CFLAGS += -nostdlib -I$(NEWLIB_INCLUDE_DIR) -I$(ISAL_SYSTEM_INCLUDE_DIR) -I$(FREERTOS_KERNEL_INCLUDE_DIR) -I$(FREERTOS_PORT_INCLUDE_DIR) -I$(FREERTOS_APP_INCLUDE_DIR) -DSTORE_METHOD_DEBUG_INFO
-export JDWP = true
+# no JDWP for now
+export JDWP = false
+export JNI = false
+# no NETWORKING either
+export NETWORKING = none
+
