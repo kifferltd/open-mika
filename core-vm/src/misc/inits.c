@@ -37,6 +37,7 @@
 #include "exception.h"
 #include "fifo.h"
 #include "methods.h"
+#include "ts-mem.h"
 #include "driver_virtual.h"
 #include "file_driver.h"
 #include "deflate_driver.h"
@@ -84,8 +85,8 @@ void initWonka(void) {
 #endif
 
   initLocks();
-  initModules();
 #ifdef MODULES
+  initModules();
   x_symtab_kernel();
 #endif
 
@@ -300,6 +301,9 @@ void args_read(void) {
     fsroot = FSROOT;
   }
 
+// TODO this code is applicable to any OS in which Mika is launched as a process
+//      it is generally not applicable in an RTOS where Mika is "the application"
+#ifndef FREERTOS
   {
     char *new_fsroot;
     char *path = host_getCommandPath();
@@ -336,6 +340,7 @@ void args_read(void) {
     fsroot = new_fsroot;
     woempa(7, "fsroot is now '%s'\n", fsroot);
   }
+#endif
 
   if(jarfileCommand){
     command_line_argument_count += 1;
@@ -368,7 +373,6 @@ void args_read(void) {
 void startWonka(void* data) {
 
   JavaVM *vm;
-  JNIEnv *env;
 
 #ifdef O4P
   struct timespec ts;
@@ -428,8 +432,11 @@ void startWonka(void* data) {
 
   haveWonkaThreads = WONKA_TRUE;
 
+#ifdef JNI
+  JNIEnv *env;
   woempa(7, "Calling JNI_CreateJavaVM() ...\n");
   JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
+#endif
 
 #ifdef O4P
   // Don't return from here, 'coz the vm gets popped off the stack! (D'oh)

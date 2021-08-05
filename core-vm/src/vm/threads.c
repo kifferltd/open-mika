@@ -169,7 +169,9 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   }
 
   setUpRootFrame(newthread);
+#ifdef JNI
   newthread->natenv = &w_JNINativeInterface;
+#endif
   newthread->label = (char *)"thread";
   newthread->name = name;
   newthread->Thread = Thread;
@@ -266,7 +268,9 @@ const char *running_thread_report(x_thread x) {
 
 void initKernel() {
 
+#ifndef FREERTOS
   install_term_handler();
+#endif
   x_mutex_create(&idLock);
 
   x_thread_create(&ur_thread_x_Thread, 
@@ -290,7 +294,9 @@ void startInitialThreads(void* data) {
   w_instance arglist;
   w_int dims;
   w_int    i;
+#ifdef JNI
   JNIEnv  *env = w_thread2JNIEnv(W_Thread_sysInit);
+#endif
   jclass   class_Init;
   w_instance String;
   w_boolean unsafe;
@@ -363,6 +369,7 @@ void startInitialThreads(void* data) {
 */
   woempa(7, "Invoking main([Ljava.lang.String;) of %s ...\n", INIT_CLASS);
 
+#ifdef JNI
   method = (*env)->GetMethodID(env, class_ThreadGroup, "registerThread", "(Ljava/lang/Thread;)V");
   if (method==NULL) {
     wabort(ABORT_WONKA,"Uh oh: class java.lang.ThreadGroup doesn't have a method registerThread(java.lang.Thread).  Game over.\n");
@@ -394,6 +401,9 @@ void startInitialThreads(void* data) {
   if ((*env)->ExceptionCheck(env)) {
     (*env)->ExceptionDescribe(env);
   }
+#else
+// TODO launch Init.main() without using JNI!
+#endif
 
   setBooleanField(I_Thread_sysInit, F_Thread_stopped, TRUE);
   W_Thread_sysInit->top = & W_Thread_sysInit->rootFrame;
@@ -446,7 +456,9 @@ void startKernel() {
   }
 
   setUpRootFrame(W_Thread_sysInit);
+#ifdef JNI
   W_Thread_sysInit->natenv = &w_JNINativeInterface;
+#endif
   W_Thread_sysInit->label = (char*)"thread:sysInit";
   W_Thread_sysInit->name = string_sysThread;
   W_Thread_sysInit->state = wt_unstarted;
