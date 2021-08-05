@@ -44,9 +44,11 @@ static char ownhostname[256];
 w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_instance InetAddress) {
 
   w_boolean result = FALSE;
+#if NETWORKING == native
   w_instance addrCache;
   w_string name;
-  struct hostent * host = NULL;
+// TODO make a w_hostent
+// struct hostent * host = NULL;
   char * hostname;
   int af = 0;
 
@@ -97,6 +99,7 @@ w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_ins
   }
 */
   releaseMem(hostname);
+#endif
 
   return result;
 
@@ -108,12 +111,14 @@ w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_ins
 
 void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_instance Name) {
 
+#if NETWORKING == native
   w_thread thread = JNIEnv2w_thread(env);
   long ipnumber;
   w_string name = String2string(Name);
   w_string h_name = NULL;
   char * hostname = allocMem(string_length(name) + 1);
-  struct hostent * host = NULL;
+// TODO make a w_hostent
+//  struct hostent * host = NULL;
   int af = 0;
 
   if (!hostname) {
@@ -135,7 +140,6 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
   //w_printf("looking up %s (%d)\n", hostname, af);
   host = w_gethostbyname2(hostname, af);
   //w_printf("result = %p\n", host);
-*/
 
   if (! host) {
     woempa(9, "unable to find DNS name for '%s' due to %s", hostname,strerror(errno));
@@ -152,6 +156,7 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
 
   woempa(1, "displaying DNS information... name = %s (%p)\n", host->h_name, hostname);
   woempa(1, "displaying DNS information... length = %d (%p)\n", host->h_length, hostname);
+*/
 
   /*
   ** Creating and copying the hostname to private 'hostName' field of InetAddress Object
@@ -198,12 +203,14 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
   setIntegerField(InetAddress, F_InetAddress_address, ntohl(ipnumber));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
   //w_printf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
+#endif
 }
 
 w_instance InetAddress_getLocalName(JNIEnv *env, w_instance clazz) {
 
 //  static const w_size length = 255;
   w_instance Name = NULL;
+#if NETWORKING == native
 /* CG WAS:
   char * name = allocMem(W_Thread_system, length * sizeof(char));
 
@@ -219,7 +226,8 @@ w_instance InetAddress_getLocalName(JNIEnv *env, w_instance clazz) {
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
     Name = (*env)->NewStringUTF(env, ownhostname);
-  } 
+  }
+#endif 
 
   return Name;
 
