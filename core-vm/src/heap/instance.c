@@ -456,13 +456,10 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
 }
 
 void newGlobalReference(w_instance instance) {
-#ifdef DEBUG
+#ifdef JNI
   w_instance found;
 
-  found =
-#endif
-#ifdef JNI
-    (w_instance) ht_register(globals_hashtable, (w_word)instance);
+  found = (w_instance) ht_register(globals_hashtable, (w_word)instance);
   woempa(1, "%s global reference to instance %p.\n", found ? "further" : "new", instance);
 #endif
 
@@ -532,4 +529,3 @@ void reportInstanceStat(void) {
 }
 
 #endif
-

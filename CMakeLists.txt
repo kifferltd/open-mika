@@ -28,8 +28,9 @@ configure_file (${IMSYS_MIKA_SOURCE_DIR}/build-imsys.sh.in ${IMSYS_MIKA_BUILD_DI
 
 set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_SOURCE_DIR}/core-vm/include)
 set (IMSYS_MIKA_LIB_DIR ${IMSYS_MIKA_BUILD_DIR}/im4000/lib)
-set (IMSYS_MIKA_OSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
+set (IMSYS_MIKA_LIBOSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
 set (IMSYS_MIKA_LIBMIKA_FILE ${IMSYS_MIKA_LIB_DIR}/libmika.a)
+set (IMSYS_MIKA_LIBAWT_FILE ${IMSYS_MIKA_LIB_DIR}/libawt.a)
 
 if (${IMSYS_MIKA_REBUILD} STREQUAL ALWAYS)
     # Dummy output which is never actually produced. Anything that depends on
@@ -49,16 +50,18 @@ else ()
 endif ()
 
 add_custom_command ( OUTPUT
-                         ${IMSYS_MIKA_OSWALD_FILE}
+                         ${IMSYS_MIKA_LIBOSWALD_FILE}
                          ${IMSYS_MIKA_LIBMIKA_FILE}
+                         ${IMSYS_MIKA_LIBAWT_FILE}
                      COMMAND ${IMSYS_MIKA_BUILD_DIR}/build-imsys.sh
                      DEPENDS ${IMSYS_MIKA_BUILD_DEP}
 )
 
 add_custom_target (imsys-mika-build ALL
     DEPENDS
-        ${IMSYS_MIKA_OSWALD_FILE}
+        ${IMSYS_MIKA_LIBOSWALD_FILE}
         ${IMSYS_MIKA_LIBMIKA_FILE}
+        ${IMSYS_MIKA_LIBAWT_FILE}
 )
 
 # Make variables and targets available in parent scope if exists
@@ -69,22 +72,30 @@ if (hasParent)
 
     set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_INCLUDE_DIR} PARENT_SCOPE)
 
-    add_library (imsys-mika-oswald STATIC IMPORTED GLOBAL)
-    add_library (imsys-mika-libmika STATIC IMPORTED GLOBAL)
-    target_include_directories (imsys-mika-oswald INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
-    target_include_directories (imsys-mika-libmika INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
-    set_target_properties (imsys-mika-oswald
+    add_library (imsys-mika-liboswald STATIC IMPORTED GLOBAL)
+    target_include_directories (imsys-mika-liboswald INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
+    set_target_properties (imsys-mika-liboswald
         PROPERTIES
-        IMPORTED_LOCATION ${IMSYS_MIKA_OSWALD_FILE}
+        IMPORTED_LOCATION ${IMSYS_MIKA_LIBOSWALD_FILE}
     )
+    add_dependencies (imsys-mika-liboswald imsys-mika-build)
+
+    add_library (imsys-mika-libmika STATIC IMPORTED GLOBAL)
+    target_include_directories (imsys-mika-libmika INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
     set_target_properties (imsys-mika-libmika
         PROPERTIES
         IMPORTED_LOCATION ${IMSYS_MIKA_LIBMIKA_FILE}
     )
-    add_dependencies (imsys-mika-oswald imsys-mika-build)
     add_dependencies (imsys-mika-libmika imsys-mika-build)
 
-    set (imsys-mika imsys-mika-oswald PARENT_SCOPE)
-    set (imsys-mika imsys-mika-libmika PARENT_SCOPE)
+    add_library (imsys-mika-libawt STATIC IMPORTED GLOBAL)
+    target_include_directories (imsys-mika-libawt INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
+    set_target_properties (imsys-mika-libawt
+        PROPERTIES
+        IMPORTED_LOCATION ${IMSYS_MIKA_LIBAWT_FILE}
+    )
+    add_dependencies (imsys-mika-libawt imsys-mika-build)
+
+    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libawt PARENT_SCOPE)
 
 endif()

@@ -58,5 +58,5 @@ esac
 $SHELLNOCASEMATCH
 
 pushd ..
-make ${MAKEFLAGS} mika
+make ${MAKEFLAGS} libs
 popd

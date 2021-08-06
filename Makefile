@@ -66,11 +66,6 @@ export networkobjdir = $(objdir)/network/$(NETWORK)
 export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
-ifeq ($(HOSTOS), freertos)
-  CFLAGS += -I $(IMSYS_NEWLIB_INCLUDE_DIR) -I $(IMSYS_FREERTOS_KERNEL_INCLUDE_DIR) -I $(IMSYS_FREERTOS_APP_INCLUDE_DIR) -I $(IMSYS_ISAL_SYSTEM_INCLUDE_DIR) -I $(IMSYS_FREERTOS_PORT_INCLUDE_DIR)
-# HACK
-  CFLAGS += -I /home/chris/imsys-phabricator/sw-imsys-freertos/vendors/imsys/im4000/test/mika-2-hello-world
-endif
 
 ifeq "$(AWT)" "rudolph"
   include $(MIKA_TOP)/Configuration/awt/$(AWT_DEF).mk
@@ -608,6 +603,9 @@ export JNI
 
 mika : echo builddir kernel core-vm
 
+# FIXME: Targets not defined here
+libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
+
 kecho :
 	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"
 	@echo "CPU =" $(CPU)
@@ -705,5 +703,3 @@ common-test :
 #	make -C vm-cmp/math/$(MATH) test
 #	make -C vm-ext/comm test
 #	make -C max/src/native/mika/max test
-
-

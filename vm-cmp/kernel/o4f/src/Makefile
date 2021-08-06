@@ -30,10 +30,6 @@
 CFLAGS += -I $(MIKA_TOP)/core-vm/include
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
-CFLAGS += -I ~/imsys-phabricator/sw-freertos/FreeRTOS/Source/include
-CFLAGS += -I /home/chris/imsys-phabricator/sw-freertos/FreeRTOS/Demo/Imsys_ISAL
-CFLAGS += -I ~/imsys-phabricator/sw-freertos/FreeRTOS/Source/portable/Imsys/ISAL/
-CFLAGS += -I ~/imsys-phabricator/sw-isal-system/include
 
 sources = o4f.c debug.c dump.c mem.c monitor.c mutex.c queue.c thread.c time.c
 
@@ -42,7 +38,6 @@ objects=$(patsubst %.c, $(kernobjdir)/%.o, $(sources))
 CFLAGS += -I ../include -I ../hal/cpu/$(CPU)/include
 CFLAGS += -I ../hal/host/$(HOSTOS)/include
 CFLAGS += -I ../../common/include
-CFLAGS += -O0
 #CFLAGS += -loswald 
 
 .PHONY : mika
@@ -56,4 +51,3 @@ $(objects) : $(kernobjdir)/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-
