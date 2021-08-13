@@ -603,8 +603,7 @@ export JNI
 
 mika : echo builddir kernel core-vm
 
-# FIXME: Targets not defined here
-libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
+libs: kernel core-vm 
 
 kecho :
 	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"
@@ -621,6 +620,9 @@ echo : kecho
 	@echo "CFLAGS =" $(CFLAGS)
 	@echo "LDFLAGS =" $(LDFLAGS)
 	@echo "SHARED_OBJECTS =" $(SHARED_OBJECTS)
+	@echo "MIKA_LIB = " $(MIKA_LIB)
+	@echo "OSWALD_LIB = " $(OSWALD_LIB)
+	@echo "AWT_LIB = " $(AWT_LIB)
 
 builddir :
 	@echo "Creating " $(objdir)
@@ -660,7 +662,7 @@ ifeq ($(MIKA_MAX), true)
 	make -C max/src/native/mika/max 
 endif
 
-core-vm : comm max 
+core-vm : builddir comm max 
 	make -C core-vm 
 
 install : mika
