@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -38,9 +38,9 @@ void init_vfs(void) {
     woempa(9, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
   #endif
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
-  current_working_dir = getcwd(cwdbuffer, MAX_CWD_SIZE);
+  current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
   if (!current_working_dir) {
-    woempa(9, "getcwd returned NULL, errono = %d\n", errno);
+    woempa(9, "ff_getcwd returned NULL, errono = %d\n", errno);
   }
   current_working_dir = reallocMem(cwdbuffer, strlen(cwdbuffer) + 1);
   current_root_dir = fsroot;

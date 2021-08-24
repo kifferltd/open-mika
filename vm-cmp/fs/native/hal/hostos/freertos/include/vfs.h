@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -40,7 +40,7 @@
 #include <string.h>
 //#include <dirent.h>
 #include <errno.h>
-#include <stdio.h>
+#include <ff_stdio.h>
 #include <utime.h>
  
 #include "vfs_fcntl.h"
@@ -147,25 +147,8 @@ void init_vfs(void);
 
 #define vfs_STAT                   stat
 
-// HACK HACK HACK
-
-           struct dirent {
-               ino_t          d_ino;       /* Inode number */
-               off_t          d_off;       /* Not an offset; see below */
-               unsigned short d_reclen;    /* Length of this record */
-               unsigned char  d_type;      /* Type of file; not supported
-                                              by all filesystem types */
-               char           d_name[256]; /* Null-terminated filename */
-           };
-
-struct DIR {
-    struct dirent ent;
-    struct _WDIR *wdirp;
-};
-typedef struct DIR DIR;
-
 #define vfs_dirent                 struct dirent
-#define vfs_DIR                    DIR
+#define vfs_DIR                    FF_FindData_t
 #define vfs_fpos_t                 w_int
 
 #ifdef FS_NON_BLOCKING
