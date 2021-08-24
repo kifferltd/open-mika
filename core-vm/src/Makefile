@@ -26,7 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-.PHONY : mika
+.PHONY : mika libs
 mika :
 	make -C adt $(MAKECMDGOALS)
 	make -C classfile $(MAKECMDGOALS)
@@ -38,4 +38,5 @@ mika :
 	make -C security $(MAKECMDGOALS)
 	make -C vm $(MAKECMDGOALS)
 
+libs: mika
 

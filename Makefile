@@ -397,7 +397,7 @@ ifeq ($(JAVA5_SUPPORT), true)
   WONKA_INFO += with Java5 support\;
 endif
 
-ifeq ($(JAVA5_SUPPORT), false )
+ifeq ($(JAVA5_SUPPORT), false)
   WONKA_INFO += no Java5 support\;
 endif
 
@@ -418,7 +418,7 @@ ifeq ($(USE_LIBFFI), false)
 endif
 
 
-ifeq ($(BYTECODE_VERIFIER), true )
+ifeq ($(BYTECODE_VERIFIER), true)
   WONKA_INFO += bytecode verification is enabled\;
 endif
 
@@ -426,7 +426,7 @@ ifeq ($(BYTECODE_VERIFIER), false)
   WONKA_INFO += bytecode verification is disabled\;
 endif
 
-ifeq ($(NETWORK), none )
+ifeq ($(NETWORK), none)
   WONKA_INFO += no network\;
 endif
 
@@ -470,7 +470,7 @@ endif
 ifeq ($(UNICODE_SUBSETS), 0)
   WONKA_INFO += minimal Unicode support\;
 else
-  ifeq ($(UNICODE_SUBSETS), 999 )
+  ifeq ($(UNICODE_SUBSETS), 999)
     WONKA_INFO += full Unicode support\;
   else
     WONKA_INFO += support for Unicode subsets $(UNICODE_SUBSETS)\;
@@ -479,13 +479,13 @@ endif
 
 WONKA_INFO += using own routines for unzipping\;
 
-ifeq ($(ENABLE_THREAD_RECYCLING), true )
+ifeq ($(ENABLE_THREAD_RECYCLING), true)
   WONKA_INFO += with recycling of native threads\;
 else
   WONKA_INFO += no recycling of native threads\;
 endif
 
-ifeq ($(JAVAX_COMM), true )
+ifeq ($(JAVAX_COMM), true)
     WONKA_INFO += with javax.comm\;
 endif
 
@@ -493,7 +493,7 @@ ifeq ($(JAVAX_COMM), false)
     WONKA_INFO += no javax.comm\;
 endif
 
-ifeq ($(TESTS), true )
+ifeq ($(TESTS), true)
   TEST_INFO = generating tests for Mauve and for the VisualTestEngine.
 endif
 ifeq ($(TESTS), false)
@@ -526,7 +526,7 @@ ifeq "$(AWT)" "rudolph"
     endif
 endif
 
-ifeq ($(AWT), none )
+ifeq ($(AWT), none)
     AWT_INFO = no AWT\;
 endif
 
@@ -603,7 +603,8 @@ export JNI
 
 mika : echo builddir kernel core-vm
 
-libs: kernel core-vm 
+libs: kernel
+	make -C core-vm libs
 
 kecho :
 	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"

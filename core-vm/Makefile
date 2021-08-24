@@ -108,12 +108,13 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-.PHONY : awt filesystem network fp jpda math security core-vm generated
+.PHONY : awt filesystem network fp jpda math security core-vm generated libs
 
-mika : main.o $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
+mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
 	$(CC) -o mika main.o $(LDFLAGS)
-# WAS:	$(CC) -o mika main.o $(CFLAGS) $(LDFLAGS)
+
+libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
 
 main.o : main.c
 
@@ -164,8 +165,8 @@ ifeq ($(JAVA5_SUPPORT), true)
 else
 	awk -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes.in > $(gendir)/core-classes.c
 endif
-	make -C src $(MAKECMDGOALS)
-	make -C hal $(MAKECMDGOALS)
+	make -C src 
+	make -C hal 
 
 clean:
 	rm main.o
