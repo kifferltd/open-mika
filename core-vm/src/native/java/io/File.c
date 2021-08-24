@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2008, 2009, 2010 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <vfs.h>
@@ -35,6 +31,7 @@
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
+#include "wordset.h"
 #include "wstrings.h"
 
 /*
@@ -103,6 +100,63 @@ w_instance File_get_fsroot (JNIEnv *env, w_instance thisFile) {
   return getStringInstance(utf2String(fsroot, strlen(fsroot)));
 }
 
+#ifdef FREERTOS
+// FreeRTOS FAT filesystem uses a different logic for scanning directories:
+// ff_findfirst is equivalent to opendir followed by readdir
+// TODO can we rewrite the POSIX code to work the same way?
+
+w_instance File_list (JNIEnv *env, w_instance thisFile) {
+  w_thread thread = JNIEnv2w_thread(env);
+  char *pathname;
+  int count=0;
+  int i;
+  w_instance result = NULL;
+  char *entryname;
+  w_string entry_string;
+  w_instance entry;
+  w_wordset *temp = NULL;
+  w_size numberOfFiles = 0;
+  ff_stat_struct statbuf;
+
+  threadMustBeSafe(thread);
+  pathname = getFileName(thisFile);	  
+
+  if (ff_stat(pathname, &statbuf) != 0 || statbuf.st_mode != FF_IFDIR) {
+    // this is not a directory
+    return NULL;
+  }
+
+  FF_FindData_t *finddata_ptr = x_mem_calloc(sizeof(FF_FindData_t));
+  if (ff_findfirst(pathname, finddata_ptr ) == 0 ) {
+    do {
+      entryname = finddata_ptr->pcFileName;
+      entry_string = utf2String(entryname, strlen(entryname));
+      addToWordset(&temp, (w_word) entry_string);
+    } while( ff_findnext( finddata_ptr ) == 0 );
+  }
+  // else we will return an empty array 
+    
+  enterUnsafeRegion(thread);
+  result = allocArrayInstance_1d(thread, clazzArrayOf_String, sizeOfWordset(&temp));
+  enterSafeRegion(thread);
+
+  for (i = 0; !wordsetIsEmpty(&temp); ++i) {
+    entry_string = (w_string) takeFirstFromWordset(&temp);
+    entry = getStringInstance(entry_string);
+    setArrayReferenceField(result, entry, i++);
+    deregisterString(entry_string);
+    removeLocalReference(thread, entry);
+  }
+  x_mem_free(finddata_ptr);
+  releaseWordset(&temp);
+
+  return result;
+}
+
+#else
+
+// POSIX version
+
 w_instance File_list (JNIEnv *env, w_instance thisFile) {
   w_thread thread = JNIEnv2w_thread(env);
   char *pathname;
@@ -162,6 +216,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
   return result;
 
 }
+#endif
 
 w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
   char *pathname;
