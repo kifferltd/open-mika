@@ -55,6 +55,6 @@ CFLAGS += -nostdlib -I$(NEWLIB_INCLUDE_DIR) -I$(ISAL_SYSTEM_INCLUDE_DIR) -I$(FRE
 # no JDWP for now
 export JDWP = false
 export JNI = false
-# no NETWORKING either
-export NETWORKING = none
+# no NETWORK either
+export NETWORK = none
 
