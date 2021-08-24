@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -32,7 +32,6 @@
 #include "argument.h" 
 #include "misc.h"
 #include "oswald.h"
-#include "network.h"
 #include "mika_threads.h"
 
 #ifdef JAVAX_COMM
@@ -461,8 +460,6 @@ int main(int argc, char * argv[]) {
 
   command_line_argument_count = argc - 1;
   command_line_arguments = argv + 1;
-
-  startNetwork();
 
   x_oswald_init(max_heap_size, tick_millis);
   // Hm. We get here for O4P, but not for OSwald. This needs to change.
