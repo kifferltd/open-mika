@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -30,8 +31,10 @@ sources = MathHelper.c
 mathobjdir = $(objdir)/vm-cmp/math
 objects=$(mathobjdir)/MathHelper.o
 
-.PHONY : mika math-classes
-mika : $(mathobjdir) math-classes $(objects)
+.PHONY : libs mika math-classes
+mika : libs
+
+libs : $(mathobjdir) math-classes $(objects)
 
 $(mathobjdir) :
 	@echo Creating $(mathobjdir)

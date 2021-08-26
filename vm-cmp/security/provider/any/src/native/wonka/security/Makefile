@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -31,8 +32,10 @@ sources = MD5MessageDigest.c  ShaMessageDigest.c
 securityobjdir = $(objdir)/core-vm/security
 objects=$(patsubst %.c, $(securityobjdir)/%.o, $(sources))
 
-.PHONY : mika
-mika : $(securityobjdir) $(objects)
+.PHONY : mika libs
+mika : libs
+
+libs : $(securityobjdir) $(objects)
 
 $(securityobjdir) :
 	@echo Creating $(securityobjdir)

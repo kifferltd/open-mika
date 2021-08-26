@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -49,8 +50,10 @@ sources = cmd-arrayref.c cmd-arraytype.c cmd-classloaderref.c \
 jdwpobjdir = $(objdir)/vm-ext/jdwp
 objects=$(patsubst %.c, $(jdwpobjdir)/%.o, $(sources))
 
-.PHONY : mika
-mika : $(jdwpobjdir) $(objects)
+.PHONY : mika libs
+mika : libs
+
+libs : $(jdwpobjdir) $(objects)
 
 $(jdwpobjdir) :
 	@echo Creating $(jdwpobjdir)

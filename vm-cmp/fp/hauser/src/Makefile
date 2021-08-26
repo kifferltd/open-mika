@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -30,8 +31,10 @@ sources = wmath.c
 fpobjdir = $(objdir)/vm-cmp/fp
 objects=$(patsubst %.c, $(fpobjdir)/%.o, $(sources))
 
-.PHONY : mika
-mika : $(fpobjdir) $(objects)
+.PHONY : mika libs
+mika : libs
+
+libs : $(fpobjdir) $(objects)
 
 $(fpobjdir) :
 	@echo Creating $(fpobjdir)

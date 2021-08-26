@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2021 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2021 by Chris Gray, KIFFER Ltd.                           #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -27,32 +27,13 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
+.PHONY : mika libs clean
+mika : 
 
-# LOCATE_TARGET = $(OROOT)/wonka/bin ;
-FS_TOP = $(MIKA_TOP)/vm-cmp/fs/native
+libs :
 
-CFLAGS += -I $(MIKA_TOP)/core-vm/include
-CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
-CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
-CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
-#CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/freertos/include
-CFLAGS += -I $(FS_TOP)/hal/hostos/freertos/include
+clean :
 
-sources = vfs.c
-fsobjdir = $(objdir)/vm-cmp/fs
-objects=$(patsubst %.c, $(fsobjdir)/%.o, $(sources))
 
-.PHONY : mika libs
-mika : libs
 
-libs : $(fsobjdir) $(objects)
-
-$(fsobjdir) :
-	@echo Creating $(fsobjdir)
-	@mkdir -p $(fsobjdir)
-
-$(objects) : $(fsobjdir)/%.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-clean:
 
