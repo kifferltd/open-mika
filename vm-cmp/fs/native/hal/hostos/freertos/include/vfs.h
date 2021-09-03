@@ -33,12 +33,10 @@
 
 #define _FILE_OFFSET_BITS 32
 
-#include <sys/stat.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <dirent.h>
 #include <errno.h>
 #include <ff_stdio.h>
 #include <utime.h>
@@ -123,7 +121,8 @@ void init_vfs(void);
 #define vfs_close(a)               close(a)
 #define vfs_lseek(a,b,c)           lseek(a,b,c)
 
-#define vfs_utime(a,b)             utime(a,b)
+// FIXME - FreeRTOS FAT must have a way to set access time
+#define vfs_utime(a,b)             (-1)
 
 #define vfs_opendir(path)          opendir(path)
 #define vfs_closedir(a)            closedir(a)
@@ -134,18 +133,18 @@ void init_vfs(void);
 #define vfs_alphasort(...)        alphasort(__VA_ARGS__)
 
 #define vfs_fstat(...)            fstat(__VA_ARGS__)
-#define vfs_stat(path, ...)       stat(path, __VA_ARGS__)
-#define vfs_truncate(path,len)    truncate(path, len)
+#define vfs_stat(path, ...)       ff_stat(path, __VA_ARGS__)
+#define vfs_truncate(path,len)    ff_truncate(path, len)
 
-#define vfs_mkdir(path, ...)      mkdir(path, __VA_ARGS__)
-#define vfs_rmdir(path)            rmdir(path)
+#define vfs_mkdir(path, ...)      ff_mkdir(path)
+#define vfs_rmdir(path)           ff_rmdir(path)
 #define vfs_unlink(path)           unlink(path)
 #define vfs_chmod(path, ...)      chmod(path, __VA_ARGS__)
 #define vfs_fchmod(...)           fchmod(__VA_ARGS__)
 
 #define vfs_rename(a, b)           rename(a, b)
 
-#define vfs_STAT                   stat
+#define vfs_STAT                   FF_STAT
 
 #define vfs_dirent                 struct dirent
 #define vfs_DIR                    FF_FindData_t

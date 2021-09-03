@@ -116,7 +116,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
   w_instance entry;
   w_wordset *temp = NULL;
   w_size numberOfFiles = 0;
-  ff_stat_struct statbuf;
+  struct vfs_STAT statbuf;
 
   threadMustBeSafe(thread);
   pathname = getFileName(thisFile);	  
@@ -260,12 +260,14 @@ w_boolean File_isDirectory (JNIEnv *env, jobject thisFile) {
 w_long File_lastModified (JNIEnv *env, jobject thisFile) {
   struct vfs_STAT statbuf;
 
+/*
+TODO sort out why  ffconfigTIME_SUPPORT == 1 and yet no st_mtime in statbuf
+#if ( ffconfigTIME_SUPPORT == 1 )
   if (statFile(thisFile, &statbuf)) {
     return ((jlong)statbuf.st_mtime) * ((jlong)1000);
   }
-  else {
+*/
     return 0;
-  }
 }
 
 w_long File_length (JNIEnv *env, jobject thisFile) {
