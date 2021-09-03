@@ -41,7 +41,7 @@ SemaphoreHandle_t memoryMutex;
 
 inline x_status x_mem_lock(x_sleep timeout) {
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
-    switch(xSemaphoreTake(memoryMutex, timeout == x_eternal ? portMAX_DELAY : timeout)) {
+    switch(xSemaphoreTakeRecursive(memoryMutex, timeout == x_eternal ? portMAX_DELAY : timeout)) {
       case pdPASS:  return xs_success;
       case pdFAIL:  return xs_no_instance;
       default :     return xs_unknown;
@@ -51,7 +51,7 @@ inline x_status x_mem_lock(x_sleep timeout) {
 
 inline x_status x_mem_unlock() {
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
-    switch (xSemaphoreGive(memoryMutex)) {
+    switch (xSemaphoreGiveRecursive(memoryMutex)) {
       case pdPASS: return xs_success;
       case pdFAIL: return xs_not_owner;
       default :    return xs_unknown;
