@@ -437,6 +437,21 @@ void startWonka(void* data) {
   JNIEnv *env;
   woempa(7, "Calling JNI_CreateJavaVM() ...\n");
   JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
+#else
+  // TODO separate this cleanly from JNI
+
+  startHeap();
+  startLoading();
+  startKernel();
+#ifdef RUDOLPH
+#ifdef MODULES
+  loadModule("mod_awt");
+#else
+  init_awt();
+#endif
+#endif
+
+  x_thread_resume(W_Thread_sysInit->kthread);
 #endif
 
 #ifdef O4P
