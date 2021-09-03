@@ -208,26 +208,12 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
 
 w_instance InetAddress_getLocalName(JNIEnv *env, w_instance clazz) {
 
-//  static const w_size length = 255;
   w_instance Name = NULL;
-#if NETWORKING == native
-/* CG WAS:
-  char * name = allocMem(W_Thread_system, length * sizeof(char));
 
-  if (name && w_gethostname(name, length) == 0) {
-    woempa(7, "w_gethostname => '%s'\n", name);
-    Name = (*env)->NewStringUTF(env, name);
-  }
-
-  if (name) {
-    releaseMem(name);
-  }
-*/
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
     Name = (*env)->NewStringUTF(env, ownhostname);
   }
-#endif 
 
   return Name;
 
