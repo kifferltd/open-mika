@@ -219,8 +219,8 @@ void start_routine(void *thread_ptr) {
   else {
     loempa(2,"Native thread %p starting\n", thread);
   }
-// TODO 
-  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
+// TODO  ???
+//  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
 // TODO set priority
 
   thread->state = xt_ready;
@@ -330,8 +330,12 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      thread->flags = 0; // WAS: 1
      snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
      //thread->name[0] = 0;
+   printf("===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
+                                       start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
-     //vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
+   printf("===>>>  status = %d\n", status);
+   printf("===>>>  setting ThreadLocalStoragePointer of task %p to %p\n", thread->handle, thread);
+     vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
      if (status != pdPASS) {
        o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
       }
