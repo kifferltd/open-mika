@@ -112,13 +112,13 @@ x_monitor xthreads_monitor;
 static const char *unborn_thread_report(x_thread);
 //static const char *dying_thread_report(x_thread);
 
-#define SYSTEM_STACK_SIZE 65536
+#define SYSTEM_STACK_SIZE ((unsigned short)16384)
 
 /* [CG 20050601]
  * For O4P we let the system supply the stack, since LinuxThreads ignores the
  * one we supply anyway. (NetBSD probably does the Right Thing, but whatever ...)
  */
-#ifdef O4P
+#if defined O4P || defined FREERTOS
 #define ur_thread_stack NULL
 #else
 static char ur_thread_stack[SYSTEM_STACK_SIZE];
@@ -274,6 +274,9 @@ void initKernel() {
   x_mutex_create(&idLock);
 
   x_thread_create(&ur_thread_x_Thread, 
+// too early for allocClearedMem, would need to use x_mem_calloc or raw calloc
+//  x_thread starting_thread = allocClearedMem(sizeof(x_Thread));
+//  x_thread_create(starting_thread, 
     startWonka, NULL, ur_thread_stack, 
     SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
 }
@@ -284,6 +287,127 @@ extern int woempa_bytecodecount;
 
 static w_string string_sysThread;
 static w_string string_sysThreadGroup;
+
+#ifndef JNI
+/**
+ ** Register system thread and call Init.main() from there, without using JNI.
+ */
+static void invokeInitMain(w_instance arglist) {
+  w_MethodSpec *spec;
+  w_method candidate;
+  w_frame frame;
+  w_size   i;
+  w_size   j;
+
+  printf("looking up ThreadGroup.register, ThreadGroup.deregister\n");
+  w_string registerThread_name_string = utf2String("registerThread", strlen("registerThread"));
+  w_string deregisterThread_name_string = utf2String("deregisterThread", strlen("deregisterThread"));
+  w_string reg_dereg_desc_string = utf2String("(Ljava/lang/Thread;)V", strlen("(Ljava/lang/Thread;)V"));
+  if (createMethodSpecUsingDescriptor(clazzThreadGroup, registerThread_name_string, reg_dereg_desc_string, &spec) == CLASS_LOADING_FAILED) {
+    wabort(ABORT_WONKA,"Uh oh: failed to build method spec using declaring_clazz %k, name %w, desc %w.\n",clazzThreadGroup, registerThread_name_string, reg_dereg_desc_string);
+  }
+
+  w_method register_method = NULL;
+  w_method deregister_method = NULL;
+  for (i = 0; i < clazzThreadGroup->numDeclaredMethods; ++i) {
+    candidate = &clazzThreadGroup->own_methods[i];
+
+    if (candidate->spec.name == registerThread_name_string && candidate->desc == reg_dereg_desc_string) {
+      register_method = candidate;
+      break;
+    }
+    else if (candidate->spec.name == deregisterThread_name_string && candidate->desc == reg_dereg_desc_string) {
+      deregister_method = candidate;
+      break;
+    }
+  }
+
+  releaseMethodSpec(spec);
+  releaseMem(spec);
+  deregisterString(registerThread_name_string);
+  deregisterString(deregisterThread_name_string);
+  deregisterString(reg_dereg_desc_string);
+
+  if (register_method==NULL) {
+    wabort(ABORT_WONKA,"Uh oh: class java.lang.ThreadGroup doesn't have a method registerThread(java.lang.Thread).  Game over.\n");
+  }
+  if (deregister_method==NULL) {
+    wabort(ABORT_WONKA,"Uh oh: class java.lang.ThreadGroup doesn't have a method deregisterThread(java.lang.Thread).  Game over.\n");
+  }
+
+  // TODO check exceptionThrown(W_Thread_sysInit) is null after each method call?
+
+  printf("registering system thread\n");
+  frame = pushFrame(W_Thread_sysInit, register_method);
+  frame->flags |= FRAME_NATIVE;
+
+  frame->jstack_top[0].c = (w_word) I_ThreadGroup_system;
+  frame->jstack_top[0].s = stack_trace;
+  frame->jstack_top += 1;
+  frame->jstack_top[0].c = (w_word) I_Thread_sysInit;
+  frame->jstack_top[0].s = stack_trace;
+  frame->jstack_top += 1;
+
+  callMethod(frame, register_method);
+  
+  deactivateFrame(frame, NULL);
+
+  w_string initClassName = cstring2String(INIT_CLASS, strlen(INIT_CLASS));
+  w_string dotified = undescriptifyClassName(initClassName);
+  w_clazz initClazz = namedClassMustBeLoaded(systemClassLoader, dotified);
+  deregisterString(dotified);
+  deregisterString(initClassName);
+
+  mustBeLinked(initClazz);
+
+  printf("looking up Init.main\n");
+  w_string main_name_string = utf2String("main", strlen("main"));
+  w_string main_desc_string = utf2String("([Ljava/lang/String;)V", strlen("([Ljava/lang/String;)V"));
+  if (createMethodSpecUsingDescriptor(initClazz, main_name_string, main_desc_string, &spec) == CLASS_LOADING_FAILED) {
+    wabort(ABORT_WONKA,"Uh oh: failed to build method spec using declaring_clazz %k, name %w, desc %w.\n",initClazz, main_name_string, main_desc_string);
+  }
+
+  w_method main_method = NULL;
+  for (i = 0; i < clazzInit->numDeclaredMethods; ++i) {
+    candidate = &clazzInit->own_methods[i];
+
+    if (candidate->spec.name == main_name_string && candidate->desc == main_desc_string) {
+      main_method = candidate;
+      break;
+    }
+  }
+
+  printf("calling Init.main\n");
+  frame = pushFrame(W_Thread_sysInit, main_method);
+  frame->flags |= FRAME_NATIVE;
+
+  frame->jstack_top[0].c = 0;
+  frame->jstack_top[0].s = stack_notrace;
+  frame->jstack_top += 1;
+  frame->jstack_top[0].c = (w_word) arglist;
+  frame->jstack_top[0].s = stack_trace;
+  frame->jstack_top += 1;
+
+  callMethod(frame, main_method);
+  
+  deactivateFrame(frame, NULL);
+
+  frame = pushFrame(W_Thread_sysInit, deregister_method);
+  frame->flags |= FRAME_NATIVE;
+
+  frame->jstack_top[0].c = (w_word) I_ThreadGroup_system;
+  frame->jstack_top[0].s = stack_trace;
+  frame->jstack_top += 1;
+  frame->jstack_top[0].c = (w_word) I_Thread_sysInit;
+  frame->jstack_top[0].s = stack_trace;
+  frame->jstack_top += 1;
+
+  callMethod(frame, register_method);
+  
+  deactivateFrame(frame, NULL);
+
+}
+#endif
 
 void startInitialThreads(void* data) {
 
@@ -402,7 +526,7 @@ void startInitialThreads(void* data) {
     (*env)->ExceptionDescribe(env);
   }
 #else
-// TODO launch Init.main() without using JNI!
+  invokeInitMain(arglist);
 #endif
 
   setBooleanField(I_Thread_sysInit, F_Thread_stopped, TRUE);
