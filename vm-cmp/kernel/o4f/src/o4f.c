@@ -59,9 +59,9 @@ static void oswaldEnvInit(void) {
   
   o4fe = &theEnvironment;
 
-// N.B. xSemaphoreCreateMutex() creates the mutex in the "free" state
+// N.B. xSemaphoreCreateRecursiveMutex() creates the mutex in the "free" state
   o4fe->timer_mutex = xSemaphoreCreateBinary();
-  o4fe->threads_mutex = xSemaphoreCreateMutex();
+  o4fe->threads_mutex = xSemaphoreCreateRecursiveMutex();
 
 }
 
