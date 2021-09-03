@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2021 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -30,7 +31,7 @@ sources = BufferedReader.c FileOutputStream.c ObjectStreamClass.c File.c ObjectS
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
 
-CFLAGS += -I $(fsinc)
+CFLAGS += -I $(fsinc) -I $(networkinc)
 
 .PHONY : mika
 mika : $(nativeobjdir) $(objects)

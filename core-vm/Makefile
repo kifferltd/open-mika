@@ -31,7 +31,6 @@ CFLAGS += -I $(MIKA_TOP)/core-vm/include
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
-CFLAGS += -I $(MIKA_TOP)/vm-cmp/network/native/hal/hostos/$(HOSTOS)/include
 CFLAGS += -I $(MIKA_TOP)/vm-ext/jpda/jdwp/include
 
 ifeq ($(HOSTOS), linux)

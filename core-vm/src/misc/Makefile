@@ -31,7 +31,7 @@ sources = debug.c inits.c misc.c
 miscobjdir = $(objdir)/core-vm/misc
 objects=$(patsubst %.c, $(miscobjdir)/%.o, $(sources))
 
-CFLAGS += -I $(fsinc)
+CFLAGS += -I $(fsinc) -I $(networkinc)
 
 .PHONY : mika
 mika : $(miscobjdir) $(objects)
@@ -42,6 +42,8 @@ $(miscobjdir) :
 
 $(objects) : $(miscobjdir)/%.o : %.c
 	@echo fsinc = $(fsinc)
+	@echo networkinc = $(networkinc)
+	@echo CFLAGS = $(CFLAGS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 

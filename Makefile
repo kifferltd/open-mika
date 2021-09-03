@@ -390,7 +390,7 @@ endif
  
 ifeq ($(FILESYSTEM), native)
   WONKA_INFO += using host OS filesystem, with virtual root at $(FSROOT)\;
-  export fsinc = $(MIKA_TOP)/vm-cmp/fs/$(FILESYSTEM)/hal/hostos/$(HOSTOS)/include
+  export fsinc = $(MIKA_TOP)/vm-cmp/fs/native/hal/hostos/$(HOSTOS)/include
 endif
 
 ifeq ($(JAVA5_SUPPORT), true)
@@ -603,8 +603,10 @@ export JNI
 
 mika : echo builddir kernel core-vm
 
-libs: kernel
+$(MIKA_LIB) : 
 	make -C core-vm libs
+
+libs: kernel $(MIKA_LIB)
 
 kecho :
 	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"
@@ -624,6 +626,8 @@ echo : kecho
 	@echo "MIKA_LIB = " $(MIKA_LIB)
 	@echo "OSWALD_LIB = " $(OSWALD_LIB)
 	@echo "AWT_LIB = " $(AWT_LIB)
+	@echo "networkinc = " $(networkinc)
+	@echo "fsinc = " $(fsinc)
 
 builddir :
 	@echo "Creating " $(objdir)
