@@ -252,6 +252,8 @@ ifeq ($(DEBUG), true)
     else
       OPTIM = $(OPTIM) -Os
     endif
+  else
+    OPTIM = -O0
   endif
 
   GDB_SYMBOLS = true
@@ -267,6 +269,8 @@ else  # No debug -> Full optimalisation
 
 #  CFLAGS += -ggdb
 endif
+
+CFLAGS += $(OPTIM)
 
 ifeq ($(GDB_SYMBOLS), true)
     CFLAGS += -ggdb  
@@ -613,14 +617,12 @@ kecho :
 	@echo "CPU =" $(CPU)
 	@echo "TOOLCHAIN =" $(TOOLCHAIN)
 	@echo "HOSTOS =" $(HOSTOS)
-	@echo "CFLAGS =" $(CFLAGS)
 	@echo "LDFLAGS =" $(LDFLAGS)
 
 echo : kecho
 	@echo "Building Mika for platform '$(PLATFORM)'"
 	@echo "SCHEDULER =" $(SCHEDULER)
 	@echo "AWT =" $(AWT)
-	@echo "CFLAGS =" $(CFLAGS)
 	@echo "LDFLAGS =" $(LDFLAGS)
 	@echo "SHARED_OBJECTS =" $(SHARED_OBJECTS)
 	@echo "MIKA_LIB = " $(MIKA_LIB)
