@@ -50,11 +50,23 @@ else ifeq ($(ISALFEATURE),1)
 else
   $(error UNKNOWN ISALFEATURE)
 endif
-# CFLAGS += -nostdlib -I$(NEWLIB_INCLUDE_DIR) -I$(ISAL_SYSTEM_INCLUDE_DIR) -I$(FREERTOS_KERNEL_INCLUDE_DIR) -I$(FREERTOS_PORT_INCLUDE_DIR) -I$(FREERTOS_APP_INCLUDE_DIR) -DSTORE_METHOD_DEBUG_INFO
 CFLAGS += -nostdlib -I$(NEWLIB_INCLUDE_DIR) -I$(ISAL_SYSTEM_INCLUDE_DIR) -I$(FREERTOS_KERNEL_INCLUDE_DIR) -I$(FREERTOS_PORT_INCLUDE_DIR) -I$(FREERTOS_FAT_INCLUDE_DIR) -I$(FREERTOS_APP_INCLUDE_DIR) -DSTORE_METHOD_DEBUG_INFO
 # no JDWP for now
 export JDWP = false
 export JNI = false
 # no NETWORK either
 export NETWORK = none
+
+# Root directory for Mika is root of FreeRTOS filesystem
+export FSROOT = /
+
+#
+# If Mika is run with no -Xbootclasspath parameter, the bootstrap class 
+# loader will search the file $(BOOTCLASSFILE), located in {}/$(BOOTCLASSDIR).
+# These variables also specify where the zipfile of bootstrap classes will
+# be created, and what name it will be given. 
+#
+
+BOOTCLASSDIR  = lib/mika
+BOOTCLASSFILE = mcl.jar
 
