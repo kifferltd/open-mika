@@ -267,9 +267,9 @@ w_instance ClassLoader_findBootstrapClass(JNIEnv *env, w_instance This, w_instan
 
   if (!clazz) {
     threadMustBeSafe(thread);
-    x_monitor_eternal(&system_loaded_class_hashtable->monitor);
+    ht_lock(system_loaded_class_hashtable);
     clazz = loadBootstrapClass(name);
-    x_monitor_exit(&system_loaded_class_hashtable->monitor);
+    ht_unlock(system_loaded_class_hashtable);
   }
 
   return clazz ? clazz2Class(clazz) : NULL;
