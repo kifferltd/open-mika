@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -48,6 +48,9 @@
 #define x_random      random
 
 typedef unsigned short         x_ushort;
+
+/// Local storage slot (in the FreeRTOS task control block) where we store a pointer back to our x_thread pointer
+#define O4F_LOCAL_STORAGE_OFFSET_X_THREAD (configNUM_THREAD_LOCAL_STORAGE_POINTERS-1)
 
 /// Amount of memory to reserve for `static' allocations during OS startup (Wonka doesn't need any).
 #ifndef STATIC_MEMORY_SIZE

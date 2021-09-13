@@ -53,6 +53,7 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
   default:
     x_snprintf(strerror_buf, ABORT_BUFSIZE, "\nOSWALD ABORT called with unknown type %d and message '%s'", type, message);
   }
+  printf("%s:%d %s\n", file, line, strerror_buf);
 
   exit(1);
 }

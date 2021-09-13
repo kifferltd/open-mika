@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by Chris Gray, KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -81,21 +81,22 @@ int mapPriority(unsigned int requested) {
 }
 
 /*
+ * REPLACED BY MACRO
  * Prototype:
  *   x_thread x_thread_current(void);
  * Description:     
  *   Returns a pointer to the currently executing thread running
  *   thread.  If no thread is executing, this service returns a null
  *   pointer.
- */
 
 x_thread x_thread_current() {
 
   TaskHandle_t handle = xTaskGetCurrentTaskHandle();
-  void * t = pvTaskGetThreadLocalStoragePointer(handle, 0);
+  void * t = pvTaskGetThreadLocalStoragePointer(handle, O4F_LOCAL_STORAGE_OFFSET_X_THREAD);
 
   return (x_thread) t;
 }
+ */
 
 /*
 ** Prototype:
@@ -213,14 +214,14 @@ void start_routine(void *thread_ptr) {
 
   num_started += 1;
   thread = (x_thread )thread_ptr;
+  printf("===>>>  setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, thread);
+  vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread);
   if (thread->xref) {
     loempa(2,"Mika thread %t starting\n", thread->xref);
   }
   else {
     loempa(2,"Native thread %p starting\n", thread);
   }
-// TODO  ???
-//  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle() , 0, thread);
 // TODO set priority
 
   thread->state = xt_ready;
@@ -334,8 +335,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
    printf("===>>>  status = %d\n", status);
-   printf("===>>>  setting ThreadLocalStoragePointer of task %p to %p\n", thread->handle, thread);
-     vTaskSetThreadLocalStoragePointer(thread->handle, 0, thread);
      if (status != pdPASS) {
        o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
       }
