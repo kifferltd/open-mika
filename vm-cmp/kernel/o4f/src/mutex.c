@@ -40,7 +40,7 @@
  */
 x_status x_mutex_create(x_mutex mutex) {
 
-  mutex->owner_mutex = xSemaphoreCreateMutex();
+  mutex->owner_mutex = xSemaphoreCreateRecursiveMutex();
   if (!mutex->owner_mutex) {
     return xs_insufficient_memory;
   }
@@ -73,7 +73,7 @@ x_status x_mutex_delete(x_mutex mutex) {
  */
 x_status x_mutex_lock(x_mutex mutex, x_sleep timeout) {
 
-  BaseType_t rc = xSemaphoreTake(mutex->owner_mutex, timeout);
+  BaseType_t rc = xSemaphoreTakeRecursive(mutex->owner_mutex, timeout);
 
   return rc == pdPASS ? xs_success : xs_no_instance;
 }
@@ -88,7 +88,7 @@ x_status x_mutex_lock(x_mutex mutex, x_sleep timeout) {
  */
 x_status x_mutex_unlock(x_mutex mutex) {
 
-  BaseType_t rc = xSemaphoreGive(mutex->owner_mutex);
+  BaseType_t rc = xSemaphoreGiveRecursive(mutex->owner_mutex);
 
   return rc == pdPASS ? xs_success : xs_not_owner;
 }
