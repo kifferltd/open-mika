@@ -478,11 +478,10 @@ void w_dump_locks(void) {
   x_dump_mutex("    Finalizer fifo mutex : ", finalizer_fifo_mutex);
   x_dump_mutex("      Enqueue fifo mutex : ", enqueue_fifo_mutex);
 #endif
-  x_dump_monitor("  Lock hashtable monitor : ", &lock_hashtable->monitor);
-  x_dump_monitor("String hashtable monitor : ", &string_hashtable->monitor);
+  x_dump_mutex("    Lock hashtable mutex : ", &lock_hashtable->mutex);
+  x_dump_mutex("  String hashtable mutex : ", &string_hashtable->mutex);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);
-// FIXME - freertos port does not use a monitor for this
-//  x_dump_monitor("          Memory monitor : ", memory_monitor);
+  x_dump_mutex("            Memory mutex : ", memoryMutex);
   x_dump_monitor("              GC monitor : ", gc_monitor);
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
   x_dump_monitor("            AWT treelock : ", tree_lock);
@@ -522,7 +521,7 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
   w_clazz      clazz;
   w_hashtable  loaded_classes;
   w_hashtable  unloaded_classes;
-  x_monitor    monitor;
+  x_mutex      mutex;
 
   object_size += x_mem_size(mem);
   object = chunk2object(mem);
@@ -534,39 +533,41 @@ static x_boolean classloaders_callback(void * mem, void * arg) {
     unloaded_classes = loader2unloaded_classes(instance);
     w_dump("     %j has %d loaded classes, %d unloaded;\n", instance, loaded_classes->occupancy, unloaded_classes->occupancy);
 
-    monitor = &loaded_classes->monitor;
-    w_dump("       loaded class monitor is %p\n", monitor);
+//    mutex = &loaded_classes->mutex;
+//    w_dump("       loaded class mutex is %p\n", mutex);
     
-    if(monitor->owner) {
-      w_dump("       loaded_hashtable (0x%08x) locked", monitor);
-      if(monitor->owner->xref) {
-        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
-      }
-      w_dump("\n");
-    }
+// TODO need a way to get the owner of a mutex
+//    if(monitor->owner) {
+//      w_dump("       loaded_hashtable (0x%08x) locked", monitor);
+//      if(monitor->owner->xref) {
+//        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+//      }
+//      w_dump("\n");
+//    }
     
-    monitor = &unloaded_classes->monitor;
-    w_dump("       unloaded class monitor is %p\n", monitor);
+    mutex = &unloaded_classes->mutex;
+    w_dump("       unloaded class mutex is %p\n", mutex);
     
-    if(monitor->owner) {
-      w_dump("       unloaded_hashtable (0x%08x) locked", monitor);
-      if(monitor->owner->xref) {
-        w_dump(" by \"%p\"", ((w_thread)(monitor->owner->xref)));
-        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
-      }
-      w_dump("\n");
-    }
+// TODO need a way to get the owner of a mutex
+//    if(mutex->owner) {
+//      w_dump("       unloaded_hashtable (0x%08x) locked", mutex);
+//      if(monitor->owner->xref) {
+//        w_dump(" by \"%p\"", ((w_thread)(monitor->owner->xref)));
+//        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+//      }
+//      w_dump("\n");
+//    }
 
-    monitor = (x_monitor)ht_read(lock_hashtable, (w_word)instance);
+//    monitor = (x_monitor)ht_read(lock_hashtable, (w_word)instance);
     
-    if(monitor && monitor->owner) {
-      w_dump("       instance (0x%08x) locked", monitor);
-      if(monitor->owner->xref) {
-        w_dump(" by \"%p\"", ((w_thread)(monitor->owner->xref)));
-        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
-      }
-      w_dump("\n");
-    }
+//    if(monitor && monitor->owner) {
+//      w_dump("       instance (0x%08x) locked", monitor);
+//      if(monitor->owner->xref) {
+//        w_dump(" by \"%p\"", ((w_thread)(monitor->owner->xref)));
+//        w_dump(" by \"%w\"", ((w_thread)(monitor->owner->xref))->name);
+//      }
+//      w_dump("\n");
+//    }
   }
 
   return TRUE;
