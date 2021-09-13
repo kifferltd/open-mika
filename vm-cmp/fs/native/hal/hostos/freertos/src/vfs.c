@@ -31,20 +31,41 @@
 char *current_working_dir;
 char *current_root_dir;
 
+#ifdef DEBUG
+static void dumpDir(const char *path, int level) {
+  woempa(7, "%*sScanning directory %s", level * 4, "", path);
+  FF_FindData_t *findData = allocMem(sizeof(FF_FindData_t));
+  int rc = ff_findfirst(path, findData );
+  while (rc == 0) {
+    woempa(7, "%*s%s [%s %s] [size=%d]", level * 4, "", findData->pcFileName, (findData->ucAttributes & FF_FAT_ATTR_DIR) ? "DIR" : "", (findData->ucAttributes && FF_FAT_ATTR_DIR) ? "RO" : "", findData->ulFileSize);
+    if ((findData->ucAttributes & FF_FAT_ATTR_DIR) && strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
+      char *pathbuf = allocMem(strlen(path) + strlen(findData->pcFileName) + 2);
+      sprintf(pathbuf, "%s%s/", path, findData->pcFileName);
+      dumpDir(pathbuf, level + 1);
+      releaseMem(pathbuf);
+    }
+    rc =  ff_findnext( findData ) == 0;
+  }
+  releaseMem(findData);
+  woempa(7, "%*sEnd of directory %s", level * 4, "", path);
+}
+#endif
+
 void init_vfs(void) {
-  #ifdef FS_NON_BLOCKING
-    woempa(9, "init_vfs  -> Using native filesystem (NON-BLOCKING)\n"); 
-  #else
-    woempa(9, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
-  #endif
+  woempa(9, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
+  vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
   if (!current_working_dir) {
-    woempa(9, "ff_getcwd returned NULL, errono = %d\n", errno);
+    woempa(9, "ff_getcwd returned NULL, errno = %d\n", errno);
   }
   current_working_dir = reallocMem(cwdbuffer, strlen(cwdbuffer) + 1);
   current_root_dir = fsroot;
   woempa(9, "current dir  : %s\n", current_working_dir);
   woempa(9, "current root : %s\n", current_root_dir);
+
+#ifdef DEBUG
+  dumpDir(current_root_dir, 0);
+#endif
 }
 

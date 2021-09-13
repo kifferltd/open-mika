@@ -64,6 +64,9 @@ extern char *command_line_path;
 static char *cwdbuffer;
 
 #define MAX_CWD_SIZE 1024
+#define FLASH_CACHE_SIZE 8192
+
+FF_Disk_t *vfs_flashDisk;
 
 void init_vfs(void);
 
