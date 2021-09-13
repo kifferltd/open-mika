@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2005, 2008, 2009, 2020, 2021by KIFFER Ltd.                *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -10,23 +9,22 @@
 *    notice, this list of conditions and the following disclaimer.        *
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
 *    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #ifndef _HASHTABLE_H
@@ -64,7 +62,7 @@
 **                 lowthreshold and highthreshold are calculated when
 **                 ht_create or ht_resize is called.
 **
-**  monitor        a x_Monitor used by the high-level operations and
+**  mutex          a x_Mutex used by the high-level operations and
 **                 by ht_lock and ht_unlock
 **
 **  hash           hash function, mapping w_word -> w_word.   
@@ -132,7 +130,7 @@ typedef struct w_Hashtable {
   w_int    occupancy;     
   w_int    lowthreshold;  
   w_int    highthreshold; 
-  x_Monitor monitor;        
+  x_Mutex  mutex;
   w_word (*hash) (w_word);
   w_boolean (*equal)(w_word,w_word);
   w_word   nullkey;
@@ -162,7 +160,7 @@ typedef struct w_Hashtable2k {
   w_int    occupancy;     
   w_int    lowthreshold;  
   w_int    highthreshold; 
-  x_Monitor monitor;        
+  x_Mutex  mutex;
   w_word  *keys1;
   w_word  *keys2;
   w_word  *values;
@@ -213,12 +211,12 @@ ht_destroy(w_hashtable hashtable);
 /* They are very low-level: most often you will want to use the higher-     */
 /* level operations ht_read, ht_write ht_every, and ht_list_keys/values.    */
 /*                                                                          */
-/* ht_lock     lock the monitor                                             */
+/* ht_lock     lock the mutex                                               */
 /*                                                                          */
-/* ht_try_lock try to lock the monitor - returns immediately with TRUE if   */
+/* ht_try_lock try to lock the mutex - returns immediately with TRUE if   */
 /*             the lock was obtained, FALSE if it was in use.               */
 /*                                                                          */
-/* ht_unlock   unlock the monitor                                           */
+/* ht_unlock   unlock the mutex                                             */
 /*                                                                          */
 /* ht_lock and ht_unlock should be used to protect any sequence of probes   */
 /* followed by a getkey and/or setvalue, in order to prevent mutation of    */
@@ -251,8 +249,8 @@ ht_destroy(w_hashtable hashtable);
 /*                                                                          */
 /* ht_check_size  if the current occupancy exceeds the threshold then the   */
 /*             arrays of keys, values, and hashcodes are re-allocated,      */
-/*             and the data is re-hashed. This function takes an x_monitor  */
-/*             as its second parameter; if this non-NULL then the monitor   */
+/*             and the data is re-hashed. This function takes an x_mutex    */
+/*             as its second parameter; if this non-NULL then the mutex     */
 /*             in question will be released while the new memory is         */
 /*             being allocated, to prevent deadlock situations. The flag    */
 /*             HT_RESIZING is set during the operation to prevent two       */
@@ -358,11 +356,11 @@ ht_destroy(w_hashtable hashtable);
 /*                                                                          */
 /****************************************************************************/
 
-#define ht_lock(ht)   x_monitor_enter(&(ht)->monitor, x_eternal);
+#define ht_lock(ht)   x_mutex_lock(&(ht)->mutex, x_eternal);
 
-#define ht_try_lock(ht) (x_monitor_enter(&(ht)->monitor, x_no_wait) == xs_success)
+#define ht_try_lock(ht) (x_mutex_lock(&(ht)->mutex, x_no_wait) == xs_success)
 
-#define ht_unlock(ht) x_monitor_exit(&(ht)->monitor);
+#define ht_unlock(ht) x_mutex_unlock(&(ht)->mutex);
 
 w_int
 ht_probe(w_hashtable, w_word hashcode, w_int sequence);
@@ -555,9 +553,9 @@ ht2k_rehash(w_hashtable2k);
 void
 ht2k_destroy(w_hashtable2k hashtable);
 
-#define ht2k_lock(ht)   x_monitor_enter(&(ht)->monitor, x_eternal);
+#define ht2k_lock(ht)   x_mutex_lock(&(ht)->mutex, x_eternal);
 
-#define ht2k_unlock(ht) x_monitor_exit(&(ht)->monitor);
+#define ht2k_unlock(ht) x_mutex_unlock(&(ht)->mutex);
 
 w_int
 ht2k_probe(w_hashtable2k, w_word hashcode, w_int sequence);

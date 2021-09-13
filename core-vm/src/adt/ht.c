@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2008, 2009 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2004, 2009, 2018, 2020, 2021 by KIFFER Ltd.               *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -10,23 +9,22 @@
 *    notice, this list of conditions and the following disclaimer.        *
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
 *    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTS OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -217,7 +215,7 @@ _ht_create (const char *f, int l,
 	hashtable->label  = label;
 	hashtable->currentsize = initialsize;
 	hashtable->occupancy = 0;
-	x_monitor_create(&hashtable->monitor);
+	x_mutex_create(&hashtable->mutex);
 
 	if (equal) {
 		woempa(1,"user-defined equality function at %p\n",equal);
@@ -272,7 +270,7 @@ _ht_create (const char *f, int l,
 void
 ht_destroy(w_hashtable theHashtable) {
 
-	x_monitor_delete(&theHashtable->monitor);
+	x_mutex_delete(&theHashtable->mutex);
 	if (theHashtable->keys) {
 		releaseMem(theHashtable->keys);
 	}
@@ -1294,7 +1292,7 @@ _ht2k_create (const char *f, int l,
   hashtable->label  = label;
   hashtable->currentsize = initialsize;
   hashtable->occupancy = 0;
-  x_monitor_create(&hashtable->monitor);
+  x_mutex_create(&hashtable->mutex);
 
   hashtable->keys1 = allocClearedMem(initialsize * sizeof(w_word));
   hashtable->keys2 = allocClearedMem(initialsize * sizeof(w_word));
@@ -1422,7 +1420,7 @@ ht2k_resize(w_hashtable2k hashtable, w_size newsize)
 void
 ht2k_destroy(w_hashtable2k theHashtable) {
 
-  x_monitor_delete(&theHashtable->monitor);
+  x_mutex_delete(&theHashtable->mutex);
   if (theHashtable->keys1) {
     releaseMem(theHashtable->keys1);
   }
