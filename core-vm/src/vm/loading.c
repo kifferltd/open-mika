@@ -343,8 +343,6 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
   w_int     result = CLASS_LOADING_DID_NOTHING;
   w_clazz   current = *clazzptr;
   w_int     state = getClazzState(current);
-//  x_monitor monitor;
-//  x_status  status;
 
   threadMustBeSafe(thread);
 
@@ -419,7 +417,7 @@ static void patchLoadedClasses(void) {
 ** Class Loader must be used for all system classes.
 */
 void setSystemClassLoader(w_instance scl) {
-  x_monitor_eternal(&system_loaded_class_hashtable->monitor);
+  ht_lock(system_loaded_class_hashtable);
   if (systemClassLoader) {
     woempa(9, "Ahoy there! Someone tried to install SystemClassLoader twice ...\n");
   }
@@ -430,7 +428,7 @@ void setSystemClassLoader(w_instance scl) {
     patchLoadedClasses();
     patchPackages();
   }
-  x_monitor_exit(&system_loaded_class_hashtable->monitor);
+  ht_unlock(system_loaded_class_hashtable);
 }
 
 #ifdef JDWP
@@ -581,6 +579,12 @@ static char *getFirstJarFileName(char *bcp) {
   char *firstzipname = NULL;
 
   if (bcp) {
+    w_int empty_fsroot = 0;
+    if (fsroot[0] == '/' && fsroot[1] == 0) {
+      woempa(7, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
+      empty_fsroot = 1;
+    }
+
     w_int i = 0;
     w_int j = 0;
     w_int l = strlen(bcp);
@@ -615,15 +619,15 @@ static char *getFirstJarFileName(char *bcp) {
     if (i < l) {
       w_int k = 0;
       if ((l - i > 2 ) && (bcp[i] == '{') && (bcp[i + 1] == '}') && bcp[i + 2] == '/') {
-        woempa(7, "Element starts with '{}/', replace by '%s/'\n", fsroot);
+        woempa(7, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
         k = strlen(fsroot) - 2;
       }
       woempa(7, "Allocating %d bytes for firstzipname\n", j - i + k + 1);
       firstzipname = allocClearedMem(j - i + k + 1);
       if (k) {
         strncpy(firstzipname, fsroot, strlen(fsroot));
-        strncpy(firstzipname + k + 2, &bcp[i + 2], j - i - 2);
-        firstzipname[j - i + k] = 0;
+        strncpy(firstzipname + k + 2 - empty_fsroot, &bcp[i + 2], j - i - 2);
+        firstzipname[j - i + k - empty_fsroot] = 0;
       }
       else {
         strncpy(firstzipname, &bcp[i], j - i);
@@ -753,7 +757,7 @@ void startLoading(void) {
   ** Thread, or ThreadGroup without first checking that the class is prepared.
   */
   
-  x_monitor_eternal(&system_loaded_class_hashtable->monitor);
+  ht_lock(system_loaded_class_hashtable);
 
   /****
   * 1 *
@@ -851,7 +855,7 @@ void startLoading(void) {
  ****/
   woempa(7,"Step 7: loading core classes \n");
   loadCoreClasses();
-  x_monitor_exit(&system_loaded_class_hashtable->monitor);
+  ht_unlock(system_loaded_class_hashtable);
 
 
  /****
