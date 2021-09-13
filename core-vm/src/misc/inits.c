@@ -52,7 +52,11 @@
 #define FSROOT "./fsroot"
 #endif
 #ifndef CLASSPATH
+#ifdef FREERTOS
+#define CLASSPATH "/app"
+#else
 #define CLASSPATH "."
+#endif
 #endif
 
 #ifdef MODULES
