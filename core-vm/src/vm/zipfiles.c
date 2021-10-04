@@ -1,7 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2003, 2004, 2005 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,32 +9,29 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
-//#include <sys/uio.h>
 #include <fcntl.h>
 #include <unistd.h>
-//#include <zlib.h>
 
 #include "new_deflate_internals.h"
-#include "list.h"
+//#include "list.h"
 #include "ts-mem.h"
 #include "wstrings.h"
 #include "zipfile.h"
@@ -64,7 +59,7 @@ typedef w_ubyte *                              (*z_decoder)(z_zipEntry zipEntry)
 #define ZE_ZERO_LENGTH                        0x00200000 /* The original file had 0 bytes in it!                  */
 
 /*
-** The different general purpose bit flags of PKWARE. Note that the flags usaed or reserved by
+** The different general purpose bit flags of PKWARE. Note that the flags used or reserved by
 ** PKWARE are 16 bits long. We use a complete 32 bit word to add our own flags to it. These flags
 ** start after the 16'th bit.
 */
@@ -222,17 +217,20 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   if (!start) {
     wabort(ABORT_WONKA, "Unable to allocate %d bytes for buffer\n", ZIPENTRY_BUFSIZ);
   }
-  woempa(1, "Reading %slocal entry at offset %d\n", local ? "" : "non-", offs);
-  lseek(entry->zipFile->fd, offs, SEEK_SET);
-  rc = read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
+  woempa(6, "Reading %slocal entry at offset %d\n", local ? "" : "non-", offs);
+  rc = vfs_lseek(entry->zipFile->fd, offs, SEEK_SET);
+  if (rc != offs) {
+    wabort(ABORT_WONKA, "Failed to seek to offset %d (rc is %d), can't handle that", offs, rc);
+  }
+  rc = vfs_read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
 #ifndef OSWALD
   while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
     w_printf("readZipEntry(): read() interrupted, retrying\n");
-    rc = read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
+    rc = vfs_read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
   }
 #endif
   if (rc < 22 + 2 * (!local)) {
-    wabort(ABORT_WONKA, "Read less than %d bytes, can't handle that", 22 + 2 * (!local));
+    wabort(ABORT_WONKA, "Tried to read %d bytes starting at offset %d and got %d bytes, can't handle that", 22 + 2 * (!local), offs, rc);
   }
 #ifdef DEBUG
   if (! local) {
@@ -251,13 +249,13 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   entry->flags = readShort(data);
   entry->compression = readShort(data);
   timestamp = readWord(data);
-  woempa(1, "x_major = %d, x_minor = %d, flags = 0x%04x, compression = %d, timestamp = %d\n", entry->x_major, entry->x_minor, entry->flags, entry->compression, timestamp);
+  woempa(6, "x_major = %d, x_minor = %d, flags = 0x%04x, compression = %d, timestamp = %d\n", entry->x_major, entry->x_minor, entry->flags, entry->compression, timestamp);
 
   if (! local) {
     entry->d_crc = readWord(data);
     entry->c_size = (w_int)readWord(data);
     entry->u_size = (w_int)readWord(data);
-    woempa(1, "crc = 0x%08x, c_size = %d, u_size = %d\n", entry->d_crc, entry->c_size, entry->u_size);
+    woempa(6, "crc = 0x%08x, c_size = %d, u_size = %d\n", entry->d_crc, entry->c_size, entry->u_size);
   }
   else {
     /* 
@@ -280,16 +278,16 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 #ifdef DEBUG
     entry->extraLength = extraLength;
     entry->commentLength = commentLength;
-    woempa(1, "nameLength = %d, extraLength = %d, commentLength = %d\n", entry->nameLength, entry->extraLength, entry->commentLength);
+    woempa(6, "nameLength = %d, extraLength = %d, commentLength = %d\n", entry->nameLength, entry->extraLength, entry->commentLength);
     entry->s_disk = (w_short)readShort(data);
     entry->i_attr = (w_flags)readShort(data);
     entry->e_attr = readWord(data);
-    woempa(1, "s_disk = %d, i_attr = %d, e_attr = %d\n", entry->s_disk, entry->i_attr, entry->e_attr);
+    woempa(6, "s_disk = %d, i_attr = %d, e_attr = %d\n", entry->s_disk, entry->i_attr, entry->e_attr);
 #else
     data += 8;
 #endif
     entry->offset = readWord(data);
-    woempa(1, "offset = %d\n", entry->offset);
+    woempa(6, "offset = %d\n", entry->offset);
     // Bytes consumed so far == 42
  
     if (42 + nameLength + extraLength + commentLength > ZIPENTRY_BUFSIZ) {
@@ -302,10 +300,10 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       l =  nameLength + extraLength + commentLength - ZIPENTRY_BUFSIZ;
       w_printf("Need to read an extra %d bytes\n", l);
       while (l > 0) {
-        rc = read(entry->zipFile->fd, readptr,  l);
+        rc = vfs_read(entry->zipFile->fd, readptr,  l);
 #ifndef OSWALD
         while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
-          rc = read(entry->zipFile->fd, readptr,  l);
+          rc = vfs_read(entry->zipFile->fd, readptr,  l);
         }
 #endif
         if (rc < 0) {
@@ -324,7 +322,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->name, data, (w_size)entry->nameLength);
       entry->name[entry->nameLength] = 0x00;
-      woempa(1, "name = %s\n", entry->name);
+      woempa(6, "name = %s\n", entry->name);
       data += entry->nameLength;
     }
     if (extraLength) {
@@ -335,7 +333,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->extra, data, (w_size)extraLength);
       entry->extra[extraLength] = 0x00;
-      woempa(1, "extra = %s\n", entry->extra);
+      woempa(6, "extra = %s\n", entry->extra);
 #endif
       data += extraLength;
     }
@@ -347,7 +345,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->comment, data, (w_size)entry->commentLength);
       entry->comment[entry->commentLength] = 0x00;
-      woempa(1, "comment = %s\n", entry->comment);
+      woempa(6, "comment = %s\n", entry->comment);
 #endif
       data += commentLength;
     }
@@ -358,8 +356,8 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
     ** and extra the correct lengths ourselfs.
     */
 
-    lseek(entry->zipFile->fd, entry->offset + 26, SEEK_SET);
-    read(entry->zipFile->fd, o_data, 4);
+    vfs_lseek(entry->zipFile->fd, entry->offset + 26, SEEK_SET);
+    vfs_read(entry->zipFile->fd, o_data, 4);
     nameLength = (w_int)readShort(other_data);
     extraLength = (w_int)readShort(other_data);
     entry->c_data_offset = entry->offset + 30 + nameLength + extraLength;
@@ -367,7 +365,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 
   offs += data - start;
   *offsetptr = offs;
-  woempa(1, "Finished reading entry, offset is now %d\n", offs);
+  woempa(6, "Finished reading entry, offset is now %d\n", offs);
   releaseMem(start);
  
 }
@@ -403,7 +401,7 @@ z_zipFile parseZipFile(char *path) {
     return NULL;
   }
 
-  zipFile->fd = open(path, O_RDONLY);
+  zipFile->fd = vfs_open(path, O_RDONLY);
   if (zipFile->fd < 0) {
     woempa(9, "Unable to open zip file `%s'\n", path);
     releaseMem(zipFile);
@@ -416,7 +414,7 @@ z_zipFile parseZipFile(char *path) {
   ** Read partial information of the first entry.
   */
 
-  read (zipFile->fd, temp, 4);
+  vfs_read (zipFile->fd, temp, 4);
   signature = bytes2word(temp);
   if (signature != Z_LOCAL_HEADER) {
     woempa(9, "Zip file signature is 0x%08x, should be 0x%08x\n", signature, Z_LOCAL_HEADER);
@@ -441,11 +439,11 @@ z_zipFile parseZipFile(char *path) {
 
   while (1) {
     while (1) {
-      lseek (zipFile->fd, offset, SEEK_SET);
-      l = read (zipFile->fd, temp, TRAWL_SIZE + 4);
-      for (i = 0; i < l - 4; ++i) {
+      vfs_lseek (zipFile->fd, offset, SEEK_SET);
+      l = vfs_read (zipFile->fd, temp, TRAWL_SIZE + 4);
+      for (i = 0; i + 4 < l; ++i) {
         if (temp[i] == Z_SENTINEL0 && temp[i + 1] == Z_SENTINEL1 && temp[i + 2] == Z_DIR_BYTE0 && temp[i + 3] == Z_DIR_BYTE1) {
-          woempa(1, "Found directory sentinel at offset %d + %d\n", offset, i);
+          woempa(6, "Found directory sentinel at offset %d + %d\n", offset, i);
           offset += i + 4;
           match = allocClearedMem(sizeof(z_ZipEntry));
           if (!match) {
@@ -466,11 +464,11 @@ z_zipFile parseZipFile(char *path) {
     readZipEntry(WONKA_FALSE, match, &offset);
     
     if (match->offset == 0) {
-      woempa(1, "Found matching first entry in central directory.\n");
-      woempa(1, "Match offset %d\n", match->c_data_offset);
+      woempa(6, "Found matching first entry in central directory.\n");
+      woempa(6, "Match offset %d\n", match->c_data_offset);
       break;
     }
-    woempa(1, "Found non-matching entry in central directory, trying again ...\n");
+    woempa(6, "Found non-matching entry in central directory, trying again ...\n");
   }
 
   list_init(match);
@@ -487,8 +485,8 @@ z_zipFile parseZipFile(char *path) {
   // MEMORY LEAK, RELEASE entry	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
   while (1) {
-    lseek (zipFile->fd, offset, SEEK_SET);
-    read (zipFile->fd, temp, 4);
+    vfs_lseek (zipFile->fd, offset, SEEK_SET);
+    vfs_read (zipFile->fd, temp, 4);
     signature = bytes2word(temp);
     if (signature != Z_DIR_HEADER) {
       break;
@@ -514,8 +512,8 @@ z_zipFile parseZipFile(char *path) {
   woempa(1, "Reading central directory of zipfile 0x%08x\n", (w_word)zipFile);
 
   offset += sizeof(w_word);
-  lseek (zipFile->fd, offset, SEEK_SET);
-  read (zipFile->fd, temp, 18);
+  vfs_lseek (zipFile->fd, offset, SEEK_SET);
+  vfs_read (zipFile->fd, temp, 18);
 #ifdef DEBUG
   zipFile->c_disk = bytes2short(temp);
   zipFile->d_disk = bytes2short(temp + 2);
@@ -531,8 +529,8 @@ z_zipFile parseZipFile(char *path) {
     releaseMem(zipFile);
     return NULL;
   }
-  lseek(zipFile->fd, offset, SEEK_SET);
-  read(zipFile->fd, zipFile->comment, zipFile->commentLength);
+  vfs_lseek(zipFile->fd, offset, SEEK_SET);
+  vfs_read(zipFile->fd, zipFile->comment, zipFile->commentLength);
 
   dumpDir(zipFile);
 #endif
@@ -667,8 +665,8 @@ static w_ubyte *zip_destore(z_zipEntry entry) {
   if (!result) {
     wabort(ABORT_WONKA, "Unable to allocate space for result\n");
   }
-  lseek(entry->zipFile->fd, entry->c_data_offset, SEEK_SET);
-  read(entry->zipFile->fd, result, entry->u_size);
+  vfs_lseek(entry->zipFile->fd, entry->c_data_offset, SEEK_SET);
+  vfs_read(entry->zipFile->fd, result, entry->u_size);
 
   if (entry->d_crc == CCITT_32(result, (w_size)entry->u_size)) {
     setFlag(entry->flags, ZE_UNCOMPRESSED);
@@ -1085,17 +1083,17 @@ static w_ubyte *zip_inflate(z_zipEntry entry) {
     wabort(ABORT_WONKA, "Unable to allocate space for result\n");
   }
 
-  rc = lseek(entry->zipFile->fd, entry->c_data_offset, SEEK_SET);
+  rc = vfs_lseek(entry->zipFile->fd, entry->c_data_offset, SEEK_SET);
   if (rc == -1) {
     wabort(ABORT_WONKA, "lseek() failed\n");
   }
   woempa(1, "zip_inflate(): Need to read %d bytes\n", entry->c_size);
   //w_printf("zip_inflate(): Need to read %d bytes\n", entry->c_size);
   while (l < entry->c_size) {
-    rc = read(entry->zipFile->fd, source + l, entry->c_size - l);
+    rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
 #ifndef OSWALD
     while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
-      rc = read(entry->zipFile->fd, source + l, entry->c_size - l);
+      rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
     }
 #endif
     if (rc == -1) {
