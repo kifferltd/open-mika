@@ -80,7 +80,7 @@ wfp_float64 D_NAN;
 #endif
 
 void initWonka(void) {
-  (void)x_mutex_create(&woempaMutex);
+  initDebug();
 
 #ifdef NATIVE_FP
   F_NAN = strtof("NAN", NULL);

@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -44,6 +40,13 @@
 #include "vfs.h"
 #include "vfs_fcntl.h"
 
+#ifdef FREERTOS
+#include "FreeRTOS.h"
+#include "iot_uart.h"
+#include "semphr.h"
+#include "im4000uart.h"
+#endif
+
 extern w_clazz clazzClassLoader;
 
 const char *abortMessages[] = {
@@ -59,8 +62,19 @@ w_flags verbose_flags;
 
 x_Mutex woempaMutex;
 
+#ifdef FREERTOS
+  IotUARTHandle_t xUartHandle = NULL;
+#endif
+
 void PutString(char *s) {
+#ifdef FREERTOS
+  iot_uart_write_sync(xUartHandle, s, strlen(s));
+  if (s[strlen(s)-1]==10) {
+    iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
+  }
+#else
   write(2, s, strlen(s));
+#endif
 }
 
 char hexDigit(int n) {
@@ -202,6 +216,50 @@ void w_printf(const char *fmt, ...) {
 
 }
 
+#ifdef IM4000
+static void _callback( IotUARTOperationStatus_t xStatus, void *pvUserContext )
+{
+    ( void )xStatus;
+    SemaphoreHandle_t xUartSem = ( SemaphoreHandle_t )pvUserContext;
+    configASSERT( NULL != xUartSem );
+    xSemaphoreGive( xUartSem );
+}
+
+static void initDebugUart(void) {
+  w_int lUartInstance = IM4000_COM3;
+  w_int iResult = IOT_UART_INVALID_VALUE;
+  SemaphoreHandle_t xUartSem;
+  const size_t uNumBytesToRead = 10u;
+  w_ubyte puRxBuffer[16] = { 0 };
+  w_ubyte puTxBuffer[ sizeof( puRxBuffer ) + 2 ] = { 0 };
+  IotUARTConfig_t xUARTConfig;
+  w_int iNumBytesRead = 0;
+
+  xUartSem = xSemaphoreCreateBinary();
+
+  xUartHandle = iot_uart_open( lUartInstance );
+  configASSERT( NULL != xUartHandle );
+
+   /* Set UART configuration */
+    xUARTConfig.ulBaudrate = 115200u;
+    xUARTConfig.ucWordlength = 8u;
+    xUARTConfig.xParity = eUartParityNone;
+    xUARTConfig.xStopbits = eUartStopBitsOne;
+    xUARTConfig.ucFlowControl = 0u; /* Disable flow control. */
+    iResult = iot_uart_ioctl(xUartHandle, eUartSetConfig, &xUARTConfig);
+    configASSERT( IOT_UART_SUCCESS == iResult );
+}
+#endif
+
+void initDebug() {
+  (void)x_mutex_create(&woempaMutex);
+
+#ifdef IM4000
+  initDebugUart();
+#endif
+
+}
+
 extern char *woempa_dump_file;
 extern int  woempa_stderr;
 extern int  woempa_bytecodecount;
@@ -222,12 +280,15 @@ void _woempa(const char *file, const char *function, int line, int level, const 
       woempa_bytecodecount > woempa_bytecodetrigger)
     woempa_default_trigger_level = 2;
 
+// TODO re-write this for FreeRTOS FAT
+#ifndef FREERTOS
   if(woempa_dump_file) {
     if (! od) {
       /*         name     <--- flags --------------------------->  <------ modes -------------->  */
       od = open(woempa_dump_file, (VFS_O_WRONLY | VFS_O_CREAT | VFS_O_TRUNC), (VFS_S_IRUSR | VFS_S_IWUSR | VFS_S_IXUSR | VFS_S_IRGRP | VFS_S_IROTH));
     }
   }
+#endif
   
   if (strcmp(get_basename(file),"hashtable.c") == 0) {
     trigger = hashtable_trigger_level;
@@ -292,18 +353,27 @@ void _woempa(const char *file, const char *function, int line, int level, const 
     va_end (ap);
    
 #ifndef ECOS
+#ifdef FREERTOS
+    iot_uart_write_sync(xUartHandle, woempa_buffer, strlen(woempa_buffer));
+    if (woempa_buffer[strlen(woempa_buffer)-1]==10) {
+      iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
+    }
+#else
     if(od) { 
       (void)write(od, woempa_buffer, strlen(woempa_buffer));
     }
-#endif //ECOS
+#endif // FREERTOS
+#endif // ECOS
  
    
+#ifndef FREERTOS
     if(woempa_stderr) {
       if (level >= 7 || (woempa_bytecodecount > woempa_bytecodetrigger && woempa_bytecodetrigger > 0)) {
         (void)write(2, woempa_buffer, strlen(woempa_buffer));
         fflush(NULL);
       }
     }
+#endif
 
     (void)x_mutex_unlock(&woempaMutex);
 
@@ -330,7 +400,14 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   (void)x_vsnprintf(woempa_buffer + strlen(woempa_buffer), bufsize - strlen(woempa_buffer), fmt , ap);
   va_end (ap);
 
+#ifdef FREERTOS
+  (void)iot_uart_write_sync(xUartHandle, woempa_buffer, strlen(woempa_buffer));
+  if (woempa_buffer[strlen(woempa_buffer)-1]==10) {
+    iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
+  }
+#else
   (void)write(1, woempa_buffer, strlen(woempa_buffer));
+#endif
   kthread = x_thread_current();
 /*
 ** Replace with thread_hashtable lookup for now
