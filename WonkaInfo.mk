@@ -75,3 +75,31 @@ ifeq ($(MATH), java)
   WONKA_INFO += using all-java math functions\;
 endif
 
+ifeq ($(UNICODE_SUBSETS), 0)
+  WONKA_INFO += minimal Unicode support\;
+else
+  ifeq ($(UNICODE_SUBSETS), 999)
+    WONKA_INFO += full Unicode support\;
+  else
+    WONKA_INFO += support for Unicode subsets $(UNICODE_SUBSETS)\;
+  endif
+endif
+
+ifeq ($(ENABLE_THREAD_RECYCLING), true)
+  WONKA_INFO += with recycling of native threads\;
+else
+  WONKA_INFO += no recycling of native threads\;
+endif
+
+ifeq ($(JAVAX_COMM), true)
+    WONKA_INFO += with javax.comm\;
+endif
+
+ifeq ($(JAVAX_COMM), false)
+    WONKA_INFO += no javax.comm\;
+endif
+
+ifneq ($(UPTIME_LIMIT), none)
+  WONKA_INFO += will exit automatically after $(UPTIME_LIMIT) seconds\;
+endif
+

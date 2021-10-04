@@ -47,9 +47,7 @@ include ./Configuration/mika/default.mk
 
 export VERSION_STRING ?= "IM4000 test build 1.4.2-$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)"
 export AWT_DEF ?= none
-export CPU
-export HOSTOS
-export SCHEDULER
+export CPU HOSTOS SCHEDULER
 export AR
 
 export tooldir = $(MIKA_TOP)/tool
@@ -78,17 +76,8 @@ ifdef UNIX
 else
   LIBPREFIX ?= ""
 endif
-export LIBPREFIX
 
-# CFLAGS_cpu__arm = -DARM
-# CFLAGS_cpu__armel = -DARMEL
-# CFLAGS_cpu__mips = -DMIPS
-# CFLAGS_cpu__ppc = -DPPC
-# CFLAGS_cpu__sh4 = -DSH4
-# CFLAGS_cpu__x86 = -DX86
-# CFLAGS_cpu__x86-clang = -DX86
-
-# CFLAGS += $(CFLAGS_cpu__$(CPU))
+export CCLASSPATH LIBPREFIX
 
 ifeq ($(CPU),x86)
   LDFLAGS = -m32
@@ -383,59 +372,23 @@ ifeq ($(HOSTOS), winnt)
   CFLAGS += -fno-leading-underscore
 endif
 
-ifdef CCLASSPATH
-  WONKA_INFO += runtime classpath is $(CCLASSPATH);
-endif
+export FILESYSTEM NETWORK SECURITY
+export JAVA5_SUPPORT JDWP JAVAX_COMM BYTECODE_VERIFIER
+export FLOATING_POINT MATH UNICODE_SUBSETS
+export ENABLE_THREAD_RECYCLING
+export USE_LIBFFI
+export UPTIME_LIMIT
+export SCHEDULER USE_NANOSLEEP HAVE_TIMEDWAIT USE_NATIVE_MALLOC HOST_TIMER_GRANULARITY CPU_MIPS SHARED_HEAP
+
+include WonkaInfo.mk
+include KernelInfo.mk
 
 ifeq ($(FILESYSTEM), vfs)
-  WONKA_INFO += using own virtual filesystem\;
   export fsinc = $(MIKA_TOP)/vm-cmp/fs/include
 endif
  
 ifeq ($(FILESYSTEM), native)
-  WONKA_INFO += using host OS filesystem, with virtual root at $(FSROOT)\;
   export fsinc = $(MIKA_TOP)/vm-cmp/fs/native/hal/hostos/$(HOSTOS)/include
-endif
-
-ifeq ($(JAVA5_SUPPORT), true)
-  WONKA_INFO += with Java5 support\;
-endif
-
-ifeq ($(JAVA5_SUPPORT), false)
-  WONKA_INFO += no Java5 support\;
-endif
-
-ifeq ($(JDWP), true)
-  WONKA_INFO += with JDWP enabled\;
-endif
-
-ifeq ($(JDWP), false)
-  WONKA_INFO += no JDWP\;
-endif
-
-ifeq ($(USE_LIBFFI), true)
-  WONKA_INFO += using libffi to call native code\;
-endif
-
-ifeq ($(USE_LIBFFI), false)
-  WONKA_INFO += using own hacks to call native code\;
-endif
-
-
-ifeq ($(BYTECODE_VERIFIER), true)
-  WONKA_INFO += bytecode verification is enabled\;
-endif
-
-ifeq ($(BYTECODE_VERIFIER), false)
-  WONKA_INFO += bytecode verification is disabled\;
-endif
-
-ifeq ($(NETWORK), none)
-  WONKA_INFO += no network\;
-endif
-
-ifeq ($(NETWORK), native)
-  WONKA_INFO += using the host OS network facilities\;
 endif
 
 ifeq ($(SECURITY), fine)
@@ -447,65 +400,11 @@ ifeq ($(SECURITY), coarse)
     SECURITY = java2
 endif
 
-ifeq ($(SECURITY), java2)
-    WONKA_INFO += fine-grained (Java2) security\;
-endif
-ifeq ($(SECURITY), none)
-    WONKA_INFO += no security\;
-endif
-
-ifeq ($(FLOATING_POINT), native)
-  WONKA_INFO += using native floating-point\;
-endif
-
-ifeq ($(FLOATING_POINT), hauser)
-  WONKA_INFO += using own floating-point after John Hauser\;
-endif
-
-ifeq ($(MATH), native)
-  WONKA_INFO += using native math functions\;
-endif
-
-ifeq ($(MATH), java)
-  WONKA_INFO += using all-java math functions\;
-endif
-
-
-ifeq ($(UNICODE_SUBSETS), 0)
-  WONKA_INFO += minimal Unicode support\;
-else
-  ifeq ($(UNICODE_SUBSETS), 999)
-    WONKA_INFO += full Unicode support\;
-  else
-    WONKA_INFO += support for Unicode subsets $(UNICODE_SUBSETS)\;
-  endif
-endif
-
-WONKA_INFO += using own routines for unzipping\;
-
-ifeq ($(ENABLE_THREAD_RECYCLING), true)
-  WONKA_INFO += with recycling of native threads\;
-else
-  WONKA_INFO += no recycling of native threads\;
-endif
-
-ifeq ($(JAVAX_COMM), true)
-    WONKA_INFO += with javax.comm\;
-endif
-
-ifeq ($(JAVAX_COMM), false)
-    WONKA_INFO += no javax.comm\;
-endif
-
 ifeq ($(TESTS), true)
   TEST_INFO = generating tests for Mauve and for the VisualTestEngine.
 endif
 ifeq ($(TESTS), false)
   TEST_INFO = not generating tests for Mauve and for the VisualTestEngine.
-endif
-
-ifneq ($(UPTIME_LIMIT), none)
-  WONKA_INFO += will exit automatically after $(UPTIME_LIMIT) seconds\;
 endif
 
 ifeq "$(AWT)" "rudolph"
@@ -532,45 +431,6 @@ endif
 
 ifeq ($(AWT), none)
     AWT_INFO = no AWT\;
-endif
-
-ifeq ($(SCHEDULER), o4p)
-  ifeq ($(USE_NANOSLEEP), true)
-    O4P_INFO = using nanosleep(2) for internal timing loop\;
-  else
-    O4P_INFO = using usleep(3) for internal timing loop\;
-  endif
-
-  ifeq ($(HAVE_TIMEDWAIT), true)
-    O4P_INFO += using pthread_cond_timedwait\;
-  else
-    O4P_INFO += not using pthread_cond_timedwait\;
-  endif
-
-  ifeq ($(USE_NATIVE_MALLOC), true)
-    O4P_INFO += using native malloc\;
-  else
-    O4P_INFO += using own memory management routines\;
-  endif
-
-  ifdef HOST_TIMER_GRANULARITY
-    O4P_INFO += host timer granularity = $(HOST_TIMER_GRANULARITY) usec\;
-  endif
-else ifeq ($(SCHEDULER), o4f)
-  O4F_INFO += hello world
-else
-  ifdef CPU_MIPS
-    OSWALD_INFO += estimated CPU speed = $(CPU_MIPS) MIPS\;
-  endif
-
-  ifdef HOST_TIMER_GRANULARITY
-    OSWALD_INFO += host timer granularity = $(HOST_TIMER_GRANULARITY) usec\;
-  endif
-
-  ifeq ($(SHARED_HEAP), true)
-    OSWALD_INFO += exporting own version of malloc and friends\;
-  endif
-
 endif
 
 CFLAGS += -DWONKA_INFO=\"" $(WONKA_INFO) "\"
