@@ -214,7 +214,7 @@ void start_routine(void *thread_ptr) {
 
   num_started += 1;
   thread = (x_thread )thread_ptr;
-  printf("===>>>  setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, thread);
+  loempa(2, "setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, thread);
   vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread);
   if (thread->xref) {
     loempa(2,"Mika thread %t starting\n", thread->xref);
@@ -306,7 +306,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    }
 
    if (stack_start) {
-     printf("O4F WARNING: stack_start is non-NULL (%p), but x_thread_create ignores stack_start\n", stack_start);
+     loempa(2, "O4F WARNING: stack_start is non-NULL (%p), but x_thread_create ignores stack_start\n", stack_start);
    }
    loempa(2, "x_thread_create: setting up FreeRTOS task %s\n", "");
    thread->task_function = entry_function;
@@ -331,10 +331,10 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      thread->flags = 0; // WAS: 1
      snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
      //thread->name[0] = 0;
-   printf("===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
+     loempa(2, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
-   printf("===>>>  status = %d\n", status);
+     loempa(2, "===>>>  status = %d\n", status);
      if (status != pdPASS) {
        o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
       }
@@ -441,7 +441,7 @@ x_size x_thread_priority_set(x_thread thread, w_size new_priority) {
   else {
     // map 0 (highest priority) to (configMAX_PRIORITIES – 1), (NUM_PRIORITIES - 1) to 1
     thread->task_priority = configMAX_PRIORITIES - 1 - ((configMAX_PRIORITIES - 2)*new_priority/NUM_PRIORITIES);
-printf("oswald priority %d maps to FreeRTOS priority %d of %d\n", new_priority, thread->task_priority, configMAX_PRIORITIES);
+    loempa(2, "oswald priority %d maps to FreeRTOS priority %d of %d\n", new_priority, thread->task_priority, configMAX_PRIORITIES);
   }
 
   return old_priority;
