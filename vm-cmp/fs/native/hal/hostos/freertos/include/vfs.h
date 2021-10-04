@@ -29,6 +29,10 @@
 #ifndef VFS_INCLUDE
 #define VFS_INCLUDE
 
+#ifdef FS_NON_BLOCKING
+ERROR - non-blocking file access is not supported on FreeRTOS
+#endif
+
 /* Set _FILE_OFFSET_BITS to 32 to make these functions work with glibc2.2 */
 
 #define _FILE_OFFSET_BITS 32
@@ -44,17 +48,20 @@
 #include "vfs_fcntl.h"
 #include "ts-mem.h"
 
+#define MAX_CWD_SIZE 1024
+#define FLASH_CACHE_SIZE 8192
+#define MAX_FILE_DESCRIPTORS 256
 
-#ifdef OSWALD
-#define FS_NON_BLOCKING
-#include "oswald.h"
-#endif
+typedef struct vfs_fd_entry {
+  FF_FILE *ff_fileptr;
+  w_word flags; // O_RDONLY, O_WRONLY, or O_RDWR
+} vfs_fd_entry;
+
+extern vfs_fd_entry vfs_fd_table[];
 
 extern char *current_working_dir;
 extern char *current_root_dir;
 extern char *fsroot;
-
-/* Macros to map the vfs_* functions to their normal C equivalents */
 
 #define close_vfs()                woempa(9, "close_vfs -> Using native filesystem\n")
 #define vfs_mount(...)            woempa(9, "vfs_mount -> Using native filesystem\n", __VA_ARGS__);
@@ -63,27 +70,16 @@ extern char *command_line_path;
 
 static char *cwdbuffer;
 
-#define MAX_CWD_SIZE 1024
-#define FLASH_CACHE_SIZE 8192
-
 FF_Disk_t *vfs_flashDisk;
 
 void init_vfs(void);
 
-#ifndef FS_NON_BLOCKING
+extern w_int vfs_open(const char *pathname, w_word flags);
+extern w_int vfs_read(w_int fd, void *buf, w_size count);
+extern w_int vfs_lseek(w_int fd, w_int offset, w_int whence);
+extern w_int vfs_close(w_int fd);
 
-/*
-** However, there's a problem with the following functions when using Oswald. Since Oswald is multithreading in a single 
-** process, a function that blocks the process blocks every single thread. Therefore it's needed to make all calls 
-** non-blocking.
-*/
-
-#define vfs_open(path, ...)       open(path, __VA_ARGS__)
-#define vfs_creat(path, ...)      creat(path, __VA_ARGS__)
-#define vfs_read(...)             read(__VA_ARGS__)
-#define vfs_write(...)            write(__VA_ARGS__)
-
-#define vfs_fopen(path, ...)      fopen(path, __VA_ARGS__)
+#define vfs_fopen(path, ...)      ff_fopen(path, __VA_ARGS__)
 #define vfs_fdopen(...)           fdopen(__VA_ARGS__)
 #define vfs_fclose(...)           fclose(__VA_ARGS__)
 
@@ -115,14 +111,9 @@ void init_vfs(void);
 
 #define vfs_FILE                   FILE
 
-#endif /* !FS_NON_BLOCKING */
-
 /*
 ** The following functions have no blocking issues
 */
-
-#define vfs_close(a)               close(a)
-#define vfs_lseek(a,b,c)           lseek(a,b,c)
 
 // FIXME - FreeRTOS FAT must have a way to set access time
 #define vfs_utime(a,b)             (-1)
@@ -153,42 +144,9 @@ void init_vfs(void);
 #define vfs_DIR                    FF_FindData_t
 #define vfs_fpos_t                 w_int
 
-#ifdef FS_NON_BLOCKING
 
-/*
-** These transform the original function calls into non-blocking calls. This does not mean
-** that these functions don't block, they do actually, but they no longer block the 
-** running process.
-*/
-
-static inline int vfs_open(const char *filename, const w_int flags, const w_word mode) {
-  return open(filename, flags | O_NONBLOCK, mode);
-}
-
-static inline int vfs_creat(const char *pathname, w_word mode) {
-  /* The normal creat function has no NONBLOCK option, so we need to reroute the call to open */
-  return open(pathname, O_CREAT|O_WRONLY|O_TRUNC|O_NONBLOCK, mode);
-}
-
-static inline int vfs_read(const int file_desc, w_void *buffer, const w_word count) {
-  int retval = read(file_desc, buffer, count);
-  while (retval == -1 && (errno == EAGAIN || errno == EINTR)){
-    // [CG 20050515] Surely this isn't needed?
-    // x_thread_sleep(50);
-    retval = read(file_desc, buffer, count);
-  }
-  return retval;  
-}
-
-static inline int vfs_write(const int file_desc, const w_void *buffer, const w_word count) {
-  int retval = write(file_desc, buffer, count);
-  while (retval == -1 && (errno == EAGAIN || errno == EINTR)){
-    x_thread_sleep(50);
-    retval = write(file_desc, buffer, count);
-  }
-  return retval;  
-}
-
+// old non-blocking code
+#ifdef HIPPOPOTAMUS
 /*
 ** These are the bastards. There's no way to make these calls nonblocking. So they are mapped to the normal 
 ** file calls.
@@ -198,12 +156,12 @@ static inline int vfs_write(const int file_desc, const w_void *buffer, const w_w
 #define VFS_STREAM_ERROR   0x02         /* Error flag */
 
 typedef struct vfs_FILE {
-  int             file_desc;            /* file descriptor of this stream */
+  w_int           file_desc;            /* file descriptor of this stream */
   char           *mode;                /* File mode, e.g. r+ */
   w_word          error;                /* Error flags */
 } vfs_FILE;
 
-static inline vfs_FILE *vfs_fdopen(int fildes, const char *mode) {
+static inline vfs_FILE *vfs_fdopen(w_int fildes, const char *mode) {
   vfs_FILE   *stream = allocMem(sizeof(vfs_FILE)); 
 
   if (stream) {
@@ -254,7 +212,7 @@ static inline w_word vfs_fclose(vfs_FILE *stream) {
   return 0;
 }
 
-inline static int vfs_fseek(vfs_FILE *stream, long offset, w_int whence) {
+inline static w_int vfs_fseek(vfs_FILE *stream, long offset, w_int whence) {
   return lseek(stream->file_desc, offset, whence);
 }
 
@@ -347,7 +305,8 @@ static inline w_word vfs_fflush(vfs_FILE *stream) {
   return 0;
 }
 
-#endif /* FS_NON_BLOCKING */
+#endif
+// end old code
 
 #define VFS_S_IFMT                 S_IFMT
 #define VFS_S_IFDIR                S_IFDIR
