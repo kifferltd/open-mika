@@ -64,13 +64,21 @@ const char *magic = "This memory is valid.";
 static o4f_Memory_Chunk Memory_Sentinel;
 static o4f_memory_chunk memory_sentinel;
 
+/* WAS:
 static void *chunk2mem(o4f_memory_chunk chunk) {
   return ((char*)chunk) + sizeof(o4f_Memory_Chunk);
 }
+*/
 
+#define chunk2mem(chunk) (((char*)chunk) + sizeof(o4f_Memory_Chunk))
+
+/* WAS:
 static o4f_memory_chunk mem2chunk(void *mem) {
   return (o4f_memory_chunk)(((char*)mem) - sizeof(o4f_Memory_Chunk));
 }
+*/
+
+#define mem2chunk(mem) ((o4f_memory_chunk)(((char*)mem) - sizeof(o4f_Memory_Chunk)))
 
 void x_mem_init(void) {
   memory_sentinel = &Memory_Sentinel;
@@ -116,7 +124,9 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
+  loempa(1,"heap_remaining was %d\n", heap_remaining);
   heap_remaining -= size + sizeof(o4f_Memory_Chunk);
+  loempa(1,"subtracted %d + %d from heap_remaining, is now %d\n", size, sizeof(o4f_Memory_Chunk), heap_remaining);
   x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
