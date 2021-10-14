@@ -31,7 +31,6 @@
 #include <unistd.h>
 
 #include "new_deflate_internals.h"
-//#include "list.h"
 #include "ts-mem.h"
 #include "wstrings.h"
 #include "zipfile.h"

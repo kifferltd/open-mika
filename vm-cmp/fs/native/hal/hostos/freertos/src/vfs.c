@@ -54,111 +54,9 @@ static void dumpDir(const char *path, int level) {
 }
 #endif
 
-// NEW TEST //
-#define FLASH_DISK_NAME                                        "/"
-#define MAX_NUM_OF_SUB_DIRS 5
-#define MAX_DIR_NAME_LENGTH 10
-#define MAX_PATH_LENGTH 40
-
-/*-----------------------------------------------------------*/
+#define FLASH_DISK_NAME    "/"
 
 static FF_Disk_t *pxFlashDisk;
-
-/*
-static void doc( const char *pcDirPath, const char *pcFileName, const char *mode )
-{
-char path[MAX_PATH_LENGTH];
-FF_FILE *file;
-char charbuf;
-
-        path[0] = '\0';
-        strcat(path, pcDirPath);
-        strncat(path, pcFileName, MAX_PATH_LENGTH - strlen(pcDirPath));
-        file = ff_fopen(path, mode);
-        if (file)
-        {
-             printf("opened %s for '%s'\n", path, mode);
-             int len = ff_fread(&charbuf, 1, 1, file );
-             if (len)
-             {
-                 printf("first byte is 0x%02x\n", charbuf);
-             }
-             else {
-                 printf("could not read first byte, errno is %d\n", errno);
-             }
-             printf("closing %s\n", path);
-             ff_fclose(file);
-        }
-        else {
-             printf("failed to open %s for '%s'\n", path, mode);
-        }
-}
-*/
-
-static void dir( const char *pcDirPath )
-{
-FF_FindData_t xFindStruct;
-const char        *pcAttrib;
-const char        *pcWritableFile = "writable file";
-const char        *pcReadOnlyFile = "read only file";
-const char        *pcDirectory = "directory";
-UBaseType_t i, next = 0;
-char subdirs[MAX_NUM_OF_SUB_DIRS][MAX_DIR_NAME_LENGTH];
-char path[MAX_PATH_LENGTH];
-const char *mode;
- 
-        FF_PRINTF( "Directory content for %s:\n", pcDirPath); 
-        memset( &xFindStruct, 0, sizeof( FF_FindData_t ) );
-
-        if( ff_findfirst( pcDirPath, &xFindStruct ) == 0 )
-        {
-                do
-                {
-                        /* Point pcAttrib to a string that describes the file. */
-                        if( ( xFindStruct.ucAttributes & FF_FAT_ATTR_DIR ) != 0 )
-                        {
-                                pcAttrib = pcDirectory;
-                                if( strcmp(xFindStruct.pcFileName, ".") != 0 &&
-                                        strcmp(xFindStruct.pcFileName, "..") != 0 )
-                                {
-                                        strncpy(subdirs[next++], xFindStruct.pcFileName, MAX_DIR_NAME_LENGTH);
-                                }
-                        }
-                        else if( xFindStruct.ucAttributes & FF_FAT_ATTR_READONLY )
-                        {
-                                pcAttrib = pcReadOnlyFile;
-                                mode = "r";
-                        }
-                        else
-                        {
-                                pcAttrib = pcWritableFile;
-                                mode = "r+";
-                        }
-
-                        FF_PRINTF( "%s [%s] [size=%d]\n",
-                                           xFindStruct.pcFileName,
-                                           pcAttrib,
-                                           xFindStruct.ulFileSize );
-
-/*
-                        if( ( xFindStruct.ucAttributes & FF_FAT_ATTR_DIR ) == 0 )
-                        {
-                                doc(pcDirPath, xFindStruct.pcFileName, mode);
-                        }
-*/
-                } while( ff_findnext( &xFindStruct ) == 0 );
-        }
-        for (i = 0; i < next; i++)
-        {
-                path[0] = '\0';
-                strcat(path, pcDirPath);
-                strncat(path, subdirs[i], MAX_DIR_NAME_LENGTH);
-                strcat(path, "/");
-                dir(path);
-        }
-}
-
-
 
 void init_vfs(void) {
   memset(vfs_fd_table, 0, sizeof(vfs_fd_table));
@@ -175,22 +73,13 @@ void init_vfs(void) {
   woempa(9, "current dir  : %s\n", current_working_dir);
   woempa(9, "current root : %s\n", current_root_dir);
 
-// OLD TEST //
-#ifdef DEBUG
-//  dumpDir(current_root_dir, 0);
-#endif
-
-// NEW TEST //
   pxFlashDisk = FFInitFlash(FLASH_DISK_NAME, FLASH_CACHE_SIZE);
-
-//  dir( FLASH_DISK_NAME );
-
 }
 
-w_int vfs_open(const char *pathname, w_word flags) {
+w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
   int fd;
   // TODO deal with more flags
-  const char *mode = isSet(flags, O_RDONLY) ? "r" : "r+";
+  const char *mode = (flags == O_RDONLY) ? "r" : "r+";
   FF_FILE *ff_fileptr = ff_fopen(pathname, mode);
   if (ff_fileptr) {
     // TODO - fix it so that fds 0, 1, 2 appear to be occupied
@@ -250,7 +139,7 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
 // If the read/write position could not be moved then -1 is returned and the task's errno is set to indicate the reason
   if (ff_fseek(ff_fileptr, offset, whence) == 0) {
     w_int new_pos = ff_ftell(ff_fileptr);
-    woempa(7, "sought %d bytes from fd %d\n", offset, fd);
+    woempa(7, "sought %d bytes from fd %d, offset is now %d\n", offset, fd, new_pos);
     return new_pos;
   }
 

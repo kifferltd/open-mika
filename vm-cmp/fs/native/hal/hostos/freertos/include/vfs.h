@@ -74,7 +74,7 @@ FF_Disk_t *vfs_flashDisk;
 
 void init_vfs(void);
 
-extern w_int vfs_open(const char *pathname, w_word flags);
+extern w_int vfs_open(const char *pathname, w_word flags, w_word mode);
 extern w_int vfs_read(w_int fd, void *buf, w_size count);
 extern w_int vfs_lseek(w_int fd, w_int offset, w_int whence);
 extern w_int vfs_close(w_int fd);
