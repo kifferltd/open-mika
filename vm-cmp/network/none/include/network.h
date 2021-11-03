@@ -110,7 +110,8 @@ static inline int w_errno(int s){
   return -1;
 }
 
-static inline char* w_strerror(int errno) {
+// TODO replace by something more useful
+static inline char* w_strerror(int foo) {
   return "NO NETWORK AVAILABLE";
 }
 
@@ -185,7 +186,10 @@ static inline int shutdown(int s,int h){
   return -1;
 }
 
+#ifndef FREERTOS
+// TODO this delaration looks dodgy anyhow
 extern int errno;
+#endif
 
 static inline short ntohs(short s){
   return (short)(s<<8) | (s>>8);
