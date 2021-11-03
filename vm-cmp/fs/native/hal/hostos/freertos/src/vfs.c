@@ -79,15 +79,15 @@ void init_vfs(void) {
 w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
   int fd;
   // TODO deal with more flags
-  const char *mode = (flags == O_RDONLY) ? "r" : "r+";
-  FF_FILE *ff_fileptr = ff_fopen(pathname, mode);
+  const char *how = (flags == O_RDONLY) ? "r" : "r+";
+  FF_FILE *ff_fileptr = ff_fopen(pathname, how);
   if (ff_fileptr) {
     // TODO - fix it so that fds 0, 1, 2 appear to be occupied
-    for (fd = 2; fd < MAX_FILE_DESCRIPTORS; fd++) {
+    for (fd = 3; fd < MAX_FILE_DESCRIPTORS; fd++) {
       if (!vfs_fd_table[fd].ff_fileptr) {
         vfs_fd_table[fd].ff_fileptr = ff_fileptr;
         vfs_fd_table[fd].flags = flags;
-        woempa(7, "opened %s in mode %s, fd = %d\n", pathname, mode, fd);
+        woempa(7, "opened %s in mode %s, fd = %d\n", pathname, how, fd);
 
         return fd;
       }
@@ -96,7 +96,7 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
 
   w_int fat_errno = stdioGET_ERRNO();
   
-  woempa(7, "unable to open %s in mode %s, fat_errno = %d\n", pathname, mode, fat_errno);
+  woempa(7, "unable to open %s in mode %s, fat_errno = %d\n", pathname, how, fat_errno);
   // TODO we should set errno
   return -1;
 }
