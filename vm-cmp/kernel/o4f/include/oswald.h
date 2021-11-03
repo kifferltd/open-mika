@@ -264,6 +264,19 @@ void x_mem_discard(void * block);
 x_status x_mem_collect(x_size * bytes, x_size * num);
 x_boolean x_mem_is_block(void * mem);
 
+/*
+** The OSwald debugging API.
+*/
+void x_debug_write(const void *buf, size_t count);
+
+inline static void x_debug_putc(const char c) {
+  x_debug_write(c, 1);
+}
+
+inline static void x_debug_puts(const char *s) {
+  x_debug_write(s, strlen(s));
+}
+
 x_long x_time_now_millis(void);
 
 /*

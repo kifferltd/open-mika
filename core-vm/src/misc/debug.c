@@ -62,20 +62,17 @@ w_flags verbose_flags;
 
 x_Mutex woempaMutex;
 
-#ifdef FREERTOS
-  IotUARTHandle_t xUartHandle = NULL;
-#endif
+// TODO modify non-FreeRTOS code to use x_debug_puts/putc
 
 void PutString(char *s) {
 #ifdef FREERTOS
-  iot_uart_write_sync(xUartHandle, s, strlen(s));
-  if (s[strlen(s)-1]==10) {
-    iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
-  }
+  x_debug_puts(s);
 #else
   write(2, s, strlen(s));
 #endif
 }
+
+// TODO is this stuff ever used?
 
 char hexDigit(int n) {
   return n<10 ? n+'0' : n+'a'-10;
@@ -216,48 +213,8 @@ void w_printf(const char *fmt, ...) {
 
 }
 
-#ifdef IM4000
-static void _callback( IotUARTOperationStatus_t xStatus, void *pvUserContext )
-{
-    ( void )xStatus;
-    SemaphoreHandle_t xUartSem = ( SemaphoreHandle_t )pvUserContext;
-    configASSERT( NULL != xUartSem );
-    xSemaphoreGive( xUartSem );
-}
-
-static void initDebugUart(void) {
-  w_int lUartInstance = IM4000_COM3;
-  w_int iResult = IOT_UART_INVALID_VALUE;
-  SemaphoreHandle_t xUartSem;
-  const size_t uNumBytesToRead = 10u;
-  w_ubyte puRxBuffer[16] = { 0 };
-  w_ubyte puTxBuffer[ sizeof( puRxBuffer ) + 2 ] = { 0 };
-  IotUARTConfig_t xUARTConfig;
-  w_int iNumBytesRead = 0;
-
-  xUartSem = xSemaphoreCreateBinary();
-
-  xUartHandle = iot_uart_open( lUartInstance );
-  configASSERT( NULL != xUartHandle );
-
-   /* Set UART configuration */
-    xUARTConfig.ulBaudrate = 115200u;
-    xUARTConfig.ucWordlength = 8u;
-    xUARTConfig.xParity = eUartParityNone;
-    xUARTConfig.xStopbits = eUartStopBitsOne;
-    xUARTConfig.ucFlowControl = 0u; /* Disable flow control. */
-    iResult = iot_uart_ioctl(xUartHandle, eUartSetConfig, &xUARTConfig);
-    configASSERT( IOT_UART_SUCCESS == iResult );
-}
-#endif
-
 void initDebug() {
   (void)x_mutex_create(&woempaMutex);
-
-#ifdef IM4000
-  initDebugUart();
-#endif
-
 }
 
 extern char *woempa_dump_file;
@@ -354,10 +311,7 @@ void _woempa(const char *file, const char *function, int line, int level, const 
    
 #ifndef ECOS
 #ifdef FREERTOS
-    iot_uart_write_sync(xUartHandle, woempa_buffer, strlen(woempa_buffer));
-    if (woempa_buffer[strlen(woempa_buffer)-1]==10) {
-      iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
-    }
+    x_debug_puts(woempa_buffer);
 #else
     if(od) { 
       (void)write(od, woempa_buffer, strlen(woempa_buffer));
@@ -401,10 +355,7 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   va_end (ap);
 
 #ifdef FREERTOS
-  (void)iot_uart_write_sync(xUartHandle, woempa_buffer, strlen(woempa_buffer));
-  if (woempa_buffer[strlen(woempa_buffer)-1]==10) {
-    iot_uart_write_sync(xUartHandle, (char*)"\015", 1);
-  }
+  x_debug_puts(woempa_buffer);
 #else
   (void)write(1, woempa_buffer, strlen(woempa_buffer));
 #endif
@@ -457,8 +408,8 @@ void w_dump(const char *fmt, ... ) {
 #if defined(LINUX) || defined(NETBSD)
   (void)write(2, dump_buffer, strlen(dump_buffer));
 #else
-  PutString(dump_buffer);
-  PutString((char *)"\15");
+  x_debug_puts(dump_buffer);
+  x_debug_putc('\015');
 #endif
 }
 
