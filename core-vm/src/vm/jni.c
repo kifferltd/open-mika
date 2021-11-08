@@ -3209,8 +3209,6 @@ jint JNI_CreateJavaVM(JavaVM **p_VM, JNIEnv **p_env, void *vm_args) {
 #endif
 #endif
 
-  x_thread_resume(W_Thread_sysInit->kthread);
-
   return 0;
 
 }
