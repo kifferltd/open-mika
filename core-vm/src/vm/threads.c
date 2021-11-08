@@ -112,7 +112,11 @@ x_monitor xthreads_monitor;
 static const char *unborn_thread_report(x_thread);
 //static const char *dying_thread_report(x_thread);
 
+#ifdef FREERTOS
+#define SYSTEM_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#else
 #define SYSTEM_STACK_SIZE ((unsigned short)16384)
+#endif
 
 /* [CG 20050601]
  * For O4P we let the system supply the stack, since LinuxThreads ignores the
@@ -274,9 +278,6 @@ void initKernel() {
   x_mutex_create(&idLock);
 
   x_thread_create(&ur_thread_x_Thread, 
-// too early for allocClearedMem, would need to use x_mem_calloc or raw calloc
-//  x_thread starting_thread = allocClearedMem(sizeof(x_Thread));
-//  x_thread_create(starting_thread, 
     startWonka, NULL, ur_thread_stack, 
     SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
 }
@@ -603,10 +604,12 @@ void startKernel() {
 #endif
 
 /* [CG 20050601]
- * For O4P we let the system supply the stack, since LinuxThreads ignores the
+ * For O4P and O4F we let the system supply the stack, since LinuxThreads ignores the
  * one we supply anyway. (NetBSD probably does the Right Thing, but whatever ...)
  */
-#ifndef O4P
+#if defined (O4P) || defined (FREERTOS)
+  W_Thread_sysInit->kstack = NULL;
+#else
   W_Thread_sysInit->kstack = allocMem(init_stack_size);
 #endif
   W_Thread_sysInit->ksize = init_stack_size;
@@ -623,7 +626,7 @@ void startKernel() {
   ht_write(thread_hashtable, (w_word)W_Thread_sysInit->kthread, (w_word)W_Thread_sysInit);
 
   W_Thread_sysInit->kthread->xref = W_Thread_sysInit;
-  x_thread_create(W_Thread_sysInit->kthread, startInitialThreads, 0, W_Thread_sysInit->kstack, W_Thread_sysInit->ksize, W_Thread_sysInit->kpriority, TF_SUSPENDED);
+  x_thread_create(W_Thread_sysInit->kthread, startInitialThreads, 0, W_Thread_sysInit->kstack, W_Thread_sysInit->ksize, W_Thread_sysInit->kpriority, TF_START);
   W_Thread_sysInit->kthread->report = running_thread_report;
 }
 

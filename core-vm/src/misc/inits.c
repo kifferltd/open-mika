@@ -454,8 +454,6 @@ void startWonka(void* data) {
   init_awt();
 #endif
 #endif
-
-  x_thread_resume(W_Thread_sysInit->kthread);
 #endif
 
 #ifdef O4P
