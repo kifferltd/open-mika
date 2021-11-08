@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2014      *
-* by Chris Gray, KIFFER Ltd. All rights reserved.                         *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2014,     *
+* 2021 by Chris Gray, KIFFER Ltd. All rights reserved.                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -59,7 +59,18 @@ extern w_method registerThread_method;
 extern w_method deregisterThread_method;
 
 void systemGroupManagerEntry(void);
+ 
+#if defined(FREERTOS)
 
+static const w_size default_stack_size   = (configMINIMAL_STACK_SIZE);
+static const w_size gc_stack_size        = (configMINIMAL_STACK_SIZE);
+static const w_size init_stack_size      = (configMINIMAL_STACK_SIZE);
+static const w_size group_stack_size     = (configMINIMAL_STACK_SIZE);
+static const w_size driver_stack_size    = (configMINIMAL_STACK_SIZE);
+
+#else
+
+// TODO clean up this mess!
 #if defined(ARM)
 #define STACK_FACTOR                       3
 static const w_int bytes_per_call        = 660;
@@ -90,6 +101,8 @@ static const w_size gc_stack_size        = 1024 * 32 * STACK_FACTOR;
 static const w_size init_stack_size      = 1024 * 32 * STACK_FACTOR;
 static const w_size group_stack_size     = 1024 * 32 * STACK_FACTOR;
 static const w_size driver_stack_size    = 1024 * 32 * STACK_FACTOR;
+
+#endif
 
 #define USER_PRIORITY                       5  // This is a java priority
 
