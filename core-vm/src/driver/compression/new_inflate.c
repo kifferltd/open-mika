@@ -284,13 +284,10 @@ w_bits new_readSingleBit(w_inflate_control bs) {
 
   bit = (bs->i_bits & 0x01);
 
-//woempa(7, "%d\n", bs->i_bits);
   bs->i_bits >>= 1;
   if (! bs->i_bits) {
-//woempa(7, "%d\n", bs->offset_in);
     if (bs->offset_in == 0 || bs->offset_in >= bs->par_in->size) {
       new_getNewBlock(bs);
-//woempa(7, "%p\n", bs->par_in);
 
       if (bs->par_in == NULL) return 0;
 
@@ -824,20 +821,20 @@ void releaseInflateControl(w_inflate_control control) {
 void inflate_control_setInput(w_inflate_control control, w_ubyte* bytes, w_int size, int clonedata) {
   w_deflate_queueelem element;
 
-  woempa(7, "data = %p size = %d clonedata = %d\n", bytes, size, clonedata);
+  woempa(1, "data = %p size = %d clonedata = %d\n", bytes, size, clonedata);
   if(size <= 0) {
     return;
   }
 
   element = allocMem(sizeof(w_Deflate_QueueElem));
-  woempa(7, "queue element = %p\n", element);
+  woempa(1, "queue element = %p\n", element);
   if(element) {
     element->next = NULL;
     element->size = size;
     element->release = clonedata;
     if(clonedata) {
       w_ubyte* data = allocMem(sizeof(w_ubyte)*size);
-      woempa(7, "cloning, copy = %p\n", data);
+      woempa(1, "cloning, copy = %p\n", data);
       if(data) {
         memcpy(data,bytes,sizeof(w_ubyte)*size);
         element->data = data;
@@ -849,10 +846,10 @@ void inflate_control_setInput(w_inflate_control control, w_ubyte* bytes, w_int s
       element->data = bytes;
     }
     if(control->last_link_in) {
-      woempa(7, "set %p->last_link_in->next to %p\n", control, element);
+      woempa(1, "set %p->last_link_in->next to %p\n", control, element);
       control->last_link_in->next = element;
     } else {
-      woempa(7, "set %p->first_link_in to %p\n", control, element);
+      woempa(1, "set %p->first_link_in to %p\n", control, element);
       control->first_link_in = element;
     }
     control->last_link_in = element;
@@ -870,16 +867,16 @@ int inflate_control_inflate(w_inflate_control l) {
   w_int err = 0;
 
   do {
-woempa(7, "l->i_bits = %d\n", l->i_bits);
+woempa(1, "l->i_bits = %d\n", l->i_bits);
     lastblock = new_readSingleBit(l);
     if (l->par_in == NULL) {
-      woempa(7, "A no more input: baling out\n");
+      woempa(1, "A no more input: baling out\n");
       goto hastalavista;
     }
 
     type = new_readBits(l, 2);
     if (l->par_in == NULL) {
-      woempa(7, "B no more input: baling out\n");
+      woempa(1, "B no more input: baling out\n");
       goto hastalavista;
     }
 
@@ -894,11 +891,11 @@ woempa(7, "l->i_bits = %d\n", l->i_bits);
         check |= (new_readLiteralByte(l) << 8);
 
         if (l->par_in == NULL) {
-          woempa(7, "C no more input: baling out\n");
+          woempa(1, "C no more input: baling out\n");
           goto hastalavista;
         }
 
-        woempa(7,"--> block %d is of the 'stored' type. %d bytes (0x%04x == 0x%04x)\n", num, size, size & 0x0000ffff, ~check & 0x0000ffff);
+        woempa(1,"--> block %d is of the 'stored' type. %d bytes (0x%04x == 0x%04x)\n", num, size, size & 0x0000ffff, ~check & 0x0000ffff);
         if ((size & 0x0000ffff) != (~check & 0x0000ffff)) {
           woempa(9,"Wrong block check 0x%04x != 0x%04x.\n", size & 0x0000ffff, ~check & 0x0000ffff);
           err = 1;
@@ -920,7 +917,7 @@ woempa(7, "l->i_bits = %d\n", l->i_bits);
             wabort(ABORT_WONKA, "Unable to build fixed dictionary\n");
           }
         }
-        woempa(7,"--> block %d is of the 'fixed huffman code' type.\n", num);
+        woempa(1,"--> block %d is of the 'fixed huffman code' type.\n", num);
         if (new_inflateBlock(l, fixed_dict)) {
           woempa(9,"inflateFoo\n");
           err = 1;
@@ -929,7 +926,7 @@ woempa(7, "l->i_bits = %d\n", l->i_bits);
         break;
 
       case 2:
-        woempa(7,"--> block %d is of the 'dynamic huffman code' type.\n", num);
+        woempa(1,"--> block %d is of the 'dynamic huffman code' type.\n", num);
         dict = new_buildDynamicDictionary(l);
         if (! dict) {
           woempa(9,"dictFoo\n");
@@ -957,7 +954,7 @@ hastalavista:
 
   if (!err) {
     if(l->size_bek_out > 0) {
-      woempa(7, "flushing %d output bytes\n", l->size_bek_out);
+      woempa(1, "flushing %d output bytes\n", l->size_bek_out);
       new_bekkenFlush(l);
     }
   }
@@ -980,22 +977,22 @@ int inflate_control_getbytes_from_queue(w_inflate_control control, w_ubyte* byte
   int result = 0;
   int need = len;
   w_deflate_queueelem element = control->first_link_out;
-  woempa(7,"filling array. want %d bytes: first element = %p\n", len, element);
+  woempa(1,"filling array. want %d bytes: first element = %p\n", len, element);
   while(element && need) {
     int have = element->size - element->index;
 
-    woempa(7,"size = %d, index = %d, release = %d, len = %d, result = %d\n",element->size, element->index,
+    woempa(1,"size = %d, index = %d, release = %d, len = %d, result = %d\n",element->size, element->index,
       element->release, len, result);
     if(have <= need) {
-      woempa(7, "I have no more than I need, so I copy all I have\n");
-      woempa(7,"memcpy 1 (%p,%p,%d)\n",bytes+result,element->data+element->index, have);
+      woempa(1, "I have no more than I need, so I copy all I have\n");
+      woempa(1,"memcpy 1 (%p,%p,%d)\n",bytes+result,element->data+element->index, have);
       memcpy(bytes+result,element->data+element->index, have);
       result += have;
       need -= have;
       have = 0;
     } else if (need) {
-      woempa(7, "I have more than I need, so I copy all I need\n");
-      woempa(7,"memcpy 2 (%p,%p,%d)\n",bytes+result,element->data+element->index, need);
+      woempa(1, "I have more than I need, so I copy all I need\n");
+      woempa(1,"memcpy 2 (%p,%p,%d)\n",bytes+result,element->data+element->index, need);
       memcpy(bytes+result,element->data+element->index, need);
       element->index += need;
       result = len;
@@ -1005,18 +1002,18 @@ int inflate_control_getbytes_from_queue(w_inflate_control control, w_ubyte* byte
 
     if (need && !have) {
       w_deflate_queueelem deleteMe = element;
-      woempa(7, "I have nothing so I take the next element from the queue\n");
+      woempa(1, "I have nothing so I take the next element from the queue\n");
       element = element->next;
       deleteQueueElement(deleteMe);
-      woempa(7,"still need %d bytes: next element = %p\n", need, element);
+      woempa(1,"still need %d bytes: next element = %p\n", need, element);
     }
   }
   control->first_link_out = element;
-  woempa(7, "set %p->first_link_out to %p\n", control, element);
+  woempa(1, "set %p->first_link_out to %p\n", control, element);
   if(!element) {
-    woempa(7, "set %p->last_link_out to %p\n", control, element);
+    woempa(1, "set %p->last_link_out to %p\n", control, element);
     control->last_link_out = NULL;
   }
-  woempa(7,"Done filling array. got %d bytes\n",result);
+  woempa(1,"Done filling array. got %d bytes\n",result);
   return result;
 }

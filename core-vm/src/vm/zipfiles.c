@@ -216,7 +216,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   if (!start) {
     wabort(ABORT_WONKA, "Unable to allocate %d bytes for buffer\n", ZIPENTRY_BUFSIZ);
   }
-  woempa(6, "Reading %slocal entry at offset %d\n", local ? "" : "non-", offs);
+  woempa(1, "Reading %slocal entry at offset %d\n", local ? "" : "non-", offs);
   rc = vfs_lseek(entry->zipFile->fd, offs, SEEK_SET);
   if (rc != offs) {
     wabort(ABORT_WONKA, "Failed to seek to offset %d (rc is %d), can't handle that", offs, rc);
@@ -248,13 +248,13 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   entry->flags = readShort(data);
   entry->compression = readShort(data);
   timestamp = readWord(data);
-  woempa(6, "x_major = %d, x_minor = %d, flags = 0x%04x, compression = %d, timestamp = %d\n", entry->x_major, entry->x_minor, entry->flags, entry->compression, timestamp);
+  woempa(1, "x_major = %d, x_minor = %d, flags = 0x%04x, compression = %d, timestamp = %d\n", entry->x_major, entry->x_minor, entry->flags, entry->compression, timestamp);
 
   if (! local) {
     entry->d_crc = readWord(data);
     entry->c_size = (w_int)readWord(data);
     entry->u_size = (w_int)readWord(data);
-    woempa(6, "crc = 0x%08x, c_size = %d, u_size = %d\n", entry->d_crc, entry->c_size, entry->u_size);
+    woempa(1, "crc = 0x%08x, c_size = %d, u_size = %d\n", entry->d_crc, entry->c_size, entry->u_size);
   }
   else {
     /* 
@@ -277,16 +277,16 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 #ifdef DEBUG
     entry->extraLength = extraLength;
     entry->commentLength = commentLength;
-    woempa(6, "nameLength = %d, extraLength = %d, commentLength = %d\n", entry->nameLength, entry->extraLength, entry->commentLength);
+    woempa(1, "nameLength = %d, extraLength = %d, commentLength = %d\n", entry->nameLength, entry->extraLength, entry->commentLength);
     entry->s_disk = (w_short)readShort(data);
     entry->i_attr = (w_flags)readShort(data);
     entry->e_attr = readWord(data);
-    woempa(6, "s_disk = %d, i_attr = %d, e_attr = %d\n", entry->s_disk, entry->i_attr, entry->e_attr);
+    woempa(1, "s_disk = %d, i_attr = %d, e_attr = %d\n", entry->s_disk, entry->i_attr, entry->e_attr);
 #else
     data += 8;
 #endif
     entry->offset = readWord(data);
-    woempa(6, "offset = %d\n", entry->offset);
+    woempa(1, "offset = %d\n", entry->offset);
     // Bytes consumed so far == 42
  
     if (42 + nameLength + extraLength + commentLength > ZIPENTRY_BUFSIZ) {
@@ -321,7 +321,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->name, data, (w_size)entry->nameLength);
       entry->name[entry->nameLength] = 0x00;
-      woempa(6, "name = %s\n", entry->name);
+      woempa(1, "name = %s\n", entry->name);
       data += entry->nameLength;
     }
     if (extraLength) {
@@ -332,7 +332,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->extra, data, (w_size)extraLength);
       entry->extra[extraLength] = 0x00;
-      woempa(6, "extra = %s\n", entry->extra);
+      woempa(1, "extra = %s\n", entry->extra);
 #endif
       data += extraLength;
     }
@@ -344,7 +344,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       }
       w_memcpy(entry->comment, data, (w_size)entry->commentLength);
       entry->comment[entry->commentLength] = 0x00;
-      woempa(6, "comment = %s\n", entry->comment);
+      woempa(1, "comment = %s\n", entry->comment);
 #endif
       data += commentLength;
     }
@@ -364,7 +364,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 
   offs += data - start;
   *offsetptr = offs;
-  woempa(6, "Finished reading entry, offset is now %d\n", offs);
+  woempa(1, "Finished reading entry, offset is now %d\n", offs);
   releaseMem(start);
  
 }
@@ -407,7 +407,7 @@ z_zipFile parseZipFile(char *path) {
     return NULL;
   }
 
-  woempa(1, "Opened zip file `%s'\n", path);
+  woempa(7, "Opened zip file `%s'\n", path);
   
   /*
   ** Read partial information of the first entry.
@@ -442,7 +442,7 @@ z_zipFile parseZipFile(char *path) {
       l = vfs_read (zipFile->fd, temp, TRAWL_SIZE + 4);
       for (i = 0; i + 4 < l; ++i) {
         if (temp[i] == Z_SENTINEL0 && temp[i + 1] == Z_SENTINEL1 && temp[i + 2] == Z_DIR_BYTE0 && temp[i + 3] == Z_DIR_BYTE1) {
-          woempa(6, "Found directory sentinel at offset %d + %d\n", offset, i);
+          woempa(1, "Found directory sentinel at offset %d + %d\n", offset, i);
           offset += i + 4;
           match = allocClearedMem(sizeof(z_ZipEntry));
           if (!match) {
@@ -463,11 +463,11 @@ z_zipFile parseZipFile(char *path) {
     readZipEntry(WONKA_FALSE, match, &offset);
     
     if (match->offset == 0) {
-      woempa(6, "Found matching first entry in central directory.\n");
-      woempa(6, "Match offset %d\n", match->c_data_offset);
+      woempa(1, "Found matching first entry in central directory.\n");
+      woempa(1, "Match offset %d\n", match->c_data_offset);
       break;
     }
-    woempa(6, "Found non-matching entry in central directory, trying again ...\n");
+    woempa(1, "Found non-matching entry in central directory, trying again ...\n");
   }
 
   list_init(match);
@@ -507,8 +507,8 @@ z_zipFile parseZipFile(char *path) {
   ** ... now read the concluding file information.
   */
 
-  woempa(1, "Hashtable contains %d entries (capacity = %d)\n", zipFile->ht->occupancy, zipFile->ht->currentsize);
-  woempa(1, "Reading central directory of zipfile 0x%08x\n", (w_word)zipFile);
+  woempa(7, "Hashtable contains %d entries (capacity = %d)\n", zipFile->ht->occupancy, zipFile->ht->currentsize);
+  woempa(7, "Reading central directory of zipfile 0x%08x\n", (w_word)zipFile);
 
   offset += sizeof(w_word);
   vfs_lseek (zipFile->fd, offset, SEEK_SET);
