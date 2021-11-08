@@ -87,7 +87,7 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
       if (!vfs_fd_table[fd].ff_fileptr) {
         vfs_fd_table[fd].ff_fileptr = ff_fileptr;
         vfs_fd_table[fd].flags = flags;
-        woempa(7, "opened %s in mode %s, fd = %d\n", pathname, how, fd);
+        woempa(1, "opened %s in mode %s, fd = %d\n", pathname, how, fd);
 
         return fd;
       }
@@ -102,7 +102,7 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
 }
 
 w_int vfs_read(w_int fd, void *buf, w_size count) {
-  woempa(7, "reading %d bytes from fd %d\n", count, fd);
+  woempa(1, "reading %d bytes from fd %d\n", count, fd);
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
   if (!ff_fileptr) {
     woempa(7, "failed to read %d bytes from fd %d, fd is not in use\n", count, fd);
@@ -110,20 +110,28 @@ w_int vfs_read(w_int fd, void *buf, w_size count) {
     return -1;
   }
 
-  int rc = ff_fread(buf, 1, count, ff_fileptr);
-  if (rc == count) {
-    woempa(7, "did read %d bytes from fd %d\n", count, fd);
+  long offset = ff_ftell(ff_fileptr);
+  size_t length = ff_filelength(ff_fileptr);
+  if (offset > length) {
+    return -1;
+  }
+
+  w_size effective = offset + count > length ? length - offset : count;
+
+  int rc = ff_fread(buf, 1, effective, ff_fileptr);
+  if (rc == effective) {
+    woempa(1, "did read %d bytes from fd %d\n", count, fd);
     return count;
   }
 
   w_int fat_errno = stdioGET_ERRNO();
-  woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", count, fd, fat_errno);
+  woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", effective, fd, fat_errno);
   // TODO set errno
   return -1;
 }
 
 w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
-  woempa(7, "seeking %d bytes in fd %d from %s\n", offset, fd,
+  woempa(1, "seeking %d bytes in fd %d from %s\n", offset, fd,
     whence == FF_SEEK_CUR ? "current file position" :
     whence == FF_SEEK_END ? "end of the file" :
     whence == FF_SEEK_SET ? "beginning of file" : "??? unknown ???");
@@ -139,7 +147,7 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
 // If the read/write position could not be moved then -1 is returned and the task's errno is set to indicate the reason
   if (ff_fseek(ff_fileptr, offset, whence) == 0) {
     w_int new_pos = ff_ftell(ff_fileptr);
-    woempa(7, "sought %d bytes from fd %d, offset is now %d\n", offset, fd, new_pos);
+    woempa(1, "sought %d bytes from fd %d, offset is now %d\n", offset, fd, new_pos);
     return new_pos;
   }
 
@@ -161,5 +169,5 @@ w_int vfs_close(w_int fd) {
   // TODO set errno
   if (rc) return rc;
   vfs_fd_table[fd].ff_fileptr = NULL;
-  woempa(7, "closed fd %d\n", fd);
+  woempa(1, "closed fd %d\n", fd);
 }
