@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018            *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018, 2021      *
 * by KIFFER Ltd.  All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -195,6 +195,16 @@ w_boolean sameClassReference(w_clazz *clazzptr1, w_clazz *clazzptr2) {
   if ((*clazzptr1)->dotified != (*clazzptr2)->dotified) {
 
     return WONKA_FALSE;
+
+  }
+
+  /**
+   ** EXPERIMENTAL
+   ** If names match and are the name of a system class then return true because we are sure they will ultimately be loaded by the system class loader.
+   */
+  if (namedClassIsSystemClass((*clazzptr1)->dotified)) {
+
+    return WONKA_TRUE;
 
   }
 
