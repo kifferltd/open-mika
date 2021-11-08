@@ -313,7 +313,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->waiting_on = NULL;
    thread->waiting_with = 0;
    thread->flags = 0;
-
+   thread->stack_depth = stack_size;
    thread->task_priority = priority;
    thread->task_priority = mapPriority(priority);
 
@@ -321,6 +321,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
 
    loempa(2, "x_thread_create: registering FreeRTOS task %s\n", "");
    threadRegister(thread);
+   snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
 
    if (flags & TF_SUSPENDED) {
      thread->state = xt_newborn;
@@ -329,7 +330,6 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    else {
      thread->state = xt_ready;
      thread->flags = 0; // WAS: 1
-     snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
      //thread->name[0] = 0;
      loempa(2, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
@@ -467,7 +467,10 @@ x_status x_thread_resume(x_thread thread) {
 
     loempa(2, "Starting new born thread %p\n", thread);
     thread->state = xt_ready;
-    status = xTaskCreate(start_routine, "thread", 256, (void *)thread, 2, &thread->handle);
+    loempa(7, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
+                                       start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
+    status = xTaskCreate(start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
+    loempa(7, "===>>>  status = %d\n", status);
     if (status == ENOMEM) {
        return xs_no_mem;
     }

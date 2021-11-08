@@ -122,9 +122,7 @@ typedef struct x_Thread {
   volatile x_state      state;
   TaskHandle_t          handle;
   char                  name[MAX_THREAD_NAME_LENGTH + 1];
-
-//  SemaphoreHandle_t       sleep_timer;            /* a mutex/cond to support thread_sleep */
-
+  x_ushort              stack_depth;
   w_size                task_priority;    /* Priority this thread is mapped to. */
 
   void *                task_function;    /* The function the thread will call when it runs */
