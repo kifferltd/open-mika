@@ -2215,32 +2215,24 @@ void sweepPhase(void) {
 */
 
 w_wordset reclaim_listener_list = NULL;
-x_Monitor reclaim_listener_Monitor;
-x_monitor reclaim_listener_monitor = NULL;
+x_Monitor reclaim_listener_Mutex;
+x_monitor reclaim_listener_mutex = NULL;
 
-static int enter_reclaim_listener_monitor(void) {
-  x_status status = x_monitor_eternal(reclaim_listener_monitor);
-
-  if (status == xs_no_instance) {
-
-    return FALSE;
-
+static void enter_reclaim_listener_mutex(void) {
+  x_status status = x_mutex_lock(reclaim_listener_mutex, x_eternal);
+  if (status != xs_success) {
+    wabort(ABORT_WONKA, "Vreed - x_mutex_lock(reclaim_listener_mutex) returned %d\n", status);
   }
-  else if (status != xs_success) {
-    wabort(ABORT_WONKA, "Vreed - x_monitor_eternal(reclaim_listener_monitor) returned %d\n", status);
-  }
-  woempa(1, "Entered reclaim_listener_monitor, status = %d\n", status);
-
-  return TRUE;
+  woempa(1, "Locked reclaim_listener_mutex, status = %d\n", status);
 }
 
-static void exit_reclaim_listener_monitor(void) {
-  x_status status = x_monitor_exit(reclaim_listener_monitor);
+static void exit_reclaim_listener_mutex(void) {
+  x_status status = x_mutex_unlock(reclaim_listener_mutex);
 
   if (status != xs_success) {
-    wabort(ABORT_WONKA, "Vreed - x_monitor_exit(reclaim_listener_monitor) returned %d\n", status);
+    wabort(ABORT_WONKA, "Vreed - x_mutex_unlock(reclaim_listener_mutex) returned %d\n", status);
   }
-    woempa(1, "Left reclaim_listener_monitor, status = %d\n", status);
+    woempa(1, "Unlocked reclaim_listener_mutex, status = %d\n", status);
 }
 
 /*
@@ -2254,28 +2246,24 @@ volatile w_int reclaim_accumulator = 0;
 #endif
 
 void registerReclaimCallback(w_reclaim_callback callback) {
-  if (!reclaim_listener_monitor) {
-    reclaim_listener_monitor = &reclaim_listener_Monitor;
-    x_monitor_create(reclaim_listener_monitor);
+  if (!reclaim_listener_mutex) {
+    reclaim_listener_mutex = &reclaim_listener_Mutex;
+    x_mutex_create(reclaim_listener_mutex);
   }
 
-  while (!enter_reclaim_listener_monitor()) {
-    x_thread_sleep(1);
-  }
+  enter_reclaim_listener_mutex();
   if (!addToWordset(&reclaim_listener_list, (w_word)callback)) {
     woempa(9, "Was not able to add reclaim listener to list\n");
   }
-  exit_reclaim_listener_monitor();
+  exit_reclaim_listener_mutex();
 
 }
 
 void deregisterReclaimCallback(w_reclaim_callback callback) {
 
-  while (!enter_reclaim_listener_monitor()) {
-    x_thread_sleep(1);
-  }
+  enter_reclaim_listener_mutex();
   removeFromWordset(&reclaim_listener_list, (w_word)callback);
-  exit_reclaim_listener_monitor();
+  exit_reclaim_listener_mutex();
 
 }
 
@@ -2348,18 +2336,17 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 #ifdef JDWP
      && thread != jdwp_thread 
 #endif
-     && threadIsSafe(thread) && enter_reclaim_listener_monitor()
+     && threadIsSafe(thread)
        ) {
+      enter_reclaim_listener_mutex();
       reclaimed_this_cycle = 0;
       for (i= 0; remaining > 0 && i < sizeOfWordset(&reclaim_listener_list); ++i) {
         w_reclaim_callback callback = (w_reclaim_callback)elementOfWordset(&reclaim_listener_list, i);
-        exit_reclaim_listener_monitor();
+        exit_reclaim_listener_mutex();
         reclaimed_this_cycle += callback(remaining * (memory_load_factor + 1), caller);
-        if (!enter_reclaim_listener_monitor()) {
-          break;
-        }
+        enter_reclaim_listener_mutex();
       }
-      exit_reclaim_listener_monitor();
+      exit_reclaim_listener_mutex();
       remaining = remaining - reclaimed_this_cycle;
       if (isSet(verbose_flags, VERBOSE_FLAG_GC) && sizeOfWordset(&reclaim_listener_list) && gc_phase != GC_PHASE_UNREADY) {
         w_printf("GC: thread %t was able to reclaim %d bytes\n", thread, initial - remaining);
@@ -2374,8 +2361,8 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 #ifdef JDWP
           thread == jdwp_thread ? " is JDWP thread" :
 #endif
-          !threadIsSafe(thread) ? " is not GC safe" :
-          " enter_reclaim_listener_monitor() failed");
+          !threadIsSafe(thread) ? " is not GC safe" : "cause unknown"
+        );
       }
       setFlag(thread->flags, WT_THREAD_GC_PENDING);
       thread->to_be_reclaimed += weighted;
