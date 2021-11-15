@@ -474,7 +474,7 @@ extern x_mutex   finalizer_fifo_mutex;
 extern x_mutex   enqueue_fifo_mutex;
 #endif
 extern x_mutex   string_mutex;
-extern x_monitor reclaim_listener_monitor;
+extern x_mutex   reclaim_listener_mutex;
 extern x_monitor gc_monitor;
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
 extern x_monitor  tree_lock;
@@ -508,7 +508,7 @@ void w_dump_locks(void) {
 #endif
   x_dump_mutex("    Lock hashtable mutex : ", &lock_hashtable->mutex);
   x_dump_mutex("  String hashtable mutex : ", &string_hashtable->mutex);
-  x_dump_monitor("        Reclaim listener : ", reclaim_listener_monitor);
+  x_dump_monitor("        Reclaim listener : ", reclaim_listener_mutex);
   x_dump_mutex("            Memory mutex : ", memoryMutex);
   x_dump_monitor("              GC monitor : ", gc_monitor);
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
