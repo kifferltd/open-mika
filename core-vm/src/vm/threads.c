@@ -410,6 +410,8 @@ static void invokeInitMain(w_instance arglist) {
 }
 #endif
 
+extern x_size heap_remaining;
+
 void startInitialThreads(void* data) {
 
 #ifdef DEBUG_STACKS
@@ -431,7 +433,7 @@ void startInitialThreads(void* data) {
   W_Thread_sysInit->native_stack_max_depth = 0;
 #endif
 
-  woempa(9, "********* %d instances in use after initial loading. ************\n", instance_use);
+  woempa(9, "********* %d instances in use after initial loading; heap remaining = %d. ************\n", instance_use, heap_remaining);
 
 /* TODO
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {

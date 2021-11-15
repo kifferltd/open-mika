@@ -37,6 +37,8 @@ x_size heap_remaining;
 x_size min_heap_bytes;
 x_size max_heap_bytes;
 
+#define FreeRTOS_heap_remaining (sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE))
+
 SemaphoreHandle_t memoryMutex;
 
 inline x_status x_mem_lock(x_sleep timeout) {
@@ -98,8 +100,8 @@ void x_mem_init(void) {
 void *_x_mem_alloc(w_size size, const char *file, int line) {
   o4f_memory_chunk newchunk;
 
-  if (size > heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, heap_remaining);
+  if (size > FreeRTOS_heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -125,9 +127,8 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
   loempa(1,"heap_remaining was %d\n", heap_remaining);
-  heap_remaining -= size + sizeof(o4f_Memory_Chunk);
-  loempa(1,"subtracted %d + %d from heap_remaining, is now %d\n", size, sizeof(o4f_Memory_Chunk), heap_remaining);
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -136,8 +137,8 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
 void *_x_mem_calloc(w_size size, const char *file, int line) {
   o4f_memory_chunk newchunk;
 
-  if (size > heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, heap_remaining);
+  if (size > FreeRTOS_heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -159,8 +160,8 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  heap_remaining -= size + sizeof(o4f_Memory_Chunk);
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -179,8 +180,8 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
 
   }
 
-  if (size > oldchunk->size && size - oldchunk->size > heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
+  if (size > oldchunk->size && size - oldchunk->size > FreeRTOS_heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -202,9 +203,8 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   newchunk->line = line;
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  heap_remaining += oldsize;
-  heap_remaining -= newsize;
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -215,7 +215,7 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
 void *_x_mem_alloc(w_size size) {
   o4f_memory_chunk newchunk;
 
-  if (size > heap_remaining) {
+  if (size > FreeRTOS_heap_remaining) {
 
     return NULL;
   }
@@ -233,8 +233,8 @@ void *_x_mem_alloc(w_size size) {
   newchunk->size = size;
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  heap_remaining -= size + sizeof(o4f_Memory_Chunk);
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -243,12 +243,12 @@ void *_x_mem_alloc(w_size size) {
 void *_x_mem_calloc(w_size size) {
   o4f_memory_chunk newchunk;
 
-  if (size > heap_remaining) {
+  if (size > FreeRTOS_heap_remaining) {
 
     return NULL;
   }
 
-    newchunk = calloc(sizeof(o4f_Memory_Chunk) + size, 1);
+  newchunk = calloc(sizeof(o4f_Memory_Chunk) + size, 1);
 
   if (!newchunk) {
     heap_remaining = 0;
@@ -260,8 +260,8 @@ void *_x_mem_calloc(w_size size) {
   newchunk->size = size;
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
-  heap_remaining -= size + sizeof(o4f_Memory_Chunk);
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -273,8 +273,8 @@ void *_x_mem_realloc(void *old, w_size size) {
   w_size oldsize;
   w_size newsize;
 
-  if (size > oldchunk->size && size - oldchunk->size > heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, heap_remaining);
+  if (size > oldchunk->size && size - oldchunk->size > FreeRTOS_heap_remaining) {
+    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -295,9 +295,8 @@ void *_x_mem_realloc(void *old, w_size size) {
 
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  heap_remaining += oldsize;
-  heap_remaining -= newsize;
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -320,9 +319,9 @@ void x_mem_free(void *block) {
   chunk->check = NULL;
 #endif
   x_list_remove(chunk);
-  heap_remaining += chunk->size + sizeof(o4f_Memory_Chunk);
-  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
   x_mem_unlock();
+  heap_remaining = FreeRTOS_heap_remaining;
+  loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   free(chunk);
 }
