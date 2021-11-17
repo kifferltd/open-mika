@@ -112,23 +112,6 @@ x_monitor xthreads_monitor;
 static const char *unborn_thread_report(x_thread);
 //static const char *dying_thread_report(x_thread);
 
-#ifdef FREERTOS
-#define SYSTEM_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
-#else
-#define SYSTEM_STACK_SIZE ((unsigned short)16384)
-#endif
-
-/* [CG 20050601]
- * For O4P we let the system supply the stack, since LinuxThreads ignores the
- * one we supply anyway. (NetBSD probably does the Right Thing, but whatever ...)
- */
-#if defined O4P || defined FREERTOS
-#define ur_thread_stack NULL
-#else
-static char ur_thread_stack[SYSTEM_STACK_SIZE];
-#endif
-x_Thread ur_thread_x_Thread;
-
 /*
 ** Allocate and clear out the necessary fields for a new thread structure.
 */
@@ -270,9 +253,10 @@ const char *running_thread_report(x_thread x) {
 
 }
 
+/* moved to inits.c
 void initKernel() {
 
-#ifndef FREERTOS
+#ifdef O4P
   install_term_handler();
 #endif
   x_mutex_create(&idLock);
@@ -281,6 +265,7 @@ void initKernel() {
     startWonka, NULL, ur_thread_stack, 
     SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
 }
+*/
 
 #define INIT_CLASS "wonka.vm.Init"
 
@@ -312,13 +297,18 @@ static void invokeInitMain(w_instance arglist) {
   w_method deregister_method = NULL;
   for (i = 0; i < clazzThreadGroup->numDeclaredMethods; ++i) {
     candidate = &clazzThreadGroup->own_methods[i];
+    woempa(1, "Checking %M\n", candidate);
 
     if (candidate->spec.name == registerThread_name_string && candidate->desc == reg_dereg_desc_string) {
       register_method = candidate;
-      break;
+      woempa(1, "Found ThreadGroup.registerThread() at %p\n", register_method);
     }
     else if (candidate->spec.name == deregisterThread_name_string && candidate->desc == reg_dereg_desc_string) {
       deregister_method = candidate;
+      woempa(1, "Found ThreadGroup.deregisterThread() at %p\n", deregister_method);
+    }
+
+    if (register_method && deregister_method) {
       break;
     }
   }
@@ -616,7 +606,7 @@ void startKernel() {
 #endif
   W_Thread_sysInit->ksize = init_stack_size;
 
-  W_Thread_sysInit->kthread = (x_thread)allocClearedMem(sizeof(x_Thread));
+  W_Thread_sysInit->kthread = &ur_thread_x_Thread;
   W_Thread_sysInit->kthread->xref = W_Thread_sysInit;
   W_Thread_sysInit->kthread->report = unborn_thread_report;
   W_Thread_sysInit->kpriority = priority_j2k(USER_PRIORITY,0);
@@ -628,8 +618,8 @@ void startKernel() {
   ht_write(thread_hashtable, (w_word)W_Thread_sysInit->kthread, (w_word)W_Thread_sysInit);
 
   W_Thread_sysInit->kthread->xref = W_Thread_sysInit;
-  x_thread_create(W_Thread_sysInit->kthread, startInitialThreads, 0, W_Thread_sysInit->kstack, W_Thread_sysInit->ksize, W_Thread_sysInit->kpriority, TF_START);
   W_Thread_sysInit->kthread->report = running_thread_report;
+  startInitialThreads(NULL);
 }
 
 /*

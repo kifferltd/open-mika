@@ -79,6 +79,23 @@ wfp_float32 F_NAN;
 wfp_float64 D_NAN;
 #endif
 
+#ifdef FREERTOS
+#define SYSTEM_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#else
+#define SYSTEM_STACK_SIZE ((unsigned short)16384)
+#endif
+
+/* [CG 20050601]
+ * For O4P we let the system supply the stack, since LinuxThreads ignores the
+ * one we supply anyway. (NetBSD probably does the Right Thing, but whatever ...)
+ */
+#if defined O4P || defined FREERTOS
+#define ur_thread_stack NULL
+#else
+static char ur_thread_stack[SYSTEM_STACK_SIZE];
+#endif
+x_Thread ur_thread_x_Thread;
+
 void initWonka(void) {
   initDebug();
 
@@ -93,7 +110,15 @@ void initWonka(void) {
   x_symtab_kernel();
 #endif
 
-  initKernel();
+#ifdef O4P
+  install_term_handler();
+#endif
+// TODO what is this supposed to be used for?
+//  x_mutex_create(&idLock);
+
+  x_thread_create(&ur_thread_x_Thread, 
+    startWonka, NULL, ur_thread_stack, 
+    SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
 }
 
 #ifdef FSENABLE
@@ -456,7 +481,9 @@ void startWonka(void* data) {
 #endif
 #endif
 
-#ifdef O4P
+/*
+  not needed if we run startWonka inline
+#if defined(O4P)
   // Don't return from here, 'coz the vm gets popped off the stack! (D'oh)
   ts.tv_sec = 10;
   ts.tv_nsec = 0;
@@ -464,6 +491,9 @@ void startWonka(void* data) {
   while(1) {
     nanosleep(&ts, NULL);
   }
+#elif defined(FREERTOS)
+  x_thread_sleep(x_eternal);
 #endif
+*/
 }
 
