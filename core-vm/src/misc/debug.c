@@ -360,17 +360,7 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   (void)write(1, woempa_buffer, strlen(woempa_buffer));
 #endif
   kthread = x_thread_current();
-/*
-** Replace with thread_hashtable lookup for now
-  thread = (w_thread)kthread->wx_user_data;
-*/
-  if (thread_hashtable) {
-    thread = (w_thread)ht_read(thread_hashtable, (w_word)kthread);
-    if ((*(w_word*)thread->label)!=(*(w_word*)"thread")){
-      woempa(9,"currentWonkaThread called at %s:%d from non-wonka thread (label = %s)\n", function, line, thread->label);
-      thread = NULL;
-    }
-  }
+  thread = (w_thread)kthread->xref;
 
   w_dump_info();
 
