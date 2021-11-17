@@ -803,7 +803,7 @@ static w_int referenceClazz(w_clazz clazz) {
   }
 
   clazz->bytes_needed = (((clazz->instanceSize + 1) & ~1) * sizeof(w_word)) + sizeof(w_Object);
-  woempa(1,"class %k has instance size %d words and %d words of static fields, each instance requires %d bytes\n", clazz, clazz->instanceSize, clazz->numStaticWords, clazz->bytes_needed);
+  woempa(7,"class %k has instance size %d words and %d words of static fields, each instance requires %d bytes\n", clazz, clazz->instanceSize, clazz->numStaticWords, clazz->bytes_needed);
 
 #ifdef JDWP
   jdwp_event_class_prepare(clazz);

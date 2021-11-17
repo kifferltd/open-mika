@@ -1511,7 +1511,7 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
   w_clazz result = clazz;
   w_hashtable hashtable = loader2loaded_classes(loader);
 
-  woempa(7, "Registering %K in %s.\n", clazz, hashtable->label);
+  woempa(1, "Registering %K in %s.\n", clazz, hashtable->label);
 
   threadMustBeSafe(thread);
 
@@ -1520,7 +1520,7 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
 
   if (existing) {
     if (existing == clazz) {
-      woempa(7, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
+      woempa(1, "Class %k (%p) was already present in %s (which is OK).\n", clazz, clazz, hashtable->label);
     }
     else {
       if (getClazzState(existing) == CLAZZ_STATE_LOADING) { 
@@ -1535,7 +1535,7 @@ w_clazz registerClazz(w_thread thread, w_clazz clazz, w_instance loader) {
     }
   }
   ht_unlock(hashtable);
-  woempa(7, "Returning %K\n", result);
+  woempa(1, "Returning %K\n", result);
   if (loader) {
     notifyMonitor(loader, TRUE);
   }
@@ -1556,7 +1556,7 @@ void deregisterClazz(w_clazz clazz, w_instance loader) {
   w_clazz  existing;
   w_hashtable hashtable = loader2loaded_classes(loader);
 
-  woempa(8, "Deregistering clazz %k from %s.\n", clazz, hashtable->label);
+  woempa(1, "Deregistering clazz %k from %s.\n", clazz, hashtable->label);
 
   existing = (w_clazz)ht_erase(hashtable, (w_word)clazz->dotified);
 

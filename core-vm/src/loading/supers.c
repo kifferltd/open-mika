@@ -115,7 +115,7 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
     clazz->supers[i] = super->supers[i - n + super->numSuperClasses];
   }
 
-  woempa(1, "Class %k has total of %d superclasses\n", clazz, n);
+  woempa(7, "Class %k has total of %d superclasses\n", clazz, n);
   clazz->supers = reallocMem(clazz->supers, n * sizeof(w_clazz));
   if (!clazz->supers) {
     return CLASS_LOADING_FAILED;
