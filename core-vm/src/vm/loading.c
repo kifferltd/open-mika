@@ -319,7 +319,7 @@ w_clazz identifyClazz(w_string name, w_instance initiating_loader) {
   w_clazz result = NULL;
 
   result = (w_clazz)ht_read(loader2loaded_classes(initiating_loader), (w_word)name);
-  woempa(7, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
+  woempa(1, "searched loaded classes of %j for %w, found %p\n", initiating_loader, name, result);
 
   if (!result || getClazzState(result) < CLAZZ_STATE_LOADED) {
     result = allocClearedMem(sizeof(w_UnloadedClazz));
@@ -650,6 +650,8 @@ static char *getFirstJarFileName(char *bcp) {
   return firstzipname ? firstzipname : (char*)""; // TODO : think of a better default?
 }
 
+extern x_size heap_remaining;
+
 void startLoading(void) {
   w_string string_java_lang_Object = cstring2String("java.lang.Object", 16);
   w_string string_java_lang_Cloneable = cstring2String("java.lang.Cloneable", 19);
@@ -963,7 +965,7 @@ void startLoading(void) {
 
   attach_class_instances();
 
-  woempa(7, "Forced class loading complete, loaded %d classes.\n",system_loaded_class_hashtable->occupancy);
+  woempa(7, "Forced class loading complete, loaded %d classes; heap remaining = %d.\n",system_loaded_class_hashtable->occupancy, heap_remaining);
 
 }
 
@@ -1743,6 +1745,7 @@ w_clazz loadBootstrapClass(w_string name) {
   }
 
   deleteBootstrapFile(filename);
+  releaseMem(filename);
 
   return clazz;
 }
