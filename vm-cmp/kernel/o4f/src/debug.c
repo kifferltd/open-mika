@@ -76,9 +76,13 @@ static bool ensureUartIsInitialised() {
 
 void x_debug_write(const void *buf, size_t count) {
   if (ensureUartIsInitialised()) {
-    xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
+      xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    }
     iot_uart_write_sync(uart_handle, buf, count);
-    xSemaphoreGive(uart_mutex);
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
+      xSemaphoreGive(uart_mutex);
+    }
   }
 }
 
@@ -89,6 +93,8 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
   x_status status = xs_success;
   w_thread thread = NULL;
   va_list ap;
+
+  vTaskSuspendAll();
 
   w_int hdrlen = x_snprintf(strerror_buf, ABORT_BUFSIZE, "%s:%d ", file, line);
   w_int totlen = hdrlen;
