@@ -63,9 +63,6 @@
 extern void  x_symtab_kernel(void);
 #endif
 
-//TODO: get rid of these extern's
-extern void mouse_set_path(char *s);
-
 char *bootclasspath = BOOTCLASSDIR "/" BOOTCLASSFILE ":" BOOTCLASSDIR "/";
 
 char *fsroot = NULL;
@@ -481,19 +478,5 @@ void startWonka(void* data) {
 #endif
 #endif
 
-/*
-  not needed if we run startWonka inline
-#if defined(O4P)
-  // Don't return from here, 'coz the vm gets popped off the stack! (D'oh)
-  ts.tv_sec = 10;
-  ts.tv_nsec = 0;
-
-  while(1) {
-    nanosleep(&ts, NULL);
-  }
-#elif defined(FREERTOS)
-  x_thread_sleep(x_eternal);
-#endif
-*/
 }
 
