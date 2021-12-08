@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2009 by Chris Gray,         *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -47,25 +43,25 @@
 #include "methods.h"
 #include "exception.h"
 
-w_instance Field_getDeclaringClass(JNIEnv *env, w_instance Field) {
+w_instance Field_getDeclaringClass(w_thread thread, w_instance Field) {
 
   return clazz2Class(Field2field(Field)->declaring_clazz);
   
 }
 
-w_instance Field_getName(JNIEnv *env, w_instance Field) {
+w_instance Field_getName(w_thread thread, w_instance Field) {
 
   return getStringInstance(Field2field(Field)->name);
 
 }
 
-w_int Field_getModifiers(JNIEnv *env, w_instance Field) {
+w_int Field_getModifiers(w_thread thread, w_instance Field) {
 
   return Field2field(Field)->flags & ACC_FLAGS;
 
 }
 
-w_instance Field_getType(JNIEnv *env, w_instance Field) {
+w_instance Field_getType(w_thread thread, w_instance Field) {
 
   w_field  field = Field2field(Field);
   w_clazz  clazz;
@@ -86,7 +82,7 @@ w_instance Field_getType(JNIEnv *env, w_instance Field) {
 
 }
 
-w_boolean Field_equals(JNIEnv *env, w_instance Field, w_instance Object) {
+w_boolean Field_equals(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field field_1;
   w_field field_2;
@@ -118,9 +114,8 @@ w_boolean Field_equals(JNIEnv *env, w_instance Field, w_instance Object) {
 ** T_desc. If the widening doesn't work, we throw an IllegalArgumentException.
 */
 
-void get_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance theObject, w_clazz T_clazz, void *T_data) {
+void get_convert_and_assign(w_thread thread, w_instance thisField, w_instance theObject, w_clazz T_clazz, void *T_data) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_field field = Field2field(thisField);
   void *from;
   w_clazz calling_clazz;
@@ -189,7 +184,7 @@ void get_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance theObj
 ** Here come the specific get methods.
 */
 
-w_boolean Field_getBoolean(JNIEnv *env, w_instance Field, w_instance Object) {
+w_boolean Field_getBoolean(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -197,7 +192,7 @@ w_boolean Field_getBoolean(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_boolean, to);
+        get_convert_and_assign(thread, Field, Object, clazz_boolean, to);
       }
     }
   }
@@ -206,7 +201,7 @@ w_boolean Field_getBoolean(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_sbyte Field_getByte(JNIEnv *env, w_instance Field, w_instance Object) {
+w_sbyte Field_getByte(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -214,7 +209,7 @@ w_sbyte Field_getByte(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_byte, to);
+        get_convert_and_assign(thread, Field, Object, clazz_byte, to);
       }
     }
   }
@@ -223,7 +218,7 @@ w_sbyte Field_getByte(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_char Field_getChar(JNIEnv *env, w_instance Field, w_instance Object) {
+w_char Field_getChar(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -231,7 +226,7 @@ w_char Field_getChar(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_char, to);
+        get_convert_and_assign(thread, Field, Object, clazz_char, to);
       }
     }
   }
@@ -240,7 +235,7 @@ w_char Field_getChar(JNIEnv *env, w_instance Field, w_instance Object) {
   
 }
 
-w_short Field_getShort(JNIEnv *env, w_instance Field, w_instance Object) {
+w_short Field_getShort(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -248,7 +243,7 @@ w_short Field_getShort(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_short, to);
+        get_convert_and_assign(thread, Field, Object, clazz_short, to);
       }
     }
   }
@@ -257,7 +252,7 @@ w_short Field_getShort(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_int Field_getInt(JNIEnv *env, w_instance Field, w_instance Object) {
+w_int Field_getInt(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -265,7 +260,7 @@ w_int Field_getInt(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_int, to);
+        get_convert_and_assign(thread, Field, Object, clazz_int, to);
       }
     }
   }
@@ -274,7 +269,7 @@ w_int Field_getInt(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_long Field_getLong(JNIEnv *env, w_instance Field, w_instance Object) {
+w_long Field_getLong(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_long   to;
@@ -282,7 +277,7 @@ w_long Field_getLong(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_long, (w_word*)&to);
+        get_convert_and_assign(thread, Field, Object, clazz_long, (w_word*)&to);
       }
     }
   }
@@ -291,7 +286,7 @@ w_long Field_getLong(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_float Field_getFloat(JNIEnv *env, w_instance Field, w_instance Object) {
+w_float Field_getFloat(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_word to[1];
@@ -299,7 +294,7 @@ w_float Field_getFloat(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_float, to);
+        get_convert_and_assign(thread, Field, Object, clazz_float, to);
       }
     }
   }
@@ -308,7 +303,7 @@ w_float Field_getFloat(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_double Field_getDouble(JNIEnv *env, w_instance Field, w_instance Object) {
+w_double Field_getDouble(w_thread thread, w_instance Field, w_instance Object) {
 
   w_field  field = Field2field(Field);
   w_double to;
@@ -316,7 +311,7 @@ w_double Field_getDouble(JNIEnv *env, w_instance Field, w_instance Object) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        get_convert_and_assign(env, Field, Object, clazz_double, (w_word*)&to);
+        get_convert_and_assign(thread, Field, Object, clazz_double, (w_word*)&to);
       }
     }
   }
@@ -325,9 +320,8 @@ w_double Field_getDouble(JNIEnv *env, w_instance Field, w_instance Object) {
 
 }
 
-w_instance Field_get(JNIEnv *env, w_instance Field, w_instance Object) {
+w_instance Field_get(w_thread thread, w_instance Field, w_instance Object) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_field  field = Field2field(Field);
   w_instance result = NULL;
   void *to;
@@ -374,7 +368,7 @@ w_instance Field_get(JNIEnv *env, w_instance Field, w_instance Object) {
 #else
       to = wordFieldPointer(result, slot);
 #endif
-      get_convert_and_assign(env, Field, Object, field->value_clazz, to);
+      get_convert_and_assign(thread, Field, Object, field->value_clazz, to);
     }
   }
   else {
@@ -395,9 +389,8 @@ w_instance Field_get(JNIEnv *env, w_instance Field, w_instance Object) {
       
 }
 
-static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance theObject, w_clazz F_clazz, w_word F_data[]) {
+static void set_convert_and_assign(w_thread thread, w_instance thisField, w_instance theObject, w_clazz F_clazz, w_word F_data[]) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_field field = Field2field(thisField);
   w_clazz calling_clazz;
   w_instance calling_instance;
@@ -463,7 +456,7 @@ static void set_convert_and_assign(JNIEnv *env, w_instance thisField, w_instance
 
 }  
 
-void Field_setBoolean(JNIEnv *env, w_instance Field, w_instance Object, w_boolean z) {
+void Field_setBoolean(w_thread thread, w_instance Field, w_instance Object, w_boolean z) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -473,14 +466,14 @@ void Field_setBoolean(JNIEnv *env, w_instance Field, w_instance Object, w_boolea
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_boolean, from);
+        set_convert_and_assign(thread, Field, Object, clazz_boolean, from);
       }
     }
   }
 
 }
 
-void Field_setByte(JNIEnv *env, w_instance Field, w_instance Object, w_sbyte b) {
+void Field_setByte(w_thread thread, w_instance Field, w_instance Object, w_sbyte b) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -490,14 +483,14 @@ void Field_setByte(JNIEnv *env, w_instance Field, w_instance Object, w_sbyte b) 
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_byte, from);
+        set_convert_and_assign(thread, Field, Object, clazz_byte, from);
       }
     }
   }
 
 }
 
-void Field_setChar(JNIEnv *env, w_instance Field, w_instance Object, w_char c) {
+void Field_setChar(w_thread thread, w_instance Field, w_instance Object, w_char c) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -507,14 +500,14 @@ void Field_setChar(JNIEnv *env, w_instance Field, w_instance Object, w_char c) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_char, from);
+        set_convert_and_assign(thread, Field, Object, clazz_char, from);
       }
     }
   }
 
 }
 
-void Field_setShort(JNIEnv *env, w_instance Field, w_instance Object, w_short s) {
+void Field_setShort(w_thread thread, w_instance Field, w_instance Object, w_short s) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -524,14 +517,14 @@ void Field_setShort(JNIEnv *env, w_instance Field, w_instance Object, w_short s)
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_short, from);
+        set_convert_and_assign(thread, Field, Object, clazz_short, from);
       }
     }
   }
 
 }
 
-void Field_setInt(JNIEnv *env, w_instance Field, w_instance Object, w_int i) {
+void Field_setInt(w_thread thread, w_instance Field, w_instance Object, w_int i) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -541,27 +534,27 @@ void Field_setInt(JNIEnv *env, w_instance Field, w_instance Object, w_int i) {
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_int, from);
+        set_convert_and_assign(thread, Field, Object, clazz_int, from);
       }
     }
   }
 
 }
 
-void Field_setLong(JNIEnv *env, w_instance Field, w_instance Object, w_long l) {
+void Field_setLong(w_thread thread, w_instance Field, w_instance Object, w_long l) {
 
   w_field  field = Field2field(Field);
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_long, (w_word*)&l);
+        set_convert_and_assign(thread, Field, Object, clazz_long, (w_word*)&l);
       }
     }
   }
 
 }
 
-void Field_setFloat(JNIEnv *env, w_instance Field, w_instance Object, w_float f) {
+void Field_setFloat(w_thread thread, w_instance Field, w_instance Object, w_float f) {
 
   w_field  field = Field2field(Field);
   w_word from[1];
@@ -571,21 +564,21 @@ void Field_setFloat(JNIEnv *env, w_instance Field, w_instance Object, w_float f)
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_float, from);
+        set_convert_and_assign(thread, Field, Object, clazz_float, from);
       }
     }
   }
 
 }
 
-void Field_setDouble(JNIEnv *env, w_instance Field, w_instance Object, w_double d) {
+void Field_setDouble(w_thread thread, w_instance Field, w_instance Object, w_double d) {
 
   w_field  field = Field2field(Field);
 
   if (mustBeReferenced(field->declaring_clazz) != CLASS_LOADING_FAILED) {
     if (mustBeLoaded(&field->value_clazz) != CLASS_LOADING_FAILED) {
       if (mustBeReferenced(field->value_clazz) != CLASS_LOADING_FAILED) {
-        set_convert_and_assign(env, Field, Object, clazz_double, (w_word*)&d);
+        set_convert_and_assign(thread, Field, Object, clazz_double, (w_word*)&d);
       }
     }
   }
@@ -593,9 +586,8 @@ void Field_setDouble(JNIEnv *env, w_instance Field, w_instance Object, w_double 
 }
 
 
-void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Value) {
+void Field_set(w_thread thread, w_instance Field, w_instance Object, w_instance Value) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_field  field = Field2field(Field);
   w_word *data = NULL;
   w_clazz clazz;
@@ -651,7 +643,7 @@ void Field_set(JNIEnv *env, w_instance Field, w_instance Object, w_instance Valu
 
     clazz = getWrappedValue(Value, &data);
     if (clazz) {
-      set_convert_and_assign(env, Field, Object, clazz, data);
+      set_convert_and_assign(thread, Field, Object, clazz, data);
     }
     else {
       throwException(thread, clazzIllegalArgumentException, NULL);

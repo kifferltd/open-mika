@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Copyright (c) 2008, 2010, 2011, 2020, 2021 by KIFFER Ltd.               *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011 by Chris   *
-* Gray, /k/ Embedded Java Solutions. All rights reserved.                 *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "arrays.h"
@@ -54,7 +51,7 @@
 /*
 ** getName() returns the name held in clazz->dotified.
 */
-w_instance Class_getName(JNIEnv *env, w_instance Class) {
+w_instance Class_getName(w_thread thread, w_instance Class) {
   w_instance Name = getStringInstance(Class2clazz(Class)->dotified);
   
   return Name;
@@ -64,7 +61,7 @@ w_instance Class_getName(JNIEnv *env, w_instance Class) {
 /*
 ** isPrimitive() relies on the CLAZZ_IS_PRIMITIVE flag.
 */
-w_boolean Class_isPrimitive(JNIEnv *env, w_instance Class) {
+w_boolean Class_isPrimitive(w_thread thread, w_instance Class) {
 
   return isSet(Class2clazz(Class)->flags, CLAZZ_IS_PRIMITIVE);
 
@@ -73,13 +70,13 @@ w_boolean Class_isPrimitive(JNIEnv *env, w_instance Class) {
 /*
 ** A class is an array class if it has 1 or more dimensions.
 */
-w_boolean Class_isArray(JNIEnv *env, w_instance Class) {
+w_boolean Class_isArray(w_thread thread, w_instance Class) {
 
   return Class2clazz(Class)->dims != 0;
 
 }
 
-w_boolean Class_isInterface(JNIEnv *env, w_instance Class) {
+w_boolean Class_isInterface(w_thread thread, w_instance Class) {
 
   return isSet(Class2clazz(Class)->flags, ACC_INTERFACE);
 
@@ -89,7 +86,7 @@ w_boolean Class_isInterface(JNIEnv *env, w_instance Class) {
 ** isInstance(foo) returns true iff foo is non-null and is assignable to a
 ** variable of this class.
 */
-w_boolean Class_isInstance(JNIEnv *env, w_instance thisClass, w_instance theObject) {
+w_boolean Class_isInstance(w_thread thread, w_instance thisClass, w_instance theObject) {
 
   if (theObject) {
     w_clazz this_clazz = Class2clazz(thisClass);
@@ -108,9 +105,7 @@ w_boolean Class_isInstance(JNIEnv *env, w_instance thisClass, w_instance theObje
 ** assignable to a variable of this class using only identity conversion
 ** or reference widening conversion.
 */
-w_boolean Class_isAssignableFrom(JNIEnv *env, w_instance thisClass, w_instance thatClass) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_boolean Class_isAssignableFrom(w_thread thread, w_instance thisClass, w_instance thatClass) {
 
   if (thatClass) {
     w_clazz this_clazz = Class2clazz(thisClass);
@@ -130,7 +125,7 @@ w_boolean Class_isAssignableFrom(JNIEnv *env, w_instance thisClass, w_instance t
 ** java.lang.Object.  Otherwise, getSuper() is used to find the immediate
 ** superclass.
 */
-w_instance Class_getSuperclass(JNIEnv *env, w_instance Class) {
+w_instance Class_getSuperclass(w_thread thread, w_instance Class) {
 
   w_instance Super = NULL;
   w_clazz clazz = Class2clazz(Class);
@@ -170,8 +165,7 @@ w_instance Class_getSuperclass(JNIEnv *env, w_instance Class) {
 ** class indirectly implements or this interface indirectly extends are
 ** not included. The order should be the same as in the class file.
 */
-w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_getInterfaces(w_thread thread, w_instance this) {
   w_int   i;
   w_instance Array;
   w_instance exception;
@@ -216,9 +210,7 @@ w_instance Class_getInterfaces(JNIEnv *env, w_instance this) {
 ** Throws ExceptionInInitializerError if an exception is thrown by the 
 ** default initializer.
 */
-w_instance Class_newInstance0(JNIEnv *env, w_instance this) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_newInstance0(w_thread thread, w_instance this) {
   w_clazz clazz = Class2clazz(this);
   w_clazz calling_clazz;
   w_instance newInstance = NULL;
@@ -300,9 +292,7 @@ w_boolean isPrimitiveClassName(w_string name) {
 ** forName_S() finds a class with the given name, using the classloader which
 ** defined the calling class. The class found will be initialized.
 */
-w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classname) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_forName_S(w_thread thread, w_instance thisClass, w_instance Classname) {
   w_clazz clazz;
   w_string classname;
   w_clazz  calling_clazz;
@@ -339,9 +329,7 @@ w_instance Class_forName_S(JNIEnv *env, w_instance thisClass, w_instance Classna
 ** forName_SZCL() finds a class with the given name, using the given classloader.
 ** The class found will be initialized iff 'initialize' is true.
 */
-w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Classname, w_boolean initialize, w_instance Classloader) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_forName_SZCL(w_thread thread, w_instance thisClass, w_instance Classname, w_boolean initialize, w_instance Classloader) {
   w_clazz clazz;
   w_string classname;
   w_instance exception;
@@ -380,9 +368,8 @@ w_instance Class_forName_SZCL(JNIEnv *env, w_instance thisClass, w_instance Clas
 */
 w_instance
 Class_get_constructors
-( JNIEnv *env, w_instance thisClass, w_int mtype
+( w_thread thread, w_instance thisClass, w_int mtype
 ) {
-  w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz = Class2clazz(thisClass);
   w_size   i;
   w_int    numRelevantConstructors;
@@ -422,7 +409,7 @@ Class_get_constructors
       if (method->spec.name == string_angle_brackets_init
           && (mtype==DECLARED || isSet(method->flags, ACC_PUBLIC))
          ) {
-        Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
+        Constructor = allocInstance(thread, clazzConstructor);
         if (!Constructor) {
           woempa(9, "Unable to allocate Constructor\n");
           break;
@@ -464,9 +451,7 @@ static w_int addFieldsToFifo(w_clazz current_clazz, w_fifo fields_fifo, w_int mt
 ** get_fields gets the fields (PUBLIC or DECLARED, depending on mtype)
 ** of this class, and of its superclasses if mtype is PUBLIC.
 */
-w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_get_fields ( w_thread thread, w_instance thisClass, w_int mtype) {
   w_clazz  clazz = Class2clazz(thisClass);
   w_int numRelevantFields;
   w_fifo fields;
@@ -535,7 +520,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
       w_field field = (w_field) getFifo(fields);
       w_instance Field;
 
-      Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+      Field = allocInstance(thread, clazzField);
 
       if (Field==NULL) {
         woempa(9, "Unable to allocate Field\n");
@@ -564,9 +549,7 @@ w_instance Class_get_fields ( JNIEnv *env, w_instance thisClass, w_int mtype) {
 ** indirect). No arrempt is made to remove duplicates. Whether this is the
 ** intended behaviour I have no idea.
 */
-w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_get_methods(w_thread thread, w_instance thisClass, w_int mtype) {
   w_clazz  clazz = Class2clazz(thisClass);
   w_clazz  super;
   w_int  i;
@@ -713,9 +696,7 @@ w_instance Class_get_methods(JNIEnv *env, w_instance thisClass, w_int mtype) {
 ** in AParameters, either in this class (mtype DECLARED) or in this class
 ** and all its superclasses (mtype PUBLIC).
 */
-w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instance AParameters, w_int mtype) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_get_one_constructor(w_thread thread, w_instance thisClass, w_instance AParameters, w_int mtype) {
   w_clazz      clazz = Class2clazz(thisClass);
   w_instance   Constructor;
   w_method     constructor = NULL;
@@ -786,7 +767,7 @@ w_instance Class_get_one_constructor(JNIEnv *env, w_instance thisClass, w_instan
 
   if (constructor) {
     enterUnsafeRegion(thread);
-    Constructor = allocInstance(JNIEnv2w_thread(env), clazzConstructor);
+    Constructor = allocInstance(thread, clazzConstructor);
     enterSafeRegion(thread);
     if (Constructor == NULL) {
       woempa(9, "Unable to allocate Constructor\n");
@@ -861,9 +842,7 @@ w_field seekField (w_clazz clazz, w_string name, int mtype) {
   return result;
 }
 
-w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fieldNameString, w_int mtype) {
-
-  w_thread   thread = JNIEnv2w_thread(env);
+w_instance Class_get_one_field(w_thread thread, w_instance thisClass, w_instance fieldNameString, w_int mtype) {
   w_clazz    clazz = Class2clazz(thisClass);
   w_string   fieldName;
   w_field    field;
@@ -886,7 +865,7 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
 
   if (field) {
     enterUnsafeRegion(thread);
-    Field = allocInstance(JNIEnv2w_thread(env), clazzField);
+    Field = allocInstance(thread, clazzField);
     enterSafeRegion(thread);
     if (!Field) {
       woempa(9, "Unable to allocate Constructor\n");
@@ -904,9 +883,7 @@ w_instance Class_get_one_field(JNIEnv *env, w_instance thisClass, w_instance fie
 
 }
 
-w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance methodNameString, w_instance AParameters, w_int mtype) {
-
-  w_thread   thread = JNIEnv2w_thread(env);
+w_instance Class_get_one_method(w_thread thread, w_instance thisClass, w_instance methodNameString, w_instance AParameters, w_int mtype) {
   w_clazz    clazz = Class2clazz(thisClass);
   w_clazz    super;
   w_string   method_name;
@@ -1042,7 +1019,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
 
   if (method) {
     enterUnsafeRegion(thread);
-    Method = allocInstance(JNIEnv2w_thread(env), clazzMethod);
+    Method = allocInstance(thread, clazzMethod);
     enterSafeRegion(thread);
     if (Method == NULL) {
       woempa(9, "Unable to allocate Method\n");
@@ -1062,7 +1039,7 @@ w_instance Class_get_one_method(JNIEnv *env, w_instance thisClass, w_instance me
 /*
 ** getComponentType() uses clazz->previousDimension.
 */
-w_instance Class_getComponentType(JNIEnv *env, w_instance thisClass) {
+w_instance Class_getComponentType(w_thread thread, w_instance thisClass) {
   w_clazz clazz = Class2clazz(thisClass);
   w_instance result = NULL;
 
@@ -1078,7 +1055,7 @@ w_instance Class_getComponentType(JNIEnv *env, w_instance thisClass) {
 ** getModifiers() just masks clazz->flags to remove our Wonka flags and the
 ** dreaded ambiguous ACC_SYNCwhatever flag.
 */
-w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
+w_int Class_getModifiers(w_thread thread, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   w_word flags;
   int i;
@@ -1100,8 +1077,7 @@ w_int Class_getModifiers(JNIEnv *env, w_instance Class) {
   
 }
 
-w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
-  w_thread   thread = JNIEnv2w_thread(env);
+w_instance Class_getDeclaringClass(w_thread thread, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   int i;
 
@@ -1124,8 +1100,7 @@ w_instance Class_getDeclaringClass(JNIEnv *env, w_instance Class) {
 
   return NULL;
 }
-w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_getDeclaredClasses0(w_thread thread, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   w_clazz *inner_clazz = allocMem(clazz->temp.inner_class_info_count * sizeof(w_clazz));
   w_instance Array;
@@ -1163,8 +1138,7 @@ w_instance Class_getDeclaredClasses0(JNIEnv *env, w_instance Class) {
   return Array;
 }
 
-w_instance Class_getClasses0(JNIEnv *env, w_instance Class) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Class_getClasses0(w_thread thread, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   w_clazz super = clazz;
   w_fifo inner_clazz_fifo = allocFifo(510);

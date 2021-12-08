@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2007, 2009, 2021 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "core-classes.h"
@@ -36,7 +32,7 @@
 #include "vfs.h"
 
 void FileOutputStream_write
-  (JNIEnv *env, w_instance thisFileOutputStream, w_int oneByte) {
+  (w_thread thread, w_instance thisFileOutputStream, w_int oneByte) {
 
   w_instance     fdObj;
   vfs_FILE    *file;
@@ -44,21 +40,21 @@ void FileOutputStream_write
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
   if(!fdObj) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
     return;
   }
     
   file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
   } else {
     vfs_fputc(oneByte, file);
   }
 }
 
 void FileOutputStream_writeFromBuffer
-  (JNIEnv *env, w_instance thisFileOutputStream, w_instance buffer, w_int offset, w_int length) {
+  (w_thread thread, w_instance thisFileOutputStream, w_instance buffer, w_int offset, w_int length) {
 
   w_instance     fdObj;
   vfs_FILE    *file;
@@ -66,12 +62,12 @@ void FileOutputStream_writeFromBuffer
   w_byte       *data;
 
   if(!buffer) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
     return;
   }
 
   if(offset < 0 || length < 0 || offset > instance2Array_length(buffer) - length) {
-    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
+    throwArrayIndexOutOfBoundsException(thread);
     return;
   }
 
@@ -83,14 +79,14 @@ void FileOutputStream_writeFromBuffer
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
   if(!fdObj) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
   }
   else {
   
     file = getWotsitField(fdObj, F_FileDescriptor_fd);
 
     if(file == NULL) {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
     } else {
       data = bytes + offset;
       vfs_fwrite(data, 1, (w_word)length, file);
@@ -101,7 +97,7 @@ void FileOutputStream_writeFromBuffer
 }
 
 void FileOutputStream_close
-  (JNIEnv *env, w_instance thisFileOutputStream) {
+  (w_thread thread, w_instance thisFileOutputStream) {
 
   w_instance     fdObj;
   vfs_FILE    *file;
@@ -127,7 +123,7 @@ void FileOutputStream_close
 }
 
 void FileOutputStream_flush
-  (JNIEnv *env, w_instance thisFileOutputStream) {
+  (w_thread thread, w_instance thisFileOutputStream) {
 
   w_instance     fdObj;
   vfs_FILE    *file;

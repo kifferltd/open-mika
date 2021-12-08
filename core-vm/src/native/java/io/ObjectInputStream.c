@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2021 by KIFFER Ltd.         *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2010 by Chris Gray,   *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -75,8 +72,10 @@ void throwInvalidClassException(w_thread thread, w_instance Class, char * messag
   }
 }
 
-w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_instance Clazz) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ObjectInputStream_allocNewInstance(w_thread thread, w_instance this, w_instance Clazz) {
+#ifdef JNI
+  JNIEnv *env = w_thread2JNIEnv(thread);
+#endif
   w_clazz clazz;
   w_instance newInstance;
 
@@ -105,6 +104,7 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
       2. run the readExternal method. --> done in java.
   */
   if(isAssignmentCompatible(clazz, clazzExternalizable)){
+#ifdef JNI
     jmethodID jmid = (*env)->GetMethodID(env, Clazz, "<init>","()V");
     if(jmid){
       w_method method = (w_method) jmid;
@@ -119,6 +119,24 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
       (*env)->ExceptionClear(env);
       throwInvalidClassException(thread, Clazz, "no-args constructor not available", 33);
     }
+#else
+    w_method cons = find_method(clazz, "<init>","()V");
+    if (cons) {
+      w_frame new_frame = pushFrame(thread, cons);
+      new_frame->flags |= FRAME_REFLECTION;
+
+      new_frame->jstack_top[0].c = (w_word)newInstance;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      woempa(7, "Calling %M with parameter(%j)\n", cons, newInstance);
+      callMethod(new_frame, cons);
+
+      deactivateFrame(new_frame, NULL);
+    }
+    else {
+      throwInvalidClassException(thread, Clazz, "no-args constructor not available", 33);
+    }
+#endif
   }
   /** else if obj serializable do
       1. run the no-arg constructor of it's first non-serializable superclass.
@@ -135,6 +153,7 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
     }
 
     if(super){
+#ifdef JNI
       w_instance superClazz = clazz2Class(super);
 
       jmethodID jmid = (*env)->GetMethodID(env, superClazz, "<init>","()V");
@@ -151,6 +170,24 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
         (*env)->ExceptionClear(env);
         throwInvalidClassException(thread, superClazz, "no-args constructor not available", 33);
       }
+#else
+      w_method cons = find_method(super, "<init>","()V");
+      if (cons) {
+        w_frame new_frame = pushFrame(thread, cons);
+        new_frame->flags |= FRAME_REFLECTION;
+  
+        new_frame->jstack_top[0].c = (w_word)newInstance;
+        new_frame->jstack_top[0].s = stack_trace;
+        new_frame->jstack_top += 1;
+        woempa(7, "Calling %M with parameter(%j)\n", cons, newInstance);
+        callMethod(new_frame, cons);
+  
+        deactivateFrame(new_frame, NULL);
+      }
+      else {
+        throwInvalidClassException(thread, Clazz, "no-args constructor not available", 33);
+     }
+#endif
     }
   }
   /** else throw an Exception */
@@ -162,16 +199,16 @@ w_instance ObjectInputStream_allocNewInstance(JNIEnv *env, w_instance this, w_in
 
 }
 
-w_instance ObjectInputStream_getCallingClassLoader(JNIEnv *env, w_instance this) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ObjectInputStream_getCallingClassLoader(w_thread thread, w_instance this) {
 
   return clazz2loader(Class2clazz(getCallingClazz(thread)->Class));
 
 }
 
-w_instance ObjectInputStream_createAndFillByteArray(JNIEnv *env, w_instance this, w_int size){
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ObjectInputStream_createAndFillByteArray(w_thread thread, w_instance this, w_int size){
+#ifdef JNI
+  JNIEnv *env = w_thread2JNIEnv(thread);
+#endif
   w_instance Bytes;
 
   threadMustBeSafe(thread);
@@ -180,6 +217,7 @@ w_instance ObjectInputStream_createAndFillByteArray(JNIEnv *env, w_instance this
   enterSafeRegion(thread);
 
   if(Bytes){
+#ifdef JNI
     w_instance Class = clazz2Class(clazzObjectInputStream);
     jmethodID jmid =(*env)->GetMethodID(env, Class, "getBytes", "([BI)V");
     if(jmid){
@@ -188,6 +226,27 @@ w_instance ObjectInputStream_createAndFillByteArray(JNIEnv *env, w_instance this
     else {
       woempa(9, "getBytes([BI)V method not found !!!\n");
     }
+#else
+    w_method gbs = find_method(clazzObjectInputStream, "getBytes", "([BI)V");
+    if (gbs) {
+      w_frame new_frame = pushFrame(thread, gbs);
+      new_frame->flags |= FRAME_REFLECTION;
+
+      new_frame->jstack_top[0].c = (w_word)size;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      new_frame->jstack_top[0].c = (w_word)Bytes;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      new_frame->jstack_top[0].c = (w_word)this;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      woempa(7, "Calling %M of %j with parameters(%j, %d)\n", gbs, this, Bytes, size);
+      callMethod(new_frame, gbs);
+
+      deactivateFrame(new_frame, NULL);
+    }
+#endif
   }
   return Bytes;
 }
@@ -332,8 +391,7 @@ void to_boolean_array(w_instance Array, w_instance Bytes, w_int length){
   }
 }
 
-w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, w_instance Clazz, w_int length) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ObjectInputStream_createPrimitiveArray(w_thread thread, w_instance this, w_instance Clazz, w_int length) {
   w_clazz type;
   w_clazz aclazz;
   w_instance Bytes;
@@ -370,33 +428,59 @@ w_instance ObjectInputStream_createPrimitiveArray(JNIEnv *env, w_instance this, 
     return NULL;
   }
 
+#ifdef JNI
+  JNIEnv *env = w_thread2JNIEnv(thread);
+#endif
+
   if (type == clazz_byte) {
+#ifdef JNI
     w_instance Class = clazz2Class(clazzObjectInputStream);
     jmethodID jmid =(*env)->GetMethodID(env, Class, "getBytes", "([BI)V");
     if(jmid){
       (*env)->CallNonvirtualVoidMethod(env, this, Class, jmid, Array, length);
     }
+#else
+    w_method gbs = find_method(clazzObjectInputStream, "getBytes", "([BI)V");
+    if (gbs) {
+      w_frame new_frame = pushFrame(thread, gbs);
+      new_frame->flags |= FRAME_REFLECTION;
+
+      new_frame->jstack_top[0].c = (w_word)length;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      new_frame->jstack_top[0].c = (w_word)Array;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      new_frame->jstack_top[0].c = (w_word)this;
+      new_frame->jstack_top[0].s = stack_trace;
+      new_frame->jstack_top += 1;
+      woempa(7, "Calling %m of %j with parameters(%j, %d)\n", gbs, this, Array, length);
+      callMethod(new_frame, gbs);
+
+      deactivateFrame(new_frame, NULL);
+    }
+#endif
   }
   else if (type == clazz_int || type == clazz_float) {
-    Bytes = ObjectInputStream_createAndFillByteArray(env, this, length * 4);
+    Bytes = ObjectInputStream_createAndFillByteArray(thread, this, length * 4);
     if(Bytes){
       to_word_array(Array, Bytes, length);
     }
   }
   else if (type == clazz_double || type == clazz_long) {
-    Bytes = ObjectInputStream_createAndFillByteArray(env, this, length * 8);
+    Bytes = ObjectInputStream_createAndFillByteArray(thread, this, length * 8);
     if(Bytes){
       to_long_array(Array, Bytes, length);
     }
   }
   else if (type == clazz_char || type == clazz_short) {
-    Bytes = ObjectInputStream_createAndFillByteArray(env, this, length * 2);
+    Bytes = ObjectInputStream_createAndFillByteArray(thread, this, length * 2);
     if(Bytes){
       to_short_array(Array, Bytes, length);
     }
   }
   else if (type == clazz_boolean) {
-    Bytes = ObjectInputStream_createAndFillByteArray(env, this, length);
+    Bytes = ObjectInputStream_createAndFillByteArray(thread, this, length);
     if(Bytes){
       to_boolean_array(Array, Bytes, length);
     }

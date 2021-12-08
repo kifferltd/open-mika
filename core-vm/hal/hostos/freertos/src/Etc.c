@@ -37,7 +37,7 @@
 
 void 
 Etc_static_setTriggerLevel
-( JNIEnv *env, w_instance classSystem,
+( w_thread thread, w_instance classSystem,
   w_instance filenameString, w_int triggerLevel
 ) {
   woempa(9, "NOT FUNCTIONAL\n");
@@ -45,7 +45,7 @@ Etc_static_setTriggerLevel
 
 void 
 Etc_static_setAllTriggerLevel
-( JNIEnv *env, w_instance classSystem,
+( w_thread thread, w_instance classSystem,
   w_int triggerLevel
 ) {
   setAllTriggerLevel(triggerLevel);
@@ -53,14 +53,14 @@ Etc_static_setAllTriggerLevel
 
 void
 Etc_static_woempa
-( JNIEnv *env, w_instance classSystem,
+( w_thread thread, w_instance classSystem,
   w_int triggerLevel,
   w_instance theString
 ) {
   woempa(triggerLevel, "%w\n", String2string ( theString));
 }
 
-void Etc_static_heapCheck(JNIEnv *env, w_instance classSystem){
+void Etc_static_heapCheck(w_thread thread, w_instance classSystem){
 #ifdef DEBUG
   woempa(9, "calling heapCheck for Etc\n");
   heapCheck;

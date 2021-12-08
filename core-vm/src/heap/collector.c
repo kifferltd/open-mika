@@ -1,6 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,     *
-* 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.                   *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2018,     *
+* 2021 by Chris Gray, KIFFER Ltd.  All rights reserved.                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1627,7 +1627,7 @@ w_int preparationPhase(void) {
   return 0;
 }
 
-w_boolean ReferenceQueue_append(JNIEnv *env, w_instance this, w_instance reference);
+w_boolean ReferenceQueue_append(w_thread thread, w_instance this, w_instance reference);
 
 static void miniSweepReferences(void) {
   w_instance parent_instance;
@@ -2418,8 +2418,7 @@ w_size internal_reclaim_callback(w_int requested, w_instance instance) {
 ** (which is a singleton, so this code is only executed once).
 */
 
-void gc_create(JNIEnv *env, w_instance theGarbageCollector) {
-  gc_thread = JNIEnv2w_thread(env);
+void gc_create(w_thread gc_thread, w_instance theGarbageCollector) {
   gc_monitor = getMonitor(theGarbageCollector);
   gc_kicks_pointer = (void*)wordFieldPointer(theGarbageCollector, F_GarbageCollector_kicks);
   instance_returned = 0;

@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Copyright (c) 2010, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -39,7 +35,7 @@
 #include "core-classes.h"
 #include "deflate_driver.h"
 
-void Deflater_updateLvl(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_updateLvl(w_thread thread, w_instance thisDeflater) {
   w_int lvl = getIntegerField(thisDeflater, F_Deflater_level);
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   woempa(7, "zstream = %p\n", zstream);
@@ -51,14 +47,14 @@ void Deflater_updateLvl(JNIEnv *env, w_instance thisDeflater) {
   }
 }
 
-void Deflater_create(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_create(w_thread thread, w_instance thisDeflater) {
   w_device zstream = deviceBSOpen("zip_", wdp_none);
   woempa(7, "zstream = %p\n", zstream);
   setWotsitField(thisDeflater, F_Deflater_wotsit, zstream);
-  Deflater_updateLvl(env, thisDeflater);
+  Deflater_updateLvl(thread, thisDeflater);
 }
 
-void Deflater_reset(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_reset(w_thread thread, w_instance thisDeflater) {
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   woempa(7, "zstream = %p\n", zstream);
   if (zstream) {
@@ -66,7 +62,7 @@ void Deflater_reset(JNIEnv *env, w_instance thisDeflater) {
   }
 }
 
-void Deflater_finalize(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_finalize(w_thread thread, w_instance thisDeflater) {
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   woempa(7, "zstream = %p\n", zstream);
   if (zstream) {
@@ -75,7 +71,7 @@ void Deflater_finalize(JNIEnv *env, w_instance thisDeflater) {
   }
 }
 
-void Deflater_end(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_end(w_thread thread, w_instance thisDeflater) {
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   woempa(7, "zstream = %p\n", zstream);
   if (zstream) {
@@ -84,8 +80,7 @@ void Deflater_end(JNIEnv *env, w_instance thisDeflater) {
   }
 }
 
-void Deflater_setDictionary(JNIEnv *env, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
-  w_thread thread = JNIEnv2w_thread(env);
+void Deflater_setDictionary(w_thread thread, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
 
   if (!byteArray) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -117,7 +112,7 @@ void Deflater_setDictionary(JNIEnv *env, w_instance thisDeflater, w_instance byt
   }
 }
 
-void Deflater_setInput(JNIEnv *env, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
+void Deflater_setInput(w_thread thread, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   w_sbyte * data = instance2Array_byte(byteArray) + off;
   w_driver_status status;
@@ -133,8 +128,7 @@ void Deflater_setInput(JNIEnv *env, w_instance thisDeflater, w_instance byteArra
 }
 
 
-w_int Deflater_deflate(JNIEnv *env, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int Deflater_deflate(w_thread thread, w_instance thisDeflater, w_instance byteArray, w_int off, w_int len) {
   w_int ret=0;
 
   if (!getWotsitField(thisDeflater, F_Deflater_wotsit)) {
@@ -192,7 +186,7 @@ w_int Deflater_deflate(JNIEnv *env, w_instance thisDeflater, w_instance byteArra
   return ret;  
 }
 
-void Deflater_finish(JNIEnv *env, w_instance thisDeflater) {
+void Deflater_finish(w_thread thread, w_instance thisDeflater) {
   w_device zstream = getWotsitField(thisDeflater, F_Deflater_wotsit);
   w_driver_status status;
   woempa(7, "zstream = %p\n", zstream);

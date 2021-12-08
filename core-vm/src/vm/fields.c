@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006 by Chris Gray, /k/ Embedded Java   *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -224,6 +220,53 @@ w_boolean fieldMatch(w_field field, w_string name, w_string desc_string, w_int m
 
   return 0;
   
+}
+
+/*
+** The following function performs the steps to find a given field with name,
+** descriptor, private or public nature and static or instance field nature.
+** The function should search for the field at the current level of hierarchy
+** of the class only.
+**
+**        clazz : the clazz to find the field in.
+**       string : the name of the field.
+**         desc : the descriptor for the field, when NULL it always matches.
+**  matchStatic : 1 should match 'static', -1 should match with instance field, 0 don't care.
+** matchPrivate : 1 should match 'private', -1 should match 'public', 0 don't care.
+**
+**      Returns : the field structure if found, NULL when not found.
+**
+*/
+
+w_field searchClazzOnlyForField(w_clazz clazz, w_string name, w_string desc_string, w_int matchStatic, w_int matchPrivate) {
+
+  w_field field;
+  w_int k;
+  w_size i;
+  w_size j;
+  w_clazz current;
+
+  if (mustBeReferenced(clazz) == CLASS_LOADING_FAILED) {
+
+    return NULL;
+
+  }
+
+  /*
+  ** Let's see first if we declare a field in clazz
+  ** that has the simple name of 'name' and that satisfies the 'instance' and
+  ** 'public' flags.
+  */
+
+  for (k = clazz->numFields - 1; k >= 0; k--) {
+    field = &clazz->own_fields[k];
+    if (fieldMatch(field, name, desc_string, matchStatic, matchPrivate)) {
+      return field;
+    }
+  }
+
+  return NULL;
+    
 }
 
 /*

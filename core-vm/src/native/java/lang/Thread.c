@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -50,18 +50,17 @@ extern w_method jdwp_Thread_run_method;
 extern x_monitor xthreads_monitor;
 #endif
 
-static jclass   class_Thread;
 static jmethodID run_method;
 
 extern const char *dumpThread(x_thread);
 
 static volatile w_int numberOfThreadInstances;
 
-w_instance Thread_currentThread(JNIEnv *env, w_instance ThreadClass) {
+w_instance Thread_currentThread(w_thread thread, w_instance ThreadClass) {
 
-  woempa(1, "Current Thread instance is %p.\n", JNIEnv2Thread(env));
+  woempa(1, "Current Thread instance is %p.\n", thread->Thread);
   
-  return JNIEnv2Thread(env);
+  return thread->Thread;
 
 }
 
@@ -87,11 +86,10 @@ static void threadEntry(void * athread) {
 
   threadMustBeSafe(thread);
   if (!run_method) {
-    class_Thread = clazz2Class(clazzThread);
-    run_method = (*env)->GetMethodID(env, class_Thread, "_run", "()V"); 
+    run_method = find_method(clazz_Thread, "_run", "()V"); 
     woempa(7,"run_method is %M\n",run_method);
 #ifdef JDWP
-    jdwp_Thread_run_method = (*env)->GetMethodID(env, class_Thread, "_run", "()V"); 
+    jdwp_Thread_run_method = find_method(clazz_Thread, "_run", "()V"); 
 #endif
   }
 
@@ -205,11 +203,10 @@ static void threadEntry(void * athread) {
 */
 }
 
-void Thread_create(JNIEnv *env, w_instance thisThread, w_instance parentThreadGroup, w_instance nameString, w_instance theRunnable) {
+void Thread_create(w_thread currentthread, w_instance thisThread, w_instance parentThreadGroup, w_instance nameString, w_instance theRunnable) {
 
   char *   buffer;
   w_string name;
-  w_thread currentthread = JNIEnv2w_thread(env);
   w_thread newthread;
   w_clazz  runnable_clazz;
   w_size   stacksize;
@@ -350,17 +347,17 @@ void Thread_destructor(w_instance thisThread) {
 
 }
 
-void Thread_setName0(JNIEnv *env, w_instance thisThread, w_instance nameString) {
+void Thread_setName0(w_thread thread, w_instance thisThread, w_instance nameString) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-  if (thread) {
-    w_string oldname = thread->name;
+  w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
+  if (this_thread) {
+    w_string oldname = this_thread->name;
     w_string newname = String2string(nameString);
 
     registerString(newname);
     deregisterString(oldname);
 
-    thread->name = newname;
+    this_thread->name = newname;
   }
 }
 
@@ -394,8 +391,7 @@ w_boolean getXThreadFromPool(w_instance thisThread) {
 }
 #endif
 
-w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
-  w_thread current_thread = JNIEnv2w_thread(env);
+w_int Thread_start0(w_thread current_thread, w_instance thisThread) {
   w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
   w_thread oldthread;
   x_status status;
@@ -473,68 +469,68 @@ w_int Thread_start0(JNIEnv *env, w_instance thisThread) {
 
 }
 
-void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable) {
+void Thread_stop0(w_thread thread, w_instance thisThread, w_instance Throwable) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-  if (!threadIsActive(thread)) {
-    woempa(7, "Thread %t is already dying, ignoring %e\n", thread, Throwable);
+  w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
+  if (!threadIsActive(this_thread)) {
+    woempa(7, "Thread %t is already dying, ignoring %e\n", this_thread, Throwable);
     return;
   }
 
-  throwExceptionInstance(thread, Throwable);
+  throwExceptionInstance(this_thread, Throwable);
 
 #ifdef JDWP
   if(jpda_hooks) {
-    jdwp_event_thread_end(thread);
+    jdwp_event_thread_end(this_thread);
   }
 #endif
   
-  x_thread_wakeup(thread->kthread);
-  if (threadState(thread) == wt_waiting) {
-    x_thread_stop_waiting(thread->kthread);
+  x_thread_wakeup(this_thread->kthread);
+  if (threadState(this_thread) == wt_waiting) {
+    x_thread_stop_waiting(this_thread->kthread);
   }
 }
 
-void Thread_suspend0(JNIEnv *env, w_instance thisThread) {
+void Thread_suspend0(w_thread thread, w_instance thisThread) {
   woempa(9, "WARNING: Thread/suspend() does nothing!\n");
 }
 
-void Thread_resume0(JNIEnv *env, w_instance thisThread) {
+void Thread_resume0(w_thread thread, w_instance thisThread) {
   woempa(9, "WARNING: Thread/resume() does nothing!\n");
 }
 
 
-void Thread_setPriority0(JNIEnv *env, w_instance thisThread, w_int newPriority) {
+void Thread_setPriority0(w_thread thread, w_instance thisThread, w_int newPriority) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
+  w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
 
   woempa(1,"requested priority is %d\n",newPriority);
 
-  thread->jpriority = newPriority;
+  this_thread->jpriority = newPriority;
 
-  thread->kpriority = priority_j2k(thread->jpriority,0);
-  if (threadIsActive(thread) && thread->kthread) {
-   x_thread_priority_set(thread->kthread, thread->kpriority);
+  this_thread->kpriority = priority_j2k(this_thread->jpriority,0);
+  if (threadIsActive(this_thread) && this_thread->kthread) {
+   x_thread_priority_set(this_thread->kthread, this_thread->kpriority);
   }
 }
 
-void Thread_setDaemon0(JNIEnv *env, w_instance thisThread, w_boolean on) {
+void Thread_setDaemon0(w_thread thread, w_instance thisThread, w_boolean on) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
+  w_thread this_thread = getWotsitField(thisThread, F_Thread_wotsit);
 
   if(thread) {
-    thread->isDaemon = on;
+    this_thread->isDaemon = on;
   }
 }
 
-w_boolean Thread_isInterrupted(JNIEnv *env, w_instance thisThread) {
+w_boolean Thread_isInterrupted(w_thread current_thread, w_instance thisThread) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
-  if(thread) {
-    w_boolean interrupted = isSet(thread->flags, WT_THREAD_INTERRUPTED);
+  w_thread target_thread = getWotsitField(thisThread, F_Thread_wotsit);
+  if(current_thread) {
+    w_boolean interrupted = isSet(target_thread->flags, WT_THREAD_INTERRUPTED);
 
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-      w_printf("Thread.isInterrupted(): %t has %sbeen interrupted\n", thread, interrupted ? "" : "not ");
+      w_printf("Thread.isInterrupted(): %t has %sbeen interrupted\n", target_thread, interrupted ? "" : "not ");
     }
 
     return interrupted;
@@ -543,36 +539,35 @@ w_boolean Thread_isInterrupted(JNIEnv *env, w_instance thisThread) {
   return FALSE;
 }
 
-void Thread_interrupt(JNIEnv *env, w_instance thisThread) {
+void Thread_interrupt(w_thread calling_thread, w_instance thisThread) {
 
-  w_thread thread = getWotsitField(thisThread, F_Thread_wotsit);
+  w_thread target_thread = getWotsitField(thisThread, F_Thread_wotsit);
   x_status status;
 
-  if (!thread) {
+  if (!target_thread) {
     return;
   }
 
-  woempa(1, "thread %t is interrupting %t\n", JNIEnv2w_thread(env), thread);
+  woempa(1, "thread %t is interrupting %t\n", calling_thread, target_thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-    w_printf("Thread.interrupt(): %t is interrupting %t\n", currentWonkaThread, thread);
+    w_printf("Thread.interrupt(): %t is interrupting %t\n", currentWonkaThread, target_thread);
   }
 
-  setFlag(thread->flags, WT_THREAD_INTERRUPTED);
-  if (thread->state == wt_sleeping) {
-    status = x_thread_wakeup(thread->kthread);
+  setFlag(target_thread->flags, WT_THREAD_INTERRUPTED);
+  if (target_thread->state == wt_sleeping) {
+    status = x_thread_wakeup(target_thread->kthread);
     woempa(7, "x_thread_wakeup status = %d\n", status);
-    thread->state = wt_ready;
+    target_thread->state = wt_ready;
   }
-  if (threadState(thread) == wt_waiting) {
-    status = x_thread_stop_waiting(thread->kthread);
+  if (threadState(target_thread) == wt_waiting) {
+    status = x_thread_stop_waiting(target_thread->kthread);
     woempa(7, "x_thread_stop_waiting status = %d\n", status);
   }
 
 }
 
-w_boolean Thread_static_interrupted(JNIEnv *env, w_instance classThread) {
+w_boolean Thread_static_interrupted(w_thread thread, w_instance classThread) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_boolean interrupted = isSet(thread->flags, WT_THREAD_INTERRUPTED);
 
   if (interrupted) {
@@ -586,10 +581,9 @@ w_boolean Thread_static_interrupted(JNIEnv *env, w_instance classThread) {
 
 }
 
-void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
+void Thread_static_yield(w_thread thread, w_instance ThreadClass) {
 
 #ifdef DEBUG
-  w_thread thread = JNIEnv2w_thread(env);
 
   woempa(1, "Yielding on %j (thread %t).\n", thread->Thread, thread);
 #endif
@@ -598,9 +592,7 @@ void Thread_static_yield(JNIEnv *env, w_instance ThreadClass) {
 
 }
 
-void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
-
-  w_thread thread = getWotsitField(Thread, F_Thread_wotsit);
+void Thread_sleep0(w_thread thread, w_instance Thread, w_long millis, w_int nanos) {
 
   if (millis < 0 || nanos < 0 || nanos >= 1000000) {
     throwException(thread,clazzIllegalArgumentException,NULL);
@@ -639,8 +631,7 @@ void Thread_sleep0(JNIEnv *env, w_instance Thread, w_long millis, w_int nanos) {
   testForInterrupt(thread);
 }
 
-w_boolean Thread_static_holdsLock(JNIEnv *env, w_instance classThread, w_instance instance) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_boolean Thread_static_holdsLock(w_thread thread, w_instance classThread, w_instance instance) {
 
   if (!instance) {
     throwException(thread, clazzNullPointerException, NULL);

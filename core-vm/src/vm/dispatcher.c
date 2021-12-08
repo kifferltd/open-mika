@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002 by Punch Telematix. All rights reserved. *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2011, 2012            *
-* by Chris Gray,  /k/ Embedded Java Solutions. All rights reserved.       *
+* Copyright (c) 2008, 2011, 2012, 2021 by KIFFER Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -836,7 +834,7 @@ void native_instance_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   x_monitor_exit(m);
@@ -883,7 +881,7 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -919,7 +917,7 @@ void native_instance_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l= _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  result.l= _call_instance(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -955,7 +953,7 @@ void native_instance_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  _call_instance(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -983,7 +981,7 @@ void native_instance_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
 
@@ -1021,7 +1019,7 @@ void native_instance_unsynchronized_32bits(w_frame caller, w_method method) {
   prepareNativeFrame(frame, thread, caller, method);
 
   thread->top = frame;
-  long_result = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1048,7 +1046,7 @@ void native_instance_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  result.l = _call_instance(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1075,7 +1073,7 @@ void native_instance_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(w_thread2JNIEnv(thread), (w_slot)caller->jstack_top, method);
+  _call_instance(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1109,7 +1107,7 @@ void native_static_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
+  long_result = _call_static(thread, o, (w_slot)caller->jstack_top, method);
   // WAS: ref_result = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   x_monitor_exit(m);
@@ -1156,7 +1154,7 @@ void native_static_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
+  long_result = _call_static(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1192,7 +1190,7 @@ void native_static_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
+  result.l = _call_static(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1228,7 +1226,7 @@ void native_static_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(w_thread2JNIEnv(thread), o, (w_slot)caller->jstack_top, method);
+  _call_static(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1255,7 +1253,7 @@ void native_static_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  long_result = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
   // WAS: ref_result  = *((w_instance*)&long_result);
   memcpy(&ref_result, &long_result, sizeof(w_instance));
   if (thread->exception) {
@@ -1292,7 +1290,7 @@ void native_static_unsynchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  long_result = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1319,7 +1317,7 @@ void native_static_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  result.l = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1346,7 +1344,7 @@ void native_static_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(w_thread2JNIEnv(thread), clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;

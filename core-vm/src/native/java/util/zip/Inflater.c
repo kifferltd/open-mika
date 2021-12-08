@@ -1,29 +1,30 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Acunia N.V. All rights reserved.      *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Philips site 5, box 3       info@acunia.com                           *
-*   3001 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
-
-/*
-** $Id: Inflater.c,v 1.7 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <string.h>
 
@@ -34,7 +35,7 @@
 #include "core-classes.h"
 #include "deflate_driver.h"
 
-void Inflater_create(JNIEnv *env, w_instance thisInflater) {
+void Inflater_create(w_thread thread, w_instance thisInflater) {
   woempa(6,"DEBUG - creating new inflater\n");
   {
     w_device unzipper = deviceBSOpen("unzip_", wdp_none);
@@ -54,7 +55,7 @@ void Inflater_create(JNIEnv *env, w_instance thisInflater) {
   }
 }
 
-void Inflater_reset(JNIEnv *env, w_instance thisInflater) {
+void Inflater_reset(w_thread thread, w_instance thisInflater) {
   w_device zstream = getWotsitField(thisInflater, F_Inflater_wotsit);
   woempa(6,"DEBUG - resetting inflater %j\n", thisInflater);
   if (zstream) {
@@ -63,11 +64,11 @@ void Inflater_reset(JNIEnv *env, w_instance thisInflater) {
   }
 }
 
-void Inflater_finalize(JNIEnv *env, w_instance thisInflater) {
-  Inflater_end(env, thisInflater);
+void Inflater_finalize(w_thread thread, w_instance thisInflater) {
+  Inflater_end(thread, thisInflater);
 }
 
-void Inflater_end(JNIEnv *env, w_instance thisInflater) {
+void Inflater_end(w_thread thread, w_instance thisInflater) {
   woempa(6,"DEBUG - ending inflater %j\n", thisInflater);
   {
     w_device zstream = getWotsitField(thisInflater, F_Inflater_wotsit);
@@ -82,8 +83,7 @@ void Inflater_end(JNIEnv *env, w_instance thisInflater) {
   }
 }
 
-void Inflater_setDictionary(JNIEnv *env, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
-  w_thread thread = JNIEnv2w_thread(env);
+void Inflater_setDictionary(w_thread thread, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
 
   if (!byteArray) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -117,7 +117,7 @@ void Inflater_setDictionary(JNIEnv *env, w_instance thisInflater, w_instance byt
   }
 }
 
-void Inflater_setInput(JNIEnv *env, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
+void Inflater_setInput(w_thread thread, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
   w_device zstream = getWotsitField(thisInflater, F_Inflater_wotsit);
   w_sbyte * data = instance2Array_byte(byteArray) + off;
   w_driver_status status;
@@ -132,8 +132,7 @@ void Inflater_setInput(JNIEnv *env, w_instance thisInflater, w_instance byteArra
 
 #define UNZIP_READ_TIMEOUT 2
 
-w_int Inflater_inflate(JNIEnv *env, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int Inflater_inflate(w_thread thread, w_instance thisInflater, w_instance byteArray, w_int off, w_int len) {
   w_int ret=0;
 
   if (!getWotsitField(thisInflater, F_Inflater_wotsit)) {
@@ -184,7 +183,7 @@ w_int Inflater_inflate(JNIEnv *env, w_instance thisInflater, w_instance byteArra
   return ret;  
 }
 
-w_int Inflater_getRemaining(JNIEnv *env, w_instance thisInflater) {
+w_int Inflater_getRemaining(w_thread thread, w_instance thisInflater) {
   w_device zstream = getWotsitField(thisInflater, F_Inflater_wotsit);
   if (zstream) {
     w_word reply;

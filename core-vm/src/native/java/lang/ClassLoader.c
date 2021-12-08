@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2010 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Copyright (c) 2010, 2021 by KIFFER Ltd.  All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -87,7 +83,7 @@ static w_boolean checkClassName(w_string slashed) {
   return WONKA_TRUE;
 }
 
-void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
+void ClassLoader_create(w_thread thread, w_instance ClassLoader) {
 
   w_clazz  clazz = instance2clazz(ClassLoader);
   w_hashtable class_hashtable;
@@ -137,15 +133,13 @@ void ClassLoader_create(JNIEnv *env, w_instance ClassLoader) {
   }
 }
 
-w_boolean ClassLoader_checkClassName(JNIEnv *env, w_instance This, w_instance nameString) {
+w_boolean ClassLoader_checkClassName(w_thread thread, w_instance This, w_instance nameString) {
   w_string name = String2string(nameString);
 
   return !name || checkClassName(name);
 }
 
-w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_instance nameString, w_instance Data, w_int offset, w_int length, w_instance pd) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ClassLoader_defineClass(w_thread thread, w_instance thisClassLoader, w_instance nameString, w_instance Data, w_int offset, w_int length, w_instance pd) {
   w_byte    *data = instance2Array_byte(Data);
   w_clazz    clazz;
   w_instance theClass;
@@ -202,9 +196,7 @@ w_instance ClassLoader_defineClass(JNIEnv *env, w_instance thisClassLoader, w_in
 
 }
 
-void ClassLoader_resolveClass(JNIEnv *env, w_instance This, w_instance theClass) {
-
-  w_thread thread = JNIEnv2w_thread(env);
+void ClassLoader_resolveClass(w_thread thread, w_instance This, w_instance theClass) {
   w_clazz  clazz = Class2clazz(theClass);
 
   if (theClass) {
@@ -219,13 +211,12 @@ void ClassLoader_resolveClass(JNIEnv *env, w_instance This, w_instance theClass)
 
 }
 
-w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance thisClassLoader, w_instance nameString) {
+w_instance ClassLoader_findLoadedClass(w_thread thread, w_instance thisClassLoader, w_instance nameString) {
 
   w_clazz clazz;
   w_string name;
 
   if (!loader2loaded_classes(thisClassLoader)) {
-    w_thread thread = JNIEnv2w_thread(env);
     throwException(thread, clazzSecurityException, "%j is not fully initialised", thisClassLoader);
   }
   else if (nameString) {
@@ -249,9 +240,8 @@ w_instance ClassLoader_findLoadedClass(JNIEnv *env, w_instance thisClassLoader, 
 
 }
 
-w_instance ClassLoader_findBootstrapClass(JNIEnv *env, w_instance This, w_instance nameString) {
+w_instance ClassLoader_findBootstrapClass(w_thread thread, w_instance This, w_instance nameString) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_clazz clazz;
   w_string name;
 
@@ -279,7 +269,7 @@ w_instance ClassLoader_findBootstrapClass(JNIEnv *env, w_instance This, w_instan
 
 void
 ClassLoader_setSigners
-( JNIEnv *env, w_instance This,
+( w_thread thread, w_instance This,
   w_instance theClass, w_instance theObjectArray
 ) {
   // TODO 
@@ -292,15 +282,13 @@ ClassLoader_setSigners
 ** it will call this method straight from java so w_instance pointer will not always be the Class of ClassLoader
 */
 
-w_instance ClassLoader_getCallingClassLoader(JNIEnv *env, w_instance thisClassLoader) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ClassLoader_getCallingClassLoader(w_thread thread, w_instance thisClassLoader) {
   w_clazz clazz = getCallingClazz(thread);
   
   return clazz->loader;
 }
 
-w_instance ClassLoader_getCallingCallingClassLoader(JNIEnv *env, w_instance thisClassLoader) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ClassLoader_getCallingCallingClassLoader(w_thread thread, w_instance thisClassLoader) {
   w_frame frame = thread->top;
   int count = 3;
   
@@ -324,7 +312,7 @@ w_instance ClassLoader_getCallingCallingClassLoader(JNIEnv *env, w_instance this
 ** make it into an instance of java.lang.String. 
 */
 
-w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
+w_instance ClassLoader_getCommandLineClasspath(w_thread thread, w_instance class) {
   w_instance Result;
   w_string result;
   result = cstring2String(system_vm_args->classpath, strlen(system_vm_args->classpath));
@@ -335,15 +323,15 @@ w_instance ClassLoader_getCommandLineClasspath(JNIEnv *env, w_instance class) {
 
 }
 
-void ClassLoader_static_installExtensionClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theExtensionClassLoader) {
+void ClassLoader_static_installExtensionClassLoader(w_thread thread, w_instance classClassLoader, w_instance theExtensionClassLoader) {
   extensionClassLoader = theExtensionClassLoader;
 }
 
-void ClassLoader_static_installApplicationClassLoader(JNIEnv *env, w_instance classClassLoader, w_instance theApplicationClassLoader) {
+void ClassLoader_static_installApplicationClassLoader(w_thread thread, w_instance classClassLoader, w_instance theApplicationClassLoader) {
   applicationClassLoader = theApplicationClassLoader;
 }
 
-void ClassLoader_static_setProxyFlag(JNIEnv *env, w_instance classClassLoader, w_instance theClass) {
+void ClassLoader_static_setProxyFlag(w_thread thread, w_instance classClassLoader, w_instance theClass) {
   w_clazz clazz = Class2clazz(theClass);
   setFlag(clazz->flags, CLAZZ_IS_PROXY);
 }

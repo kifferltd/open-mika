@@ -31,7 +31,7 @@
 #include "arrays.h"
 #include "jni.h"
 
-void StandardOutputStream_write(JNIEnv *env, w_instance theStandardInputStream, w_instance byte_array_instance, w_int off, w_int len) {
+void StandardOutputStream_write(w_thread thread, w_instance theStandardInputStream, w_instance byte_array_instance, w_int off, w_int len) {
   printf("%*c", len, instance2Array_byte(byte_array_instance) + off);
 }
 

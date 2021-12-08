@@ -1,6 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.          *
-* All rights reserved.                                   *
+* Copyright (c) 2010, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -10,21 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  *
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,       *
-* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "core-classes.h"
@@ -41,8 +40,7 @@
 static jclass   class_Reader;
 static jmethodID read_method;
 
-w_int PushbackReader_read(JNIEnv *env, w_instance thisPushbackReader) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int PushbackReader_read(w_thread thread, w_instance thisPushbackReader) {
   x_monitor m;
   w_instance lock = getReferenceField(thisPushbackReader, F_Reader_lock);
   w_instance chars;
@@ -70,7 +68,7 @@ w_int PushbackReader_read(JNIEnv *env, w_instance thisPushbackReader) {
     if (!read_method) {
       mustBeInitialized(clazzReader);
       class_Reader = clazz2Class(clazzReader);
-      read_method = (*env)->GetMethodID(env, class_Reader, "read", "()I"); 
+      read_method = find_method(clazzReader, "read", "()I"); 
       woempa(7,"read_method is %M\n",read_method);
     }
     in = getReferenceField(thisPushbackReader, F_PushbackReader_in);
@@ -83,8 +81,7 @@ w_int PushbackReader_read(JNIEnv *env, w_instance thisPushbackReader) {
   return result;
 }
 
-void PushbackReader_unread(JNIEnv *env, w_instance thisPushbackReader, w_int c) {
-  w_thread thread = JNIEnv2w_thread(env);
+void PushbackReader_unread(w_thread thread, w_instance thisPushbackReader, w_int c) {
   x_monitor m;
   w_instance lock = getReferenceField(thisPushbackReader, F_Reader_lock);
   w_instance chars;

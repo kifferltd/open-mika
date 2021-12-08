@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -70,34 +70,33 @@ w_int PlainDatagramSocketImpl_clear(w_instance ThisImpl) {
 
 }
 
-w_int PlainDatagramSocketImpl_getSocket(JNIEnv* env , w_instance ThisImpl) {
+w_int PlainDatagramSocketImpl_getSocket(w_thread thread , w_instance ThisImpl) {
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
     woempa(9, "ERROR socket %p is closed !\n", ThisImpl);
-    throwException(JNIEnv2w_thread(env), clazzSocketException, "socket is already closed");
+    throwException(thread, clazzSocketException, "socket is already closed");
   }
 
   return sock;
 
 }
 
-void PlainDatagramSocketImpl_close(JNIEnv* env , w_instance ThisImpl) {
+void PlainDatagramSocketImpl_close(w_thread thread , w_instance ThisImpl) {
 
   if (PlainDatagramSocketImpl_clear(ThisImpl) == -1) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "close failed");
+    throwException(thread, clazzIOException, "close failed");
   }
 
 }
 
-void PlainDatagramSocketImpl_finalize(JNIEnv* env , w_instance ThisImpl) {
+void PlainDatagramSocketImpl_finalize(w_thread thread , w_instance ThisImpl) {
   PlainDatagramSocketImpl_clear(ThisImpl);
 }
 
-void PlainDatagramSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
+void PlainDatagramSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
   w_int sock;
 
   if(getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)){
@@ -126,10 +125,10 @@ void PlainDatagramSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
 */
 }
 
-void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port, w_instance address) {
+void PlainDatagramSocketImpl_bind(w_thread thread , w_instance ThisImpl, w_int port, w_instance address) {
 /* TODO : re-write me
   if (!address) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, "bind failed: %s",strerror(errno));
+    throwException(thread, clazzNullPointerException, "bind failed: %s",strerror(errno));
   }
   else {
     struct sockaddr_in sa;
@@ -138,7 +137,7 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
   	
     if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
       woempa(9, "Error socket %i is closed\n",sock);
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already closed");
+      throwException(thread, clazzIOException, "socket is already closed");
       return;
     }  	  	  	
 
@@ -149,7 +148,7 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
     res = w_bind (sock, (struct sockaddr*)&sa, sizeof (struct sockaddr_in));
 
     if (res == -1) {
-      throwException(JNIEnv2w_thread(env), clazzBindException, "bind failed: %s",strerror(errno));
+      throwException(thread, clazzBindException, "bind failed: %s",strerror(errno));
       return;
     }
 
@@ -157,7 +156,7 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
       socklen_t namelen = sizeof(sa);
       res = w_getsockname(sock , (struct sockaddr*)&sa , &namelen);
       if (res == -1){
-        throwException(JNIEnv2w_thread(env), clazzBindException, "bind failed: %s",strerror(errno));
+        throwException(thread, clazzBindException, "bind failed: %s",strerror(errno));
       }
       else {
         port = w_switchPortBytes(sa.sin_port);    	
@@ -170,13 +169,13 @@ void PlainDatagramSocketImpl_bind(JNIEnv* env , w_instance ThisImpl, w_int port,
 
 }
 
-w_int PlainDatagramSocketImpl_peek(JNIEnv* env , w_instance ThisImpl, w_instance address) {
+w_int PlainDatagramSocketImpl_peek(w_thread thread , w_instance ThisImpl, w_instance address) {
   w_int port = 0;
 /* TODO : re-write me
 
 
   if (!address) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     struct sockaddr_in sa;
@@ -185,7 +184,7 @@ w_int PlainDatagramSocketImpl_peek(JNIEnv* env , w_instance ThisImpl, w_instance
 
     if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
       woempa(9, "Error socket %i is closed\n",sock);
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already closed");
+      throwException(thread, clazzIOException, "socket is already closed");
       return port;
     }  	  	  	
 
@@ -194,7 +193,7 @@ w_int PlainDatagramSocketImpl_peek(JNIEnv* env , w_instance ThisImpl, w_instance
     woempa (6, "socketfd = %d, peek result = %d\n", sock, port);
 
     if (port == -1) {
-      throwException(JNIEnv2w_thread(env), clazzConnectException, "connect failed: %s",strerror(errno));
+      throwException(thread, clazzConnectException, "connect failed: %s",strerror(errno));
       return port;
     }
 
@@ -209,18 +208,18 @@ w_int PlainDatagramSocketImpl_peek(JNIEnv* env , w_instance ThisImpl, w_instance
 
 }
 
-w_int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_instance packet) {
+w_int PlainDatagramSocketImpl_receive(w_thread thread , w_instance ThisImpl, w_instance packet) {
 /* TODO : re-write me
 
   if (packet == NULL) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
   	
     if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
       woempa(9, "Error socket %i is closed\n", sock);
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already closed");
+      throwException(thread, clazzIOException, "socket is already closed");
     }  	  	  	
     else {
       struct sockaddr_in sa;
@@ -234,7 +233,7 @@ w_int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_insta
 
       if (offset < 0 || length < 0 || (offset + length) > result) {
         woempa(9, "Error socket OutOfBoundsException (off %i, len %i, length %i)\n",offset,length,result);
-        throwException(JNIEnv2w_thread(env), clazzIOException, "receive failed: %s",strerror(errno));
+        throwException(thread, clazzIOException, "receive failed: %s",strerror(errno));
         return 0;
       }
      	
@@ -250,11 +249,11 @@ w_int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_insta
      	
       if (result == -1) {
         if (len) { 		     		
-          throwException(JNIEnv2w_thread(env), clazzIOException, strerror(errno));
+          throwException(thread, clazzIOException, strerror(errno));
         }
      	else {
           woempa(9,"ERROR receive timed out \n");
-          throwException(JNIEnv2w_thread(env), clazzInterruptedIOException, NULL);	     	
+          throwException(thread, clazzInterruptedIOException, NULL);	     	
         }
       }
       else {
@@ -270,18 +269,18 @@ w_int PlainDatagramSocketImpl_receive(JNIEnv* env , w_instance ThisImpl, w_insta
 
 }
 
-void PlainDatagramSocketImpl_send(JNIEnv* env , w_instance ThisImpl, w_instance packet) {
+void PlainDatagramSocketImpl_send(w_thread thread , w_instance ThisImpl, w_instance packet) {
 /* TODO : re-write me
 
   if (packet == NULL) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
   	
     if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
       woempa(9, "Error socket %i is closed\n", sock);
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already closed");
+      throwException(thread, clazzIOException, "socket is already closed");
     }  	  	  	
     else {
       struct sockaddr_in sa;
@@ -297,7 +296,7 @@ void PlainDatagramSocketImpl_send(JNIEnv* env , w_instance ThisImpl, w_instance 
 
       result = w_sendto(sock, buffer, getIntegerField(packet, F_DatagramPacket_length), MSG_NOSIGNAL, (struct sockaddr*)&sa, sizeof (struct sockaddr_in),ThisImpl);
       if (result == -1){
-        throwException(JNIEnv2w_thread(env), clazzIOException, "send failed: %s",strerror(errno));
+        throwException(thread, clazzIOException, "send failed: %s",strerror(errno));
       }
     }
   }
@@ -305,36 +304,36 @@ void PlainDatagramSocketImpl_send(JNIEnv* env , w_instance ThisImpl, w_instance 
 
 }
 
-void PlainDatagramSocketImpl_setTimeToLive(JNIEnv* env, w_instance ThisImpl, w_int value) {
+void PlainDatagramSocketImpl_setTimeToLive(w_thread thread, w_instance ThisImpl, w_int value) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
       	
   if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
     woempa(9, "Error socket %i is closed\n", sock);
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already closed");
+    throwException(thread, clazzIOException, "socket is already closed");
   }
   else if (value > 255 || value < 0) {
     woempa(9, "Error invalid argument passed %d\n", value);
-    throwException(JNIEnv2w_thread(env), clazzIllegalArgumentException, "invalid TTL value %i",value);
+    throwException(thread, clazzIllegalArgumentException, "invalid TTL value %i",value);
   }  	  	  	
   else {
     unsigned char val = (unsigned char) value;
     if  (w_setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &val, sizeof(val))) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   } 	
 */
 }
 
-w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
+w_int PlainDatagramSocketImpl_getTimeToLive(w_thread thread, w_instance ThisImpl) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
     woempa(9, "Error socket %i is closed\n", sock);
-    throwException(JNIEnv2w_thread(env), clazzSocketException, "socket is already closed");
+    throwException(thread, clazzSocketException, "socket is already closed");
     return sock;
   }  	  	  	
   else {
@@ -342,7 +341,7 @@ w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
     socklen_t len = sizeof(val);
 
     if (w_getsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &val, &len)) {
-      throwException(JNIEnv2w_thread(env), clazzIOException, "getsocket option failed: $s",strerror(errno));
+      throwException(thread, clazzIOException, "getsocket option failed: $s",strerror(errno));
     }
     else {
       return (w_int) val;
@@ -355,18 +354,18 @@ w_int PlainDatagramSocketImpl_getTimeToLive(JNIEnv* env, w_instance ThisImpl) {
   
 }
 
-void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int action, w_instance localAddr) {
+void groupRequest(w_thread thread, w_instance ThisImpl, w_instance address, w_int action, w_instance localAddr) {
 /* TODO : re-write me
 
   if (!address) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainDatagramSocketImpl_wotsit);
       	
     if (!getBooleanField(ThisImpl, F_PlainDatagramSocketImpl_open)) {
       woempa(9, "Error socket %i is closed\n", sock);
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "socket is already closed");
+      throwException(thread, clazzSocketException, "socket is already closed");
     }  	  	  	
     else {
       struct ip_mreq groupaddr;
@@ -376,7 +375,7 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
            INADDR_ANY : getIntegerField(localAddr, F_InetAddress_address));
 
      if (w_setsockopt(sock, IPPROTO_IP, action, &groupaddr, sizeof(groupaddr)) == -1) {
-       throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s", strerror(errno));
+       throwException(thread, clazzSocketException, "setsocket option failed: %s", strerror(errno));
      }
    } 	
   }
@@ -384,20 +383,20 @@ void groupRequest(JNIEnv* env, w_instance ThisImpl, w_instance address, w_int ac
 
 }
 
-void PlainDatagramSocketImpl_join(JNIEnv* env, w_instance ThisImpl, w_instance address, w_instance localAddr) {
+void PlainDatagramSocketImpl_join(w_thread thread, w_instance ThisImpl, w_instance address, w_instance localAddr) {
 /* TODO : re-write me
   groupRequest(env, ThisImpl, address, IP_ADD_MEMBERSHIP, localAddr);
 */
 }
 
-void PlainDatagramSocketImpl_leave(JNIEnv* env, w_instance ThisImpl, w_instance address) {
+void PlainDatagramSocketImpl_leave(w_thread thread, w_instance ThisImpl, w_instance address) {
   //TODO ...
 /* TODO : re-write me
   groupRequest(env, ThisImpl, address, IP_DROP_MEMBERSHIP, NULL);
 */
 }
 
-w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, w_int sock) {
+w_int PlainDatagramSocketImpl_optBindAddress(w_thread thread , w_instance ThisImpl, w_int sock) {
 /* TODO : re-write me
 
   struct sockaddr_in sa;
@@ -405,7 +404,7 @@ w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, 
   w_int res = w_getsockname(sock, (struct sockaddr *)&sa, &namelen);	
  	
   if (res == -1) {
-    throwException(JNIEnv2w_thread(env), clazzSocketException, "get socket name failed: %s",strerror(errno));
+    throwException(thread, clazzSocketException, "get socket name failed: %s",strerror(errno));
   }
   else {
     res = ntohl(sa.sin_addr.s_addr);
@@ -417,7 +416,7 @@ w_int PlainDatagramSocketImpl_optBindAddress(JNIEnv* env , w_instance ThisImpl, 
   
 }
 
-w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int sock, w_int value) {
+w_int PlainDatagramSocketImpl_optLinger(w_thread thread , w_instance ThisImpl, w_int sock, w_int value) {
 /* TODO : re-write me
 
   struct linger lg;
@@ -425,7 +424,7 @@ w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int
 
   if (value == -1) { //get
     if (w_getsockopt(sock, SOL_SOCKET, SO_LINGER, &lg, &len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option linger failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "getsocket option linger failed: %s",strerror(errno));
       return 0;
     }
     if (lg.l_onoff) {
@@ -439,7 +438,7 @@ w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int
     lg.l_onoff = value;
 
     if (w_setsockopt(sock, SOL_SOCKET, SO_LINGER, &lg, len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option linger failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option linger failed: %s",strerror(errno));
     }
   }
 */
@@ -448,7 +447,7 @@ w_int PlainDatagramSocketImpl_optLinger(JNIEnv* env , w_instance ThisImpl, w_int
 
 }
 
-w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, w_int sock, w_boolean value, w_boolean get) {
+w_boolean PlainDatagramSocketImpl_optNoDelay(w_thread thread , w_instance ThisImpl, w_int sock, w_boolean value, w_boolean get) {
 /* TODO : re-write me
 
   int val;     	
@@ -456,7 +455,7 @@ w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, 
 
   if (get == WONKA_TRUE) { //get
     if (w_getsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &val, &len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
       return (val == 0 ? WONKA_FALSE : WONKA_TRUE);
@@ -465,7 +464,7 @@ w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, 
   else { //set
     val = (value == WONKA_TRUE ? 1 : 0);
     if (w_setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &val, len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }
 */
@@ -474,7 +473,7 @@ w_boolean PlainDatagramSocketImpl_optNoDelay(JNIEnv* env , w_instance ThisImpl, 
 
 }
 
-w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, w_int sock, w_instance address, w_boolean get) {
+w_int PlainDatagramSocketImpl_optMulticastIF(w_thread thread , w_instance ThisImpl, w_int sock, w_instance address, w_boolean get) {
 /* TODO : re-write me
 
   struct sockaddr_in sa;
@@ -482,7 +481,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
  	
   if (get == WONKA_TRUE) { //get
     if (w_getsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, &len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
       return ntohl(sa.sin_addr.s_addr);
@@ -493,7 +492,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
     sa.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
 
     if  (w_setsockopt(sock, SOL_SOCKET, IP_MULTICAST_IF, &sa, len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }
 */
@@ -502,7 +501,7 @@ w_int PlainDatagramSocketImpl_optMulticastIF(JNIEnv* env , w_instance ThisImpl, 
 
 }
 
-w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_int sock, w_int value, w_int opt) {
+w_int PlainDatagramSocketImpl_optIntOptions(w_thread thread, w_instance ThisImpl, w_int sock, w_int value, w_int opt) {
 /* TODO : re-write me
 
 // TODO: on Windows and Solaris len may sometimes be 1! Move this whole function to a hal/hostos directory.
@@ -523,13 +522,13 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
       break;
     default:
       woempa(9, "ERROR in optIntOptions: unknown options %d\n", opt);
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "invalid socket option");
+      throwException(thread, clazzSocketException, "invalid socket option");
       return 0;
   }
 
   if (value == -1) { // get
     if (w_getsockopt(sock, SOL_SOCKET, opt, &value, &len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "getsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "getsocket option failed: %s",strerror(errno));
     }
     else {
       return value;
@@ -537,7 +536,7 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
   }
   else { // set
     if (w_setsockopt(sock, SOL_SOCKET, opt, &value, len)) {
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
   }
 */
@@ -546,7 +545,7 @@ w_int PlainDatagramSocketImpl_optIntOptions(JNIEnv* env, w_instance ThisImpl, w_
 
 }
 
-void PlainDatagramSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int sock, w_int value) {
+void PlainDatagramSocketImpl_setSoTimeout(w_thread thread , w_instance ThisImpl, w_int sock, w_int value) {
 /* TODO : re-write me
   struct timeval tv;
 
@@ -557,12 +556,12 @@ void PlainDatagramSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_i
   }
     if (w_setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval))) {
       //woempa(9,"ERROR (set) in optIntOptions = %s(%d,%d)\n", w_strerror((int)w_errno(sock)), opt, sock); 	
-      throwException(JNIEnv2w_thread(env), clazzSocketException, "setsocket option failed: %s",strerror(errno));
+      throwException(thread, clazzSocketException, "setsocket option failed: %s",strerror(errno));
     }
 */
 }
 
-void PlainDatagramSocketImpl_signal(JNIEnv *env, w_instance thisPlainDatagramSocketImpl, w_instance aThread) {
+void PlainDatagramSocketImpl_signal(w_thread thread, w_instance thisPlainDatagramSocketImpl, w_instance aThread) {
 /* TODO : re-write me
   w_thread wt = w_threadFromThreadInstance(aThread);
   x_thread xt = wt->kthread;

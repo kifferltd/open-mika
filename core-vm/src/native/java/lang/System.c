@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2008 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
+* Copyright (c) 2010, 2020, 2021 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -49,7 +45,7 @@
 #include "mika_threads.h"
 #include "wonkatime.h"
 
-w_long System_static_currentTimeMillis(JNIEnv *env, w_instance classSystem) {
+w_long System_static_currentTimeMillis(w_thread thread, w_instance classSystem) {
   return x_time_now_millis();
 }
 
@@ -416,9 +412,8 @@ static inline void do_unchecked_reference_arraycopy(w_instance Src, w_int srco, 
   }
 }
 
-void System_static_arraycopy(JNIEnv *env, w_instance Class, w_instance Src, w_int srco, w_instance Dst, w_int dsto, w_int length) {
+void System_static_arraycopy(w_thread thread, w_instance Class, w_instance Src, w_int srco, w_instance Dst, w_int dsto, w_int length) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_clazz   srcClazz;
   w_clazz   dstClazz;
   w_clazz   srcCom;
@@ -542,21 +537,20 @@ void System_static_arraycopy(JNIEnv *env, w_instance Class, w_instance Src, w_in
 
 }
 
-w_int System_identityHashCode(JNIEnv *env, jclass clazz, w_instance obj) {
+w_int System_identityHashCode(w_thread thread, jclass clazz, w_instance obj) {
 
   if (obj == NULL) {
     return 0;
   }
 
-  return Object_hashCode(env, obj);
+  return Object_hashCode(thread, obj);
 
 }
 
 extern Wonka_InitArgs *system_vm_args;
 
-w_instance System_getCmdLineProperties(JNIEnv *env, w_instance this) {
+w_instance System_getCmdLineProperties(w_thread thread, w_instance this) {
 
-  w_thread    thread = JNIEnv2w_thread(env);
   w_int       i;
   w_instance  Array = NULL;
   w_instance  String;

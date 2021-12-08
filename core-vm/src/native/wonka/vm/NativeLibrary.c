@@ -33,7 +33,7 @@
 #include "loading.h"
 #include "misc.h"
 
-void NativeLibrary_finalize(JNIEnv *env, w_instance thisNativeLibrary) {
+void NativeLibrary_finalize(w_thread thread, w_instance thisNativeLibrary) {
 #ifndef FREERTOS
   void *handle = getWotsitField(thisNativeLibrary, F_NativeLibrary_handle);
   unloadModule(handle);

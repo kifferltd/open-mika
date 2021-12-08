@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2006 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -49,7 +45,7 @@
 */
 void
 Character_static_createTables
-( JNIEnv *env, w_instance ClassCharacter
+( w_thread thread, w_instance ClassCharacter
 ) {
   createCharacterTables();
 }
@@ -59,7 +55,7 @@ Character_static_createTables
 */
 w_instance
 Character_static_getCategory
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return getStringInstance(charToCategory(ch));
 }
@@ -69,7 +65,7 @@ Character_static_getCategory
 */
 w_boolean
 Character_static_isDefined
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsDefined(ch);
 }
@@ -78,7 +74,7 @@ Character_static_isDefined
 ** Returns true iff ch is a digit according to Java.
 */
 w_boolean Character_static_isDigit
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsDigit(ch);
 }
@@ -124,7 +120,7 @@ static w_char forDigit (w_int digit, w_int radix) {
 }
 
 w_char Character_static_forDigit
-( JNIEnv *env, w_instance ClassCharacter, w_int digit, w_int radix
+( w_thread thread, w_instance ClassCharacter, w_int digit, w_int radix
 ) {
   return forDigit(digit, radix);
 }
@@ -188,7 +184,7 @@ static w_int i_digit(w_char ch, w_int radix) {
 }
 
 w_int Character_static_digit
-( JNIEnv *env, w_instance ClassCharacter, w_char ch, w_int radix
+( w_thread thread, w_instance ClassCharacter, w_char ch, w_int radix
 ) {
   return i_digit(ch, radix);
 }
@@ -203,7 +199,7 @@ void fast_Character_digit_char_int(w_frame frame) {
 */
 w_boolean
 Character_static_isLowerCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsLower(ch);
 }
@@ -213,7 +209,7 @@ Character_static_isLowerCase
 */
 w_boolean
 Character_static_isUpperCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsUpper(ch);
 }
@@ -223,7 +219,7 @@ Character_static_isUpperCase
 */
 w_boolean
 Character_static_isTitleCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsTitle(ch);
 }
@@ -233,7 +229,7 @@ Character_static_isTitleCase
 */
 w_boolean
 Character_static_isLetter
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsLetter(ch);
 }
@@ -243,7 +239,7 @@ Character_static_isLetter
 */
 w_boolean
 Character_static_isFormat
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsFormat(ch);
 }
@@ -253,7 +249,7 @@ Character_static_isFormat
 */
 w_boolean
 Character_static_isWhitespace
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsWhitespace(ch);
 }
@@ -266,7 +262,7 @@ Character_static_isWhitespace
 */
 w_char
 Character_static_toLowerCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return char2lower(ch);
 }
@@ -279,7 +275,7 @@ Character_static_toLowerCase
 */
 w_char
 Character_static_toUpperCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return char2upper(ch);
 }
@@ -292,7 +288,7 @@ Character_static_toUpperCase
 */
 w_char
 Character_static_toTitleCase
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return char2title(ch);
 }
@@ -304,7 +300,7 @@ Character_static_toTitleCase
 */
 w_int
 Character_static_numericValue
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charToNumericValue(ch);
 }
@@ -316,7 +312,7 @@ Character_static_numericValue
 */
 w_int
 Character_static_toUnicodeBlock
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charToUnicodeSubset(ch);
 }
@@ -327,7 +323,7 @@ Character_static_toUnicodeBlock
 */
 w_sbyte
 Character_static_getDirectionality
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   // [CG 20070126] Special-case these because what the mauve tests expect
   // makes more sense than what is in the Unicode database
@@ -355,14 +351,14 @@ Character_static_getDirectionality
 */
 w_boolean
 Character_static_isMirrored
-( JNIEnv *env, w_instance ClassCharacter, w_char ch
+( w_thread thread, w_instance ClassCharacter, w_char ch
 ) {
   return charIsMirrored(ch);
 }
 
 
 w_instance
-Character_getWrappedClass(JNIEnv *env, w_instance thisClass) {
+Character_getWrappedClass(w_thread thread, w_instance thisClass) {
 
   return clazz2Class(clazz_char);
   

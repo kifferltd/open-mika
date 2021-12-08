@@ -245,20 +245,7 @@ extern w_int java_stack_size;
  */
 #define MIN_FREE_SLOTS 32
 
-/*
-** The JNIEnv* parameter of a JNI call points at field natenv of the current
-** Wonka thread.  Putting natenv as the first field of w_Thread simplifies
-** the inline functions w_thread2JNIEnv and JNIEnv2w_thread.
-*/
-
 typedef struct w_Thread {
-  
-  /*
-  ** The JNI environment pointer. Make sure it is always the first element of the
-  ** w_Thread structure since the JNIEnv2w_thread relies on this! An environment
-  ** pointer can then just be cast to a w_thread pointer...
-  */
-  
   const JNINativeInterface*   natenv;
 
   char      *label;                  // "thread", or "thread:<whatever>"
@@ -501,11 +488,6 @@ static w_thread checkThreadPointer(volatile w_thread t) {
   return t;
 }
 
-static w_thread  JNIEnv2w_thread(JNIEnv *env) {
-  void *p = env;
-  return checkThreadPointer((w_thread)p);
-}
-
 static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
   return &checkThreadPointer(t)->natenv;
 }
@@ -514,24 +496,10 @@ static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
 
 #define checkThreadPointer(t) (t)
 
-inline static w_thread  JNIEnv2w_thread(JNIEnv *env) {
-  return (w_thread)env;
-}
-
 inline static JNIEnv *w_thread2JNIEnv(w_Thread *t) {
   return &(t)->natenv;
 }
 #endif
-
-inline static w_instance JNIEnv2Thread(JNIEnv *env) {
-  return JNIEnv2w_thread(env)->Thread;
-}
-
-/*
-** From an env pointer, give back the current top frame
-*/
-
-#define JNIEnv2frame(e)       (JNIEnv2w_thread(e)->top)
 
 extern w_hashtable thread_hashtable;
 

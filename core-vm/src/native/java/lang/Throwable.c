@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Copyright (c) 2010, 2011, 2020, 2021 by KIFFER Ltd.                     *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2006, 2010, 2011 by Chris Gray, /k/ Embedded  *
-* Java Solutions. All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -65,7 +62,7 @@ static const w_size bufsize = 511;
 ** Format the first line of a stack trace (Throwable class and message),
 ** returning the result as a java.lang.String .
 */
-w_int Throwable_getStackTraceLength(JNIEnv *env, w_instance thisThrowable) {
+w_int Throwable_getStackTraceLength(w_thread thread, w_instance thisThrowable) {
   w_Exr *records = getWotsitField(thisThrowable, F_Throwable_records);
   setWotsitField(thisThrowable, F_Throwable_frame, records);
   if (records) {
@@ -78,8 +75,7 @@ w_int Throwable_getStackTraceLength(JNIEnv *env, w_instance thisThrowable) {
 ** Get the next line of a stack trace (returning it as a java.lang.String),
 ** and advance the `frame' field of the Throwable to the next record.
 */
-void Throwable_nextStackTrace(JNIEnv *env, w_instance thisThrowable, w_instance stack) {
-  w_thread thread = JNIEnv2w_thread(env);
+void Throwable_nextStackTrace(w_thread thread, w_instance thisThrowable, w_instance stack) {
   w_exr current = getWotsitField(thisThrowable, F_Throwable_frame);
   w_exr next = current + 1;
   
@@ -134,7 +130,7 @@ static void stripStackTraceLevels(w_instance thisThrowable, w_int n) {
 ** Delete the current contents of a Throwable and replace it by a stack trace
 ** reflecting the current stack (but excluding the call to fillInStackTrace()).
 */
-w_instance Throwable_fillInStackTrace(JNIEnv *env, w_instance thisThrowable) {
+w_instance Throwable_fillInStackTrace(w_thread thread, w_instance thisThrowable) {
   w_Exr * records = getWotsitField(thisThrowable, F_Throwable_records);
   
   if (records) {
@@ -142,7 +138,7 @@ w_instance Throwable_fillInStackTrace(JNIEnv *env, w_instance thisThrowable) {
     woempa(1, "Destroying existing trace record for %j\n", thisThrowable);
     releaseMem(records);
   }
-  fillThrowable(JNIEnv2w_thread(env), thisThrowable);
+  fillThrowable(thread, thisThrowable);
   stripStackTraceLevels(thisThrowable, 1);
 
   return thisThrowable;

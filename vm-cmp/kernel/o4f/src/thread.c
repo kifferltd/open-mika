@@ -510,7 +510,14 @@ x_status x_thread_sleep(x_sleep timer_ticks) {
 
   thread->state = xt_sleeping;
 
-  vTaskDelay(timer_ticks);
+  if (x_eternal == timer_ticks) {
+    for (;;) {
+      vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+  }
+  else {
+    vTaskDelay(timer_ticks);
+  }
 
   unsetFlag(thread->flags, TF_TIMEOUT);
 

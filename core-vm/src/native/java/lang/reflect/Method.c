@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2010 by Chris Gray,         *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
+* Copyright (c) 2010, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -49,7 +45,7 @@
 #include "reflection.h"
 #include "exception.h"
 
-w_instance Method_getDeclaringClass(JNIEnv *env, w_instance thisMethod) {
+w_instance Method_getDeclaringClass(w_thread thread, w_instance thisMethod) {
   w_method method;
 
   method = getWotsitField(thisMethod, F_Method_wotsit);
@@ -58,14 +54,14 @@ w_instance Method_getDeclaringClass(JNIEnv *env, w_instance thisMethod) {
   
 }
 
-w_instance Method_getName(JNIEnv *env, w_instance thisMethod) {
+w_instance Method_getName(w_thread thread, w_instance thisMethod) {
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
   
   return getStringInstance(method->spec.name);
   
 }
 
-w_int Method_getModifiers(JNIEnv *env, w_instance thisMethod) {
+w_int Method_getModifiers(w_thread thread, w_instance thisMethod) {
 
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
   
@@ -73,11 +69,11 @@ w_int Method_getModifiers(JNIEnv *env, w_instance thisMethod) {
   
 }
 
-w_instance Method_getReturnType(JNIEnv *env, w_instance thisMethod) {
+w_instance Method_getReturnType(w_thread thread, w_instance thisMethod) {
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
 
   if (mustBeLoaded(&method->spec.return_type) == CLASS_LOADING_FAILED) {
-    woempa(7, "Attempt to load %k failed: %e\n", method->spec.return_type, exceptionThrown(JNIEnv2w_thread(env)));
+    woempa(7, "Attempt to load %k failed: %e\n", method->spec.return_type, exceptionThrown(thread));
     return NULL;
   }
 
@@ -85,9 +81,8 @@ w_instance Method_getReturnType(JNIEnv *env, w_instance thisMethod) {
   
 }
 
-w_instance Method_getParameterTypes(JNIEnv *env, w_instance thisMethod) {
+w_instance Method_getParameterTypes(w_thread thread, w_instance thisMethod) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
   w_instance Parameters;
   w_clazz parameter;
@@ -128,9 +123,8 @@ w_instance Method_getParameterTypes(JNIEnv *env, w_instance thisMethod) {
 **
 */
 
-w_instance Method_getExceptionTypes(JNIEnv *env, w_instance thisMethod) {
+w_instance Method_getExceptionTypes(w_thread thread, w_instance thisMethod) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_method method;
   w_instance Exceptions;
   w_clazz  exception;
@@ -174,7 +168,7 @@ w_instance Method_getExceptionTypes(JNIEnv *env, w_instance thisMethod) {
 
 }
 
-w_boolean Method_equals(JNIEnv *env, w_instance thisMethod, w_instance theObject) {
+w_boolean Method_equals(w_thread thread, w_instance thisMethod, w_instance theObject) {
 
   w_method this_method = getWotsitField(thisMethod, F_Method_wotsit);
   w_boolean result = WONKA_FALSE;
@@ -190,9 +184,8 @@ w_boolean Method_equals(JNIEnv *env, w_instance thisMethod, w_instance theObject
    
 }
 
-w_instance Method_invoke0(JNIEnv *env, w_instance thisMethod, w_instance theObject, w_instance Arguments) {
+w_instance Method_invoke0(w_thread thread, w_instance thisMethod, w_instance theObject, w_instance Arguments) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_method method = getWotsitField(thisMethod, F_Method_wotsit);
   w_frame  frame;
   w_instance This = NULL;
@@ -271,7 +264,7 @@ w_instance Method_invoke0(JNIEnv *env, w_instance thisMethod, w_instance theObje
 
     }        
 
-    frame = invoke(env, method, This, Arguments);
+    frame = invoke(thread, method, This, Arguments);
   }        
 
   if (! exceptionThrown(thread)) {

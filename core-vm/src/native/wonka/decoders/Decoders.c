@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Copyright (c) 2010, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "wonka.h"
@@ -39,9 +35,8 @@
 #include "wstrings.h"
 #include "arrays.h"
 
-w_instance UTF8Decoder_bToC(JNIEnv *env, w_instance Decoder, w_instance byteArray, w_int offset, w_int count){
+w_instance UTF8Decoder_bToC(w_thread thread, w_instance Decoder, w_instance byteArray, w_int offset, w_int count){
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance Chars;
   w_char * chars;
   w_byte * bytes;
@@ -78,9 +73,8 @@ w_instance UTF8Decoder_bToC(JNIEnv *env, w_instance Decoder, w_instance byteArra
 
 }
 
-w_instance UTF8Decoder_bToString(JNIEnv *env, w_instance Decoder, w_instance byteArray, w_int offset, w_int count){
+w_instance UTF8Decoder_bToString(w_thread thread, w_instance Decoder, w_instance byteArray, w_int offset, w_int count){
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance String;
   w_string string;
   w_byte * bytes;
@@ -109,9 +103,8 @@ w_instance UTF8Decoder_bToString(JNIEnv *env, w_instance Decoder, w_instance byt
 }
 
 
-w_instance UTF8Decoder_cToB(JNIEnv *env, w_instance Decoder, w_instance charArray, w_int offset, w_int count){
+w_instance UTF8Decoder_cToB(w_thread thread, w_instance Decoder, w_instance charArray, w_int offset, w_int count){
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_char * chars;
   w_byte * bytes;
   w_int length;
@@ -150,8 +143,7 @@ w_instance UTF8Decoder_cToB(JNIEnv *env, w_instance Decoder, w_instance charArra
 
 }
 
-w_instance UTF8Decoder_stringToB(JNIEnv *env, w_instance Decoder, w_instance String){
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance UTF8Decoder_stringToB(w_thread thread, w_instance Decoder, w_instance String){
   w_byte * bytes;
   w_int length;
   w_instance Bytes;
@@ -178,7 +170,7 @@ w_instance UTF8Decoder_stringToB(JNIEnv *env, w_instance Decoder, w_instance Str
   return NULL;
 }
 
-void Latin1Decoder_copyArray(JNIEnv *env, w_instance This, w_instance Bytes, w_int boff, w_instance Chars, w_int coff, w_int count) {
+void Latin1Decoder_copyArray(w_thread thread, w_instance This, w_instance Bytes, w_int boff, w_instance Chars, w_int coff, w_int count) {
 
   w_char * chars;
   w_ubyte * bytes;
@@ -187,7 +179,7 @@ void Latin1Decoder_copyArray(JNIEnv *env, w_instance This, w_instance Bytes, w_i
   w_int duffs;
 
   if (!Chars || !Bytes){
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
     return;
   }
 
@@ -195,7 +187,7 @@ void Latin1Decoder_copyArray(JNIEnv *env, w_instance This, w_instance Bytes, w_i
   blength = instance2Array_length(Bytes);
 
   if (boff < 0 || count < 0 || boff + count > blength || coff < 0  || coff > clength - count) {
-    throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, NULL);
+    throwException(thread, clazzArrayIndexOutOfBoundsException, NULL);
     return;
   }
 
@@ -244,9 +236,8 @@ void Latin1Decoder_copyArray(JNIEnv *env, w_instance This, w_instance Bytes, w_i
 
 }
 
-w_instance Latin1Decoder_cToB(JNIEnv *env, w_instance This, w_instance Chars, w_int offset, w_int count){
+w_instance Latin1Decoder_cToB(w_thread thread, w_instance This, w_instance Chars, w_int offset, w_int count){
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_char * chars;
   w_ubyte * bytes;
   w_int length;

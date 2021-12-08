@@ -1,6 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005. 2006. 2010, 2020, 2021 by KIFFER Ltd.         *
-+ All rights reserved.                                                    *
+* Copyright (c) 2010, 2020, 2021 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -111,12 +110,11 @@ static void i_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int min
   }
 }
 
-void StringBuffer_ensureCapacity(JNIEnv *env, w_instance StringBuffer, w_int minimum) {
-  i_ensureCapacity(JNIEnv2w_thread(env), StringBuffer, minimum);
+void StringBuffer_ensureCapacity(w_thread thread, w_instance StringBuffer, w_int minimum) {
+  i_ensureCapacity(thread, StringBuffer, minimum);
 }
 
-void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_instance String) {
-  w_thread thread = JNIEnv2w_thread(env);
+void StringBuffer_createFromString(w_thread thread, w_instance StringBuffer, w_instance String) {
   w_string string;
   w_int length;
   w_instance buffer;
@@ -127,7 +125,7 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     length = string_length(string) + 16;
     woempa(1, "Allocating array of char[%d]\n", length);
     enterUnsafeRegion(thread);
-    buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    buffer = allocArrayInstance_1d(thread, atype2clazz[P_char], length);
     enterSafeRegion(thread);
     if (!buffer) {
 
@@ -153,7 +151,7 @@ void StringBuffer_createFromString(JNIEnv *env, w_instance StringBuffer, w_insta
     length = 16;
     woempa(1, "Allocating array of char[%d]\n", length);
     enterUnsafeRegion(thread);
-    buffer = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+    buffer = allocArrayInstance_1d(thread, atype2clazz[P_char], length);
     enterSafeRegion(thread);
     if (!buffer) {
 
@@ -234,8 +232,7 @@ static w_instance i_StringBuffer_append_char(w_thread thread, w_instance thisStr
    
 }
 
-w_instance StringBuffer_append_String(JNIEnv *env, w_instance thisStringBuffer, w_instance theString) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance StringBuffer_append_String(w_thread thread, w_instance thisStringBuffer, w_instance theString) {
   w_int curr_length = getIntegerField(thisStringBuffer, F_StringBuffer_count);
 
   if (theString) {
@@ -311,9 +308,8 @@ void fast_StringBuffer_append_String(w_frame frame) {
   }
 }
 
-w_instance StringBuffer_substring(JNIEnv *env, w_instance StringBuffer, w_int start, w_int end) {
+w_instance StringBuffer_substring(w_thread thread, w_instance StringBuffer, w_int start, w_int end) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_int length = getIntegerField(StringBuffer, F_StringBuffer_count);
   w_string string;
   w_instance result = NULL;
@@ -356,7 +352,7 @@ static w_instance i_StringBuffer_toString(w_instance thisStringBuffer) {
 
 }
 
-w_instance StringBuffer_toString(JNIEnv *env, w_instance thisStringBuffer) {
+w_instance StringBuffer_toString(w_thread thread, w_instance thisStringBuffer) {
   return i_StringBuffer_toString(thisStringBuffer);
 }
 

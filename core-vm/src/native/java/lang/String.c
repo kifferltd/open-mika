@@ -49,7 +49,7 @@
 /*
 ** Create an empty string
 
-void String_create_empty(JNIEnv *env, w_instance String) {
+void String_create_empty(w_thread thread, w_instance String) {
   w_string s = registerString(string_empty);
   setWotsitField(String, F_String_wotsit, s);
   woempa(1, "%p new string at %p, empty\n", String, (char *)(String2string(String)));
@@ -72,9 +72,9 @@ void fast_String_create_empty(w_frame frame) {
 ** Create a string instance just like an existing string
 */
 
-void String_create_String(JNIEnv *env, w_instance String, w_instance Value) {
+void String_create_String(w_thread thread, w_instance String, w_instance Value) {
   if (! Value) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   } 
   else {
     w_string s = registerString(String2string(Value));
@@ -88,9 +88,8 @@ void String_create_String(JNIEnv *env, w_instance String, w_instance Value) {
 ** Create a string instance from a StringBuffer
 */
 
-void String_create_StringBuffer(JNIEnv *env, w_instance String, w_instance value) {
+void String_create_StringBuffer(w_thread thread, w_instance String, w_instance value) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_string string;
 
   if (!value) {
@@ -131,8 +130,8 @@ void i_String_create_char(w_thread thread, w_instance String, w_instance charArr
   }
 }
 
-void String_create_char(JNIEnv *env, w_instance thisString, w_instance charArray, w_int offset, w_int count) {
-  i_String_create_char(JNIEnv2w_thread(env), thisString, charArray, offset, count);
+void String_create_char(w_thread thread, w_instance thisString, w_instance charArray, w_int offset, w_int count) {
+  i_String_create_char(thread, thisString, charArray, offset, count);
 }
 
 void fast_String_create_char(w_frame frame) {
@@ -194,8 +193,8 @@ static void i_String_create_byte(w_thread thread, w_instance String, w_instance 
 
 }
 
-void String_create_byte(JNIEnv *env, w_instance thisString, w_instance byteArray, w_int hibyte, w_int offset, w_int count) {
-  i_String_create_byte(JNIEnv2w_thread(env), thisString, byteArray, hibyte, offset, count);
+void String_create_byte(w_thread thread, w_instance thisString, w_instance byteArray, w_int hibyte, w_int offset, w_int count) {
+  i_String_create_byte(thread, thisString, byteArray, hibyte, offset, count);
 }
 
 void fast_String_create_byte(w_frame frame) {
@@ -213,8 +212,7 @@ void fast_String_toString(w_frame frame) {
   }
 }
 
-w_instance String_toCharArray(JNIEnv *env, w_instance This) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance String_toCharArray(w_thread thread, w_instance This) {
   w_int length;
   w_string this = String2string(This);
   w_instance result;
@@ -222,7 +220,7 @@ w_instance String_toCharArray(JNIEnv *env, w_instance This) {
   length = string_length(this);
   woempa(1, "Allocating array of char[%d]\n", length);
   enterUnsafeRegion(thread);
-  result = allocArrayInstance_1d(JNIEnv2w_thread(env), atype2clazz[P_char], length);
+  result = allocArrayInstance_1d(thread, atype2clazz[P_char], length);
   enterSafeRegion(thread);
   if (result) {
     if (string_is_latin1(this)) {
@@ -240,7 +238,7 @@ w_instance String_toCharArray(JNIEnv *env, w_instance This) {
   
 }
 
-w_int String_compareTo(JNIEnv *env, w_instance This, w_instance String) {
+w_int String_compareTo(w_thread thread, w_instance This, w_instance String) {
 
   w_string this = String2string(This);
   w_string string;
@@ -248,7 +246,7 @@ w_int String_compareTo(JNIEnv *env, w_instance This, w_instance String) {
   w_int i;
 
   if (!String) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     string = String2string(String);
@@ -287,9 +285,8 @@ w_int String_compareTo(JNIEnv *env, w_instance This, w_instance String) {
   
 }
 
-w_instance String_getBytes(JNIEnv *env, w_instance This, w_boolean Enc) {
+w_instance String_getBytes(w_thread thread, w_instance This, w_boolean Enc) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance result = NULL;
   w_string this = String2string(This);
   w_byte *dst;
@@ -346,8 +343,8 @@ static w_boolean i_String_equals(w_thread thread, w_instance thisString, w_insta
 
 }
 
-w_boolean String_equals(JNIEnv *env, w_instance thisString, w_instance otherString) {
-  return i_String_equals(JNIEnv2w_thread(env), thisString, otherString);
+w_boolean String_equals(w_thread thread, w_instance thisString, w_instance otherString) {
+  return i_String_equals(thread, thisString, otherString);
 }
 
 void fast_String_equals(w_frame frame) {
@@ -370,7 +367,7 @@ void fast_String_equals(w_frame frame) {
 ** Compare two strings for equality modulo case
 */
 
-w_boolean String_equalsIgnoreCase(JNIEnv *env, w_instance This, w_instance Other) {
+w_boolean String_equalsIgnoreCase(w_thread thread, w_instance This, w_instance Other) {
 
   w_boolean result = WONKA_FALSE;
   w_string this;
@@ -418,8 +415,8 @@ static w_int i_String_hashCode(w_thread thread, w_instance thisString) {
   return string->wonka_hash;
 }
 
-w_int String_hashCode(JNIEnv *env, w_instance thisString) {
-  return i_String_hashCode(JNIEnv2w_thread(env), thisString);
+w_int String_hashCode(w_thread thread, w_instance thisString) {
+  return i_String_hashCode(thread, thisString);
 }
 
 void fast_String_hashCode(w_frame frame) {
@@ -440,7 +437,7 @@ void fast_String_hashCode(w_frame frame) {
 ** Length in unicode characters
 */
 
-w_int String_length(JNIEnv *env, w_instance String) {
+w_int String_length(w_thread thread, w_instance String) {
   w_string string = String2string(String);
   woempa(1, "%p '%w'\n", String, string);
 
@@ -465,8 +462,7 @@ void fast_String_length(w_frame frame) {
   }
 }
 
-w_boolean String_regionMatches(JNIEnv *env, w_instance This, w_boolean ic, w_int to, w_instance Other, w_int oo, w_int len) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w_int to, w_instance Other, w_int oo, w_int len) {
   w_boolean result = WONKA_TRUE;
   w_string this = String2string(This);
   w_string other;
@@ -531,9 +527,9 @@ static w_boolean i_String_startsWith(w_string this, w_string prefix, w_int offse
 
 }
 
-w_boolean String_startsWith(JNIEnv *env, w_instance This, w_instance Prefix, w_int offset) {
+w_boolean String_startsWith(w_thread thread, w_instance This, w_instance Prefix, w_int offset) {
   if (!Prefix) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
     return FALSE;
   }
 
@@ -556,7 +552,7 @@ void fast_String_startsWith(w_frame frame) {
   }
 }
 
-w_boolean String_endsWith(JNIEnv *env, w_instance This, w_instance Suffix) {
+w_boolean String_endsWith(w_thread thread, w_instance This, w_instance Suffix) {
 
   w_string this;
   w_string suffix;
@@ -564,7 +560,7 @@ w_boolean String_endsWith(JNIEnv *env, w_instance This, w_instance Suffix) {
   w_size i;
   
   if (!Suffix) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
     return FALSE;
   }
 
@@ -610,8 +606,8 @@ static w_char i_String_charAt(w_thread thread, w_instance thisString, w_int idx)
  
 }
 
-w_char String_charAt(JNIEnv *env, w_instance thisString, w_int idx) {
-  return i_String_charAt(JNIEnv2w_thread(env), thisString, idx);
+w_char String_charAt(w_thread thread, w_instance thisString, w_int idx) {
+  return i_String_charAt(thread, thisString, idx);
 }
 
 void fast_String_charAt(w_frame frame) {
@@ -639,8 +635,7 @@ void fast_String_charAt(w_frame frame) {
   }
 }
 
-void String_getChars(JNIEnv *env, w_instance This, w_int srcBegin, w_int srcEnd, w_instance Dst, w_int dstBegin) {
-  w_thread thread = JNIEnv2w_thread(env);
+void String_getChars(w_thread thread, w_instance This, w_int srcBegin, w_int srcEnd, w_instance Dst, w_int dstBegin) {
   w_string this;
   w_char *dst;
   w_int length;
@@ -671,7 +666,7 @@ void String_getChars(JNIEnv *env, w_instance This, w_int srcBegin, w_int srcEnd,
 } 
 
 
-void String_copyBytes(JNIEnv *env, w_instance Source, w_int srcBegin, w_int srcEnd, w_instance dstByteArray, w_int dstBegin) {
+void String_copyBytes(w_thread thread, w_instance Source, w_int srcBegin, w_int srcEnd, w_instance dstByteArray, w_int dstBegin) {
   w_string source = String2string(Source);
   w_sbyte *destination;
   w_int length;
@@ -715,8 +710,8 @@ static w_int i_String_indexOf_char(w_thread thread, w_instance thisString, w_int
   
 }
 
-w_int String_indexOf_char(JNIEnv *env, w_instance thisString, w_int ch, w_int offset) {
-  return i_String_indexOf_char(JNIEnv2w_thread(env), thisString, ch, offset);
+w_int String_indexOf_char(w_thread thread, w_instance thisString, w_int ch, w_int offset) {
+  return i_String_indexOf_char(thread, thisString, ch, offset);
 }
 
 void fast_String_indexOf_char(w_frame frame) {
@@ -734,8 +729,7 @@ void fast_String_indexOf_char(w_frame frame) {
   }
 }
 
-w_int String_indexOf_String(JNIEnv *env, w_instance thisString, w_instance otherString, w_int fromIndex) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int String_indexOf_String(w_thread thread, w_instance thisString, w_instance otherString, w_int fromIndex) {
   w_string string;
   w_string other;
   w_int where;
@@ -809,7 +803,7 @@ w_int String_indexOf_String(JNIEnv *env, w_instance thisString, w_instance other
 
 }
 
-w_int String_lastIndexOf_char(JNIEnv *env, w_instance thisString, w_int ch, w_int offset) {
+w_int String_lastIndexOf_char(w_thread thread, w_instance thisString, w_int ch, w_int offset) {
   w_string string = String2string(thisString);
   w_int i;
   w_int result = -1;
@@ -832,8 +826,7 @@ w_int String_lastIndexOf_char(JNIEnv *env, w_instance thisString, w_int ch, w_in
   
 }
 
-w_int String_lastIndexOf_String(JNIEnv *env, w_instance thisString, w_instance otherString, w_int offset) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int String_lastIndexOf_String(w_thread thread, w_instance thisString, w_instance otherString, w_int offset) {
   w_string string;
   w_string other;
   w_int where;
@@ -879,7 +872,7 @@ w_int String_lastIndexOf_String(JNIEnv *env, w_instance thisString, w_instance o
 
 }
 
-w_instance String_toUpperCase(JNIEnv *env, w_instance This, w_instance Locale) {
+w_instance String_toUpperCase(w_thread thread, w_instance This, w_instance Locale) {
 
   w_string this = String2string(This);
   w_instance result = This;
@@ -907,7 +900,7 @@ w_instance String_toUpperCase(JNIEnv *env, w_instance This, w_instance Locale) {
 
 }
 
-w_instance String_toLowerCase(JNIEnv *env, w_instance This, w_instance Locale) {
+w_instance String_toLowerCase(w_thread thread, w_instance This, w_instance Locale) {
 
   w_string this = String2string(This);
   w_instance result = This;
@@ -934,7 +927,7 @@ w_instance String_toLowerCase(JNIEnv *env, w_instance This, w_instance Locale) {
 
 }
 
-w_instance String_replace(JNIEnv *env, w_instance This, w_char oldChar, w_char newChar) {
+w_instance String_replace(w_thread thread, w_instance This, w_char oldChar, w_char newChar) {
 
   w_string this;
   w_instance Result = This;
@@ -966,9 +959,8 @@ w_instance String_replace(JNIEnv *env, w_instance This, w_char oldChar, w_char n
 
 }
 
-w_instance String_concat(JNIEnv *env, w_instance This, w_instance String) {
+w_instance String_concat(w_thread thread, w_instance This, w_instance String) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_string this;
   w_string string;
   w_instance Result = NULL;
@@ -1063,8 +1055,8 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
 
 }
 
-w_instance String_substring(JNIEnv *env, w_instance thisString, w_int offset, w_int endIndex) {
-  return i_String_substring(JNIEnv2w_thread(env), thisString, offset, endIndex);
+w_instance String_substring(w_thread thread, w_instance thisString, w_int offset, w_int endIndex) {
+  return i_String_substring(thread, thisString, offset, endIndex);
 }
 
 void fast_String_substring(w_frame frame) {
@@ -1092,8 +1084,7 @@ void fast_String_substring(w_frame frame) {
 **
 */
 
-w_instance String_intern(JNIEnv *env, w_instance thisString) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance String_intern(w_thread thread, w_instance thisString) {
   w_instance resultString;
 
   threadMustBeSafe(thread);
@@ -1108,7 +1099,7 @@ w_instance String_intern(JNIEnv *env, w_instance thisString) {
 **
 */
 
-w_instance String_trim(JNIEnv *env, w_instance This) {
+w_instance String_trim(w_thread thread, w_instance This) {
 
   w_string this = String2string(This);
   w_instance Result = This;
@@ -1166,7 +1157,7 @@ w_instance String_trim(JNIEnv *env, w_instance This) {
 
 }
 
-w_instance String_static_valueOf_char(JNIEnv *env, w_instance stringClass, w_char c) {
+w_instance String_static_valueOf_char(w_thread thread, w_instance stringClass, w_char c) {
   w_string string;
   w_instance result = NULL;
 

@@ -80,8 +80,7 @@ static char *convertPath(w_string p) {
   return c;
 }
 
-w_instance NativeProcess_exec(JNIEnv* jnienv, w_instance thisObj, w_instance cmdArray, w_instance envArray, w_instance pathString) {
-  w_thread    thread = JNIEnv2w_thread(jnienv);
+w_instance NativeProcess_exec(w_thread thread, w_instance thisObj, w_instance cmdArray, w_instance envArray, w_instance pathString) {
   w_int       cmdlength = 0; 
   w_int       envlength = 0; 
   w_int       i;
@@ -244,14 +243,14 @@ clean_up:
 }
 
 #include <stdio.h>
-w_int ProcessInputStream_read(JNIEnv *env, w_instance thisInstance) {
+w_int ProcessInputStream_read(w_thread thread, w_instance thisInstance) {
   w_int result;
   w_void* pid;
   char buffer;
   w_instance info = getReferenceField(thisInstance, F_ProcessInputStream_info);
 
   if(info == NULL) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
+    throwException(thread,clazzIOException,"stream closed");
     return -1;
   }
 
@@ -261,20 +260,19 @@ w_int ProcessInputStream_read(JNIEnv *env, w_instance thisInstance) {
       host_read_in(pid,&buffer,1) : host_read_err(pid,&buffer,1);
 
   if(result == EXECUTION_ERROR){
-    w_thread thread = JNIEnv2w_thread(env);
+    w_thread thread = thread;
     throwException(thread,clazzIOException,NULL);
   }
   return buffer;
 }
 
-w_int ProcessInputStream_read_Array(JNIEnv *env, w_instance thisInstance, w_instance Array, w_int offset, w_int length) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int ProcessInputStream_read_Array(w_thread thread, w_instance thisInstance, w_instance Array, w_int offset, w_int length) {
   w_int result = 0;
   w_void* pid;
   w_instance info = getReferenceField(thisInstance, F_ProcessInputStream_info);
 
   if(info == NULL) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
+    throwException(thread,clazzIOException,"stream closed");
     return result;
   }
   if(Array == NULL){
@@ -296,41 +294,41 @@ w_int ProcessInputStream_read_Array(JNIEnv *env, w_instance thisInstance, w_inst
   return result;
 }
 
-w_int ProcessInputStream_available(JNIEnv *env, w_instance thisInstance) {
+w_int ProcessInputStream_available(w_thread thread, w_instance thisInstance) {
   w_void* pid;
   w_int result;
 
   w_instance info = getReferenceField(thisInstance, F_ProcessInputStream_info);
 
   if(info == NULL) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
+    throwException(thread,clazzIOException,"stream closed");
     return -1;
   }
   pid = getWotsitField(info, F_ProcessInfo_wotsit);
   result = getBooleanField(thisInstance,F_ProcessInputStream_input) == WONKA_TRUE ?
      host_available_in(pid) : host_available_err(pid);
   if(result == EXECUTION_ERROR) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"I/O error !");
+    throwException(thread,clazzIOException,"I/O error !");
   }
 
   return result;
 }
 
-w_void ProcessOutputStream_write(JNIEnv *env, w_instance thisInstance, w_int byte) {
+w_void ProcessOutputStream_write(w_thread thread, w_instance thisInstance, w_int byte) {
   w_ubyte buffer = byte;
   w_void* pid;
   w_instance info = getReferenceField(thisInstance, F_ProcessOutputStream_info);
   if(info == NULL) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"stream closed");
+    throwException(thread,clazzIOException,"stream closed");
     return;
   }
   pid = getWotsitField(info, F_ProcessInfo_wotsit);
   if(host_write(pid, &buffer, 1) == EXECUTION_ERROR) {
-    throwException(JNIEnv2w_thread(env),clazzIOException,"I/O error !");
+    throwException(thread,clazzIOException,"I/O error !");
   }
 }
 
-w_void ProcessOutputStream_close(JNIEnv *env, w_instance thisInstance) {
+w_void ProcessOutputStream_close(w_thread thread, w_instance thisInstance) {
   w_instance info = getReferenceField(thisInstance, F_ProcessOutputStream_info);
   if(info) {
     w_void* pid = getWotsitField(info, F_ProcessInfo_wotsit);
@@ -338,10 +336,9 @@ w_void ProcessOutputStream_close(JNIEnv *env, w_instance thisInstance) {
   }
 }
 
-w_void ProcessOutputStream_write_Array(JNIEnv *env, w_instance thisInstance, 
+w_void ProcessOutputStream_write_Array(w_thread thread, w_instance thisInstance, 
       w_instance Array, w_int offset,w_int length) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance info = getReferenceField(thisInstance, F_ProcessOutputStream_info);
   if(info == NULL) {
     throwException(thread,clazzIOException,"stream closed");
@@ -363,7 +360,7 @@ w_void ProcessOutputStream_write_Array(JNIEnv *env, w_instance thisInstance,
   }
 }
 
-w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
+w_int ProcessMonitor_WaitForAll(w_thread thread, w_instance thisInstance) {
   w_int retval;
   w_int pid = host_wait_for_all(&retval);
 
@@ -379,7 +376,7 @@ w_int ProcessMonitor_WaitForAll(JNIEnv *env, w_instance thisInstance) {
   return pid;
 }
 
-w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
+w_void ProcessInfo_cleanUp(w_thread thread, w_instance thisInstance) {
   w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid) {
@@ -391,7 +388,7 @@ w_void ProcessInfo_cleanUp(JNIEnv *env, w_instance thisInstance) {
   }
 }
 
-w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
+w_void ProcessInfo_destroy(w_thread thread, w_instance thisInstance) {
    w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL && (getBooleanField(thisInstance, F_ProcessInfo_destroyed)== WONKA_FALSE)) {
@@ -403,7 +400,7 @@ w_void ProcessInfo_destroy(JNIEnv *env, w_instance thisInstance) {
   }
 }
 
-w_void ProcessInfo_setReturnValue (JNIEnv *env, w_instance thisInstance, w_int retval) {
+w_void ProcessInfo_setReturnValue (w_thread thread, w_instance thisInstance, w_int retval) {
    w_void* pid = getWotsitField(thisInstance, F_ProcessInfo_wotsit);
 
   if(pid != NULL) {

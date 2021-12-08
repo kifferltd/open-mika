@@ -1,33 +1,30 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
-*                                                                         *
-* Modifications Copyright (c) 2004 by Chris Gray, /k/ Embedded Java       *
-* Solutions, Antwerp, Belgium.  All rights reserved.                      *
-*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
-
-/*
-** $Id: ZipFile.c,v 1.6 2006/10/04 14:24:17 cvsroot Exp $
-*/
 
 #include <string.h>
 
@@ -41,20 +38,20 @@
 #include "zipfile.h"
 
 
-w_long ZipFile_bytesToLong(JNIEnv *env, w_instance Class, w_instance byteArray, w_int offset){
+w_long ZipFile_bytesToLong(w_thread thread, w_instance Class, w_instance byteArray, w_int offset){
   w_long result=0;
   w_int length;
   w_ubyte* bytes;
   w_word w;
 
   if(!byteArray){
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     length = (w_size)instance2Array_length(byteArray);
 
     if(offset < 0 || offset > length - 4){
-      throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, NULL);
+      throwException(thread, clazzArrayIndexOutOfBoundsException, NULL);
     }
     else {
       bytes = (w_ubyte*)instance2Array_byte(byteArray);
@@ -68,7 +65,7 @@ w_long ZipFile_bytesToLong(JNIEnv *env, w_instance Class, w_instance byteArray, 
   return result;
 }
 
-w_long ZipFile_getDate(JNIEnv *env, w_instance Class, w_instance byteArray, w_int offset){
+w_long ZipFile_getDate(w_thread thread, w_instance Class, w_instance byteArray, w_int offset){
   w_long result = 0;
   w_int length;
   w_ubyte* bytes;
@@ -76,13 +73,13 @@ w_long ZipFile_getDate(JNIEnv *env, w_instance Class, w_instance byteArray, w_in
   w_Date date;
 
   if(!byteArray){
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
   else {
     length = (w_size)instance2Array_length(byteArray);
 
     if(offset < 0 || offset > length - 4){
-      throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, NULL);
+      throwException(thread, clazzArrayIndexOutOfBoundsException, NULL);
     }
     else {
 
@@ -180,13 +177,12 @@ w_ubyte* quickInflate(w_ubyte* c_data, w_size c_size, w_size u_size, w_word d_cr
 */
 
 
-w_instance ZipFile_quickInflate(JNIEnv *env, w_instance theClass, w_instance cData, w_int u_size, w_int crc){
+w_instance ZipFile_quickInflate(w_thread thread, w_instance theClass, w_instance cData, w_int u_size, w_int crc){
   w_ubyte * u_data;
   w_ubyte * c_data;
   w_size c_size;
   w_instance uData = NULL;
   char * errmsg = NULL;
-  w_thread thread = JNIEnv2w_thread(env);
 
   threadMustBeSafe(thread);
   if(! cData){

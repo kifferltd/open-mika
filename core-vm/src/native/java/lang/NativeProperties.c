@@ -1,6 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007 by Chris Gray, /k/ Embedded Java Solutions.          *
-* All rights reserved.                                                    *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -10,21 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of /k/ Embedded Java Solutions nor the names of     *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL /K/ EMBEDDED JAVA SOLUTIONS OR OTHER CONTRIBUTORS BE  *
-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR     *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "fifo.h"
@@ -36,8 +35,7 @@ w_hashtable prop_hashtable;
 
 w_instance keyArray;
 
-w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance NativeProperties_init(w_thread thread, w_instance classSystem) {
   char *utf8;
   w_string s;
   w_fifo fifo;
@@ -142,7 +140,7 @@ w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
   woempa(1, "Set %s -> %w\n", "java.runtime.name", s);
 
   enterUnsafeRegion(thread);
-  keyArray = allocArrayInstance_1d(JNIEnv2w_thread(env), clazzArrayOf_String, prop_hashtable->occupancy);
+  keyArray = allocArrayInstance_1d(thread, clazzArrayOf_String, prop_hashtable->occupancy);
   enterSafeRegion(thread);
   fifo = ht_list_keys_no_lock(prop_hashtable);
   i = 0;
@@ -155,7 +153,7 @@ w_instance NativeProperties_init(JNIEnv *env, w_instance classSystem) {
   return keyArray;
 }
 
-w_instance NativeProperties_get(JNIEnv *env, w_instance classSystem, w_instance nameString) {
+w_instance NativeProperties_get(w_thread thread, w_instance classSystem, w_instance nameString) {
   w_string name = String2string(nameString);
   w_string result;
 

@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -36,7 +36,7 @@
 #include "jni.h"
 #include "wstrings.h"
 
-w_int NetworkInterface_getAddressDevice(JNIEnv* env , w_instance ThisImpl, w_instance string) {
+w_int NetworkInterface_getAddressDevice(w_thread thread , w_instance ThisImpl, w_instance string) {
 /* TODO : re-write me
   struct ifreq ifr;
   struct sockaddr_in* addr;
@@ -44,7 +44,7 @@ w_int NetworkInterface_getAddressDevice(JNIEnv* env , w_instance ThisImpl, w_ins
   int ret;
   int fd;
   if(string == NULL) {
-    w_thread thread = JNIEnv2w_thread(env);
+    w_thread thread = thread;
     throwException(thread, clazzNullPointerException, NULL);
     return -1;
   }
@@ -72,7 +72,7 @@ w_int NetworkInterface_getAddressDevice(JNIEnv* env , w_instance ThisImpl, w_ins
   return -1;
 }
 
-w_void NetworkInterface_getInterfaces(JNIEnv* env , w_instance ThisClass, w_instance list) {
+w_void NetworkInterface_getInterfaces(w_thread thread , w_instance ThisClass, w_instance list) {
 /* TODO : re-write me
   jmethodID mid = (*env)->GetStaticMethodID(env, ThisClass, "addToList","(Ljava/util/Vector;ILjava/lang/String;)V");
   struct ifreq *ifr;

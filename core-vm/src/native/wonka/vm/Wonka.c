@@ -1,6 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2008, 2015 by Chris Gray, /k/ Embedded  *
-* Java Solutions and KIFFER Ltd. All rights reserved.                     *
+* Copyright (c) 2008, 2015, 2021 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -19,12 +18,12 @@
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
 * IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
 * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
-* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
-* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
-*  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,    *
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
-* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
-* POSSIBILITY OF SUCH DAMAGE.                                             *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -238,7 +237,7 @@ w_word bytes2word(w_byte *bytes) {
 
 #include <ctype.h>
                                         
-w_long Wonka_suid(JNIEnv *env, w_instance Wonka, w_instance Class) {
+w_long Wonka_suid(w_thread thread, w_instance Wonka, w_instance Class) {
   w_clazz clazz = Class2clazz(Class);
   w_long suid = 0;
   w_clazz *interfaces = NULL;
@@ -719,7 +718,7 @@ w_long Wonka_suid(JNIEnv *env, w_instance Wonka, w_instance Class) {
 
 }
 
-void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance verboseString) {
+void Wonka_static_setWonkaVerbose(w_thread thread, w_instance theClass, w_instance verboseString) {
   w_string verbose_string = String2string(verboseString);
 
   if (verbose_string && !verbose_cstring) {
@@ -796,11 +795,11 @@ void Wonka_static_setWonkaVerbose(JNIEnv *env, w_instance theClass, w_instance v
   }
 }
 
-void Wonka_static_setMethodDebugInfo(JNIEnv *env, w_instance theClass, w_boolean enable) {
+void Wonka_static_setMethodDebugInfo(w_thread thread, w_instance theClass, w_boolean enable) {
   use_method_debug_info = enable;
 }
 
-void Wonka_static_loadExtensions(JNIEnv *env, w_instance theClass) {
+void Wonka_static_loadExtensions(w_thread thread, w_instance theClass) {
 #ifdef MODULES 
   loadExtensions();
 #else 

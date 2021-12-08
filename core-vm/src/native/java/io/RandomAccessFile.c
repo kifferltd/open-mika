@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -67,8 +67,7 @@ w_boolean statFD(w_instance thisFileDescriptor, struct vfs_STAT *statbufptr) {
   return result;
 }
 
-w_int RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w_instance path, w_int mode) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_instance path, w_int mode) {
   w_string pathname_string;
   char *pathname;
   const char  *fmode = "r+";
@@ -144,7 +143,7 @@ w_int RandomAccessFile_createFromString (JNIEnv *env, w_instance thisRAF, w_inst
   return 0;
 }
 
-w_int RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
+w_int RandomAccessFile_read (w_thread thread, w_instance thisRAF) {
   vfs_FILE    *file;
   w_int       result = -1;
   w_sbyte     minibuf;
@@ -152,7 +151,7 @@ w_int RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     if (vfs_fread(&minibuf, 1, 1, file) > 0) {
       result = minibuf;
@@ -162,7 +161,7 @@ w_int RandomAccessFile_read (JNIEnv *env, w_instance thisRAF) {
   return result;
 }
 
-w_int RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
+w_int RandomAccessFile_readIntoBuffer (w_thread thread, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
 
   vfs_FILE    *file;
   w_int       result;
@@ -170,7 +169,7 @@ w_int RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instan
   w_sbyte     *data;
 
   if ((offset < 0) || (offset > instance2Array_length(buffer) - length)) {
-    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
+    throwArrayIndexOutOfBoundsException(thread);
 
     return -1;
   }
@@ -179,7 +178,7 @@ w_int RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instan
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
     result = 0;
   } else {
     data = bytes + offset;
@@ -190,8 +189,7 @@ w_int RandomAccessFile_readIntoBuffer (JNIEnv *env, w_instance thisRAF, w_instan
   return result;
 }
 
-w_int RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_int RandomAccessFile_skipBytes (w_thread thread, w_instance thisRAF, w_int n) {
   w_instance  fd_obj;
   vfs_FILE    *file;
   w_long       result = 0;
@@ -239,14 +237,14 @@ w_int RandomAccessFile_skipBytes (JNIEnv *env, w_instance thisRAF, w_int n) {
   return result;
 }
 
-void RandomAccessFile_write (JNIEnv *env, w_instance thisRAF, w_int oneByte) {
+void RandomAccessFile_write (w_thread thread, w_instance thisRAF, w_int oneByte) {
   vfs_FILE    *file;
   w_sbyte     minibuf = oneByte;
 
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     vfs_fseek(file, vfs_ftell(file), SEEK_SET);
     vfs_fwrite(&minibuf, 1, 1, file);
@@ -254,13 +252,13 @@ void RandomAccessFile_write (JNIEnv *env, w_instance thisRAF, w_int oneByte) {
   }
 }
 
-void RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
+void RandomAccessFile_writeFromBuffer (w_thread thread, w_instance thisRAF, w_instance buffer, w_int offset, w_int length) {
   vfs_FILE    *file;
   w_sbyte     *bytes;
   w_sbyte     *data;
 
   if ((offset < 0) || (offset > instance2Array_length(buffer) - length)) {
-    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
+    throwArrayIndexOutOfBoundsException(thread);
 
     return;
   }
@@ -269,7 +267,7 @@ void RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_instan
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     data = bytes + offset;
     vfs_fwrite(data, 1, (w_word)length, file);
@@ -277,14 +275,14 @@ void RandomAccessFile_writeFromBuffer (JNIEnv *env, w_instance thisRAF, w_instan
   }
 }
 
-w_long RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
+w_long RandomAccessFile_getFilePointer (w_thread thread, w_instance thisRAF) {
   vfs_FILE    *file;
   w_long       result = -1;
 
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
     result = 0;
   } else {
     result = vfs_ftell(file);
@@ -293,21 +291,21 @@ w_long RandomAccessFile_getFilePointer (JNIEnv *env, w_instance thisRAF) {
   return result;
 }
 
-void RandomAccessFile_seek (JNIEnv *env, w_instance thisRAF, w_long pos) {
+void RandomAccessFile_seek (w_thread thread, w_instance thisRAF, w_long pos) {
   vfs_FILE    *file;
 
   file = RAF2FILE(thisRAF);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     if(vfs_fseek(file, (long)pos, SEEK_SET) == -1) {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
     }
   }
 }
 
-w_long RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
+w_long RandomAccessFile_length (w_thread thread, w_instance thisRAF) {
   w_instance fd_obj;
   struct vfs_STAT statbuf;
   w_long result = 0;
@@ -315,14 +313,14 @@ w_long RandomAccessFile_length (JNIEnv *env, w_instance thisRAF) {
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
 
   if (!statFD(fd_obj, &statbuf)) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
   }
   result = statbuf.st_size;
 
   return result;
 }
 
-void RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen) {
+void RandomAccessFile_setLength (w_thread thread, w_instance thisRAF, w_long newlen) {
 
   w_instance  fd_obj;
   vfs_FILE    *file;
@@ -331,7 +329,7 @@ void RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen)
   file = getWotsitField(fd_obj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     char *pathname;
     w_long oldptr;
@@ -341,25 +339,25 @@ void RandomAccessFile_setLength (JNIEnv *env, w_instance thisRAF, w_long newlen)
     oldptr = vfs_ftell(file);
 
     if(vfs_truncate(pathname, newlen) == -1) {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
     }
 
     freeFDName(pathname);
 
     if(newlen < oldptr && vfs_fseek(file, newlen, SEEK_SET) == -1) {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
     }
   }
 }
 
-void RandomAccessFile_close (JNIEnv *env, w_instance thisRAF) { 
+void RandomAccessFile_close (w_thread thread, w_instance thisRAF) { 
   w_instance  fd_obj;
   vfs_FILE    *file;
 
   fd_obj = getReferenceField(thisRAF, F_RandomAccessFile_fd);
 
   if(fd_obj == NULL) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
   } else {
     
     file = getWotsitField(fd_obj, F_FileDescriptor_fd);

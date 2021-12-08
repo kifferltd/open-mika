@@ -63,7 +63,7 @@ w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
   return result;
 }
 
-w_boolean File_createNew (JNIEnv *env, w_instance thisFile) {
+w_boolean File_createNew (w_thread thread, w_instance thisFile) {
   struct vfs_STAT statbuf;
   struct vfs_FILE *file;
   char *pathname;
@@ -77,7 +77,7 @@ w_boolean File_createNew (JNIEnv *env, w_instance thisFile) {
       vfs_fclose(file);
     }
     else {
-      throwException(JNIEnv2w_thread(env), clazzIOException, "could not open file '%s' using mode w+: %s\n", pathname, strerror(errno));
+      throwException(thread, clazzIOException, "could not open file '%s' using mode w+: %s\n", pathname, strerror(errno));
     }
   }
 
@@ -86,17 +86,17 @@ w_boolean File_createNew (JNIEnv *env, w_instance thisFile) {
   return result;
 }
 
-w_boolean File_exists (JNIEnv *env, w_instance thisFile) {
+w_boolean File_exists (w_thread thread, w_instance thisFile) {
   struct vfs_STAT statbuf;
 
   return statFile(thisFile, &statbuf);
 }
 
-w_instance File_get_CWD (JNIEnv *env, w_instance thisFile) {
+w_instance File_get_CWD (w_thread thread, w_instance thisFile) {
   return getStringInstance(utf2String(current_working_dir, strlen(current_working_dir)));
 }
 
-w_instance File_get_fsroot (JNIEnv *env, w_instance thisFile) {
+w_instance File_get_fsroot (w_thread thread, w_instance thisFile) {
   return getStringInstance(utf2String(fsroot, strlen(fsroot)));
 }
 
@@ -105,8 +105,7 @@ w_instance File_get_fsroot (JNIEnv *env, w_instance thisFile) {
 // ff_findfirst is equivalent to opendir followed by readdir
 // TODO can we rewrite the POSIX code to work the same way?
 
-w_instance File_list (JNIEnv *env, w_instance thisFile) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance File_list (w_thread thread, w_instance thisFile) {
   char *pathname;
   int count=0;
   int i;
@@ -157,8 +156,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
 
 // POSIX version
 
-w_instance File_list (JNIEnv *env, w_instance thisFile) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance File_list (w_thread thread, w_instance thisFile) {
   char *pathname;
   int count=0;
   int i;
@@ -218,7 +216,7 @@ w_instance File_list (JNIEnv *env, w_instance thisFile) {
 }
 #endif
 
-w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
+w_boolean File_setReadOnly (w_thread thread, w_instance thisFile) {
   char *pathname;
   struct vfs_STAT statbuf;
   w_boolean result;
@@ -233,31 +231,31 @@ w_boolean File_setReadOnly (JNIEnv *env, w_instance thisFile) {
   return result;
 }
 
-w_boolean File_canRead (JNIEnv *env, w_instance thisFile) {
+w_boolean File_canRead (w_thread thread, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IRUSR) == VFS_S_IRUSR);
 }
 
-w_boolean File_canWrite (JNIEnv *env, w_instance thisFile) {
+w_boolean File_canWrite (w_thread thread, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IWUSR) == VFS_S_IWUSR);
 }
 
-w_boolean File_isFile (JNIEnv *env, w_instance thisFile) {
+w_boolean File_isFile (w_thread thread, w_instance thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISREG(statbuf.st_mode);
 }
 
-w_boolean File_isDirectory (JNIEnv *env, jobject thisFile) {
+w_boolean File_isDirectory (w_thread thread, jobject thisFile) {
   struct vfs_STAT statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISDIR(statbuf.st_mode);
 }
 
-w_long File_lastModified (JNIEnv *env, jobject thisFile) {
+w_long File_lastModified (w_thread thread, jobject thisFile) {
   struct vfs_STAT statbuf;
 
 /*
@@ -270,7 +268,7 @@ TODO sort out why  ffconfigTIME_SUPPORT == 1 and yet no st_mtime in statbuf
     return 0;
 }
 
-w_long File_length (JNIEnv *env, jobject thisFile) {
+w_long File_length (w_thread thread, jobject thisFile) {
   struct vfs_STAT statbuf;
   
   if (statFile(thisFile, &statbuf)) {
@@ -281,7 +279,7 @@ w_long File_length (JNIEnv *env, jobject thisFile) {
   }
 }
 
-w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
+w_boolean File_delete (w_thread thread, w_instance thisFile) {
   char      *pathname;
   struct vfs_STAT statbuf;
   w_boolean result;
@@ -305,7 +303,7 @@ w_boolean File_delete (JNIEnv *env, w_instance thisFile) {
 
 }
 
-w_boolean File_mkdir(JNIEnv *env, jobject thisFile) {
+w_boolean File_mkdir(w_thread thread, jobject thisFile) {
   char *pathname;
   int rc;
   w_boolean result;
@@ -320,7 +318,7 @@ w_boolean File_mkdir(JNIEnv *env, jobject thisFile) {
   return result;
 }
 
-w_boolean File_setModTime(JNIEnv *env, w_instance thisFile, w_long modtime) {
+w_boolean File_setModTime(w_thread thread, w_instance thisFile, w_long modtime) {
   char *pathname;
   w_boolean        result;
   struct utimbuf  buf;
@@ -338,7 +336,7 @@ w_boolean File_setModTime(JNIEnv *env, w_instance thisFile, w_long modtime) {
   return result;
 }
 
-w_boolean File_rename(JNIEnv *env, w_instance thisObj, w_instance file1String, w_instance file2String) {
+w_boolean File_rename(w_thread thread, w_instance thisObj, w_instance file1String, w_instance file2String) {
     
   w_string file1_string;
   w_string file2_string;
@@ -349,7 +347,7 @@ w_boolean File_rename(JNIEnv *env, w_instance thisObj, w_instance file1String, w
   w_boolean        result = FALSE;
 
   if (!file1String || !file2String) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, NULL);
+    throwException(thread, clazzNullPointerException, NULL);
   }
 
   file1_string = String2string(file1String);

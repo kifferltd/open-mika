@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -268,7 +268,7 @@ static w_boolean shutdown_iteration(void * mem, void * arg) {
   return TRUE;
 }
 
-void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
+void Runtime_static_exit0 (w_thread thread, w_instance thisClass, w_int exitcode) {
 
   x_mem_scan(x_eternal, OBJECT_TAG, shutdown_iteration, NULL);
 #ifdef JAVA_PROFILE
@@ -285,9 +285,8 @@ void Runtime_static_exit0 (JNIEnv* env, w_instance thisClass, w_int exitcode) {
 #endif
 }
 
-w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathString) {
+w_int Runtime_load0 (w_thread thread, w_instance thisRuntime, w_instance libpathString) {
 
-  w_thread   thread = JNIEnv2w_thread(env);
   w_string   libpath = NULL;
   w_ubyte *  path = NULL;
   void *     handle = NULL;
@@ -330,9 +329,8 @@ w_int Runtime_load0 (JNIEnv* env, w_instance thisRuntime, w_instance libpathStri
  * If libnameString is non-null:
  *   libpathString = complete path to the library, e.g. /Mika/fsroot/fwdir/libfoo.so .
  */
-w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
+w_int Runtime_loadLibrary0 (w_thread thread, w_instance thisRuntime, w_instance libnameString, w_instance libpathString) {
 
-  w_thread   thread = JNIEnv2w_thread(env);
   w_string   libname = NULL;
   w_string   libpath = NULL;
   w_ubyte *  name = NULL;
@@ -382,12 +380,12 @@ w_int Runtime_loadLibrary0 (JNIEnv* env, w_instance thisRuntime, w_instance libn
 }
 
 w_long
-Runtime_totalMemory (JNIEnv* env, w_instance thisRuntime) {
+Runtime_totalMemory (w_thread thread, w_instance thisRuntime) {
   return (w_long)(x_mem_total());
 }
 
 w_long
-Runtime_freeMemory (JNIEnv* env, w_instance thisRuntime) {
+Runtime_freeMemory (w_thread thread, w_instance thisRuntime) {
   return (w_long)(x_mem_avail());
 }
 

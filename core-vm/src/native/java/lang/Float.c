@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2025, 2021 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -33,7 +33,7 @@
 #include "descriptor.h"
 #include "mikaMath.h"
 
-w_int Float_static_floatToRawIntBits(JNIEnv *env, w_instance class, w_float f) {
+w_int Float_static_floatToRawIntBits(w_thread thread, w_instance class, w_float f) {
   union {w_float f; w_int i;} foo;
 
   foo.f = f;
@@ -41,7 +41,7 @@ w_int Float_static_floatToRawIntBits(JNIEnv *env, w_instance class, w_float f) {
   return foo.i;
 }
 
-w_float Float_static_intToFloatBits(JNIEnv *env, w_instance class, w_int i) {
+w_float Float_static_intToFloatBits(w_thread thread, w_instance class, w_int i) {
   union {w_float f; w_int i;} foo;
 
   foo.i = i;
@@ -49,14 +49,14 @@ w_float Float_static_intToFloatBits(JNIEnv *env, w_instance class, w_int i) {
   return foo.f;
 }
 
-w_boolean Float_static_isInfinite(JNIEnv *env, w_instance class, w_float f) {
+w_boolean Float_static_isInfinite(w_thread thread, w_instance class, w_float f) {
   return wfp_float32_is_Infinite(f);
 }
 
-w_boolean Float_static_isNaN(JNIEnv *env, w_instance class, w_float f) {
+w_boolean Float_static_isNaN(w_thread thread, w_instance class, w_float f) {
   return wfp_float32_is_NaN(f);
 }
 
-w_instance Float_getWrappedClass(JNIEnv *env, w_instance thisClass) {
+w_instance Float_getWrappedClass(w_thread thread, w_instance thisClass) {
   return clazz2Class(clazz_float);
 }

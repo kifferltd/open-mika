@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2021 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2010, 2021 by KIFFER Ltd.  All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -34,7 +34,7 @@
 #include "wmath.h"
 #include "mikaMath.h"
 
-w_long Double_static_doubleToRawLongBits(JNIEnv *env, w_instance class, w_double d) {
+w_long Double_static_doubleToRawLongBits(w_thread thread, w_instance class, w_double d) {
   union {w_double d; w_long l;} foo;
 
   foo.d = d;
@@ -42,7 +42,7 @@ w_long Double_static_doubleToRawLongBits(JNIEnv *env, w_instance class, w_double
   return foo.l;
 }
 
-w_double Double_static_longToDoubleBits(JNIEnv *env, w_instance class, w_long j) {
+w_double Double_static_longToDoubleBits(w_thread thread, w_instance class, w_long j) {
   union {w_double d; w_long l;} foo;
 
   foo.l = j;
@@ -50,13 +50,13 @@ w_double Double_static_longToDoubleBits(JNIEnv *env, w_instance class, w_long j)
   return foo.d;
 }
 
-w_boolean Double_static_isNaN(JNIEnv *env, w_instance class, w_double j) {
+w_boolean Double_static_isNaN(w_thread thread, w_instance class, w_double j) {
 
   return wfp_float64_is_NaN(j);
 
 }
 
-w_boolean Double_static_isInfinite(JNIEnv *env, w_instance class, w_double j) {
+w_boolean Double_static_isInfinite(w_thread thread, w_instance class, w_double j) {
 
   return wfp_float64_is_Infinite(j);
 
@@ -64,7 +64,7 @@ w_boolean Double_static_isInfinite(JNIEnv *env, w_instance class, w_double j) {
 
 
 w_instance
-Double_getWrappedClass(JNIEnv *env, w_instance thisClass) {
+Double_getWrappedClass(w_thread thread, w_instance thisClass) {
 
   return clazz2Class(clazz_double);
   

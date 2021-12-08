@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005. 2006. 2008, 2011, 2020, 2021 by KIFFER Ltd.   *
-+ All rights reserved.                                                    *
+* Copyright (c) 2008, 2011, 2020, 2021 by KIFFER Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -40,7 +40,6 @@
 #include "oswald.h"
 #include "wstrings.h"
 
-
 static inline w_int objectHashCode(w_instance instance) {
 
   return (w_int)instance;
@@ -48,8 +47,7 @@ static inline w_int objectHashCode(w_instance instance) {
 }
 
 
-w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Object_clone(w_thread thread, w_instance thisObject) {
   w_clazz  clazz = instance2clazz(thisObject);
   w_instance theClone = NULL;
 
@@ -89,7 +87,7 @@ w_instance Object_clone(JNIEnv *env, w_instance thisObject) {
 
 w_instance 
 Object_getClass (
-  JNIEnv *env, w_instance thisObject
+  w_thread thread, w_instance thisObject
 ) {
   w_clazz clazz = instance2clazz(thisObject);
 
@@ -99,7 +97,7 @@ Object_getClass (
 
 }
 
-w_boolean Object_equals(JNIEnv *env, w_instance thisObject, w_instance thatObject) {
+w_boolean Object_equals(w_thread thread, w_instance thisObject, w_instance thatObject) {
 
   if (thisObject == thatObject) {
     return WONKA_TRUE;
@@ -109,7 +107,7 @@ w_boolean Object_equals(JNIEnv *env, w_instance thisObject, w_instance thatObjec
   
 }
 
-w_int Object_hashCode(JNIEnv *env, w_instance thisObject) {
+w_int Object_hashCode(w_thread thread, w_instance thisObject) {
   w_int hashcode;
 
   woempa(1, "Getting hash code of %j.\n", thisObject);
@@ -120,8 +118,7 @@ w_int Object_hashCode(JNIEnv *env, w_instance thisObject) {
   return hashcode;
 }
 
-void Object_wait(JNIEnv *env, w_instance thisObject, w_long millis, w_int nanos) {
-  w_thread thread = JNIEnv2w_thread(env);
+void Object_wait(w_thread thread, w_instance thisObject, w_long millis, w_int nanos) {
   x_sleep  sleep_ticks = 0;
  
   if(millis < 0 || nanos < 0 || nanos >= 1000000) {
@@ -178,12 +175,12 @@ void Object_wait(JNIEnv *env, w_instance thisObject, w_long millis, w_int nanos)
   testForInterrupt(thread);
 }
 
-void Object_notify(JNIEnv *env, w_instance thisObject) {
+void Object_notify(w_thread thread, w_instance thisObject) {
 
-  woempa(1, "Env %p; Notify single thread waiting on instance of %k.\n", env, instance2clazz(thisObject));
+  woempa(1, "%T; Notify single thread waiting on instance of %k.\n", thread, instance2clazz(thisObject));
 
   if (isNotSet(instance2flags(thisObject), O_HAS_LOCK)) {
-    throwException(JNIEnv2w_thread(env), clazzIllegalMonitorStateException, "not owner");
+    throwException(thread, clazzIllegalMonitorStateException, "not owner");
 
     return;
   }
@@ -192,12 +189,12 @@ void Object_notify(JNIEnv *env, w_instance thisObject) {
   
 }
 
-void Object_notifyAll(JNIEnv *env, w_instance thisObject) {
+void Object_notifyAll(w_thread thread, w_instance thisObject) {
 
-  woempa(1, "Env %p; Notify all threads waiting on instance of %k.\n", env, instance2clazz(thisObject));
+  woempa(1, "%T; Notify all threads waiting on instance of %k.\n", thread, instance2clazz(thisObject));
 
   if (isNotSet(instance2flags(thisObject), O_HAS_LOCK)) {
-    throwException(JNIEnv2w_thread(env), clazzIllegalMonitorStateException, "not owner");
+    throwException(thread, clazzIllegalMonitorStateException, "not owner");
 
     return;
   }

@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray, /k/     *
-* Embedded Java Solutions. All rights reserved.                           *
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "checks.h"
@@ -45,7 +41,7 @@
 #include "constant.h"
 #include "interpreter.h" // for deactivateFrame, but should be in methods.h
 
-w_instance Constructor_getDeclaringClass(JNIEnv *env, w_instance thisConstructor) {
+w_instance Constructor_getDeclaringClass(w_thread thread, w_instance thisConstructor) {
   w_method method;
 
   method = getWotsitField(thisConstructor, F_Constructor_wotsit);
@@ -54,14 +50,14 @@ w_instance Constructor_getDeclaringClass(JNIEnv *env, w_instance thisConstructor
   
 }
 
-w_instance Constructor_getName(JNIEnv *env, w_instance thisConstructor) {
+w_instance Constructor_getName(w_thread thread, w_instance thisConstructor) {
   w_method method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   
   return getStringInstance(method->spec.declaring_clazz->dotified);
   
 }
 
-w_int Constructor_getModifiers(JNIEnv *env, w_instance thisConstructor) {
+w_int Constructor_getModifiers(w_thread thread, w_instance thisConstructor) {
 
   w_method method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   
@@ -69,9 +65,8 @@ w_int Constructor_getModifiers(JNIEnv *env, w_instance thisConstructor) {
   
 }
 
-w_instance Constructor_getParameterTypes(JNIEnv *env, w_instance thisConstructor) {
+w_instance Constructor_getParameterTypes(w_thread thread, w_instance thisConstructor) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_method method = getWotsitField(thisConstructor, F_Constructor_wotsit);
   w_instance Parameters;
   w_clazz parameter;
@@ -108,9 +103,8 @@ w_instance Constructor_getParameterTypes(JNIEnv *env, w_instance thisConstructor
    
 }
 
-w_instance Constructor_getExceptionTypes(JNIEnv *env, w_instance thisConstructor) {
+w_instance Constructor_getExceptionTypes(w_thread thread, w_instance thisConstructor) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_method method;
   w_instance Exceptions;
   w_clazz exception;
@@ -152,8 +146,7 @@ w_instance Constructor_getExceptionTypes(JNIEnv *env, w_instance thisConstructor
 
 }
 
-w_instance Constructor_newInstance0(JNIEnv *env, w_instance thisConstructor, w_instance Arguments) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance Constructor_newInstance0(w_thread thread, w_instance thisConstructor, w_instance Arguments) {
   w_method init;
   w_frame frame;
   w_instance new = NULL;
@@ -184,7 +177,7 @@ w_instance Constructor_newInstance0(JNIEnv *env, w_instance thisConstructor, w_i
     new = allocInstance(thread, init->spec.declaring_clazz);
     enterSafeRegion(thread);
     if (new) {
-      frame = invoke(env, init, new, Arguments);
+      frame = invoke(thread, init, new, Arguments);
       if (exceptionThrown(thread)) {
         woempa(9, "(REFLECTION) invoke failed: %k\n", instance2clazz(exceptionThrown(thread)));
       }

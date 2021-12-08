@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2015 by Chris Gray, KIFFER Ltd.  All rights reserved.     *
+* Copyright (c) 2015, 2021 by Chris Gray, KIFFER Ltd.                     *
+*  All rights reserved.                                                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -31,7 +32,7 @@
 
 w_fifo assertions_fifo;
 
-w_instance Init_static_getNextAssertionFlag(JNIEnv* jnienv, w_instance thisClass) {
+w_instance Init_static_getNextAssertionFlag(w_thread thread, w_instance thisClass) {
   char *assertion = getFifo(assertions_fifo);
   if (assertion) {
     woempa(7, "assertion flag : %s\n", assertion);

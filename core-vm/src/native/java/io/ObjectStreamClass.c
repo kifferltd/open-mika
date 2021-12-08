@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
+* Copyright (c) 2004, 2005, 2006, 2007, 2021 by KIFFER Ltd.               *
 * All rights reserved.                                                    *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008 by Chris Gray,         *
-* /k/ Embedded Java Solutions. All rights reserved.                       *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include <string.h>
@@ -46,8 +43,45 @@
 
 #define IO_LEVEL 6
 
-w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance ObjectStreamClass, w_instance Class) {
-  w_thread thread = JNIEnv2w_thread(env);
+// TODO move this code to methods.c?
+w_method findInheritedMethod(const w_clazz clazz, const char *method_name, const char *method_spec);
+
+w_method findInheritedMethod(const w_clazz clazz, const char *method_name, const char *method_spec) {
+      w_MethodSpec *spec;
+      w_method candidate;
+
+      w_string method_name_string = utf2String(method_name, strlen(method_name));
+      w_string method_desc_string = utf2String(method_spec, strlen(method_spec));
+      if (createMethodSpecUsingDescriptor(clazz, method_name_string, method_desc_string, &spec) == CLASS_LOADING_FAILED) {
+        wabort(ABORT_WONKA,"Uh oh: failed to build method spec using clazz %k, name %w, desc %w.\n",clazz, method_name_string, method_desc_string);
+      }
+
+      w_method the_method = NULL;
+      w_clazz search_clazz = clazz;
+      w_int i, j;
+      for (j = 0; the_method == NULL && j < clazz->numSuperClasses;) {
+        for (i = 0; i < clazz->numDeclaredMethods; ++i) {
+          woempa(1, "Seek %w in %K\n", spec->name, search_clazz);
+          candidate = &search_clazz->own_methods[i];
+          woempa(1, "Checking %M\n", candidate);
+
+          if (candidate->spec.name == method_name_string && candidate->desc == method_desc_string) {
+            the_method = candidate;
+            woempa(1, "Found %s.%s at %p\n", method_name_string, method_desc_string, the_method);
+            break;
+          }
+        }
+        search_clazz = search_clazz->supers[j++];
+      }
+
+      releaseMethodSpec(spec);
+      releaseMem(spec);
+      deregisterString(method_name_string);
+      deregisterString(method_desc_string);
+}
+
+
+w_instance ObjectStreamClass_createObjectStreamClass(w_thread thread, w_instance ObjectStreamClass, w_instance Class) {
   w_clazz clazz;
   w_instance newOSC = NULL;
 
@@ -75,13 +109,12 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
       flags = 0x0c;
     }
     else {
-      //setup writeObject
-      jmethodID jmid = (*env)->GetMethodID(env, Class, "writeObject", "(Ljava/io/ObjectOutputStream;)V");
+      w_method writeObject_method = findInheritedMethod(clazz, "writeObject", "(Ljava/io/ObjectOutputStream;)V");
 
       flags = 0x02;
 
-      if(jmid != NULL){
-        if(jmid->spec.declaring_clazz == clazz) {
+      if(writeObject_method != NULL){
+        if(writeObject_method->spec.declaring_clazz == clazz) {
           w_instance Method;
 
           enterUnsafeRegion(thread);
@@ -89,12 +122,11 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
           enterSafeRegion(thread);
 
           if(Method){
-            w_method method =  (w_method) jmid;
-            w_int    acc_flags =  method->flags & 0x0000ffff;
+            w_int    acc_flags =  writeObject_method->flags & 0x0000ffff;
 
             if(acc_flags & ACC_PRIVATE){
               setReferenceField(newOSC, Method, F_ObjectStreamClass_writeObject);
-              setWotsitField(Method, F_Method_wotsit, jmid);
+              setWotsitField(Method, F_Method_wotsit, writeObject_method);
               setBooleanField(Method, F_AccessibleObject_accessible, WONKA_TRUE);
               flags |= 0x01;
             }
@@ -105,60 +137,39 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
         }
       }
       else {
-        (*env)->ExceptionClear(env);
+        clearException(thread);
       }
     }
 
     //Setup suid ...
     {
-
-      w_field jid  = NULL;
-      w_field flds = clazz->own_fields;
-      w_word stop = clazz->numStaticFields;
       w_long* suid = (w_long*)wordFieldPointer(newOSC, F_ObjectStreamClass_suid);
-
       w_string name = cstring2String("serialVersionUID", 16);
-
-      w_word i;
-
-      if (!name) {
-        wabort(ABORT_WONKA, "Unable to create name\n");
-      }
-
-      for(i = 0 ; i < stop ; i++){
-        w_field f = flds+i;
-
-        if(f->name == name){
-          if(f->value_clazz == clazz_long || isSet(f->flags, ACC_PRIVATE | ACC_FINAL | ACC_STATIC)){
-            jid = f;
-          }
-          break;
-        }
-      }
-
+      w_string desc = cstring2String("J", 16);
+      w_field suid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
+      deregisterString(desc);
       deregisterString(name);
 
-      if(jid != NULL){
+      if(suid_field && isSet(suid_field->flags, ACC_PRIVATE | ACC_FINAL | ACC_STATIC)){
         woempa(IO_LEVEL, "hardCoded suid found for %k\n",clazz);
-        *suid =(*env)->GetStaticLongField(env, Class, jid);
+	*suid = *(w_long*)&clazz->staticFields[FIELD_OFFSET(suid_field->size_and_slot)];
       }
       else {
         woempa(IO_LEVEL, "no hardCoded suid found for %k\n",clazz);
-        *suid = Wonka_suid(env, NULL, Class);
+        *suid = Wonka_suid(thread, NULL, Class);
       }
     }
 
     {
-      //setup writeReplace
-      jmethodID jmid = (*env)->GetMethodID(env, Class, "writeReplace", "()Ljava/lang/Object;");
-      if(jmid != NULL) {
+      w_method writeReplace_method = findInheritedMethod(clazz, "writeReplace", "()Ljava/lang/Object;");
+      if(writeReplace_method != NULL) {
         jobject method; 
 
         enterUnsafeRegion(thread);
         method = allocInstance(thread, clazzMethod);
         enterSafeRegion(thread);
         if(method){
-          setWotsitField(method, F_Method_wotsit, jmid);
+          setWotsitField(method, F_Method_wotsit, writeReplace_method);
           setReferenceField(newOSC, method, F_ObjectStreamClass_writeReplace);
           setBooleanField(method, F_AccessibleObject_accessible, WONKA_TRUE);
         }
@@ -167,7 +178,7 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
         }
       }
       else {
-        (*env)->ExceptionClear(env);
+        clearException(thread);
       }
     }
 
@@ -183,9 +194,8 @@ w_instance ObjectStreamClass_createObjectStreamClass(JNIEnv *env, w_instance Obj
   return newOSC;
 }
 
-void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
+void ObjectStreamClass_verifyInput(w_thread thread, w_instance thisOSC) {
   w_instance Class = getReferenceField(thisOSC, F_ObjectStreamClass_clazz);
-  w_thread thread = JNIEnv2w_thread(env);
   w_int flags = getIntegerField(thisOSC, F_ObjectStreamClass_flags);
   w_clazz clazz;
 
@@ -221,36 +231,20 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
   //check serialVersionUID ...
   {
     w_long* suid = (w_long*)wordFieldPointer(thisOSC, F_ObjectStreamClass_suid);
-    w_field flds = clazz->own_fields;
-    w_word stop = clazz->numStaticFields;
     w_long realsuid;
-    w_string name = cstring2String("serialVersionUID", 16);
     w_word i;
-    w_field jid = NULL;
-
-    if (!name) {
-      wabort(ABORT_WONKA, "Unable to create name\n");
-    }
-
-    for(i = 0 ; i < stop ; i++){
-      w_field f = flds+i;
-
-      if(f->name == name){
-        if(f->value_clazz == clazz_long || isSet(f->flags, ACC_PRIVATE | ACC_FINAL | ACC_STATIC)){
-          jid = f;
-        }
-        break;
-      }
-    }
-
+    w_string name = cstring2String("serialVersionUID", 16);
+    w_string desc = cstring2String("J", 1);
+    w_field realsuid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
+    deregisterString(desc);
     deregisterString(name);
 
-    if(jid != NULL){
+    if(realsuid_field && isSet(realsuid_field->flags, ACC_PRIVATE | ACC_FINAL | ACC_STATIC)){
       woempa(IO_LEVEL, "hardCoded suid found for %k\n",clazz);
-      realsuid =(*env)->GetStaticLongField(env, Class, jid);
+      realsuid = *(w_long*)&clazz->staticFields[FIELD_OFFSET(realsuid_field->size_and_slot)];
     }
     else {
-      realsuid = Wonka_suid(env, NULL, Class);
+      realsuid = Wonka_suid(thread, NULL, Class);
       woempa(IO_LEVEL, "no hardCoded suid found for %k calculated %lld\n",clazz,realsuid);
     }
 
@@ -269,15 +263,15 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
 
   {
     //setup readResolve
-    jmethodID jmid = (*env)->GetMethodID(env, Class, "readResolve", "()Ljava/lang/Object;");
-    if(jmid != NULL) {
+    w_method readResolve_method = findInheritedMethod(clazz, "readResolve", "()Ljava/lang/Object;");
+    if(readResolve_method != NULL) {
       jobject method; 
 
       enterUnsafeRegion(thread);
       method = allocInstance(thread, clazzMethod);
       enterSafeRegion(thread);
       if(method){
-        setWotsitField(method, F_Method_wotsit, jmid);
+        setWotsitField(method, F_Method_wotsit, readResolve_method);
         setReferenceField(thisOSC, method, F_ObjectStreamClass_readResolve);
         setBooleanField(method, F_AccessibleObject_accessible, WONKA_TRUE);
       }
@@ -286,16 +280,15 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
       }
     }
     else {
-      (*env)->ExceptionClear(env);
+      clearException(thread);
     }
   }
 
   {
     //setup readObject
-    jmethodID jmid = (*env)->GetMethodID(env, Class, "readObject", "(Ljava/io/ObjectInputStream;)V");
+    w_method readObject_method = find_method(clazz, "readObject", "(Ljava/io/ObjectInputStream;)V");
 
-    if(jmid != NULL){
-      if(jmid->spec.declaring_clazz == clazz) {
+    if(readObject_method != NULL){
         w_instance Method; 
 
         enterUnsafeRegion(thread);
@@ -303,22 +296,21 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
         enterSafeRegion(thread);
 
         if(Method){
-          w_method method =  (w_method) jmid;
+          w_method method =  (w_method) readObject_method;
           w_int    acc_flags =  method->flags & 0x0000ffff;
 
           if(acc_flags & ACC_PRIVATE){
             setReferenceField(thisOSC, Method, F_ObjectStreamClass_readObject);
-            setWotsitField(Method, F_Method_wotsit, jmid);
+            setWotsitField(Method, F_Method_wotsit, readObject_method);
             setBooleanField(Method, F_AccessibleObject_accessible, WONKA_TRUE);
           }
         }
         else {
           return;
         }
-      }
     }
     else {
-      (*env)->ExceptionClear(env);
+      clearException(thread);
     }
   }
 
@@ -400,8 +392,7 @@ void ObjectStreamClass_verifyInput(JNIEnv *env, w_instance thisOSC) {
   //TODO: what about serialPersitantFields ???  --> we use the fields found on the stream !
 }
 
-w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
-  w_thread thread = JNIEnv2w_thread(env);
+w_instance ObjectStreamClass_createFields(w_thread thread, w_instance thisOSC) {
   w_instance Class = getReferenceField(thisOSC, F_ObjectStreamClass_clazz);
   w_instance OSFIELDS = NULL;
   w_clazz clazz;
@@ -423,10 +414,17 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
 
 
   if(isAssignmentCompatible(clazz, clazzSerializable)){
-    jfieldID jid = (*env)->GetStaticFieldID(env, Class, "serialPersistentFields", "[Ljava/io/ObjectStreamField;");
+    w_field flds = clazz->own_fields;
+    w_word stop = clazz->numStaticFields;
+    w_word i;
+    w_field spf_field = NULL;
+    w_string name = cstring2String("serialPersistentFields", strlen("serialPersistentFields"));
+    w_string desc = cstring2String("[Ljava/io/ObjectStreamClass", 16);
+    w_field suid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
+    deregisterString(desc);
+    deregisterString(name);
 
-
-    if(jid != NULL){
+    if(spf_field && isSet(spf_field->flags, ACC_PRIVATE | ACC_FINAL | ACC_STATIC)){
       w_instance Field;
 
       enterUnsafeRegion(thread);
@@ -434,12 +432,10 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
       enterSafeRegion(thread);
 
       if(Field){
-        w_field field = (w_field)jid;
+        setWotsitField(Field, F_Field_wotsit, spf_field);
 
-        setWotsitField(Field, F_Field_wotsit, field);
-
-        if(isSet(field->flags, ACC_FINAL | ACC_PRIVATE )){
-          w_instance OsFields = (*env)->GetStaticObjectField(env, Class, jid);
+        if(isSet(spf_field->flags, ACC_FINAL | ACC_PRIVATE )){
+          w_instance OsFields = *(w_instance*)&clazz->staticFields[FIELD_OFFSET(spf_field->size_and_slot)];
 
           if(OsFields && (OsFields = cloneArray(thread,OsFields))){
             w_int i = 0;
@@ -527,7 +523,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
 
       w_field* prf;
 
-      (*env)->ExceptionClear(env);
+      clearException(thread);
 
       prf = allocMem((numField - i) * sizeof(w_field));
 
@@ -587,7 +583,7 @@ w_instance ObjectStreamClass_createFields(JNIEnv *env, w_instance thisOSC) {
               setWotsitField(newField, F_Field_wotsit, field);
               setBooleanField(newField, F_AccessibleObject_accessible, WONKA_TRUE);
 
-              ObjectStreamField_create(env, OSField, String, FldClass);
+              ObjectStreamField_create(thread, OSField, String, FldClass);
 
               setArrayReferenceField(OSFIELDS, OSField, (w_int) i);
               setReferenceField(OSField, newField, F_ObjectStreamField_field);

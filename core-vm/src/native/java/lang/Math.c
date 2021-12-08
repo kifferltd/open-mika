@@ -264,7 +264,7 @@ static const w_double         piby4 = 0x3fe921fb54442d18LL;    /* 0.785398163397
 #ifdef NATIVE_MATH
 extern void init_math(void);
 
-void Math_static_init(JNIEnv *env, w_instance classMath) {
+void Math_static_init(w_thread thread, w_instance classMath) {
   init_math();
 }
 
@@ -389,7 +389,7 @@ void fast_Math_static_exp(w_frame frame) {
 
 #else
 
-void Math_static_init(JNIEnv *env, w_instance classMath) {
+void Math_static_init(w_thread thread, w_instance classMath) {
 }
 
 #endif

@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -71,21 +71,21 @@ w_int PlainSocketImpl_clear(w_instance ThisImpl) {
 
 }
 
-void PlainSocketImpl_close(JNIEnv* env , w_instance ThisImpl) {
+void PlainSocketImpl_close(w_thread thread , w_instance ThisImpl) {
   if (PlainSocketImpl_clear(ThisImpl) == -1) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "closing socket failed with %d: '%s'", errno, strerror(errno));
+    throwException(thread, clazzIOException, "closing socket failed with %d: '%s'", errno, strerror(errno));
   }
 }
 
-void PlainSocketImpl_finalize(JNIEnv* env , w_instance ThisImpl) {
+void PlainSocketImpl_finalize(w_thread thread , w_instance ThisImpl) {
   PlainSocketImpl_clear(ThisImpl);
 }
 
-w_int PlainSocketImpl_getSocket(JNIEnv* env , w_instance ThisImpl){
+w_int PlainSocketImpl_getSocket(w_thread thread , w_instance ThisImpl){
 /* TODO : re-write me
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
-    throwException(JNIEnv2w_thread(env), clazzSocketException, "socket is not open or uninitialized");
+    throwException(thread, clazzSocketException, "socket is not open or uninitialized");
   }
 
   return (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -94,7 +94,7 @@ w_int PlainSocketImpl_getSocket(JNIEnv* env , w_instance ThisImpl){
 
 }
 
-void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
+void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
 /* TODO : re-write me
   w_int sock;
 #ifdef PF_INET6
@@ -104,7 +104,7 @@ void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
 #endif
 
   if(getBooleanField(ThisImpl, F_PlainSocketImpl_open)){
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket is already open");
+    throwException(thread, clazzIOException, "socket is already open");
   }
   else {
     sock = w_socket (pf, SOCK_STREAM, 0);
@@ -112,7 +112,7 @@ void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
     woempa(1, "%j : socket is %d\n", ThisImpl, sock);
 
     if (sock == -1) {
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzIOException, "socket errno %d '%s'", errno, strerror(errno));
       woempa(9, "Not able to create a socket for %p\n", ThisImpl);
     }
     else {
@@ -122,14 +122,14 @@ void PlainSocketImpl_nativeCreate(JNIEnv* env , w_instance ThisImpl) {
 */
 }
 
-void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
+void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeout) {
 /* TODO : re-write me
 
   w_instance address = getReferenceField(ThisImpl, F_SocketImpl_address); 
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
 
   if (!address) {
-    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
+    throwException(thread, clazzConnectException, "no IP address");
   }
   else {
     struct sockaddr * sa = NULL;
@@ -145,7 +145,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
 
     if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
       woempa(9, "socket %i was closed\n", sock);
-      throwException(JNIEnv2w_thread(env), clazzIOException, "socket was closed or uninitialized");
+      throwException(thread, clazzIOException, "socket was closed or uninitialized");
       return;
     }  	  	
 
@@ -205,10 +205,10 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
         printf("Socket: connection failed: %s\n", strerror(errno));
       }
       if (errno == ETIMEDOUT) {
-        throwException(JNIEnv2w_thread(env), clazzSocketTimeoutException, NULL);
+        throwException(thread, clazzSocketTimeoutException, NULL);
       }
       else {
-        throwException(JNIEnv2w_thread(env), clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
+        throwException(thread, clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
       }
       return;
     }
@@ -225,7 +225,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
       res = w_getsockname(sock , (struct sockaddr *)&sa4 , &namelen);
       if (res == -1) {
         //woempa(9,"ERROR in connect = %s\n", w_strerror((int)w_errno(sock)));
-        throwException(JNIEnv2w_thread(env), clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
+        throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
       }
       else {
         setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa4.sin_port));
@@ -237,7 +237,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
 
       if (res == -1) {
         woempa(9,"ERROR in connect/getsockname = %s\n", strerror(errno)); 	
-        throwException(JNIEnv2w_thread(env), clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
+        throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
       }
       else {	
         setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa6.sin6_port));
@@ -248,7 +248,7 @@ void PlainSocketImpl_connect(JNIEnv* env , w_instance ThisImpl, w_int timeout) {
     res = w_getsockname(sock , (struct sockaddr *)&sa4 , &namelen);
     if (res == -1) {
       //woempa(9,"ERROR in connect = %s\n", w_strerror((int)w_errno(sock)));
-      throwException(JNIEnv2w_thread(env), clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
     }
     else {  
       setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa4.sin_port));
@@ -265,7 +265,7 @@ static sigusr_handler(int sig) {
   woempa(1, "Received signal %d\n", sig);
 }
 
-w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
+w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -280,19 +280,19 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
   woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
   if (! byteArray) {
-    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
+    throwException(thread, clazzConnectException, "no IP address");
     return -1;
   }
   else {
     arrayLength = instance2Array_length(byteArray);
     if ((off < 0) || (length < 0) || (off > arrayLength - length)) {
-      throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, "out of bounds; size = %d, offset = %d, length = %d", arrayLength, off, length);
+      throwException(thread, clazzArrayIndexOutOfBoundsException, "out of bounds; size = %d, offset = %d, length = %d", arrayLength, off, length);
       return -1;
     }
   }
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket closed or uninitialized");
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
     return -1;  	
   }
 
@@ -320,13 +320,13 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d read timed out\n", sock);
       }
-      throwException(JNIEnv2w_thread(env), clazzSocketTimeoutException, "");
+      throwException(thread, clazzSocketTimeoutException, "");
     }
     else {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d read failed: %s\n", sock, strerror(errno));
       }
-      throwException(JNIEnv2w_thread(env), clazzIOException, "recv errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzIOException, "recv errno %d '%s'", errno, strerror(errno));
     }
   }
 
@@ -350,7 +350,7 @@ w_int PlainSocketImpl_read(JNIEnv* env , w_instance ThisImpl, w_instance byteArr
 
 }
 
-void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
+void PlainSocketImpl_write(w_thread threadv, w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -362,19 +362,19 @@ void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArr
   woempa(1, "writing %i bytes to SocketImpl %p\n", length, ThisImpl);
 
   if (! byteArray) {
-    throwException(JNIEnv2w_thread(env), clazzNullPointerException, "buffer is NULL");
+    throwException(thread, clazzNullPointerException, "buffer is NULL");
     return;
   }
   else {
     arrayLength = instance2Array_length(byteArray);
     if ((off < 0) || (length < 0) || (off > arrayLength - length)) {
-      throwException(JNIEnv2w_thread(env), clazzArrayIndexOutOfBoundsException, "out of bounds; size = %d, offset = %d, length = %d", arrayLength, off, length);
+      throwException(thread, clazzArrayIndexOutOfBoundsException, "out of bounds; size = %d, offset = %d, length = %d", arrayLength, off, length);
       return;
     }
   }
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket closed or uninitialized");
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
     return;  	
   }
 
@@ -398,14 +398,14 @@ void PlainSocketImpl_write(JNIEnv * env, w_instance ThisImpl, w_instance byteArr
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d write failed: %s\n", sock, strerror(errno));
     }
-    throwException(JNIEnv2w_thread(env), clazzIOException, "send errno %d '%s'", errno, strerror(errno));
+    throwException(thread, clazzIOException, "send errno %d '%s'", errno, strerror(errno));
   }
 */
 
 }
 
 // TODO: test if this actually works ...
-void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int udata) {
+void PlainSocketImpl_sendUrgentData(w_thread thread , w_instance thisImpl, w_int udata) {
 /* TODO : re-write me
   w_int sock = (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit);
   w_byte bdata = (w_byte)udata;
@@ -422,7 +422,7 @@ void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int uda
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d OOB write failed: %s\n", sock, strerror(errno));
     }
-    throwException(JNIEnv2w_thread(env), clazzIOException, "send OOB errno %d '%s'", errno, strerror(errno));
+    throwException(thread, clazzIOException, "send OOB errno %d '%s'", errno, strerror(errno));
   }
 */
 }
@@ -430,15 +430,15 @@ void PlainSocketImpl_sendUrgentData(JNIEnv* env , w_instance thisImpl, w_int uda
 // TODO rewrite this using getaddrinfo(), see example at
 // https://beej.us/guide/bgnet/output/html/multipage/bindman.html
 
-void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
+void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
 /* TODO : re-write me
 
   w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_localAddress); 
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_localport);
-  w_thread thread = JNIEnv2w_thread(env);
+  w_thread thread = thread;
   
   if (! address) {
-    throwException(JNIEnv2w_thread(env), clazzConnectException, "no IP address");
+    throwException(thread, clazzConnectException, "no IP address");
   }
   else {
     struct sockaddr * sa = NULL;
@@ -564,14 +564,14 @@ void PlainSocketImpl_bind(JNIEnv* env , w_instance ThisImpl) {
 
 }
 
-void PlainSocketImpl_listen(JNIEnv* env , w_instance ThisImpl, w_int backlog) {
+void PlainSocketImpl_listen(w_thread thread , w_instance ThisImpl, w_int backlog) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n",sock);
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket closed or uninitialized");
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
   }
   else {
     w_int res = w_listen(sock,(int)backlog);
@@ -581,7 +581,7 @@ void PlainSocketImpl_listen(JNIEnv* env , w_instance ThisImpl, w_int backlog) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d listen failed: %s\n", sock, strerror(errno));
       }
-      throwException(JNIEnv2w_thread(env), clazzIOException, "listen errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzIOException, "listen errno %d '%s'", errno, strerror(errno));
     }
     else {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -593,10 +593,9 @@ void PlainSocketImpl_listen(JNIEnv* env , w_instance ThisImpl, w_int backlog) {
 
 }
 
-w_int PlainSocketImpl_accept(JNIEnv* env , w_instance ThisImpl, w_instance newImpl) {
+w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance newImpl) {
 /* TODO : re-write me
 
-  w_thread thread = JNIEnv2w_thread(env);
   
   //newImpl will not be null (this function is a private method)
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
@@ -677,14 +676,14 @@ w_int PlainSocketImpl_accept(JNIEnv* env , w_instance ThisImpl, w_instance newIm
   return 0;
 }
 
-w_int PlainSocketImpl_available(JNIEnv* env , w_instance ThisImpl) {
+w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
 /* TODO : re-write me
 
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n", sock);
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket closed or uninitialized");
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
   }
   else { 	
     w_int arg = 0;
@@ -692,7 +691,7 @@ w_int PlainSocketImpl_available(JNIEnv* env , w_instance ThisImpl) {
 
     if (res == -1) {
       //woempa(9, "Error in Available 'ioctl' failed: %s\n", w_strerror((int)w_errno(sock)));
-      throwException(JNIEnv2w_thread(env), clazzIOException, "ioctl errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzIOException, "ioctl errno %d '%s'", errno, strerror(errno));
     }
 
     woempa(6, "Available bytes %x, %x\n", res, arg);
@@ -705,20 +704,20 @@ w_int PlainSocketImpl_available(JNIEnv* env , w_instance ThisImpl) {
 
 }
 
-void PlainSocketImpl_shutdown(JNIEnv* env , w_instance ThisImpl, w_boolean in) {
+void PlainSocketImpl_shutdown(w_thread thread , w_instance ThisImpl, w_boolean in) {
 /* TODO : re-write me
   w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n", sock);
-    throwException(JNIEnv2w_thread(env), clazzIOException, "socket closed or uninitialized");
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
   }
   else { 	
     if(shutdown(sock, (in == WONKA_TRUE ? 0 : 1)) == -1){
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d shutdown(%d) failed: %s\n", sock, in, strerror(errno));
       }
-      throwException(JNIEnv2w_thread(env), clazzIOException, "shutdown failed: errno %d '%s'", errno, strerror(errno));
+      throwException(thread, clazzIOException, "shutdown failed: errno %d '%s'", errno, strerror(errno));
     }
     else {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -771,16 +770,15 @@ static void setOption(w_thread thread, w_instance this, int level, int option, v
 */
 }
 
-w_int PlainSocketImpl_getRcvBuf(JNIEnv* env , w_instance thisImpl) {
+w_int PlainSocketImpl_getRcvBuf(w_thread thread , w_instance thisImpl) {
 /* TODO : re-write me
-  return getOption(JNIEnv2w_thread(env), thisImpl, SOL_SOCKET, SO_RCVBUF);
+  return getOption(thread, thisImpl, SOL_SOCKET, SO_RCVBUF);
 */
   return 0;
 }
 
-void PlainSocketImpl_setRcvBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
+void PlainSocketImpl_setRcvBuf(w_thread thread , w_instance thisImpl, w_int size) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting rcvbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
@@ -790,16 +788,15 @@ void PlainSocketImpl_setRcvBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
 */
 }
 
-w_int PlainSocketImpl_getSndBuf(JNIEnv* env , w_instance thisImpl) {
+w_int PlainSocketImpl_getSndBuf(w_thread thread , w_instance thisImpl) {
 /* TODO : re-write me
-  return getOption(JNIEnv2w_thread(env), thisImpl, SOL_SOCKET, SO_SNDBUF);
+  return getOption(thread, thisImpl, SOL_SOCKET, SO_SNDBUF);
 */
   return 0;
 }
 
-void PlainSocketImpl_setSndBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
+void PlainSocketImpl_setSndBuf(w_thread thread , w_instance thisImpl, w_int size) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting sndbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
@@ -809,15 +806,14 @@ void PlainSocketImpl_setSndBuf(JNIEnv* env , w_instance thisImpl, w_int size) {
 */
 }
 
-w_int PlainSocketImpl_getIpTos(JNIEnv* env , w_instance thisImpl) {
+w_int PlainSocketImpl_getIpTos(w_thread thread , w_instance thisImpl) {
 /* TODO : re-write me
-  return getOption(JNIEnv2w_thread(env), thisImpl, IPPROTO_IP, IP_TOS);
+  return getOption(thread, thisImpl, IPPROTO_IP, IP_TOS);
 */
 }
 
-void PlainSocketImpl_setIpTos(JNIEnv* env , w_instance thisImpl, w_int tos) {
+void PlainSocketImpl_setIpTos(w_thread thread , w_instance thisImpl, w_int tos) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting IP TOS to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), tos);
@@ -827,9 +823,8 @@ void PlainSocketImpl_setIpTos(JNIEnv* env , w_instance thisImpl, w_int tos) {
 */
 }
 
-void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
+void PlainSocketImpl_setLinger(w_thread thread , w_instance thisImpl, w_int ling) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
   struct linger longer;
 
   if (ling < 0) {
@@ -853,9 +848,8 @@ void PlainSocketImpl_setLinger(JNIEnv* env , w_instance thisImpl, w_int ling) {
 */
 }
 
-void PlainSocketImpl_setKeepAlive(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+void PlainSocketImpl_setKeepAlive(w_thread thread , w_instance ThisImpl, w_boolean on) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting keepalive to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
@@ -865,9 +859,8 @@ void PlainSocketImpl_setKeepAlive(JNIEnv* env , w_instance ThisImpl, w_boolean o
 */
 }
 
-void PlainSocketImpl_setNoDelay(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+void PlainSocketImpl_setNoDelay(w_thread thread , w_instance ThisImpl, w_boolean on) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting nodelay to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
@@ -877,9 +870,8 @@ void PlainSocketImpl_setNoDelay(JNIEnv* env , w_instance ThisImpl, w_boolean on)
 */
 }
 
-void PlainSocketImpl_setOOBInline(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+void PlainSocketImpl_setOOBInline(w_thread thread , w_instance ThisImpl, w_boolean on) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting OOBInline to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
@@ -889,9 +881,8 @@ void PlainSocketImpl_setOOBInline(JNIEnv* env , w_instance ThisImpl, w_boolean o
 */
 }
 
-void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int millis) {
+void PlainSocketImpl_setSoTimeout(w_thread thread , w_instance ThisImpl, w_int millis) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
   struct timeval tv;
 
   tv.tv_sec = millis / 1000;
@@ -904,9 +895,8 @@ void PlainSocketImpl_setSoTimeout(JNIEnv* env , w_instance ThisImpl, w_int milli
 */
 }
 
-void PlainSocketImpl_setReuseAddr(JNIEnv* env , w_instance ThisImpl, w_boolean on) {
+void PlainSocketImpl_setReuseAddr(w_thread thread , w_instance ThisImpl, w_boolean on) {
 /* TODO : re-write me
-  w_thread thread = JNIEnv2w_thread(env);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
     printf("Socket: id = %d setting ReuseAddr to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
@@ -916,7 +906,7 @@ void PlainSocketImpl_setReuseAddr(JNIEnv* env , w_instance ThisImpl, w_boolean o
 */
 }
 
-void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance aThread) {
+void PlainSocketImpl_signal(w_thread thread, w_instance thisPlainSocketImpl, w_instance aThread) {
 /* TODO : re-write me
   w_thread wt = w_threadFromThreadInstance(aThread);
   x_thread xt = wt->kthread;
@@ -932,7 +922,7 @@ void PlainSocketImpl_signal(JNIEnv *env, w_instance thisPlainSocketImpl, w_insta
 */
 }
 
-w_int PlainSocketImpl_getLocal4Address(JNIEnv *env, w_instance thisPlainSocketImpl) {
+w_int PlainSocketImpl_getLocal4Address(w_thread thread, w_instance thisPlainSocketImpl) {
 /* TODO : re-write me
     w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
     struct sockaddr_in sa4;
@@ -943,7 +933,7 @@ w_int PlainSocketImpl_getLocal4Address(JNIEnv *env, w_instance thisPlainSocketIm
   return 0;
 }
 
-void PlainSocketImpl_getLocal6Address(JNIEnv *env, w_instance thisPlainSocketImpl, w_instance outputByteArray) {
+void PlainSocketImpl_getLocal6Address(w_thread thread, w_instance thisPlainSocketImpl, w_instance outputByteArray) {
 /* TODO : re-write me
     w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
     struct sockaddr_in6 sa6;

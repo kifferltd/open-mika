@@ -1,0 +1,760 @@
+
+<NULL> [<NULL>/<null>:0] [args_read:151] : Found 1 command line arguments
+<NULL> [<NULL>/<null>:0] [args_read:154] : Analysing command line argument `HelloWorld'
+<NULL> [<NULL>/<null>:0] [args_read:281] :  Not an option: HelloWorld, passing remaining 1 arguments on to Init/main()
+<NULL> [<NULL>/<null>:0] [args_read:367] : Classpath: .
+<NULL> [<NULL>/<null>:0] [args_read:368] : Xbootclasspath: {}/lib/mika/mcl.jar:{}/lib/mika/
+<NULL> [<NULL>/<null>:0] [args_read:370] : Java argument: HelloWorld
+<NULL> [<NULL>/<null>:0] [startStrings:927] : created string_hashtable at 0x001f08f8
+<NULL> [<NULL>/<null>:0] [startStrings:938] : Initialised string tables and static strings.
+<NULL> [<NULL>/<null>:0] [startStrings:939] :  string_empty = 0x001f09c8 ''
+<NULL> [<NULL>/<null>:0] [startStrings:940] :  string_NULL  = 0x001f0a20 '<NULL>'
+<NULL> [<NULL>/<null>:0] [startStrings:941] :  string_EMPTY = 0x001f1740 '<EMPTY>'
+<NULL> [<NULL>/<null>:0] [startStrings:942] :  string_BOGUS = 0x001f17a0 '<BOGUS>'
+<NULL> [<NULL>/<null>:0] [init_vfs:63] : init_vfs  -> Using native filesystem (BLOCKING)
+<NULL> [<NULL>/<null>:0] [init_vfs:73] : current dir  : /
+<NULL> [<NULL>/<null>:0] [init_vfs:74] : current root : /
+<NULL> [<NULL>/<null>:0] [startVFS:122] : vfs_mount -> Using native filesystem
+<NULL> [<NULL>/<null>:0] [registerDevice:83] : Adding device unzip_ (family: zip) to device registry
+<NULL> [<NULL>/<null>:0] [registerDevice:83] : Adding device zip_ (family: zip) to device registry
+<NULL> [<NULL>/<null>:0] [registerDriver:84] : Adding driver deflate-driver-v0.2 (family: zip) to driver registry
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:594] : Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:601] : bootclasspath is {}/lib/mika/mcl.jar:{}/lib/mika/, length is 32
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:604] : Element begins at bcp[0], ends at bcp[19]
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:606] : Element ends in `jar', so we use bcp[0..18]
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:632] : Element starts with '{}/', replace by '/'
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:635] : Allocating 19 bytes for firstzipname
+<NULL> [<NULL>/<null>:0] [getFirstJarFileName:646] : firstzipname = '/lib/mika/mcl.jar'
+<NULL> [<NULL>/<null>:0] [startLoading:720] : Using boot zipfile `/lib/mika/mcl.jar'
+<NULL> [<NULL>/<null>:0] [parseZipFile:410] : Opened zip file `/lib/mika/mcl.jar'
+<NULL> [<NULL>/<null>:0] [parseZipFile:510] : Hashtable contains 273 entries (capacity = 369)
+<NULL> [<NULL>/<null>:0] [parseZipFile:511] : Reading central directory of zipfile 0x001fc1e8
+<NULL> [<NULL>/<null>:0] [dumpDir:156] : ============================================= ZIP DIR 0x001fc1e8 ======================
+<NULL> [<NULL>/<null>:0] [dumpDir:157] :            Current disk number: 0
+<NULL> [<NULL>/<null>:0] [dumpDir:158] :          Disk with central dir: 0
+<NULL> [<NULL>/<null>:0] [dumpDir:159] : Number of entries on this disk: 273
+<NULL> [<NULL>/<null>:0] [dumpDir:160] :  Number of entries in this dir: 273
+<NULL> [<NULL>/<null>:0] [dumpDir:161] :               Central dir size: 27539
+<NULL> [<NULL>/<null>:0] [dumpDir:162] :             Central dir offset: 404001
+<NULL> [<NULL>/<null>:0] [dumpDir:163] :                 Comment length: 0
+<NULL> [<NULL>/<null>:0] [dumpDir:175] : =======================================================================================
+<NULL> [<NULL>/<null>:0] [startLoading:735] : created system_loaded_class_hashtable at 0x001fc150
+<NULL> [<NULL>/<null>:0] [startLoading:738] : created system_unloaded_class_hashtable at 0x00214e88
+<NULL> [<NULL>/<null>:0] [startLoading:741] : created system_package_hashtable at 0x002155b0
+<NULL> [<NULL>/<null>:0] [startLoading:776] : Step 1: load java.lang.Object
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Object in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Object
+<NULL> [<NULL>/<null>:0] [startLoading:783] : Step 2: load java.lang.Cloneable, java.io.Serializable, java.lang.Throwable.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded interface java.lang.Cloneable in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded interface java.lang.Cloneable
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded interface java.io.Serializable in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded interface java.io.Serializable
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Throwable in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Throwable
+<NULL> [<NULL>/<null>:0] [startLoading:805] : Step 3: create array pseudo-class
+<NULL> [<NULL>/<null>:0] [createClazzArray:71] : Found clone method of clazzObject in slot [5], using it as basis of array clone
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [startLoading:813] : Step 4: load java.lang.Class, java.lang.ClassLoader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Class in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Class
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ClassLoader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ClassLoader
+<NULL> [<NULL>/<null>:0] [startLoading:830] : Step 5: attach an instance of Class to everything loaded so far, and locate the special methods Object.finalize() and ClassLoader.loadClass().
+<NULL> [<NULL>/<null>:0] [identify_special_methods:540] : Class java.lang.ClassLoader has loadClass method loadClass(Ljava/lang/String;)Ljava/lang/Class;
+<NULL> [<NULL>/<null>:0] [startLoading:837] : Step 6: load java.lang.Thread, java.lang.ref.Reference, java.lang.reflect.Constructor
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Thread in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Thread
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ThreadGroup in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ThreadGroup
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ref.Reference in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ref.Reference
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Constructor in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Constructor
+<NULL> [<NULL>/<null>:0] [startLoading:866] : Step 7: loading core classes 
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at clazz.c:330, count = 10000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : clazz.c.330 (alloc/release 0x0024faf8): Walked 0 anon 2565 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 1 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.Attributes$Name in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.Attributes$Name
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.BindException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.BindException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.DatagramSocketImpl in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.DatagramSocketImpl
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.Reader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.Reader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.text.RuleBasedCollator in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.text.RuleBasedCollator
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Short in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Short
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Package in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Package
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.StreamCorruptedException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.StreamCorruptedException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ArrayIndexOutOfBoundsException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ArrayIndexOutOfBoundsException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.GarbageCollector in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.GarbageCollector
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IllegalMonitorStateException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IllegalMonitorStateException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Proxy in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Proxy
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded interface java.io.Externalizable in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded interface java.io.Externalizable
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.ObjectStreamField in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.ObjectStreamField
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.CloneNotSupportedException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.CloneNotSupportedException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ref.SoftReference in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ref.SoftReference
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.SystemClassLoader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.SystemClassLoader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded interface java.lang.reflect.Member in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded interface java.lang.reflect.Member
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.SocketException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.SocketException
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at strings.c:73, count = 20000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : strings.c.73 (alloc/release 0x0027c188): Walked 0 anon 3808 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 2 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Error in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Error
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.ArrayUtil in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.ArrayUtil
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.ConnectException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.ConnectException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IndexOutOfBoundsException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IndexOutOfBoundsException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.FilePermission in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.FilePermission
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.CRC32 in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.CRC32
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.rmi.RMIConnection in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.rmi.RMIConnection
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.math.Utils in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.math.Utils
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.StringBuffer in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.StringBuffer
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.URL in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.URL
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NoSuchMethodError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NoSuchMethodError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.SecurityException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.SecurityException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.FileNotFoundException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.FileNotFoundException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.Finalizer in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.Finalizer
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.BufferedReader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.BufferedReader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Integer in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Integer
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.AccessibleObject in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.AccessibleObject
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at clazz.c:324, count = 30000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : clazz.c.324 (alloc/release 0x002ae2b8): Walked 0 anon 5074 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 3 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.RandomAccessFile in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.RandomAccessFile
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.FileInputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.FileInputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.PlainSocketImpl in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.PlainSocketImpl
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.FileOutputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.FileOutputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ExceptionInInitializerError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ExceptionInInitializerError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.String in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.String
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.Deflater in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.Deflater
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.JarEntry in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.JarEntry
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.decoders.Latin1Decoder in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.decoders.Latin1Decoder
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NegativeArraySizeException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NegativeArraySizeException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.InvalidClassException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.InvalidClassException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.ZipException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.ZipException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.Inet4Address in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.Inet4Address
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.ApplicationClassLoader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.ApplicationClassLoader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Math in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Math
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.DatagramPacket in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.DatagramPacket
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.UTFDataFormatException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.UTFDataFormatException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IllegalArgumentException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IllegalArgumentException
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at clazz.c:324, count = 40000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : clazz.c.324 (alloc/release 0x002ec858): Walked 0 anon 6558 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 4 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Long in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Long
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.OutOfMemoryError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.OutOfMemoryError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.InvocationTargetException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.InvocationTargetException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Field in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Field
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.Inet6Address in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.Inet6Address
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.ObjectStreamClass in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.ObjectStreamClass
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ThreadDeath in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ThreadDeath
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Character in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Character
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.RuntimeException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.RuntimeException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.VirtualMachineError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.VirtualMachineError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Void in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Void
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.RuntimePermission in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.RuntimePermission
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.System in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.System
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.FileDescriptor in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.FileDescriptor
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.JarFile in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.JarFile
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.DataFormatException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.DataFormatException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ArithmeticException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ArithmeticException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.JDWP in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.JDWP
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.InitManifest in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.InitManifest
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.InterruptedIOException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.InterruptedIOException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.security.MD5MessageDigest in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.security.MD5MessageDigest
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.Manifest$Chunk in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.Manifest$Chunk
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.io.StandardOutputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.io.StandardOutputStream
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at strings.c:503, count = 50000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : strings.c.503 (alloc/release 0x00320f78): Walked 0 anon 7773 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 5 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.Inflater in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.Inflater
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ClassFormatError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ClassFormatError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NoClassDefFoundError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NoClassDefFoundError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.NetworkInterface in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.NetworkInterface
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IncompatibleClassChangeError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IncompatibleClassChangeError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.InterruptedException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.InterruptedException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.InstantiationError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.InstantiationError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.security.SecurityPermission in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.security.SecurityPermission
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ArrayStoreException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ArrayStoreException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.Wonka in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.Wonka
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.security.ProtectionDomain in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.security.ProtectionDomain
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.Heartbeat in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.Heartbeat
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.SocketTimeoutException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.SocketTimeoutException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NoSuchMethodException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NoSuchMethodException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.SocketImpl in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.SocketImpl
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.UndeclaredThrowableException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.UndeclaredThrowableException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.Vector in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.Vector
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.Init in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.Init
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ref.WeakReference in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ref.WeakReference
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ClassNotFoundException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ClassNotFoundException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NoSuchFieldError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NoSuchFieldError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ClassCastException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ClassCastException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Modifier in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Modifier
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at strings.c:73, count = 60000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : strings.c.73 (alloc/release 0x0034cc78): Walked 0 anon 8868 tagged chunks, 0 MB anon 0 Mb tagged, 0 chunks were in error. Made 6 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.PushbackReader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.PushbackReader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.PlainDatagramSocketImpl in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.PlainDatagramSocketImpl
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.Adler32 in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.Adler32
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.UnsatisfiedLinkError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.UnsatisfiedLinkError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.ByteArrayOutputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.ByteArrayOutputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.InputStreamReader in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.InputStreamReader
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.File in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.File
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.ResourceBundle in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.ResourceBundle
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.ObjectInputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.ObjectInputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Boolean in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Boolean
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.security.Security$SecurityProperties in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.security.Security$SecurityProperties
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.security.Security in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.security.Security
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ref.PhantomReference in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ref.PhantomReference
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.EOFException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.EOFException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.InstantiationException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.InstantiationException
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at clazz.c:324, count = 70000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : clazz.c.324 (alloc/release 0x0037e0f8): Walked 0 anon 10092 tagged chunks, 0 MB anon 1 Mb tagged, 0 chunks were in error. Made 7 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.security.AccessController in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.security.AccessController
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.LinkageError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.LinkageError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Array in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Array
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.reflect.Method in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.reflect.Method
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ref.ReferenceQueue in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ref.ReferenceQueue
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.decoders.UTF8Decoder in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.decoders.UTF8Decoder
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.UnknownHostException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.UnknownHostException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.InternalError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.InternalError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.net.InetAddress in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.net.InetAddress
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.ClassCircularityError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.ClassCircularityError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.ObjectOutputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.ObjectOutputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.ZipByteArrayInputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.ZipByteArrayInputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Runtime in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Runtime
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.StackTraceElement in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.StackTraceElement
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.Attributes in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.Attributes
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at clazz.c:330, count = 80000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : clazz.c.330 (alloc/release 0x003acd10): Walked 0 anon 11265 tagged chunks, 0 MB anon 1 Mb tagged, 0 chunks were in error. Made 8 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NoSuchFieldException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NoSuchFieldException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.VerifyError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.VerifyError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.io.ErrorOutputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.io.ErrorOutputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.SecurityManager in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.SecurityManager
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Double in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Double
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.vm.Etc in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.vm.Etc
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Exception in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Exception
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.security.ShaMessageDigest in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.security.ShaMessageDigest
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IllegalAccessError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IllegalAccessError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.Manifest in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.Manifest
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NativeProperties in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NativeProperties
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.zip.ZipFile in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.zip.ZipFile
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.IllegalAccessException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.IllegalAccessException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.Arrays in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.Arrays
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.StackOverflowError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.StackOverflowError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.AbstractMethodError in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.AbstractMethodError
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Byte in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Byte
+<NULL> [<NULL>/<null>:0] [checkChunk:333] : Performing heap check for alloc/releaseMem at new_inflate.c:691, count = 90000
+<NULL> [<NULL>/<null>:0] [checkChunk:344] : new_inflate.c.691 (alloc/release 0x003d71a0): Walked 0 anon 12807 tagged chunks, 0 MB anon 1 Mb tagged, 0 chunks were in error. Made 9 scans.
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class wonka.io.StandardInputStream in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class wonka.io.StandardInputStream
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.io.IOException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.io.IOException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.StringIndexOutOfBoundsException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.StringIndexOutOfBoundsException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.Float in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.Float
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.util.jar.JarException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.util.jar.JarException
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded class java.lang.NullPointerException in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded class java.lang.NullPointerException
+<NULL> [<NULL>/<null>:0] [startLoading:874] : Step 8: create primitive classes and their array classes
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Z in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Z
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering class boolean in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning class boolean
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [C in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [C
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering class char in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning class char
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [F in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [F
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering class float in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning class float
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [D in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning p<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Reg<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning class double
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [B in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [B
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering class byte in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning class byte
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [S in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [S
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering class short in hashtable:system-loaded-c<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Ret<NULL> [<NULL>/<null>:0] [registerClazz:.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.Object;
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Ljava.lang.Class; in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.Class;
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Ljava.lang.String; in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.String;
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:256] : Added superinterface java.io.Serializable to java.lang.Class
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:299] : Class java.lang.Class has total of 1 superinterfaces, of which 1 direct
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.security.ProtectionDomain, found 0x00329b98
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Object;, found 0x003f6d28
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Package, found 0x00258e00
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Object;, found 0x003f6d28
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Constructor;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Constructor, found 0x002477f8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Field;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Field, found 0x002f3250
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Method;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Method, found 0x00381670
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Constructor;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Constructor;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Constructor, found 0x002477f8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Constructor, found 0x002477f8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Field;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Field;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Field, found 0x002f3250
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Field, found 0x002f3250
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Method;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Method;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Method, found 0x00381670
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Method, found 0x00381670
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.net.URL, found 0x002978d0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.io.InputStream, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.security.ProtectionDomain, found 0x00329b98
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.Class
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.Object
+<NULL> [<NULL>/<null>:0] [initializeClazz:300] : fixup2 for java.lang.Object = 0x00131a00
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [initializeClazz:300] : fixup2 for java.lang.Class = 0x0012fc00
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Method;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Ljava.lang.reflect.Method; in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.reflect.Method;
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Method, found 0x00381670
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Field;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Ljava.lang.reflect.Field; in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.reflect.Field;
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.reflect.Constructor;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering prepared class [Ljava.lang.reflect.Constructor; in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning prepared class [Ljava.lang.reflect.Constructor;
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Class;, found 0x003f7100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Constructor, found 0x002477f8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.reflect.Field, found 0x002f3250
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Class, found 0x0021c658
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of private <init>()V of initializing class java.lang.Class is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Object with code length 1
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:147] : Removing call from private <init>()V of initializing class java.lang.Class to trivial constructor public <init>()V of class java.lang.O)
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:256] : Added superinterface java.io.Serializable to java.lang.Throwable
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:299] : Class java.lang.Throwable has total of 1 superinterfaces, of which 1 direct
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.StackTraceElement, found 0x00205948
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.StackTraceElement;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.io.PrintStream, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.io.PrintWriter, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.io.ObjectOutputStream, found 0x0038e330
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.reflect.InvocationTargetException
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.Throwable
+<NULL> [<NULL>/<null>:0] [initializeClazz:300] : fixup2 for java.lang.Throwable = 0x00130500
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.StackTraceElement, found 0x00205948
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.Throwable is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Object with code length 1
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:147] : Removing call from public <init>()V of initializing class java.lang.Throwable to trivial constructor public <init>()V of class java.lan)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>(Ljava/lang/String;)V of initializing class java.lang.Throwable is 0x2a (aload_0), second is 0xb7 (invokespe)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of initializing class java.lang.Throwable with code length 15
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:144] :   begins with a jump to pc 4, opcode = 0x2a
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>(Ljava/lang/String;Ljava/lang/Throwable;)V of initializing class java.lang.Throwabl<NULL> [<NULL>/<null>:0] n
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class 8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.NullPointerException
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.RuntimeException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.RuntimeException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Exception with code length 5
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.NullPointerException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.OutOfMemoryError
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.Error
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.Error is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Throwable with code length 15
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:144] :   begins with a jump to pc 4, opcode = 0x2a
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.VirtualMachineError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.VirtualMachineError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Error with code length 5
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.OutOfMemoryError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.VirtualMachineError with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ArithmeticException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.ArithmeticException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ArrayIndexOutOfBoundsException
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.IndexOutOfBoundsException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.IndexOutOfBoundsException is 0x2a (aload_0), second is 0xb7 (invokespeci)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.ArrayIndexOutOfBoundsException is 0x2a (aload_0), second is 0xb7 (invoke)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.IndexOutOfBoundsException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ArrayStoreException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.ArrayStoreException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ClassCastException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.ClassCastException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.IllegalAccessError
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.LinkageError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.LinkageError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Error with code length 5
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.IncompatibleClassChangeError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.IncompatibleClassChangeError is 0x2a (aload_0), second is 0xb7 (invokesp)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.LinkageError with code length 5
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.IllegalAccessError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.IncompatibleClassChangeError with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.IllegalMonitorStateException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.IllegalMonitorStateException is 0x2a (aload_0), second is 0xb7 (invokesp)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.InternalError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.InternalError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.VirtualMachineError with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.NegativeArraySizeException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.NegativeArraySizeException is 0x2a (aload_0), second is 0xb7 (invokespec)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.RuntimeException with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.NoSuchMethodException
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.NoSuchMethodException is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Exception with code length 5
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class [Ljava.lang.Object;
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class [Ljava.lang.String;
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class [Ljava.lang.Class;
+<NULL> [<NULL>/<null>:0] [startLoading:966] : Forced class loading complete, loaded 186 classes.
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.util.Vector, found 0x00204f28
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.util.Vector, found 0x00204f28
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.ThreadGroup;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.ThreadGroup;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Thread;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Thread;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ThreadGroup
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>(Ljava/lang/ThreadGroup;Ljava/lang/String;)V of initializing class java.lang.ThreadGroup is 0x2a (aload_0), )
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Object with code length 1
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:147] : Removing call from public <init>(Ljava/lang/ThreadGroup;Ljava/lang/String;)V of initializing class java.lang.ThreadGroup to trivial con)
+<NULL> [<NULL>/<null>:0] [registerClazz:1514] : Registering loaded interface java.lang.Runnable in hashtable:system-loaded-classes.
+<NULL> [<NULL>/<null>:0] [registerClazz:1538] : Returning loaded interface java.lang.Runnable
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:256] : Added superinterface java.lang.Runnable to java.lang.Thread
+<NULL> [<NULL>/<null>:0] [loadSuperInterfaces:299] : Class java.lang.Thread has total of 1 superinterfaces, of which 1 direct
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.util.Map, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for [Ljava.lang.Thread;, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadLocal, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadLocal, found 0x00000000
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ClassLoader, found 0x002001c8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.Thread
+<NULL> [<NULL>/<null>:0] [initializeClazz:300] : fixup2 for java.lang.Thread = 0x00136100
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.ThreadGroup, found 0x00206ad8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Runnable, found 0x00400068
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Thread, found 0x00200700
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Object, found 0x00217728
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;Ljava/lang/String;)V of initializing class java.lang.Thread is 0)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.Object with code length 1
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:147] : Removing call from public <init>(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;Ljava/lang/String;)V of initializing class java.lang.Thread0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.Throwable, found 0x0021cdd0
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.ExceptionInInitializerError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.ExceptionInInitializerError is 0x2a (aload_0), second is 0xb7 (invokespe)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.LinkageError with code length 5
+<NULL> [<NULL>/<null>:0] [identifyClazz:322] : searched loaded classes of <NULL> for java.lang.String, found 0x002014b8
+<NULL> [<NULL>/<null>:0] [mustBeInitialized:442] : Initializing prepared class java.lang.AbstractMethodError
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:123] : First byte of public <init>()V of initializing class java.lang.AbstractMethodError is 0x2a (aload_0), second is 0xb7 (invokespecial)
+<NULL> [<NULL>/<null>:0] [doSuperConstructorHack:133] : Method being called is public <init>()V of class java.lang.IncompatibleClassChangeError with code length 5
+<NULL> [<NULL>/<null>:0] [startKernel:625] : registering os thread 0x004013f8 as thread instance 0x004019d0
+SystemInitThread [<NULL>/<null>:0] [startInitialThreads:434] : ********* 189 instances in use after initial loading. ************
+SystemInitThread [<NULL>/<null>:0] [loadSuperInterfaces:256] : Added superinterface java.io.Serializable to java.lang.String
+

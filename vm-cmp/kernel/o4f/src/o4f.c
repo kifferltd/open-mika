@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -98,11 +98,16 @@ x_status x_oswald_init(x_size max_heap, x_size millis) {
   x_setup_timers(millis);
 
   printf("= = = O S W A L D   S T A R T E D = = =\r\n\r\n");
+  printf("heap size = %d\n", heap_size);
 
   o4fe->status = O4F_ENV_STATUS_NORMAL;
   vTaskStartScheduler();
 
   /* just for the compiler, in fact we would never get here */
   return xs_success;
+}
+
+void vApplicationStackOverflowHook( TaskHandle_t xTask, char * pcTaskName ) {
+  printf("Stack overflow in task %s\n", pcTaskName);
 }
 

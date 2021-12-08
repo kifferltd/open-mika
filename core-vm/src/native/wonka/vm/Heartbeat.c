@@ -69,7 +69,7 @@ static w_boolean inited;
 extern int wonka_killed;
 extern x_thread heartbeat_thread;
 
-void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat, w_boolean detectDeadlocks) {
+void Heartbeat_create(w_thread thread, w_instance theHeartbeat, w_boolean detectDeadlocks) {
 
 #ifdef UPTIME_LIMIT
   stop_time = x_millis2ticks(UPTIME_LIMIT * 1000);
@@ -91,7 +91,7 @@ void Heartbeat_create(JNIEnv *env, w_instance theHeartbeat, w_boolean detectDead
   detect_deadlocks = detectDeadlocks;
 }
 
-w_int Heartbeat_numberNonDaemonThreads(JNIEnv *env, w_instance theClass) {
+w_int Heartbeat_numberNonDaemonThreads(w_thread thread, w_instance theClass) {
   
   return nondaemon_thread_count;
 }
@@ -202,7 +202,7 @@ woempa(7, "blocking_all_threads = %d\n", blocking_all_threads);
 
 extern int dumping_info;
 
-w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
+w_boolean Heartbeat_isKilled(w_thread thread, w_instance theClass) {
 #ifdef ACADEMIC_LICENCE
   static x_time next_warning = 0;
   if (x_time_get() >= next_warning) {
@@ -263,13 +263,13 @@ w_boolean Heartbeat_isKilled(JNIEnv *env, w_instance theClass) {
   return wonka_killed;
 }
 
-w_void Heartbeat_setThread(JNIEnv *env, w_instance thisObject, w_instance thread) {
-  heartbeat_thread = ((w_thread)getWotsitField(thread, F_Thread_wotsit))->kthread;
+w_void Heartbeat_setThread(w_thread thread, w_instance thisObject, w_instance hbthread) {
+  heartbeat_thread = ((w_thread)getWotsitField(hbthread, F_Thread_wotsit))->kthread;
 }
 
 #ifdef FREERTOS
 
-void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+void Heartbeat_static_nativesleep(w_thread thread, w_instance classHeartbeat, w_long millis) {
   x_thread_sleep(x_millis2ticks(millis));
 }
 
@@ -281,7 +281,7 @@ static struct timespec ts;
 static struct timeval before;
 static struct timeval now;
 
-void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long millis) {
+void Heartbeat_static_nativesleep(w_thread thread, w_instance classHeartbeat, w_long millis) {
   long micros = millis * 1000;
   w_long diff;
 
@@ -315,11 +315,11 @@ void Heartbeat_static_nativesleep(JNIEnv *env, w_instance classHeartbeat, w_long
 
 #endif
 
-void Heartbeat_static_collectTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
+void Heartbeat_static_collectTimeOffset(w_thread thread, w_instance classHeartbeat) {
   collecting = TRUE;
 }
 
-w_long Heartbeat_static_getTimeOffset(JNIEnv *env, w_instance classHeartbeat) {
+w_long Heartbeat_static_getTimeOffset(w_thread thread, w_instance classHeartbeat) {
    return system_time_offset;
 }
 

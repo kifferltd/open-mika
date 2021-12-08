@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,6 +26,8 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+// TODO - rewrite to work without JNI
+
 #include <network.h>
 #include <errno.h>
 
@@ -41,7 +43,7 @@
 */
 static char ownhostname[256];
 
-w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_instance InetAddress) {
+w_boolean InetAddress_static_lookupName(w_thread thread, w_instance thisClass, w_instance InetAddress) {
 
   w_boolean result = FALSE;
 #if NETWORKING == native
@@ -90,7 +92,9 @@ w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_ins
   host = w_gethostbyname(hostname);
   if (host) {
     woempa(7, "canonical name = '%s'\n", host->h_name);
-    setReferenceField(InetAddress, (*env)->NewStringUTF(env, host->h_name), F_InetAddress_hostName);
+    w_string hname_string = cstring2String(host->h_name, strlen(host->h_name));
+    setReferenceField(InetAddress, newStringInstance(hname_string), F_InetAddress_hostName);
+    deregisterString(hname_string);
     result = TRUE;
   }
   else {
@@ -109,13 +113,12 @@ w_boolean InetAddress_static_lookupName(JNIEnv *env, w_instance thisClass, w_ins
 ** hostName will be set to name ...
 */
 
-void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_instance Name) {
+void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_instance Name) {
 
 #if NETWORKING == native
-  w_thread thread = JNIEnv2w_thread(env);
   long ipnumber;
   w_string name = String2string(Name);
-  w_string h_name = NULL;
+  w_string hname = NULL;
   char * hostname = allocMem(string_length(name) + 1);
 // TODO make a w_hostent
 //  struct hostent * host = NULL;
@@ -162,10 +165,10 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
   ** Creating and copying the hostname to private 'hostName' field of InetAddress Object
   ** TODO : re-write me
 
-  //w_printf("canonical name = %s (%d)\n", h_name, host->h_addrtype);
-  h_name = cstring2String(host->h_name, strlen(host->h_name));
-  setReferenceField(InetAddress, getStringInstance(h_name), F_InetAddress_hostName);
-  deregisterString(h_name);
+  //w_printf("canonical name = %s (%d)\n", hname, host->h_addrtype);
+  w_string hname_string = cstring2String(host->h_name, strlen(host->h_name));
+  setReferenceField(InetAddress, getStringInstance(hname_string), F_InetAddress_hostName);
+  deregisterString(hname_string);
   //setReferenceField(InetAddress, Name, F_InetAddress_hostName);
   */
 
@@ -206,13 +209,15 @@ void InetAddress_createInetAddress (JNIEnv *env, w_instance InetAddress, w_insta
 #endif
 }
 
-w_instance InetAddress_getLocalName(JNIEnv *env, w_instance clazz) {
+w_instance InetAddress_getLocalName(w_thread thread, w_instance clazz) {
 
   w_instance Name = NULL;
 
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
-    Name = (*env)->NewStringUTF(env, ownhostname);
+    w_string ownhostname_string = cstring2String(ownhostname, strlen(ownhostname));
+    setReferenceField(Name, getStringInstance(ownhostname_string), F_InetAddress_hostName);
+    deregisterString(ownhostname_string);
   }
 
   return Name;

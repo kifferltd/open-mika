@@ -1,8 +1,30 @@
-/*****************************************************************************
-* Copyright (c) 2005 by Chris Gray, trading as /k/ Embedded Java Solutions. *
-* All rights reserved.  The contents of this file may not be copied or      *
-* distributed in any form without express written consent of the author.    *
-*****************************************************************************/
+/**************************************************************************
+* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
+**************************************************************************/
 
 #include <stdio.h>
 #include <math.h>
@@ -96,7 +118,7 @@ postlude:
 }
 
 
-w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_double value) {
+w_instance MathHelper_static_doubleToString(w_thread thread, w_instance myClazz, w_double value) {
   char chars[64];
   char trial[64];
   int l;
@@ -114,7 +136,6 @@ w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_d
  
   l = snprintf(chars, 64, pattern, d0);
   if (l == -1 || l >= 64) {
-     w_thread thread = JNIEnv2w_thread(env); 
      throwException(thread, clazzIllegalArgumentException, NULL);
      return NULL;
   }
@@ -140,10 +161,10 @@ w_instance MathHelper_static_doubleToString(JNIEnv *env, w_instance myClazz, w_d
     strncpy(chars, trial, l + 1);
   }
 
-  return (*env)->NewStringUTF(env, chars);
+  return getStringInstance(cstring2String(chars, strlen(chars)));
 }
 
-w_instance MathHelper_static_floatToString(JNIEnv *env, w_instance myClazz, w_float value) {
+w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, w_float value) {
   char chars[64];
   char trial[64];
   int l;
@@ -156,7 +177,6 @@ w_instance MathHelper_static_floatToString(JNIEnv *env, w_instance myClazz, w_fl
   f0 = mc.f;
   l = snprintf(chars, 64, pattern, f0);
   if (l == -1 || l >= 64) {
-     w_thread thread = JNIEnv2w_thread(env); 
      throwException(thread, clazzIllegalArgumentException, NULL);
      return NULL;
   }
@@ -182,7 +202,7 @@ w_instance MathHelper_static_floatToString(JNIEnv *env, w_instance myClazz, w_fl
     strncpy(chars, trial, l + 1);
   }
 
-  return (*env)->NewStringUTF(env, chars);
+  return getStringInstance(cstring2String(chars, strlen(chars)));
 }
 
 void init_math(void) {

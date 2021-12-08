@@ -1,8 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix.                *
-* All rights reserved.                                                    *
-* Parts copyright (c) 2007, 2009 by Chris Gray, /k/ Embedded Java         *
-* Solutions.  All rights reserved.                                        *
+* Copyright (c) 2007, 2009, 2021 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "core-classes.h"
@@ -57,7 +53,7 @@ char *getFISFileName(w_instance thisFileInputStream) {
 #define freeFileName(n) releaseMem((n)-2)
 
 w_int FileInputStream_read
-  (JNIEnv *env, w_instance thisFileInputStream) {
+  (w_thread thread, w_instance thisFileInputStream) {
   w_instance     fdObj;
   vfs_FILE    *file;
   w_int        result = -1;
@@ -66,7 +62,7 @@ w_int FileInputStream_read
   file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
     result = 0;
   } else {
     if(!vfs_feof(file)) {
@@ -78,7 +74,7 @@ w_int FileInputStream_read
 }
 
 w_int FileInputStream_readIntoBuffer
-  (JNIEnv *env, w_instance thisFileInputStream, w_instance buffer, w_int offset, w_int length) {
+  (w_thread thread, w_instance thisFileInputStream, w_instance buffer, w_int offset, w_int length) {
   w_instance     fdObj;
   vfs_FILE    *file;
   w_int        result;
@@ -86,12 +82,12 @@ w_int FileInputStream_readIntoBuffer
   w_byte       *data;
 
   if(!buffer) {
-    throwNullPointerException(JNIEnv2w_thread(env));
+    throwNullPointerException(thread);
     return -1;
   }
   
   if(offset < 0 || length < 0 || offset > instance2Array_length(buffer) - length) {
-    throwArrayIndexOutOfBoundsException(JNIEnv2w_thread(env));
+    throwArrayIndexOutOfBoundsException(thread);
     return -1;
   }
 
@@ -104,7 +100,7 @@ w_int FileInputStream_readIntoBuffer
   file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
     result = 0;
   } else {
     data = bytes + offset;
@@ -118,7 +114,7 @@ w_int FileInputStream_readIntoBuffer
 }
 
 w_long FileInputStream_skip
-  (JNIEnv *env, w_instance thisFileInputStream, w_long n) {
+  (w_thread thread, w_instance thisFileInputStream, w_long n) {
 
   w_instance fdObj;
   vfs_FILE    *file;
@@ -129,7 +125,7 @@ w_long FileInputStream_skip
   file = getWotsitField(fdObj, F_FileDescriptor_fd);
   
   if(file == NULL) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
     result = 0;
   } else {
     prev_pos = vfs_ftell(file);
@@ -138,7 +134,7 @@ w_long FileInputStream_skip
     if(result != (long)-1) {
       result = vfs_ftell(file) - prev_pos;
     } else {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
       result = 0; 
     }
   }
@@ -147,7 +143,7 @@ w_long FileInputStream_skip
 }
 
 w_int FileInputStream_available
-  (JNIEnv *env, w_instance thisFileInputStream) {
+  (w_thread thread, w_instance thisFileInputStream) {
 
   w_instance         fdObj;
   vfs_FILE        *file;
@@ -161,13 +157,13 @@ w_int FileInputStream_available
   filename = getFISFileName(thisFileInputStream);
   
   if(file == NULL) {
-    throwIOException(JNIEnv2w_thread(env));
+    throwIOException(thread);
     result = 0;
   } else {
     if(vfs_stat((w_ubyte *)filename, &statbuf) != -1) {
       result = (statbuf.st_size - vfs_ftell(file));
     } else {
-      throwIOException(JNIEnv2w_thread(env));
+      throwIOException(thread);
       result = 0;
     }
   }
@@ -176,7 +172,7 @@ w_int FileInputStream_available
 }
 
 void FileInputStream_close
-  (JNIEnv *env, w_instance thisFileInputStream) {
+  (w_thread thread, w_instance thisFileInputStream) {
 
   w_instance     fdObj;
   vfs_FILE    *file;
