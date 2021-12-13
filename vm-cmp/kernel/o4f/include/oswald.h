@@ -270,7 +270,7 @@ x_boolean x_mem_is_block(void * mem);
 void x_debug_write(const void *buf, size_t count);
 
 inline static void x_debug_putc(const char c) {
-  x_debug_write(c, 1);
+  x_debug_write(&c, 1);
 }
 
 inline static void x_debug_puts(const char *s) {
