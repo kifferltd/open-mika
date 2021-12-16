@@ -1,7 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2010 by Chris Gray, /k/ Embedded Java Solutions.    *
-* All rights reserved.                                                    *
+* Copyright (c) 2010, 2018, 2021  by KIFFER Ltd.  All rights reserved.    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "oswald.h"
@@ -101,7 +98,7 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   o4f_memory_chunk newchunk;
 
   if (size > FreeRTOS_heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
+    loempa(9,"%s:%d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -138,7 +135,7 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
   o4f_memory_chunk newchunk;
 
   if (size > FreeRTOS_heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
+    loempa(9,"%s:%d Attempt to allocate %d bytes, available space is %d!\n",file,line,size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
@@ -181,7 +178,7 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   }
 
   if (size > oldchunk->size && size - oldchunk->size > FreeRTOS_heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, FreeRTOS_heap_remaining);
+    loempa(9,"%s:%d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, FreeRTOS_heap_remaining);
 
     return NULL;
   }
