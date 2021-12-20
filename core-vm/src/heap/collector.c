@@ -572,7 +572,7 @@ static w_int releaseInstance(w_object object) {
       s->interned = NULL;
       woempa(3, "Uninterned %j (%w)\n", instance, s);
     }
-    woempa(3, "Deferring sweeping of %j (%w)\n", instance, s);
+    woempa(7, "Deferring sweeping of %j (%w)\n", instance, s);
     if (putFifo(instance, dead_string_fifo) < 0) {
       wabort(ABORT_WONKA, "Failed to put %j on dead_string_fifo", instance);
     };

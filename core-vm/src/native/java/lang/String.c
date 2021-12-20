@@ -214,23 +214,23 @@ void fast_String_toString(w_frame frame) {
 
 w_instance String_toCharArray(w_thread thread, w_instance This) {
   w_int length;
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_instance result;
   
-  length = string_length(this);
+  length = string_length(this_string);
   woempa(1, "Allocating array of char[%d]\n", length);
   enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(thread, atype2clazz[P_char], length);
   enterSafeRegion(thread);
   if (result) {
-    if (string_is_latin1(this)) {
+    if (string_is_latin1(this_string)) {
       w_size i;
-      for (i = 0; i < string_length(this); ++i) {
-        instance2Array_char(result)[i] = (w_char)this->contents.bytes[i];
+      for (i = 0; i < string_length(this_string); ++i) {
+        instance2Array_char(result)[i] = (w_char)this_string->contents.bytes[i];
       }
     }
     else {
-      w_memcpy(instance2Array_char(result), this->contents.chars, string_length(this) * sizeof(w_char));
+      w_memcpy(instance2Array_char(result), this_string->contents.chars, string_length(this_string) * sizeof(w_char));
     }
   }
 
@@ -240,7 +240,7 @@ w_instance String_toCharArray(w_thread thread, w_instance This) {
 
 w_int String_compareTo(w_thread thread, w_instance This, w_instance String) {
 
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_string string;
   w_int result = 0;
   w_int i;
@@ -250,21 +250,21 @@ w_int String_compareTo(w_thread thread, w_instance This, w_instance String) {
   }
   else {
     string = String2string(String);
-    if (string_length(this) == 0) {
+    if (string_length(this_string) == 0) {
       result -= string_length(string);
     }
     else if (string_length(string) == 0) {
-      result = string_length(this);
+      result = string_length(this_string);
     }
-    else if (string != this) {
-      for (i = 0; i < (w_int)string_length(this); i++) {
+    else if (string != this_string) {
+      for (i = 0; i < (w_int)string_length(this_string); i++) {
 
         /*
         ** Calculate possible result based on character compare.
         */
         
-        if (string_char(this, i) != string_char(string, i)) {
-          result = (w_int)(string_char(this, i) - string_char(string, i));
+        if (string_char(this_string, i) != string_char(string, i)) {
+          result = (w_int)(string_char(this_string, i) - string_char(string, i));
           break;
         }
 
@@ -272,8 +272,8 @@ w_int String_compareTo(w_thread thread, w_instance This, w_instance String) {
         ** Check that String and This don't differ in length only, otherwise calculate length difference.
         */
         
-        if ((i + 1) >= (w_int)string_length(string) || (i + 1) >= (w_int)string_length(this)) {
-          result = string_length(this) - string_length(string);
+        if ((i + 1) >= (w_int)string_length(string) || (i + 1) >= (w_int)string_length(this_string)) {
+          result = string_length(this_string) - string_length(string);
           break;
         }
 
@@ -288,13 +288,13 @@ w_int String_compareTo(w_thread thread, w_instance This, w_instance String) {
 w_instance String_getBytes(w_thread thread, w_instance This, w_boolean Enc) {
 
   w_instance result = NULL;
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_byte *dst;
   w_int i;
 
   enterUnsafeRegion(thread);
   if (Enc == WONKA_TRUE){
-    w_byte * utfbytes = string2UTF8(this, &i);
+    w_byte * utfbytes = string2UTF8(this_string, &i);
 
     if (utfbytes) {
       i -= 2;
@@ -311,13 +311,13 @@ w_instance String_getBytes(w_thread thread, w_instance This, w_boolean Enc) {
     }
   }
   else {
-    w_int length = string_length(this);
+    w_int length = string_length(this_string);
 
     result = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
     if (result) {
       dst = instance2Array_byte(result);
-      for (i = 0; i < (w_int)string_length(this); i++) {
-        *dst++ = (w_byte)string_char(this, i);
+      for (i = 0; i < (w_int)string_length(this_string); i++) {
+        *dst++ = (w_byte)string_char(this_string, i);
       }
     }
   }
@@ -370,8 +370,8 @@ void fast_String_equals(w_frame frame) {
 w_boolean String_equalsIgnoreCase(w_thread thread, w_instance This, w_instance Other) {
 
   w_boolean result = WONKA_FALSE;
-  w_string this;
-  w_string other;
+  w_string this_string;
+  w_string other_string;
   w_int i;
 
   /*
@@ -380,23 +380,23 @@ w_boolean String_equalsIgnoreCase(w_thread thread, w_instance This, w_instance O
   */
 
   if (Other && isSuperClass(clazzString, instance2clazz(Other))) {
-    this = String2string(This);
-    other = String2string(Other);
+    this_string = String2string(This);
+    other_string = String2string(Other);
     /*
     ** Do a quick pointer check first.
     */
-    if (this == other) {
+    if (this_string == other_string) {
       result = WONKA_TRUE;
     }
-    else if (string_length(this) == string_length(other)) {
+    else if (string_length(this_string) == string_length(other_string)) {
       /*
       ** Preset result to TRUE and compare character by character; when we hit an unequal character,
       ** we set result to FALSE and break...
       */
       result = WONKA_TRUE;
-      for (i = 0; i < (w_int)string_length(this); i++) {
-        w_char this_char = string_char(this, i);
-        w_char that_char = string_char(other, i);
+      for (i = 0; i < (w_int)string_length(this_string); i++) {
+        w_char this_char = string_char(this_string, i);
+        w_char that_char = string_char(other_string, i);
         if ( this_char != that_char && (char2lower(this_char) != char2lower(that_char)) && (char2upper(this_char) != char2upper(that_char))) {
           result = WONKA_FALSE;
           break;
@@ -464,19 +464,19 @@ void fast_String_length(w_frame frame) {
 
 w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w_int to, w_instance Other, w_int oo, w_int len) {
   w_boolean result = WONKA_TRUE;
-  w_string this = String2string(This);
-  w_string other;
+  w_string this_string = String2string(This);
+  w_string other_string;
   w_int i;
   
   if (Other) {
-    other = String2string(Other);
-    if (to < 0 || oo < 0 || to + len > (w_int)string_length(this) || oo + len > (w_int)string_length(other)) {
+    other_string = String2string(Other);
+    if (to < 0 || oo < 0 || to + len > (w_int)string_length(this_string) || oo + len > (w_int)string_length(other_string)) {
       result = WONKA_FALSE;
     }
     else {
       if (ic == WONKA_FALSE) {
         for (i = 0; i < len; i++) {
-          if (string_char(this, i + to) != string_char(other, oo + i)) {
+          if (string_char(this_string, i + to) != string_char(other_string, oo + i)) {
             result = WONKA_FALSE;
             break;
           }
@@ -484,8 +484,8 @@ w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w
       }
       else {
         for (i = 0; i < len; i++) {
-          w_char this_char = string_char(this, i + to);
-          w_char that_char = string_char(other, oo + i);
+          w_char this_char = string_char(this_string, i + to);
+          w_char that_char = string_char(other_string, oo + i);
           if ((char2upper(this_char) != char2upper(that_char)) && (char2lower(this_char) != char2lower(that_char))) {
             result = WONKA_FALSE;
             break;
@@ -502,20 +502,20 @@ w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w
   
 }
 
-static w_boolean i_String_startsWith(w_string this, w_string prefix, w_int offset) {
+static w_boolean i_String_startsWith(w_string this_string, w_string prefix, w_int offset) {
   w_size i;
 
   if (string_length(prefix) == 0) {
     return TRUE;
   }
 
-  if (prefix == this && offset == 0) {
+  if (prefix == this_string && offset == 0) {
     return TRUE;
   }
 
-  if (offset < (w_int)string_length(this) && string_length(prefix) <= (string_length(this) - offset)) {
+  if (offset < (w_int)string_length(this_string) && string_length(prefix) <= (string_length(this_string) - offset)) {
     for (i = 0; i < string_length(prefix); ++i) {
-      if (string_char(this, offset + i) != string_char(prefix, i)) {
+      if (string_char(this_string, offset + i) != string_char(prefix, i)) {
         return FALSE;
       }
     }
@@ -554,7 +554,7 @@ void fast_String_startsWith(w_frame frame) {
 
 w_boolean String_endsWith(w_thread thread, w_instance This, w_instance Suffix) {
 
-  w_string this;
+  w_string this_string;
   w_string suffix;
   w_int offset;
   w_size i;
@@ -564,21 +564,21 @@ w_boolean String_endsWith(w_thread thread, w_instance This, w_instance Suffix) {
     return FALSE;
   }
 
-  this = String2string(This);
+  this_string = String2string(This);
   suffix = String2string(Suffix);
-  offset = string_length(this) - string_length(suffix);
+  offset = string_length(this_string) - string_length(suffix);
 
   if (string_length(suffix) == 0 ) {
     return TRUE;
   }
 
-  if (suffix == this) {
+  if (suffix == this_string) {
     return TRUE;
   }
 
   if (offset > 0) {
     for (i = 0; i < string_length(suffix); ++i) {
-      if (string_char(this, offset + i) != string_char(suffix, i)) {
+      if (string_char(this_string, offset + i) != string_char(suffix, i)) {
         return FALSE;
       }
     }
@@ -636,29 +636,29 @@ void fast_String_charAt(w_frame frame) {
 }
 
 void String_getChars(w_thread thread, w_instance This, w_int srcBegin, w_int srcEnd, w_instance Dst, w_int dstBegin) {
-  w_string this;
+  w_string this_string;
   w_char *dst;
   w_int length;
 
-  this = String2string(This);
+  this_string = String2string(This);
   if (Dst == NULL) {
     throwException(thread, clazzNullPointerException, NULL);
   }
-  else if (srcBegin < 0 || srcBegin > srcEnd || srcEnd > (w_int)string_length(this) || dstBegin < 0 || dstBegin + srcEnd - srcBegin > instance2Array_length(Dst)) {
+  else if (srcBegin < 0 || srcBegin > srcEnd || srcEnd > (w_int)string_length(this_string) || dstBegin < 0 || dstBegin + srcEnd - srcBegin > instance2Array_length(Dst)) {
     throwException(thread, clazzIndexOutOfBoundsException, NULL);
   }
   else {
     if ((srcEnd - srcBegin) > 0) {
       dst = instance2Array_char(Dst) + dstBegin;
       length = srcEnd - srcBegin;
-      if (string_is_latin1(this)) {
+      if (string_is_latin1(this_string)) {
         w_int i;
         for (i = srcBegin; i < srcEnd; ++i) {
-          dst[i - srcBegin] = (w_char)this->contents.bytes[i];
+          dst[i - srcBegin] = (w_char)this_string->contents.bytes[i];
         }
       }
       else {
-        w_memcpy(dst, this->contents.chars + srcBegin, length * sizeof(w_char));
+        w_memcpy(dst, this_string->contents.chars + srcBegin, length * sizeof(w_char));
       }
     }
   }
@@ -874,20 +874,21 @@ w_int String_lastIndexOf_String(w_thread thread, w_instance thisString, w_instan
 
 w_instance String_toUpperCase(w_thread thread, w_instance This, w_instance Locale) {
 
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_instance result = This;
   w_int i;
   w_char *buffer;
   w_char *dst;
   w_string string;
 
-  buffer = allocMem(string_length(this) * sizeof(w_char));
+  loempa(7, "String_toUpperCase : This = %p, this_string = %p, Locale = instance %p of clazz %p (%k)\n", This, this_string, Locale, instance2clazz(Locale), instance2clazz(Locale));
+  buffer = allocMem(string_length(this_string) * sizeof(w_char));
   if (buffer) {
     dst = buffer;
-    for (i = 0; i < (w_int)string_length(this); i++) {
-      *dst++ = char2upper(string_char(this, i));
+    for (i = 0; i < (w_int)string_length(this_string); i++) {
+      *dst++ = char2upper(string_char(this_string, i));
     }
-    string = unicode2String(buffer, string_length(this));
+    string = unicode2String(buffer, string_length(this_string));
     if (string) {
       result = newStringInstance(string);
     // string is now registered twice, which is once too many
@@ -902,20 +903,20 @@ w_instance String_toUpperCase(w_thread thread, w_instance This, w_instance Local
 
 w_instance String_toLowerCase(w_thread thread, w_instance This, w_instance Locale) {
 
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_instance result = This;
   w_int i;
   w_char * buffer;
   w_char * dst;
   w_string string;
   
-  buffer = allocMem(string_length(this) * sizeof(w_char));
+  buffer = allocMem(string_length(this_string) * sizeof(w_char));
   if (buffer) {
     dst = buffer;
-    for (i = 0; i < (w_int)string_length(this); i++) {
-      *dst++ = char2lower(string_char(this, i));
+    for (i = 0; i < (w_int)string_length(this_string); i++) {
+      *dst++ = char2lower(string_char(this_string, i));
     }
-    string = unicode2String(buffer, string_length(this));
+    string = unicode2String(buffer, string_length(this_string));
     if (string) {
       result = newStringInstance(string);
       deregisterString(string);
@@ -929,17 +930,17 @@ w_instance String_toLowerCase(w_thread thread, w_instance This, w_instance Local
 
 w_instance String_replace(w_thread thread, w_instance This, w_char oldChar, w_char newChar) {
 
-  w_string this;
+  w_string this_string;
   w_instance Result = This;
   w_string result;
   w_char * buffer;
   w_int i;
 
-  this = String2string(This);
-  buffer = allocMem(string_length(this) * sizeof(w_char));
+  this_string = String2string(This);
+  buffer = allocMem(string_length(this_string) * sizeof(w_char));
   if (buffer) {
-    for (i = 0; i < (w_int)string_length(this); i++) {
-      w_char ch = string_char(this, i);
+    for (i = 0; i < (w_int)string_length(this_string); i++) {
+      w_char ch = string_char(this_string, i);
       if (ch == oldChar) {
         buffer[i] = newChar;
       }
@@ -947,7 +948,7 @@ w_instance String_replace(w_thread thread, w_instance This, w_char oldChar, w_ch
         buffer[i] = ch;
       }
     }
-    result = unicode2String(buffer, string_length(this));
+    result = unicode2String(buffer, string_length(this_string));
     if (result) {
       Result = newStringInstance(result);
       deregisterString(result);
@@ -961,7 +962,7 @@ w_instance String_replace(w_thread thread, w_instance This, w_char oldChar, w_ch
 
 w_instance String_concat(w_thread thread, w_instance This, w_instance String) {
 
-  w_string this;
+  w_string this_string;
   w_string string;
   w_instance Result = NULL;
   w_string result;
@@ -974,31 +975,31 @@ w_instance String_concat(w_thread thread, w_instance This, w_instance String) {
 
   }
 
-  this = String2string(This);
+  this_string = String2string(This);
   string = String2string(String);
   if (string_length(string)) {
-    buffer = allocMem((string_length(string) + string_length(this)) * sizeof(w_char));
+    buffer = allocMem((string_length(string) + string_length(this_string)) * sizeof(w_char));
     if (buffer) {
-      if (string_is_latin1(this)) {
+      if (string_is_latin1(this_string)) {
         w_size i;
-        for (i = 0; i < string_length(this); ++i) {
-          buffer[i] = (w_char)this->contents.bytes[i];
+        for (i = 0; i < string_length(this_string); ++i) {
+          buffer[i] = (w_char)this_string->contents.bytes[i];
         }
       }
       else {
-        w_memcpy(buffer, this->contents.chars, string_length(this) * sizeof(w_char));
+        w_memcpy(buffer, this_string->contents.chars, string_length(this_string) * sizeof(w_char));
       }
 
       if (string_is_latin1(string)) {
         w_size i;
         for (i = 0; i < string_length(string); ++i) {
-          buffer[i + string_length(this)] = (w_char)string->contents.bytes[i];
+          buffer[i + string_length(this_string)] = (w_char)string->contents.bytes[i];
         }
       }
       else {
-        w_memcpy(buffer + string_length(this), string->contents.chars, string_length(string) * sizeof(w_char));
+        w_memcpy(buffer + string_length(this_string), string->contents.chars, string_length(string) * sizeof(w_char));
       }
-      result = unicode2String(buffer, string_length(this) + string_length(string));
+      result = unicode2String(buffer, string_length(this_string) + string_length(string));
       if (result) {
         Result = newStringInstance(result);
         deregisterString(result);
@@ -1016,15 +1017,15 @@ w_instance String_concat(w_thread thread, w_instance This, w_instance String) {
 
 static w_instance i_String_substring(w_thread thread, w_instance This, w_int offset, int endIndex) {
 
-  w_string this;
+  w_string this_string;
   w_instance SubString = NULL;
   w_string subString = NULL;
   w_char  *buffer;
   w_size   length;
 
-  this = String2string(This);
-  length = string_length(this);
-  woempa(1, "String '%w' (length %d) offset %d endIndex %d\n", this, length, offset, endIndex);
+  this_string = String2string(This);
+  length = string_length(this_string);
+  woempa(1, "String '%w' (length %d) offset %d endIndex %d\n", this_string, length, offset, endIndex);
 
   if (offset < 0 || offset > (w_int)length || offset > endIndex || endIndex > (w_int)length) {
     throwException(thread, clazzStringIndexOutOfBoundsException, NULL);
@@ -1032,14 +1033,14 @@ static w_instance i_String_substring(w_thread thread, w_instance This, w_int off
   else {
     buffer = allocMem((endIndex - offset) * sizeof(w_char));
     if (buffer) {
-      if (string_is_latin1(this)) {
+      if (string_is_latin1(this_string)) {
         w_int i;
         for (i = offset; i < endIndex; ++i) {
-          buffer[i - offset] = (w_char)this->contents.bytes[i];
+          buffer[i - offset] = (w_char)this_string->contents.bytes[i];
         }
       }
       else {
-        w_memcpy(buffer, this->contents.chars + offset, (endIndex - offset) * sizeof(w_char));
+        w_memcpy(buffer, this_string->contents.chars + offset, (endIndex - offset) * sizeof(w_char));
       }
       subString = unicode2String(buffer, (w_size)(endIndex - offset));
       releaseMem(buffer);
@@ -1101,7 +1102,7 @@ w_instance String_intern(w_thread thread, w_instance thisString) {
 
 w_instance String_trim(w_thread thread, w_instance This) {
 
-  w_string this = String2string(This);
+  w_string this_string = String2string(This);
   w_instance Result = This;
   w_string result;
   w_size i;
@@ -1114,33 +1115,33 @@ w_instance String_trim(w_thread thread, w_instance This) {
   ** not empty.
   */
 
-  if (string_length(this) > 0 && (string_char(this, 0) <= 0x0020 || string_char(this, string_length(this) - 1) <= 0x0020)) {
-    buffer = allocMem(string_length(this) * sizeof(w_char));
+  if (string_length(this_string) > 0 && (string_char(this_string, 0) <= 0x0020 || string_char(this_string, string_length(this_string) - 1) <= 0x0020)) {
+    buffer = allocMem(string_length(this_string) * sizeof(w_char));
     if (buffer) {
-      if (string_is_latin1(this)) {
-        for (i = 0; i < string_length(this); ++i) {
-          buffer[i] = (w_char)this->contents.bytes[i];
+      if (string_is_latin1(this_string)) {
+        for (i = 0; i < string_length(this_string); ++i) {
+          buffer[i] = (w_char)this_string->contents.bytes[i];
         }
       }
       else {
-        w_memcpy(buffer, this->contents.chars, string_length(this) * sizeof(w_char));
+        w_memcpy(buffer, this_string->contents.chars, string_length(this_string) * sizeof(w_char));
       }
       leading = 0;
       trailing = 0;
-      for (i = 0; i < string_length(this); i++) {
+      for (i = 0; i < string_length(this_string); i++) {
         if (buffer[i] > 0x0020) {
           break;
         }
         leading += 1;
       }
-      for (i = string_length(this) - 1; i >= 0; i--) {
+      for (i = string_length(this_string) - 1; i >= 0; i--) {
         if (buffer[i] > 0x0020) {
           break;
         }
         trailing += 1;
       }
-      if (leading != (w_int)string_length(this)) {
-        result = unicode2String(buffer + leading, string_length(this) - trailing - leading);
+      if (leading != (w_int)string_length(this_string)) {
+        result = unicode2String(buffer + leading, string_length(this_string) - trailing - leading);
         if (result) {
           Result = newStringInstance(result);
           deregisterString(result);

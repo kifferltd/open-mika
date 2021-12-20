@@ -651,6 +651,8 @@ w_string cstring2String(const char *cstring, w_size length) {
   return result;
 }
 
+#define string_char(s,n) (string_is_latin1(s)?(w_char)((s)->contents.bytes[n]):(s)->contents.chars[n])
+
 /*
 ** The function that attaches a hash value to a w_string.
 ** From the JDK 1.2 documentation. Notice that the hashcode calculation
@@ -662,7 +664,6 @@ w_word hashString(w_string string) {
   w_int hash = 0;
   w_size i;
    
-#define string_char(s,n) (string_is_latin1(s)?(w_char)((s)->contents.bytes[n]):(s)->contents.chars[n])
   if (string_is_latin1(string)) {
     for (i=0;i<(w_size)(string_length(string));++i) {
       hash = hash*31 + string->contents.bytes[i];
