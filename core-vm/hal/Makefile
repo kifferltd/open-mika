@@ -30,5 +30,7 @@
 
 .PHONY : mika
 mika :
-	make -C $(MIKA_TOP)/core-vm/hal/cpu/any/src $(MAKECMDGOALS)
 	make -C $(MIKA_TOP)/core-vm/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
+
+# For now we move calls.c into core-vm/src/vm, so nothing to do here
+#	make -C $(MIKA_TOP)/core-vm/hal/cpu/any/src $(MAKECMDGOALS)
