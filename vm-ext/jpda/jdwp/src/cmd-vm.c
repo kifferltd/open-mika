@@ -541,9 +541,9 @@ static void jdwp_vm_classpaths(jdwp_command_packet cmd) {
   int l;
   int n;
 
-  woempa(7, "Base dir = %s\n", jdwp_base_directory);
+  woempa(7, "Base dir = %s\n", base_directory);
   // baseDir
-  jdwp_put_cstring(&reply_grobag, jdwp_base_directory, strlen(jdwp_base_directory));
+  jdwp_put_cstring(&reply_grobag, base_directory, strlen(base_directory));
 
   if (fsroot[fsrootlen - 1] == '/') {
     --fsrootlen;

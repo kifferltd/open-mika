@@ -48,9 +48,7 @@ w_thread jdwp_thread;
 
 jdwp_state_enum jdwp_state;
 
-JNIEnv *jdwp_JNIEnv;
-
-char *jdwp_base_directory;
+w_thread jdwp_thread;
 
 /*
 ** Command line arguments from argument.c
@@ -325,23 +323,6 @@ void jdwp_dispatcher() {
 
   woempa(7, "Setting jdwp_thread = %t\n", currentWonkaThread);
   jdwp_thread = currentWonkaThread;
-
-  /*
-  ** Note the current working directory, it will be e.g. the base for relative classpaths.
-  */
-  {
-    int m;
-
-    m = 32;
-    jdwp_base_directory = allocMem(m);
-    while (!getcwd(jdwp_base_directory, m - 1)) {
-      m *= 2;
-      jdwp_base_directory = reallocMem(jdwp_base_directory, m);
-      memset(jdwp_base_directory, 0, m);
-    }
-    woempa(7, "jdwp_base_directory is '%s'\n", jdwp_base_directory);
-
-  }
 
   jdwp_event_hashtable = ht_create("hashtable:jdwp-events", JDWP_EVENT_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   jdwp_breakpoint_hashtable = ht_create("hashtable:jdwp-breakpoints", JDWP_BREAKPOINT_HASHTABLE_SIZE, NULL, NULL, 0, 0);

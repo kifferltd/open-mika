@@ -67,6 +67,12 @@ char *bootclasspath = BOOTCLASSDIR "/" BOOTCLASSFILE ":" BOOTCLASSDIR "/";
 
 char *fsroot = NULL;
 
+/**
+ * base_directory is the directory which was current (cwd) when Mika was launched.
+ * It will not be updated if a chdir() is executed later.
+ */
+char *base_directory;
+
 extern x_Mutex woempaMutex;
 extern char *command_line_path;
 extern w_fifo assertions_fifo;
@@ -143,6 +149,19 @@ void startVFS(void) {
 #else
   vfs_mount(0, (char *)"/", (char *)"wromfs", VFS_MOUNT_RO); 
 #endif
+
+  /*
+  ** Note the working directory in which we were launched.
+  */
+  w_int m = 32;
+  base_directory = allocMem(m);
+  while (!vfs_getcwd(jdwp_base_directory, m - 1)) {
+    m *= 2;
+    base_directory = reallocMem(jdwp_base_directory, m);
+    memset(jdwp_base_directory, 0, m);
+  }
+  woempa(7, "base_directory is '%s'\n", jdwp_base_directory);
+  }
 }
 
 extern char *get_default_classpath(void);

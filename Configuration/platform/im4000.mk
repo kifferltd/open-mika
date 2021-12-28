@@ -60,8 +60,7 @@ CFLAGS += -I$(FREERTOS_FAT_INCLUDE_DIR)
 CFLAGS += -I$(FREERTOS_APP_INCLUDE_DIR) 
 CFLAGS += -I$(FREERTOS_IO_INCLUDE_DIR) 
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
-# no JDWP for now
-export JDWP = false
+export JDWP = true
 export JNI = false
 # no NETWORK either
 export NETWORK = none

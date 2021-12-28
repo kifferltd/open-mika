@@ -36,11 +36,11 @@
 #include "wonka.h"
 #include "wstrings.h"
 
-extern JNIEnv *jdwp_JNIEnv;
+extern w_thread jdwp_thread;
 extern w_size jdwp_global_suspend_count;
 
-extern void Thread_stop0(JNIEnv *env, w_instance thisThread, w_instance Throwable);
-extern void Thread_interrupt(JNIEnv *env, w_instance thisThread);
+extern void Thread_stop0(w_thread thread, w_instance thisThread, w_instance Throwable);
+extern void Thread_interrupt(w_thread thread, w_instance thisThread);
 
 #ifdef DEBUG
 static const char* thread_reference_command_names[] = {
@@ -504,7 +504,7 @@ w_void jdwp_thr_stop(jdwp_command_packet cmd) {
     if (thread) {
       throwable = jdwp_get_objectref(cmd->data, &offset);
       if (instance) {
-        Thread_stop0(jdwp_JNIEnv, instance, throwable);
+        Thread_stop0(jdwp_thread, instance, throwable);
         jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
       }
       else {
@@ -538,7 +538,7 @@ w_void jdwp_thr_interrupt(jdwp_command_packet cmd) {
     woempa(7, "%t\n", thread);
   
     if (thread) {
-      Thread_interrupt(jdwp_JNIEnv, instance);
+      Thread_interrupt(jdwp_thread, instance);
       jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
     }
     else {

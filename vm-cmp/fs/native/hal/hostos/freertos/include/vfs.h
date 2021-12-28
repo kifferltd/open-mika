@@ -79,6 +79,7 @@ extern w_int vfs_read(w_int fd, void *buf, w_size count);
 extern w_int vfs_lseek(w_int fd, w_int offset, w_int whence);
 extern w_int vfs_close(w_int fd);
 
+#define vfs_getcwd(b,l)           ff_getcwd(b,l)
 #define vfs_fopen(path, ...)      ff_fopen(path, __VA_ARGS__)
 #define vfs_fdopen(...)           fdopen(__VA_ARGS__)
 #define vfs_fclose(...)           fclose(__VA_ARGS__)
