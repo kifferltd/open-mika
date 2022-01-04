@@ -279,7 +279,7 @@ java/lang/ThreadGroup
 	children	Ljava/util/Vector;
 java/lang/String
 	wotsit                  +
-        hashCode		+
+#        hashCode		+
 #        create_empty            ()V                     String_create_empty
         create_String           (Ljava/lang/String;)V   String_create_String
         create_char             ([CII)V                 String_create_char
