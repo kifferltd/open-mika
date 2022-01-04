@@ -76,7 +76,7 @@ ifeq ($(SHARED_OBJECTS), true)
   CFLAGS += $(CFLAGS_shared_objects_$(HOSTOS))
   LDFLAGS += $(LDFLAGS_shared_objects_$(HOSTOS))
 
-  ifeq ($(USE_LIBFFI), true)
+  ifeq ($(FFI), libffi)
     ifdef LIBFFI_A_LOCATION
       LDFLAGS += -L$(LIBFFI_A_LOCATION)
     endif

@@ -164,8 +164,22 @@ ifeq ($(USE_NATIVE_MALLOC), true)
   CFLAGS += -DUSE_NATIVE_MALLOC
 endif
 
-ifeq ($(USE_LIBFFI), true)
-  CFLAGS += -DUSE_LIBFFI
+# For now we support both USE_LIBFFI (boolean) and FFI ("libffi" or "bruteforce")
+# USE_LIBFFI should be phased out
+ifdef $FFI
+  ifeq ($(FFI), libffi)
+    CFLAGS += -DUSE_LIBFFI
+    FFI = libffi
+  else
+    FFI = bruteforce
+  endif
+else
+  ifeq ($(USE_LIBFFI), true)
+    CFLAGS += -DUSE_LIBFFI
+    FFI = libffi
+  else
+    FFI = bruteforce
+  endif
 endif
 
 ifdef CPU_MIPS
@@ -376,7 +390,7 @@ export FILESYSTEM NETWORK SECURITY
 export JAVA5_SUPPORT JDWP JAVAX_COMM BYTECODE_VERIFIER
 export FLOATING_POINT MATH UNICODE_SUBSETS
 export ENABLE_THREAD_RECYCLING
-export USE_LIBFFI
+export FFI
 export UPTIME_LIMIT
 export SCHEDULER USE_NANOSLEEP HAVE_TIMEDWAIT USE_NATIVE_MALLOC HOST_TIMER_GRANULARITY CPU_MIPS SHARED_HEAP
 
