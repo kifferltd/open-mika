@@ -316,6 +316,8 @@ void registerExternals(void);
 
 extern w_int bytesInUse;
 
+extern char *base_directory;
+
 void startWonka(void*);
 
 /*

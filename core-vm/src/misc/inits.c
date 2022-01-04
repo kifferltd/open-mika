@@ -155,13 +155,12 @@ void startVFS(void) {
   */
   w_int m = 32;
   base_directory = allocMem(m);
-  while (!vfs_getcwd(jdwp_base_directory, m - 1)) {
+  while (!vfs_getcwd(base_directory, m - 1)) {
     m *= 2;
-    base_directory = reallocMem(jdwp_base_directory, m);
-    memset(jdwp_base_directory, 0, m);
+    base_directory = reallocMem(base_directory, m);
+    memset(base_directory, 0, m);
   }
-  woempa(7, "base_directory is '%s'\n", jdwp_base_directory);
-  }
+  woempa(7, "base_directory is '%s'\n", base_directory);
 }
 
 extern char *get_default_classpath(void);

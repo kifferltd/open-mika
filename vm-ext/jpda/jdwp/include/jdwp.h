@@ -581,8 +581,6 @@ extern  w_int    jdwp_events_enabled;
 
 extern  w_thread jdwp_thread;
 
-extern char *jdwp_base_directory;
-
 extern w_int jdwp_decrement_object_id_refcount(w_word objectID, w_int amount);
  
 extern w_instance jdwp_objectID2instance(w_word objectID);
