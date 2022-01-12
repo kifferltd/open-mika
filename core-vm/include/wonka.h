@@ -76,7 +76,11 @@ typedef u_int8_t                    w_ubyte;
 typedef int8_t                      w_sbyte;
 typedef int16_t                     w_short;
 typedef u_int16_t                   w_ushort;
-typedef u_int32_t                   w_word;
+#if UINTPTR_MAX != 0xFFFFFFFF
+#error Your compilation environment does not define uintptr_t as 32 bits!
+#else
+typedef uintptr_t                   w_word;
+#endif
 typedef int32_t                     w_boolean;
 typedef u_int32_t                   w_size;
 typedef int32_t                     w_int;
@@ -249,12 +253,14 @@ typedef void (*w_fixup)(w_clazz);
 
 typedef w_word  (*w_word_fun)(void);
 typedef w_long  (*w_long_fun)(void);
+typedef w_instance (*w_ref_fun)(void);
 typedef void    (*w_void_fun)(void);
 typedef void    (*w_fun_dec)(w_word this, ...);
 
 union w_Function {
   w_word_fun word_fun;
   w_long_fun long_fun;
+  w_ref_fun  ref_fun;
   w_void_fun void_fun;
 };
 
