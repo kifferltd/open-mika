@@ -816,7 +816,6 @@ void native_instance_synchronized_reference(w_frame caller, w_method method) {
   w_instance o;
   x_monitor m;
   volatile w_thread thread = caller->thread;
-  w_long long_result;
   w_instance ref_result;
 
   woempa(1, "Calling %M\n", method);
@@ -834,9 +833,7 @@ void native_instance_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
-  // WAS: ref_result = *((w_instance*)&long_result);
-  memcpy(&ref_result, &long_result, sizeof(w_instance));
+  ref_result = _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   if (thread->exception) {
@@ -867,7 +864,7 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
   w_instance o;
   x_monitor m;
   volatile w_thread thread = caller->thread;
-  w_long long_result;
+  w_word word_result;
 
   woempa(1, "Calling %M\n", method);
   frame->jstack_base = caller->jstack_top; 
@@ -881,14 +878,13 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
+  word_result = _call_instance_32bits(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
   caller->jstack_top[0].s = stack_notrace;
-  // WAS: caller->jstack_top[0].c = *((w_word*)&long_result);
-  memcpy((w_word*)&caller->jstack_top[0].c, &long_result, sizeof(w_word));
+  caller->jstack_top[0].c = word_result;
   woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
   caller->jstack_top += 1;
   thread->top = caller;
@@ -917,7 +913,7 @@ void native_instance_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l= _call_instance(thread, (w_slot)caller->jstack_top, method);
+  result.l= _call_instance_64bits(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -953,7 +949,7 @@ void native_instance_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(thread, (w_slot)caller->jstack_top, method);
+  _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -969,7 +965,6 @@ void native_instance_unsynchronized_reference(w_frame caller, w_method method) {
   w_frame frame = &theFrame;
   w_int idx = - method->exec.arg_i;
   volatile w_thread thread = caller->thread;
-  w_long long_result;
   w_instance ref_result;
   
   woempa(1, "Calling %M\n", method);
@@ -981,9 +976,7 @@ void native_instance_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
-  // WAS: ref_result = *((w_instance*)&long_result);
-  memcpy(&ref_result, &long_result, sizeof(w_instance));
+  ref_result = _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
 
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
@@ -1010,7 +1003,7 @@ void native_instance_unsynchronized_32bits(w_frame caller, w_method method) {
 
   w_Frame theFrame;
   w_frame frame = &theFrame;
-  w_long  long_result;
+  w_word  word_result;
   w_int idx = - method->exec.arg_i;
   volatile w_thread thread = caller->thread;
 
@@ -1019,13 +1012,12 @@ void native_instance_unsynchronized_32bits(w_frame caller, w_method method) {
   prepareNativeFrame(frame, thread, caller, method);
 
   thread->top = frame;
-  long_result = _call_instance(thread, (w_slot)caller->jstack_top, method);
+  word_result = _call_instance_32bits(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
   caller->jstack_top[0].s = stack_notrace;
-  // WAS: caller->jstack_top[0].c = *((w_word*)&long_result);
-  memcpy((w_word*)&caller->jstack_top[0].c, &long_result, sizeof(w_word));
+  caller->jstack_top[0].c = word_result;
   woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
   caller->jstack_top += 1;
   thread->top = caller;
@@ -1046,7 +1038,7 @@ void native_instance_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_instance(thread, (w_slot)caller->jstack_top, method);
+  result.l = _call_instance_64bits(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1073,7 +1065,7 @@ void native_instance_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_instance(thread, (w_slot)caller->jstack_top, method);
+  _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1089,7 +1081,6 @@ void native_static_synchronized_reference(w_frame caller, w_method method) {
   w_instance o;
   x_monitor m;
   volatile w_thread thread = caller->thread;
-  w_long long_result;
   w_instance ref_result;
 
   woempa(1, "Calling %M\n", method);
@@ -1107,9 +1098,7 @@ void native_static_synchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(thread, o, (w_slot)caller->jstack_top, method);
-  // WAS: ref_result = *((w_instance*)&long_result);
-  memcpy(&ref_result, &long_result, sizeof(w_instance));
+  ref_result = _call_static_reference(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
@@ -1136,7 +1125,7 @@ void native_static_synchronized_32bits(w_frame caller, w_method method) {
 
   w_Frame theFrame;
   w_frame frame = &theFrame;
-  w_long long_result;
+  w_word word_result;
   w_int idx = - method->exec.arg_i;
   w_instance o;
   x_monitor m;
@@ -1154,14 +1143,13 @@ void native_static_synchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(thread, o, (w_slot)caller->jstack_top, method);
+  word_result = _call_static_32bits(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
   caller->jstack_top[0].s = stack_notrace;
-  // WAS: caller->jstack_top[0].c = *((w_word*)&long_result);
-  memcpy((w_word*)&caller->jstack_top[0].c, &long_result, sizeof(w_word));
+  caller->jstack_top[0].c = word_result;
   woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
   caller->jstack_top += 1;
   thread->top = caller;
@@ -1190,7 +1178,7 @@ void native_static_synchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(thread, o, (w_slot)caller->jstack_top, method);
+  result.l = _call_static_64bits(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1226,7 +1214,7 @@ void native_static_synchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(thread, o, (w_slot)caller->jstack_top, method);
+  _call_static_reference(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   enterUnsafeRegion(thread);
@@ -1241,7 +1229,6 @@ void native_static_unsynchronized_reference(w_frame caller, w_method method) {
   w_frame frame = &theFrame;
   w_int idx = - method->exec.arg_i;
   volatile w_thread thread = caller->thread;
-  w_long long_result;
   w_instance ref_result;
 
   woempa(1, "Calling %M\n", method);
@@ -1253,9 +1240,7 @@ void native_static_unsynchronized_reference(w_frame caller, w_method method) {
   frame->jstack_top[0].c = 0;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
-  long_result = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
-  // WAS: ref_result  = *((w_instance*)&long_result);
-  memcpy(&ref_result, &long_result, sizeof(w_instance));
+  ref_result = _call_static_reference(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
     caller->jstack_top[idx].s = stack_notrace;
@@ -1280,7 +1265,7 @@ void native_static_unsynchronized_32bits(w_frame caller, w_method method) {
 
   w_Frame theFrame;
   w_frame frame = &theFrame;
-  w_long long_result;
+  w_word word_result;
   w_int idx = - method->exec.arg_i;
   volatile w_thread thread = caller->thread;
 
@@ -1290,13 +1275,12 @@ void native_static_unsynchronized_32bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  long_result = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  word_result = _call_static_32bits(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
   caller->jstack_top[0].s = stack_notrace;
-  // WAS: caller->jstack_top[0].c = ((w_word*)&long_result)[0];
-  memcpy((w_word*)&caller->jstack_top[0].c, &long_result, sizeof(w_word));
+  caller->jstack_top[0].c = word_result;
   woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
   caller->jstack_top += 1;
   thread->top = caller;
@@ -1317,7 +1301,7 @@ void native_static_unsynchronized_64bits(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  result.l = _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  result.l = _call_static_64bits(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
@@ -1344,7 +1328,7 @@ void native_static_unsynchronized_void(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  _call_static(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
+  _call_static_reference(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
