@@ -221,9 +221,8 @@ static inline void setDoubleField(w_instance parent, w_int slot, w_double value)
   w_memcpy(wordFieldPointer(parent, slot), &value, 8);
 }
 
-#define setWotsitField(parent,slot,value) memcpy(wordFieldPointer((parent), (slot)), &(value), sizeof(void*))
-
-#define clearWotsitField(parent,slot) memset(wordFieldPointer((parent), (slot)), 0, sizeof(void*))
+#define setWotsitField(parent,slot,value) (parent)[slot] = (w_word)(value)
+#define clearWotsitField(parent,slot) (parent)[slot] = 0
 
 w_clazz instance2clazz(w_instance ins);
 #include "clazz.h"
