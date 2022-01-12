@@ -2183,6 +2183,9 @@ void interpret(w_frame caller, w_method method) {
       tos[0].s = stack_trace;
       *current = in_ldc_w_string;
     }
+    else if (*tag & 0x0f == 8) {
+      wabort(ABORT_WONKA, "loading unresolved string constant!");
+    }
     else {
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_notrace;
@@ -2257,6 +2260,9 @@ void interpret(w_frame caller, w_method method) {
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_trace;
       current[-1] = in_ldc_string;
+    }
+    else if (*tag & 0x0f == 8) {
+      wabort(ABORT_WONKA, "loading unresolved string constant!");
     }
     else {
       tos[0].c = cclazz->values[i];
