@@ -157,12 +157,12 @@ ifeq ($(MATH), native)
 endif
 
 core-vm:
-	awk -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
-	awk -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)
-	awk -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes5.in > $(gendir)/core-classes.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes5.in > $(gendir)/core-classes.c
 else
-	awk -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes.in > $(gendir)/core-classes.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes.in > $(gendir)/core-classes.c
 endif
 	make -C src 
 	make -C hal 

@@ -41,8 +41,8 @@ $(mathobjdir) :
 	@mkdir -p $(mathobjdir)
 
 math-classes :
-	awk -f $(scriptdir)/math-classes-h.awk -f $(scriptdir)/common-classes-h.awk math-classes.in > $(gendir)/math-classes.h
-	awk -f $(scriptdir)/math-classes-c.awk -f $(scriptdir)/common-classes-c.awk math-classes.in > $(gendir)/math-classes.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/math-classes-h.awk -f $(scriptdir)/common-classes-h.awk math-classes.in > $(gendir)/math-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/math-classes-c.awk -f $(scriptdir)/common-classes-c.awk math-classes.in > $(gendir)/math-classes.c
 
 $(objects) : $(mathobjdir)/%.o : src/native/java/lang/%.c
 	$(CC) $(CFLAGS) -c $< -o $@

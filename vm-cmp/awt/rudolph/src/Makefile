@@ -39,11 +39,11 @@ objects = $(awtobjdir)/awt-classes.o
 mika : $(AWT_LIB) 
 
 $(objects) :
-	awk -f $(scriptdir)/awt-classes-h.awk -f $(scriptdir)/common-classes-h.awk $(AWT_TOP)/src/awt-classes.in > $(gendir)/awt-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/awt-classes-h.awk -f $(scriptdir)/common-classes-h.awk $(AWT_TOP)/src/awt-classes.in > $(gendir)/awt-classes.h
 ifeq ($(JAVA5_SUPPORT), true)
-	awk -f $(scriptdir)/awt-classes-c.awk -f $(scriptdir)/common-classes-c.awk $(AWT_TOP)/src/awt-classes5.in > $(gendir)/awt-classes.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/awt-classes-c.awk -f $(scriptdir)/common-classes-c.awk $(AWT_TOP)/src/awt-classes5.in > $(gendir)/awt-classes.c
 else
-	awk -f $(scriptdir)/awt-classes-c.awk -f $(scriptdir)/common-classes-c.awk $(AWT_TOP)/src/awt-classes.in > $(gendir)/awt-classes.c
+	awk -v JNI=$(JNI) -f $(scriptdir)/awt-classes-c.awk -f $(scriptdir)/common-classes-c.awk $(AWT_TOP)/src/awt-classes.in > $(gendir)/awt-classes.c
 endif
 	$(CC) -c -o $(awtobjdir)/awt-classes.o $(CFLAGS) $(gendir)/awt-classes.c
 	make -C $(AWT_TOP)/src/native
