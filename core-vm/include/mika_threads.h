@@ -145,8 +145,8 @@ w_int priority_j2k(w_int java_prio, w_int trim);
  * Each slot consists of two words: the slot contents (c) and the slot data type (s).
  */
 typedef struct w_Slot {
-  x_word c;
-  x_word s;
+  w_word c;
+  w_word s;
 } w_Slot;
 
 /*
