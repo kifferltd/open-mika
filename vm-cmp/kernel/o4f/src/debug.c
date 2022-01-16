@@ -57,7 +57,7 @@ static void initDebugUart(void) {
     xUARTConfig.ucWordlength = 8u;
     xUARTConfig.xParity = eUartParityNone;
     xUARTConfig.xStopbits = eUartStopBitsOne;
-    xUARTConfig.ucFlowControl = 0u; /* Disable flow control. */
+    xUARTConfig.ucFlowControl = 1u; /* Enable flow control. */
     iResult = iot_uart_ioctl(uart_handle, eUartSetConfig, &xUARTConfig);
     configASSERT( IOT_UART_SUCCESS == iResult );
 }
