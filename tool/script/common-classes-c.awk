@@ -202,6 +202,7 @@ function id2rtype(id) {
     descr=$2
     if($3) methods[thisclazz,method,descr] = $3
     id=descr2id(descr)
+    idmap[descr] = id
     if(!protos[id]) {
       static_plists[id]=id2splist(id)
       instance_plists[id]=id2iplist(id)
@@ -318,7 +319,7 @@ END {
 
   print "/* dispatchers */"
   for (id in protos) {
-    printf "void native_static_synchronized_%s(w_frame caller, w_method method) {\n", id
+    printf "void native_static_%s(w_frame caller, w_method method) {\n", id
     printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
     printf "  w_instance theClass;\n  x_monitor m = NULL;\n  volatile w_thread thread = caller->thread;\n "
     nonvoid = rtypes[id] != "void"
@@ -348,9 +349,7 @@ END {
       printf "  enterUnsafeRegion(thread);\n  caller->jstack_top += idx + 1;\n  thread->top = caller;\n    enterSafeRegion(thread);\n"
     }
     printf "}\n\n"
-  }
 
-  for (id in protos) {
     printf "void native_instance_%s(w_frame caller, w_method method) {\n", id
     printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
     printf "  w_instance o;\n  x_monitor m = NULL;\n  volatile w_thread thread = caller->thread;\n"
@@ -382,6 +381,49 @@ END {
     }
     printf "}\n\n"
   }
+
+#  printf "void (*static_%s_dispatchers[])(w_frame, w_method) = {\n", Module
+#  for (id in protos) {
+#    printf "native_static_%s,\n", id
+#    ididx[id] = ++idx
+#  }
+#  printf "};\n"
+#  printf "void (*instance_%s_dispatchers[])(w_frame, w_method) = {\n", Module
+#  for (id in protos) {
+#    printf "native_instance_%s,\n", id
+#  }
+#  printf "};\n"
+#
+#  printf "w_hashtable %s_dispatcher_hashtable;\n\n", Module
+#  printf "void fill%sDispatcherHastable() {\n", Module
+#  printf "  %s_dispatcher_hashtable = ht_create(\"hashtable:native dispatchers\", 97, NULL, NULL, 0, 0xffffffff);\n\n", Module
+#  for (descr in idmap) {
+#    printf "  w_string desc_string = cstring2String(\"%s\", %d);\n", descr, length(descr)
+#    printf "  ht_write_no_lock(%s_dispatcher_hashtable, (w_word)desc_string, %d);\n",Module, ididx[idmap[descr]]
+#  }
+#  printf "}\n"
+
+  printf "struct {\n"
+  printf "  w_string descr;\n"
+  printf "  w_callfun static_dispatcher;\n"
+  printf "  w_callfun instance_dispatcher;\n"
+  printf "} %s_native_dispatchers[] = {\n", Module
+  for (descr in idmap) {
+    printf "  { \"%s\", native_static_%s, native_instance_%s },\n", descr, idmap[descr], idmap[descr]
+  }
+  printf "  { NULL, NULL, NULL }\n};\n\n"
+
+  printf "void collect%sDispatchers(w_hashtable static_hashtable, w_hashtable instance_hashtable) {\n", Module
+  printf "  w_string descr_string;\n\n"
+  printf "  for (int i = 0; %s_native_dispatchers[i].descr; ++i) {\n", Module
+  printf "    descr_string = cstring2String(%s_native_dispatchers[i].descr, strlen(%s_native_dispatchers[i].descr));\n", Module, Module
+  printf "    woempa(7, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
+  printf "    ht_write_no_lock(static_hashtable, descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher);\n", Module
+  printf "    woempa(7, \"added (%%w, 0x%%08x) to static_hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher, static_hashtable->occupancy);\n", Module
+  printf "    ht_write_no_lock(instance_hashtable, descr_string, (w_word)%s_native_dispatchers[i].instance_dispatcher);\n", Module
+  printf "    woempa(7, \"added (%%w, 0x%%08x) to instance_hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher, instance_hashtable->occupancy);\n", Module
+  printf "  }\n"
+  printf "}\n\n"
 
   print "static struct {"
   print "  w_clazz *clazzptr;"

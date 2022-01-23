@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  #
+# Copyright (c) 2021, 2022 by KIFFER Ltd. All rights reserved.            #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -165,6 +165,12 @@ BEGIN {
 
 
 END {
+  print "#include \"dispatcher.h\"" 
+  print "#include \"hashtable.h\"" 
+  print ""
+  print "extern w_hashtable static_dispatchers_hashtable;"
+  print "extern w_hashtable instance_dispatchers_hashtable;"
+
   print " "
   print "/*"
   print "** For each clazz we declare:"

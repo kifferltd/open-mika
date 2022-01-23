@@ -753,6 +753,19 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
     }
   }
 
+  // logic using pre-computed dispatchers
+  w_word hit = ht_read(isSet(method->flags, ACC_STATIC) ? (w_word)static_dispatchers_hashtable : (w_word)instance_dispatchers_hashtable, method->desc);
+  if (!hit) {
+    wabort(ABORT_WONKA, "No dispatcher found for descriptor %w", method->desc);
+  }
+  else {
+    woempa(7, "Will call native code at %p using dispatcher at %0x08x\n", method->exec.function.void_fun, hit);
+    method->exec.dispatcher = (w_callfun)hit;
+    callMethod(caller, method);
+
+    return;
+  }
+
   if (isSet(method->flags, ACC_STATIC)) {
     i = 13;
   }
