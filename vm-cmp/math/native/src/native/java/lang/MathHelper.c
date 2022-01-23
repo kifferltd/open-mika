@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021 , 2022 by KIFFER Ltd. All rights reserved.           *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -208,4 +208,9 @@ w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, 
 void init_math(void) {
   collectMathFixups();
   loadMathClasses();
+  ht_lock(static_dispatchers_hashtable);
+  ht_lock(instance_dispatchers_hashtable);
+  collectMathDispatchers(static_dispatchers_hashtable, instance_dispatchers_hashtable);
+  ht_unlock(instance_dispatchers_hashtable);
+  ht_unlock(static_dispatchers_hashtable);
 }

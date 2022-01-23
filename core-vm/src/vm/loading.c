@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018, 2021      *
-* by KIFFER Ltd.  All rights reserved.                                    *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018, 2021,     *
+* 2022 by KIFFER Ltd.  All rights reserved.                               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -76,8 +76,13 @@ w_hashtable2k interface_hashtable;
 ** The initial size of \texttt{interface_hashtable}
 */
 #define INTERFACE_HT_SIZE 101
+ 
+/*
+** Two hashtables which map descriptors onto dispatchers.
+*/
+w_hashtable static_dispatchers_hashtable;
+w_hashtable instance_dispatchers_hashtable;
 
-// char     *bootdirname;
 char     *bootzipname;
 #ifdef USE_ZLIB
 unzFile bootzipfile;
@@ -967,6 +972,15 @@ void startLoading(void) {
 
   woempa(7, "Forced class loading complete, loaded %d classes; heap remaining = %d.\n",system_loaded_class_hashtable->occupancy, heap_remaining);
 
+  static_dispatchers_hashtable = ht_create("hashtable: static dispatchers", 97, NULL, NULL, 0, 0);
+  instance_dispatchers_hashtable = ht_create("hashtable: instance dispatchers", 97, NULL, NULL, 0, 0);
+  woempa(7, "Created hashtables for static and dynamic dispatchers.\n");
+  //ht_lock(static_dispatchers_hashtable);
+  //ht_lock(instance_dispatchers_hashtable);
+  woempa(7, "Locked hashtables, adding the dispatchers.\n");
+  collectCoreDispatchers(static_dispatchers_hashtable, instance_dispatchers_hashtable);
+  //ht_unlock(instance_dispatchers_hashtable);
+  //ht_unlock(static_dispatchers_hashtable);
 }
 
 /*
