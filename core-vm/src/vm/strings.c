@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2015 by         *
-* Chris Gray, KIFFER Ltd. All rights reserved.                            *
+* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2015, 2022      *
+* by Chris Gray, KIFFER Ltd. All rights reserved.                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -66,9 +66,24 @@ w_string string_BOGUS;
 static w_word hashString(w_string string);
 static w_size string_reclaim_callback(w_int requested, w_instance instance);
 
+#ifdef DEBUG
+#define ALLOC_STRING_REPORT_INTERVAL 10000
+static int counter;
+
+static void printAllocStringReport(w_size length) {
+  woempa(7, "this is a printAllocStringReport\n");
+}
+#endif
+
 static inline w_string allocString(w_size length, w_boolean is_latin1) {
 
   w_string string;
+#ifdef DEBUG
+  ++counter;
+  if ((counter % ALLOC_STRING_REPORT_INTERVAL) == 0) {
+    printAllocStringReport(length);
+  }
+#endif
   
   string = allocMem(offsetof(w_String, contents) + length * (is_latin1 ? sizeof(w_byte) : sizeof(w_char)));
   if (!string) {
@@ -145,16 +160,16 @@ void putw_char(w_char ch, w_ubyte **destination) {
     *(*destination)++ = 0x80;
   }
   else if( ch < 0x80) {
-    *(*destination)++ = ch;
+    *(*destination)++ = (w_ubyte) ch;
   }
   else if(ch < 0x800) {
-    *(*destination)++ = 0xC0+(ch >> 6);
-    *(*destination)++ = 0x80+(ch & 63);
+    *(*destination)++ = (w_ubyte) (0xC0+(ch >> 6));
+    *(*destination)++ = (w_ubyte) (0x80+(ch & 63));
   }
   else {
-    *(*destination)++ = 0xE0 + (ch >> 12);
-    *(*destination)++ = 0x80 + ((ch >> 6) & 63);
-    *(*destination)++ = 0x80 + (ch & 63);
+    *(*destination)++ = (w_ubyte) (0xE0 + (ch >> 12));
+    *(*destination)++ = (w_ubyte) (0x80 + ((ch >> 6) & 63));
+    *(*destination)++ = (w_ubyte) (0x80 + (ch & 63));
   }
 
 }
