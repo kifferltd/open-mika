@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2009, 2010, 2011, 2012, 2013, 2021 by KIFFER Ltd.         *
+* Copyright (c) 2009, 2010, 2011, 2012, 2013, 2021, 2022 by KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -217,8 +217,6 @@ typedef struct w_Wa {
   w_int count;
   w_int bytes;
   w_int errors;
-  w_int all_count;
-  w_int all_bytes;
   const char * function;
   w_int line;
 } w_Wa;
@@ -240,8 +238,7 @@ static x_boolean checkWalk(void * mem, void * arg) {
     return WONKA_TRUE;
   }    
 
-  woempa(1, "%d %p %s:%d size %d back %d\n", wa->all_count, chunk, chunk->file, chunk->line, chunk->size, chunk->back);
-  wa->all_count += 1;
+  woempa(1, "%p %s:%d size %d back %d\n", chunk, chunk->file, chunk->line, chunk->size, chunk->back);
 
   bad = 0;
   if (chunk->front != FRONT_FENCE) {
@@ -273,9 +270,6 @@ static x_boolean checkWalk(void * mem, void * arg) {
     }
   }
   else {
-//    wa->all_bytes += chunk->size + sizeof(w_Chunk);
-    wa->all_bytes += x_mem_size(chunk);
-//      wa->bytes += chunk->size + sizeof(w_Chunk);
     wa->bytes += x_mem_size(chunk);
     wa->count += 1;
   }
@@ -294,15 +288,13 @@ void _heapCheck(const char * function, const int line) {
   wa->count = 0;
   wa->bytes = 0;
   wa->errors = 0;
-  wa->all_count = 0;
-  wa->all_bytes = 0;
   wa->function = function;
   wa->line = line;
   previous = NULL;
   x_mem_walk(x_eternal, checkWalk, wa);
   walks += 1;
-  woempa(9, "%s %d : %d anon %d tagged, %d MB anon %d MB tagged, %d errors, %d scans.\n", function, line, wa->all_count, wa->count, wa->all_bytes / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
-  w_printf("%s %d : %d anon %d tagged, %d MB anon %d MB tagged, %d errors, %d scans.\n", function, line, wa->all_count, wa->count, wa->all_bytes / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
+  woempa(9, "%s %d : %d blocks, %d MB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
+  w_printf("%s %d : %d blocks, %d MB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
   
   if (wa->errors) {
     wabort(ABORT_WONKA, "x_mem_walk returned %d errors\n", wa->errors);
@@ -333,14 +325,12 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
     wa->count = 0;
     wa->bytes = 0;
     wa->errors = 0;
-    wa->all_bytes = 0;
-    wa->all_count = 0;
     previous = NULL;
     x_mem_walk(x_eternal, checkWalk, wa);
     walks += 1;
     errors += wa->errors;
     x_mem_unlock();
-    woempa(9, "%s.%d (alloc/release %p): Walked %d anon %d tagged chunks, %d MB anon %d Mb tagged, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->all_count - wa->count, wa->count, (wa->all_bytes - wa->bytes) / (1024 * 1024), wa->bytes / (1024 * 1024), wa->errors, walks);
+    woempa(9, "%s.%d (alloc/release %p): Walked %d chunks, %d Mb in use, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
     if (wa->errors) {
       wabort(ABORT_WONKA, "Found bad chunk. Stopping...\n");
     }
@@ -761,8 +751,6 @@ void reportMemStat(w_int type) {
   wa->count = 0;
   wa->bytes = 0;
   wa->errors = 0;
-  wa->all_count = 0;
-  wa->all_bytes = 0;
   for (i = 0; i < NUMBER_OF_BUCKETS; i++) {
     ht[i] = NULL;
   }
