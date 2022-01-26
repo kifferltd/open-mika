@@ -5,17 +5,17 @@ BEGIN {
   else {
   } 
 
-  desc2id["B"] = "b"
-  desc2id["C"] = "c"
-  desc2id["D"] = "d"
-  desc2id["F"] = "f"
-  desc2id["I"] = "i"
-  desc2id["J"] = "j"
-  desc2id["L"] = "l"
-  desc2id["S"] = "s"
-  desc2id["Z"] = "z"
-  desc2id["["] = "a"
-  desc2id["V"] = "v"
+  d2id["B"] = "b"
+  d2id["C"] = "c"
+  d2id["D"] = "d"
+  d2id["F"] = "f"
+  d2id["I"] = "i"
+  d2id["J"] = "j"
+  d2id["L"] = "l"
+  d2id["S"] = "s"
+  d2id["Z"] = "z"
+  d2id["["] = "a"
+  d2id["V"] = "v"
 
   id2type["b"] = "w_byte"
   id2type["c"] = "w_char"
@@ -37,8 +37,8 @@ function descr2id(descr) {
   id = ""
   while(cursor<rparen) {
     letter = substr(descr,cursor,1)
-    if(desc2id[letter]) {
-      id = sprintf("%s%s",id,desc2id[letter])
+    if(d2id[letter]) {
+      id = sprintf("%s%s",id,d2id[letter])
     }
     else {
       print "unexpected letter", letter
@@ -52,8 +52,8 @@ function descr2id(descr) {
   }
 
   letter=substr(descr,++cursor,1)
-  if(desc2id[letter]) {
-    id = sprintf("%s_%s",id,desc2id[letter])
+  if(d2id[letter]) {
+    id = sprintf("%s_%s",id,d2id[letter])
   }
   else {
       print "unexpected letter", letter
@@ -98,7 +98,7 @@ function id2iplist(id) {
 function id2splist(id) {
   cursor=1
   depth = length(id)-2
-  plist = "thread, theClass"
+  plist = "thread, target"
   while(depth){
     letter=substr(id,depth,1)
     switch (letter) {
@@ -319,16 +319,19 @@ END {
 
   print "/* dispatchers */"
   for (id in protos) {
+    printf "void native_static_%s(w_frame caller, w_method method);\n\n", id
     printf "void native_static_%s(w_frame caller, w_method method) {\n", id
+    printf "  volatile w_thread thread = caller->thread;\n"
     printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
-    printf "  w_instance theClass;\n  x_monitor m = NULL;\n  volatile w_thread thread = caller->thread;\n "
+    printf "  w_instance target = clazz2Class(frame->method->spec.declaring_clazz);\n"
+    printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"
     if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
     printf "  woempa(7, \"Calling %%M\\n\", method);\n  frame->jstack_base = caller->jstack_top;\n  prepareNativeFrame(frame, thread, caller, method);\n\n"
     printf "  threadMustBeSafe(thread);\n\n"
-    printf "  theClass = clazz2Class(frame->method->spec.declaring_clazz);\n"
-    printf "  if (isSet(method->flags, ACC_SYNCHRONIZED)) {\n    m = getMonitor(theClass);\n    x_monitor_eternal(m);\n  }\n\n  thread->top = frame;\n\n"
+    printf "  if (m) {\n    x_monitor_eternal(m);\n  }\n\n"
+    printf "  thread->top = frame;\n\n"
     printf "  frame->jstack_top[0].c = 0;\n  frame->jstack_top[0].s = stack_%strace;\n  frame->jstack_top += 1;\n", reference ? "" : "no"
     printf "  w_slot top = caller->jstack_top;\n"
     printf "  typedef %s (sfun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
@@ -350,16 +353,19 @@ END {
     }
     printf "}\n\n"
 
+    printf "void native_instance_%s(w_frame caller, w_method method);\n\n", id
     printf "void native_instance_%s(w_frame caller, w_method method) {\n", id
+    printf "  volatile w_thread thread = caller->thread;\n"
     printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
-    printf "  w_instance o;\n  x_monitor m = NULL;\n  volatile w_thread thread = caller->thread;\n"
+    printf "  w_instance target = (w_instance) caller->jstack_top[idx].c;\n"
+    printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"
     if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
     printf "  woempa(7, \"Calling %%M\\n\", method);\n  frame->jstack_base = caller->jstack_top;\n  prepareNativeFrame(frame, thread, caller, method);\n\n"
     printf "  threadMustBeSafe(thread);\n\n"
-    printf "  o = (w_instance) caller->jstack_top[idx].c;\n"
-    printf "  if (isSet(method->flags, ACC_SYNCHRONIZED)) {\n    m = getMonitor(o);\n    x_monitor_eternal(m);\n  }\n\n  thread->top = frame;\n\n"
+    printf "  if (m) {\n    x_monitor_eternal(m);\n  }\n\n"
+    printf "  thread->top = frame;\n\n"
     printf "  frame->jstack_top[0].c = 0;\n  frame->jstack_top[0].s = stack_%strace;\n  frame->jstack_top += 1;\n", reference ? "" : "no"
     printf "  w_slot top = caller->jstack_top;\n"
     printf "  typedef %s (ifun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
