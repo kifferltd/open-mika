@@ -293,8 +293,8 @@ void _heapCheck(const char * function, const int line) {
   previous = NULL;
   x_mem_walk(x_eternal, checkWalk, wa);
   walks += 1;
-  woempa(9, "%s %d : %d blocks, %d MB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
-  w_printf("%s %d : %d blocks, %d MB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
+  woempa(9, "%s %d : %d blocks, %d KiB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / 1024, wa->errors, walks);
+  w_printf("%s %d : %d blocks, %d KiB in use, %d errors, %d scans.\n", function, line, wa->count, wa->bytes / 1024, wa->errors, walks);
   
   if (wa->errors) {
     wabort(ABORT_WONKA, "x_mem_walk returned %d errors\n", wa->errors);
@@ -330,7 +330,7 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
     walks += 1;
     errors += wa->errors;
     x_mem_unlock();
-    woempa(9, "%s.%d (alloc/release %p): Walked %d chunks, %d Mb in use, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->count, wa->bytes / (1024 * 1024), wa->errors, walks);
+    woempa(9, "%s.%d (alloc/release %p): Walked %d chunks, %d KiB in use, %d chunks were in error. Made %d scans.\n", file, line, block2chunk(block), wa->count, wa->bytes / 1024, wa->errors, walks);
     if (wa->errors) {
       wabort(ABORT_WONKA, "Found bad chunk. Stopping...\n");
     }
