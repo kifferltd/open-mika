@@ -394,7 +394,7 @@ static void do_drem(w_Slot**);
 static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) { 
   frame->current = current;
   frame->jstack_top = tos;
-  woempa(9, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
+  woempa(1, "%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   if (woempa_bytecodecount > 1000000) w_printf("%M offset[%d] (%s)\n", frame->method, current - frame->method->exec.code, opcode_names[*current]);
   woempa_bytecodecount += 1; 
   if (!threadIsUnsafe(frame->thread)) { 
