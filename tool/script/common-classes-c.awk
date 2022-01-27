@@ -323,7 +323,7 @@ END {
     printf "void native_static_%s(w_frame caller, w_method method) {\n", id
     printf "  volatile w_thread thread = caller->thread;\n"
     printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
-    printf "  w_instance target = clazz2Class(frame->method->spec.declaring_clazz);\n"
+    printf "  w_instance target = clazz2Class(method->spec.declaring_clazz);\n"
     printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"
