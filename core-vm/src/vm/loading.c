@@ -78,10 +78,9 @@ w_hashtable2k interface_hashtable;
 #define INTERFACE_HT_SIZE 101
  
 /*
-** Two hashtables which map descriptors onto dispatchers.
+** Hashtable which maps descriptors onto dispatchers.
 */
-w_hashtable static_dispatchers_hashtable;
-w_hashtable instance_dispatchers_hashtable;
+w_hashtable dispatchers_hashtable;
 
 char     *bootzipname;
 #ifdef USE_ZLIB
@@ -412,7 +411,6 @@ w_int mustBeLoaded(volatile w_clazz *clazzptr) {
 }
 
 static void loaded_class_iterator(w_word key, w_word value) {
-//  w_string name = (w_string) key;
   w_clazz clazz = (w_clazz)value;
   if (!clazz->loader) {
     clazz->loader = systemClassLoader;
@@ -972,15 +970,8 @@ void startLoading(void) {
 
   woempa(7, "Forced class loading complete, loaded %d classes; heap remaining = %d.\n",system_loaded_class_hashtable->occupancy, heap_remaining);
 
-  static_dispatchers_hashtable = ht_create("hashtable: static dispatchers", 97, NULL, NULL, 0, 0);
-  instance_dispatchers_hashtable = ht_create("hashtable: instance dispatchers", 97, NULL, NULL, 0, 0);
-  woempa(7, "Created hashtables for static and dynamic dispatchers.\n");
-  //ht_lock(static_dispatchers_hashtable);
-  //ht_lock(instance_dispatchers_hashtable);
-  woempa(7, "Locked hashtables, adding the dispatchers.\n");
-  collectCoreDispatchers(static_dispatchers_hashtable, instance_dispatchers_hashtable);
-  //ht_unlock(instance_dispatchers_hashtable);
-  //ht_unlock(static_dispatchers_hashtable);
+  dispatchers_hashtable = ht_create("hashtable: static dispatchers", 97, NULL, NULL, 0, 0);
+  collectCoreDispatchers(dispatchers_hashtable);
 }
 
 /*

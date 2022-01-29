@@ -63,10 +63,11 @@ function descr2id(descr) {
 }
 
 function id2iplist(id) {
+  cursor = 1
   depth = length(id)-1
   plist = sprintf("thread, (w_instance) top[-%d].c", depth--)
   while(depth){
-    letter=substr(id,depth,1)
+    letter=substr(id,cursor++,1)
     switch (letter) {
       case "a":
       case "b":
@@ -100,7 +101,7 @@ function id2splist(id) {
   depth = length(id)-2
   plist = "thread, target"
   while(depth){
-    letter=substr(id,depth,1)
+    letter=substr(id,cursor++,1)
     switch (letter) {
       case "a":
       case "b":
@@ -267,7 +268,7 @@ END {
       if(a[1] == thisclazz) {
         if (!have_fixup1) {
           have_fixup1 = 1;
-          printf "void fixup1_%s(w_clazz clazz) {\n\n", thisclazz
+          printf "static void fixup1_%s(w_clazz clazz) {\n\n", thisclazz
         }
         printf "  %s = findFieldOffset(clazz, \"%s\");\n",realfields[cf],a[2]
       }        
@@ -279,7 +280,7 @@ END {
     if (j) {
       if (!have_fixup1) {
         have_fixup1 = 1;
-        printf "void fixup1_%s(w_clazz clazz) {\n\n", thisclazz
+        printf "static void fixup1_%s(w_clazz clazz) {\n\n", thisclazz
       }
       for(i in ff) {
         printf "  woempa(1, \"clazz '%s' wotsit field '%s' at index %%d.\\n\", clazz->instanceSize - clazz->numReferenceFields);\n", thisclazz, ff[i]
@@ -299,7 +300,7 @@ END {
       printf "}\n\n"
     }
     if (mcount) {
-      printf "void fixup2_%s(w_clazz clazz) {\n\n", thisclazz
+      printf "static void fixup2_%s(w_clazz clazz) {\n\n", thisclazz
       printf "  registerNatives(clazz, %s_methods, %d);\n", thisclazz, mcount
       clazz_fixup2[c] = "fixup2_" thisclazz;
       printf "}\n\n"
@@ -311,7 +312,7 @@ END {
   print "  frame->jstack_top = frame->jstack_base;\n  frame->jstack_base[0].s = stack_notrace;\n "
   printf "  frame->auxstack_base = caller->auxstack_top;\n  frame->auxstack_top = caller->auxstack_top;\n\n"
   printf "#ifdef TRACE_CLASSLOADERS\n"
-  printf "  {\n    w_instance loader = isSet(method->flags, ACC_STATIC)\n        ? method->spec.declaring_clazz->loader\n        : instance2clazz(frame->jstack_base[- method->exec.arg_i].c)->loader;\n"
+  printf "  {\n    w_instance loader = isSet(method->flags, ACC_STATIC)\n        ? method->spec.declaring_clazz->loader\n        : instance2clazz((w_instance)frame->jstack_base[- method->exec.arg_i].c)->loader;\n"
   printf "    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {\n      frame->udcl = loader;\n    }\n"
   printf "    else {\n      frame->udcl = caller->udcl;\n    }\n  }\n"
   printf "#endif\n"
@@ -319,115 +320,88 @@ END {
 
   print "/* dispatchers */"
   for (id in protos) {
-    printf "void native_static_%s(w_frame caller, w_method method);\n\n", id
-    printf "void native_static_%s(w_frame caller, w_method method) {\n", id
+    printf "void native_dispatcher_%s(w_frame caller, w_method method);\n\n", id
+    printf "void native_dispatcher_%s(w_frame caller, w_method method) {\n", id
     printf "  volatile w_thread thread = caller->thread;\n"
-    printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
-    printf "  w_instance target = clazz2Class(method->spec.declaring_clazz);\n"
+    printf "  w_Frame theFrame;\n"
+    printf "  w_frame frame = &theFrame;\n"
+    printf "  w_int idx = - method->exec.arg_i;\n"
+    printf "  w_instance target = isSet(method->flags, ACC_STATIC) ? clazz2Class(method->spec.declaring_clazz) : (w_instance) caller->jstack_top[idx].c;\n"
     printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"
     if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
-    printf "  woempa(7, \"Calling %%M\\n\", method);\n  frame->jstack_base = caller->jstack_top;\n  prepareNativeFrame(frame, thread, caller, method);\n\n"
+    printf "  woempa(7, \"Calling %%M\\n\", method);\n"
+    printf "  frame->jstack_base = caller->jstack_top;\n"
+    printf "  prepareNativeFrame(frame, thread, caller, method);\n\n"
     printf "  threadMustBeSafe(thread);\n\n"
-    printf "  if (m) {\n    x_monitor_eternal(m);\n  }\n\n"
+    printf "  if (m) {\n"
+    printf "    x_monitor_eternal(m);\n"
+    printf "  }\n\n"
     printf "  thread->top = frame;\n\n"
-    printf "  frame->jstack_top[0].c = 0;\n  frame->jstack_top[0].s = stack_%strace;\n  frame->jstack_top += 1;\n", reference ? "" : "no"
+    printf "  frame->jstack_top[0].c = 0;\n"
+    printf "  frame->jstack_top[0].s = stack_%strace;\n", reference ? "" : "no"
+    printf "  frame->jstack_top += 1;\n"
     printf "  w_slot top = caller->jstack_top;\n"
-    printf "  typedef %s (sfun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
-    printf "  sfun_%s *sf%s = (sfun_%s*)method->exec.function.word_fun;\n",id,id,id
+
+    printf "  if (isSet(method->flags, ACC_STATIC)) {\n"
+    printf "    typedef %s (sfun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
+    printf "    sfun_%s *sf%s = (sfun_%s*)method->exec.function.word_fun;\n",id,id,id
     if (nonvoid) printf "  result ="
-    printf "  sf%s(%s);\n",id,static_plists[id]
-    printf "  if (m) {\n    x_monitor_exit(m);\n  }\n\n";
+    printf "    sf%s(%s);\n",id,static_plists[id]
+    printf "  }\n"
+    printf "  else {\n"
+    printf "    typedef %s (ifun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
+    printf "    ifun_%s *if%s = (ifun_%s*)method->exec.function.word_fun;\n",id,id,id
+    if (nonvoid) printf "  result ="
+    printf "    if%s(%s);\n",id,instance_plists[id]
+    printf "  }\n"
+    
+    printf "  if (m) {\n"
+    printf "    x_monitor_exit(m);\n"
+    printf "  }\n\n";
     if (nonvoid) {
       printf "  if (thread->exception) {\n    woempa(7, \"%%m threw %%e, ignoring return value\\n\", method, thread->exception);\n"
       printf "    caller->jstack_top[idx].s = stack_notrace;\n    caller->jstack_top += idx + 1;\n    thread->top = caller;\n  }\n"
-      printf "  else {\n    enterUnsafeRegion(thread);\n"
+      printf "  else {\n"
+      printf "    enterUnsafeRegion(thread);\n"
       printf "    woempa(7, \"%%m result = %%08x\\n\", method, result);\n"
-      printf "    caller->jstack_top[idx].c = (w_word)result;\n    caller->jstack_top[idx].s = stack_%strace;\n    caller->jstack_top += idx + 1;\n", reference ? "" : "no"
+      printf "    caller->jstack_top[idx].c = (w_word)result;\n"
+      printf "    caller->jstack_top[idx].s = stack_%strace;\n", reference ? "" : "no"
+      printf "    caller->jstack_top += idx + 1;\n"
       if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
-      printf "    thread->top = caller;\n    enterSafeRegion(thread);\n  }\n"
+      printf "    thread->top = caller;\n"
+      printf "    enterSafeRegion(thread);\n"
+      printf "  }\n"
     }
     else {
-      printf "  enterUnsafeRegion(thread);\n  caller->jstack_top += idx + 1;\n  thread->top = caller;\n    enterSafeRegion(thread);\n"
+      printf "  enterUnsafeRegion(thread);\n"
+      printf "  caller->jstack_top += idx + 1;\n"
+      printf "  thread->top = caller;\n"
+      printf "  enterSafeRegion(thread);\n"
     }
     printf "}\n\n"
 
-    printf "void native_instance_%s(w_frame caller, w_method method);\n\n", id
-    printf "void native_instance_%s(w_frame caller, w_method method) {\n", id
-    printf "  volatile w_thread thread = caller->thread;\n"
-    printf "  w_Frame theFrame;\n  w_frame frame = &theFrame;\n  w_int idx = - method->exec.arg_i;\n"
-    printf "  w_instance target = (w_instance) caller->jstack_top[idx].c;\n"
-    printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
-    nonvoid = rtypes[id] != "void"
-    reference = rtypes[id] == "w_instance"
-    if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
-    printf "  woempa(7, \"Calling %%M\\n\", method);\n  frame->jstack_base = caller->jstack_top;\n  prepareNativeFrame(frame, thread, caller, method);\n\n"
-    printf "  threadMustBeSafe(thread);\n\n"
-    printf "  if (m) {\n    x_monitor_eternal(m);\n  }\n\n"
-    printf "  thread->top = frame;\n\n"
-    printf "  frame->jstack_top[0].c = 0;\n  frame->jstack_top[0].s = stack_%strace;\n  frame->jstack_top += 1;\n", reference ? "" : "no"
-    printf "  w_slot top = caller->jstack_top;\n"
-    printf "  typedef %s (ifun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
-    printf "  ifun_%s *if%s = (ifun_%s*)method->exec.function.word_fun;\n",id,id,id
-    if (nonvoid) printf "  result ="
-    printf "  if%s(%s);\n",id,instance_plists[id]
-    printf "  if (m) {\n    x_monitor_exit(m);\n  }\n\n";
-    if (nonvoid) {
-      printf "  if (thread->exception) {\n    woempa(7, \"%%m threw %%e, ignoring return value\\n\", method, thread->exception);\n"
-      printf "    caller->jstack_top[idx].s = stack_notrace;\n    caller->jstack_top += idx + 1;\n    thread->top = caller;\n  }\n"
-      printf "  else {\n    enterUnsafeRegion(thread);\n"
-      printf "    woempa(7, \"%%m result = %%08x\\n\", method, result);\n"
-      printf "    caller->jstack_top[idx].c = (w_word)result;\n    caller->jstack_top[idx].s = stack_%strace;\n    caller->jstack_top += idx + 1;\n", reference ? "" : "no"
-      if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
-      printf "    thread->top = caller;\n    enterSafeRegion(thread);\n  }\n"
-    }
-    else {
-      printf "  enterUnsafeRegion(thread);\n  caller->jstack_top += idx + 1;\n  thread->top = caller;\n    enterSafeRegion(thread);\n"
-    }
-    printf "}\n\n"
   }
 
-#  printf "void (*static_%s_dispatchers[])(w_frame, w_method) = {\n", Module
-#  for (id in protos) {
-#    printf "native_static_%s,\n", id
-#    ididx[id] = ++idx
-#  }
-#  printf "};\n"
-#  printf "void (*instance_%s_dispatchers[])(w_frame, w_method) = {\n", Module
-#  for (id in protos) {
-#    printf "native_instance_%s,\n", id
-#  }
-#  printf "};\n"
-#
-#  printf "w_hashtable %s_dispatcher_hashtable;\n\n", Module
-#  printf "void fill%sDispatcherHastable() {\n", Module
-#  printf "  %s_dispatcher_hashtable = ht_create(\"hashtable:native dispatchers\", 97, NULL, NULL, 0, 0xffffffff);\n\n", Module
-#  for (descr in idmap) {
-#    printf "  w_string desc_string = cstring2String(\"%s\", %d);\n", descr, length(descr)
-#    printf "  ht_write_no_lock(%s_dispatcher_hashtable, (w_word)desc_string, %d);\n",Module, ididx[idmap[descr]]
-#  }
-#  printf "}\n"
 
-  printf "struct {\n"
-  printf "  w_string descr;\n"
-  printf "  w_callfun static_dispatcher;\n"
-  printf "  w_callfun instance_dispatcher;\n"
+  printf "static struct {\n"
+  printf "  const char *descr;\n"
+  printf "  w_callfun dispatcher;\n"
   printf "} %s_native_dispatchers[] = {\n", Module
   for (descr in idmap) {
-    printf "  { \"%s\", native_static_%s, native_instance_%s },\n", descr, idmap[descr], idmap[descr]
+    printf "  { \"%s\", native_dispatcher_%s", descr, idmap[descr]
+    printf " },\n"
   }
   printf "  { NULL, NULL, NULL }\n};\n\n"
 
-  printf "void collect%sDispatchers(w_hashtable static_hashtable, w_hashtable instance_hashtable) {\n", Module
+  printf "void collect%sDispatchers(w_hashtable hashtable, w_hashtable instance_hashtable) {\n", Module
   printf "  w_string descr_string;\n\n"
   printf "  for (int i = 0; %s_native_dispatchers[i].descr; ++i) {\n", Module
   printf "    descr_string = cstring2String(%s_native_dispatchers[i].descr, strlen(%s_native_dispatchers[i].descr));\n", Module, Module
   printf "    woempa(7, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
-  printf "    ht_write_no_lock(static_hashtable, descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher);\n", Module
-  printf "    woempa(7, \"added (%%w, 0x%%08x) to static_hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher, static_hashtable->occupancy);\n", Module
-  printf "    ht_write_no_lock(instance_hashtable, descr_string, (w_word)%s_native_dispatchers[i].instance_dispatcher);\n", Module
-  printf "    woempa(7, \"added (%%w, 0x%%08x) to instance_hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].static_dispatcher, instance_hashtable->occupancy);\n", Module
+  printf "    ht_write_no_lock(hashtable, (w_word)descr_string, (w_word)%s_native_dispatchers[i].dispatcher);\n", Module
+  printf "    woempa(7, \"added (%%w, 0x%%08x) to descriptors hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].dispatcher, hashtable->occupancy);\n", Module
   printf "  }\n"
   printf "}\n\n"
 

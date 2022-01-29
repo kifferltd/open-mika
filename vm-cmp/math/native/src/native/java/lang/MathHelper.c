@@ -208,9 +208,5 @@ w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, 
 void init_math(void) {
   collectMathFixups();
   loadMathClasses();
-  ht_lock(static_dispatchers_hashtable);
-  ht_lock(instance_dispatchers_hashtable);
-  collectMathDispatchers(static_dispatchers_hashtable, instance_dispatchers_hashtable);
-  ht_unlock(instance_dispatchers_hashtable);
-  ht_unlock(static_dispatchers_hashtable);
+  collectMathDispatchers(dispatchers_hashtable);
 }

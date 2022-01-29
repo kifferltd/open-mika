@@ -754,11 +754,11 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   }
 
   // logic using pre-computed dispatchers
-  woempa(7, "Looking up descriptor %w in %s_dispatchers_hashtable\n", method->desc, isSet(method->flags, ACC_STATIC) ? "static" : "instance");
-  w_word hit = ht_read(isSet(method->flags, ACC_STATIC) ? static_dispatchers_hashtable : instance_dispatchers_hashtable, (w_word)method->desc);
-  if (hit) {
-    woempa(7, "Will call native code at %p using dispatcher at %0x08x\n", method->exec.function.void_fun, hit);
-    method->exec.dispatcher = (w_callfun)hit;
+  woempa(7, "Looking up descriptor %w in dispatchers_hashtable\n", method->desc);
+  w_word disp = ht_read(dispatchers_hashtable, (w_word)method->desc);
+  if (disp) {
+    woempa(7, "Will call native code at %p using dispatcher at %0x08\n", method->exec.function.void_fun, disp);
+    method->exec.dispatcher = (w_callfun)disp;
     callMethod(caller, method);
 
     return;

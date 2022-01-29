@@ -63,6 +63,8 @@ function parse(a) {
 }
 
 BEGIN {
+  printf "void collect%sDispatchers(w_hashtable hashtable);\n", Module
+  printf "w_clazz loadOne%sClass(const char *name);\n", Module
   print " "
   print "/*"
   print "** Prototypes for the native methods"
@@ -163,13 +165,12 @@ BEGIN {
   } 
 }
 
-
 END {
   print "#include \"dispatcher.h\"" 
   print "#include \"hashtable.h\"" 
   print ""
-  print "extern w_hashtable static_dispatchers_hashtable;"
-  print "extern w_hashtable instance_dispatchers_hashtable;"
+  print "extern w_hashtable dispatchers_hashtable;"
+#  print "extern w_hashtable instance_dispatchers_hashtable;"
 
   print " "
   print "/*"
