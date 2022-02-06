@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2022 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -97,6 +97,10 @@ w_instance File_get_CWD (w_thread thread, w_instance thisFile) {
 }
 
 w_instance File_get_fsroot (w_thread thread, w_instance thisFile) {
+  // special case: fsroot = "/" really means fsroot = "", i.e. "{}/" maps to "/" (not "//")
+  if (strlen(fsroot) == 1 && fsroot[0] == '/') {
+     return registerString(string_EMPTY);
+  }
   return getStringInstance(utf2String(fsroot, strlen(fsroot)));
 }
 
@@ -113,7 +117,8 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   char *entryname;
   w_string entry_string;
   w_instance entry;
-  w_wordset *temp = NULL;
+  w_wordet ws = NULL;
+  w_wordset *temp = &ws;
   w_size numberOfFiles = 0;
   struct vfs_STAT statbuf;
 
@@ -128,26 +133,28 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   FF_FindData_t *finddata_ptr = x_mem_calloc(sizeof(FF_FindData_t));
   if (ff_findfirst(pathname, finddata_ptr ) == 0 ) {
     do {
-      entryname = finddata_ptr->pcFileName;
+      entryname = (char*)finddata_ptr->pcFileName;
       entry_string = utf2String(entryname, strlen(entryname));
-      addToWordset(&temp, (w_word) entry_string);
+      addToWordset(temp, (w_word) entry_string);
     } while( ff_findnext( finddata_ptr ) == 0 );
   }
   // else we will return an empty array 
     
-  enterUnsafeRegion(thread);
-  result = allocArrayInstance_1d(thread, clazzArrayOf_String, sizeOfWordset(&temp));
-  enterSafeRegion(thread);
+  if (!wordsetIsEmpty(temp)) {
+    enterUnsafeRegion(thread);
+    result = allocArrayInstance_1d(thread, clazzArrayOf_String, sizeOfWordset(temp));
+    enterSafeRegion(thread);
+  }
 
-  for (i = 0; !wordsetIsEmpty(&temp); ++i) {
-    entry_string = (w_string) takeFirstFromWordset(&temp);
+  for (i = 0; !wordsetIsEmpty(temp); ++i) {
+    entry_string = (w_string) takeFirstFromWordset(temp);
     entry = getStringInstance(entry_string);
     setArrayReferenceField(result, entry, i++);
     deregisterString(entry_string);
     removeLocalReference(thread, entry);
   }
   x_mem_free(finddata_ptr);
-  releaseWordset(&temp);
+  releaseWordset(temp);
 
   return result;
 }
@@ -310,7 +317,7 @@ w_boolean File_mkdir(w_thread thread, jobject thisFile) {
   
   pathname = getFileName(thisFile);	  
 
-  rc = vfs_mkdir((w_ubyte *)pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO);
+  rc = vfs_mkdir(pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO);
   result = (rc != -1);
 
   freeFileName(pathname);
