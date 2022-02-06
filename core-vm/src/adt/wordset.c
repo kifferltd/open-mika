@@ -63,41 +63,34 @@ w_boolean addToWordset(w_wordset* wordset, w_word what) {
 /** Remove first word from a waitset.  Returns the word or 0 if the set was empty.
 */
 w_word takeFirstFromWordset(w_wordset* wordset) {
-  if (*wordset && (*wordset)->occupancy) {
-    w_word *w = (w_word*)((*wordset)->contents);
-    w_int   n = ((*wordset)->occupancy) / sizeof(w_word);
-    w_word result;
-
-    woempa(1,"Wordset %p contains %d items\n",*wordset,(*wordset)->occupancy / sizeof(w_word));
-    result = w[0];
-    woempa(1,"Removed front element 0x%08x\n",result);
-    if (n > 1) {
-      w[0] = w[n-1];
-      woempa(1,"  -- replaced with 0x%08x\n",w[0]);
-    }
-    (*wordset)->occupancy -= sizeof(w_word);
-
-    return result;
-
-  }
-  else {
-
+  if (wordsetIsEmpty(wordset)) {
     return 0;
-
   }
+  w_word *w = (w_word*)((*wordset)->contents);
+  w_int   n = ((*wordset)->occupancy) / sizeof(w_word);
+  w_word result;
+
+  woempa(1,"Wordset %p contains %d items\n",*wordset,(*wordset)->occupancy / sizeof(w_word));
+  result = w[0];
+  woempa(1,"Removed front element 0x%08x\n",result);
+  if (n > 1) {
+    w[0] = w[n-1];
+    woempa(1,"  -- replaced with 0x%08x\n",w[0]);
+  }
+  (*wordset)->occupancy -= sizeof(w_word);
+
+  return result;
 }
 
 /** Look for a word in a wordset.  Returns TRUE iff the word was found, FALSE otherwise.
 */
 w_boolean isInWordset(w_wordset* wordset, w_word what) {
+  if (wordsetIsEmpty(wordset)) {
+    return FALSE;
+  }
+
   w_word *w;
   w_size  i;
-
-  if (*wordset == NULL) {
-
-    return WONKA_FALSE;
-
-  }
 
   w = (w_word*)((*wordset)->contents);
   for (i = 0; i < ((*wordset)->occupancy) / sizeof(w_word); ++i) {
@@ -114,6 +107,10 @@ w_boolean isInWordset(w_wordset* wordset, w_word what) {
 /** Remove a word from a wordset, if it is present.  Returns TRUE iff the word was found.
 */
 w_boolean removeFromWordset(w_wordset* wordset, w_word what) {
+  if (wordsetIsEmpty(wordset)) {
+    return FALSE;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
   w_int   n = ((*wordset)->occupancy) / sizeof(w_word);
   w_int   i;
@@ -135,13 +132,19 @@ w_boolean removeFromWordset(w_wordset* wordset, w_word what) {
 ** (Sets \texttt{*wordset} to \texttt{NULL}.
 */
 void releaseWordset(w_wordset* wordset) {
-  releaseMem(*wordset);
-  *wordset = NULL;
+  if (wordset && *wordset) {
+    releaseMem(*wordset);
+    *wordset = NULL;
+  }
 }
 /**
- ** Returns the i'th element of a wordset.
+ ** Returns the i'th element of a wordset. Will return 0 if wordset or *wordset is NULL.
  */
 w_word elementOfWordset(w_wordset* wordset, w_int i) {
+  if (wordsetIsEmpty(wordset)) {
+    return 0;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
 #ifdef RUNTIME_CHECKS
   w_int   n = *wordset ? ((*wordset)->occupancy) / sizeof(w_word) : 0;
@@ -154,9 +157,13 @@ w_word elementOfWordset(w_wordset* wordset, w_int i) {
 }
 
 /**
- ** Modify the i'th element of a wordset.
+ ** Modify the i'th element of a wordset. Does nothing if wordset or *wordset is NULL.
  */
 void modifyElementOfWordset(w_wordset* wordset, w_int i, w_word val) {
+  if (wordsetIsEmpty(wordset)) {
+    return;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
 #ifdef RUNTIME_CHECKS
   w_int   n = *wordset ? ((*wordset)->occupancy) / sizeof(w_word) : 0;
@@ -170,6 +177,10 @@ void modifyElementOfWordset(w_wordset* wordset, w_int i, w_word val) {
 /** Remove a the n'th element from a wordset.
 */
 void removeWordsetElementAt(w_wordset* wordset, w_int i) {
+  if (wordsetIsEmpty(wordset)) {
+    return;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
 #ifdef RUNTIME_CHECKS
   w_int   n = *wordset ? ((*wordset)->occupancy) / sizeof(w_word) : 0;
@@ -187,6 +198,10 @@ void removeWordsetElementAt(w_wordset* wordset, w_int i) {
 /** Sort a Wordset. Will need to be re-sorted if anything is added or removed.
 */
 void sortWordset(w_wordset* wordset) {
+  if (wordsetIsEmpty(wordset)) {
+    return;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
   w_int   n = (*wordset)->occupancy;
   w_int   i;
@@ -204,10 +219,14 @@ void sortWordset(w_wordset* wordset) {
 }
 
 /*
-** Take the last word from a wordset (must not be empty!).
-** Leaves the other elements undisturbed.
+** Take the last word from a wordset, leavingthe other elements undisturbed.
+** Will return 0 if wordset or *wordset is NULL.
 */
 w_word takeLastFromWordset(w_wordset* wordset) {
+  if (wordsetIsEmpty(wordset)) {
+    return 0;
+  }
+
   w_word *w = (w_word*)((*wordset)->contents);
   w_word result = w[sizeOfWordset(wordset) - 1];
 
@@ -220,6 +239,6 @@ w_word takeLastFromWordset(w_wordset* wordset) {
 ** Find out how many items are in a wordset.
 */
 w_size sizeOfWordset(w_wordset *wordset) {
-  return (*wordset) ? (*wordset)->occupancy / sizeof(w_word) : 0;
+  return wordset && (*wordset) ? (*wordset)->occupancy / sizeof(w_word) : 0;
 }
 

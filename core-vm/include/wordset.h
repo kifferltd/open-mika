@@ -74,7 +74,7 @@ w_size sizeOfWordset(w_wordset *wordset);
 ** Sometimes we only care whether a wordset is empty or not.
 */
 inline static w_boolean wordsetIsEmpty(w_wordset *wordset) {
-  return !(*wordset) || (*wordset)->occupancy == 0;
+  return !wordset || !(*wordset) || !(*wordset)->occupancy;
 }
 
 /** Release the memory used by a Wordset
