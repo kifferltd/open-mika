@@ -117,7 +117,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   char *entryname;
   w_string entry_string;
   w_instance entry;
-  w_wordet ws = NULL;
+  w_wordset ws = NULL;
   w_wordset *temp = &ws;
   w_size numberOfFiles = 0;
   struct vfs_STAT statbuf;
