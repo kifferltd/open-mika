@@ -1,7 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2005, 2006, 2008, 2009 by /k/ Embedded Java         *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2008, 2009, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,22 +9,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 package wonka.vm;
@@ -63,8 +60,8 @@ public final class SystemClassLoader extends ClassLoader {
   private static Object[] bootclasspath;
 
   /**
-   ** The path to the bootstrap zipfile. For this file we don't create a 
-   ** JarFile object, we use the native bootstrap loader instead.
+   ** The absolute path to the bootstrap zipfile. For this file we don't 
+   ** create a JarFile object, we use the native bootstrap loader instead.
    */
   private static String bootstrap_zipfile_path;
 
@@ -145,23 +142,31 @@ public final class SystemClassLoader extends ClassLoader {
 
     while (true) {
       int    colon = bcp.indexOf(':');
-      String s = colon < 0 ? bcp : bcp.substring(0, colon);
-      if (s.endsWith("/")) {
-        File f = new File(s);
-        if (f.isDirectory()) {
-          list.add(f);
-        }
+      File f = new File(colon < 0 ? bcp : bcp.substring(0, colon));
+      if (!f.exists()) {
+        Etc.woempa(7, "SystemClassLoader: " + f + " does not exist, ignoring it");
+        continue;
+      }
+
+      if (f.isDirectory()) {
+        Etc.woempa(7, "SystemClassLoader: adding directory " + f + " to bootclasspath");
+        list.add(f);
       }
       else {
         try {
-          JarFile jf = new JarFile(s, false);
           if (bootstrap_zipfile_path == null) {
-            bootstrap_zipfile_path = s;
+            bootstrap_zipfile_path = f.getAbsolutePath();
+            Etc.woempa(7, "SystemClassLoader: adding bootstrap file " + f + " to bootclasspath");
+            list.add(bootstrap_zipfile_path);
           }
-          list.add(jf);
+          else {
+            JarFile jf = new JarFile(f, false);
+            Etc.woempa(7, "SystemClassLoader: adding jarfile " + f + " to bootclasspath");
+            list.add(jf);
+          }
         }
         catch (IOException ioe) {
-//          Etc.woempa(9, "SystemClassLoader/<init>: unable to create JarFile" + "(" + s + ") : " + ioe);
+          Etc.woempa(9, "SystemClassLoader/<init>: unable to create JarFile" + "(" + f + ") : " + ioe);
         }
       }
 
@@ -193,46 +198,50 @@ public final class SystemClassLoader extends ClassLoader {
 
     for (int i = 0; i < bootclasspath.length; ++i) {
       Object bootclasspath_entry = bootclasspath[i];
-      //Etc.woempa(9, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry);
+      Etc.woempa(7, "findClass(" + filename + "): checking bootclasspath[" + i + "] = " + bootclasspath_entry.getClass() + " " + bootclasspath_entry);
       if (bootclasspath_entry == bootstrap_zipfile_path) {
+        Etc.woempa(7, "That's the bootclasspath zipfile, calling getBootstrapFile(" + filename + ")");
         bytes = getBootstrapFile(filename);
       }
       else {
-        try {
+        if (bootclasspath_entry instanceof JarFile) {
           JarFile jf = (JarFile)bootclasspath_entry;
+          Etc.woempa(7, "It's a JarFile, try to find entry " + filename);
           try {
             JarEntry je = jf.getJarEntry(filename);
             if (je != null){
               int length = (int)je.getSize();
               in = jf.getInputStream(je);
-              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
+              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found " + filename + " in " + jf + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
             }
             else {
-              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
+              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed to find file " + filename + " in " + jf);
             }
           } catch (IOException e){
             e.printStackTrace();
           }
-        } catch (ClassCastException cce) {
-          File f = new File(bootclasspath_entry + filename);
+        } else if (((File)bootclasspath_entry).isDirectory()) {
+          Etc.woempa(7, "Not a JarFile, try looking for a file called " + filename + " in " + bootclasspath_entry);
+          File f = new File((File)bootclasspath_entry, filename);
           if (f.isFile()) {
             try {
               int length = (int)f.length();
               in = new FileInputStream(f);
-              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
+              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): found file " + f + ", length = " + length);
               bytes = new byte[length];
               length = in.read(bytes);
             }
             catch (FileNotFoundException fnfe) {
-              //Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
+              Etc.woempa(7, "System Class Loader: findClass("+dotname+"): failed top find file " + f);
             }
             catch(IOException ioe) {
               ioe.printStackTrace();
             }
           }
         }
+        // else this bootclasspath entry is not a String, JarFile, or a directory File - ignore it
       }
 
       if (bytes != null) {
@@ -257,21 +266,28 @@ public final class SystemClassLoader extends ClassLoader {
    ** Private method to see if a resource is present in a particular element
    ** of bootclasspath.
    */
-  private URL tryResource(String name, Object bcpelem) throws MalformedURLException {
+  private URL tryResource(String name, Object bootclasspath_entry) throws MalformedURLException {
     URL url = null;
 
-    if (bcpelem == bootstrap_zipfile_path && getBootstrapFile(name) != null) {
-      url = new URL("jar:file:" + ((JarFile)bcpelem).getName() + "!/"+name);
+    Etc.woempa(7, "tryResource(" + name + ", " + bootclasspath_entry + ")");
+    if (bootclasspath_entry == bootstrap_zipfile_path) {
+      Etc.woempa(7, "That's the bootclasspath zipfile, let's see if getBootstrapFile(" + name + ") returns anything");
+      if (getBootstrapFile(name) != null) {
+        url = new URL("jar:file:" + bootstrap_zipfile_path + "!/"+name);
+      }
+      // else we will return null
     }
     else {
-      try {
-        JarFile jf = (JarFile)bcpelem;
+      if (bootclasspath_entry instanceof JarFile) {
+        Etc.woempa(7, "That's a JarFile, let's see if getJarEntry() returns anything");
+        JarFile jf = (JarFile)bootclasspath_entry;
         JarEntry je = jf.getJarEntry(name);
         if (je != null) {
           url = new URL("jar:file:" + jf.getName() + "!/"+name);
         }
-      } catch (ClassCastException cce) {
-        File f = new File((File)bcpelem, name);
+      } else {
+        Etc.woempa(7, "Not a JarFile, let's just hope it's a directory");
+        File f = new File((File)bootclasspath_entry, name);
         if (f.isFile()) {
           url = new URL("file:" + f);
         }
@@ -310,34 +326,42 @@ public final class SystemClassLoader extends ClassLoader {
   }
 
   public InputStream getResourceAsStream(String name){
+    Etc.woempa(7, "getResourceAsStream(" + name + ")");
     for (int i = 0; i < bootclasspath.length; ++i) {
-      if (bootclasspath[i] == bootstrap_zipfile_path) {
+      Object bootclasspath_entry = bootclasspath[i];
+      Etc.woempa(7, "Checking bootclasspath[" + i + "] = " + bootclasspath_entry.getClass() + " " + bootclasspath_entry);
+      if (bootclasspath_entry == bootstrap_zipfile_path) {
+        Etc.woempa(7, "That's the bootclasspath zipfile, calling getBootstrapFile(" + name + ")");
         byte[] bytes = getBootstrapFile(name);
         if (bytes != null) {
 
           return new java.io.ByteArrayInputStream(bytes);
 
         }
+        // else we will end up returning null
       }
-
-      try {
-        JarFile jf = (JarFile)bootclasspath[i];
-        try {
-          JarEntry je = jf.getJarEntry(name);
-          if (je != null){
-            return jf.getInputStream(je);
-          }
-        }
-        catch (IOException e){}
-      }
-      catch (ClassCastException cce) {
-        // if it's not a jarfile it must be a directory
-        File f = new File((File)bootclasspath[i], name);
-        if (f.isFile()) {
+      else {
+        if (bootclasspath_entry instanceof JarFile) {
+          Etc.woempa(7, "It's a JarFile, try to find entry " + name);
+          JarFile jf = (JarFile)bootclasspath_entry;
           try {
-            return new FileInputStream(f);
+            JarEntry je = jf.getJarEntry(name);
+            if (je != null){
+              return jf.getInputStream(je);
+            }
           }
-          catch (FileNotFoundException fnfe) {}
+          catch (IOException e){}
+        }
+        else {
+          // if it's not a jarfile it must be a directory
+          Etc.woempa(7, "Not a JarFile, try looking for a file called " + name + " in " + bootclasspath_entry);
+          File f = new File((File)bootclasspath_entry, name);
+          if (f.isFile()) {
+            try {
+              return new FileInputStream(f);
+            }
+            catch (FileNotFoundException fnfe) {}
+          }
         }
       }
     }
