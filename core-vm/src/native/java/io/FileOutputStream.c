@@ -35,7 +35,7 @@ void FileOutputStream_write
   (w_thread thread, w_instance thisFileOutputStream, w_int oneByte) {
 
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
 
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
@@ -44,12 +44,14 @@ void FileOutputStream_write
     return;
   }
     
-  file = getWotsitField(fdObj, F_FileDescriptor_fd);
+  fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-  if(file == NULL) {
+  if(fd < 0) {
     throwIOException(thread);
   } else {
-    vfs_fputc(oneByte, file);
+    w_ubyte minibuf[1];
+    minibuf[0] = (w_ubyte)oneByte;
+    vfs_write(fd, minibuf, 1);
   }
 }
 
@@ -57,7 +59,7 @@ void FileOutputStream_writeFromBuffer
   (w_thread thread, w_instance thisFileOutputStream, w_instance buffer, w_int offset, w_int length) {
 
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
   w_byte       *bytes;
   w_byte       *data;
 
@@ -83,13 +85,13 @@ void FileOutputStream_writeFromBuffer
   }
   else {
   
-    file = getWotsitField(fdObj, F_FileDescriptor_fd);
+    fd = getIntegerField(fdObj, F_FileDescriptor_fd);
 
-    if(file == NULL) {
+    if(fd == NULL) {
       throwIOException(thread);
     } else {
       data = bytes + offset;
-      vfs_fwrite(data, 1, (w_word)length, file);
+      vfs_write(fd, data, length);
     }
 
   }

@@ -1,6 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2009 by Chris Gray, /k/ Embedded Java Solutions.    *
+* Parts copyright (c) 2009, 2022 by Chris Gray, KIFFER Ltd.               *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -11,33 +10,27 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 package java.io;
 
 public final class FileDescriptor {
 
-  private boolean validFD;
-  
-  /** used in native code */
-  private String fileName;
-  
   public static final FileDescriptor  in = null;
   public static final FileDescriptor out = null;
   public static final FileDescriptor err = null;
@@ -47,28 +40,41 @@ public final class FileDescriptor {
   static final int MODE_WRITE = 1;
   static final int MODE_APPEND = 2;
 
+  // The real file descriptor - this should be an open file
+  int fd;
+
   /**
-   ** Public descriptor which does nothing; consequently the FileDescriptor
+   ** Public constructor which sets fd to -1; consequently the FileDescriptor
    ** created is not valid.
    */
-  public FileDescriptor() {}
+  public FileDescriptor() {
+    fd = -1;
+  }
 
   /**
    ** Package-local constructor used to set the fileName and wotsit.
    ** Takes an absolute path and a mode as defined by MODE_XXXX.
    */
   FileDescriptor(String abspath, int mode) {
-    createFromPath(abspath, mode);
-    fileName = abspath;
-    validFD = true;
+    if (abspath == null) {
+      throw new NullPointerException();
+    }
+    fd = createFromPath(abspath, mode);
   }
 
-  private native void createFromPath(String path, int mode);
+  private native int createFromPath(String path, int mode);
 
   public boolean valid() {
-    return validFD;
+    // TODO add native check at vfs level?
+    return fd >= 0;
   }
 
-  public native void sync() throws SyncFailedException;
+  public void sync() throws SyncFailedException {
+    if (fd >= 0) {
+     _sync();
+    }
+  }
+
+  public native void _sync() throws SyncFailedException;
 }
 

@@ -33,41 +33,24 @@
 #include "vfs_fcntl.h"
 #include "wstrings.h"
 
-/*
-** Get the file descriptor's name as a C-style UTF8 string. After you've
-** finished with the name, call freeFileDescriptorName() on the result to
-** free up the memory.
-*/
-char *getFISFileName(w_instance thisFileInputStream) {
-  w_instance fd;
-  w_instance pathString;
-  w_string path;
-
-  fd = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
-  pathString = getReferenceField(fd, F_FileDescriptor_fileName);
-  path = String2string(pathString);
-
-  return (char*)string2UTF8(path, NULL) + 2;
-}
-
-#define freeFileName(n) releaseMem((n)-2)
-
 w_int FileInputStream_read
   (w_thread thread, w_instance thisFileInputStream) {
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
   w_int        result = -1;
 
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
-  file = getWotsitField(fdObj, F_FileDescriptor_fd);
+  fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-  if(file == NULL) {
+  if (fd < 0) {
     throwIOException(thread);
-    result = 0;
+// TODO  } else if (vfs_eof(fd)) {
+// TODO    return -1;
   } else {
-    if(!vfs_feof(file)) {
-      result = vfs_fgetc(file);
-    }
+    // TODO detect EOF
+    w_ubyte minibuf[1];
+    vfs_read(fd, minibuf, 1);
+    result = minibuf[0];
   }
 
   return result;
@@ -76,7 +59,7 @@ w_int FileInputStream_read
 w_int FileInputStream_readIntoBuffer
   (w_thread thread, w_instance thisFileInputStream, w_instance buffer, w_int offset, w_int length) {
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int    fd;
   w_int        result;
   w_byte       *bytes;
   w_byte       *data;
@@ -97,17 +80,16 @@ w_int FileInputStream_readIntoBuffer
 
   bytes = instance2Array_byte(buffer);
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
-  file = getWotsitField(fdObj, F_FileDescriptor_fd);
+  fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-  if(file == NULL) {
+  if(fd < 0) {
     throwIOException(thread);
-    result = 0;
+// TODO  } else if (vfs_eof(fd)) {
+// TODO    return -1;
   } else {
     data = bytes + offset;
-    result = vfs_fread(data, 1, (w_word)length, file);
-    if(result == 0 && vfs_feof(file)) {
-      result = -1;
-    }
+    result = vfs_read(fd, data, length);
+    woempa(7, "vfs_read(%d, %p, %d) returned %d\n", fd, data, length, result);
   }
 
   return result;
@@ -117,22 +99,22 @@ w_long FileInputStream_skip
   (w_thread thread, w_instance thisFileInputStream, w_long n) {
 
   w_instance fdObj;
-  vfs_FILE    *file;
+  w_int    fd;
   w_long       result = n;
   w_long       prev_pos;
 
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
-  file = getWotsitField(fdObj, F_FileDescriptor_fd);
+  fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-  if(file == NULL) {
+  if(fd < 0) {
     throwIOException(thread);
     result = 0;
   } else {
-    prev_pos = vfs_ftell(file);
-    result = vfs_fseek(file, (long)n, SEEK_CUR);
+    prev_pos = vfs_ftell(fd);
+    result = vfs_lseek(fd, (long)n, SEEK_CUR);
 
     if(result != (long)-1) {
-      result = vfs_ftell(file) - prev_pos;
+      result = vfs_ftell(fd) - prev_pos;
     } else {
       throwIOException(thread);
       result = 0; 
@@ -146,22 +128,24 @@ w_int FileInputStream_available
   (w_thread thread, w_instance thisFileInputStream) {
 
   w_instance         fdObj;
-  vfs_FILE        *file;
+  w_int fd;
   w_int            result;
   const char      *filename;
-  struct vfs_STAT statbuf;
-
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
-  file = getWotsitField(fdObj, F_FileDescriptor_fd);
-
-  filename = getFISFileName(thisFileInputStream);
+  fd = getIntegerField(fdObj, F_FileDescriptor_fd);
+  woempa(7, "fd = %d\n", fd);
   
-  if(file == NULL) {
+  if(fd < 0) {
+    woempa(7, "fd < 0, gettin outa here\n");
     throwIOException(thread);
     result = 0;
   } else {
-    if(vfs_stat((w_ubyte *)filename, &statbuf) != -1) {
-      result = (statbuf.st_size - vfs_ftell(file));
+    // FIXME this should use the vfs_ abstraction
+    woempa(7, "FILE ptr = %p\n", vfs_fd_table[fd].ff_fileptr);
+    size_t flen = ff_filelength(vfs_fd_table[fd].ff_fileptr);
+    woempa(7, "file length = %d errno = %d\n", flen, errno);
+    if (flen > 0 || errno == 0) {
+      result = flen;
     } else {
       throwIOException(thread);
       result = 0;
@@ -175,17 +159,18 @@ void FileInputStream_close
   (w_thread thread, w_instance thisFileInputStream) {
 
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
 
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
 
   if (fdObj) {
-    file = getWotsitField(fdObj, F_FileDescriptor_fd);
+    fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-    if(file) {
-      vfs_fclose(file);
-      clearWotsitField(fdObj, F_FileDescriptor_fd);
+    if(fd >= 0) {
+      vfs_fclose(fd);
+      setIntegerField(fdObj, F_FileDescriptor_fd, -1);
     }
+    setReferenceField(thisFileInputStream, F_FileInputStream_fd, NULL);
   }
 }
 

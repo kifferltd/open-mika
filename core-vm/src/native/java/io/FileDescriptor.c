@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2021 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2007, 2009, 2021, 2022 by KIFFER Ltd. All rights reserved.*
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,7 +12,7 @@
 * 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
 *    may be used to endorse or promote products derived from this         *
 *    software without specific prior written permission.                  *
-*                                                                         *
+e                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
@@ -33,34 +33,38 @@
 #include "wstrings.h"
 
 /*
-** Open a file and store the fileName and wotsit fields in thisFileDescriptor;
-** set validFD true. The path string must be an absolute path and 'modenum' 
+** Open a file and return the resulting fd. The path string must be an absolute path and 'modenum' 
 ** must be one of the following:
-** 0 -> read -> fopen(3) mode "r"
+** 0 -> Java MODE_READ   -> open(2) flags O_RDONLY
+** 1 -> Java MODE_WRITE  -> open(2) flags O_RDWR
+** 2 -> Java MODE_APPEND -> open(2) flags O_RDWR|O_APPEND
 */
-void FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescriptor, w_instance pathString, w_int modenum) {
-  w_string path_string = pathString ? String2string(pathString) : NULL;
+w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescriptor, w_instance pathString, w_int modenum) {
+  w_string path_string = String2string(pathString);
   w_int path_length;
   w_ubyte *path = string2UTF8(path_string, &path_length) + 2;
-  w_ubyte *mode = modenum == 0 ? "r" : modenum == 1 ? "w+" : modenum == 2 ? "a+" : NULL;
-  void *file;
+  w_word flags = modenum == 0 ? O_RDONLY : modenum == 1 ? O_RDWR : modenum == 2 ? (O_RDWR|O_APPEND) : 0xffffffff;
+  w_int fd;
 
-  if (!mode) {
+  woempa(7, "flags = %d\n", flags);
+  if (flags == 0xffffffff) {
     throwException(thread, clazzInternalError, NULL);
   }
 
-  file = vfs_fopen(path, mode);
-  if (!file) {
-    throwException(thread, clazzFileNotFoundException, "could not open file '%s' using mode '%s': %s\n", path, mode, strerror(errno));
+  fd = vfs_open(path, flags, 0);
+  woempa(7, "fd = %d\n", fd);
+  if (fd < 0) {
+    throwException(thread, clazzFileNotFoundException, "could not open file '%s' in mode %d using flags '%x': %s\n", path, modenum, flags, strerror(errno));
   }
   releaseMem(path - 2);
 
-  setWotsitField(thisFileDescriptor, F_FileDescriptor_fd, file);
+  return fd;
 }
 
 void FileDescriptor_sync
-  (w_thread thread, jobject thisObj) {
+  (w_thread thread, jobject theClass) {
 
+  // TODO
   woempa(9, "sync !");
 	  
 }
