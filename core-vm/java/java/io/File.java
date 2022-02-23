@@ -1,6 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2003, 2009 by /k/ Embedded Java Solutions.          *
+* Parts copyright (c) 2009, 2022 by Chris Gray, KIFFER Ltd.               *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -11,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 package java.io;
@@ -43,6 +41,7 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import wonka.vm.Etc;
 import wonka.vm.SecurityConfiguration;
 
 public class File implements Comparable, Serializable {
@@ -99,6 +98,7 @@ public class File implements Comparable, Serializable {
   private static native String get_fsroot();
   
   private static String extractPathFromURI(URI uri) throws IllegalArgumentException {
+    Etc.woempa(7, "Extracting Path from URI " +  uri);
     if (!uri.isAbsolute()) {
       throw new IllegalArgumentException("URI is not absolute: " + uri);
     }
@@ -139,8 +139,13 @@ public class File implements Comparable, Serializable {
     fsrootedPrefix = "{}" + separator;
 
     current_working_dir = get_CWD();
-    fsroot_dir = get_fsroot() + separator;
-    current_working_dir = current_working_dir + separator;
+    if (!current_working_dir.endsWith(separator)) {
+      current_working_dir = current_working_dir + separator;
+    }
+    fsroot_dir = get_fsroot();
+    if (!fsroot_dir.endsWith(separator)) {
+      fsroot_dir = fsroot_dir + separator;
+    }
     // TODO: shouldn't we have a GetSystemProperty-like mechanism here?
     System.getProperties().setProperty("user.dir", current_working_dir);
   }
@@ -219,6 +224,7 @@ public class File implements Comparable, Serializable {
     if (i > 0 && i == result.length() - 1) {
       result = result.substring(0, i);
     }
+    Etc.woempa(7, "stripSlashes(" + path + ") => " + result);
  
     return result;
   }
@@ -263,17 +269,17 @@ public class File implements Comparable, Serializable {
       absolutePath = fullname;
     }
     else if (fsrooted) {
-      absolutePath = fsroot_dir + fullname.substring(3);
+      absolutePath = fsroot_dir + relpath;
     }
     else {
-      absolutePath = current_working_dir + fullname;
+      absolutePath = current_working_dir + relpath;
     }
     int len = absolutePath.length() - 1;
     if(len > 0 && absolutePath.charAt(len) == '/') {
       absolutePath = absolutePath.substring(0, len);
     }
 
-    
+    Etc.woempa(7, "File " + path + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
     absname = absolutePath;
   }
 
