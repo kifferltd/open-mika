@@ -60,18 +60,18 @@ static FF_Disk_t *pxFlashDisk;
 
 void init_vfs(void) {
   memset(vfs_fd_table, 0, sizeof(vfs_fd_table));
-  woempa(9, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
+  woempa(7, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
   x_mutex_create(fd_table_mutex);
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
   if (!current_working_dir) {
-    woempa(9, "ff_getcwd returned NULL, errno = %d\n", errno);
+    woempa(7, "ff_getcwd returned NULL, errno = %d\n", errno);
   }
   current_working_dir = reallocMem(cwdbuffer, strlen(cwdbuffer) + 1);
   current_root_dir = fsroot;
-  woempa(9, "current dir  : %s\n", current_working_dir);
-  woempa(9, "current root : %s\n", current_root_dir);
+  woempa(7, "current dir  : %s\n", current_working_dir);
+  woempa(7, "current root : %s\n", current_root_dir);
 
   pxFlashDisk = FFInitFlash(FLASH_DISK_NAME, FLASH_CACHE_SIZE);
 }
@@ -101,33 +101,60 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
   return -1;
 }
 
-w_int vfs_read(w_int fd, void *buf, w_size count) {
-  woempa(1, "reading %d bytes from fd %d\n", count, fd);
+w_int vfs_read(w_int fd, void *buf, w_size length) {
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
   if (!ff_fileptr) {
-    woempa(7, "failed to read %d bytes from fd %d, fd is not in use\n", count, fd);
+    woempa(7, "failed to read from fd %d, fd is not in use\n", fd);
     // TODO set errno
     return -1;
   }
 
-  long offset = ff_ftell(ff_fileptr);
-  size_t length = ff_filelength(ff_fileptr);
-  if (offset > length) {
+  if (ff_feof(ff_fileptr)) {
+    woempa(7, "failed to read from fd %d, fd is at EOF\n", fd);
     return -1;
   }
 
-  w_size effective = offset + count > length ? length - offset : count;
+  woempa(1, "reading from fd %d\n", fd);
+  long offset = ff_ftell(ff_fileptr);
+  size_t filelen = ff_filelength(ff_fileptr);
+  if (offset > filelen) {
+    return -1;
+  }
+
+  w_size effective = offset + length > filelen ? filelen - offset : length;
+  woempa(1, "requested read = %d bytes from offset %d, file length = %d, effective = %d \n", length, offset, filelen, effective);
 
   int rc = ff_fread(buf, 1, effective, ff_fileptr);
   if (rc == effective) {
-    woempa(1, "did read %d bytes from fd %d\n", count, fd);
-    return count;
+    woempa(1, "did read %d bytes from fd %d\n", effective, fd);
+    return effective;
   }
 
   w_int fat_errno = stdioGET_ERRNO();
   woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", effective, fd, fat_errno);
   // TODO set errno
   return -1;
+}
+
+w_int vfs_write(w_int fd, void *buf, w_size length) {
+  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
+  if (!ff_fileptr) {
+    woempa(7, "failed to write to fd %d, fd is not in use\n", fd);
+    // TODO set errno
+    return -1;
+  }
+
+  woempa(1, "writing to %d bytes to fd %d\n", length, fd);
+  // TODO !!!
+  int rc = ff_fwrite(buf, 1, length, ff_fileptr );
+  w_int fat_errno = stdioGET_ERRNO();
+  if (fat_errno) {
+    woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", effective, fd, fat_errno);
+    // TODO set errno
+    return -1;
+  }
+
+  return rc;
 }
 
 w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
@@ -137,7 +164,7 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
     whence == FF_SEEK_SET ? "beginning of file" : "??? unknown ???");
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
   if (!ff_fileptr) {
-    woempa(7, "failed to seek %d bytes from fd %d, fd is not in use\n", offset, fd);
+    wabort(ABORT_WONKA, "failed to seek %d bytes from fd %d, fd is not in use\n", offset, fd);
     // TODO set errno
     return -1;
   }
@@ -152,9 +179,21 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   }
 
   w_int fat_errno = stdioGET_ERRNO();
-  woempa(7, "failed to seek %d bytes from fd %d, fat_errno = %d\n", offset, fd, fat_errno);
+  woempa(9, "failed to seek %d bytes from fd %d, fat_errno = %d\n", offset, fd, fat_errno);
   // TODO set errno
   return -1;
+}
+
+w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
+  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
+  if (!ff_fileptr) {
+    wabort(ABORT_WONKA, "failed to stat fd %d, fd is not in use\n", fd);
+    // TODO set errno
+    return -1;
+  }
+
+  // set errno on error
+  return ff_stat( const char *pcFileName, ff_stat_struct *pxStatBuffer )
 }
 
 w_int vfs_close(w_int fd) {
