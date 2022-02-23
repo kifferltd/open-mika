@@ -169,17 +169,18 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   retcode = xSemaphoreTake(monitor->owner_mutex, remaining == (x_sleep) remaining ? (x_sleep) remaining : 0);
   unsetFlag(current->flags, TF_TIMEOUT);
 
+  // we are the owner of the monitor again
+  monitor->owner = current;
+  monitor->count = current->waiting_with;
+  loempa(2, "Thread %p has re-acquired monitor %p with count %i\n", current, monitor, monitor->count);
+
+  // ... and we are no longer waiting for it
+  current->waiting_on = NULL;
+  current->waiting_with = 0;
+  current->state = xt_ready;
+
   switch (retcode) {
     case pdPASS: {
-      // The monitor was free and we just acquired it.
-      monitor->owner = current;
-      monitor->count = current->waiting_with;
-      loempa(2, "Thread %p has re-acquired monitor %p with count %i\n", current, monitor, monitor->count);
-
-      current->waiting_on = NULL;
-      current->waiting_with = 0;
-      current->state = xt_ready;
-
       return xs_success;
     }
 
@@ -273,6 +274,8 @@ x_status x_monitor_stop_waiting(x_monitor monitor, x_thread thread) {
 
     xTaskNotifyGive(thread->handle);
     // TODO the task handle is still in the queue, one day it will get a spurious notification
+
+    return xs_success;
   }
 
   return xs_no_instance;
