@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -70,28 +70,29 @@ extern char *command_line_path;
 
 static char *cwdbuffer;
 
-FF_Disk_t *vfs_flashDisk;
-
 void init_vfs(void);
+
+#define vfs_STAT                   FF_Stat_t
 
 extern w_int vfs_open(const char *pathname, w_word flags, w_word mode);
 extern w_int vfs_read(w_int fd, void *buf, w_size count);
+extern w_int vfs_write(w_int fd, void *buf, w_size count);
 extern w_int vfs_lseek(w_int fd, w_int offset, w_int whence);
 extern w_int vfs_close(w_int fd);
 
 #define vfs_getcwd(b,l)           ff_getcwd(b,l)
-#define vfs_fopen(path, ...)      ff_fopen(path, __VA_ARGS__)
-#define vfs_fdopen(...)           fdopen(__VA_ARGS__)
-#define vfs_fclose(...)           fclose(__VA_ARGS__)
+//#define vfs_fopen(path, ...)      ff_fopen(path, __VA_ARGS__)
+//#define vfs_fdopen(...)           fdopen(__VA_ARGS__)
+//#define vfs_fclose(...)           fclose(__VA_ARGS__)
 
-#define vfs_fseek(...)            fseek(__VA_ARGS__)
-#define vfs_ftell(...)            ftell(__VA_ARGS__)
+//#define vfs_fseek(...)            fseek(__VA_ARGS__)
+//#define vfs_ftell(...)            ftell(__VA_ARGS__)
 #define vfs_rewind(...)           rewind(__VA_ARGS__)
 #define vfs_fgetpos(...)          fgetpos(__VA_ARGS__)
 #define vfs_fsetpos(...)          fsetpos(__VA_ARGS__)
 
-#define vfs_fread(...)            fread(__VA_ARGS__)
-#define vfs_fwrite(...)           fwrite(__VA_ARGS__)
+//#define vfs_fread(...)            fread(__VA_ARGS__)
+//#define vfs_fwrite(...)           fwrite(__VA_ARGS__)
 
 #define vfs_fopen(path, ...)      fopen(path, __VA_ARGS__)
 #define vfs_fdopen(...)           fdopen(__VA_ARGS__)
@@ -127,7 +128,7 @@ extern w_int vfs_close(w_int fd);
 #define vfs_seekdir(...)          seekdir(__VA_ARGS__)
 #define vfs_alphasort(...)        alphasort(__VA_ARGS__)
 
-#define vfs_fstat(...)            fstat(__VA_ARGS__)
+//#define vfs_fstat(...)            fstat(__VA_ARGS__)
 #define vfs_stat(path, ...)       ff_stat(path, __VA_ARGS__)
 #define vfs_truncate(path,len)    ff_truncate(path, len)
 
@@ -213,7 +214,8 @@ static inline w_word vfs_fclose(vfs_FILE *stream) {
   return 0;
 }
 
-inline static w_int vfs_fseek(vfs_FILE *stream, long offset, w_int whence) {
+/*
+inline static w_int vfs_lseek(vfs_FILE *stream, long offset, w_int whence) {
   return lseek(stream->file_desc, offset, whence);
 }
 
@@ -221,6 +223,7 @@ inline static w_word vfs_ftell(vfs_FILE *stream) {
   w_word result = lseek(stream->file_desc, 0, SEEK_CUR);
   return result;
 }
+*/
 
 inline static w_void vfs_rewind(vfs_FILE *stream) {
   lseek(stream->file_desc, 0, SEEK_SET);

@@ -56,7 +56,7 @@ static void dumpDir(const char *path, int level) {
 
 #define FLASH_DISK_NAME    "/"
 
-static FF_Disk_t *pxFlashDisk;
+static FF_Disk_t *vfs_flashDisk;
 
 void init_vfs(void) {
   memset(vfs_fd_table, 0, sizeof(vfs_fd_table));
@@ -72,8 +72,6 @@ void init_vfs(void) {
   current_root_dir = fsroot;
   woempa(7, "current dir  : %s\n", current_working_dir);
   woempa(7, "current root : %s\n", current_root_dir);
-
-  pxFlashDisk = FFInitFlash(FLASH_DISK_NAME, FLASH_CACHE_SIZE);
 }
 
 w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
@@ -99,6 +97,18 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
   woempa(7, "unable to open %s in mode %s, fat_errno = %d\n", pathname, how, fat_errno);
   // TODO we should set errno
   return -1;
+}
+
+w_int vfs_ftell(w_int fd) {
+  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
+  if (!ff_fileptr) {
+    woempa(7, "failed to read from fd %d, fd is not in use\n", fd);
+    // TODO set errno
+    return -1;
+  }
+
+  // TODO set errno on error
+  return ff_ftell(ff_fileptr);
 }
 
 w_int vfs_read(w_int fd, void *buf, w_size length) {
@@ -149,7 +159,7 @@ w_int vfs_write(w_int fd, void *buf, w_size length) {
   int rc = ff_fwrite(buf, 1, length, ff_fileptr );
   w_int fat_errno = stdioGET_ERRNO();
   if (fat_errno) {
-    woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", effective, fd, fat_errno);
+    woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", length, fd, fat_errno);
     // TODO set errno
     return -1;
   }
@@ -184,6 +194,9 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   return -1;
 }
 
+/*
+  Looks like there aint't no stat function that works with ff_fileptr, always need a path
+
 w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
   if (!ff_fileptr) {
@@ -193,8 +206,9 @@ w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
   }
 
   // set errno on error
-  return ff_stat( const char *pcFileName, ff_stat_struct *pxStatBuffer )
+  return ff_fstat(ff_fileptr, statBuf )
 }
+*/
 
 w_int vfs_close(w_int fd) {
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
