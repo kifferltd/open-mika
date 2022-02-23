@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd. All rights reserved.      #
+# Copyright (c) 2018, 2022 by Chris Gray, KIFFER Ltd. All rights reserved.#
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -108,13 +108,13 @@ endif
 
 #
 # If Mika is run with no -Xbootclasspath parameter, the bootstrap class 
-# loader will search the file $(BOOTCLASSFILE), located in {}/$(BOOTCLASSDIR).
+# loader will search the file $(BOOTCLASSFILE), located in $(BOOTCLASSDIR).
 # These variables also specify where the zipfile of bootstrap classes will
 # be created, and what name it will be given. 
 #
 
 ifndef BOOTCLASSDIR
-  export BOOTCLASSDIR  = "lib/mika"
+  export BOOTCLASSDIR  = "{}/lib/mika"
 endif
 ifndef BOOTCLASSFILE
   export BOOTCLASSFILE = "mcl.jar"

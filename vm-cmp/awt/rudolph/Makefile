@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2019 by Chris Gray, KIFFER Ltd.                     #
+# Copyright (c) 2018, 2019, 2022 by Chris Gray, KIFFER Ltd.               #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -29,7 +29,7 @@
 
 export AWT_TOP = $(MIKA_TOP)/vm-cmp/awt/rudolph
 
-CFLAGS += -DFONTDIR=\"{}/$(BOOTCLASSDIR)/font\"
+CFLAGS += -DFONTDIR=\"$(BOOTCLASSDIR)/font\"
 CFLAGS += $(AWT_TOP)/include
 
 .PHONY : mika subdirs clean

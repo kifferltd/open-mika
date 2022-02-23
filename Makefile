@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2021 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2018, 2020, 2021, 2022 by Chris Gray, KIFFER Ltd.         #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -125,9 +125,9 @@ else
 endif
 
 
-CFLAGS += -DBOOTCLASSDIR=\"{}/$(BOOTCLASSDIR)\"
+CFLAGS += -DBOOTCLASSDIR=\"$(BOOTCLASSDIR)\"
 CFLAGS += -DBOOTCLASSFILE=\"$(BOOTCLASSFILE)\"
-CFLAGS += -DEXTCLASSDIR=\"{}/$(BOOTCLASSDIR)/ext\"
+CFLAGS += -DEXTCLASSDIR=\"$(BOOTCLASSDIR)/ext\"
 CFLAGS += -DDEFAULT_HEAP_SIZE=\"$(DEFAULT_HEAP_SIZE)\"
 CFLAGS += -DDEFAULT_STACK_SIZE=\"$(DEFAULT_STACK_SIZE)\"
 CFLAGS += -DVERSION_STRING=\"$(VERSION_STRING)\"
@@ -263,14 +263,16 @@ ifeq ($(DEBUG), true)
   
 else  # No debug -> Full optimalisation 
           #CG optimise for size
+          #CG 20220221 leave this out for now
 
-  ifeq ($(OPTIM), "-O")
-    OPTIM = -Os
-  else
-    OPTIM = $(OPTIM) -Os
-  endif
+#  ifeq ($(OPTIM), "-O")
+#    OPTIM = -Os
+#  else
+#    OPTIM = $(OPTIM) -Os
+#  endif
 
-#  CFLAGS += -ggdb
+          #CG 20220221 for lldb
+  CFLAGS += -ggdb
 endif
 
 CFLAGS += $(OPTIM)
