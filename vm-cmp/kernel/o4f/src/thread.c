@@ -335,9 +335,12 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
      loempa(2, "===>>>  status = %d\n", status);
-     if (status != pdPASS) {
-       o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed", status);
-      }
+     if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
+        return xs_no_mem;
+     }
+     else if (status != pdPASS) {
+       o4f_abort(O4F_ABORT_THREAD, "x_thread_create: xTaskCreate() failed with status %d", status);
+     }
    }
 
    return rval;
@@ -471,11 +474,11 @@ x_status x_thread_resume(x_thread thread) {
                                        start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
     status = xTaskCreate(start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
     loempa(7, "===>>>  status = %d\n", status);
-    if (status == ENOMEM) {
+    if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
        return xs_no_mem;
     }
-    else if (status != 0) {
-      o4f_abort(O4F_ABORT_THREAD, "xTaskCreate() failed", status);
+    else if (status != pdPASS) {
+      o4f_abort(O4F_ABORT_THREAD, "xTaskCreate() failed with status %d", status);
       return xs_no_instance;
     }
   }
