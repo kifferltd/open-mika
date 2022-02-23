@@ -62,11 +62,34 @@ function descr2id(descr) {
   return id
 }
 
+function count64bitparams(id) {
+  k = 0
+  np = length(id)-2
+  
+  c = index(substr(id,1,np),"d")
+  while (c) {
+    prinf "// found a 'd' in " id ", incrementing k"
+    k += 1
+    c = index(substr(id,c+1,np-c),"d")
+  }
+  c = index(substr(id,1,np),"j")
+  while (c) {
+    prinf "// found a 'j' in " id ", incrementing k"
+    k += 1
+    c = index(substr(id,c+1,np-c),"j")
+  }
+  print "// total of " k " 64-bit params in " id
+  return k
+}
+
 function id2iplist(id) {
-  cursor = 1
+  nparams = length(id)-2
   depth = length(id)-1
+  depth += count64bitparams(id)
+
+  cursor = 1
   plist = sprintf("thread, (w_instance) top[-%d].c", depth--)
-  while(depth){
+  while(cursor<=nparams){
     letter=substr(id,cursor++,1)
     switch (letter) {
       case "a":
@@ -77,16 +100,14 @@ function id2iplist(id) {
       case "l":
       case "s":
       case "z":
+# take 1 word from stack
         plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
-#    return if3(thread, (w_instance) top[-3].c, top[-2].c, top[-1].c);
         break
       case "d":
-# TODO - take two words from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
-        break
       case "j":
-# TODO - take two words from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
+# take two words from stack
+        plist = sprintf("%s, slots2%s(top[-%d],top[-%d])",plist,id2type[letter],depth, depth-1)
+        depth-=2
         break
       default:
         print "unexpected letter", letter
@@ -98,9 +119,12 @@ function id2iplist(id) {
 
 function id2splist(id) {
   cursor=1
+  nparams = length(id)-2
   depth = length(id)-2
+  depth += count64bitparams(id)
+
   plist = "thread, target"
-  while(depth){
+  while(cursor<=nparams){
     letter=substr(id,cursor++,1)
     switch (letter) {
       case "a":
@@ -111,15 +135,14 @@ function id2splist(id) {
       case "l":
       case "s":
       case "z":
+# take 1 word from stack
         plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
         break
       case "d":
-# TODO - take two words from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,"w_double",depth--)
-        break
       case "j":
-# TODO - take two words from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,"w_long",depth--)
+# take two words from stack
+        plist = sprintf("%s, slots2%s(top[-%d],top[-%d])",plist,id2type[letter],depth, depth-1)
+        depth-=2
         break
       default:
         print "unexpected letter", letter
@@ -318,7 +341,23 @@ END {
   printf "#endif\n"
   printf "}\n\n"
 
-  print "/* dispatchers */"
+  printf "static w_double slots2w_double(w_Slot s1, w_Slot s2) {\n"
+  printf "  union{w_double d; w_word w[2];} two_words;\n"
+  printf "  two_words.w[0] = s1.c;\n"
+  printf "  two_words.w[1] = s2.c;\n"
+  printf "  return two_words.d;\n"
+  printf "}\n\n"
+
+  printf "static w_long slots2w_long(w_Slot s1, w_Slot s2) {\n"
+  printf "  union{w_long j; w_word w[2];} two_words;\n"
+  printf "  two_words.w[0] = s1.c;\n"
+  printf "  two_words.w[1] = s2.c;\n"
+  printf "  return two_words.j;\n"
+  printf "}\n\n"
+
+  printf "/* dispatchers */\n"
+  printf ""
+
   for (id in protos) {
     printf "void native_dispatcher_%s(w_frame caller, w_method method);\n\n", id
     printf "void native_dispatcher_%s(w_frame caller, w_method method) {\n", id
@@ -330,6 +369,7 @@ END {
     printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"
+    twoslots = rtypes[id] == "w_long" || rtypes[id] == "w_double"
     if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
     printf "  woempa(7, \"Calling %%M\\n\", method);\n"
     printf "  frame->jstack_base = caller->jstack_top;\n"
@@ -339,36 +379,56 @@ END {
     printf "    x_monitor_eternal(m);\n"
     printf "  }\n\n"
     printf "  thread->top = frame;\n\n"
-    printf "  frame->jstack_top[0].c = 0;\n"
-    printf "  frame->jstack_top[0].s = stack_%strace;\n", reference ? "" : "no"
-    printf "  frame->jstack_top += 1;\n"
+# this looks wrong to me
+#    printf "  frame->jstack_top[0].c = 0;\n"
+#    printf "  frame->jstack_top[0].s = stack_%strace;\n", reference ? "" : "no"
+#    printf "  frame->jstack_top += 1;\n"
     printf "  w_slot top = caller->jstack_top;\n"
 
+# TODO can we not unify the static and instance paths here?
     printf "  if (isSet(method->flags, ACC_STATIC)) {\n"
     printf "    typedef %s (sfun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
-    printf "    sfun_%s *sf%s = (sfun_%s*)method->exec.function.word_fun;\n",id,id,id
-    if (nonvoid) printf "  result ="
-    printf "    sf%s(%s);\n",id,static_plists[id]
+    printf "    sfun_%s *sf%s = (sfun_%s*)method->exec.function.%s_fun;\n    ",id,id,id,nonvoid ? (reference ? "ref" : twoslots ? "long" : "word") : "void"
+    if (nonvoid) printf "result ="
+    printf "sf%s(%s);\n",id,static_plists[id]
     printf "  }\n"
     printf "  else {\n"
     printf "    typedef %s (ifun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
-    printf "    ifun_%s *if%s = (ifun_%s*)method->exec.function.word_fun;\n",id,id,id
-    if (nonvoid) printf "  result ="
-    printf "    if%s(%s);\n",id,instance_plists[id]
+    printf "    ifun_%s *if%s = (ifun_%s*)method->exec.function.%s_fun;\n    ",id,id,id,nonvoid ? (reference ? "ref" : twoslots ? "long" : "word") : "void"
+    if (nonvoid) printf "result ="
+    printf "if%s(%s);\n",id,instance_plists[id]
     printf "  }\n"
     
     printf "  if (m) {\n"
     printf "    x_monitor_exit(m);\n"
     printf "  }\n\n";
     if (nonvoid) {
-      printf "  if (thread->exception) {\n    woempa(7, \"%%m threw %%e, ignoring return value\\n\", method, thread->exception);\n"
-      printf "    caller->jstack_top[idx].s = stack_notrace;\n    caller->jstack_top += idx + 1;\n    thread->top = caller;\n  }\n"
+      printf "  if (thread->exception) {\n"
+# this looks wrong to me
+#      printf "    woempa(7, \"%%m threw %%e, ignoring return value\\n\", method, thread->exception);\n"
+#      printf "    caller->jstack_top[idx].s = stack_notrace;\n"
+#      printf "    caller->jstack_top += idx + 1;\n"
+      printf "    thread->top = caller;\n"
+      printf "  }\n"
       printf "  else {\n"
-      printf "    enterUnsafeRegion(thread);\n"
-      printf "    woempa(7, \"%%m result = %%08x\\n\", method, result);\n"
-      printf "    caller->jstack_top[idx].c = (w_word)result;\n"
-      printf "    caller->jstack_top[idx].s = stack_%strace;\n", reference ? "" : "no"
-      printf "    caller->jstack_top += idx + 1;\n"
+      if (reference) printf "    enterUnsafeRegion(thread);\n"
+      if (twoslots) {
+        printf "    woempa(7, \"%%m result = %%16x\\n\", method, result);\n"
+        printf "    union{%s l; w_word w[2];} two_words;\n", id2rtype(id)
+        ptintf "    two_words.l = result;\n"
+        printf "    caller->jstack_top[idx].c = two_words.w[0];\n"
+        printf "    caller->jstack_top[idx].s = stack_notrace;\n"
+        printf "    caller->jstack_top += 1;\n"
+        printf "    caller->jstack_top[idx + 1].c = two_words.w[1];\n"
+        printf "    caller->jstack_top[idx + 1].s = stack_notrace;\n"
+        printf "    caller->jstack_top += idx + 2;\n"
+      }
+      else {
+        printf "    woempa(7, \"%%m result = %%08x\\n\", method, result);\n"
+        printf "    caller->jstack_top[idx].c = (w_word)result;\n"
+        printf "    caller->jstack_top[idx].s = stack_%strace;\n", reference ? "" : "no"
+        printf "    caller->jstack_top += idx + 1;\n"
+      }
       if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
       printf "    thread->top = caller;\n"
       printf "    enterSafeRegion(thread);\n"
@@ -376,7 +436,7 @@ END {
     }
     else {
       printf "  enterUnsafeRegion(thread);\n"
-      printf "  caller->jstack_top += idx + 1;\n"
+      printf "  caller->jstack_top += idx;\n"
       printf "  thread->top = caller;\n"
       printf "  enterSafeRegion(thread);\n"
     }
@@ -399,9 +459,9 @@ END {
   printf "  w_string descr_string;\n\n"
   printf "  for (int i = 0; %s_native_dispatchers[i].descr; ++i) {\n", Module
   printf "    descr_string = cstring2String(%s_native_dispatchers[i].descr, strlen(%s_native_dispatchers[i].descr));\n", Module, Module
-  printf "    woempa(7, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
+  printf "    woempa(1, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
   printf "    ht_write_no_lock(hashtable, (w_word)descr_string, (w_word)%s_native_dispatchers[i].dispatcher);\n", Module
-  printf "    woempa(7, \"added (%%w, 0x%%08x) to descriptors hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].dispatcher, hashtable->occupancy);\n", Module
+  printf "    woempa(1, \"added (%%w, 0x%%08x) to descriptors hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].dispatcher, hashtable->occupancy);\n", Module
   printf "  }\n"
   printf "}\n\n"
 
