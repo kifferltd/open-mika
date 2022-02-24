@@ -190,7 +190,7 @@ void dumpDir(z_zipFile dir) {
  * We assume that the first read will read at least 42 bytes if it reads
  * anything at all (i.e. does not fail with EINTR or EAGAIN).
  */
-#define ZIPENTRY_BUFSIZ 2048
+#define ZIPENTRY_BUFSIZ 8192
 
 /**
  * Read one entry of the zip directory, and write the information in 'entry'.
@@ -376,7 +376,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 ** by the underlying filesystem.
 */
 
-#define TRAWL_SIZE 1024
+#define TRAWL_SIZE 8192
 
 z_zipFile parseZipFile(char *path) {
 
@@ -442,7 +442,7 @@ z_zipFile parseZipFile(char *path) {
       l = vfs_read (zipFile->fd, temp, TRAWL_SIZE + 4);
       for (i = 0; i + 4 < l; ++i) {
         if (temp[i] == Z_SENTINEL0 && temp[i + 1] == Z_SENTINEL1 && temp[i + 2] == Z_DIR_BYTE0 && temp[i + 3] == Z_DIR_BYTE1) {
-          woempa(1, "Found directory sentinel at offset %d + %d\n", offset, i);
+          woempa(7, "Found directory sentinel at offset %d + %d\n", offset, i);
           offset += i + 4;
           match = allocClearedMem(sizeof(z_ZipEntry));
           if (!match) {
@@ -463,8 +463,8 @@ z_zipFile parseZipFile(char *path) {
     readZipEntry(WONKA_FALSE, match, &offset);
     
     if (match->offset == 0) {
-      woempa(1, "Found matching first entry in central directory.\n");
-      woempa(1, "Match offset %d\n", match->c_data_offset);
+      woempa(7, "Found matching first entry in central directory.\n");
+      woempa(7, "Match offset %d\n", match->c_data_offset);
       break;
     }
     woempa(1, "Found non-matching entry in central directory, trying again ...\n");
