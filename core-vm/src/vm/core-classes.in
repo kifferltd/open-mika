@@ -737,11 +737,9 @@ java/util/jar/Manifest
 java/util/jar/Manifest$Chunk
 #
 java/io/FileDescriptor
-	validFD			Z
-	fileName		Ljava/lang/String;
-	fd			+
-	createFromPath		(Ljava/lang/String;I)V	FileDescriptor_createFromPath
-        sync                    ()V                     FileDescriptor_sync
+	fd			I
+	createFromPath		(Ljava/lang/String;I)I	FileDescriptor_createFromPath
+        _sync                   ()V                     FileDescriptor_sync
 java/io/FileInputStream
 	fd			java/io/FileDescriptor
         read                    ()I                                             FileInputStream_read 
