@@ -407,7 +407,7 @@ z_zipFile parseZipFile(char *path) {
     return NULL;
   }
 
-  woempa(7, "Opened zip file `%s'\n", path);
+  woempa(1, "Opened zip file `%s'\n", path);
   
   /*
   ** Read partial information of the first entry.
@@ -442,7 +442,7 @@ z_zipFile parseZipFile(char *path) {
       l = vfs_read (zipFile->fd, temp, TRAWL_SIZE + 4);
       for (i = 0; i + 4 < l; ++i) {
         if (temp[i] == Z_SENTINEL0 && temp[i + 1] == Z_SENTINEL1 && temp[i + 2] == Z_DIR_BYTE0 && temp[i + 3] == Z_DIR_BYTE1) {
-          woempa(7, "Found directory sentinel at offset %d + %d\n", offset, i);
+          woempa(1, "Found directory sentinel at offset %d + %d\n", offset, i);
           offset += i + 4;
           match = allocClearedMem(sizeof(z_ZipEntry));
           if (!match) {
@@ -463,8 +463,8 @@ z_zipFile parseZipFile(char *path) {
     readZipEntry(WONKA_FALSE, match, &offset);
     
     if (match->offset == 0) {
-      woempa(7, "Found matching first entry in central directory.\n");
-      woempa(7, "Match offset %d\n", match->c_data_offset);
+      woempa(1, "Found matching first entry in central directory.\n");
+      woempa(1, "Match offset %d\n", match->c_data_offset);
       break;
     }
     woempa(1, "Found non-matching entry in central directory, trying again ...\n");
