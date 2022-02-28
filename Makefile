@@ -63,6 +63,11 @@ export mathobjdir = $(objdir)/math/$(MATH)
 export networkobjdir = $(objdir)/network/$(NETWORK)
 export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 
+export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
+export mikadeploydir = $(deploydir)/lib/mika
+export appdeploydir = $(deploydir)/app
+
+
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
 ifeq "$(AWT)" "rudolph"
@@ -469,19 +474,19 @@ export gendir = $(builddir)/generated
 CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 
 # TODO objdirlist not used anywhere?
-objdirlist += $(objdir)/awt/$(AWT)
-objdirlist += $(objdir)/filesystem/$(FILESYSTEM)
-objdirlist += $(objdir)/fp/$(FLOATING_POINT)
-objdirlist += $(objdir)/math/$(MATH)
-objdirlist += $(objdir)/network/$(NETWORK)
+# objdirlist += $(objdir)/awt/$(AWT)
+# objdirlist += $(objdir)/filesystem/$(FILESYSTEM)
+# objdirlist += $(objdir)/fp/$(FLOATING_POINT)
+# objdirlist += $(objdir)/math/$(MATH)
+# objdirlist += $(objdir)/network/$(NETWORK)
 
 export CFLAGS
 export LDFLAGS
 export JNI
 
-.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test
+.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app
 
-mika : echo builddir kernel core-vm
+mika : echo builddir kernel core-vm deployable
 
 $(MIKA_LIB) : 
 	make -C core-vm libs
@@ -508,6 +513,12 @@ echo : kecho
 	@echo "fsinc = " $(fsinc)
 
 builddir :
+	@echo "Creating " $(deploydir)
+	@mkdir -p $(deploydir)
+	@echo "Creating " $(deploydir)
+	@mkdir -p $(mikadeploydir)
+	@echo "Creating " $(mikadeploydir)
+	@mkdir -p $(appdeploydir)
 	@echo "Creating " $(objdir)
 	@mkdir -p $(objdir)
 	@echo "Creating " awtobjdir
@@ -548,12 +559,23 @@ endif
 core-vm : builddir comm max 
 	make -C core-vm 
 
+binary:
+
+jarfile:
+
+resource:
+
+app:
+
+deployable: binary jarfile resource app
+
 install : mika
 	@echo "Installing mika binary in ${INSTALL_DIR}"
 	cp core-vm/mika ${INSTALL_DIR}
 
 clean :
 	@rm -rf $(gendir)
+	@rm -rf $(deploydir)
 	@rm -rf $(objdir)
 	@rm -rf $(libdir)
 	-make -C vm-cmp/kernel/$(SCHEDULER) clean
