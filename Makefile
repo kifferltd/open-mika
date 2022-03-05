@@ -45,16 +45,42 @@ include ./Configuration/toolchain/$(TOOLCHAIN).mk
 include ./Configuration/host/$(HOSTOS).mk
 include ./Configuration/mika/default.mk
 
-export VERSION_STRING ?= "IM4000 test build 1.4.2-$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)"
+export VERSION_STRING ?= "Snapshot_$(PLATFORM)-$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)"
 export AWT_DEF ?= none
 export CPU HOSTOS SCHEDULER
 export AR
+export JAVAC
+
+# TODO: JAVAX could be java5 (or whatever)
+export JAVAX = java
+export javadir = $(MIKA_TOP)/core-vm/$(JAVAX)
+
+# TODO: SECURITY can take different values
+export SECURITY = none
+export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
+
+# TODO: SECURITY_PROVIDER can take different values e.g. harmony or none
+export SECURITY_PROVIDER = none
+export secprovdir = $(MIKA_TOP)/vm-cmp/security/provider/$(SECURITY_PROVIDER)/$(JAVAX)
+# FIXME only if SECURITY_PROVIDER is not 'none'
+# export secanyprovdir = $(MIKA_TOP)/vm-cmp/security/provider/any/$(JAVAX)
+
+export javamathdir = $(MIKA_TOP)/vm-cmp/math/${MATH}/$(JAVAX)
+
+# TODO JAR really means JAR_VERIFIER
+# TODO JAR can be java or none
+export JAR = none
+export javajardir = $(MIKA_TOP)/vm-cmp/jar/$(JAR)
+
+export classpath = $(javadir):$(javamathdir):$(securitydir):$(secprovdir):$(javajardir)
 
 export tooldir = $(MIKA_TOP)/tool
 export scriptdir = $(tooldir)/script
 export builddir = $(MIKA_TOP)/build/$(PLATFORM)
 export libdir = $(builddir)/lib
 export objdir = $(builddir)/obj
+export classdir = $(builddir)/class
+export emptydir = $(builddir)/java/empty
 
 export awtobjdir = $(objdir)/awt/$(AWT)
 export filesystemobjdir = $(objdir)/filesystem/$(FILESYSTEM)
@@ -66,7 +92,6 @@ export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
 export mikadeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
-
 
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
@@ -216,8 +241,9 @@ ifeq ($(MIKA_MAX), true)
   CFLAGS += -DRESMON
 endif
 
+# FIXME: would be better to define APP_DIR as app directory or empty
 ifeq ($(USE_APP_DIR), true)
-  CLASSPATH = "\{\}/apps/"
+  CLASSPATH = app/
 endif
 
 ifdef CCLASSPATH
@@ -486,7 +512,7 @@ export JNI
 
 .PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app
 
-mika : echo builddir kernel core-vm deployable
+mika : echo builddir deployable kernel core-vm
 
 $(MIKA_LIB) : 
 	make -C core-vm libs
@@ -515,9 +541,9 @@ echo : kecho
 builddir :
 	@echo "Creating " $(deploydir)
 	@mkdir -p $(deploydir)
-	@echo "Creating " $(deploydir)
-	@mkdir -p $(mikadeploydir)
 	@echo "Creating " $(mikadeploydir)
+	@mkdir -p $(mikadeploydir)
+	@echo "Creating " $(appdeploydir)
 	@mkdir -p $(appdeploydir)
 	@echo "Creating " $(objdir)
 	@mkdir -p $(objdir)
@@ -539,6 +565,10 @@ builddir :
 	@mkdir -p $(libdir)
 	@echo "Creating " $(gendir)
 	@mkdir -p $(gendir)
+	@echo "Creating " $(classdir)
+	@mkdir -p $(classdir)
+	@echo "Creating " $(emptydir)
+	@mkdir -p $(emptydir)
 
 kernel : kecho builddir kcommon 
 	make -C vm-cmp/kernel/$(SCHEDULER) 
@@ -559,15 +589,31 @@ endif
 core-vm : builddir comm max 
 	make -C core-vm 
 
-binary:
+binary : 
+	@echo "TODO: here we would copy the open-mika binary to ${mikadeploydir}"
 
-jarfile:
+# FIXME: select right security dir(s)
+jarfile : 
+	# make -C ${secanyprovdir} classes
+	make -C ${secprovdir} classes
+	make -C ${securitydir} classes
+	make -C ${javajardir} classes
+	make -C core-vm/$(JAVAX) classes
+	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
+	jar cmf core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
 
-resource:
+resource :
+	@echo "Copying resources to ${mikadeploydir}"
+	cp -r core-vm/resource/system/* ${mikadeploydir}	
 
-app:
+# FIXME: would be better to define APP_DIR as app directory or empty
+app :
+ifneq ($(wildcard ~/app/.*),)
+	@echo "Copying applications to ${appdeploydir}"
+	cp -r app/* ${appdeploydir}	
+endif
 
-deployable: binary jarfile resource app
+deployable : binary jarfile resource app
 
 install : mika
 	@echo "Installing mika binary in ${INSTALL_DIR}"
@@ -578,6 +624,7 @@ clean :
 	@rm -rf $(deploydir)
 	@rm -rf $(objdir)
 	@rm -rf $(libdir)
+	@rm -rf $(classdir)
 	-make -C vm-cmp/kernel/$(SCHEDULER) clean
 	-make -C vm-cmp/kernel/common clean
 	-make -C vm-cmp/fs/$(FILESYSTEM) clean

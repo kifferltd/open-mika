@@ -67,5 +67,5 @@ esac
 $SHELLNOCASEMATCH
 
 pushd ..
-make ${MAKEFLAGS} libs
+make ${MAKEFLAGS} libs deployable
 popd
