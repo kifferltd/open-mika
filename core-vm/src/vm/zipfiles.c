@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -32,6 +32,7 @@
 
 #include "new_deflate_internals.h"
 #include "ts-mem.h"
+//#include "vfs.h"
 #include "wstrings.h"
 #include "zipfile.h"
 
@@ -121,7 +122,7 @@ static const z_decoder decoders[] = {
 #define readByte(d)                     (*(d)++)
 
 #ifdef DEBUG
-void dumpEntry(z_zipEntry entry) {
+static void dumpEntry(z_zipEntry entry) {
 
   w_int offset = (w_int)entry->c_data_offset;
 
@@ -148,7 +149,7 @@ void dumpEntry(z_zipEntry entry) {
 }
 
 
-void dumpDir(z_zipFile dir) {
+static void dumpDir(z_zipFile dir) {
 
   z_zipEntry entry;
   w_int i = 1;
@@ -376,18 +377,157 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 ** by the underlying filesystem.
 */
 
-#define TRAWL_SIZE 8192
+#define TRAWL_SIZE 1024
+
+// TESTING buffer to hold a copy of the last chunk we read
+static unsigned char previous[TRAWL_SIZE];
+//
+
+/*
+** Read just enough of the first entry to be able to recognise it in the central directory.
+*/
+static z_zipEntry readFirstEntry(z_zipFile zipFile, w_size *offset_ptr) {
+  w_word signature;
+  // TODO probably we only need 4 bytes here
+  w_ubyte *temp = allocMem(TRAWL_SIZE + 4);
+  if (!temp) {
+    woempa(9, "Unable to allocate temp buffer\n");
+    return NULL;
+  }
+
+  vfs_read (zipFile->fd, temp, 4);
+  signature = bytes2word(temp);
+  if (signature != Z_LOCAL_HEADER) {
+    woempa(9, "Zip file signature is 0x%08x, should be 0x%08x\n", signature, Z_LOCAL_HEADER);
+    releaseMem(temp);
+    return NULL;
+  }
+
+  z_zipEntry entry = allocClearedMem(sizeof(z_ZipEntry));
+  if (!entry) {
+    woempa(9, "Unable to allocate entry for zip file\n");
+    releaseMem(temp);
+    return NULL;
+  }
+  entry->zipFile = zipFile;
+  *offset_ptr = 4; /* Skip over the signature */
+  readZipEntry(WONKA_TRUE, entry, offset_ptr);
+  releaseMem(temp);
+
+  return entry;
+}
+
+/*
+** Read one entry in the zipfile.
+*/
+static z_zipEntry readNextEntry(z_zipFile zipFile, w_size *offset_ptr) {
+  w_word signature;
+  w_ubyte sigbuf[4];
+  woempa(7, "Reading ZipEntry at offset 0%07o\n", *offset_ptr);
+
+  z_zipEntry entry = allocClearedMem(sizeof(z_ZipEntry));
+  if (!entry) {
+    woempa(7, "Unable to allocate memory for ZipEntry\n");
+    return NULL;
+  }
+
+  entry->zipFile = zipFile;
+  vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
+  vfs_read (zipFile->fd, sigbuf, 4);
+  signature = bytes2word(sigbuf);
+  if (signature != Z_DIR_HEADER) {
+    woempa(7, "Bad signature %0x %0x %0x %0x\n", sigbuf[0], sigbuf[1], sigbuf[2], sigbuf[3]);
+    return NULL;
+  }
+
+  *offset_ptr += sizeof(w_word);
+  entry->zipFile = zipFile;
+  readZipEntry(WONKA_FALSE, entry, offset_ptr);
+
+  return entry;
+}
+
+/*
+** Find the central directory header
+*/
+static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
+  w_boolean found = FALSE;
+
+  w_ubyte *trawlbuf = allocMem(TRAWL_SIZE + 4);
+  if (!trawlbuf) {
+    woempa(9, "Unable to allocate trawlbuf\n");
+    return NULL;
+  }
+
+  z_zipEntry match = allocClearedMem(sizeof(z_ZipEntry));
+  if (!match) {
+    releaseMem(trawlbuf);
+    return NULL;
+  }
+
+  match->zipFile = zipFile;
+  while (!found) {
+    w_boolean found_sentinel = FALSE;
+
+    while (!found_sentinel) {
+      w_size i;
+      w_size l;
+
+      vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
+      l = vfs_read (zipFile->fd, trawlbuf, TRAWL_SIZE + 4);
+      woempa(7, "was able to read %d bytes from 0%07o\n", l, *offset_ptr);
+//TESTING
+      if (memcmp(previous, trawlbuf, TRAWL_SIZE) == 0) {
+        wabort(ABORT_WONKA, "OOH LAH LAH %07o %02x %02x %02x %02x %02x %02x %02x ...\n", *offset_ptr, trawlbuf[0], trawlbuf[1], trawlbuf[2], trawlbuf[3], trawlbuf[4], trawlbuf[5], trawlbuf[6], trawlbuf[7]);
+      }
+//
+      woempa(7, "looking for pattern %02x %02x %02x %02x in bytes 0%07o to 0%07o\n", Z_SENTINEL0, Z_SENTINEL1, Z_DIR_BYTE0, Z_DIR_BYTE1, *offset_ptr, *offset_ptr + l - 1);
+      for (i = 0; i + 4 < l; ++i) {
+        if (trawlbuf[i] == Z_SENTINEL0 && trawlbuf[i + 1] == Z_SENTINEL1 && trawlbuf[i + 2] == Z_DIR_BYTE0 && trawlbuf[i + 3] == Z_DIR_BYTE1) {
+          woempa(7, "Found directory sentinel at offset 0%07o + 0%o\n", *offset_ptr, i);
+          found_sentinel = TRUE;
+          *offset_ptr += i + 4;
+          break;
+        }
+      }
+      if (!found_sentinel) {
+//TESTING
+        memcpy(previous, trawlbuf, TRAWL_SIZE);
+//
+        woempa(7, "Not found, advancing offset by 0%o\n", TRAWL_SIZE);
+        *offset_ptr += TRAWL_SIZE;
+      }
+    }
+    readZipEntry(WONKA_FALSE, match, offset_ptr);
+    
+    if (match->offset == 0) {
+      found = TRUE;
+      woempa(7, "Found matching first entry in central directory.\n");
+      woempa(7, "Match offset %d\n", match->c_data_offset);
+    }
+    else {
+      woempa(7, "Found non-matching entry in central directory, trying again from %d ...\n", *offset_ptr);
+    }
+  }
+
+  releaseMem(trawlbuf);
+
+  if (found) {
+    return match;
+  }
+  else {
+   releaseMem(match);
+   return NULL;
+  }
+}
 
 z_zipFile parseZipFile(char *path) {
 
-  w_word signature;
   z_zipEntry entry;
   z_zipEntry match = NULL;
   z_zipFile zipFile;
   w_ubyte *temp;
   w_size offset;
-  w_size i;
-  w_size l;
 
   temp = allocMem(TRAWL_SIZE + 4);
   if (!temp) {
@@ -399,6 +539,10 @@ z_zipFile parseZipFile(char *path) {
     releaseMem(temp);
     return NULL;
   }
+
+//  vfs_stat_struct statbuf;
+//  w_int statrc = vfs_stat(path, &statbuf);
+//  woempa(7, "Zipfile %s size is %d 0%o 0x%x\n", statbuf.st_size, statbuf.st_size, statbuf.st_size);
 
   zipFile->fd = vfs_open(path, O_RDONLY);
   if (zipFile->fd < 0) {
@@ -412,67 +556,29 @@ z_zipFile parseZipFile(char *path) {
   /*
   ** Read partial information of the first entry.
   */
-
-  vfs_read (zipFile->fd, temp, 4);
-  signature = bytes2word(temp);
-  if (signature != Z_LOCAL_HEADER) {
-    woempa(9, "Zip file signature is 0x%08x, should be 0x%08x\n", signature, Z_LOCAL_HEADER);
-    releaseMem(zipFile);
-    return NULL;
-  }
-
-  entry = allocClearedMem(sizeof(z_ZipEntry));
+  entry = readFirstEntry(zipFile, &offset);
   if (!entry) {
     woempa(9, "Unable to allocate entry for zip file `%s'\n", path);
     releaseMem(zipFile);
     return NULL;
   }
-  entry->zipFile = zipFile;
-  offset = 4; /* Skip over the signature */
-  readZipEntry(WONKA_TRUE, entry, &offset);
 
   /*
   ** Now skip over the file data until we find a directory header that matches
   ** in name and offset with this first entry.
   */
-
-  while (1) {
-    while (1) {
-      vfs_lseek (zipFile->fd, offset, SEEK_SET);
-      l = vfs_read (zipFile->fd, temp, TRAWL_SIZE + 4);
-      for (i = 0; i + 4 < l; ++i) {
-        if (temp[i] == Z_SENTINEL0 && temp[i + 1] == Z_SENTINEL1 && temp[i + 2] == Z_DIR_BYTE0 && temp[i + 3] == Z_DIR_BYTE1) {
-          woempa(1, "Found directory sentinel at offset %d + %d\n", offset, i);
-          offset += i + 4;
-          match = allocClearedMem(sizeof(z_ZipEntry));
-          if (!match) {
-            woempa(9, "Unable to allocate entry for zip file `%s'\n", path);
-            // TODO : release other entries!
-            releaseMem(zipFile);
-            return NULL;
-          }
-          match->zipFile = zipFile;
-          break;
-        }
-      }
-      if (match) {
-        break;
-      }
-      offset += TRAWL_SIZE;
-    }
-    readZipEntry(WONKA_FALSE, match, &offset);
-    
-    if (match->offset == 0) {
-      woempa(1, "Found matching first entry in central directory.\n");
-      woempa(1, "Match offset %d\n", match->c_data_offset);
-      break;
-    }
-    woempa(1, "Found non-matching entry in central directory, trying again ...\n");
+  match = findDirectoryHeader(zipFile, &offset);
+  if (!match) {
+    woempa(9, "Unable to find directory header `%s'\n", path);
+    releaseMem(zipFile);
+    return NULL;
   }
 
   list_init(match);
   zipFile->ht = ht_create ("hashtable:zipfile", 101, cstring_hash, cstring_equal, 0, 0);
   if (!zipFile->ht) {
+    woempa(9, "Unable to find create %s\n", "hashtable:zipfile");
+    releaseMem(zipFile);
     releaseMem(temp);
     releaseMem(match);
     releaseMem(zipFile);
@@ -484,21 +590,14 @@ z_zipFile parseZipFile(char *path) {
   // MEMORY LEAK, RELEASE entry	!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 
   while (1) {
-    vfs_lseek (zipFile->fd, offset, SEEK_SET);
-    vfs_read (zipFile->fd, temp, 4);
-    signature = bytes2word(temp);
-    if (signature != Z_DIR_HEADER) {
+    entry = readNextEntry(zipFile, &offset);
+    if (!entry) {
+// NAH
+//      woempa(9, "Unable to read zipfile entry at offset 0%07o\n", offset);
+//      releaseMem(zipFile);
+//      return NULL;
       break;
     }
-    offset += sizeof(w_word);
-    entry = allocClearedMem(sizeof(z_ZipEntry));
-    if (!entry) {
-      woempa(9, "Unable to allocate entry for zip file `%s'\n", path);
-      releaseMem(zipFile);
-      return NULL;
-    }
-    entry->zipFile = zipFile;
-    readZipEntry(WONKA_FALSE, entry, &offset);
     list_insert(match, entry);
     ht_write(zipFile->ht, (w_word)entry->name, (w_word)entry);
   }
@@ -1090,7 +1189,7 @@ static w_ubyte *zip_inflate(z_zipEntry entry) {
   //w_printf("zip_inflate(): Need to read %d bytes\n", entry->c_size);
   while (l < entry->c_size) {
     rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
-#ifndef OSWALD
+#if !defined (OSWALD) && !defined (FREERTOS)
     while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
       rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
     }
