@@ -28,6 +28,7 @@
 ###########################################################################
 
 CFLAGS += -I $(MIKA_TOP)/core-vm/include
+CFLAGS += -I $(fsinc)
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
