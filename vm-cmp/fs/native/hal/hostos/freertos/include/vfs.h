@@ -128,8 +128,9 @@ extern w_int vfs_close(w_int fd);
 #define vfs_seekdir(...)          seekdir(__VA_ARGS__)
 #define vfs_alphasort(...)        alphasort(__VA_ARGS__)
 
+#define vfs_stat_struct           ff_stat_struct
 //#define vfs_fstat(...)            fstat(__VA_ARGS__)
-#define vfs_stat(path, ...)       ff_stat(path, __VA_ARGS__)
+#define vfs_stat(path, statbufptr)       ff_stat(path,statbufptr)
 #define vfs_truncate(path,len)    ff_truncate(path, len)
 
 #define vfs_mkdir(path, ...)      ff_mkdir(path)
