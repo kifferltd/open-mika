@@ -32,7 +32,7 @@
 #include "jni.h"
 
 void ErrorOutputStream_write(w_thread thread, w_instance theStandardInputStream, w_instance byte_array_instance, w_int off, w_int len) {
-  x_debug_write("\e[91m", 5);
+  x_debug_write("\e[31m", 5);
   x_debug_write(instance2Array_byte(byte_array_instance) + off, len);
   x_debug_write("\e[0m", 4);
 }
