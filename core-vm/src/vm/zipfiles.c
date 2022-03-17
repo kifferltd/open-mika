@@ -191,7 +191,7 @@ static void dumpDir(z_zipFile dir) {
  * We assume that the first read will read at least 42 bytes if it reads
  * anything at all (i.e. does not fail with EINTR or EAGAIN).
  */
-#define ZIPENTRY_BUFSIZ 8192
+#define ZIPENTRY_BUFSIZ 512
 
 /**
  * Read one entry of the zip directory, and write the information in 'entry'.
@@ -377,7 +377,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 ** by the underlying filesystem.
 */
 
-#define TRAWL_SIZE 1024
+#define TRAWL_SIZE 16384
 
 // TESTING buffer to hold a copy of the last chunk we read
 static unsigned char previous[TRAWL_SIZE];
@@ -435,8 +435,13 @@ static z_zipEntry readNextEntry(z_zipFile zipFile, w_size *offset_ptr) {
   vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
   vfs_read (zipFile->fd, sigbuf, 4);
   signature = bytes2word(sigbuf);
-  if (signature != Z_DIR_HEADER) {
-    woempa(7, "Bad signature %0x %0x %0x %0x\n", sigbuf[0], sigbuf[1], sigbuf[2], sigbuf[3]);
+  // TODO we should make a better distinction between these two cases
+  if (signature == Z_DIR_END) {
+    woempa(7, "Found end-of-directory signature %0x %0x %0x %0x\n", sigbuf[0], sigbuf[1], sigbuf[2], sigbuf[3]);
+    return NULL;
+  }
+  else if (signature != Z_DIR_HEADER) {
+    woempa(9, "Bad signature %0x %0x %0x %0x\n", sigbuf[0], sigbuf[1], sigbuf[2], sigbuf[3]);
     return NULL;
   }
 
