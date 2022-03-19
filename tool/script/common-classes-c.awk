@@ -431,7 +431,7 @@ END {
       }
       if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
       printf "    thread->top = caller;\n"
-      printf "    enterSafeRegion(thread);\n"
+      if (reference) printf "    enterSafeRegion(thread);\n"
       printf "  }\n"
     }
     else {
