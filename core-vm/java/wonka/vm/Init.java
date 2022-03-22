@@ -405,25 +405,25 @@ final class Init {
     }
 
   // Start up the Garbage Collector
-    debug("Init: starting Garbage Collector");
-    GarbageCollector gc = GarbageCollector.getInstance();
+  //  debug("Init: starting Garbage Collector");
+  //  GarbageCollector gc = GarbageCollector.getInstance();
   // Start up the Heartbeat
     debug("Init: starting Heartbeat");
     Heartbeat h = Heartbeat.getInstance();
   // Start JDWP (does nothing if JDWP not compiled in)
     JDWP.getInstance();
   // Set the default timezone to the default default
-    TimeZone defaultTimeZone = null;
-    String user_timezone = System.getProperty("user.timezone");
-    debug("Init: user.timezone = " + user_timezone);
-    if (user_timezone != null) {
-      defaultTimeZone = TimeZone.getTimeZone(user_timezone);
-      if (defaultTimeZone == null) {
-        System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
-      }
-    }
-    TimeZone.setDefault(defaultTimeZone);
-    debug("Init: default TimeZone is " + TimeZone.getDefault());
+  //  TimeZone defaultTimeZone = null;
+  //  String user_timezone = System.getProperty("user.timezone");
+  //  debug("Init: user.timezone = " + user_timezone);
+  //  if (user_timezone != null) {
+  //    defaultTimeZone = TimeZone.getTimeZone(user_timezone);
+  //    if (defaultTimeZone == null) {
+  //      System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
+  //    }
+  //  }
+  //  TimeZone.setDefault(defaultTimeZone);
+  //  debug("Init: default TimeZone is " + TimeZone.getDefault());
 
     String user_language = System.getProperty("user.language");
     if (user_language != null) {
