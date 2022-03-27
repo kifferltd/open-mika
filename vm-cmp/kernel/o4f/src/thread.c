@@ -300,7 +300,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      return xs_bad_argument;
    }
 
-   if ((priority < 0) || (priority > (NUM_PRIORITIES - 1))) {
+   if ((priority < 0) || (priority >= configMAX_PRIORITIES)) {
      loempa(2, "Prio is %d! EXIT\n", priority);
      return xs_bad_argument;
    }
@@ -431,19 +431,20 @@ x_status x_thread_delete(x_thread thread) {
  *                               w_size new_priority);
  * Description:
  *   Changes the priority of the specified thread.  Valid priorities
- *   range from 0 through (NUM_PRIORITIES - 1), where 0 represents the 
+ *   range from 0 through (configMAX_PRIORITIES - 1), where 0 represents the 
  *   highest priority level. 
  */
  
 x_size x_thread_priority_set(x_thread thread, w_size new_priority) {
   x_size old_priority = thread->task_priority;
 
-  if (new_priority >= NUM_PRIORITIES) {
+  if (new_priority >= configMAX_PRIORITIES) {
     loempa(9, "x_thread_priority_set(): priority %d is out of range, ignoring\n", new_priority);
   }
   else {
-    // map 0 (highest priority) to (configMAX_PRIORITIES – 1), (NUM_PRIORITIES - 1) to 1
-    thread->task_priority = configMAX_PRIORITIES - 1 - ((configMAX_PRIORITIES - 2)*new_priority/NUM_PRIORITIES);
+    // map 0 (highest priority) to (configMAX_PRIORITIES – 1), (configMAX_PRIORITIES - 1) to 1
+    // WAS: thread->task_priority = configMAX_PRIORITIES - 1 - ((configMAX_PRIORITIES - 2)*new_priority/NUM_PRIORITIES);
+    thread->task_priority = new_priority;
     loempa(2, "oswald priority %d maps to FreeRTOS priority %d of %d\n", new_priority, thread->task_priority, configMAX_PRIORITIES);
   }
 

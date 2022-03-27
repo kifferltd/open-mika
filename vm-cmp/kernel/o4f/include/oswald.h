@@ -36,8 +36,6 @@
 #include "FreeRTOS.h"
 #include "xmisc.h"
 
-#define NUM_PRIORITIES     64
-
 #ifdef __BIT_TYPES_DEFINED__
 typedef int32_t      x_boolean;
 typedef u_int8_t     x_ubyte;
@@ -63,6 +61,8 @@ typedef struct x_Monitor *      x_monitor;
 typedef struct x_Thread *       x_thread;
 typedef struct x_Sem *          x_sem;
 typedef struct x_Mutex *        x_mutex;
+
+#define NUM_PRIORITIES configMAX_PRIORITIES
 
 typedef TickType_t   x_sleep;
 

@@ -198,7 +198,7 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 ** Notify one thread waiting on a monitor
 */
 x_status x_monitor_notify(x_monitor monitor) {
-  TaskHandle_t handle;
+  TaskHandle_t handle = (TaskHandle_t)0;
   BaseType_t retcode = xQueueReceive(monitor->waiter_queue, &handle, 0);
   switch (retcode) {
     case pdPASS:
@@ -208,7 +208,13 @@ x_status x_monitor_notify(x_monitor monitor) {
     default:
       o4f_abort(O4F_ABORT_MONITOR, "x_monitor_notify: xQueueReceive() failed with return code", retcode);
   }
-  loempa(2, "Thread %p is notifying a thread of monitor %p\n", monitor, x_thread_current());
+
+  if (!handle) {
+    loempa(2, "Thread %p is not notifying any thread of monitor %p, because none is waiting\n", x_thread_current(), monitor);
+    return xs_no_instance;
+  }
+
+  loempa(2, "Thread %p is notifying thread with handle %p of monitor %p\n", x_thread_current(), handle, monitor);
   xTaskNotifyGive(handle);
 
   return xs_success;
@@ -231,7 +237,7 @@ x_status x_monitor_notify_all(x_monitor monitor) {
   }
   vTaskPrioritySet(NULL, old_priority);
 
-  return status;
+  return status == xs_no_instance ? xs_success: status;
 }
 
 /*

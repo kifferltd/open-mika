@@ -40,6 +40,7 @@
  */
 x_status x_mutex_create(x_mutex mutex) {
 
+  mutex->magic = 0x7774756d;
   mutex->owner_mutex = xSemaphoreCreateRecursiveMutex();
   if (!mutex->owner_mutex) {
     return xs_insufficient_memory;
