@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2007, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -35,6 +35,11 @@
 #include "heap.h"
 #include "mika_threads.h"
 #include "network.h"
+
+#ifdef FREERTOS
+#define htonl FreeRTOS_htonl
+#define htons FreeRTOS_htons
+#endif
 
 w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){
   w_int length = instance2Array_length(Array) * 4;

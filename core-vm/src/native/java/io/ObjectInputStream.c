@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2021 by KIFFER Ltd.         *
+* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2021, 2022 by KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -38,6 +38,11 @@
 #include "network.h"
 #include "methods.h"
 #include "wstrings.h"
+
+#ifdef FREERTOS
+#define ntohl FreeRTOS_ntohl
+#define ntohs FreeRTOS_ntohs
+#endif
 
 void throwInvalidClassException(w_thread thread, w_instance Class, char * message, int l){
   w_instance ice;

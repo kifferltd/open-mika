@@ -65,11 +65,10 @@ static inline int w_switchPortBytes(int port){
 #include "wonka.h"
 
 #define w_socket(x,y,z)		FreeRTOS_socket(x,y,z)
-#define w_socketclose(s)   	FreeRTOS_close((int)s)
+// TODO maybe we need this:
+//  	{FreeRTOS_shutdown( xSocket, FREERTOS_SHUT_RDWR ); while( FreeRTOS_recv( xSocket, pcBufferToTransmit, xTotalLengthToSend, 0 ) >= 0 ) vTaskDelay( pdTICKS_TO_MS( 250 ) ); FreeRTOS_closesocket( xSocket );}
+#define w_socketclose(s)	FreeRTOS_closesocket(s)
 #define w_send(s,b,l,f)    	FreeRTOS_send(s,b,l,f)
-/* [CG 20040329] Replaced by inline function (v.i.)
-#define w_recv(T,s,b,l,f, timeout)    	FreeRTOS_recv(s,b,l,f)
-*/
 
 /*
  * TODO
