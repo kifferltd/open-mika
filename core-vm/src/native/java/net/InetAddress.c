@@ -203,7 +203,7 @@ void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_i
 */
 
   releaseMem(hostname);
-  setIntegerField(InetAddress, F_InetAddress_address, ntohl(ipnumber));
+  setIntegerField(InetAddress, F_InetAddress_address, Free_RTOS_ntohl(ipnumber));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
   //w_printf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
 #endif

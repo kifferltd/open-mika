@@ -34,5 +34,9 @@ CFLAGS += $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/include
 mika :
 	make -C $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
 
+libs :
+
+clean :
+
 
 

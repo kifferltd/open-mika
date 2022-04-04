@@ -141,12 +141,14 @@ static inline w_int w_recvfrom(int s, void *b, size_t blen, int f, struct sockad
 #define w_getpeername(s,a)      FreeRTOS_getpeername((int)s,a,sizeof(*a))
 #define w_gethostbyname(n)      FreeRTOS_gethostbyname(n)
 #define w_gethostbyname2(n,a)   FreeRTOS_gethostbyname2(n,a)
-#define w_gethostname(n,l)      FreeRTOS_gethostname(n,l)
+// TODO find out if the board has a "hostname" somewhere
+#define w_gethostname(n,l)      ({strncpy("im4000",n,l); 0;})
 #define w_sendto(s, b, blen, f, sa, size_sa, T) FreeRTOS_sendto(s, b, blen, f, sa, size_sa)
 #define w_getsockopt(s,lev,n,v,l) FreeRTOS_getsockopt((s),(lev),(n),(v),(l))
 #define w_setsockopt(s,lev,n,v,l) FreeRTOS_setsockopt((s),(lev),(n),(v),(l))
 #define w_getsockname(s,n,l) FreeRTOS_getsockname((s),(n),(l))
 
+// TODO FreeRTOS+TCP doesn't have an errno ...
 /*
 static inline int w_errno(int s) {
   return FreeRTOS_errno;
