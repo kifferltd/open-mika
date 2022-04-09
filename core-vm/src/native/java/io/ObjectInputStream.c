@@ -40,8 +40,11 @@
 #include "wstrings.h"
 
 #ifdef FREERTOS
-#define ntohl FreeRTOS_ntohl
-#define ntohs FreeRTOS_ntohs
+#define w_ntohl FreeRTOS_ntohl
+#define w_ntohs FreeRTOS_ntohs
+#else
+#define w_ntohl ntohl
+#define w_ntohs ntohs
 #endif
 
 void throwInvalidClassException(w_thread thread, w_instance Class, char * message, int l){
@@ -263,38 +266,38 @@ void to_word_array(w_instance Array, w_instance Bytes, w_int length){
     w_int duffs = (length + 31) / 32; // Note switch must be done on 31 == 0x1f
 
     switch (length & 0x1f) {
-      case  0: do { *dst++ = ntohl(*src++);
-      case 31:      *dst++ = ntohl(*src++);
-      case 30:      *dst++ = ntohl(*src++);
-      case 29:      *dst++ = ntohl(*src++);
-      case 28:      *dst++ = ntohl(*src++);
-      case 27:      *dst++ = ntohl(*src++);
-      case 26:      *dst++ = ntohl(*src++);
-      case 25:      *dst++ = ntohl(*src++);
-      case 24:      *dst++ = ntohl(*src++);
-      case 23:      *dst++ = ntohl(*src++);
-      case 22:      *dst++ = ntohl(*src++);
-      case 21:      *dst++ = ntohl(*src++);
-      case 20:      *dst++ = ntohl(*src++);
-      case 19:      *dst++ = ntohl(*src++);
-      case 18:      *dst++ = ntohl(*src++);
-      case 17:      *dst++ = ntohl(*src++);
-      case 16:      *dst++ = ntohl(*src++);
-      case 15:      *dst++ = ntohl(*src++);
-      case 14:      *dst++ = ntohl(*src++);
-      case 13:      *dst++ = ntohl(*src++);
-      case 12:      *dst++ = ntohl(*src++);
-      case 11:      *dst++ = ntohl(*src++);
-      case 10:      *dst++ = ntohl(*src++);
-      case  9:      *dst++ = ntohl(*src++);
-      case  8:      *dst++ = ntohl(*src++);
-      case  7:      *dst++ = ntohl(*src++);
-      case  6:      *dst++ = ntohl(*src++);
-      case  5:      *dst++ = ntohl(*src++);
-      case  4:      *dst++ = ntohl(*src++);
-      case  3:      *dst++ = ntohl(*src++);
-      case  2:      *dst++ = ntohl(*src++);
-      case  1:      *dst++ = ntohl(*src++);
+      case  0: do { *dst++ = w_ntohl(*src++);
+      case 31:      *dst++ = w_ntohl(*src++);
+      case 30:      *dst++ = w_ntohl(*src++);
+      case 29:      *dst++ = w_ntohl(*src++);
+      case 28:      *dst++ = w_ntohl(*src++);
+      case 27:      *dst++ = w_ntohl(*src++);
+      case 26:      *dst++ = w_ntohl(*src++);
+      case 25:      *dst++ = w_ntohl(*src++);
+      case 24:      *dst++ = w_ntohl(*src++);
+      case 23:      *dst++ = w_ntohl(*src++);
+      case 22:      *dst++ = w_ntohl(*src++);
+      case 21:      *dst++ = w_ntohl(*src++);
+      case 20:      *dst++ = w_ntohl(*src++);
+      case 19:      *dst++ = w_ntohl(*src++);
+      case 18:      *dst++ = w_ntohl(*src++);
+      case 17:      *dst++ = w_ntohl(*src++);
+      case 16:      *dst++ = w_ntohl(*src++);
+      case 15:      *dst++ = w_ntohl(*src++);
+      case 14:      *dst++ = w_ntohl(*src++);
+      case 13:      *dst++ = w_ntohl(*src++);
+      case 12:      *dst++ = w_ntohl(*src++);
+      case 11:      *dst++ = w_ntohl(*src++);
+      case 10:      *dst++ = w_ntohl(*src++);
+      case  9:      *dst++ = w_ntohl(*src++);
+      case  8:      *dst++ = w_ntohl(*src++);
+      case  7:      *dst++ = w_ntohl(*src++);
+      case  6:      *dst++ = w_ntohl(*src++);
+      case  5:      *dst++ = w_ntohl(*src++);
+      case  4:      *dst++ = w_ntohl(*src++);
+      case  3:      *dst++ = w_ntohl(*src++);
+      case  2:      *dst++ = w_ntohl(*src++);
+      case  1:      *dst++ = w_ntohl(*src++);
               } while (--duffs > 0);
     }
   }
@@ -308,8 +311,8 @@ void to_long_array(w_instance Array, w_instance Bytes, w_int length){
   //TODO: add duffs device
 
   for( ; i < length ; i++){
-    w_long l = ntohl(*src++);
-    *dst++ = (l<<32) | (ntohl(*src++));
+    w_long l = w_ntohl(*src++);
+    *dst++ = (l<<32) | (w_ntohl(*src++));
   }
 }
 
@@ -320,38 +323,38 @@ void to_short_array(w_instance Array, w_instance Bytes, w_int length){
     w_int duffs = (length + 31) / 32; // Note switch must be done on 31 == 0x1f
 
     switch (length & 0x1f) {
-      case  0: do { *dst++ = ntohs(*src++);
-      case 31:      *dst++ = ntohs(*src++);
-      case 30:      *dst++ = ntohs(*src++);
-      case 29:      *dst++ = ntohs(*src++);
-      case 28:      *dst++ = ntohs(*src++);
-      case 27:      *dst++ = ntohs(*src++);
-      case 26:      *dst++ = ntohs(*src++);
-      case 25:      *dst++ = ntohs(*src++);
-      case 24:      *dst++ = ntohs(*src++);
-      case 23:      *dst++ = ntohs(*src++);
-      case 22:      *dst++ = ntohs(*src++);
-      case 21:      *dst++ = ntohs(*src++);
-      case 20:      *dst++ = ntohs(*src++);
-      case 19:      *dst++ = ntohs(*src++);
-      case 18:      *dst++ = ntohs(*src++);
-      case 17:      *dst++ = ntohs(*src++);
-      case 16:      *dst++ = ntohs(*src++);
-      case 15:      *dst++ = ntohs(*src++);
-      case 14:      *dst++ = ntohs(*src++);
-      case 13:      *dst++ = ntohs(*src++);
-      case 12:      *dst++ = ntohs(*src++);
-      case 11:      *dst++ = ntohs(*src++);
-      case 10:      *dst++ = ntohs(*src++);
-      case  9:      *dst++ = ntohs(*src++);
-      case  8:      *dst++ = ntohs(*src++);
-      case  7:      *dst++ = ntohs(*src++);
-      case  6:      *dst++ = ntohs(*src++);
-      case  5:      *dst++ = ntohs(*src++);
-      case  4:      *dst++ = ntohs(*src++);
-      case  3:      *dst++ = ntohs(*src++);
-      case  2:      *dst++ = ntohs(*src++);
-      case  1:      *dst++ = ntohs(*src++);
+      case  0: do { *dst++ = w_ntohs(*src++);
+      case 31:      *dst++ = w_ntohs(*src++);
+      case 30:      *dst++ = w_ntohs(*src++);
+      case 29:      *dst++ = w_ntohs(*src++);
+      case 28:      *dst++ = w_ntohs(*src++);
+      case 27:      *dst++ = w_ntohs(*src++);
+      case 26:      *dst++ = w_ntohs(*src++);
+      case 25:      *dst++ = w_ntohs(*src++);
+      case 24:      *dst++ = w_ntohs(*src++);
+      case 23:      *dst++ = w_ntohs(*src++);
+      case 22:      *dst++ = w_ntohs(*src++);
+      case 21:      *dst++ = w_ntohs(*src++);
+      case 20:      *dst++ = w_ntohs(*src++);
+      case 19:      *dst++ = w_ntohs(*src++);
+      case 18:      *dst++ = w_ntohs(*src++);
+      case 17:      *dst++ = w_ntohs(*src++);
+      case 16:      *dst++ = w_ntohs(*src++);
+      case 15:      *dst++ = w_ntohs(*src++);
+      case 14:      *dst++ = w_ntohs(*src++);
+      case 13:      *dst++ = w_ntohs(*src++);
+      case 12:      *dst++ = w_ntohs(*src++);
+      case 11:      *dst++ = w_ntohs(*src++);
+      case 10:      *dst++ = w_ntohs(*src++);
+      case  9:      *dst++ = w_ntohs(*src++);
+      case  8:      *dst++ = w_ntohs(*src++);
+      case  7:      *dst++ = w_ntohs(*src++);
+      case  6:      *dst++ = w_ntohs(*src++);
+      case  5:      *dst++ = w_ntohs(*src++);
+      case  4:      *dst++ = w_ntohs(*src++);
+      case  3:      *dst++ = w_ntohs(*src++);
+      case  2:      *dst++ = w_ntohs(*src++);
+      case  1:      *dst++ = w_ntohs(*src++);
               } while (--duffs > 0);
     }
   }

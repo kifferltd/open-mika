@@ -2,7 +2,7 @@
 #define _NETWORK_H
 
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2022 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -35,6 +35,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include "FreeRTOS_sockets.h"
 
 #ifdef DEBUG
 #define DEBUG_NETWORK

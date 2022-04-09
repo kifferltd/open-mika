@@ -37,8 +37,11 @@
 #include "network.h"
 
 #ifdef FREERTOS
-#define htonl FreeRTOS_htonl
-#define htons FreeRTOS_htons
+#define w_htonl FreeRTOS_htonl
+#define w_htons FreeRTOS_htons
+#else
+#define w_htonl htonl
+#define w_htons htons
 #endif
 
 w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){
@@ -61,38 +64,38 @@ w_instance do_word_copy(w_thread thread, w_instance Array, w_instance This){
       duffs = (length + 31) / 32; // Note switch must be done on 31 == 0x1f
 
       switch (length & 0x1f) {
-        case  0: do { *dst++ = htonl(*src++);
-        case 31:      *dst++ = htonl(*src++);
-        case 30:      *dst++ = htonl(*src++);
-        case 29:      *dst++ = htonl(*src++);
-        case 28:      *dst++ = htonl(*src++);
-        case 27:      *dst++ = htonl(*src++);
-        case 26:      *dst++ = htonl(*src++);
-        case 25:      *dst++ = htonl(*src++);
-        case 24:      *dst++ = htonl(*src++);
-        case 23:      *dst++ = htonl(*src++);
-        case 22:      *dst++ = htonl(*src++);
-        case 21:      *dst++ = htonl(*src++);
-        case 20:      *dst++ = htonl(*src++);
-        case 19:      *dst++ = htonl(*src++);
-        case 18:      *dst++ = htonl(*src++);
-        case 17:      *dst++ = htonl(*src++);
-        case 16:      *dst++ = htonl(*src++);
-        case 15:      *dst++ = htonl(*src++);
-        case 14:      *dst++ = htonl(*src++);
-        case 13:      *dst++ = htonl(*src++);
-        case 12:      *dst++ = htonl(*src++);
-        case 11:      *dst++ = htonl(*src++);
-        case 10:      *dst++ = htonl(*src++);
-        case  9:      *dst++ = htonl(*src++);
-        case  8:      *dst++ = htonl(*src++);
-        case  7:      *dst++ = htonl(*src++);
-        case  6:      *dst++ = htonl(*src++);
-        case  5:      *dst++ = htonl(*src++);
-        case  4:      *dst++ = htonl(*src++);
-        case  3:      *dst++ = htonl(*src++);
-        case  2:      *dst++ = htonl(*src++);
-        case  1:      *dst++ = htonl(*src++);
+        case  0: do { *dst++ = w_htonl(*src++);
+        case 31:      *dst++ = w_htonl(*src++);
+        case 30:      *dst++ = w_htonl(*src++);
+        case 29:      *dst++ = w_htonl(*src++);
+        case 28:      *dst++ = w_htonl(*src++);
+        case 27:      *dst++ = w_htonl(*src++);
+        case 26:      *dst++ = w_htonl(*src++);
+        case 25:      *dst++ = w_htonl(*src++);
+        case 24:      *dst++ = w_htonl(*src++);
+        case 23:      *dst++ = w_htonl(*src++);
+        case 22:      *dst++ = w_htonl(*src++);
+        case 21:      *dst++ = w_htonl(*src++);
+        case 20:      *dst++ = w_htonl(*src++);
+        case 19:      *dst++ = w_htonl(*src++);
+        case 18:      *dst++ = w_htonl(*src++);
+        case 17:      *dst++ = w_htonl(*src++);
+        case 16:      *dst++ = w_htonl(*src++);
+        case 15:      *dst++ = w_htonl(*src++);
+        case 14:      *dst++ = w_htonl(*src++);
+        case 13:      *dst++ = w_htonl(*src++);
+        case 12:      *dst++ = w_htonl(*src++);
+        case 11:      *dst++ = w_htonl(*src++);
+        case 10:      *dst++ = w_htonl(*src++);
+        case  9:      *dst++ = w_htonl(*src++);
+        case  8:      *dst++ = w_htonl(*src++);
+        case  7:      *dst++ = w_htonl(*src++);
+        case  6:      *dst++ = w_htonl(*src++);
+        case  5:      *dst++ = w_htonl(*src++);
+        case  4:      *dst++ = w_htonl(*src++);
+        case  3:      *dst++ = w_htonl(*src++);
+        case  2:      *dst++ = w_htonl(*src++);
+        case  1:      *dst++ = w_htonl(*src++);
                 } while (--duffs > 0);
       }
     }
@@ -121,8 +124,8 @@ w_instance do_long_copy(w_thread thread, w_instance Array, w_instance This){
 
     for( ; i < length ; i++){
       w_long l = *src++;
-      *dst++ = htonl((w_word)(l>>32));
-      *dst++ = htonl((w_word)l);
+      *dst++ = w_htonl((w_word)(l>>32));
+      *dst++ = w_htonl((w_word)l);
     }
   }
   return Bytes;
@@ -149,38 +152,38 @@ w_instance do_short_copy(w_thread thread, w_instance Array, w_instance This){
       duffs = (length + 31) / 32; // Note switch must be done on 31 == 0x1f
 
       switch (length & 0x1f) {
-        case  0: do { *dst++ = htons(*src++);
-        case 31:      *dst++ = htons(*src++);
-        case 30:      *dst++ = htons(*src++);
-        case 29:      *dst++ = htons(*src++);
-        case 28:      *dst++ = htons(*src++);
-        case 27:      *dst++ = htons(*src++);
-        case 26:      *dst++ = htons(*src++);
-        case 25:      *dst++ = htons(*src++);
-        case 24:      *dst++ = htons(*src++);
-        case 23:      *dst++ = htons(*src++);
-        case 22:      *dst++ = htons(*src++);
-        case 21:      *dst++ = htons(*src++);
-        case 20:      *dst++ = htons(*src++);
-        case 19:      *dst++ = htons(*src++);
-        case 18:      *dst++ = htons(*src++);
-        case 17:      *dst++ = htons(*src++);
-        case 16:      *dst++ = htons(*src++);
-        case 15:      *dst++ = htons(*src++);
-        case 14:      *dst++ = htons(*src++);
-        case 13:      *dst++ = htons(*src++);
-        case 12:      *dst++ = htons(*src++);
-        case 11:      *dst++ = htons(*src++);
-        case 10:      *dst++ = htons(*src++);
-        case  9:      *dst++ = htons(*src++);
-        case  8:      *dst++ = htons(*src++);
-        case  7:      *dst++ = htons(*src++);
-        case  6:      *dst++ = htons(*src++);
-        case  5:      *dst++ = htons(*src++);
-        case  4:      *dst++ = htons(*src++);
-        case  3:      *dst++ = htons(*src++);
-        case  2:      *dst++ = htons(*src++);
-        case  1:      *dst++ = htons(*src++);
+        case  0: do { *dst++ = w_htons(*src++);
+        case 31:      *dst++ = w_htons(*src++);
+        case 30:      *dst++ = w_htons(*src++);
+        case 29:      *dst++ = w_htons(*src++);
+        case 28:      *dst++ = w_htons(*src++);
+        case 27:      *dst++ = w_htons(*src++);
+        case 26:      *dst++ = w_htons(*src++);
+        case 25:      *dst++ = w_htons(*src++);
+        case 24:      *dst++ = w_htons(*src++);
+        case 23:      *dst++ = w_htons(*src++);
+        case 22:      *dst++ = w_htons(*src++);
+        case 21:      *dst++ = w_htons(*src++);
+        case 20:      *dst++ = w_htons(*src++);
+        case 19:      *dst++ = w_htons(*src++);
+        case 18:      *dst++ = w_htons(*src++);
+        case 17:      *dst++ = w_htons(*src++);
+        case 16:      *dst++ = w_htons(*src++);
+        case 15:      *dst++ = w_htons(*src++);
+        case 14:      *dst++ = w_htons(*src++);
+        case 13:      *dst++ = w_htons(*src++);
+        case 12:      *dst++ = w_htons(*src++);
+        case 11:      *dst++ = w_htons(*src++);
+        case 10:      *dst++ = w_htons(*src++);
+        case  9:      *dst++ = w_htons(*src++);
+        case  8:      *dst++ = w_htons(*src++);
+        case  7:      *dst++ = w_htons(*src++);
+        case  6:      *dst++ = w_htons(*src++);
+        case  5:      *dst++ = w_htons(*src++);
+        case  4:      *dst++ = w_htons(*src++);
+        case  3:      *dst++ = w_htons(*src++);
+        case  2:      *dst++ = w_htons(*src++);
+        case  1:      *dst++ = w_htons(*src++);
                 } while (--duffs > 0);
       }
     }
