@@ -35,7 +35,6 @@
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
-#include "network.h"
 #include "wstrings.h"
 
 /*

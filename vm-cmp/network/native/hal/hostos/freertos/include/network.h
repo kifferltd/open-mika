@@ -29,13 +29,14 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+#include "FreeRTOS.h"
+#include "FreeRTOS_Sockets.h"
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-#include "FreeRTOS_sockets.h"
 
 #ifdef DEBUG
 #define DEBUG_NETWORK
