@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -36,6 +36,12 @@
 #include "exception.h"
 #include "fields.h"
 #include "wstrings.h"
+#ifdef FREERTOS
+#include "FreeRTOS_IP.h"
+#define w_ntohl FreeRTOS_ntohl
+#else
+#define w_ntohl ntohl
+#endif
 
 /*
 ** CG HACK to ensure we can always look up own name ...
@@ -202,7 +208,7 @@ void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_i
 */
 
   releaseMem(hostname);
-  setIntegerField(InetAddress, F_InetAddress_address, FreeRTOS_ntohl(ipnumber));
+  setIntegerField(InetAddress, F_InetAddress_address, w_ntohl(ipnumber));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
   //w_printf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
 #endif

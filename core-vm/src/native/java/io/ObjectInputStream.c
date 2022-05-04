@@ -40,6 +40,7 @@
 #include "wstrings.h"
 
 #ifdef FREERTOS
+#include "FreeRTOS_IP.h"
 #define w_ntohl FreeRTOS_ntohl
 #define w_ntohs FreeRTOS_ntohs
 #else

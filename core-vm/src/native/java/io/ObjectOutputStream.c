@@ -37,6 +37,7 @@
 #include "network.h"
 
 #ifdef FREERTOS
+#include "FreeRTOS_IP.h"
 #define w_htonl FreeRTOS_htonl
 #define w_htons FreeRTOS_htons
 #else
