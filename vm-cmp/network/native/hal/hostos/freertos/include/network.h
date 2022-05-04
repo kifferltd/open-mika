@@ -71,6 +71,7 @@ static inline int w_switchPortBytes(int port){
 //  	{FreeRTOS_shutdown( xSocket, FREERTOS_SHUT_RDWR ); while( FreeRTOS_recv( xSocket, pcBufferToTransmit, xTotalLengthToSend, 0 ) >= 0 ) vTaskDelay( pdTICKS_TO_MS( 250 ) ); FreeRTOS_closesocket( xSocket );}
 #define w_socketclose(s)	FreeRTOS_closesocket(s)
 #define w_send(s,b,l,f)    	FreeRTOS_send(s,b,l,f)
+#define w_sockaddr              FreeRTOS_sockaddr
 
 /*
  * TODO
