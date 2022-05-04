@@ -30,11 +30,11 @@ NETWORK_TOP  = $(MIKA_TOP)/vm-cmp/network/native
 
 CFLAGS += $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/include
 
-.PHONY : mika
-mika :
-	make -C $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
+.PHONY : mika libs clean
 
-libs :
+# normally we should be called with target 'libs', 'mika' added just in case
+mika libs :
+	make -C $(NETWORK_TOP)/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
 
 clean :
 

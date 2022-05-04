@@ -41,7 +41,9 @@ networkobjdir = $(objdir)/vm-cmp/network
 objects=$(patsubst %.c, $(networkobjdir)/%.o, $(sources))
 
 .PHONY : mika
-mika : $(networkobjdir) $(objects)
+
+# normally we should be called with target 'libs', 'mika' added just in case
+mika libs : $(networkobjdir) $(objects)
 
 $(networkobjdir) :
 	@echo Creating $(networkobjdir)
