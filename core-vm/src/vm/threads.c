@@ -253,20 +253,6 @@ const char *running_thread_report(x_thread x) {
 
 }
 
-/* moved to inits.c
-void initKernel() {
-
-#ifdef O4P
-  install_term_handler();
-#endif
-  x_mutex_create(&idLock);
-
-  x_thread_create(&ur_thread_x_Thread, 
-    startWonka, NULL, ur_thread_stack, 
-    SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
-}
-*/
-
 #define INIT_CLASS "wonka.vm.Init"
 
 extern int woempa_bytecodecount;

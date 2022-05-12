@@ -29,8 +29,11 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+#define  BOARD_USE_TCP   1
+#include "board_init.h"
 #include "FreeRTOS.h"
 #include "FreeRTOS_Sockets.h"
+#include "FreeRTOS_IP.h"
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -172,6 +175,13 @@ extern int (*x_recvmsg)(int s, struct msghdr *msg, int flags);
 extern int (*x_accept)(int s, struct sockaddr *addr, unsigned *addrlen);
 extern ssize_t (*x_read)(int fd, void *buf, size_t count);
 extern ssize_t (*x_write)(int fd, const void *buf, size_t count);
+
+// Functions we need to supply for FreeRTOS+TCP
+extern void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent);
+extern void tcpPingSendHook(uint32_t address);
+extern void  vApplicationPingReplyHook(ePingReplyStatus_t eStatus, uint16_t usIdentifier);
+extern BaseType_t xApplicationGetRandomNumber(uint32_t *pulNumber);
+extern uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t usSourcePort, uint32_t ulDestinationAddress, uint16_t usDestinationPort);
 
 #endif /* _NETWORK_H */
 

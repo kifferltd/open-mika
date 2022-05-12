@@ -34,3 +34,55 @@ void startNetwork(void) {
   // nothing to do???
 }
 
+void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
+  printf("Network is %s\n", eNetworkEvent == eNetworkUp ? "UP" : "DOWN");
+  tcp_mac_t mac;
+  tcp_return_code_t rc = tcp_get_mac(&mac);
+  if (rc == TCP_SUCCESS) {
+    printf("MAC address = %02x %02x %02x %02x %02x %02x\n", mac.puMAC[0], mac.puMAC[1], mac.puMAC[2], mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
+  }
+  else {
+    printf("MAC address not available\n");
+  }
+}
+
+void tcpPingSendHook(uint32_t address) {
+}
+
+void  vApplicationPingReplyHook(ePingReplyStatus_t eStatus, uint16_t usIdentifier) {
+}
+
+/*
+** XOR-shift PRNG which generates a 32-bit unsigned int on each call.
+** See: https://en.wikipedia.org/wiki/Xorshift
+** TODO Maybe this should be part of OSwald???
+*/
+
+/* The state word must be initialized to non-zero */
+static uint32_t xor32state = 0x3569ac;
+
+x_word xorshift32(x_word state)
+{
+        /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+        uint32_t x = xor32state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        return xor32state = x;
+}
+
+BaseType_t xApplicationGetRandomNumber(uint32_t *pulNumber) {
+  *pulNumber = xorshift32(&xor32state);
+
+  return pdTRUE;
+}
+
+uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t usSourcePort, uint32_t ulDestinationAddress, uint16_t usDestinationPort) {
+    ( void ) ulSourceAddress;
+    ( void ) usSourcePort;
+    ( void ) ulDestinationAddress;
+    ( void ) usDestinationPort;
+
+    return xorshift32(&xor32state);
+}
+
