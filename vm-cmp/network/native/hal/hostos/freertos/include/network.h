@@ -70,6 +70,7 @@ static inline int w_switchPortBytes(int port){
 #include "wonka.h"
 
 #define w_socket(x,y,z)		FreeRTOS_socket(x,y,z)
+#define PF_INET
 // TODO maybe we need this:
 //  	{FreeRTOS_shutdown( xSocket, FREERTOS_SHUT_RDWR ); while( FreeRTOS_recv( xSocket, pcBufferToTransmit, xTotalLengthToSend, 0 ) >= 0 ) vTaskDelay( pdTICKS_TO_MS( 250 ) ); FreeRTOS_closesocket( xSocket );}
 #define w_socketclose(s)	FreeRTOS_closesocket(s)
@@ -147,8 +148,10 @@ static inline w_int w_recvfrom(int s, void *b, size_t blen, int f, struct sockad
 #define w_getpeername(s,a)      FreeRTOS_getpeername((int)s,a,sizeof(*a))
 #define w_gethostbyname(n)      FreeRTOS_gethostbyname(n)
 #define w_gethostbyname2(n,a)   FreeRTOS_gethostbyname2(n,a)
-// TODO find out if the board has a "hostname" somewhere
-#define w_gethostname(n,l)      ({strncpy("im4000",n,l); 0;})
+
+int w_gethostname(char *name, size_t len);
+int w_sethostname(const char *name, size_t len);
+
 #define w_sendto(s, b, blen, f, sa, size_sa, T) FreeRTOS_sendto(s, b, blen, f, sa, size_sa)
 #define w_getsockopt(s,lev,n,v,l) FreeRTOS_getsockopt((s),(lev),(n),(v),(l))
 #define w_setsockopt(s,lev,n,v,l) FreeRTOS_setsockopt((s),(lev),(n),(v),(l))

@@ -34,22 +34,57 @@ void startNetwork(void) {
   // nothing to do???
 }
 
+static char hostname[32] = {'I', 'm', 's', 'y', 's', 0};
+
+int w_gethostname(char *name, size_t len) {
+  strncpy(name, hostname, len);
+  return 0;
+}
+
+int w_sethostname(const char *name, size_t len) {
+  strncpy(hostname, name, len < 32 ? len: 31);
+  return 0;
+}
+
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
-  printf("Network is %s\n", eNetworkEvent == eNetworkUp ? "UP" : "DOWN");
   tcp_mac_t mac;
   tcp_return_code_t rc = tcp_get_mac(&mac);
+  snprintf(hostname, 32, "Imsys_%02x%02x%02x", mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
+#ifdef DEBUG
+  printf("Network is %s\n", eNetworkEvent == eNetworkUp ? "UP" : "DOWN");
   if (rc == TCP_SUCCESS) {
     printf("MAC address = %02x %02x %02x %02x %02x %02x\n", mac.puMAC[0], mac.puMAC[1], mac.puMAC[2], mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
   }
   else {
     printf("MAC address not available\n");
   }
+
+  int32_t IPAddress;
+  uint32_t NetMask;
+  uint32_t GatewayAddress;
+  uint32_t DNSServerAddress;
+  FreeRTOS_GetAddressConfiguration(&IPAddress, &NetMask, &GatewayAddress, &DNSServerAddress );
+  printf("IPAdress = %08x Netmask = %08x GatewayAddress = %08x DNSServerAddress = %08x\n", IPAddress, NetMask, GatewayAddress, DNSServerAddress);
+#endif
 }
 
 void tcpPingSendHook(uint32_t address) {
+#ifdef DEBUG
+  printf("Pinging %08x\n", address);
+#endif
 }
 
 void  vApplicationPingReplyHook(ePingReplyStatus_t eStatus, uint16_t usIdentifier) {
+#ifdef DEBUG
+  const char *status;
+  switch (eStatus) {
+    case eSuccess : status = "Success"; break;
+    case eInvalidChecksum : status = "InvalidChecksum"; break;
+    case eInvalidData : status = "InvalidData"; break;
+    default : status = "?????"; 
+  }
+  printf("Ping #%d received reply '%s'\n", usIdentifier, status);
+#endif
 }
 
 /*
@@ -83,6 +118,9 @@ uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t u
     ( void ) ulDestinationAddress;
     ( void ) usDestinationPort;
 
+#ifdef DEBUG
+  printf("Generating random sequence number for src %08x:%d dst %08x:%d\n", ulSourceAddress, usSourcePort, ulDestinationAddress, usDestinationPort);
+#endif
     return xorshift32(&xor32state);
 }
 
