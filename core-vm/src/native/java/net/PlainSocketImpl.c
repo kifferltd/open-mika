@@ -94,8 +94,13 @@ w_int PlainSocketImpl_getSocket(w_thread thread , w_instance ThisImpl){
 
 }
 
+#ifdef FREERTOS
+#define PF_INET FREERTOS_AF_INET
+#define SOCK_STREAM FREERTOS_SOCK_STREAM
+#define IPPROT_TCP FREERTOS_IPPROTO_TCP
+#endif
+
 void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
-/* TODO : re-write me
   w_int sock;
 #ifdef PF_INET6
   w_int pf = (getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6) ? PF_INET6 : PF_INET);
@@ -107,7 +112,7 @@ void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
     throwException(thread, clazzIOException, "socket is already open");
   }
   else {
-    sock = w_socket (pf, SOCK_STREAM, 0);
+    sock = w_socket (pf, SOCK_STREAM, IPPROT_TCP);
     setWotsitField(ThisImpl, F_PlainSocketImpl_wotsit, sock);	
     woempa(1, "%j : socket is %d\n", ThisImpl, sock);
 
@@ -119,7 +124,6 @@ void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
       setBooleanField(ThisImpl, F_PlainSocketImpl_open, WONKA_TRUE);
     }
   }
-*/
 }
 
 void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeout) {
