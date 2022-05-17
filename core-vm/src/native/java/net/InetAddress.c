@@ -210,21 +210,32 @@ void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_i
   releaseMem(hostname);
   setIntegerField(InetAddress, F_InetAddress_address, w_ntohl(ipnumber));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
-  //w_printf("IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
 #endif
 }
 
-w_instance InetAddress_getLocalName(w_thread thread, w_instance clazz) {
+w_instance InetAddress_getLocalName(w_thread thread, w_instance theClass) {
+  w_clazz clazz = Class2clazz(theClass);
+  w_instance theName;
+  w_string ownhostname_string;
+  w_boolean unsafe = enterUnsafeRegion(thread);
 
-  w_instance Name = NULL;
+  theName = allocInstance(thread, clazz);
+
+  if (!unsafe) {
+    enterSafeRegion(thread);
+  }
 
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
-    w_string ownhostname_string = cstring2String(ownhostname, strlen(ownhostname));
-    setReferenceField(Name, getStringInstance(ownhostname_string), F_InetAddress_hostName);
-    deregisterString(ownhostname_string);
+    ownhostname_string = cstring2String(ownhostname, strlen(ownhostname));
   }
+  else {
+    ownhostname_string = cstring2String("IM4000", 6);
+  }
+  
+  setReferenceField(theName, getStringInstance(ownhostname_string), F_InetAddress_hostName);
+  deregisterString(ownhostname_string);
 
-  return Name;
+  return theName;
 
 }
