@@ -51,6 +51,9 @@
 #include <stdio.h>
 #endif
 
+// Type used to select a socket
+#define w_sock      int
+
 /*
 ** ---- Network Abstraction Layer ----
 **

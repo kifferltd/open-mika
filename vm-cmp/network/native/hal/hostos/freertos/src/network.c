@@ -36,21 +36,79 @@ void startNetwork(void) {
 
 static char hostname[32] = {'I', 'm', 's', 'y', 's', 0};
 
-int w_gethostname(char *name, size_t len) {
+w_int w_gethostname(char *name, size_t len) {
   strncpy(name, hostname, len);
   return 0;
 }
 
-int w_sethostname(const char *name, size_t len) {
+w_int w_sethostname(const char *name, size_t len) {
   strncpy(hostname, name, len < 32 ? len: 31);
   return 0;
+}
+
+/*
+ * TODO
+ * If a timeout is specified then we have to do a lot of fancy stuff
+ * instead of just forwarding to connect(s,a,l)
+ */
+w_int w_connect(w_sock s, void *a, w_size l, w_int t) {
+//    if (t == 0) {
+        return FreeRTOS_connect(s, a, l);
+//    }
+// otherwise ... TODO
+}
+
+/*
+ * If recv is interrupted before any data read, restart it.
+ * If it returns 0 then probably the timeout has expired, 
+ * so set timeout to -1 as a clunky way to signal to
+ * PlainSocketImpl_read() that a timeout occurred.
+ */
+w_int w_recv(w_sock s, void *b, size_t l, w_int f, w_int *timeoutp) {
+  BaseType_t retval = FreeRTOS_recv(s,b,l,f);
+
+  while (retval == -pdFREERTOS_ERRNO_EINTR) {
+    retval = FreeRTOS_recv(s,b,l,f);
+  }
+
+  if (retval == 0) {
+    *timeoutp = -1;
+  }
+
+  return (w_int)retval;
+}
+
+// TODO no socklen_t for parameter l?
+w_sock w_accept(w_sock s, struct w_sockaddr *a, unsigned *l, w_int timeout) {
+  w_sock retval = FreeRTOS_accept(s,a,l);
+
+  if (retval < 0) {
+    *l = 0;
+  }
+  return retval;
+}
+
+// TODO no socklen_t for parameter l?
+w_int w_recvfrom(w_sock s, void *b, size_t blen, w_int f, struct w_sockaddr *sa, unsigned *size_sa, w_int timeout, w_instance This) {
+
+  w_int retval =  FreeRTOS_recvfrom(s, b, blen, f, sa, size_sa);
+
+  while (retval == -1 && errno == EINTR) {
+    retval =  FreeRTOS_recvfrom(s, b, blen, f, sa, size_sa);
+  }
+
+  if (retval == -1 && errno == EAGAIN) {
+    *size_sa = 0;
+  }
+
+  return retval;
 }
 
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
   tcp_mac_t mac;
   tcp_return_code_t rc = tcp_get_mac(&mac);
   snprintf(hostname, 32, "Imsys_%02x%02x%02x", mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
-#ifdef DEBUG
+//#ifdef DEBUG
   printf("Network is %s\n", eNetworkEvent == eNetworkUp ? "UP" : "DOWN");
   if (rc == TCP_SUCCESS) {
     printf("MAC address = %02x %02x %02x %02x %02x %02x\n", mac.puMAC[0], mac.puMAC[1], mac.puMAC[2], mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
@@ -65,7 +123,7 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
   uint32_t DNSServerAddress;
   FreeRTOS_GetAddressConfiguration(&IPAddress, &NetMask, &GatewayAddress, &DNSServerAddress );
   printf("IPAdress = %08x Netmask = %08x GatewayAddress = %08x DNSServerAddress = %08x\n", IPAddress, NetMask, GatewayAddress, DNSServerAddress);
-#endif
+//#endif
 }
 
 void tcpPingSendHook(uint32_t address) {

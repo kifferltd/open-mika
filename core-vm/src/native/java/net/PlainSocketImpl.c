@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -46,14 +46,13 @@
 */
 
 w_int PlainSocketImpl_clear(w_instance ThisImpl) {
-/* TODO : re-write me
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
-  w_int res;	
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_int res = 0;	
 
   if (getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     w_int minus1 = -1;
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-      printf("Socket: closing %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit));
+      printf("Socket: closing %d\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit));
     }
     res = w_socketclose(sock);
 
@@ -62,13 +61,9 @@ w_int PlainSocketImpl_clear(w_instance ThisImpl) {
   }
   else {
     woempa(1, "socket %p was already closed !\n", ThisImpl);
-    res = 0;
   }
 
   return res;
-*/
-  return 0;
-
 }
 
 void PlainSocketImpl_close(w_thread thread , w_instance ThisImpl) {
@@ -82,26 +77,16 @@ void PlainSocketImpl_finalize(w_thread thread , w_instance ThisImpl) {
 }
 
 w_int PlainSocketImpl_getSocket(w_thread thread , w_instance ThisImpl){
-/* TODO : re-write me
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     throwException(thread, clazzSocketException, "socket is not open or uninitialized");
   }
 
   return (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
-*/
-  return 0;
-
 }
 
-#ifdef FREERTOS
-#define PF_INET FREERTOS_AF_INET
-#define SOCK_STREAM FREERTOS_SOCK_STREAM
-#define IPPROT_TCP FREERTOS_IPPROTO_TCP
-#endif
-
 void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
-  w_int sock;
+  w_sock sock;
 #ifdef PF_INET6
   w_int pf = (getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6) ? PF_INET6 : PF_INET);
 #else
@@ -137,7 +122,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
   }
   else {
     struct sockaddr * sa = NULL;
-    int sa_size = 0;
+    w_size sa_size = 0;
     
     struct sockaddr_in  sa4;
 #ifdef PF_INET6
@@ -145,7 +130,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
 #endif
 
     w_int res;
-    w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+    w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
     if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
       woempa(9, "socket %i was closed\n", sock);
@@ -158,7 +143,6 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
       memset(&sa4, 0, sizeof(sa4));
       sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
       sa4.sin_family = AF_INET;
-      //sa4.sin_port = w_switchPortBytes(port);
       sa4.sin_port = htons(port);
 
       woempa (7,"INET: connect, port %d addr %lx\n", sa4.sin_port, sa4.sin_addr.s_addr);
@@ -174,7 +158,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
       memset(&sa6, 0, sizeof(sa6));
       memcpy(&sa6.sin6_addr, instance2Array_byte(getReferenceField(address, F_Inet6Address_ipaddress)), 16);
       sa6.sin6_family = AF_INET6;
-      sa6.sin6_port = w_switchPortBytes(port);
+      sa6.sin6_port = w_htons(port);
 
       woempa (7,"INET6: connect, port %d addr %p\n", sa6.sin6_port, sa6.sin6_addr);
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -188,7 +172,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
     memset(&sa4, 0, sizeof(sa4));
     sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
     sa4.sin_family = AF_INET;
-    sa4.sin_port = w_switchPortBytes(port);
+    sa4.sin_port = w_htons(port);
 
     woempa (7,"INET: connect, port %d addr %lx\n", sa4.sin_port, sa4.sin_addr.s_addr);
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -232,7 +216,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
         throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
       }
       else {
-        setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa4.sin_port));
+        setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa4.sin_port));
       }
     }
     else {
@@ -244,7 +228,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
         throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
       }
       else {	
-        setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa6.sin6_port));
+        setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa6.sin6_port));
       }
     }
 #else
@@ -255,7 +239,7 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
       throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
     }
     else {  
-      setIntegerField(ThisImpl, F_SocketImpl_localport, w_switchPortBytes(sa4.sin_port));
+      setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa4.sin_port));
     }
 #endif
   }
@@ -263,23 +247,26 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
   
 }
 
+#ifndef FREERTOS
 // Our signal handler doesn't actually do anything, it's just there so that
 // SIGUSR1 has the desired effect of interrupting accept() or read().
 static sigusr_handler(int sig) {
   woempa(1, "Received signal %d\n", sig);
 }
+#endif
 
 w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
-/* TODO : re-write me
 
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
   w_int res;	
   w_int arrayLength;
   w_int timeout;
   w_int i;
   unsigned char c;
 
+#ifndef FREERTOS
   struct sigaction action, savedaction;
+#endif
   
   woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
@@ -304,22 +291,22 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
     return 0;
   }
 
-  /.
-  .. All seems OK, let's read...
-  ./
+  /*
+  ** All seems OK, let's read...
+  */
+#ifndef FREERTOS
   action.sa_handler = sigusr_handler;
   sigemptyset (&action.sa_mask);
   action.sa_flags = 0;
   sigaction(SIGUSR1, &action, &savedaction);
+#endif
   timeout = getIntegerField(ThisImpl, F_PlainSocketImpl_timeout);
   woempa(2, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
-#ifdef UCLINUX
-  res = w_recv(ThisImpl, sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
-#else
   res = w_recv(sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
-#endif
+#ifndef FREERTOS
   sigaction(SIGUSR1, &savedaction, NULL);
-  if (res == -1) {
+#endif
+  if (res < 0) {
     if( timeout == -1) {
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d read timed out\n", sock);
@@ -330,7 +317,11 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d read failed: %s\n", sock, strerror(errno));
       }
+#ifdef FREERTOS
+      throwException(thread, clazzIOException, "recv error %d", res);
+#else
       throwException(thread, clazzIOException, "recv errno %d '%s'", errno, strerror(errno));
+#endif
     }
   }
 
@@ -349,15 +340,11 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
   }
 
   return res;
-*/
-  return 0;
-
 }
 
-void PlainSocketImpl_write(w_thread threadv, w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
-/* TODO : re-write me
+void PlainSocketImpl_write(w_thread thread, w_instance ThisImpl, w_instance byteArray, w_int off, w_int length) {
 
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
   w_int res;	
   w_int arrayLength;
   w_int i;
@@ -398,20 +385,20 @@ void PlainSocketImpl_write(w_thread threadv, w_instance ThisImpl, w_instance byt
   }
 
   if (res == -1) {
+#ifndef FREERTOS
     woempa(9,"got error while sending from SocketImpl %p --> error = %i\n", ThisImpl, w_errno(sock));
+#endif
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d write failed: %s\n", sock, strerror(errno));
     }
     throwException(thread, clazzIOException, "send errno %d '%s'", errno, strerror(errno));
   }
-*/
 
 }
 
-// TODO: test if this actually works ...
+// Note: this doesn't actually send the data OOB (so pretty useless)
 void PlainSocketImpl_sendUrgentData(w_thread thread , w_instance thisImpl, w_int udata) {
-/* TODO : re-write me
-  w_int sock = (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit);
   w_byte bdata = (w_byte)udata;
   w_int res;
 
@@ -422,31 +409,89 @@ void PlainSocketImpl_sendUrgentData(w_thread thread , w_instance thisImpl, w_int
   }
 
   if (res == -1) {
+#ifndef FREERTOS
     woempa(9,"got error while sending OOB from SocketImpl %p --> error = %i\n", thisImpl, w_errno(sock));
+#endif
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       printf("Socket: id = %d OOB write failed: %s\n", sock, strerror(errno));
     }
     throwException(thread, clazzIOException, "send OOB errno %d '%s'", errno, strerror(errno));
   }
-*/
 }
 
 // TODO rewrite this using getaddrinfo(), see example at
 // https://beej.us/guide/bgnet/output/html/multipage/bindman.html
 
+// TODO stop this ifdef madness!!!
+#ifdef FREERTOS
 void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
-/* TODO : re-write me
 
   w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_localAddress); 
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_localport);
-  w_thread thread = thread;
+  
+  if (! address) {
+    throwException(thread, clazzConnectException, "no IP address");
+
+    return;
+  }
+
+  if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: tried to bind closed socket\n");
+    }
+    throwException(thread, clazzIOException, "socket closed or uninitialized");
+
+    return;
+  }  	  	  	
+
+  struct freertos_sockaddr sa;
+  w_int res;
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  	
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = PF_INET;
+  sa.sin_addr = FreeRTOS_htonl(getIntegerField(address, F_InetAddress_address));
+  sa.sin_port = FreeRTOS_htons(port);
+  woempa(7, "INET: bind, port %d addr %x (%x)\n", sa.sin_port, sa.sin_addr, getIntegerField(address, F_InetAddress_address));
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    unsigned char *a = (unsigned char *)&sa.sin_addr;
+    printf("Socket: binding to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa.sin_port);
+  }
+
+  res = w_bind (sock, &sa, sizeof(sa));
+  woempa(6, "socketfd = %d, bindresult = %d\n", sock, res);
+
+  if (res) {
+    char *errmsg = (res == pdFREERTOS_ERRNO_EINVAL ? "could not bind to port" : res == pdFREERTOS_ERRNO_ECANCELED ? "cancelled" : "unknown");
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: id = %d bind failed: %s\n", sock, errmsg);
+    }
+    throwException(thread, clazzBindException, errmsg, "");
+
+    return;
+  }
+
+  if (port == 0) {
+    FreeRTOS_GetLocalAddress(sock, &sa);
+    port = FreeRTOS_ntohs(sa.sin_port);
+  } 
+
+  setIntegerField(ThisImpl, F_SocketImpl_localport, port);
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: id = %d bind succeeded, port = %d\n", sock, port);
+  }
+}
+#else
+void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
+
+  w_instance address = getReferenceField(ThisImpl, F_PlainSocketImpl_localAddress); 
+  w_int port = getIntegerField(ThisImpl, F_SocketImpl_localport);
   
   if (! address) {
     throwException(thread, clazzConnectException, "no IP address");
   }
   else {
     struct sockaddr * sa = NULL;
-    int sa_size = 0;
     
     struct sockaddr_in  sa4;
 #ifdef PF_INET6
@@ -454,7 +499,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
 #endif
 
     w_int res;
-    w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+    w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
   	
     if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
       woempa(9, "socket %i was closed\n",sock);
@@ -467,7 +512,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
       memset(&sa4, 0, sizeof(sa4));
       sa4.sin_family = AF_INET;
       sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-      sa4.sin_port = w_switchPortBytes(port);
+      sa4.sin_port = w_htons(port);
       woempa(1, "INET: bind, port %d addr %x (%x)\n", sa4.sin_port, sa4.sin_addr.s_addr, getIntegerField(address, F_InetAddress_address));
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         unsigned char *a = (unsigned char *)&sa4.sin_addr.s_addr;
@@ -480,7 +525,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
     else {
       memset(&sa6, 0, sizeof(sa6));
       sa6.sin6_family = AF_INET6;
-      sa6.sin6_port = w_switchPortBytes(port);
+      sa6.sin6_port = w_htons(port);
       // TODO - test this!!!
       w_instance ipaddressInstance = getReferenceField(address, F_Inet6Address_ipaddress);
       w_byte *ipaddressBytes = instance2Array_byte(ipaddressInstance);
@@ -496,7 +541,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
     memset(&sa4, 0, sizeof(sa4));
     sa4.sin_family = AF_INET;
     sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-    sa4.sin_port = w_switchPortBytes(port);
+    sa4.sin_port = w_htons(port);
     //w_comparePorts(sa.sin_port,port);     
     woempa(1, "INET: bind, port %d addr %x (%x)\n", sa4.sin_port, sa4.sin_addr.s_addr, getIntegerField(address, F_InetAddress_address));
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
@@ -531,7 +576,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
           throwException(thread, clazzBindException, "getsockname errno %d '%s'", errno, strerror(errno));
         }
         else {
-          port = w_switchPortBytes(sa4.sin_port);
+          port = w_ntohs(sa4.sin_port);
         }
       }
       else {
@@ -541,7 +586,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
           throwException(thread, clazzBindException, "getsockname errno %d '%s'", errno, strerror(errno));
         }
         else {
-          port = w_switchPortBytes(sa6.sin6_port);
+          port = w_ntohs(sa6.sin6_port);
         }
       }
     }  	
@@ -554,7 +599,7 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
         throwException(thread, clazzBindException, "getsockname errno %d '%s'", errno, strerror(errno));
       }
       else {
-        port = w_switchPortBytes(sa4.sin_port);
+        port = w_ntohs(sa4.sin_port);
         //w_comparePorts(sa4.sin_port,port);        
       }
     }  	
@@ -564,14 +609,13 @@ void PlainSocketImpl_bind(w_thread thread , w_instance ThisImpl) {
       printf("Socket: id = %d bind succeeded, port = %d\n", sock, port);
     }
   }
-*/
 
 }
+#endif
 
 void PlainSocketImpl_listen(w_thread thread , w_instance ThisImpl, w_int backlog) {
-/* TODO : re-write me
 
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n",sock);
@@ -593,16 +637,14 @@ void PlainSocketImpl_listen(w_thread thread , w_instance ThisImpl, w_int backlog
       }
     }
   }
-*/
 
 }
 
 w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance newImpl) {
-/* TODO : re-write me
 
   
   //newImpl will not be null (this function is a private method)
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
   woempa(1, "sock = %d timeout = %d\n", sock, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open) || !newImpl) {
@@ -613,8 +655,11 @@ w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance n
 
   }
   else { // accept is done in two steps step step 1. get a socket from the system
+#ifdef FREERTOS
+    struct freertos_sockaddr sa;
+    socklen_t bytelen = sizeof (struct freertos_sockaddr);
+#else
     struct sockaddr_in sa;
-    w_int newsocket;
     socklen_t bytelen = sizeof (struct sockaddr_in);
     struct sigaction action, savedaction;
   		
@@ -622,13 +667,12 @@ w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance n
     sigemptyset (&action.sa_mask);
     action.sa_flags = 0;
     sigaction(SIGUSR1, &action, &savedaction);
-    memset(&sa, 0, sizeof(sa)); //lets play safe
-#ifdef UCLINUX
-    newsocket = w_accept(ThisImpl,sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
-#else
-    newsocket = w_accept(sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
 #endif
+    memset(&sa, 0, sizeof(sa)); //lets play safe
+    w_sock newsocket = w_accept(sock, (struct sockaddr *) &sa , &bytelen, getIntegerField(ThisImpl, F_PlainSocketImpl_timeout));
+#ifndef FREERTOS
     sigaction(SIGUSR1, &savedaction, NULL);
+#endif
     woempa(1, "newsocket = %d\n", newsocket);
   	
     //set the wotsit value to -1 or the valid socket descriptor
@@ -655,12 +699,17 @@ w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance n
     }
 
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-      printf("Socket: id = %d accept succeeded, port = %d id = %d\n", sock, w_switchPortBytes(sa.sin_port), newsocket);
+      printf("Socket: id = %d accept succeeded, port = %d id = %d\n", sock, w_ntohs(sa.sin_port), newsocket);
     }
     // step 2. set the fields of newImpl.
     setBooleanField(newImpl, F_PlainSocketImpl_open, WONKA_TRUE);
-    setIntegerField(newImpl, F_SocketImpl_port, w_switchPortBytes(sa.sin_port));
+    setIntegerField(newImpl, F_SocketImpl_port, w_ntohs(sa.sin_port));
     bytelen = sizeof(sa);
+#ifdef FREERTOS
+    FreeRTOS_GetLocalAddress(sock, &sa);
+    setIntegerField(newImpl, F_SocketImpl_localport, w_ntohs(sa.sin_port));
+    return w_ntohl(sa.sin_addr);  	
+#else
     newsocket = w_getsockname(newsocket , (struct sockaddr *) &sa , &bytelen);
     if (newsocket == -1) {
       woempa(9,"ERROR in accept (getsockname) = %s\n", strerror(errno));      
@@ -670,20 +719,18 @@ w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance n
       throwException(thread, clazzIOException, "error in getsockname, errno %d '%s', originating socket %d", errno, strerror(errno), sock);
     }
     else {
-      setIntegerField(newImpl, F_SocketImpl_localport, w_switchPortBytes(sa.sin_port));
+      setIntegerField(newImpl, F_SocketImpl_localport, w_ntohs(sa.sin_port));
     }
 
     // TODO This only works for IPv4 !!!
-    return ntohl(sa.sin_addr.s_addr);  	
+    return w_ntohl(sa.sin_addr.s_addr);  	
+#endif
   }
-  */
-  return 0;
 }
 
 w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
-/* TODO : re-write me
 
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n", sock);
@@ -691,7 +738,11 @@ w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
   }
   else { 	
     w_int arg = 0;
+#ifdef FREERTOS
+    w_int res = FreeRTOS_rx_size(sock);
+#else
     w_int res = ioctl(sock, FIONREAD, &arg);
+#endif
 
     if (res == -1) {
       //woempa(9, "Error in Available 'ioctl' failed: %s\n", w_strerror((int)w_errno(sock)));
@@ -703,21 +754,18 @@ w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
   }
 
   return sock;
-*/
-  return 0;
 
 }
 
 void PlainSocketImpl_shutdown(w_thread thread , w_instance ThisImpl, w_boolean in) {
-/* TODO : re-write me
-  w_int sock = (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
     woempa(9, "socket %i is already closed\n", sock);
     throwException(thread, clazzIOException, "socket closed or uninitialized");
   }
   else { 	
-    if(shutdown(sock, (in == WONKA_TRUE ? 0 : 1)) == -1){
+    if(w_shutdown(sock, (in == WONKA_TRUE ? 0 : 1)) == -1){
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d shutdown(%d) failed: %s\n", sock, in, strerror(errno));
       }
@@ -730,38 +778,29 @@ void PlainSocketImpl_shutdown(w_thread thread , w_instance ThisImpl, w_boolean i
     }
 
   }
-*/
 }
 
 static w_int getOption(w_thread thread, w_instance this, int level, int option) {
-/* TODO : re-write me
-  w_int sock = (w_int)getWotsitField(this, F_PlainSocketImpl_wotsit);
+
+  w_sock sock = (w_sock)getWotsitField(this, F_PlainSocketImpl_wotsit);
   socklen_t size = sizeof(int);
-  int value;
+  w_int value = 0;
 
   if (!getBooleanField(this, F_PlainSocketImpl_open)) {
     throwException(thread, clazzSocketException, "socket closed or uninitialized");
-
-    return 0;
-
-  }
-
+  } else
+// FreeRTOS has no getsockopt
+#ifndef FREERTOS
   if(w_getsockopt(sock, level, option, &value, &size) == -1){
-    throwException(thread, clazzSocketException, "getting SO_KEEPALIVE failed: errno %d '%s'", errno, strerror(errno));
-
-    return 0;
-
-  }
-
+    throwException(thread, clazzSocketException, "getting option %d failed: errno %d '%s'", option, errno, strerror(errno));
+  } else
+#endif
   return value;
-*/
-  return 0;
 
 }
 
-static void setOption(w_thread thread, w_instance this, int level, int option, void * valptr, int valsize) {
-/* TODO : re-write me
-  w_int sock = (w_int)getWotsitField(this, F_PlainSocketImpl_wotsit);
+static void setOption(w_thread thread, w_instance this, w_int level, w_int option, void * valptr, w_int valsize) {
+  w_sock sock = (w_sock)getWotsitField(this, F_PlainSocketImpl_wotsit);
 
   if (!getBooleanField(this, F_PlainSocketImpl_open)) {
     throwException(thread, clazzSocketException, "socket closed or uninitialized");
@@ -771,60 +810,54 @@ static void setOption(w_thread thread, w_instance this, int level, int option, v
   if (w_setsockopt(sock, level, option, valptr, valsize) == -1) {
     throwException(thread, clazzSocketException, "setsockopt failed: %s", strerror(errno));
   }
-*/
 }
 
 w_int PlainSocketImpl_getRcvBuf(w_thread thread , w_instance thisImpl) {
-/* TODO : re-write me
   return getOption(thread, thisImpl, SOL_SOCKET, SO_RCVBUF);
-*/
-  return 0;
 }
 
 void PlainSocketImpl_setRcvBuf(w_thread thread , w_instance thisImpl, w_int size) {
-/* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting rcvbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
+    printf("Socket: id = %d setting rcvbuf size to %d\n", (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
   }
 
   setOption(thread, thisImpl, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int));
-*/
 }
 
 w_int PlainSocketImpl_getSndBuf(w_thread thread , w_instance thisImpl) {
-/* TODO : re-write me
   return getOption(thread, thisImpl, SOL_SOCKET, SO_SNDBUF);
-*/
-  return 0;
 }
 
 void PlainSocketImpl_setSndBuf(w_thread thread , w_instance thisImpl, w_int size) {
-/* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting sndbuf size to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
+    printf("Socket: id = %d setting sndbuf size to %d\n", (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), size);
   }
 
   setOption(thread, thisImpl, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int));
-*/
 }
 
 w_int PlainSocketImpl_getIpTos(w_thread thread , w_instance thisImpl) {
-/* TODO : re-write me
+#ifdef FREERTOS
+  woempa(7, "FreeRTOS+TCP doesn't give a TOS\n");
+  return 0;
+#else
   return getOption(thread, thisImpl, IPPROTO_IP, IP_TOS);
-*/
+#endif
 }
 
 void PlainSocketImpl_setIpTos(w_thread thread , w_instance thisImpl, w_int tos) {
-/* TODO : re-write me
 
+#ifdef FREERTOS
+  woempa(7, "FreeRTOS+TCP doesn't give a TOS\n");
+#else
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting IP TOS to %d\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), tos);
+    printf("Socket: id = %d setting IP TOS to %d\n", (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), tos);
   }
 
   setOption(thread, thisImpl, IPPROTO_IP, IP_TOS, &tos, sizeof(int));
-*/
+#endif
 }
 
 void PlainSocketImpl_setLinger(w_thread thread , w_instance thisImpl, w_int ling) {
@@ -833,7 +866,7 @@ void PlainSocketImpl_setLinger(w_thread thread , w_instance thisImpl, w_int ling
 
   if (ling < 0) {
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-      printf("Socket: id = %d disabling linger\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit));
+      printf("Socket: id = %d disabling linger\n", (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit));
     }
 
     longer.l_onoff = 0;
@@ -842,7 +875,7 @@ void PlainSocketImpl_setLinger(w_thread thread , w_instance thisImpl, w_int ling
   }
   else {
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-      printf("Socket: id = %d setting linger to %d seconds\n", (w_int)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), ling);
+      printf("Socket: id = %d setting linger to %d seconds\n", (w_sock)getWotsitField(thisImpl, F_PlainSocketImpl_wotsit), ling);
     }
 
     longer.l_onoff = 1;
@@ -856,7 +889,7 @@ void PlainSocketImpl_setKeepAlive(w_thread thread , w_instance ThisImpl, w_boole
 /* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting keepalive to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+    printf("Socket: id = %d setting keepalive to %d\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
   }
 
   setOption(thread, ThisImpl, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(int));
@@ -867,7 +900,7 @@ void PlainSocketImpl_setNoDelay(w_thread thread , w_instance ThisImpl, w_boolean
 /* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting nodelay to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+    printf("Socket: id = %d setting nodelay to %d\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
   }
 
   setOption(thread, ThisImpl, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(int));
@@ -878,7 +911,7 @@ void PlainSocketImpl_setOOBInline(w_thread thread , w_instance ThisImpl, w_boole
 /* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting OOBInline to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+    printf("Socket: id = %d setting OOBInline to %d\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
   }
 
   setOption(thread, ThisImpl, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(int));
@@ -892,7 +925,7 @@ void PlainSocketImpl_setSoTimeout(w_thread thread , w_instance ThisImpl, w_int m
   tv.tv_sec = millis / 1000;
   tv.tv_usec = (millis % 1000) * 1000;
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting timeout to %d secs %d usecs\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), (int)tv.tv_sec, (int)tv.tv_usec);
+    printf("Socket: id = %d setting timeout to %d secs %d usecs\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), (int)tv.tv_sec, (int)tv.tv_usec);
   }
 
   setOption(thread, ThisImpl, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
@@ -903,7 +936,7 @@ void PlainSocketImpl_setReuseAddr(w_thread thread , w_instance ThisImpl, w_boole
 /* TODO : re-write me
 
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    printf("Socket: id = %d setting ReuseAddr to %d\n", (w_int)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
+    printf("Socket: id = %d setting ReuseAddr to %d\n", (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit), on);
   }
 
   setOption(thread, ThisImpl, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
@@ -928,7 +961,7 @@ void PlainSocketImpl_signal(w_thread thread, w_instance thisPlainSocketImpl, w_i
 
 w_int PlainSocketImpl_getLocal4Address(w_thread thread, w_instance thisPlainSocketImpl) {
 /* TODO : re-write me
-    w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
+    w_sock sock = (w_sock)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
     struct sockaddr_in sa4;
     socklen_t addressLength = sizeof(sa4);
     getsockname(sock, (struct sockaddr*)&sa4, &addressLength);
@@ -939,7 +972,7 @@ w_int PlainSocketImpl_getLocal4Address(w_thread thread, w_instance thisPlainSock
 
 void PlainSocketImpl_getLocal6Address(w_thread thread, w_instance thisPlainSocketImpl, w_instance outputByteArray) {
 /* TODO : re-write me
-    w_int sock = (w_int)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
+    w_sock sock = (w_sock)getWotsitField(thisPlainSocketImpl, F_PlainSocketImpl_wotsit);
     struct sockaddr_in6 sa6;
     socklen_t addressLength = sizeof(sa6);
     getsockname(sock, (struct sockaddr*)&sa6, &addressLength);

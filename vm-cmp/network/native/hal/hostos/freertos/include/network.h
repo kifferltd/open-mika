@@ -45,8 +45,6 @@
 #define DEBUG_NETWORK
 #endif
 
-//#define DEBUG_NETWORK
-
 #ifdef DEFINE_NETWORK
 #include <stdio.h>
 #endif
@@ -56,90 +54,42 @@
 **
 ** This file represents the network interface of Wonka.
 **
-** ---- LINUX Version, using standard Linux TCP/IP ----
+** ---- FreeRTOS version, using FreeRTOS+TCP ----
 */
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-static inline int w_switchPortBytes(int port){
-  return ((port & 0x00ff) << 8) | ((port & 0xff00) >> 8);
-}
-#else
-#define w_switchPortBytes(p) (p)
-#endif
 
 #include "wonka.h"
 
+// Type used to select a socket
+// (in POSIX this is an int, but in FreeRTOS it is a pointer)
+#define w_sock      Socket_t
+
+#define w_htons                 FreeRTOS_htons
+#define w_ntohs                 FreeRTOS_ntohs
+#define w_htonl                 FreeRTOS_htonl
+#define w_ntohl                 FreeRTOS_ntohl
 #define w_socket(x,y,z)		FreeRTOS_socket(x,y,z)
-#define PF_INET
-// TODO maybe we need this:
-//  	{FreeRTOS_shutdown( xSocket, FREERTOS_SHUT_RDWR ); while( FreeRTOS_recv( xSocket, pcBufferToTransmit, xTotalLengthToSend, 0 ) >= 0 ) vTaskDelay( pdTICKS_TO_MS( 250 ) ); FreeRTOS_closesocket( xSocket );}
+#define w_shutdown(x,y)         FreeRTOS_shutdown(x,y)
 #define w_socketclose(s)	FreeRTOS_closesocket(s)
 #define w_send(s,b,l,f)    	FreeRTOS_send(s,b,l,f)
-#define w_sockaddr              FreeRTOS_sockaddr
+#define w_sockaddr              freertos_sockaddr
 
-/*
- * TODO
- * If a timeout is specified then we have to do a lot of fancy stuff
- * instead of just forwarding to connect(s,a,l)
- */
-static inline int w_connect(int s, void *a, size_t l, int t) {
-//    if (t == 0) {
-        return FreeRTOS_connect(s, a, l);
-//    }
-// otherwise ... TODO
-}
+#define AF_INET     FREERTOS_AF_INET
+#define PF_INET     FREERTOS_AF_INET
+#define SOCK_STREAM FREERTOS_SOCK_STREAM
+#define IPPROT_TCP  FREERTOS_IPPROTO_TCP
+#define SOL_SOCKET  FREERTOS_SOL_SOCKET
+#define SO_RCVBUF   FREERTOS_SO_RCVBUF
+#define SO_SNDBUF   FREERTOS_SO_SNDBUF
+// the following are not used by FreeRTOS+TCP
+#define IPPROTO_IP  0
+#define MSG_NOSIGNAL 0
+#define MSG_OOB 0
+#define SOL_SOCKET 0
 
-/*
- * If recv is interrupted before any data read, restart it.
- * If fails with EAGAIN, this normally means SO_RCVTIMEO was used and the
- * timeout has expired. So set timeout to -1 as a clunky way to signal to
- * PlainSocketImpl_read() that a timeout occurred.
- */
-static inline int w_recv(int s, void *b, size_t l, int f, int *timeoutp) {
-  int retval = FreeRTOS_recv(s,b,l,f);
-
-  while (retval == -1 && errno == EINTR) {
-    retval = FreeRTOS_recv(s,b,l,f);
-  }
-
-  if (retval == -1 && errno == EAGAIN) {
-    *timeoutp = -1;
-  }
-
-  return retval;
-}
-
-// TODO no socklen_t for parameter l?
-static inline int w_accept(int s, struct sockaddr *a, unsigned *l, int timeout) {
-  int retval = FreeRTOS_accept(s,a,l);
-
-  while (retval == -1 && errno == EINTR) {
-    retval = FreeRTOS_accept(s,a,l);
-  }
-
-  if (retval == -1 && errno == EAGAIN) {
-    *l = 0;
-  }
-  return retval;
-}
-
-
-// TODO no socklen_t for parameter l?
-//#define w_recvfrom(s, b, blen, f, sa, size_sa, timeout, T) recvfrom(s, b, blen, f, sa, size_sa)
-static inline w_int w_recvfrom(int s, void *b, size_t blen, int f, struct sockaddr *sa, unsigned *size_sa, int timeout, w_instance This) {
-
-  int retval =  FreeRTOS_recvfrom(s, b, blen, f, sa, size_sa);
-
-  while (retval == -1 && errno == EINTR) {
-    retval =  FreeRTOS_recvfrom(s, b, blen, f, sa, size_sa);
-  }
-
-  if (retval == -1 && errno == EAGAIN) {
-    *size_sa = 0;
-  }
-
-  return retval;
-}
+w_int w_connect(w_sock s, void *a, w_size l, w_int t);
+w_int w_recv(w_sock s, void *b, size_t l, w_int f, w_int *timeoutp);
+w_sock w_accept(w_sock s, struct w_sockaddr *a, unsigned *l, w_int timeout);
+w_int w_recvfrom(w_sock s, void *b, size_t blen, w_int f, struct w_sockaddr *sa, unsigned *size_sa, w_int timeout, w_instance This);
 
 
 #define w_bind(s,a,l)      	FreeRTOS_bind(s,a,l)
@@ -159,7 +109,7 @@ int w_sethostname(const char *name, size_t len);
 
 // TODO FreeRTOS+TCP doesn't have an errno ...
 /*
-static inline int w_errno(int s) {
+static inline w_int w_errno(int s) {
   return FreeRTOS_errno;
 }
 */
@@ -167,17 +117,17 @@ static inline int w_errno(int s) {
 void startNetwork(void);
 
 // TODO no socklen_t for parameter l?
-extern int (*x_socket)(int domain, int type, int protocol);
-extern int (*x_connect)(int sockfd, const struct sockaddr *serv_addr, unsigned addrlen);
-extern int (*x_send)(int s, const void *msg, size_t len, int flags);
-extern int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct sockaddr *to, unsigned tolen);
-extern int (*x_sendmsg)(int s, const struct msghdr *msg, int flags);
-extern int (*x_recv)(int s, void *buf, size_t len, int flags);
-extern int (*x_recvfrom)(int s, void *buf, size_t len, int flags, struct sockaddr *from, unsigned *fromlen);
-extern int (*x_recvmsg)(int s, struct msghdr *msg, int flags);
-extern int (*x_accept)(int s, struct sockaddr *addr, unsigned *addrlen);
-extern ssize_t (*x_read)(int fd, void *buf, size_t count);
-extern ssize_t (*x_write)(int fd, const void *buf, size_t count);
+extern w_int (*x_socket)(w_int domain, w_int type, w_int protocol);
+extern w_int (*x_connect)(w_int sockfd, const struct w_sockaddr *serv_addr, unsigned addrlen);
+extern w_int (*x_send)(w_int s, const void *msg, size_t len, w_int flags);
+extern w_int (*x_sendto)(w_int s, const void *msg, size_t len, w_int flags, const struct w_sockaddr *to, unsigned tolen);
+extern w_int (*x_sendmsg)(w_int s, const struct msghdr *msg, w_int flags);
+extern w_int (*x_recv)(w_int s, void *buf, size_t len, w_int flags);
+extern w_int (*x_recvfrom)(w_int s, void *buf, size_t len, w_int flags, struct w_sockaddr *from, unsigned *fromlen);
+extern w_int (*x_recvmsg)(w_int s, struct msghdr *msg, w_int flags);
+extern w_int (*x_accept)(w_int s, struct w_sockaddr *addr, unsigned *addrlen);
+extern ssize_t (*x_read)(w_int fd, void *buf, size_t count);
+extern ssize_t (*x_write)(w_int fd, const void *buf, size_t count);
 
 // Functions we need to supply for FreeRTOS+TCP
 extern void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent);
