@@ -1,5 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2009, 2010, 2015 by Chris Gray, KIFFER Ltd.         *
+* Parts copyright (c) 2009, 2010, 2015, 2020 by Chris Gray, KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -802,20 +802,29 @@ ClassFormatError
       classpath = classpath.substring(i+1);
       i = classpath.indexOf(':');
     }
-    v.add(classpath);
+    if (classpath.length() > 0) {
+      v.add(classpath);
+    }
 
     sz = v.size();
     urls = new URL[sz];
 
     j = 0;
     for (i=0 ; i < sz ; i++) {
-      String urlname = (String)v.get(i);
-      if (urlname.indexOf(':') < 0) {
-        if (new File(urlname).isDirectory() && !urlname.endsWith("/")) {
-          urlname = urlname + "/";
+      String element = (String)v.get(i);
+      String urlname = "";
+
+      if (new File(element).isDirectory()) {
+        if (!element.endsWith("/")) {
+          element = element + "/";
         }
-        urlname = "file:" + urlname;
+        urlname = "file:" + element;
       }
+      else if (element.endsWith(".jar") || element.endsWith(".JAR")) {
+        urlname = "jar:" + element;
+      }
+      // else silently ignore the element
+
       try {
         urls[j++] = new URL(urlname);
       }
