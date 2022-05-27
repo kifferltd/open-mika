@@ -66,7 +66,7 @@ extern void init_awt(void);
 #endif
 #endif
 
-struct JavaVMInitArgs *system_vm_args;
+struct Wonka_InitArgs *system_vm_args;
 
 typedef union JNITypes {
   jboolean  z;

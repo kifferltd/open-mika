@@ -51,13 +51,6 @@
 #ifndef FSROOT
 #define FSROOT "./fsroot"
 #endif
-#ifndef CLASSPATH
-#ifdef FREERTOS
-#define CLASSPATH "/app"
-#else
-#define CLASSPATH "."
-#endif
-#endif
 
 #ifdef MODULES
 extern void  x_symtab_kernel(void);
@@ -483,7 +476,7 @@ void startWonka(void* data) {
   JNI_CreateJavaVM(&vm, &env, &system_InitArgs);
 #else
   // TODO separate this cleanly from JNI
-
+  system_vm_args = &system_InitArgs;
   startHeap();
   startLoading();
   startKernel();
