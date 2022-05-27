@@ -47,6 +47,7 @@ include ./Configuration/mika/default.mk
 
 export VERSION_STRING ?= "Snapshot_$(PLATFORM)-$(shell date +%Y%m%d)-$(shell git rev-parse --short HEAD)"
 export AWT_DEF ?= none
+export APP_DIR ?= $(MIKA_TOP)/sample/apps/java
 export CPU HOSTOS SCHEDULER
 export AR
 export JAVAC
@@ -241,9 +242,11 @@ ifeq ($(MIKA_MAX), true)
   CFLAGS += -DRESMON
 endif
 
-# FIXME: would be better to define APP_DIR as app directory or empty
+# Make USE_APP_DIR = true the default for now
+USE_APP_DIR ?= true
+
 ifeq ($(USE_APP_DIR), true)
-  CLASSPATH = app/
+  CCLASSPATH := /app:$(CCLASSPATH)
 endif
 
 ifdef CCLASSPATH
@@ -606,11 +609,9 @@ resource :
 	@echo "Copying resources to ${mikadeploydir}"
 	cp -r core-vm/resource/system/* ${mikadeploydir}	
 
-# FIXME: would be better to define APP_DIR as app directory or empty
 app :
-ifneq ($(wildcard ~/app/.*),)
-	@echo "Copying applications to ${appdeploydir}"
-	cp -r app/* ${appdeploydir}	
+ifneq ($(APP_DIR),"none")
+	make -C $(APP_DIR) classes
 endif
 
 deployable : binary jarfile resource app
