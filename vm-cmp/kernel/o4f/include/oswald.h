@@ -199,6 +199,8 @@ inline static x_state x_thread_state(x_thread thread) {
 
 #define x_thread_current() ((x_thread) pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD))
 
+#define x_errno ((x_thread) pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_ERRNO))
+
 void x_thread_yield(void);
 
 /*

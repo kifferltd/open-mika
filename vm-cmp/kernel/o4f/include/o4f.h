@@ -49,6 +49,9 @@
 
 typedef unsigned short         x_ushort;
 
+/// Fake errno to make FreeRTOS+ APIs easier to use
+#define O4F_LOCAL_STORAGE_OFFSET_ERRNO (configNUM_THREAD_LOCAL_STORAGE_POINTERS-2)
+
 /// Local storage slot (in the FreeRTOS task control block) where we store a pointer back to our x_thread pointer
 #define O4F_LOCAL_STORAGE_OFFSET_X_THREAD (configNUM_THREAD_LOCAL_STORAGE_POINTERS-1)
 
