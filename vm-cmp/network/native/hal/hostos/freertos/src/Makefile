@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020 by Chris Gray, KIFFER Ltd.                     #
+# Copyright (c) 2018, 2020, 2022 by Chris Gray, KIFFER Ltd.               #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -36,7 +36,7 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(NETWORK_TOP)/hal/hostos/${HOSTOS}/include
 
-sources = network.c
+sources = network.c InetAddress.c
 networkobjdir = $(objdir)/vm-cmp/network
 objects=$(patsubst %.c, $(networkobjdir)/%.o, $(sources))
 

@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2022 by Chris Gray, KIFFER Ltd.                     #
+#   All rights reserved.                                                  #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = InetAddress.c NetworkInterface.c PlainDatagramSocketImpl.c PlainSocketImpl.c
+sources = NetworkInterface.c PlainDatagramSocketImpl.c PlainSocketImpl.c
 
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
