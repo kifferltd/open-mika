@@ -11,6 +11,20 @@ import java.net.ServerSocket;
 public class HelloInternet {
 
   public static void main(String[] args) throws IOException {
+    try {
+      System.out.println("Connecting to port 587 of kiffer.ltd.uk");
+      Socket s = new Socket("kiffer.ltd.uk", 587);
+      // Create a Reader from the socket
+      BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()));
+      // Read the SMTP server banner
+      String banner = r.readLine();
+      System.out.println("Received: " + banner);
+      System.out.println("Closing the connection");
+      s.close();
+    }
+    catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
     // Open a listening socket
     System.out.println("Listening to port 1234");
     ServerSocket ss = new ServerSocket(1234);
@@ -26,10 +40,10 @@ public class HelloInternet {
         // Print a greeting to the socket and invite input.
         w.println("Hello, Internet Being. What is your name?");
         // Read the response
-	String name = r.readLine();
+        String name = r.readLine();
         // Echo it back
         w.println("Goodbye, " + name);
-	s.close();
+        s.close();
       }
       catch (IOException ioe) {
         ioe.printStackTrace();
