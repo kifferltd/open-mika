@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2015, 2016 by Chris Gray, KIFFER Ltd.         *
+* Copyright (c) 2007, 2009, 2015, 2016, 2022 by Chris Gray, KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -386,7 +386,7 @@ public class InetAddress implements Serializable {
       return result.toString();
   }
 
-  static InetAddress createInetAddress(int ip){
+  static InetAddress createFromInteger(int ip){
     String ipname = intToIPString(ip);
     InetAddress ia = null;
 
