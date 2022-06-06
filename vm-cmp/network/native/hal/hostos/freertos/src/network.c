@@ -30,6 +30,11 @@
 #include <network.h>
 #include <wonka.h>
 
+w_int FreeRTOS_IPAddress;
+w_word FreeRTOS_NetMask;
+w_word FreeRTOS_GatewayAddress;
+w_word FreeRTOS_DNSServerAddress;
+
 void startNetwork(void) {
   // nothing to do???
 }
@@ -117,12 +122,8 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
     printf("MAC address not available\n");
   }
 
-  int32_t IPAddress;
-  uint32_t NetMask;
-  uint32_t GatewayAddress;
-  uint32_t DNSServerAddress;
-  FreeRTOS_GetAddressConfiguration(&IPAddress, &NetMask, &GatewayAddress, &DNSServerAddress );
-  printf("IPAdress = %08x Netmask = %08x GatewayAddress = %08x DNSServerAddress = %08x\n", IPAddress, NetMask, GatewayAddress, DNSServerAddress);
+  FreeRTOS_GetAddressConfiguration(&FreeRTOS_IPAddress, &FreeRTOS_NetMask, &FreeRTOS_GatewayAddress, &FreeRTOS_DNSServerAddress );
+  printf("IPAdress = %08x Netmask = %08x GatewayAddress = %08x DNSServerAddress = %08x\n", FreeRTOS_IPAddress, FreeRTOS_NetMask, FreeRTOS_GatewayAddress, FreeRTOS_DNSServerAddress);
 //#endif
 }
 

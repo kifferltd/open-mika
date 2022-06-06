@@ -114,6 +114,11 @@ static inline w_int w_errno(int s) {
 }
 */
 
+extern w_int FreeRTOS_IPAddress;
+extern w_word FreeRTOS_NetMask;
+extern w_word FreeRTOS_GatewayAddress;
+extern w_word FreeRTOS_DNSServerAddress;
+
 void startNetwork(void);
 
 // TODO no socklen_t for parameter l?
