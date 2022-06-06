@@ -111,142 +111,197 @@ void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
   }
 }
 
+// TODO stop this ifdef madness!!!
+#ifdef FREERTOS
 void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeout) {
-/* TODO : re-write me
 
   w_instance address = getReferenceField(ThisImpl, F_SocketImpl_address); 
   w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
 
   if (!address) {
     throwException(thread, clazzConnectException, "no IP address");
+
+    return;
   }
-  else {
-    struct sockaddr * sa = NULL;
-    w_size sa_size = 0;
+
+  struct freertos_sockaddr sa;
+  w_int res;
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+
+  if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
+    woempa(9, "socket %i was closed\n", sock);
+    throwException(thread, clazzIOException, "socket was closed or uninitialized");
+    return;
+  }  	  	
+
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = PF_INET;
+  sa.sin_addr = FreeRTOS_htonl(getIntegerField(address, F_InetAddress_address));
+  sa.sin_port = FreeRTOS_htons(port);
+
+  woempa (7,"INET: connect, port %d addr %lx\n", sa.sin_port, sa.sin_addr);
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    unsigned char *a = (unsigned char *)&sa.sin_addr;
+    printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa.sin_port);
+  }
+
+  res = w_connect (sock, &sa, sizeof(struct freertos_sockaddr), timeout);
+  woempa (6,"socketfd = %d, connect result = %d\n",sock, res);
+
+  if (res < 0) {
+    woempa(9,"ERROR in connect = %d\n", res);
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: connection failed: %s\n", strerror(errno));
+    }
+    // TODO distiguish betewwen clazzSocketTimeoutException and clazzConnectException cases
+    throwException(thread, clazzConnectException, "socket connect error %d", res);
+
+    return;
+  }
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: connected, id = %p\n", sock);
+  }
+  setIntegerField(ThisImpl, F_SocketImpl_port, port);
+  setReferenceField(ThisImpl, address, F_SocketImpl_address);
+
+}
+#else
+void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeout) {
+
+  w_instance address = getReferenceField(ThisImpl, F_SocketImpl_address); 
+  w_int port = getIntegerField(ThisImpl, F_SocketImpl_port);
+
+  if (!address) {
+    throwException(thread, clazzConnectException, "no IP address");
+
+    return;
+  }
+
+  struct sockaddr * sa = NULL;
+  w_size sa_size = 0;
     
-    struct sockaddr_in  sa4;
+  struct sockaddr_in  sa4;
 #ifdef PF_INET6
-    struct sockaddr_in6 sa6;
+  struct sockaddr_in6 sa6;
 #endif
 
-    w_int res;
-    w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
+  w_int res;
+  w_sock sock = (w_sock)getWotsitField(ThisImpl, F_PlainSocketImpl_wotsit);
 
-    if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
-      woempa(9, "socket %i was closed\n", sock);
-      throwException(thread, clazzIOException, "socket was closed or uninitialized");
-      return;
-    }  	  	
+  if (!getBooleanField(ThisImpl, F_PlainSocketImpl_open)) {
+    woempa(9, "socket %i was closed\n", sock);
+    throwException(thread, clazzIOException, "socket was closed or uninitialized");
+    return;
+  }  	  	
 
 #ifdef PF_INET6
-    if (!(getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6))) { 
-      memset(&sa4, 0, sizeof(sa4));
-      sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
-      sa4.sin_family = AF_INET;
-      sa4.sin_port = htons(port);
-
-      woempa (7,"INET: connect, port %d addr %lx\n", sa4.sin_port, sa4.sin_addr.s_addr);
-      if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-        unsigned char *a = (unsigned char *)&sa4.sin_addr.s_addr;
-        printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], port);
-      }
-
-      sa = (struct sockaddr *)&sa4;
-      sa_size = sizeof(struct sockaddr_in);
-    }
-    else {
-      memset(&sa6, 0, sizeof(sa6));
-      memcpy(&sa6.sin6_addr, instance2Array_byte(getReferenceField(address, F_Inet6Address_ipaddress)), 16);
-      sa6.sin6_family = AF_INET6;
-      sa6.sin6_port = w_htons(port);
-
-      woempa (7,"INET6: connect, port %d addr %p\n", sa6.sin6_port, sa6.sin6_addr);
-      if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-        printf("Socket: connecting (IPv6)\n");
-      }
-
-      sa = (struct sockaddr *)&sa6;
-      sa_size = sizeof(struct sockaddr_in6);
-    }
-#else
+  if (!(getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6))) { 
     memset(&sa4, 0, sizeof(sa4));
     sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
     sa4.sin_family = AF_INET;
-    sa4.sin_port = w_htons(port);
+    sa4.sin_port = htons(port);
 
     woempa (7,"INET: connect, port %d addr %lx\n", sa4.sin_port, sa4.sin_addr.s_addr);
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
       unsigned char *a = (unsigned char *)&sa4.sin_addr.s_addr;
-      printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa4.sin_port);
+      printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], port);
     }
 
     sa = (struct sockaddr *)&sa4;
     sa_size = sizeof(struct sockaddr_in);
+  }
+  else {
+    memset(&sa6, 0, sizeof(sa6));
+    memcpy(&sa6.sin6_addr, instance2Array_byte(getReferenceField(address, F_Inet6Address_ipaddress)), 16);
+    sa6.sin6_family = AF_INET6;
+    sa6.sin6_port = w_htons(port);
+
+    woempa (7,"INET6: connect, port %d addr %p\n", sa6.sin6_port, sa6.sin6_addr);
+    if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+      printf("Socket: connecting (IPv6)\n");
+    }
+
+    sa = (struct sockaddr *)&sa6;
+    sa_size = sizeof(struct sockaddr_in6);
+  }
+#else
+  memset(&sa4, 0, sizeof(sa4));
+  sa4.sin_addr.s_addr = htonl(getIntegerField(address, F_InetAddress_address));
+  sa4.sin_family = AF_INET;
+  sa4.sin_port = w_htons(port);
+
+  woempa (7,"INET: connect, port %d addr %lx\n", sa4.sin_port, sa4.sin_addr.s_addr);
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    unsigned char *a = (unsigned char *)&sa4.sin_addr.s_addr;
+    printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa4.sin_port);
+  }
+
+  sa = (struct sockaddr *)&sa4;
+  sa_size = sizeof(struct sockaddr_in);
 #endif
 
-    res = w_connect (sock, sa, sa_size, timeout);
-    woempa (6,"socketfd = %d, connect result = %d\n",sock, res);
+  res = w_connect (sock, sa, sa_size, timeout);
+  woempa (6,"socketfd = %d, connect result = %d\n",sock, res);
 
-    if (res == -1) {
-      woempa(9,"ERROR in connect = %s\n", strerror(errno));
-      if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-        printf("Socket: connection failed: %s\n", strerror(errno));
-      }
-      if (errno == ETIMEDOUT) {
-        throwException(thread, clazzSocketTimeoutException, NULL);
-      }
-      else {
-        throwException(thread, clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
-      }
-      return;
-    }
-
+  if (res == -1) {
+    woempa(9,"ERROR in connect = %s\n", strerror(errno));
     if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-      printf("Socket: connected, id = %d\n", sock);
+      printf("Socket: connection failed: %s\n", strerror(errno));
     }
-    setIntegerField(ThisImpl, F_SocketImpl_port, port);
-    setReferenceField(ThisImpl, address, F_SocketImpl_address);
-
-#ifdef PF_INET6
-    if (!(getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6))) { 
-      socklen_t namelen = sizeof(sa4);
-      res = w_getsockname(sock , (struct sockaddr *)&sa4 , &namelen);
-      if (res == -1) {
-        //woempa(9,"ERROR in connect = %s\n", w_strerror((int)w_errno(sock)));
-        throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
-      }
-      else {
-        setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa4.sin_port));
-      }
+    if (errno == ETIMEDOUT) {
+      throwException(thread, clazzSocketTimeoutException, NULL);
     }
     else {
-      socklen_t namelen = sizeof(sa6);
-      res = w_getsockname(sock , (struct sockaddr *)&sa6 , &namelen);
-
-      if (res == -1) {
-        woempa(9,"ERROR in connect/getsockname = %s\n", strerror(errno)); 	
-        throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
-      }
-      else {	
-        setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa6.sin6_port));
-      }
+      throwException(thread, clazzConnectException, "socket connect errno %d '%s'", errno, strerror(errno));
     }
-#else
+    return;
+  }
+
+  if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
+    printf("Socket: connected, id = %d\n", sock);
+  }
+  setIntegerField(ThisImpl, F_SocketImpl_port, port);
+  setReferenceField(ThisImpl, address, F_SocketImpl_address);
+
+#ifdef PF_INET6
+  if (!(getBooleanField(ThisImpl, F_PlainSocketImpl_ipv6))) { 
     socklen_t namelen = sizeof(sa4);
     res = w_getsockname(sock , (struct sockaddr *)&sa4 , &namelen);
     if (res == -1) {
       //woempa(9,"ERROR in connect = %s\n", w_strerror((int)w_errno(sock)));
       throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
     }
-    else {  
+    else {
       setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa4.sin_port));
     }
-#endif
   }
-*/
-  
-}
+  else {
+    socklen_t namelen = sizeof(sa6);
+    res = w_getsockname(sock , (struct sockaddr *)&sa6 , &namelen);
 
+    if (res == -1) {
+      woempa(9,"ERROR in connect/getsockname = %s\n", strerror(errno)); 	
+      throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
+    }
+    else {	
+      setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa6.sin6_port));
+    }
+  }
+#else
+  socklen_t namelen = sizeof(sa4);
+  res = w_getsockname(sock , (struct sockaddr *)&sa4 , &namelen);
+  if (res == -1) {
+    //woempa(9,"ERROR in connect = %s\n", w_strerror((int)w_errno(sock)));
+    throwException(thread, clazzConnectException, "getsockname errno %d '%s'", errno, strerror(errno));
+  }
+  else {  
+    setIntegerField(ThisImpl, F_SocketImpl_localport, w_ntohs(sa4.sin_port));
+  }
+#endif
+}
+#endif
+  
 #ifndef FREERTOS
 // Our signal handler doesn't actually do anything, it's just there so that
 // SIGUSR1 has the desired effect of interrupting accept() or read().
@@ -268,7 +323,7 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
   struct sigaction action, savedaction;
 #endif
   
-  woempa(1, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
+  woempa(7, "reading %i bytes from SocketImpl %p (desp %i)\n", length, ThisImpl, sock);
 
   if (! byteArray) {
     throwException(thread, clazzConnectException, "no IP address");
@@ -301,7 +356,7 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
   sigaction(SIGUSR1, &action, &savedaction);
 #endif
   timeout = getIntegerField(ThisImpl, F_PlainSocketImpl_timeout);
-  woempa(2, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
+  woempa(7, "Calling w_recv(%d,%j[%d],%d,0,%d)\n", sock, byteArray, off, length, 0, timeout);
   res = w_recv(sock, instance2Array_byte(byteArray) + off, (w_word)length, 0, &timeout);
 #ifndef FREERTOS
   sigaction(SIGUSR1, &savedaction, NULL);
@@ -334,7 +389,7 @@ w_int PlainSocketImpl_read(w_thread thread , w_instance ThisImpl, w_instance byt
     printf("\n");
   }
 
-  woempa(1, "reading %i bytes from SocketImpl %p --> got %i\n", length, ThisImpl, res);
+  woempa(7, "reading %i bytes from SocketImpl %p --> got %i\n", length, ThisImpl, res);
   if (res == 0) { 
     res--; 
   }
