@@ -94,6 +94,8 @@ public final class Math {
 
   private static native void init();
 
+ // private static String digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+
   /**
   ** this constructor is added to prevent the compiler from adding a default constructor.
   ** Since the default constructor is public, it would be possible todo: Math m = new Math();
@@ -1169,15 +1171,11 @@ public final class Math {
       }
     }
     catch (IndexOutOfBoundsException ioobe) {
-      // System.out.println("floatValue: got "+ioobe+", throwing NumberFormatException");
       throw new NumberFormatException();
     }
 
     if (wholepart.length() == 0 && fractpart.length() == 0) {
-      // System.out.println("floatValue: no chars either side of point, throwing NumberFormatException");
-
       throw new NumberFormatException();
-
     }
 
     if (wholepart.length() == 0) {
@@ -1189,10 +1187,7 @@ public final class Math {
     }
 
     if (negative && wholepart.equals("0") && fractpart.equals("0")) {
-      // System.out.println("floatValue: special case, returning -0.0");
-
       return -0.0f;
-
     }
 
     result = (Long.parseLong(fractpart) / pow(10.0, fractpart.length()));
@@ -1228,7 +1223,6 @@ public final class Math {
 
 
 
-// System.out.println("doubleValue: input is \""+s+"\"");
     try {
       if (s.charAt(index) == '-') {
         negative = true;
@@ -1305,16 +1299,10 @@ public final class Math {
       }
     }
     catch (IndexOutOfBoundsException ioobe) {
-      // System.out.println("floatValue: got "+ioobe+", throwing NumberFormatException");
       throw new NumberFormatException();
     }
-// System.out.println("doubleValue: wholepart = "+wholepart);
-// System.out.println("doubleValue: fractpart = "+fractpart);
-// System.out.println("doubleValue: exppart = "+exppart);
-// System.out.println("doubleValue: expnegative = "+expnegative);
 
     if (wholepart.length() == 0 && fractpart.length() == 0) {
-      // System.out.println("doubleValue: no chars either side of point, throwing NumberFormatException");
       throw new NumberFormatException();
     }
 
@@ -1327,10 +1315,7 @@ public final class Math {
     }
 
     if (negative && wholepart.equals("0") && fractpart.equals("0")) {
-      // System.out.println("floatValue: special case, returning -0.0");
-
     return -0.0d;
-
     }
 
     result = Long.parseLong(wholepart);
@@ -1340,7 +1325,6 @@ public final class Math {
     result *= pow(10.0, expnegative ? -exponent : exponent);
     }
 
-// System.out.println("doubleValue: returning "+(negative ? -result : result));
     return negative ? -result : result;
 }
 
