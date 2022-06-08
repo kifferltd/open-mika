@@ -1838,10 +1838,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_l2i: {
-    woempa(1, "l2i : z = %08x %08x\n", tos[-2].c, tos[-1].c);
-#if __BYTE_ORDER == __BIG_ENDIAN
-    tos[-2] = tos[-1];
-#endif
+    union {w_long l; w_word w[2];} long_x;
+    long_x.w[0] = tos[-2].c;
+    long_x.w[1] = tos[-1].c;
+    tos[-2].c = (w_int)long_x.l;
+    // tos[-2].s should already be 0
     goto c_pop;
   }
 
