@@ -11,9 +11,9 @@ import java.net.ServerSocket;
 public class HelloInternet {
 
   public static void main(String[] args) throws IOException {
+    System.out.println("Connecting to port 587 of kiffer.ltd.uk");
+    Socket s = new Socket("kiffer.ltd.uk", 587);
     try {
-      System.out.println("Connecting to port 587 of kiffer.ltd.uk");
-      Socket s = new Socket("kiffer.ltd.uk", 587);
       // Create a Reader from the socket
       BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()));
       // Read the SMTP server banner
@@ -25,28 +25,37 @@ public class HelloInternet {
     catch (IOException ioe) {
       ioe.printStackTrace();
     }
+    finally {
+      s.close();
+    }
     // Open a listening socket
     System.out.println("Listening to port 1234");
     ServerSocket ss = new ServerSocket(1234);
     while (true) {
+      // Wait for a connection to come in
+      Socket cs = ss.accept();
+      System.out.println("Accepted a connection");
       try {
-        // Wait for a connection to come in
-        Socket s = ss.accept();
-        System.out.println("Accepted a connection");
         // Create a Writer to the socket, with autoflush=true
-        PrintWriter w = new PrintWriter(new OutputStreamWriter(s.getOutputStream()), true);
+        PrintWriter w = new PrintWriter(new OutputStreamWriter(cs.getOutputStream()), true);
         // Create a Reader from the socket
-        BufferedReader r = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        BufferedReader r = new BufferedReader(new InputStreamReader(cs.getInputStream()));
         // Print a greeting to the socket and invite input.
         w.println("Hello, Internet Being. What is your name?");
         // Read the response
         String name = r.readLine();
-        // Echo it back
-        w.println("Goodbye, " + name);
-        s.close();
+        w.println("Nice to meet you, " + name + ".");
+        w.println("I will now echo back everything you type (use ^C to exit);");
+        while (true) {
+          String line = r.readLine();
+          w.println(line);
+        }
       }
       catch (IOException ioe) {
-        ioe.printStackTrace();
+        // ignore, we expect user to send ^C
+      }
+      finally {
+        cs.close();
       }
     }
   }
