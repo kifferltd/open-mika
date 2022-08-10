@@ -95,10 +95,11 @@ x_status x_oswald_init(x_size max_heap, x_size millis) {
 
   heap_remaining = heap_size;
   x_mem_init();
-  x_setup_timers(millis);
+  // ignore any millis which are passed in, use portTICK_RATE_MS instead.
+  x_setup_timers(portTICK_RATE_MS);
 
   printf("= = = O S W A L D   S T A R T E D = = =\r\n\r\n");
-  printf("heap size = %d\n", heap_size);
+  printf("heap size = %d millis_per_tick = %d\n", heap_size, portTICK_RATE_MS);
 
   o4fe->status = O4F_ENV_STATUS_NORMAL;
   vTaskStartScheduler();
