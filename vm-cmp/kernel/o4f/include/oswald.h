@@ -206,7 +206,8 @@ void x_thread_yield(void);
 /*
 ** The Oswald time API (part of).
 */
-x_sleep x_time_get(void);
+#define x_time_get xTaskGetTickCount
+
 
 x_size x_millis2ticks(x_size millis);
 x_long x_ticks2millis(x_long millis);

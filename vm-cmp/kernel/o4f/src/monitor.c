@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -38,7 +38,8 @@ x_status x_monitor_create(x_monitor monitor) {
 
   memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
-  monitor->waiter_queue = xQueueCreate(MONITOR_MAX_THREADS, sizeof(TaskHandle_t));
+  x_list_init(&monitor->monitor_queue);
+  monitor->monitor_queue.monitor = monitor;
 // N.B. this creates the mutex in the free state
 // The mutex doesn't need to be recursive, because we do our own counting
   monitor->owner_mutex = xSemaphoreCreateMutex();
@@ -55,7 +56,7 @@ x_status x_monitor_delete(x_monitor monitor) {
   x_thread current = x_thread_current();
 
   if (monitor->owner && monitor->owner != current) {
-    loempa(9, "Refuse to delete monitor at %p: owned by %p, caller is %p\n", monitor, monitor->owner, current);
+    loempa(9, "Refuse to allow thread %p to delete monitor at %p: owned by %p\n", current, monitor, monitor->owner);
 
     return xs_not_owner;
   }
@@ -69,9 +70,12 @@ x_status x_monitor_delete(x_monitor monitor) {
   loempa(2, "Deleting the monitor at %p\n", monitor);
   monitor->magic = 0;
   if (monitor->owner)  {
-    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: monitor is in use", 0);
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: monitor is still owned by  a thread", monitor->owner);
   }
-  vQueueDelete(monitor->waiter_queue);
+
+  if (!x_list_is_empty(&monitor->monitor_queue))  {
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: atleast one thread is queued on monitor", monitor->monitor_queue.next);
+  }
   vSemaphoreDelete(monitor->owner_mutex);
 
   loempa(2, "Monitor at %p deleted\n", monitor);
@@ -103,6 +107,7 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       // The monitor was free and we just acquired it.
       monitor->owner = current;
       monitor->count = 1;
+      xTaskNotifyStateClear(current->handle);
       loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
 
       return xs_success;
@@ -142,13 +147,12 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   monitor->owner = NULL;
   monitor->count = 0;
 
-  retcode = xQueueSendToBack(monitor->waiter_queue, &current->handle, 0);
-  if (retcode != pdPASS) {
-    // probably the queue is full
-    return xs_no_instance;
-  }
+  vTaskSuspendAll();
+  current->monitor_queue.monitor = monitor;
+  x_list_insert(&monitor->monitor_queue, &current->monitor_queue);
+  retcode = xTaskResumeAll();
+  loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
   loempa(2, "Thread %p is waiting on monitor %p until tick %d\n", current, monitor, expiry_ticks);
-  loempa(2, "Now there are %d threads waiting on monitor %p\n", uxQueueMessagesWaiting(monitor->waiter_queue), monitor);
 
   retcode = xSemaphoreGive(monitor->owner_mutex);
   if (retcode != pdPASS) {
@@ -165,6 +169,11 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 
   loempa(2, "Thread %p has been notified on monitor %p, count was %d\n", current, monitor, old_count);
   // somebody gave the semaphore, time to re-acquire the mutex
+  vTaskSuspendAll();
+  x_list_remove(&current->monitor_queue);
+  current->monitor_queue.monitor = NULL;
+  retcode = xTaskResumeAll();
+  loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
   x_sleep remaining = SUBTRACT_TICKS(expiry_ticks, xTaskGetTickCount());
   retcode = xSemaphoreTake(monitor->owner_mutex, remaining == (x_sleep) remaining ? (x_sleep) remaining : 0);
   unsetFlag(current->flags, TF_TIMEOUT);
@@ -198,24 +207,12 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 ** Notify one thread waiting on a monitor
 */
 x_status x_monitor_notify(x_monitor monitor) {
-  TaskHandle_t handle = (TaskHandle_t)0;
-  BaseType_t retcode = xQueueReceive(monitor->waiter_queue, &handle, 0);
-  switch (retcode) {
-    case pdPASS:
-    case errQUEUE_EMPTY:
-      break;
-
-    default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_notify: xQueueReceive() failed with return code", retcode);
-  }
-
-  if (!handle) {
+  if (x_list_is_empty(&monitor->monitor_queue)) {
     loempa(2, "Thread %p is not notifying any thread of monitor %p, because none is waiting\n", x_thread_current(), monitor);
     return xs_no_instance;
   }
-
-  loempa(2, "Thread %p is notifying thread with handle %p of monitor %p\n", x_thread_current(), handle, monitor);
-  xTaskNotifyGive(handle);
+  loempa(2, "Thread %p is notifying thread %p waiting on monitor %p\n", x_thread_current(), monitor->monitor_queue.next->thread, monitor);
+  xTaskNotifyGive(monitor->monitor_queue.next->thread->handle);
 
   return xs_success;
 }
@@ -228,12 +225,10 @@ x_status x_monitor_notify_all(x_monitor monitor) {
   x_status status =  xs_success;
   UBaseType_t old_priority = uxTaskPriorityGet(NULL);
   vTaskPrioritySet(NULL, MAX_TASK_PRIORITY);
-  while (uxQueueMessagesWaiting(monitor->waiter_queue)) {
-    loempa(2, "notifying 1 thread of %d\n", uxQueueMessagesWaiting(monitor->waiter_queue));
-    status = x_monitor_notify(monitor);
-    if (status != xs_success && status != xs_no_instance) {
-      break;
-    }
+  x_monitor_queue_element sentinel = &monitor->monitor_queue;
+  x_monitor_queue_element element;
+  for (element = sentinel->next; element != sentinel; element = element->next) {
+    xTaskNotifyGive(element->thread->handle);
   }
   vTaskPrioritySet(NULL, old_priority);
 
@@ -249,6 +244,10 @@ x_status x_monitor_exit(x_monitor monitor) {
   if (monitor->owner != current) {
     loempa(9, "Thread %p cannot leave monitor %p - owner is %p\n", current, monitor, monitor->owner);
     return xs_not_owner;
+  }
+
+  if (current->monitor_queue.monitor) {
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: thread is still waiting on a monitor", current);
   }
 
   xTaskNotifyStateClear(current->handle);
@@ -279,7 +278,11 @@ x_status x_monitor_stop_waiting(x_monitor monitor, x_thread thread) {
     loempa(2, "Thread %p will stop thread %p from waiting on monitor %p\n", x_thread_current(), thread, monitor);
 
     xTaskNotifyGive(thread->handle);
-    // TODO the task handle is still in the queue, one day it will get a spurious notification
+    vTaskSuspendAll();
+    x_list_remove(&thread->monitor_queue);
+    thread->monitor_queue.monitor = NULL;
+    BaseType_t retcode = xTaskResumeAll();
+    loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
 
     return xs_success;
   }

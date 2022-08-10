@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -100,10 +100,20 @@ typedef struct x_Queue {
   QueueHandle_t handle;
 } x_Queue;
 
+typedef struct x_Monitor_Queue_Element * x_monitor_queue_element;
+
+typedef struct x_Monitor_Queue_Element {
+  x_monitor_queue_element next;
+  x_monitor_queue_element previous;
+  x_monitor monitor;
+  x_thread thread;
+} x_Monitor_Queue_Element;
+ 
 typedef struct x_Monitor {
   volatile x_size   magic;
   volatile w_int    count;
   volatile x_thread owner;
+  x_Monitor_Queue_Element monitor_queue;
   SemaphoreHandle_t owner_mutex;
   QueueHandle_t     waiter_queue;
   QueueHandle_t     interrupted;
@@ -131,6 +141,7 @@ typedef struct x_Thread {
   void *                task_function;    /* The function the thread will call when it runs */
   void *                task_parameters;        /* The argument to be passed to that function */
   x_thread              o4f_thread_next;        /* Next thread in our linked list */
+  x_Monitor_Queue_Element monitor_queue; 
 
   volatile x_queue      queueing_on;
   volatile x_monitor    waiting_on;
@@ -164,7 +175,6 @@ typedef struct O4fEnv {
   x_thread threads;                      /* pointer to first element in linked list of threads */
   SemaphoreHandle_t threads_mutex;           
   SemaphoreHandle_t timer_mutex;           
-  volatile w_size timer_ticks; /* the number of ticks passed since we 'booted' */
   FILE *log;
 } O4fEnv;
 

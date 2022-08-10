@@ -114,4 +114,12 @@ const char * x_status2char(x_status status);
   (f)->previous = (f);                                 \
 }
 
+#define x_list_is_empty(f) ((f)->next == (f))
+
+// If f is empty, x_list_peek(f) returns null.
+// Otherwise, x_list_peek(f) returns the first element in f without removing it.
+#define x_list_peek(f) (x_list_is_empty(f) ? 0 : (f)->next )
+
+#define x_list_rotate(f) 
+
 #endif /* _XMISC_H */
