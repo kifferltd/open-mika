@@ -109,6 +109,23 @@ w_int w_recvfrom(w_sock s, void *b, size_t blen, w_int f, struct w_sockaddr *sa,
   return retval;
 }
 
+/*
+ * We don't want to do any dynamic memory allocation here, because this code gets called very early on.
+ * So instead we use a ring-buffer of 16 buffers, each of which is big enough to contain a numeric
+ * ipv4 address (xxx.xxx.xxx.xxx) plus a trailing null byte. In practice we should never need more 
+ * than four buffers at a time (for vApplicationIPNetworkEventHook).
+ */
+static char ipabuf[16][16];
+static int ipabufidx = 0;
+
+static char *ipaddress_word2cstring(int ipa) {
+  char *result = &ipabuf[ipabufidx];
+  snprintf(result, 16, "%d.%d.%d.%d", (ipa >> 24) & 0xff, (ipa >> 16) & 0xff, (ipa >> 8) & 0xff, ipa & 0xff);
+  ipabufidx = (ipabufidx + 1) & 0xf;
+
+  return result;
+}
+
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
   tcp_mac_t mac;
   tcp_return_code_t rc = tcp_get_mac(&mac);
@@ -116,20 +133,22 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
 //#ifdef DEBUG
   printf("Network is %s\n", eNetworkEvent == eNetworkUp ? "UP" : "DOWN");
   if (rc == TCP_SUCCESS) {
-    printf("MAC address = %02x %02x %02x %02x %02x %02x\n", mac.puMAC[0], mac.puMAC[1], mac.puMAC[2], mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
+    printf("MAC address = %02x:%02x:%02x:%02x:%02x:%02x\n", mac.puMAC[0], mac.puMAC[1], mac.puMAC[2], mac.puMAC[3], mac.puMAC[4], mac.puMAC[5]);
   }
   else {
     printf("MAC address not available\n");
   }
 
   FreeRTOS_GetAddressConfiguration(&FreeRTOS_IPAddress, &FreeRTOS_NetMask, &FreeRTOS_GatewayAddress, &FreeRTOS_DNSServerAddress );
-  printf("IPAdress = %08x Netmask = %08x GatewayAddress = %08x DNSServerAddress = %08x\n", FreeRTOS_IPAddress, FreeRTOS_NetMask, FreeRTOS_GatewayAddress, FreeRTOS_DNSServerAddress);
+  printf("IPAdress = %s Netmask = %s GatewayAddress = %s DNSServerAddress = %s\n", ipaddress_word2cstring(FreeRTOS_IPAddress), ipaddress_word2cstring(FreeRTOS_NetMask), ipaddress_word2cstring(FreeRTOS_GatewayAddress), ipaddress_word2cstring(FreeRTOS_DNSServerAddress));
 //#endif
 }
 
 void tcpPingSendHook(uint32_t address) {
 #ifdef DEBUG
-  printf("Pinging %08x\n", address);
+  char addrstr[16];
+  ipaddress_word2cstring(address, addrstr);
+  printf("Pinging %s\n", addrstr);
 #endif
 }
 
@@ -178,7 +197,11 @@ uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t u
     ( void ) usDestinationPort;
 
 #ifdef DEBUG
-  printf("Generating random sequence number for src %08x:%d dst %08x:%d\n", ulSourceAddress, usSourcePort, ulDestinationAddress, usDestinationPort);
+  char srcastr[16];
+  ipaddress_word2cstring(ulSourceAddress, srcastr);
+  char dstastr[16];
+  ipaddress_word2cstring(ulDestinationAddress, dstastr);
+  printf("Generating random sequence number for src %s:%d dst %s:%d\n", srcastr, usSourcePort, dstastr, usDestinationPort);
 #endif
     return xorshift32(&xor32state);
 }
