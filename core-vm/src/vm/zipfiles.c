@@ -379,9 +379,12 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
 
 #define TRAWL_SIZE 16384
 
-// TESTING buffer to hold a copy of the last chunk we read
+/* Define SANITY_CHECKS to include extra sanity checks at runtime */
+//#define SANITY_CHECKS
+
+#ifdef SANITY_CHECKS
 static unsigned char previous[TRAWL_SIZE];
-//
+#endif
 
 /*
 ** Read just enough of the first entry to be able to recognise it in the central directory.
@@ -481,11 +484,11 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
       vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
       l = vfs_read (zipFile->fd, trawlbuf, TRAWL_SIZE + 4);
       woempa(7, "was able to read %d bytes from 0%07o\n", l, *offset_ptr);
-//TESTING
+#ifdef SANITY_CHECKS
       if (memcmp(previous, trawlbuf, TRAWL_SIZE) == 0) {
         wabort(ABORT_WONKA, "OOH LAH LAH %07o %02x %02x %02x %02x %02x %02x %02x ...\n", *offset_ptr, trawlbuf[0], trawlbuf[1], trawlbuf[2], trawlbuf[3], trawlbuf[4], trawlbuf[5], trawlbuf[6], trawlbuf[7]);
       }
-//
+#endif
       woempa(7, "looking for pattern %02x %02x %02x %02x in bytes 0%07o to 0%07o\n", Z_SENTINEL0, Z_SENTINEL1, Z_DIR_BYTE0, Z_DIR_BYTE1, *offset_ptr, *offset_ptr + l - 1);
       for (i = 0; i + 4 < l; ++i) {
         if (trawlbuf[i] == Z_SENTINEL0 && trawlbuf[i + 1] == Z_SENTINEL1 && trawlbuf[i + 2] == Z_DIR_BYTE0 && trawlbuf[i + 3] == Z_DIR_BYTE1) {
@@ -496,9 +499,9 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
         }
       }
       if (!found_sentinel) {
-//TESTING
+#ifdef SANITY_CHECKS
         memcpy(previous, trawlbuf, TRAWL_SIZE);
-//
+#endif
         woempa(7, "Not found, advancing offset by 0%o\n", TRAWL_SIZE);
         *offset_ptr += TRAWL_SIZE;
       }
