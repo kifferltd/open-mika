@@ -68,7 +68,6 @@ static w_int seqnum = 0;
 
 static void threadEntry(void * athread) {
 
-/* TODO - re-write this whole thing
 #ifdef DEBUG_STACKS
   volatile
 #endif
@@ -86,10 +85,10 @@ static void threadEntry(void * athread) {
 
   threadMustBeSafe(thread);
   if (!run_method) {
-    run_method = find_method(clazz_Thread, "_run", "()V"); 
+    run_method = find_method(clazzThread, "_run", "()V"); 
     woempa(7,"run_method is %M\n",run_method);
 #ifdef JDWP
-    jdwp_Thread_run_method = find_method(clazz_Thread, "_run", "()V"); 
+    jdwp_Thread_run_method = find_method(clazzThread, "_run", "()V"); 
 #endif
   }
 
@@ -121,9 +120,7 @@ static void threadEntry(void * athread) {
     }
 #endif
 
-#ifndef O4P
-#error TODO: This code needs to be rewritten!!!
-#endif
+#ifdef O4P
     w_int pid = getpid();
     w_int tid = syscall(__NR_gettid);
 #ifdef RESMON
@@ -131,12 +128,14 @@ static void threadEntry(void * athread) {
     setIntegerField(thread->Thread, F_Thread_tid, tid);
 #endif
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
-#ifdef O4P
       w_printf("Start %t: pid is %d lwp %d\n", thread, pid, tid);
-#else
-      w_printf("Start %t\n", thread);
-#endif
     }
+#else
+    if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
+      w_printf("Start %t\n", thread);
+    }
+#endif
+
 #ifdef JDWP
     jdwp_event_thread_start(thread);
 #endif
@@ -200,7 +199,6 @@ static void threadEntry(void * athread) {
     x_monitor_exit(xthreads_monitor);
   }
 #endif
-*/
 }
 
 void Thread_create(w_thread currentthread, w_instance thisThread, w_instance parentThreadGroup, w_instance nameString, w_instance theRunnable) {

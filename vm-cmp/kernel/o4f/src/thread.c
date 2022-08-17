@@ -316,6 +316,8 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    thread->stack_depth = stack_size;
    thread->task_priority = priority;
    thread->task_priority = mapPriority(priority);
+   x_list_init(&thread->monitor_queue);
+   thread->monitor_queue.thread = thread;
 
    thread->task_parameters = entry_input;
 
