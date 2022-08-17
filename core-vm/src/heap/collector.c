@@ -1,6 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2018,     *
-* 2021 by Chris Gray, KIFFER Ltd.  All rights reserved.                   *
+* 2021, 2022 by Chris Gray, KIFFER Ltd.  All rights reserved.             *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1556,7 +1556,7 @@ static void prepreparation(w_thread thread) {
   blocking_start = blocking_end;
   woempa(7, "%t: finished locking other threads\n", marking_thread);
 #ifdef TRACE_MEM_ALLOC
-  _heapCheck("collector.c", 1571);
+  heapCheck;
 #endif
   x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
 }
@@ -1615,6 +1615,10 @@ w_int preparationPhase(void) {
     memory_load_factor = 0;
   }
   killing_soft_references = (*gc_kicks_pointer) || (memory_load_factor > 1);
+
+#ifdef TRACE_MEM_ALLOC
+  heapCheck;
+#endif
 
 #ifdef USE_OBJECT_HASHTABLE
   ht_iterate(object_hashtable, preparation_iteration, NULL, NULL);

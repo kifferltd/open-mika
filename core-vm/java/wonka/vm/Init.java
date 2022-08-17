@@ -405,8 +405,8 @@ final class Init {
     }
 
   // Start up the Garbage Collector
-  //  debug("Init: starting Garbage Collector");
-  //  GarbageCollector gc = GarbageCollector.getInstance();
+    debug("Init: starting Garbage Collector");
+    GarbageCollector gc = GarbageCollector.getInstance();
   // Start up the Heartbeat
     debug("Init: starting Heartbeat");
     Heartbeat h = Heartbeat.getInstance();
