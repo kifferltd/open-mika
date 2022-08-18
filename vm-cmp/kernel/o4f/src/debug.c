@@ -108,8 +108,17 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
     totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD OVERFLOW: %s %4d: %s", file, line, message);
     break;
 
+  case O4F_ABORT_MEMCHUNK:
+    totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD MEMCHUNK: %s %4d: %s", file, line, message);
+    break;
+
   case O4F_ABORT_MONITOR:
-    totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD MONITOR: %s %4d: %s", file, line, message);
+    if (rc <= xs_unknown) {
+      totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD MONITOR: %s %4d: %s returned '%s'", file, line, message, x_status2char(rc));
+    }
+    else {
+      totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD MONITOR: %s %4d: %s: %p", file, line, message, rc);
+    }
     break;
 
   default:

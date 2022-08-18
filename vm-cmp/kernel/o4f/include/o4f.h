@@ -197,22 +197,22 @@ extern char **command_line_arguments;
 
 /** Memory chunk header
     +----------+
-    ! reserved ! ) Just to bring the total up to 8 words.
-    +----------+  
     !    id    ! User-supplied object type identifier.  Values 0..31 reserved.
     +----------+
+    !   size   ! Requested size in bytes
+    +----------+  
     !   next   ! )
     +----------+ ) The linked list used to emulate Oswald's heap-walking stuff
     ! previous ! )
-    +----------+
+    +----------+   v---- next 4 words only in DEBUG build ---v
     !   file   ! )
     +----------+ ) Program location where allocated
     !   line   ! )
     +----------+
-    !   size   ! Requested size in bytes
+    ! reserved ! ) Just to bring the total up to 8 words.
     +----------+
     !   check  ! Must point to `magic'
-    +----------+
+    +----------+   ^-----------------------------------------^
     ! contents !
     :          :
 */
@@ -261,6 +261,7 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc);
 #define o4f_abort(t,m,rc) _o4f_abort(__FILE__, __LINE__, t, m, rc);
 
 #define O4F_ABORT_BAD_STATUS      1
+#define O4F_ABORT_MEMCHUNK        2
 #define O4F_ABORT_OVERFLOW        3
 #define O4F_ABORT_THREAD          4
 #define O4F_ABORT_MONITOR         5
