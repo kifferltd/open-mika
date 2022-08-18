@@ -146,9 +146,7 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
 
 void tcpPingSendHook(uint32_t address) {
 #ifdef DEBUG
-  char addrstr[16];
-  ipaddress_word2cstring(address, addrstr);
-  printf("Pinging %s\n", addrstr);
+  printf("Pinging %s\n", ipaddress_word2cstring(address));
 #endif
 }
 
@@ -197,11 +195,7 @@ uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t u
     ( void ) usDestinationPort;
 
 #ifdef DEBUG
-  char srcastr[16];
-  ipaddress_word2cstring(ulSourceAddress, srcastr);
-  char dstastr[16];
-  ipaddress_word2cstring(ulDestinationAddress, dstastr);
-  printf("Generating random sequence number for src %s:%d dst %s:%d\n", srcastr, usSourcePort, dstastr, usDestinationPort);
+  printf("Generating random sequence number for src %s:%d dst %s:%d\n", ipaddress_word2cstring(ulSourceAddress), usSourcePort, ipaddress_word2cstring(ulDestinationAddress), usDestinationPort);
 #endif
     return xorshift32(&xor32state);
 }
