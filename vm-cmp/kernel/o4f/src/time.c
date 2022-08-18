@@ -76,10 +76,6 @@ x_boolean x_deadline_passed(struct timespec *ts) {
   return (ts->tv_sec < now.tv_sec)  || ((ts->tv_sec == now.tv_sec) && (ts->tv_nsec <= now.tv_usec));
 }
 
-x_sleep x_time_get() {
-  return o4fe->timer_ticks;
-}
-
 /*
 ** Functions for time calculations
 */
@@ -136,7 +132,7 @@ x_long x_ticks2usecs(x_size ticks) {
 }
 
 /*
-** Return an number of ticks for a number of microseconds.
+** Return a number of ticks for a number of microseconds.
 ** The result is always at least 1.
 */
 x_size x_usecs2ticks(x_size usecs) {
