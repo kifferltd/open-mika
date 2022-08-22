@@ -125,6 +125,7 @@ void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
     totlen += x_snprintf(strerror_buf + totlen, ABORT_BUFSIZE - totlen, "\r\nOSWALD ABORT called with unknown type %d and message '%s'", type, message);
   }
   x_debug_write(strerror_buf, totlen);
+  vTaskDelay(1000);
 
   exit(1);
 }
