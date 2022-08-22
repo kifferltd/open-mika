@@ -63,21 +63,78 @@ const char *magic = "This memory is valid.";
 static o4f_Memory_Chunk Memory_Sentinel;
 static o4f_memory_chunk memory_sentinel;
 
-/* WAS:
-static void *chunk2mem(o4f_memory_chunk chunk) {
-  return ((char*)chunk) + sizeof(o4f_Memory_Chunk);
-}
-*/
-
 #define chunk2mem(chunk) (((char*)chunk) + sizeof(o4f_Memory_Chunk))
 
-/* WAS:
-static o4f_memory_chunk mem2chunk(void *mem) {
-  return (o4f_memory_chunk)(((char*)mem) - sizeof(o4f_Memory_Chunk));
-}
+#define mem2chunk(mem) ((o4f_memory_chunk)(((char*)mem) - sizeof(o4f_Memory_Chunk)))
+
+typedef enum {
+  chunk_ok,
+  chunk_err_chunk_null,
+  chunk_err_chunk_addr_invalid,
+  chunk_err_next_null,
+  chunk_err_next_addr_invalid,
+  chunk_err_next_loop,
+  chunk_err_previous_null,
+  chunk_err_previous_addr_invalid,
+  chunk_err_previous_loop,
+  chunk_err_next_previous_not_same,
+  chunk_err_previous_next_not_same,
+} x_chunk_status;
+
+static char *chunk_status_text [] = {
+  "chunk_ok",
+  "chunk_err_chunk_null",
+  "chunk_err_chunk_addr_invalid",
+  "chunk_err_next_null",
+  "chunk_err_next_addr_invalid",
+  "chunk_err_next_loop",
+  "chunk_err_previous_null",
+  "chunk_err_previous_addr_invalid",
+  "chunk_err_previous_loop",
+  "chunk_err_next_previous_not_same",
+  "chunk_err_previous_next_not_same",
+  NULL
+};
+
+/* OBSOLETE
+#define CHUNK_OK 1
+#define CHUNK_ERR_CHUNK_NULL 1
+#define CHUNK_ERR_CHUNK_INVALID_ADDRESS 2
+#define CHUNK_ERR_NEXT_NULL 3
+#define CHUNK_ERR_NEXT_INVALID_ADDRESS 4
+#define CHUNK_ERR_NEXT_LOOP 5
+#define CHUNK_ERR_PREV_LOOP 6
+#define CHUNK_ERR_NEXT_PREV_NOT_SAME 7
+#define CHUNK_ERR_PREV_NEXT_NOT_SAME 8
 */
 
-#define mem2chunk(mem) ((o4f_memory_chunk)(((char*)mem) - sizeof(o4f_Memory_Chunk)))
+static x_chunk_status chunk_sanity_check(o4f_memory_chunk chunk) {
+  if (!chunk) {
+    return chunk_err_chunk_null;
+  }
+  if (chunk<0x100000) {
+    return chunk_err_chunk_addr_invalid;
+  }
+  if (!chunk) {
+    return chunk_err_next_null;
+  }
+  if (chunk->next<0x100000) {
+    return chunk_err_next_addr_invalid;
+  }
+  if (chunk->next == chunk) {
+    return chunk_err_next_loop;
+  }
+  if (chunk->previous == chunk) {
+    return chunk_err_previous_loop;
+  }
+  if (chunk->next->previous != chunk) {
+    return chunk_err_next_previous_not_same;
+  }
+  if (chunk->previous->next != chunk) {
+    return chunk_err_previous_next_not_same;
+  }
+  return chunk_ok;
+}
 
 void x_mem_init(void) {
   memory_sentinel = &Memory_Sentinel;
@@ -231,6 +288,13 @@ void *_x_mem_alloc(w_size size) {
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
+// << TEMPORARY CHECK
+    x_chunk_status chunk_status = chunk_sanity_check(newchunk);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+// >> TEMPORARY CHECK
+
   heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
@@ -258,6 +322,13 @@ void *_x_mem_calloc(w_size size) {
   x_mem_lock(x_eternal);
   x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
+// << TEMPORARY CHECK
+    x_chunk_status chunk_status = chunk_sanity_check(newchunk);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+// >> TEMPORARY CHECK
+
   heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
@@ -276,6 +347,13 @@ void *_x_mem_realloc(void *old, w_size size) {
     return NULL;
   }
 
+// << TEMPORARY CHECK
+    x_chunk_status chunk_status = chunk_sanity_check(oldchunk);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+// >> TEMPORARY CHECK
+
   x_mem_lock(x_eternal);
   x_list_remove(oldchunk);
   oldsize = oldchunk->size + sizeof(o4f_Memory_Chunk);
@@ -293,6 +371,13 @@ void *_x_mem_realloc(void *old, w_size size) {
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
+// << TEMPORARY CHECK
+    chunk_status = chunk_sanity_check(newchunk);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+// >> TEMPORARY CHECK
+
   heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
@@ -309,6 +394,13 @@ void x_mem_free(void *block) {
     loempa(9,"Memory block %p is not valid!\n", block);
   }
 #endif
+
+// << TEMPORARY CHECK
+    x_chunk_status chunk_status = chunk_sanity_check(chunk);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+// >> TEMPORARY CHECK
 
   loempa(1,"Returning %d bytes at %p allocated at %s:%d\n", chunk->size, block, chunk->file, chunk->line);
   x_mem_lock(x_eternal);
@@ -327,10 +419,39 @@ w_size x_mem_avail(void) {
   return heap_remaining;
 }
 
+/* WAS:
+static x_int chunk_sanity_check(o4f_memory_chunk chunk) {
+  if (!chunk) {
+    return CHUNK_ERR_CHUNK_NULL;
+  }
+  if (chunk<0x100000) {
+    return CHUNK_ERR_CHUNK_INVALID_ADDRESS;
+  }
+  if (!chunk) {
+    return CHUNK_ERR_NEXT_NULL;
+  }
+  if (chunk->next<0x100000) {
+    return CHUNK_ERR_NEXT_INVALID_ADDRESS;
+  }
+  if (chunk->next == chunk) {
+    return CHUNK_ERR_NEXT_LOOP;
+  }
+  if (chunk->previous == chunk) {
+    return CHUNK_ERR_PREV_LOOP;
+  }
+  if (chunk->next->previous != chunk) {
+    return CHUNK_ERR_NEXT_PREV_NOT_SAME;
+  }
+  if (chunk->previous->next != chunk) {
+    return CHUNK_ERR_PREV_NEXT_NOT_SAME;
+  }
+  return CHUNK_OK;
+}
+*/
 x_status x_mem_walk(x_sleep timeout, x_boolean (*callback)(void * mem, void * arg), void * arg) {
   x_status status = xs_success;
-  o4f_memory_chunk cursor;
-  o4f_memory_chunk next;
+  volatile o4f_memory_chunk cursor;
+  volatile o4f_memory_chunk next;
   
   status = x_mem_lock(timeout);
   if (status != xs_success) {
@@ -343,12 +464,20 @@ x_status x_mem_walk(x_sleep timeout, x_boolean (*callback)(void * mem, void * ar
   ** to release the chunk, for instance).
   */
   
+  printf("walking: ");
   for (cursor = memory_sentinel->next; cursor != memory_sentinel; cursor = next) {
+    printf("%p ", cursor);
+    x_chunk_status chunk_status = chunk_sanity_check(cursor);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
+
     next = cursor->next;
     if (!callback(chunk2mem(cursor), arg)) {
       break;
     }
   }
+  printf("done\n");
 
   status = x_mem_unlock();
 
@@ -357,8 +486,8 @@ x_status x_mem_walk(x_sleep timeout, x_boolean (*callback)(void * mem, void * ar
 
 x_status x_mem_scan(x_sleep timeout, x_word tag, x_boolean (*callback)(void * mem, void * arg), void * arg) {
   x_status status = xs_success;
-  o4f_memory_chunk cursor;
-  o4f_memory_chunk next;
+  volatile o4f_memory_chunk cursor;
+  volatile o4f_memory_chunk next;
   
   status = x_mem_lock(timeout);
   if (status != xs_success) {
@@ -371,15 +500,22 @@ x_status x_mem_scan(x_sleep timeout, x_word tag, x_boolean (*callback)(void * me
   ** to release the chunk, for instance).
   */
   
+  printf("scanning: ");
   for (cursor = memory_sentinel->next; cursor != memory_sentinel; cursor = next) {
-    next = cursor->next;
+    printf("%p ", cursor);
+    x_chunk_status chunk_status = chunk_sanity_check(cursor);
+    if (chunk_status) {
+      o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
+    }
 
+    next = cursor->next;
     if (cursor->id & tag) {
       if (!callback(chunk2mem(cursor), arg)) {
         break;
       }
     }
   }
+  printf("done\n");
 
   status = x_mem_unlock();
 
