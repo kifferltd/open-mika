@@ -36,7 +36,7 @@
 
 /*
 ** Get the file's name as a C-style UTF8 string. After you've finished with the
-** name, call freeFileName() on the result to free up the memory.
+** name, call releaseMem() on the result to free up the memory.
 */
 char *getFileName(w_instance thisFile) {
   w_instance pathString;
@@ -45,10 +45,8 @@ char *getFileName(w_instance thisFile) {
   pathString = getReferenceField(thisFile, F_File_absname);
   path = String2string(pathString);
 
-  return (char*)string2UTF8(path, NULL) + 2;	  
+  return w_string2UTF8(path, NULL);	  
 }
-
-#define freeFileName(n) releaseMem((n)-2)
 
 w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
   char *pathname;
@@ -58,7 +56,7 @@ w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
 
   result = (vfs_stat(pathname, statbufptr) != -1);
 
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   return result;
 }
@@ -81,7 +79,7 @@ w_boolean File_createNew (w_thread thread, w_instance thisFile) {
     }
   }
 
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   return result;
 }
@@ -98,10 +96,8 @@ w_instance File_get_CWD (w_thread thread, w_instance thisFile) {
 
 w_instance File_get_fsroot (w_thread thread, w_instance thisFile) {
   // special case: fsroot = "/" really means fsroot = "", i.e. "{}/" maps to "/" (not "//")
-  if (strlen(fsroot) == 1 && fsroot[0] == '/') {
-     return registerString(string_EMPTY);
-  }
-  return getStringInstance(utf2String(fsroot, strlen(fsroot)));
+  w_string fsroot_string = (strlen(fsroot) == 1 && fsroot[0] == '/') ? registerString(string_empty) : utf2String(fsroot, strlen(fsroot));
+  return getStringInstance(fsroot_string);
 }
 
 #ifdef FREERTOS
@@ -121,24 +117,27 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   w_wordset *temp = &ws;
   w_size numberOfFiles = 0;
   struct vfs_STAT statbuf;
+  FF_FindData_t finddata_buffer;
 
   threadMustBeSafe(thread);
   pathname = getFileName(thisFile);	  
+printf("dir %s\n", pathname);
 
   if (ff_stat(pathname, &statbuf) != 0 || statbuf.st_mode != FF_IFDIR) {
     // this is not a directory
+    releaseMem(pathname);
     return NULL;
   }
 
-  FF_FindData_t *finddata_ptr = x_mem_calloc(sizeof(FF_FindData_t));
-  if (ff_findfirst(pathname, finddata_ptr ) == 0 ) {
+  if (ff_findfirst(pathname, &finddata_buffer ) == 0 ) {
     do {
-      entryname = (char*)finddata_ptr->pcFileName;
-      entry_string = utf2String(entryname, strlen(entryname));
-      addToWordset(temp, (w_word) entry_string);
-    } while( ff_findnext( finddata_ptr ) == 0 );
+      entryname = (char*)finddata_buffer.pcFileName;
+printf("  entry %s\n", entryname);
+      addToWordset(temp, (w_word) entryname);
+    } while( ff_findnext(&finddata_buffer) == 0 );
   }
   // else we will return an empty array 
+  releaseMem(pathname);
     
   if (!wordsetIsEmpty(temp)) {
     enterUnsafeRegion(thread);
@@ -147,13 +146,13 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   }
 
   for (i = 0; !wordsetIsEmpty(temp); ++i) {
-    entry_string = (w_string) takeFirstFromWordset(temp);
+    entryname = (char*) takeFirstFromWordset(temp);
+printf("  entry %ss\n", entryname);
+    entry_string = utf2String(entryname, strlen(entryname));
     entry = getStringInstance(entry_string);
-    setArrayReferenceField(result, entry, i++);
+    setArrayReferenceField(result, entry, i);
     deregisterString(entry_string);
-    removeLocalReference(thread, entry);
   }
-  x_mem_free(finddata_ptr);
   releaseWordset(temp);
 
   return result;
@@ -179,7 +178,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
 
   dir = vfs_opendir(pathname);
   
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   if(dir != NULL) {
 
@@ -233,7 +232,7 @@ w_boolean File_setReadOnly (w_thread thread, w_instance thisFile) {
   result = vfs_stat(pathname, &statbuf) == 0
     && vfs_chmod(pathname, statbuf.st_mode & ~WRITABLE) == 0;
 
-  freeFileName(pathname);
+  releaseMem(pathname);
   
   return result;
 }
@@ -304,7 +303,7 @@ w_boolean File_delete (w_thread thread, w_instance thisFile) {
     }
   }
   
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   return result;
 
@@ -320,7 +319,7 @@ w_boolean File_mkdir(w_thread thread, jobject thisFile) {
   rc = vfs_mkdir(pathname, VFS_S_IRWXU | VFS_S_IRWXG | VFS_S_IRWXO);
   result = (rc != -1);
 
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   return result;
 }
@@ -338,7 +337,7 @@ w_boolean File_setModTime(w_thread thread, w_instance thisFile, w_long modtime) 
 
   result = (0 == vfs_utime(pathname, &buf));
 
-  freeFileName(pathname);
+  releaseMem(pathname);
 
   return result;
 }
