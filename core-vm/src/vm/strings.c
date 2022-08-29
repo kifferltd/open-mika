@@ -278,6 +278,8 @@ w_byte *string2UTF8(w_string string, w_int *count) {
 
   buffer = handle + 2;
 
+  result = handle;
+
   for (i = 0; i < string_length(string); i++) {
     w_char ch = string_char(string, i);
     if (char_is_singlet(ch)) {
@@ -296,10 +298,11 @@ w_byte *string2UTF8(w_string string, w_int *count) {
       buffer += 3;
     }
   }
-  handle[0] = (w_byte)(l >> 8);
-  handle[1] = (w_byte)(l);
+  handle[0] = (w_byte)((l >> 8) & 0xff);
+  handle[1] = (w_byte)(l & 0xff);
 
-  result = reallocMem(handle, l + 3);
+// CG 20220824 try leaving this out
+//  result = reallocMem(handle, l + 3);
   result[l + 2] = 0;
   if (count) {
     *count = l + 2;
@@ -309,6 +312,51 @@ w_byte *string2UTF8(w_string string, w_int *count) {
 
 }
 
+// new version which does not add a two-byte counter at the beginning
+
+char* w_string2UTF8(w_string string, w_int *count) {
+
+  /*
+  ** Allocate a worst case buffer, 3 bytes for each unicode char and one for the terminating null byte.
+  */
+
+  w_byte *buffer = allocMem(1 + (string_length(string) * (3 * sizeof (w_byte))));
+
+  if (!buffer) {
+
+    return NULL;
+
+  }
+
+  w_byte *cursor = buffer;
+
+  for (w_size i = 0; i < string_length(string); i++) {
+    w_char ch = string_char(string, i);
+    if (char_is_singlet(ch)) {
+      *cursor = (w_byte)ch;
+      cursor += 1;
+    }
+    else if (char_is_duplet(ch)) {
+      char2duplet(cursor, ch);
+      cursor += 2;
+    }
+    else {
+      char2triplet(cursor, ch);
+      cursor += 3;
+    }
+  }
+  w_size l = cursor - buffer;
+  buffer[l] = 0;
+
+// CG 20220824 try leaving this out
+//  buffer = reallocMem(buffer, l + 1);
+  if (count) {
+    *count = l;
+  }
+
+  return buffer;
+
+}
 
 w_byte* chars2UTF8(w_char *chars, w_int length, w_int *count) {
 

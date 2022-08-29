@@ -125,6 +125,10 @@ void putw_char(w_char ch, w_ubyte **dest);
 */
 w_ubyte *string2UTF8(w_string string, w_int * buflen);
 
+// new version which does not add a two-byte counter at the beginning
+
+char* w_string2UTF8(w_string string, w_int *count);
+
 /*
 ** chars2UTF8 converts the 'length' unicode chars at 'chars' into a UTF8 string.
 ** The UTF8 string is returned as a byte array in which the first two bytes
