@@ -278,7 +278,7 @@ void Runtime_static_exit0 (w_thread thread, w_instance thisClass, w_int exitcode
 
 //  histogram();
   
-#if defined(LINUX) || defined(NETBSD)
+#if defined(LINUX) || defined(NETBSD) || defined(FREERTOS)
   exit(exitcode);
 #else
   wabort(ABORT_WONKA, "exit(%d)\n",exitcode);
