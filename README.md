@@ -35,7 +35,7 @@
 
 Compile o4f (Oswald For FreeRTOS) as follows:
 ```
-sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/portable/Imsys/ISAL` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/vendors/imsys/boards/embla/imsys` -DCMAKE_BUILD_TYPE=Debug ..
+sw-open-mika/build$ cmake -DIMSYS_CLANG_DIR=`realpath ../../tool-llvm/build` -DIMSYS_NEWLIB_INCLUDE_DIR=`realpath ../../sw-newlib/newlib/libc/include` -DIMSYS_ISAL_SYSTEM_INCLUDE_DIR=`realpath ../../sw-isal-system/include` -DIMSYS_FREERTOS_KERNEL_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/include` -DIMSYS_IM4000_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/vendors/imsys/im4000/include` -DIMSYS_FREERTOS_PORT_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/freertos_kernel/portable/Imsys/ISAL` -DFREERTOS_FAT_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/build/_deps/freertos-fat-src/include` -DFREERTOS_TCP_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/libraries/freertos_plus/standard/freertos_plus_tcp/include` -DFREERTOS_TCP_COMPILER_DIR=`realpath ../../sw-imsys-freertos/libraries/freertos_plus/standard/freertos_plus_tcp/portable/Compiler/GCC` -DFREERTOS_IO_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/libraries/abstractions/common_io/include` -DIMSYS_FREERTOS_APP_INCLUDE_DIR=`realpath ../../sw-imsys-freertos/vendors/imsys/boards/embla/imsys` -DCMAKE_BUILD_TYPE=Debug ..
 sw-open-mika/build$ cmake --build .
 ```
 
