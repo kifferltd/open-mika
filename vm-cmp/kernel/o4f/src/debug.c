@@ -69,7 +69,6 @@ static bool ensureUartIsInitialised() {
   if (!uart_handle) {
     printf("\nInitialising UART\n");
     initDebugUart();
-    x_debug_puts("\nUART is initialised\n");
   }
   return true;
 }
