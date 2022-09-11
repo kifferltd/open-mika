@@ -121,7 +121,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
 
   threadMustBeSafe(thread);
   pathname = getFileName(thisFile);	  
-printf("dir %s\n", pathname);
+  woempa(7, "dir %s\n", pathname);
 
   if (ff_stat(pathname, &statbuf) != 0 || statbuf.st_mode != FF_IFDIR) {
     // this is not a directory
@@ -131,12 +131,18 @@ printf("dir %s\n", pathname);
 
   if (ff_findfirst(pathname, &finddata_buffer ) == 0 ) {
     do {
-      entryname = (char*)finddata_buffer.pcFileName;
-printf("  entry %s\n", entryname);
+      const int fileNameLength = strlen(finddata_buffer.pcFileName);
+      if (fileNameLength < 1 || finddata_buffer.pcFileName[0] !='.' || finddata_buffer.pcFileName[fileNameLength-1] != 0 || fileNameLength > 2) {
+        entryname = allocMem(fileNameLength + 1);
+        strcpy(entryname, finddata_buffer.pcFileName);
+        woempa(7, "  put entry %s\n", entryname);
+      }
+      else {
+        woempa(7, "Dir entry '%s' is bogus, ignoring\n", finddata_buffer.pcFileName);
+      }
       addToWordset(temp, (w_word) entryname);
     } while( ff_findnext(&finddata_buffer) == 0 );
   }
-  // else we will return an empty array 
   releaseMem(pathname);
     
   if (!wordsetIsEmpty(temp)) {
@@ -147,8 +153,9 @@ printf("  entry %s\n", entryname);
 
   for (i = 0; !wordsetIsEmpty(temp); ++i) {
     entryname = (char*) takeFirstFromWordset(temp);
-printf("  entry %ss\n", entryname);
+    woempa(7, "  take entry %s\n", entryname);
     entry_string = utf2String(entryname, strlen(entryname));
+    releaseMem(entryname);
     entry = getStringInstance(entry_string);
     setArrayReferenceField(result, entry, i);
     deregisterString(entry_string);
