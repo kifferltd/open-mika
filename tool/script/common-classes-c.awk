@@ -403,7 +403,7 @@ END {
     reference = rtypes[id] == "w_instance"
     twoslots = rtypes[id] == "w_long" || rtypes[id] == "w_double"
     if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
-    printf "  woempa(7, \"Calling %%M using native_dispatcher_%s\\n\", method);\n", id
+    printf "  woempa(1, \"Calling %%M using native_dispatcher_%s\\n\", method);\n", id
     printf "  frame->jstack_base = caller->jstack_top;\n"
     printf "  prepareNativeFrame(frame, thread, caller, method);\n\n"
     printf "  threadMustBeSafe(thread);\n\n"
@@ -428,11 +428,11 @@ END {
       printf "  else {\n"
       if (reference) printf "    enterUnsafeRegion(thread);\n"
       if (twoslots) {
-        printf "    woempa(7, \"%%m result = %%016x\\n\", method, result);\n"
+        printf "    woempa(1, \"%%m result = %%016x\\n\", method, result);\n"
         printf "    return_%s(caller, depth, result);\n", id2rtype(id)
       }
       else {
-        printf "    woempa(7, \"%%m result = %%%s\\n\", method, result);\n", nonvoid ? "08x" : "p"
+        printf "    woempa(1, \"%%m result = %%%s\\n\", method, result);\n", nonvoid ? "08x" : "p"
         printf "    return_oneslot(caller, depth, result);\n"
       }
       if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"

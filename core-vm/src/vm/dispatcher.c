@@ -754,10 +754,10 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   }
 
   // logic using pre-computed dispatchers
-  woempa(7, "Looking up descriptor %w in dispatchers_hashtable\n", method->desc);
+  woempa(1, "Looking up descriptor %w in dispatchers_hashtable\n", method->desc);
   w_word disp = ht_read(dispatchers_hashtable, (w_word)method->desc);
   if (disp) {
-    woempa(7, "Will call native code at %p using dispatcher at %0x08\n", method->exec.function.void_fun, disp);
+    woempa(1, "Will call native code at %p using dispatcher at %0x08\n", method->exec.function.void_fun, disp);
     method->exec.dispatcher = (w_callfun)disp;
     callMethod(caller, method);
 
@@ -1440,10 +1440,10 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
     method->exec.dispatcher = dispatchers[dispatcher_index];
     if (dispatcher_index == 1 || dispatcher_index >= 24) {
       setFlag(method->flags, METHOD_UNSAFE_DISPATCH);
-      woempa(7, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, dispatcher_index);
+      woempa(1, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, dispatcher_index);
     }
     else {
-      woempa(7, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, dispatcher_index);
+      woempa(1, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, dispatcher_index);
     }
   }
   x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
