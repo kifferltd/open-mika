@@ -139,9 +139,9 @@ void PlainSocketImpl_connect(w_thread thread , w_instance ThisImpl, w_int timeou
   sa.sin_addr = FreeRTOS_htonl(getIntegerField(address, F_InetAddress_address));
   sa.sin_port = FreeRTOS_htons(port);
 
-  woempa (7,"INET: connect, port %d addr %lx\n", sa.sin_port, sa.sin_addr);
+  const unsigned char *a = (unsigned char *)&sa.sin_addr;
+  woempa (7,"INET: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa.sin_port);
   if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
-    unsigned char *a = (unsigned char *)&sa.sin_addr;
     printf("Socket: connecting to %d.%d.%d.%d:%d\n", a[0], a[1], a[2], a[3], sa.sin_port);
   }
 
