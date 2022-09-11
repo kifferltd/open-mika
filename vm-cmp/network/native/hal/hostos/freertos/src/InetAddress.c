@@ -107,7 +107,7 @@ printf("Calling InetAddress_createInetAddress(%p, %p, %p)\n", thread, InetAddres
 
   setIntegerField(InetAddress, F_InetAddress_address, w_ntohl(host));
   woempa(7, "IP address is %d.%d.%d.%d\n", ((char*)&ipnumber)[0], ((char*)&ipnumber)[1], ((char*)&ipnumber)[2], ((char*)&ipnumber)[3]);
-printf("InetAddress_createInetAddress(%p, %p, %p) -> %08x\n", thread, InetAddress, Name, host);
+printf("InetAddress_createInetAddress(%p, %p, %p) -> %d.%d.%d.%d\n", thread, InetAddress, Name, (host>>24)&&0xff, (host>>16)&&0xff, (host>>8)&&0xff, host&&0xff);
 }
 
 w_instance InetAddress_getLocalName(w_thread thread, w_instance theClass) {
