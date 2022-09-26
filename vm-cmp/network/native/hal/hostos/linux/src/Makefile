@@ -37,7 +37,7 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 #CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/linux/include
 CFLAGS += -I $(NETWORK_TOP)/hal/hostos/linux/include
 
-sources = network.c InetAddress.c
+sources = network.c InetAddress.c PlainSocketImpl.c
 networkobjdir = $(objdir)/vm-cmp/network
 objects=$(patsubst %.c, $(networkobjdir)/%.o, $(sources))
 

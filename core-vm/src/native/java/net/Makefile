@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = NetworkInterface.c PlainDatagramSocketImpl.c PlainSocketImpl.c
+sources = NetworkInterface.c PlainDatagramSocketImpl.c 
 
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
