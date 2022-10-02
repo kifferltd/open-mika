@@ -775,8 +775,13 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
     n = sizeOfWordset(&clazz->references);
 
     for (i = 0; i < n; ++i) {
-      woempa(1, "(GC) %K references %K\n", clazz, elementOfWordset(&clazz->references, i));
-      child_instance = clazz2Class((w_clazz)elementOfWordset(&clazz->references, i));
+      w_clazz clazzref = (w_clazz)elementOfWordset(&clazz->references, i);
+      if (getClazzState(clazzref) == CLAZZ_STATE_UNLOADED) {
+        continue;
+      }
+
+      woempa(1, "(GC) %K references %K\n", clazz, clazzref);
+      child_instance = clazz2Class(clazzref);
       if (child_instance) {
         retcode = markInstance(child_instance, fifo, flag);
         if (retcode < 0) {
