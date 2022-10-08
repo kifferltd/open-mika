@@ -107,7 +107,7 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       // The monitor was free and we just acquired it.
       monitor->owner = current;
       monitor->count = 1;
-      xTaskNotifyStateClear(current->handle);
+      xTaskNotifyStateClear(NULL);
       loempa(2, "Thread %p now owns monitor %p, count now %d\n", current, monitor, monitor->count);
 
       return xs_success;
@@ -153,6 +153,9 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   retcode = xTaskResumeAll();
   loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
   loempa(2, "Thread %p is waiting on monitor %p until tick %d\n", current, monitor, expiry_ticks);
+
+  // Ensure there is no notification hanging around from befor the wait
+  xTaskNotifyStateClear(NULL);
 
   retcode = xSemaphoreGive(monitor->owner_mutex);
   if (retcode != pdPASS) {
@@ -250,7 +253,7 @@ x_status x_monitor_exit(x_monitor monitor) {
     o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: thread is still waiting on a monitor", current);
   }
 
-  xTaskNotifyStateClear(current->handle);
+  xTaskNotifyStateClear(NULL);
   monitor->count -= 1;
   if (monitor->count == 0) {
     monitor->owner = NULL;
