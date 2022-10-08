@@ -426,7 +426,7 @@ static z_zipEntry readFirstEntry(z_zipFile zipFile, w_size *offset_ptr) {
 static z_zipEntry readNextEntry(z_zipFile zipFile, w_size *offset_ptr) {
   w_word signature;
   w_ubyte sigbuf[4];
-  woempa(7, "Reading ZipEntry at offset 0%07o\n", *offset_ptr);
+  woempa(1, "Reading ZipEntry at offset 0%07o\n", *offset_ptr);
 
   z_zipEntry entry = allocClearedMem(sizeof(z_ZipEntry));
   if (!entry) {
@@ -483,7 +483,7 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
 
       vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
       l = vfs_read (zipFile->fd, trawlbuf, TRAWL_SIZE + 4);
-      woempa(7, "was able to read %d bytes from 0%07o\n", l, *offset_ptr);
+      woempa(1, "was able to read %d bytes from 0%07o\n", l, *offset_ptr);
 #ifdef SANITY_CHECKS
       if (memcmp(previous, trawlbuf, TRAWL_SIZE) == 0) {
         wabort(ABORT_WONKA, "OOH LAH LAH %07o %02x %02x %02x %02x %02x %02x %02x ...\n", *offset_ptr, trawlbuf[0], trawlbuf[1], trawlbuf[2], trawlbuf[3], trawlbuf[4], trawlbuf[5], trawlbuf[6], trawlbuf[7]);
@@ -502,7 +502,7 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
 #ifdef SANITY_CHECKS
         memcpy(previous, trawlbuf, TRAWL_SIZE);
 #endif
-        woempa(7, "Not found, advancing offset by 0%o\n", TRAWL_SIZE);
+        woempa(1, "Not found, advancing offset by 0%o\n", TRAWL_SIZE);
         *offset_ptr += TRAWL_SIZE;
       }
     }
