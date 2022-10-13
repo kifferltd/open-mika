@@ -64,8 +64,8 @@ CFLAGS += -I$(FREERTOS_IO_INCLUDE_DIR)
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
 export JDWP = false
 export JNI = false
-# no NETWORK either
 export NETWORK = native
+export TESTS = true
 
 # Root directory for Mika is root of FreeRTOS filesystem
 export FSROOT = /

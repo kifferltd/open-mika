@@ -515,7 +515,7 @@ export JNI
 
 .PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app
 
-mika : echo builddir deployable kernel core-vm
+mika : echo builddir deployable kernel core-vm test
 
 $(MIKA_LIB) : 
 	make -C core-vm libs
