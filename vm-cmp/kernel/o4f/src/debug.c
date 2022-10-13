@@ -73,6 +73,30 @@ static bool ensureUartIsInitialised() {
   return true;
 }
 
+w_int x_debug_read(const void *buf, size_t count) {
+  w_int bytes_read = -1;
+  if (ensureUartIsInitialised()) {
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
+      xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    }
+
+    w_int rc = iot_uart_read_sync(uart_handle, buf, count);
+    if (IOT_UART_SUCCESS == rc ) {
+      rc = iot_uart_ioctl(uart_handle, eGetRxNoOfbytes, &bytes_read);
+    }
+    if (IOT_UART_SUCCESS != rc ) {
+      printf("iot_uart_ioctl(eGetRxNoOfbytes) returned %d\r\n", rc);
+      bytes_read = -rc;
+    }
+
+    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
+      xSemaphoreGive(uart_mutex);
+    }
+  }
+
+  return bytes_read;
+}
+
 void x_debug_write(const void *buf, size_t count) {
   if (ensureUartIsInitialised()) {
     if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
