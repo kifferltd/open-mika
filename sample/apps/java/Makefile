@@ -34,5 +34,4 @@
 
 # FIXME: should use $JAVAC here
 classes:
-	find . -name \*\.java | xargs /home/chris/jdk1.6.0_45/bin/javac -bootclasspath ${classdir} -Xlint:deprecation -classpath . -source 1.4 -target 1.4 -d ${appdeploydir} 
-
+	find . -name \*\.java | xargs ${JAVA6_HOME}/bin/javac -bootclasspath ${classdir} -Xlint:deprecation -classpath . -source 1.4 -target 1.4 -d ${appdeploydir} 
