@@ -664,7 +664,7 @@ w_method find_method(w_clazz clazz, const char* method_name, const char* method_
 
     if (candidate->spec.name == method_name_string && candidate->desc == method_desc_string) {
       the_method = candidate;
-      woempa(7, "Found %k.%s%s at %p\n", the_method, clazz, method_name, method_descriptor);
+      woempa(7, "Found %k.%s%s at %p\n", clazz, method_name, method_descriptor);
       break;
     }
   }
