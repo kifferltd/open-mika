@@ -603,7 +603,7 @@ jarfile :
 	make -C ${javajardir} classes
 	make -C core-vm/$(JAVAX) classes
 	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
-	jar cmf core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
+	${JAVA6_HOME}/bin/jar cmf core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
 
 resource :
 	@echo "Copying resources to ${mikadeploydir}"
