@@ -77,7 +77,7 @@ void init_vfs(void) {
 w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
   int fd;
   // TODO deal with more flags
-  const char *how = (flags == O_RDONLY) ? "r" : "r+";
+  const char *how = (flags == O_RDONLY) ? "r" : "w";
   FF_FILE *ff_fileptr = ff_fopen(pathname, how);
   if (ff_fileptr) {
     // TODO - fix it so that fds 0, 1, 2 appear to be occupied
