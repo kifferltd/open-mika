@@ -149,7 +149,6 @@ export appdeploydir = $(deploydir)/app
 export testdeploydir = $(deploydir)/test
 export tooldeploydir = $(MIKA_TOP)/deploy/tool
 
-
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
 ifeq "$(AWT)" "rudolph"
@@ -624,6 +623,8 @@ builddir :
 	@mkdir -p $(mikadeploydir)
 	@echo "Creating " $(appdeploydir)
 	@mkdir -p $(appdeploydir)
+	@echo "Creating " $(testdeploydir)
+	@mkdir -p $(testdeploydir)
 	@echo "Creating " $(objdir)
 	@mkdir -p $(objdir)
 	@echo "Creating " $(testdeploydir)
