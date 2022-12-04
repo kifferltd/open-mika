@@ -110,7 +110,6 @@ wonka/vm/Wonka
 	setWonkaVerbose	(Ljava/lang/String;)V	Wonka_static_setWonkaVerbose
 	setMethodDebugInfo	(Z)V		Wonka_static_setMethodDebugInfo
 	loadExtensions	()V			Wonka_static_loadExtensions
-	useCli		()Z			Wonka_static_useCli
 java/lang/Object
 	hashCode	()I			Object_hashCode
 	getClass	()Ljava/lang/Class;	Object_getClass
