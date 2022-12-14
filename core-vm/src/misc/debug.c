@@ -381,6 +381,7 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
   }
 
   if (scope > ABORT_INFO) {
+    x_thread_sleep(10000);
     abort();
   }
   blocking_all_threads &= ~BLOCKED_BY_WABORT;
