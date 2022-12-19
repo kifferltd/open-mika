@@ -824,6 +824,11 @@ void interpret(w_frame caller, w_method method) {
   w_Mopair * mopair;
   w_boolean from_unsafe;
 
+  if (strncmp(method->spec.declaring_clazz->dotified->contents.bytes, "java.util.Vector$VectorEnum", strlen("java.util.Vector$VectorEnum")) == 0
+   && strncmp(method->spec.name->contents.bytes, "nextElement", strlen("nextElement")) == 0) {
+    printf("java.util.Vector$VectorEnum nextElement");
+  }
+
   frame->current = current;
   from_unsafe = enterUnsafeRegion(thread);
   woempa(1, "GC state on entry to %M was %s\n", method, from_unsafe ? "UNSAFE" : "SAFE");
