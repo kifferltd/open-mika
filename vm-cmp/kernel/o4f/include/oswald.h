@@ -269,6 +269,7 @@ x_boolean x_mem_is_block(void * mem);
 ** The OSwald debugging API.
 */
 w_int x_debug_read(const void *buf, size_t count);
+w_int x_debug_poll(void);
 void x_debug_write(const void *buf, size_t count);
 w_int x_debug_poll(void);
 
