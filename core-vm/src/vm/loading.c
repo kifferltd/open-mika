@@ -56,6 +56,9 @@ extern char *fsroot;
 
 w_instance systemClassLoader = NULL;
 
+w_method finalize_method;
+w_method loadClass_method;
+
 /*
 ** Two hashtables which map class names onto ``fixup'' functions.
 */
@@ -1776,4 +1779,3 @@ w_int numberOfDefinedClasses(w_instance loader) {
 
   return n;
 }
-

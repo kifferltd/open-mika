@@ -50,8 +50,8 @@
 ** Some special methods: java.lang.Object/finalize() and 
 java.lang/ClassLoader/loadClass(). These are set up during startLoading().
 */
-w_method finalize_method;
-w_method loadClass_method;
+extern w_method finalize_method;
+extern w_method loadClass_method;
 
 /*
 ** If a class with the given name has already been loaded by `loader',
