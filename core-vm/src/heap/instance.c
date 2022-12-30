@@ -479,7 +479,6 @@ void newGlobalReference(w_instance instance) {
 
   found = (w_instance) ht_register(globals_hashtable, (w_word)instance);
   woempa(7, "%s global reference to instance %p.\n", found ? "further" : "new", instance);
-
 }
 
 void deleteGlobalReference(w_instance instance) {
