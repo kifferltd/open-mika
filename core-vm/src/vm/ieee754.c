@@ -34,6 +34,7 @@
 ** To optimize for speed, define IEEE_INLINE to be 'inline'
 */
 
+// #define IEEE_INLINE __attribute__((always_inline))
 #define IEEE_INLINE 
 
 /*
