@@ -270,6 +270,7 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
         strcpy(fde->path, path);
         vfs_fd_table[fd] = fde;
 
+        x_errno = 0;
         return fd;
       }
       else {

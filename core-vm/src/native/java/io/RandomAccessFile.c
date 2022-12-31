@@ -265,6 +265,7 @@ w_long RandomAccessFile_length (w_thread thread, w_instance thisRAF) {
   struct vfs_STAT statbuf;
   w_long result = 0;
 
+    // FIXME this should use the vfs_ abstraction
   w_int fd = RAF2FD(thisRAF);
   result = (w_long)vfs_get_length(fd);
 
