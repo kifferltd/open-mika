@@ -57,7 +57,8 @@ public class SMBufferedReaderTest implements Testlet
        test_reset();
        test_close();
        test_ready();
-       test_lock();
+// [CG 20221220 scrap this, it's totally misconceived
+//       test_lock();
      }
 
 /**

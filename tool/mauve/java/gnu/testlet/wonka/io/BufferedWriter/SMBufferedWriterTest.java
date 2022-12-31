@@ -47,7 +47,7 @@ public class SMBufferedWriterTest implements Testlet {
        test_write();
        test_close();
        test_flush();
-       test_lock();
+//       test_lock();
      }
 
 /**
