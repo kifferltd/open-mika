@@ -39,6 +39,10 @@
 #include "methods.h"
 #include "mika_threads.h"
 
+<<<<<<< HEAD
+=======
+// WAS: static jclass   class_BufferedReader;
+>>>>>>> cbbf4f4 (Bugfix: suppress broken "locking" tests for BufferedReader.)
 static w_method updateBuffer_method;
 
 w_int BufferedReader_locateEnd(w_thread thread, w_instance this, w_instance Array, w_int start, w_int stop) {
@@ -86,7 +90,13 @@ w_int BufferedReader_read(w_thread thread, w_instance thisBufferedReader) {
 
   if (count <= (w_int)*posptr) {
     if (!updateBuffer_method) {
+<<<<<<< HEAD
       updateBuffer_method = find_method(clazzBufferedReader, "updateBuffer", "()Z");
+=======
+      // WAS: class_BufferedReader = clazz2Class(clazzBufferedReader);
+      // WAS: updateBuffer_method = (*w_thread2JNIEnv(thread))->GetMethodID(w_thread2JNIEnv(thread), class_BufferedReader, "updateBuffer", "()Z"); 
+      updateBuffer_method = find_method(clazzBufferedReader, "updateBuffer", "()Z"); 
+>>>>>>> cbbf4f4 (Bugfix: suppress broken "locking" tests for BufferedReader.)
       woempa(7,"updateBuffer_method is %M\n",updateBuffer_method);
     }
     new_frame = activateFrame(thread, updateBuffer_method, 0, 1, thisBufferedReader, stack_trace);
