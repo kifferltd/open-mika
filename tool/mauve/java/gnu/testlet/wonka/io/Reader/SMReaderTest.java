@@ -49,6 +49,7 @@ public class SMReaderTest implements Testlet
        test_reset();
        test_close();
        test_ready();
+// [CG 20221220 scrap this, it's totally misconceived
 //       test_lock();
 
      }

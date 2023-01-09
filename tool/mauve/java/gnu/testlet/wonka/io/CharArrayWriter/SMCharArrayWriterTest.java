@@ -50,7 +50,8 @@ public class SMCharArrayWriterTest implements Testlet
        test_toCharArray();
        test_toString();
        test_writeTo();
-       test_lock();
+// [CG 20221230 scrap this, it's totally misconceived
+//       test_lock();
      }
 
 
