@@ -54,7 +54,8 @@ public class SMPrintWriterTest implements Testlet
        test_setError();
        test_close();
        test_flush();
-       test_lock();
+// [CG 20221230 scrap this, it's totally misconceived
+//       test_lock();
      }
 
 

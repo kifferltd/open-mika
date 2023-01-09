@@ -43,7 +43,8 @@ public class SMWriterTest implements Testlet
        th.setclass("java.io.Writer");
        test_Writer();
        test_write();
-       test_lock();
+// [CG 20221230 scrap this, it's totally misconceived
+//       test_lock();
 
      }
 

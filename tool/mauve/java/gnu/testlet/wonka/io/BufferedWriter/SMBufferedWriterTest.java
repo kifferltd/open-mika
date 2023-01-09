@@ -47,6 +47,7 @@ public class SMBufferedWriterTest implements Testlet {
        test_write();
        test_close();
        test_flush();
+// [CG 20221230 scrap this, it's totally misconceived
 //       test_lock();
      }
 
