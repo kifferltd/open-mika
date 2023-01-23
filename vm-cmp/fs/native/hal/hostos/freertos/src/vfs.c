@@ -352,6 +352,7 @@ w_int vfs_close(w_int fd) {
   x_mutex_unlock(fd_table_mutex);
 
   if (!fde) {
+    woempa(7, "failed to read from fd %d, is not open\n", fde->path);
     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
 
     return -1;
