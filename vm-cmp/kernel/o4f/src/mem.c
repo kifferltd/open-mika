@@ -153,6 +153,10 @@ static char *chunk_status_text [] = {
   NULL
 };
 
+// WAS: 0x100000
+#define HEAP_START _sys_mem_staticSize()
+#define HEAP_END   _sys_mem_totalSize()
+
 static x_chunk_status chunk_sanity_check(o4f_memory_chunk chunk) {
   if (!chunk) {
     return chunk_err_chunk_null;
@@ -405,6 +409,11 @@ void x_mem_free(void *block) {
 #ifdef DEBUG
   if (chunk->check != magic) {
     loempa(9,"Memory block %p is not valid!\n", block);
+  }
+
+  x_chunk_status chunk_status = chunk_sanity_check(chunk);
+  if (chunk_status) {
+    o4f_abort(O4F_ABORT_MEMCHUNK, chunk_status_text[chunk_status], chunk_status);
   }
 #endif
 
