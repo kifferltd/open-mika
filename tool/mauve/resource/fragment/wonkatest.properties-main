@@ -567,31 +567,6 @@ gnu.testlet.wonka.sql.Types.TestJdbc20
 gnu.testlet.wonkax.microedition.io.Connector.AcuniaConnectorTest
 */
 
-<<<<<<< HEAD:tool/mauve/resource/fragment/wonkatest.properties-main
-=======
-/*
-# jni tests
-//primitives
-gnu.testlet.wonka.jni.JNIPrimitiveTest
-//strings
-gnu.testlet.wonka.jni.JNIStringTest
-//arrays
-gnu.testlet.wonka.jni.JNIArrayTest
-//inheritance native methods
-gnu.testlet.wonka.jni.JNIInheritanceTest
-//accessing the classes member variables and functions through native calls
-gnu.testlet.wonka.jni.JNIMemberAccessTest
-//accessing class variables and functions through native calls
-gnu.testlet.wonka.jni.JNIClassAccessTest
-//constructing a class, constructing and throwing an error
-gnu.testlet.wonka.jni.JNIClassConstructionTest
-//constructing and calling object methods using the -A and -V options
-gnu.testlet.wonka.jni.JNIObjectFunctionAccessTest
-//calling primitive functions using the -A and -V options
-gnu.testlet.wonka.jni.JNIPrimitiveFunctionAccessTest
-*/
-
->>>>>>> 5bd752c (Tests: comment out tests which cannot possibly work, namely java.awt / javax.microedition.io, and JNI.):tool/mauve/resource/wonkatest.properties
 #special tests
 //Steven's tests
 gnu.testlet.wonka.vm.Tests
