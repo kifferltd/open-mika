@@ -68,7 +68,6 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
   /*
   ** Get the host address and port.
   */
-  
   host = w_gethostbyname(jdwp_address_host);
   if(!host) {
     report_error(jdwp_address_host, jdwp_address_port, "DNS lookup failure");
