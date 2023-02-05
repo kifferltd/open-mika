@@ -50,6 +50,10 @@ public final class FileDescriptor {
   // The real file descriptor - this should be an open file
   int fd;
 
+  public static final FileDescriptor  in = null;
+  public static final FileDescriptor out = null;
+  public static final FileDescriptor err = null;
+
   /**
    ** Public constructor which sets fd to -1; consequently the FileDescriptor
    ** created is not valid.
