@@ -27,7 +27,6 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-
 # TODO include xxx_cli.c only if CLI is enabled in Config/platform file
 sources = argument.c  environment.c platform.c telnet_cli.c file_cli.c Etc.c ErrorOutputStream.c  StandardInputStream.c  StandardOutputStream.c
 
