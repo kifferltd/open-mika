@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -40,7 +40,11 @@ static w_int sock;
 static w_int serversock;
 
 static void report_error(const char *host, const char *port, const char *mess) {
+#ifdef FREERTOS
+  (void) printf("\r\nFailed to bind JDWP socket to %s:%s due to %s\n", host, port, mess ? mess : "error");
+#else
   (void) fprintf(stderr, "\r\nFailed to bind JDWP socket to %s:%s due to '%s'\n", host, port, mess ? mess : strerror(errno));
+#endif
 }
 
 /*
@@ -48,22 +52,22 @@ static void report_error(const char *host, const char *port, const char *mess) {
 */
 
 w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp_address_port, const w_boolean jdwp_config_server) {
-/* TODO : re-write me
   
   int rc = 1;
-  struct sockaddr_in sa;
+  struct w_sockaddr_in sa;
   char *buffer;
-  int  count = 0;
+  int count = 0;
+#ifdef FREERTOS
+  w_word host;
+#else
   struct hostent *host;
+#endif
   int port_nr;
   int timeout = 0;
 
-  /.
-  .. Get the host address and port.
-  ./
-
-  woempa(9, "JDWP Host : %s\n", jdwp_address_host);
-  woempa(9, "JDWP Port : %s\n", jdwp_address_port);
+  /*
+  ** Get the host address and port.
+  */
   
   host = w_gethostbyname(jdwp_address_host);
   if(!host) {
@@ -80,9 +84,9 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
   }
 
 
-  /.
-  .. Get a socket and fill in the address structure.
-  ./
+  /*
+  ** Get a socket and fill in the address structure.
+  */
 
   sock = w_socket(PF_INET, SOCK_STREAM, 0);
 
@@ -93,23 +97,28 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
   }
 
   memset(&sa,0,sizeof(sa)); 
-  sa.sin_addr.s_addr = *((unsigned long*)host->h_addr_list[0]);
-  sa.sin_family = host->h_addrtype;
-  sa.sin_port = swap_short(port_nr);
+  sa.sin_port = w_htons(port_nr);
  
   if(jdwp_config_server) {
 
-    /.
-    .. We should behave as a server and wait for jdwp connections.
-    ./
+    /*
+    ** We should behave as a server and wait for jdwp connections.
+    */
    
-    w_size socksize = sizeof(struct sockaddr_in);
+    woempa(7, "JDWP Port : %s\n", jdwp_address_port);
+    w_size socksize = sizeof(struct w_sockaddr_in);
 
     if(serversock == 0) {
     
       serversock = sock;
+#ifdef FREERTOS
+      sa.sin_family = AF_INET;
+      sa.sin_addr = NULL;
+#else
       sa.sin_addr.s_addr = INADDR_ANY;
-      rc = w_bind(serversock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in));
+      sa.sin_family = host->h_addrtype;
+#endif
+      rc = w_bind(serversock, (struct w_sockaddr*)&sa, sizeof(struct w_sockaddr_in));
       if(rc == -1) {
         report_error(jdwp_address_host, jdwp_address_port, NULL);
         w_socketclose (sock);
@@ -131,17 +140,26 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
     }
 
     woempa(7, "Calling accept() on socket %d\n", serversock);
-    sock = w_accept(serversock, (struct sockaddr *)&sa, &socksize, 0);
+    sock = w_accept(serversock, (struct w_sockaddr *)&sa, &socksize, 0);
     woempa(7, "accepted() returned %d\n", sock);
     rc = (sock < 0) ? -1 : 0;
   } else {
 
-    /.
-    .. We should behave as a client and connect to the debugger at startup.
-    ./
+    /*
+    ** We should behave as a client and connect to the debugger at startup.
+    */
+    woempa(7, "JDWP Host : %s\n", jdwp_address_host);
+    woempa(7, "JDWP Port : %s\n", jdwp_address_port);
     
+#ifdef FREERTOS
+    sa.sin_addr = host;
+    sa.sin_family = AF_INET;
+#else
+    sa.sin_addr.s_addr = *((unsigned long*)host->h_addr_list[0]);
+    sa.sin_family = host->h_addrtype;
+#endif
     woempa(7, "Connecting socket %d\n", sock);
-    rc = w_connect(sock, (struct sockaddr*)&sa, sizeof(struct sockaddr_in), 0);
+    rc = w_connect(sock, (struct w_sockaddr*)&sa, sizeof(struct w_sockaddr_in), 0);
     woempa(7, "connect() return code = %d\n", rc);
     
   }
@@ -155,9 +173,9 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
     return FALSE;
   }
 
-  /.
-  .. Wait for the handshake. Keep receiving bytes until we have received the full 14 bytes.
-  ./
+  /*
+  ** Wait for the handshake. Keep receiving bytes until we have received the full 14 bytes.
+  */
 
   buffer = allocClearedMem(15);
   
@@ -173,9 +191,9 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
   
   releaseMem(buffer);
 
-  /.
-  .. Respond to the handshake.
-  ./
+  /*
+  ** Respond to the handshake.
+  */
 
   w_send(sock, "JDWP-Handshake", 14, 0);
 
@@ -183,15 +201,13 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
 
   jdwp_state = jdwp_state_connected;
 
-  /.
-  .. From now on, it's safe to send events.
-  ./ 
+  /*
+  ** From now on, it's safe to send events.
+  */ 
 
   jdwp_events_enabled = 1;
   
   return TRUE;
-*/
-  return FALSE;
 }
 
 /*
