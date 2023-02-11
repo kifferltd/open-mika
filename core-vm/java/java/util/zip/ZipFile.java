@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2001 by Punch Telematix. All rights reserved.             *
+* Copyright (c) 2023 by Chris Gray, KIFFER Ltd.  All rights reserved.     *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,27 +9,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
-
-/**
- * $Id: ZipFile.java,v 1.4 2006/06/09 09:43:34 cvs Exp $
- */
-
+ 
 package java.util.zip;
 
 import java.io.File;
@@ -57,6 +53,9 @@ public class ZipFile implements ZipConstants {
   private final static byte FHS1 = cenFileHeaderS[1];
   private final static byte FHS2 = cenFileHeaderS[2];
   private final static byte FHS3 = cenFileHeaderS[3];
+
+  // our file system uses buffers of at least 1024 bytes
+  private final static int BLKSIZE = 4096;
 
   private RandomAccessFile raf;
   private String name;
@@ -156,27 +155,35 @@ public class ZipFile implements ZipConstants {
 
   /**
   ** called from constructor ... (no synchronization needed on raf)!
+  **
+  ** We read the file in blocks of BKLSIZE bytes, plus 4 to be sure we cath the CD sentinel.
+  ** This is usually near the end, so we stat with the last block (which may be an odd size),
+  ** and then we seek backwards in units of BLKSIZE.
   */
   private void getEntries() throws IOException {
-   	//our file system uses buffers of at least 1024 bytes
    	long pos = raf.length();
-        wonka.vm.Etc.woempa(7, "raf.length() = " + pos);
-   	int size = (1024 > pos ? (int)pos : 1024);
-   	byte [] bytes = new byte[size];
+        wonka.vm.Etc.woempa(7, "hello world, raf.length() = " + pos);
+        // TODO - check that this works for short zipfiles
+        int read_length = (int)(pos - (pos % BLKSIZE));
+        if (read_length < 4) {
+            read_length += BLKSIZE;
+        }
    	while (pos > 0) {
-   		pos -= size;
-        wonka.vm.Etc.woempa(7, "seeking to offset " + pos + " and reading " + size + " bytes");
+   	        byte [] bytes = new byte[read_length];
+   		pos -= read_length - 4;
+        wonka.vm.Etc.woempa(7, "seeking to offset " + pos + " and reading " + read_length + " bytes");
    		raf.seek(pos);
-   		raf.readFully(bytes,0,size);
-   		size = locateEndCD(bytes, size);
-        wonka.vm.Etc.woempa(7, "read " + size + " bytes");
-   		if (size == -1) {
+   		raf.readFully(bytes,0,read_length);
+   		int cd_offset = locateEndCD(bytes, read_length);
+   		if (cd_offset == -1) {
+        wonka.vm.Etc.woempa(7, "no central directory in this chunk");
    		 	break;
    		}
-   		if (size > 0) {
-   		 	System.arraycopy(bytes,0,bytes,bytes.length-size,size);
+   		if (cd_offset > 0) {
+        wonka.vm.Etc.woempa(7, "central directory in this chunk, ends at offset " + cd_offset);
+   		 	System.arraycopy(bytes,0,bytes,bytes.length-cd_offset,cd_offset);
    		}
-     	size = (1024 > pos ? (int)pos : 1024)-size;
+                read_length = BLKSIZE + 4;
    	}
   }
 
