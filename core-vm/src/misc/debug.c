@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -381,8 +381,8 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
 
   if (scope > ABORT_INFO) {
     abort();
-  blocking_all_threads &= ~BLOCKED_BY_WABORT;
   }
+  blocking_all_threads &= ~BLOCKED_BY_WABORT;
   
 }
 
@@ -507,9 +507,7 @@ void w_dump_locks(void) {
 #ifdef ENABLE_THREAD_RECYCLING
   x_dump_monitor("     Thread pool monitor : ", xthreads_monitor);
 #endif
-#ifndef GC_SAFE_POINTS_USE_NO_MONITORS
   x_dump_monitor("       GC status monitor : ", safe_points_monitor);
-#endif
   w_dump("      GC number unsafe threads : %d\n", number_unsafe_threads);
   w_dump("                 GC phase : %s\n", gc_phase_names[gc_phase > 4 ? 5 : gc_phase]);
   if (marking_thread) {
@@ -519,7 +517,7 @@ void w_dump_locks(void) {
     w_dump("       GC sweeping thread : %t\n", sweeping_thread);
   }
   if (blocking_all_threads & ~BLOCKED_BY_WABORT) {
-    w_dump("        blocking all threads : %s\n", isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "  GC" : isSet(blocking_all_threads, BLOCKED_BY_JDWP) ? "JDWP" : "no");
+    w_dump("        blocking all threads : %s\n", BLOCKED_BY_TEXT);
   }
   w_dump("\n");
   // [CG 20090130] Can't do this during sweep phase 'coz lock_hashtable will
@@ -661,9 +659,7 @@ void w_dump_meminfo(void) {
   w_dump("\n");
 }
 
-#ifdef JNI
 extern w_hashtable globals_hashtable;
-#endif
 
 void w_dump_info() {
   w_dump("\n");
@@ -675,9 +671,7 @@ void w_dump_info() {
 #ifdef DUMP_CLASSLOADERS
   w_dump_classloaders();
 #endif
-#ifdef JNI
   w_dump(" Global References: %d\n\n",globals_hashtable->occupancy);
-#endif
   w_dump_meminfo();
 #ifdef ENABLE_THREAD_RECYCLING
   w_dump(" Number of native threads in pool: %d\n\n", occupancyOfFifo(xthread_fifo));

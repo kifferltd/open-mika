@@ -1526,63 +1526,41 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 }
 #endif
 
-static w_size blocking_start;
-static w_size blocking_end;
-
 static void prepreparation(w_thread thread) {
   woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
-  blocking_start = x_time_get();
   x_monitor_eternal(safe_points_monitor);
-  blocking_end = x_time_get();
-  //w_printf("waited %d msec to get safe_points_monitor\n", blocking_end - blocking_start);
-  blocking_start = blocking_end;
-#ifdef JDWP
-  while(isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
-    woempa(7, "JDWP is blocking all threads, not possible to run yet.\n");
-    x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+  while(isSet(blocking_all_threads, ~BLOCKED_BY_GC) || number_unsafe_threads > 0) {
+    woempa(7, "%d unsafe threads, %s blocking all threads, not possible to run GC yet.\n", number_unsafe_threads, BLOCKED_BY_TEXT);
+    x_monitor_wait(safe_points_monitor, x_eternal);
   }
-  blocking_end = x_time_get();
-  //w_printf("waited %d msec because blocked by JDWP\n", blocking_end - blocking_start);
-  blocking_start = blocking_end;
-#endif
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
   setFlag(blocking_all_threads, BLOCKED_BY_GC);
-  while (number_unsafe_threads > 0) {
-    woempa(7, "number_unsafe_threads is %d, waiting\n", number_unsafe_threads);
-    x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
-  }
-  blocking_end = x_time_get();
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-  //w_printf("waited %d msec for all threads to enter safe point\n", blocking_end - blocking_start);
-  blocking_start = blocking_end;
   woempa(7, "%t: finished locking other threads\n", marking_thread);
 #ifdef TRACE_MEM_ALLOC
   heapCheck;
 #endif
-  x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
+// [CG 20221129] suppress this for now
+//  x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
 }
 
 static void postmark(w_thread thread) {
-  x_thread_priority_set(thread->kthread, thread->kpriority);
+// [CG 20221129] suppress this for now
+//  x_thread_priority_set(thread->kthread, thread->kpriority);
 
-  blocking_end = x_time_get();
-  //w_printf("spent %d msec in prepare/mark\n", blocking_end - blocking_start);
-  blocking_start = blocking_end;
   woempa(7, "%t: start unlocking other threads\n", marking_thread);
   x_monitor_eternal(safe_points_monitor);
-  woempa(2, "postmark: %t setting blocking_all_threads to 0\n", marking_thread);
   unsetFlag(blocking_all_threads, BLOCKED_BY_GC);
+  woempa(7, "postmark: %t set blocking_all_threads to %s\n", marking_thread, BLOCKED_BY_TEXT);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
-  blocking_end = x_time_get();
-  //w_printf("waited %d msec to remove blocking flag", blocking_end - blocking_start);
-  blocking_start = blocking_end;
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
-  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
+// [CG 20221129] suppress this for now
+//  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
 
 w_int preparationPhase(void) {
@@ -1717,7 +1695,6 @@ w_int markPhase(void) {
   w_int      retcode;
   w_int      marked = 0;
 
-#ifdef JNI
   woempa(7, "(GC) Marking globals hashtable.\n");
   temp_fifo = ht_list_keys(globals_hashtable);
   if (!temp_fifo) {
@@ -1736,7 +1713,6 @@ w_int markPhase(void) {
     marked += retcode;
   }
   releaseFifo(temp_fifo);
-#endif
 
   woempa(7, "(GC) Marking thread hashtable.\n");
   ht_iterate(thread_hashtable, thread_iteration, NULL, NULL);
@@ -2316,21 +2292,13 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   }
 
-  if (isSet(blocking_all_threads, BLOCKED_BY_GC)) {
+  if (blocking_all_threads) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      w_printf("GC: cowardly refusal by thread %t to start a rival garbage collection cycle\n", thread);
+      w_printf("GC: cowardly refusal by thread %t to start a garbage collection cyclewhile blocked by %s\n"", thread, BLOCKED_BY_TEXT);
       reclaim_accumulator /= 2;
     }
     return 0;
   }
-#ifdef JDWP
-  else if (isSet(blocking_all_threads, BLOCKED_BY_JDWP)) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      w_printf("GC: cowardly refusal by thread %t to start garbage collection cycle while JDWP is suspending VM\n", thread);
-    }
-    return 0;
-  }
-#endif
   
   reclaim_accumulator += weighted;
   remaining = initial = reclaim_accumulator;

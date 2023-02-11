@@ -195,7 +195,7 @@ static void checkForDeadlock(w_thread t0) {
   }
   else {
     woempa(7, "not checking %t for deadlocks, is already checked\n", t0);
-woempa(7, "blocking_all_threads = %d\n", blocking_all_threads);
+    woempa(7, "blocking_all_threads = %s\n", BLOCKED_BY_TEXT);
   }
 }
 

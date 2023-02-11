@@ -112,6 +112,12 @@ void initWonka(void) {
 // TODO what is this supposed to be used for?
 //  x_mutex_create(&idLock);
 
+  globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
+  if (!globals_hashtable) {
+    wabort(ABORT_WONKA, "Unable to create globals_hashtable\n");
+  }
+  woempa(7, "created globals_hashtable at %p\n", globals_hashtable);
+
   x_thread_create(&ur_thread_x_Thread, 
     startWonka, NULL, ur_thread_stack, 
     SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);

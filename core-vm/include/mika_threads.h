@@ -406,11 +406,12 @@ extern volatile w_int blocking_all_threads;
 #define BLOCKED_BY_JITC 4
 #define BLOCKED_BY_WABORT 0x80
 
+extern const char* blocked_by_text[];
+
+#define BLOCKED_BY_TEXT (isSet(blocking_all_threads, BLOCKED_BY_WABORT) ? "wabort" : blocked_by_text[blocking_all_threads & 7])
+
 extern volatile w_thread marking_thread;
 extern volatile w_thread jitting_thread;
-
-// Time to wait for ownership of HC state to change.
-#define GC_STATUS_WAIT_TICKS x_eternal
 
 extern w_boolean enterUnsafeRegion(const w_thread thread);
 extern w_boolean enterSafeRegion(const w_thread thread);
@@ -424,7 +425,7 @@ void _gcSafePoint(w_thread thread, char *file, int line);
 
 inline static void gcSafePoint(w_thread thread) {
   if (blocking_all_threads) {
-    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by%s%s%s%s\n", __FILE__, __LINE__, __FUNCTION__, blocking_all_threads & BLOCKED_BY_GC ? " GC" : "", blocking_all_threads & BLOCKED_BY_JDWP ? " JDWP" : "", blocking_all_threads & BLOCKED_BY_JITC ? " JITC" : "" , blocking_all_threads & BLOCKED_BY_WABORT ? " WABORT" : "");
+    woempa(7, "gcSafePoint(): %s:%d (%s): all threads blocked by %s\n", __FILE__, __LINE__, __FUNCTION__, BLOCKED_BY_TEXT);
     if (thread == marking_thread) {
       woempa(7, "gcSafePoint(): %s:%d (%s): %t is marking thread, ignoring\n", __FILE__, __LINE__, __FUNCTION__, thread);
     }

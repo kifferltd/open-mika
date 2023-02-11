@@ -56,10 +56,6 @@
 #include "methods.h"
 #include "misc.h"
 
-w_hashtable globals_hashtable;
-
-#define GLOBALS_HASHTABLE_SIZE   1439
-
 #ifdef RUDOLPH
 #ifndef MODULES
 extern void init_awt(void);
@@ -3188,12 +3184,6 @@ jint JNI_GetCreatedJavaVMs(JavaVM **vmBuf, jsize bufLen, jsize *nVMs) {
 }
 
 jint JNI_CreateJavaVM(JavaVM **p_VM, JNIEnv **p_env, void *vm_args) {
-
-  globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
-  if (!globals_hashtable) {
-    wabort(ABORT_WONKA, "Unable to create globals_hashtable\n");
-  }
-  woempa(1, "(JNI) created globals_hashtable at %p\n", globals_hashtable);
 
   system_vm_args = (struct JavaVMInitArgs *)vm_args;
 

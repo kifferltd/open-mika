@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2022 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -56,6 +56,8 @@ w_int nondaemon_thread_count;
 w_boolean system_init_thread_started;
 
 volatile w_int blocking_all_threads;
+
+const char* blocked_by_text[] = {"nowt", "GC", "JDWP", "GC+JDWP", "JITC", "GC+JITC", "JDWP+JITC", "GC+JDWP+JIYC"};
 
 /*
 ** Statics and globals
@@ -255,8 +257,6 @@ const char *running_thread_report(x_thread x) {
 
 #define INIT_CLASS "wonka.vm.Init"
 
-extern int woempa_bytecodecount;
-
 static w_string string_sysThread;
 static w_string string_sysThreadGroup;
 
@@ -451,7 +451,7 @@ void startInitialThreads(void* data) {
       woempa(7, "Getting string instance of '%s', thread is '%t'\n", command_line_arguments[i], currentWonkaThread);
       String = getStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
       setArrayReferenceField(arglist, String, i);
-      woempa(9,"args[%d] = \"%w\" bytecodecount = %d\n",i,String2string(instance2Array_instance(arglist)[i]), woempa_bytecodecount);
+      woempa(9,"args[%d] = \"%w\"\n",i,String2string(instance2Array_instance(arglist)[i]));
     }
   }
   else {
@@ -577,9 +577,7 @@ void startKernel() {
   mustBeInitialized(clazzExceptionInInitializerError);
   mustBeInitialized(clazzAbstractMethodError);
   class_ThreadGroup = clazz2Class(clazzThreadGroup);
-#ifndef GC_SAFE_POINTS_USE_NO_MONITORS
   x_monitor_create(safe_points_monitor);
-#endif
 
 /* [CG 20050601]
  * For O4P and O4F we let the system supply the stack, since LinuxThreads ignores the
@@ -731,29 +729,11 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
 
   }
 
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  while (TRUE) {
-  if (thread != marking_thread) {
-    while (blocking_all_threads) {
-      x_thread_sleep(1);
-    }
-  }
-    ++ number_unsafe_threads;
-    if (blocking_all_threads) {
-      -- number_unsafe_threads;
-      //x_thread_sleep(2);
-    }
-    else {
-      break;
-    }
-  }
-  setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-#else
   status = x_monitor_eternal(safe_points_monitor);
   if (thread != marking_thread) {
     while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-      woempa(2, "enterUnsafeRegion: %t found blocking_all_threads set, waiting\n", thread);
-      status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+      woempa(2, "enterUnsafeRegion: %t found threads blocked by %s, waiting\n", thread, BLOCKED_BY_TEXT);
+      status = x_monitor_wait(safe_points_monitor, x_eternal);
       checkOswaldStatus(status);
     }
   }
@@ -764,7 +744,6 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   checkOswaldStatus(status);
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
-#endif
 
   return FALSE;
 }
@@ -785,10 +764,6 @@ w_boolean enterSafeRegion(const w_thread thread) {
   }
 #endif
 
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-  -- number_unsafe_threads;
-  unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-#else
   status = x_monitor_eternal(safe_points_monitor);
   checkOswaldStatus(status);
   -- number_unsafe_threads;
@@ -798,7 +773,6 @@ w_boolean enterSafeRegion(const w_thread thread) {
   checkOswaldStatus(status);
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
-#endif
 
   if (isSet(thread->flags, WT_THREAD_GC_PENDING)) {
     unsetFlag(thread->flags, WT_THREAD_GC_PENDING);
@@ -814,24 +788,6 @@ void _gcSafePoint(w_thread thread
 , char *file, int line
 #endif
 ) {
-#ifdef GC_SAFE_POINTS_USE_NO_MONITORS
-    -- number_unsafe_threads;
-    unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-    while (TRUE) {
-      while (blocking_all_threads) {
-        x_thread_sleep(1);
-      }
-      ++ number_unsafe_threads;
-      if (blocking_all_threads) {
-        -- number_unsafe_threads;
-        //x_thread_sleep(2);
-      }
-      else {
-        break;
-      }
-    }
-    setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-#else
   x_status status = x_monitor_eternal(safe_points_monitor);
   checkOswaldStatus(status);
 #ifdef RUNTIME_CHECKS
@@ -848,15 +804,14 @@ void _gcSafePoint(w_thread thread
   if (thread->to_be_reclaimed) {
     x_monitor_exit(safe_points_monitor);
     checkOswaldStatus(status);
-    gc_reclaim(thread->to_be_reclaimed, NULL);
-    thread->to_be_reclaimed = 0;
+    x_thread_yield();
     status = x_monitor_eternal(safe_points_monitor);
     checkOswaldStatus(status);
   }
 
   while (blocking_all_threads || isSet(thread->flags, WT_THREAD_SUSPEND_COUNT_MASK)) {
-    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found blocking_all_threads set by %s, waiting in %s:%d\n", thread, isSet(blocking_all_threads, BLOCKED_BY_JITC) ? "JITC" : isSet(blocking_all_threads, BLOCKED_BY_GC) ? "GC" : "JDWP", file, line);
-    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    woempa(7, "gcSafePoint -> enterUnsafeRegion: %t found threads blocked by %s, waiting in %s:%d\n", thread, BLOCKED_BY_TEXT, file, line);
+    status = x_monitor_wait(safe_points_monitor, x_eternal);
     checkOswaldStatus(status);
   }
   ++ number_unsafe_threads;
@@ -864,6 +819,5 @@ void _gcSafePoint(w_thread thread
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
-#endif
 }
 

@@ -1,8 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved.                                                               *
-* Parts copyright (c) 2004, 2005, 2006, 2007, 2008, 2009 by Chris Gray,   *
-* /k/ Embedded Java Solutions.  All rights reserved.                      *
+* Copyright (c) 2008, 2009, 2020, 2021, 2022 by KIFFER Ltd.               * 
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -12,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "string.h"
@@ -47,6 +44,10 @@
 #include "wordset.h"
 
 extern w_hashtable lock_hashtable;
+
+w_hashtable globals_hashtable;
+
+#define GLOBALS_HASHTABLE_SIZE   1439
 
 w_size min_heap_free;
 
@@ -456,19 +457,15 @@ w_instance allocArrayInstance(w_thread thread, w_clazz clazz, w_int dimensions, 
 }
 
 void newGlobalReference(w_instance instance) {
-#ifdef JNI
   w_instance found;
 
   found = (w_instance) ht_register(globals_hashtable, (w_word)instance);
-  woempa(1, "%s global reference to instance %p.\n", found ? "further" : "new", instance);
-#endif
+  woempa(7, "%s global reference to instance %p.\n", found ? "further" : "new", instance);
 
 }
 
 void deleteGlobalReference(w_instance instance) {
-#ifdef JNI
   ht_deregister(globals_hashtable, (w_word)instance);
-#endif
 }
 
 #define MIN_MIN_HEAP_FREE (256 * 1024)
