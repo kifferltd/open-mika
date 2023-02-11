@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2008, 2009, 2015 by KIFFER Ltd.  All rights reserved.     *
+* Copyright (c) 2008, 2009, 2015, 2022 by KIFFER Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -407,23 +408,29 @@ final class Init {
   // Start up the Garbage Collector
     debug("Init: starting Garbage Collector");
     GarbageCollector gc = GarbageCollector.getInstance();
+  // Give GC thread a chance to start running
+    Thread.yield();
+
   // Start up the Heartbeat
     debug("Init: starting Heartbeat");
     Heartbeat h = Heartbeat.getInstance();
   // Start JDWP (does nothing if JDWP not compiled in)
     JDWP.getInstance();
+  // Give Heartbeat and JDWP threads a chance to start running
+    Thread.yield();
+
   // Set the default timezone to the default default
-  //  TimeZone defaultTimeZone = null;
-  //  String user_timezone = System.getProperty("user.timezone");
-  //  debug("Init: user.timezone = " + user_timezone);
-  //  if (user_timezone != null) {
-  //    defaultTimeZone = TimeZone.getTimeZone(user_timezone);
-  //    if (defaultTimeZone == null) {
-  //      System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
-  //    }
-  //  }
-  //  TimeZone.setDefault(defaultTimeZone);
-  //  debug("Init: default TimeZone is " + TimeZone.getDefault());
+    TimeZone defaultTimeZone = null;
+    String user_timezone = System.getProperty("user.timezone");
+    debug("Init: user.timezone = " + user_timezone);
+    if (user_timezone != null) {
+      defaultTimeZone = TimeZone.getTimeZone(user_timezone);
+      if (defaultTimeZone == null) {
+        System.err.println("Unable to find the default timezone '" + user_timezone + "': check the system.property 'user.timezone' and the mika.timezones file!");
+      }
+    }
+    TimeZone.setDefault(defaultTimeZone);
+    debug("Init: default TimeZone is " + TimeZone.getDefault());
 
     String user_language = System.getProperty("user.language");
     if (user_language != null) {
@@ -449,8 +456,24 @@ final class Init {
 
     if (jar_class_path != null) {
       // [CG 20060330] HACK to make java.class.path to look right when -jar is used
+      // [CG 20221114] TODO it's worse than this: the jar_class_path completely replaces the normal CLASSPATH:
+      //                    We probably need to create a JarFileClassLoader instance for this.
+      /*
+	https://docs.oracle.com/javase/8/docs/technotes/tools/findingclasses.html
+
+	How the Java Launcher Finds JAR-class-path Classes
+
+	A JAR file usually contains a "manifest" -- a file which lists the contents of the JAR. The manifest can define a JAR-class-path, which further extends the class path (but only while loading classes from that JAR). Classes accessed by a JAR-class-path are found in the following order:
+
+	    In general, classes referenced by a JAR-class-path entry are found as though they were part of the JAR file. The JAR files that appear in the JAR-class-path are searched after any earlier class path entries, and before any entries that appear later in the class path.
+	    However, if the JAR-class-path points to a JAR file that was already searched (for example, an extension, or a JAR file that was listed earlier in the class path) then that JAR file will not be searched again. (This optimization improves efficiency and prevents circular searches.) Such a JAR file is searched at the point that it appears, earlier in the class path.
+	    If a JAR file is installed as an extension, then any JAR-class-path it defines is ignored. All the classes required by an extension are presumed to be part of the SDK or to have themselves been installed as extensions.
+      */
+
       System.setProperty("java.class.path", jar_class_path);
     }
+
+    System.out.println("Will " + (Wonka.useCli() ? "" : "not ") + "use CLI.");
 
     try {
       debug("Init: invoking "+invoke_method+" ...");
