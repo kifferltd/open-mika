@@ -172,3 +172,7 @@ void install_term_handler(void) {
 
 }
 
+w_boolean Wonka_static_useCli(w_thread thread, w_instance theClass) {
+  return false;
+}
+
