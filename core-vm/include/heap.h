@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2022 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -204,9 +204,7 @@ w_instance allocArrayInstance_1d(w_thread thread, w_clazz clazz, w_int length);
 ** Convert an instance pointer to a pointer to the object header.
 */
 
-inline static w_object instance2object(w_instance instance) {
-  return (w_object)(((unsigned char *)(instance)) - offsetof(w_Object, fields));
-}
+#define instance2object(instance) ( (w_object)(((unsigned char *)(instance)) - offsetof(w_Object, fields)) )
 
 /*
 ** Convert an instance pointer to a pointer to the corresponding w_Clazz structure.
@@ -219,10 +217,7 @@ w_clazz instance2clazz(w_instance ins);
 ** (a w_instance pointer points at the first field).
 */
 
-inline static volatile w_word* instance2flagsptr(w_instance instance) {
-  w_word *flags = (w_word*)(((unsigned char *)(instance)) - offsetof(w_Object, fields) + offsetof(w_Object, flags));
-  return flags;
-}
+#define instance2flagsptr(instance) (w_word*)(((unsigned char *)(instance)) - offsetof(w_Object, fields) + offsetof(w_Object, flags))
 
 /*
 ** Convenience macro
@@ -443,9 +438,8 @@ extern w_thread   gc_thread;
 
 void startCollector(void);
 
-static inline w_instance makeLocal(w_instance objectref) {
-  return objectref;
-}
+// TODO get rid of this stupid thing
+#define makeLocal(objectref) (objectref)
 
 char * print_instance_short(char * buffer, int * remain, void * data, int w, int p, unsigned int f);
 char * print_instance_long(char * buffer, int * remain, void * data, int w, int p, unsigned int f);

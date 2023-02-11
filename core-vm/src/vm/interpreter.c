@@ -1,6 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2012, 2020,     *
-* 2021 by KIFFER Ltd. All rights reserved.                                *
+* 2021, 2022 by KIFFER Ltd. All rights reserved.                          *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -242,7 +242,7 @@ static void acquireJitcLock(w_thread thread) {
   while(number_unsafe_threads > 0 || blocking_all_threads) {
     woempa(7, "waiting for %d other threads to reach a safe point\n", number_unsafe_threads - 1);
 
-    status = x_monitor_wait(safe_points_monitor, GC_STATUS_WAIT_TICKS);
+    status = x_monitor_wait(safe_points_monitor, x_eternal);
     if (status != xs_interrupted) {
       checkOswaldStatus(status);
     }
@@ -299,8 +299,7 @@ static void releaseJitcLock(w_thread thread) {
 ** argument words required.
 */
 
-// FIXME: not declared inline because gcc bleats about it being to big
-static void stack2locals(w_Slot locals[], volatile w_Slot *args, w_int num) {
+inline static void stack2locals(w_Slot locals[], volatile w_Slot *args, w_int num) {
 
 
   args -= num;
@@ -358,8 +357,7 @@ static void do_astore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
 }
 
-// FIXME: not declared inline because gcc bleats about it being to big
-static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
+inline static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   (*tosptr)[0].s = stack_notrace;
   (*tosptr)[1].s = stack_notrace;
@@ -370,8 +368,7 @@ static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 
 }
 
-// FIXME: not declared inline because gcc bleats about it being to big
-static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
+inline static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   (*tosptr) -= 2;
   frame->jstack_base[slot].s = stack_notrace;
@@ -534,9 +531,7 @@ static void checkSingleStep2(w_frame frame) {
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
-    if (blocking_all_threads) {           \
-      gcSafePoint(thread);                \
-    }                                     \
+    gcSafePoint(thread);                \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
     checkSingleStep1(frame, current, tos);\
@@ -1066,9 +1061,7 @@ void interpret(w_frame caller, w_method method) {
   }
   
   c_goto: {
-    if (blocking_all_threads) {
-      gcSafePoint(thread);
-    }
+    gcSafePoint(thread);
     add_to_opcode(short_operand);
   }
 
@@ -3404,9 +3397,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_tableswitch: {
-    if (blocking_all_threads) {
-      gcSafePoint(thread);
-    }
+    gcSafePoint(thread);
     operand_ptr = (w_code) ((w_word)(current + 4) & ~3);
     table = (w_int*) operand_ptr;
     tos -= 1;
@@ -3425,9 +3416,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_lookupswitch: {
-    if (blocking_all_threads) {
-      gcSafePoint(thread);
-    }
+    gcSafePoint(thread);
     operand_ptr = (w_code)((w_word)(current + 4) & ~3);
     table = (w_int*) operand_ptr;
     // todo, make this a binary lookup instead of linear search...
@@ -4231,9 +4220,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_goto_w: {
-    if (blocking_all_threads) {
-      gcSafePoint(thread);
-    }
+    gcSafePoint(thread);
     add_to_opcode(int_operand);
   }
 

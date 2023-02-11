@@ -337,8 +337,6 @@ static const w_int bufsize = 1024;
 
 void throwException(w_thread thread, w_clazz exception, char * format, ...) {
 
-  va_list ap;
-  char * buffer;
   w_int length;
   w_string message = NULL;
   w_instance theMessage = NULL;
@@ -363,8 +361,10 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
   }
 
   if (format) {
+    char * buffer;
     buffer = allocMem(bufsize + 1);
     if (buffer) {  
+      va_list ap;
       va_start (ap, format);
       length = x_vsnprintf(buffer, bufsize, format , ap);
       va_end (ap);

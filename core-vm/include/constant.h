@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2006, 2007, 2008, 2010, 2011, 2012, 2020, 2021            *
+* Copyright (c) 2006, 2007, 2008, 2010, 2011, 2012, 2020, 2021, 2022      *
 * by KIFFER Ltd. All rights reserved.                                     *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -213,14 +213,8 @@ void resolveIMethodConstant(w_clazz clazz, w_int i);
 /*
 ** The functions getXXXXConstant return the value of the i'th constant of `clazz'.
 */
-
-static inline w_int getIntegerConstant(w_clazz clazz, w_int i) {
-  return (w_int)clazz->values[i];
-}
-
-static inline w_float getFloatConstant(w_clazz clazz, w_int i) {
-  return (w_float)clazz->values[i];
-}
+#define getIntegerConstant(clazz,i) ( (w_int)(clazz)->values[i] )
+#define getFloatConstant(clazz,i) ( (w_float)(clazz)->values[i] )
 
 static inline w_u64 getLongConstant(w_clazz clazz, w_int i) {
   w_u64 l;
@@ -252,9 +246,7 @@ static inline w_instance getStringConstant(w_clazz clazz, w_int i) {
 /*
 ** Get the value of a STRING constant which is known to already be resolved.
 */
-static inline w_instance getResolvedStringConstant(w_clazz clazz, w_int i) {
-  return (w_instance)clazz->values[i];
-}
+#define getResolvedStringConstant(clazz,i) ( (w_instance)(clazz)->values[i] )
 
 /*
  * Get the value of a CLASS constant, resolving it if need be.
@@ -265,9 +257,7 @@ w_clazz getClassConstant(w_clazz clazz, w_int idx, w_thread thread);
 /*
 ** Get the value of a CLASS constant which is known to already be resolved.
 */
-static inline w_clazz getResolvedClassConstant(w_clazz clazz, w_int i) {
-  return (w_clazz)clazz->values[i];
-}
+#define getResolvedClassConstant(clazz,i) ( (w_clazz)(clazz)->values[i] )
 
 /*
  * Get the value of a FIELD constant, resolving it if need be.
@@ -278,9 +268,7 @@ w_field getFieldConstant(w_clazz clazz, w_int idx);
 /*
 ** Get the value of a FIELD constant which is known to already be resolved.
 */
-static inline w_field getResolvedFieldConstant(w_clazz clazz, w_int i) {
-  return (w_field)clazz->values[i];
-}
+#define getResolvedFieldConstant(clazz,i) ( (w_field)(clazz)->values[i] )
 
 /*
  * Get the value of a METHOD constant, resolving it if need be.
@@ -291,9 +279,7 @@ w_method getMethodConstant(w_clazz clazz, w_int idx);
 /*
 ** Get the value of a METHOD constant which is known to already be resolved.
 */
-static inline w_method getResolvedMethodConstant(w_clazz clazz, w_int i) {
-  return (w_method)clazz->values[i];
-}
+#define getResolvedMethodConstant(clazz,i) ( (w_method)(clazz)->values[i] )
 
 /*
  * Get the value of an IMETHOD constant, resolving it if need be.
@@ -304,9 +290,7 @@ w_method getIMethodConstant(w_clazz clazz, w_int idx);
 /*
 ** Get the value of an IMETHOD constant which is known to already be resolved.
 */
-static inline w_method getResolvedIMethodConstant(w_clazz clazz, w_int i) {
-  return (w_method)clazz->values[i];
-}
+#define getResolvedIMethodConstant(clazz,i) ( (w_method)(clazz)->values[i] )
 
 void dissolveConstant(w_clazz, int idx);
 

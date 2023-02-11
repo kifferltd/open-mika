@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2014,     *
-* 2021 by Chris Gray, KIFFER Ltd. All rights reserved.                    *
+* Copyright (c) 2007, 2008, 2009, 2010, 2011, 2014, 2021, 2022, 2023      *
+* by Chris Gray, KIFFER Ltd. All rights reserved.                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -183,9 +183,7 @@ typedef struct w_Frame {
 static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
 static const w_word stack_trace     = 1; // Refers to an object that needs GC tracing, main stack and auxillary stack.
 
-inline static w_int isMonitoredSlot(w_slot slot) {
-  return (slot->s > stack_trace);
-}
+#define isMonitoredSlot(slot) ((slot)->s > stack_trace)
 
 void callMethod(w_frame arguments, w_method method);
 
@@ -387,27 +385,10 @@ w_thread  _currentWonkaThread(const char *f, int l);
 
 ******************************************************************************/
 
-#ifndef OSWALD
-#ifndef JDWP
-//#define GC_SAFE_POINTS_USE_NO_MONITORS
-#endif
-#endif
-
-/*
-** The GC_SAFE_POINTS_USE_NO_MONITORS code relies on the fact that only two
-** threads contend for the thread safety flags: the marking thread and the
-** thread itself. JDWP introduces a third player, so we need to use a monitor.
-*/
-#if defined(GC_SAFE_POINTS_USE_NO_MONITORS) && defined(JWDP)
-#error If JWDP is defined then GC_SAFE_POINTS_USE_NO_MONITORS must not be defined
-#endif
-
 /**
  The monitor used to guard gc safety (and JDWP suspend) actions
 */
-#ifndef GC_SAFE_POINTS_USE_NO_MONITORS
 extern x_monitor safe_points_monitor;
-#endif
 
 /**
  The number of threads currently in a gc-unsafe state
