@@ -54,7 +54,7 @@ w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_
   }
 
   pathname_string = String2string(path);
-  pathname = (char*)string2UTF8(pathname_string, NULL) + 2;	  
+  pathname = (char*)w_string2UTF8(pathname_string, NULL);	  
   switch(mode) {
     case 0:
       openmode = VFS_O_RDONLY;
@@ -87,7 +87,7 @@ w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_
 
   fd = vfs_open(pathname, openmode, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
-  releaseMem(pathname - 2);
+  releaseMem(pathname);
 
   if(fd == -1) {
     return 1;

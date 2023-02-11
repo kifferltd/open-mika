@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2021, 2022 by KIFFER Ltd. All rights reserved.*
+* Copyright (c) 2007, 2009, 2021, 2022, 2023 by KIFFER Ltd.               *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -42,7 +43,7 @@ e                                                                         *
 w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescriptor, w_instance pathString, w_int modenum) {
   w_string path_string = String2string(pathString);
   w_int path_length;
-  w_ubyte *path = string2UTF8(path_string, &path_length) + 2;
+  w_ubyte *path = w_string2UTF8(path_string, &path_length);
   w_word flags = modenum == 0 ? O_RDONLY : modenum == 1 ? O_RDWR : modenum == 2 ? (O_RDWR|O_APPEND) : 0xffffffff;
   w_int fd;
 
@@ -56,7 +57,7 @@ w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescript
   if (fd < 0) {
     throwException(thread, clazzFileNotFoundException, "could not open file '%s' in mode %d using flags '%x': %s\n", path, modenum, flags, strerror(errno));
   }
-  releaseMem(path - 2);
+  releaseMem(path);
 
   return fd;
 }

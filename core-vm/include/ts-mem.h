@@ -212,7 +212,7 @@ inline static int allocedAtLine(void * block) {
 #endif /* TRACE_MEM_ALLOC */
 
 /**
-  ** Hashtable used to collect all "global' references; in practice this means
+ ** Hashtable used to collect all "global' references; in practice this means
  ** 1. a reference to each Thread object (and hence to its jstack, etc.);
  ** 2. global references created by JNI.
  */

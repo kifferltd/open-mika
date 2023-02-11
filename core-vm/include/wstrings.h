@@ -114,18 +114,9 @@ void putw_char(w_char ch, w_ubyte **dest);
 
 /*
 ** string2UTF8 converts the given w_string into a UTF8 string.
-** The UTF8 string is returned as a byte array in which the first two bytes
-** are a 16-byte character count (most significant byte first).  A null byte 
-** is also appended, but is not included in the count.
-** If 'buflen' non-NULL the total length of the UTF8 string (including the
-** two count bytes, but excluding the terminating null byte) is returned in
-** '*buflen'. 
 ** The memory used for the UTF8 string is allocated from the system pool. The
 ** caller is responsible for returning this memory when it is no longer needed.
 */
-w_ubyte *string2UTF8(w_string string, w_int * buflen);
-
-// new version which does not add a two-byte counter at the beginning
 
 char* w_string2UTF8(w_string string, w_int *count);
 

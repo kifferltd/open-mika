@@ -365,13 +365,13 @@ w_boolean File_rename(w_thread thread, w_instance thisObj, w_instance file1Strin
 
   file1_string = String2string(file1String);
   file2_string = String2string(file2String);
-  pathname1 = string2UTF8(file1_string, &pathlength1) + 2;
-  pathname2 = string2UTF8(file2_string, &pathlength2) + 2;
+  pathname1 = w_string2UTF8(file1_string, &pathlength1);
+  pathname2 = w_string2UTF8(file2_string, &pathlength2);
 
   result = (vfs_rename(pathname1, pathname2) == 0);
 
-  releaseMem(pathname1 - 2);
-  releaseMem(pathname2 - 2);
+  releaseMem(pathname1);
+  releaseMem(pathname2);
 
   return result;
 
