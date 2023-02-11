@@ -1,6 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2008, 2009 by Chris Gray, /k/ Embedded Java         *
+* Copyright (c) 2008, 2009, 2023 by Chris Gray, /k/ Embedded Java         *
 * Solutions. All rights reserved.                                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -78,6 +77,66 @@ public class SimpleTimeZone extends TimeZone {
 
   private final static byte[] monthLength = { 31, 28, 31, 30 , 31, 30, 31, 31, 30, 31, 30, 31 };
 
+  private static void dstRangeCheck(int dst) {
+    if (dst < 0) {
+      throw new IllegalArgumentException("dst (" + dst + ") < 0");
+    }
+  }
+
+  private static void timeRangeCheck(int time, String timeName) {
+    if (time < 0 ) {
+      throw new IllegalArgumentException(timeName + " (" + time + ") < 0");
+    }
+    if (time >= 86400000 ) {
+      throw new IllegalArgumentException(timeName + " (" + time + ") >= 86400000");
+    }
+  }
+
+  private static void monthRangeCheck(int month, String monthName) {
+    if (month < Calendar.JANUARY ) {
+      throw new IllegalArgumentException(monthName + " (" + month + ") < Calendar.JANUARY");
+    }
+    if (month > Calendar.DECEMBER) {
+      throw new IllegalArgumentException(monthName + " (" + month + ") > Calendar.DECEMBER");
+    }
+  }
+
+  private static void dayOfWeekRangeCheck(int dayOfWeek, int dayOfWeekInMonth, String dayOfWeekName) {
+    if (dayOfWeek > Calendar.SATURDAY) {
+      throw new IllegalArgumentException(dayOfWeekName + " (" + dayOfWeek + ") > Calendar.SATURDAY");
+    }
+    if (-dayOfWeek > Calendar.SATURDAY) {
+      throw new IllegalArgumentException(dayOfWeekName + " (" + dayOfWeek + ") < -Calendar.SATURDAY");
+    }
+    if (dayOfWeekInMonth == 0) {
+      throw new IllegalArgumentException(dayOfWeekName + "InMonth == 0");
+    }
+    if (dayOfWeekInMonth > 31) {
+      throw new IllegalArgumentException(dayOfWeekName + "InMonth (" + dayOfWeekInMonth + ") > 31");
+    }
+    if (dayOfWeekInMonth < -31) {
+      throw new IllegalArgumentException(dayOfWeekName + "InMonth (" + dayOfWeekInMonth + ") < -31 ");
+    }
+    if (dayOfWeekInMonth > 5  && dayOfWeek > 0 ) {
+      throw new IllegalArgumentException(dayOfWeekName + "InMonth (" + dayOfWeekInMonth + ") > 5 and " + dayOfWeekName + " (" + dayOfWeek + ") > 0");
+    }
+    if (dayOfWeekInMonth < -5  && dayOfWeek > 0 ) {
+      throw new IllegalArgumentException(dayOfWeekName + "InMonth (" + dayOfWeekInMonth + ") < -5 and " + dayOfWeekName + " (" + dayOfWeek + ") > 0");
+    }
+  }
+
+  private static void startTimeModeRangeCheck(int startTimeMode) {
+    if (startTimeMode < 0 || startTimeMode > 2) {
+      throw new IllegalArgumentException("startTimeMode (" + startTimeMode + ") not 0, 1, or 2");
+    }
+  }
+  
+  private static void endTimeModeRangeCheck(int endTimeMode) {
+    if (endTimeMode < 0 || endTimeMode > 2) {
+      throw new IllegalArgumentException("endTimeMode (" + endTimeMode + ") not 0, 1, or 2");
+    }
+  }
+  
   public SimpleTimeZone(int rawOffset, String ID) {
 	super();
 	setID(ID);
@@ -99,20 +158,15 @@ public class SimpleTimeZone extends TimeZone {
 	  super();
 	  setID(ID);
    	this.rawOffset = rawOffset;
-	//(check for IllegalArguments
-	if (  dstSavings < 0 || startTime < 0 || startTime >= 86400000 || endTime < 0 || endTime >= 86400000
-	      || startMonth < Calendar.JANUARY || startMonth > Calendar.DECEMBER
-	      || endMonth < Calendar.JANUARY || endMonth > Calendar.DECEMBER	
-	   )  throw new IllegalArgumentException("1");
-	if (  startDayOfWeekInMonth == 0 || startDayOfWeek > Calendar.SATURDAY || startDayOfWeek < (-Calendar.SATURDAY)	
-	      || startDayOfWeekInMonth > 31 || startDayOfWeekInMonth < -31
-	      || ( (startDayOfWeekInMonth > 5 || startDayOfWeekInMonth < -5)  && startDayOfWeek > 0 )
-	   )  throw new IllegalArgumentException("2 got stDoWiM"+startDayOfWeekInMonth+"and stDoW "+startDayOfWeek);
-	if (  endDayOfWeekInMonth == 0 || endDayOfWeek > Calendar.SATURDAY || endDayOfWeek < (-Calendar.SATURDAY)	
-	      || endDayOfWeekInMonth > 31 || endDayOfWeekInMonth < -31
-	      || ( (endDayOfWeekInMonth > 5 || endDayOfWeekInMonth < -5)  && endDayOfWeek > 0 )
-	   ) throw new IllegalArgumentException("3 got endDoWiM"+endDayOfWeekInMonth+"and endDoW "+endDayOfWeek);
-	
+
+        monthRangeCheck(startMonth, "startMonth");
+	dstRangeCheck(dstSavings);
+	timeRangeCheck(startTime, "startTime");
+	timeRangeCheck(endTime, "endTime");
+        monthRangeCheck(endMonth, "endMonth");
+        dayOfWeekRangeCheck(startDayOfWeek, startDayOfWeekInMonth, "startDayOfWeek");
+        dayOfWeekRangeCheck(endDayOfWeek, endDayOfWeekInMonth, "endDayOfWeek");
+
         this.startMonth = startMonth;
         this.startTime = startTime;
         this.endMonth = endMonth;
@@ -138,12 +192,8 @@ public class SimpleTimeZone extends TimeZone {
     
     this(rawOffset,ID,startMonth,startDay,startDayOfWeek,startTime,endMonth,
         endDay,endDayOfWeek,endTime,dstSavings);
-    if (startTimeMode < 0 || startTimeMode > 2) {
-      throw new IllegalArgumentException("bad startTimeMode");
-    }
-    if (endTimeMode < 0 || endTimeMode > 2) {
-      throw new IllegalArgumentException("bad endTimeMode");
-    }
+    startTimeModeRangeCheck(startTimeMode);
+    endTimeModeRangeCheck(endTimeMode);
     this.startTimeMode = startTimeMode;
     this.endTimeMode = endTimeMode;
   }
@@ -174,18 +224,16 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setDSTSavings(int dst) {
-  	if (dst < 0) {
-  		throw new IllegalArgumentException();
-  	}
-  	dstSavings = dst;
+    dstRangeCheck(dst);
+    dstSavings = dst;
   }
 
 
   public void setEndRule(int month, int dayOfWInM, int dayOfW, int time){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER	
-             || dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY || dayOfWInM > 5 || dayOfWInM < -5) {
-          throw new IllegalArgumentException();
-        }
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+    dayOfWeekRangeCheck(dayOfW, dayOfWInM, "dayOfW");
+	
         if (dayOfWInM==0) {
         	useDaylight = false;
 		hasEndRule = false;
@@ -202,10 +250,13 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setEndRule(int month, int dayOfM, int time){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER )	
-           throw new IllegalArgumentException();
-        if ( dayOfM < 1 || dayOfM > monthLength[month] )
-           throw new IllegalArgumentException("end Day Of Month is wrong, got "+dayOfM);
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+
+        if ( dayOfM < 1 || dayOfM > monthLength[month] ) {
+           throw new IllegalArgumentException("dayOfM out of range (" + dayOfM + ")");
+        }
+
 	hasEndRule = true;
         useDaylight |= hasEndRule && hasStartRule;
         endMonth = month;
@@ -216,13 +267,13 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setEndRule(int month, int dayOfM, int dayOfW, int time, boolean after){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER
-     	     || dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY ){	
-           throw new IllegalArgumentException();
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+	
+     	if (dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY ){	
+           throw new IllegalArgumentException("dayOfW out of range (" + dayOfW + ")");
         }
-        if ( dayOfM < 1 || dayOfM > monthLength[month] ) {
-           throw new IllegalArgumentException("end Day Of Month is wrong, got "+dayOfM);
-        }
+
 	hasEndRule = true;
         useDaylight |= hasEndRule && hasStartRule;
         endMonth = month;
@@ -233,10 +284,17 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setStartRule(int month, int dayOfWInM, int dayOfW, int time){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER	
-             || dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY || dayOfWInM > 5 || dayOfWInM < -5) {
-          throw new IllegalArgumentException();
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+	
+        if (dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY) {
+          throw new IllegalArgumentException("dayOfW out of range (" + dayOfW + ")"); 
+        } 
+	
+        if (dayOfWInM > 5 || dayOfWInM < -5) {
+          throw new IllegalArgumentException("dayOfWInM out of range (" + dayOfWInM + ")");
         }
+
         if (dayOfWInM==0) {
         	useDaylight = false;
 		hasStartRule = false;
@@ -253,10 +311,12 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setStartRule(int month, int dayOfM, int time){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER )	
-           throw new IllegalArgumentException();
-        if ( dayOfM < 1 || dayOfM > monthLength[month] )
-           throw new IllegalArgumentException("start Day Of Month is wrong, got "+dayOfM);
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+        if ( dayOfM < 1 || dayOfM > monthLength[month] ) {
+           throw new IllegalArgumentException("dayOfM out of range (" + dayOfM + ")");
+        }
+
 	hasStartRule = true;
         useDaylight |= hasEndRule && hasStartRule;
         startMonth = month;
@@ -267,12 +327,14 @@ public class SimpleTimeZone extends TimeZone {
   }
 
   public void setStartRule(int month, int dayOfM, int dayOfW, int time, boolean after){
-     	if ( time < 0 || time >= 86400000  || month < Calendar.JANUARY || month > Calendar.DECEMBER
-     	     || dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY ){	
-           throw new IllegalArgumentException();
-        }
+    timeRangeCheck(time, "time");
+    monthRangeCheck(month, "month");
+        if (dayOfW > Calendar.SATURDAY || dayOfW < Calendar.SUNDAY) {
+          throw new IllegalArgumentException("dayOfW out of range (" + dayOfW + ")"); 
+        } 
+	
         if ( dayOfM < 1 || dayOfM > monthLength[month] ) {
-           throw new IllegalArgumentException("start Day Of Month is wrong, got "+dayOfM);
+           throw new IllegalArgumentException("dayOfM out of range (" + dayOfM + ")");
         }
 	hasStartRule = true;
         useDaylight |= hasEndRule && hasStartRule;
