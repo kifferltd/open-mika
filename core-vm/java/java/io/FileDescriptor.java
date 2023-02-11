@@ -1,5 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2009, 2022 by Chris Gray, KIFFER Ltd.               *
+* Copyright (c) 2009, 2022 by Chris Gray, KIFFER Ltd.                     *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -31,14 +31,21 @@ package java.io;
 
 public final class FileDescriptor {
 
+  // Package-private API (not standard)
+
+  // Constants for various access modes
+  // Caution: these values are also hard-coded in FileDescriptor.c
+  // MODE_READ -> file must exist and must not be a directory; will be opened read-only.
+  static final int MODE_READ = 0;
+  // MODE_WRITE-> if file exists it must not be a directory; it will be truncated and will be opened write-only.
+  static final int MODE_WRITE = 1;
+  // MODE_APPEND -> if file exist it must must not be a directory; will be opened write-only for append.
+  //              otherwise it will be created and then opened for write-only.
+  static final int MODE_APPEND = 2;
+
   public static final FileDescriptor  in = null;
   public static final FileDescriptor out = null;
   public static final FileDescriptor err = null;
-
-  // Caution: these values are also hard-coded in FileDescriptor.c
-  static final int MODE_READ = 0;
-  static final int MODE_WRITE = 1;
-  static final int MODE_APPEND = 2;
 
   // The real file descriptor - this should be an open file
   int fd;
@@ -75,6 +82,6 @@ public final class FileDescriptor {
     }
   }
 
-  public native void _sync() throws SyncFailedException;
+  private native void _sync() throws SyncFailedException;
 }
 

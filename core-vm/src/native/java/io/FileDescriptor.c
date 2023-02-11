@@ -36,15 +36,15 @@ e                                                                         *
 /*
 ** Open a file and return the resulting fd. The path string must be an absolute path and 'modenum' 
 ** must be one of the following:
-** 0 -> Java MODE_READ   -> open(2) flags O_RDONLY
-** 1 -> Java MODE_WRITE  -> open(2) flags O_RDWR
-** 2 -> Java MODE_APPEND -> open(2) flags O_RDWR|O_APPEND
+** 0 -> Java MODE_READ   -> open(2) flags VFS_O_RDONLY
+** 1 -> Java MODE_WRITE  -> open(2) flags VFS_O_WRONLY
+** 2 -> Java MODE_APPEND -> open(2) flags VFS_O_WRONLY|VFS_O_APPEND
 */
 w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescriptor, w_instance pathString, w_int modenum) {
   w_string path_string = String2string(pathString);
   w_int path_length;
   w_ubyte *path = w_string2UTF8(path_string, &path_length);
-  w_word flags = modenum == 0 ? O_RDONLY : modenum == 1 ? O_RDWR : modenum == 2 ? (O_RDWR|O_APPEND) : 0xffffffff;
+  w_word flags = modenum == 0 ? VFS_O_RDONLY : modenum == 1 ? VFS_O_WRONLY : modenum == 2 ? (VFS_O_WRONLY|VFS_O_APPEND) : 0xffffffff;
   w_int fd;
 
   woempa(7, "flags = %d\n", flags);

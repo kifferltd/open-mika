@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021, 2022 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,8 +26,7 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-#include <vfs.h>
-#include <vfs_fcntl.h>
+#include "vfs.h"
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"

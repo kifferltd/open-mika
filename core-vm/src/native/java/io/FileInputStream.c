@@ -141,8 +141,8 @@ w_int FileInputStream_available
     result = 0;
   } else {
     // FIXME this should use the vfs_ abstraction
-    woempa(7, "FILE ptr = %p\n", vfs_fd_table[fd].ff_fileptr);
-    size_t flen = ff_filelength(vfs_fd_table[fd].ff_fileptr);
+    woempa(7, "FILE ptr = %p\n", (FF_FILE *)vfs_fd_table[fd]->data);
+    size_t flen = ff_filelength((FF_FILE *)vfs_fd_table[fd]->data);
     woempa(7, "file length = %d errno = %d\n", flen, errno);
     if (flen > 0 || errno == 0) {
       result = flen;
