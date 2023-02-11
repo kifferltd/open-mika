@@ -117,7 +117,7 @@ public final class Integer extends Number implements Comparable {
     long l = Long.parseLong(s, radix);
 
     if (l<MIN_VALUE || l>MAX_VALUE) {
-      throw new NumberFormatException();
+      throw new NumberFormatException("out of range");
     }
 
     return (int) l;
