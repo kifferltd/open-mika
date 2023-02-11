@@ -462,46 +462,6 @@ void fast_String_length(w_frame frame) {
   }
 }
 
-w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w_int to, w_instance Other, w_int oo, w_int len) {
-  w_boolean result = WONKA_TRUE;
-  w_string this_string = String2string(This);
-  w_string other_string;
-  w_int i;
-  
-  if (Other) {
-    other_string = String2string(Other);
-    if (to < 0 || oo < 0 || to + len > (w_int)string_length(this_string) || oo + len > (w_int)string_length(other_string)) {
-      result = WONKA_FALSE;
-    }
-    else {
-      if (ic == WONKA_FALSE) {
-        for (i = 0; i < len; i++) {
-          if (string_char(this_string, i + to) != string_char(other_string, oo + i)) {
-            result = WONKA_FALSE;
-            break;
-          }
-        }
-      }
-      else {
-        for (i = 0; i < len; i++) {
-          w_char this_char = string_char(this_string, i + to);
-          w_char that_char = string_char(other_string, oo + i);
-          if ((char2upper(this_char) != char2upper(that_char)) && (char2lower(this_char) != char2lower(that_char))) {
-            result = WONKA_FALSE;
-            break;
-          }
-        }
-      }
-    }
-  }
-  else {
-    throwException(thread, clazzNullPointerException, NULL);
-  }
-  
-  return result;
-  
-}
-
 static w_boolean i_String_startsWith(w_string this_string, w_string prefix, w_int offset) {
   w_size i;
 

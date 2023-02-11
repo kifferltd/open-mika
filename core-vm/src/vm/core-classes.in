@@ -286,7 +286,6 @@ java/lang/String
         create_byte             ([BIII)V                String_create_byte
         create_StringBuffer     (Ljava/lang/StringBuffer;)V String_create_StringBuffer
         endsWith                (Ljava/lang/String;)Z   String_endsWith
-        regionMatches           (ZILjava/lang/String;II)Z                        String_regionMatches
         startsWith              (Ljava/lang/String;I)Z  String_startsWith
 	trim			()Ljava/lang/String;	String_trim
 	intern			()Ljava/lang/String;	String_intern
