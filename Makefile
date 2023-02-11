@@ -136,6 +136,7 @@ export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
 export mikadeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
+export testdeploydir = $(deploydir)/test
 
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
@@ -578,6 +579,9 @@ echo : kecho
 	@echo "AWT =" $(AWT)
 	@echo "LDFLAGS =" $(LDFLAGS)
 	@echo "SHARED_OBJECTS =" $(SHARED_OBJECTS)
+	@echo "JNI =" $(JNI)
+	@echo "TESTS =" $(TESTS)
+	@echo "JDWP =" $(JDWP)
 	@echo "MIKA_LIB = " $(MIKA_LIB)
 	@echo "OSWALD_LIB = " $(OSWALD_LIB)
 	@echo "AWT_LIB = " $(AWT_LIB)
@@ -593,6 +597,8 @@ builddir :
 	@mkdir -p $(appdeploydir)
 	@echo "Creating " $(objdir)
 	@mkdir -p $(objdir)
+	@echo "Creating " $(testdeploydir)
+	@mkdir -p $(testdeploydir)
 	@echo "Creating " awtobjdir
 	@mkdir -p $(awtobjdir)
 	@echo "Creating " filesystemobjdir
@@ -683,7 +689,9 @@ clean :
 	-make -C core-vm clean
 	-make -C max/src/native/mika/max clean
 
-test : echo builddir kernel scheduler-test
+test : echo builddir kernel jarfile scheduler-test
+	@echo "Creating tools"
+	make -C tool test
 
 scheduler-test : common-test
 	make -C vm-cmp/kernel/$(SCHEDULER) test

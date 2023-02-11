@@ -48,7 +48,7 @@ public class TestRunner
 
   static {
     String testclassfilename = System.getProperty("gnu.testlet.script.name", "wonkatest");
-    testclassfile = new String(testclassfilename + ".properties");
+    testclassfile = "/resource/" + testclassfilename + ".properties";;
   }
 
 /************************************************************
@@ -301,17 +301,18 @@ public int getTestsFailed() {
   public InputStream getResourceStream (String name)
     throws ResourceNotFoundException
   {
+     System.out.println("calling TestRunner.getResourceStream(" + name +")");
      // The following code assumes File.separator is a single character.
      if (File.separator.length () > 1)
       throw new Error ("File.separator length is greater than 1");
 
      String realName = name.replace ('#', File.separator.charAt (0));
 
-        InputStream s = ClassLoader.getSystemResourceAsStream(name);
+     InputStream s = getClass().getClassLoader().getResourceAsStream(name); 
 
-        if (s == null) throw new ResourceNotFoundException();
+     if (s == null) throw new ResourceNotFoundException();
 
-       return s;
+     return s;
    }
 
   public File getResourceFile(String name) throws ResourceNotFoundException
@@ -512,6 +513,8 @@ public int getTestsFailed() {
         flaggedoffstart = cname.indexOf("/*");
         flaggedoffstop  = cname.indexOf("*/");
         cname_always="";
+System.out.println("cname = " + cname);
+System.out.println("flaggedoffstart = " + flaggedoffstart + ", flaggedoffstop = " + flaggedoffstop + ", notflaggedoff = " + notflaggedoff);
 
         while(flaggedoffstart>=0 || flaggedoffstop >=0)
         {
