@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2023 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,7 +27,9 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = argument.c  environment.c platform.c Etc.c ErrorOutputStream.c  StandardInputStream.c  StandardOutputStream.c
+
+# TODO include xxx_cli.c only if CLI is enabled in Config/platform file
+sources = argument.c  environment.c platform.c telnet_cli.c file_cli.c Etc.c ErrorOutputStream.c  StandardInputStream.c  StandardOutputStream.c
 
 halobjdir = $(objdir)/core-vm/hal
 objects=$(patsubst %.c, $(halobjdir)/%.o, $(sources))

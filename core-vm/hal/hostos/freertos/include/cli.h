@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2023 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,27 +26,38 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-#include "oswald.h"
-#include "wonka.h"
-#include <stdio.h>
-/*
-#include <signal.h>
-#include <string.h>
-#include <unistd.h>
-*/
+#include "FreeRTOS.h"
+#include "task.h"
 
-void w_dump_info(void);
+#define CMD_MAX_INPUT_SIZE 127
+#define CMD_MAX_OUTPUT_SIZE 255
 
-int wonka_killed;
-int dumping_info;
+#define NORM "\033[0m"
+#define BOLD "\033[1m"
+#define ITAL "\033[3m"
+#define UNDR "\033[4m"
+#define STRK "\033[9m"
 
-x_thread heartbeat_thread = NULL;
+static int32_t _socket_read( char * const pcInputBuffer, uint32_t uInputBufferLength );
 
-w_boolean Wonka_static_useCli(w_thread thread, w_instance theClass) {
-#ifdef FREERTOS_CLI
-  return true;
-#else
-  return false;
-#endif
-}
+void _socket_write( const char * const pcOutputBuffer, uint32_t uOutputBufferLength );
+
+static BaseType_t _classpath( char * pcWriteBuffer, size_t xWriteBufferLen, const char * pcCommandString );
+
+static BaseType_t _breakpoint( char * pcWriteBuffer, size_t xWriteBufferLen, const char * pcCommandString );
+
+static BaseType_t _jdwp( char * pcWriteBuffer, size_t xWriteBufferLen, const char * pcCommandString );
+
+static BaseType_t _echo( char * pcWriteBuffer, size_t xWriteBufferLength, const char * pcCommandString );
+
+static BaseType_t _run( char * pcWriteBuffer, size_t xWriteBufferLen, const char * pcCommandString );
+
+static BaseType_t _file( char * pcWriteBuffer, size_t xWriteBufferLength, const char * pcCommandString );
+
+extern const CLI_Command_Definition_t xFileCommandDefinition;
+
+void startTelnetConsole(void);
+
+void stopTelnetConsole(TaskHandle_t handle);
+
 

@@ -32,6 +32,9 @@ export FREERTOS_TCP_INCLUDE_DIR=@FREERTOS_TCP_INCLUDE_DIR@
 # Absolute path to FreeRTOS TCP compiler directory
 export FREERTOS_TCP_COMPILER_DIR=@FREERTOS_TCP_COMPILER_DIR@
 
+# Absolute path to FreeRTOS CLI directory
+export FREERTOS_CLI_INCLUDE_DIR=@FREERTOS_CLI_INCLUDE_DIR@
+
 # Absolute path to FreeRTOS IO directory
 export FREERTOS_IO_INCLUDE_DIR=@FREERTOS_IO_INCLUDE_DIR@
 

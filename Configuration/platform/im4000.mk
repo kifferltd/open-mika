@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2019, 2020, 2021, 2022 by Chris Gray, KIFFER Ltd.         #
+# Copyright (c) 2019, 2020, 2021, 2022, 2023 by Chris Gray, KIFFER Ltd.   #
 #  All rights reserved.                                                   #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -60,9 +60,13 @@ CFLAGS += -isystem$(FREERTOS_PORT_INCLUDE_DIR)
 CFLAGS += -isystem$(FREERTOS_FAT_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_TCP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_TCP_COMPILER_DIR) 
+CFLAGS += -isystem$(FREERTOS_CLI_INCLUDE_DIR)
 CFLAGS += -isystem$(FREERTOS_APP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_IO_INCLUDE_DIR) 
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
+# TODO should this be settable at cmake level?
+CFLAGS += -DFREERTOS_CLI
+
 export JDWP = true
 export JNI = false
 export NETWORK = native

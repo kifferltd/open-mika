@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2022 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2022, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -126,6 +126,8 @@ static char *ipaddress_word2cstring(int ipa) {
   return result;
 }
 
+static TaskHandle_t _xCliServerHandle = NULL;
+
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
   tcp_mac_t mac;
   tcp_return_code_t rc = tcp_get_mac(&mac);
@@ -138,6 +140,18 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
   else {
     printf("MAC address not available\n");
   }
+
+#ifdef FREERTOS_CLI
+  if (rc == TCP_SUCCESS) {
+    if(_xCliServerHandle == NULL) {
+      _xCliServerHandle =  startTelnetConsole();
+    }
+  }
+  else {
+    stopTelnetConsole(_xCliServerHandle);
+    _xCliServerHandle = NULL;
+  }
+#endif
 
   FreeRTOS_GetAddressConfiguration(&FreeRTOS_IPAddress, &FreeRTOS_NetMask, &FreeRTOS_GatewayAddress, &FreeRTOS_DNSServerAddress );
   printf("IPAdress = %s Netmask = %s GatewayAddress = %s DNSServerAddress = %s\n", ipaddress_word2cstring(FreeRTOS_IPAddress), ipaddress_word2cstring(FreeRTOS_NetMask), ipaddress_word2cstring(FreeRTOS_GatewayAddress), ipaddress_word2cstring(FreeRTOS_DNSServerAddress));
