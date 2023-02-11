@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -72,7 +72,6 @@ static void threadEntry(void * athread) {
   volatile
 #endif
   w_thread thread = athread;
-  JNIEnv  *env = w_thread2JNIEnv(thread);
   volatile w_boolean gc_is_running;
   w_thread oldthread;
   x_status monitor_status;

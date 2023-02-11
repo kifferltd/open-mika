@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -39,8 +39,7 @@
 #include "methods.h"
 #include "mika_threads.h"
 
-static jclass   class_BufferedReader;
-static jmethodID updateBuffer_method;
+static w_method updateBuffer_method;
 
 w_int BufferedReader_locateEnd(w_thread thread, w_instance this, w_instance Array, w_int start, w_int stop) {
 
@@ -87,8 +86,7 @@ w_int BufferedReader_read(w_thread thread, w_instance thisBufferedReader) {
 
   if (count <= (w_int)*posptr) {
     if (!updateBuffer_method) {
-      class_BufferedReader = clazz2Class(clazzBufferedReader);
-      updateBuffer_method = (*w_thread2JNIEnv(thread))->GetMethodID(w_thread2JNIEnv(thread), class_BufferedReader, "updateBuffer", "()Z"); 
+      updateBuffer_method = find_method(clazzBufferedReader, "updateBuffer", "()Z");
       woempa(7,"updateBuffer_method is %M\n",updateBuffer_method);
     }
     new_frame = activateFrame(thread, updateBuffer_method, 0, 1, thisBufferedReader, stack_trace);
