@@ -223,8 +223,8 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
     wabort(ABORT_WONKA, "Failed to seek to offset %d (rc is %d), can't handle that", offs, rc);
   }
   rc = vfs_read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
-#ifndef OSWALD
-  while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
+#if !defined OSWALD && !defined FREERTOS
+  while (rc == -1 && (x_errno == EAGAIN || x_errno == EINTR)) {
     w_printf("readZipEntry(): read() interrupted, retrying\n");
     rc = vfs_read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
   }
@@ -301,8 +301,8 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
       w_printf("Need to read an extra %d bytes\n", l);
       while (l > 0) {
         rc = vfs_read(entry->zipFile->fd, readptr,  l);
-#ifndef OSWALD
-        while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
+#if !defined OSWALD && !defined FREERTOS
+        while (rc == -1 && (x_errno == EAGAIN || x_errno == EINTR)) {
           rc = vfs_read(entry->zipFile->fd, readptr,  l);
         }
 #endif
@@ -481,7 +481,10 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
       w_size i;
       w_size l;
 
-      vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET);
+      if (vfs_lseek (zipFile->fd, *offset_ptr, SEEK_SET) < 0) { 
+        releaseMem(trawlbuf);
+        return NULL;
+      }
       l = vfs_read (zipFile->fd, trawlbuf, TRAWL_SIZE + 4);
       woempa(1, "was able to read %d bytes from 0%07o\n", l, *offset_ptr);
 #ifdef SANITY_CHECKS
@@ -1198,7 +1201,7 @@ static w_ubyte *zip_inflate(z_zipEntry entry) {
   while (l < entry->c_size) {
     rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
 #if !defined (OSWALD) && !defined (FREERTOS)
-    while (rc == -1 && (errno == EAGAIN || errno == EINTR)) {
+    while (rc == -1 && (x_errno == EAGAIN || x_errno == EINTR)) {
       rc = vfs_read(entry->zipFile->fd, source + l, entry->c_size - l);
     }
 #endif

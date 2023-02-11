@@ -37,7 +37,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-#include <errno.h>
 #include <sched.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -49,10 +48,13 @@
 
 typedef unsigned short         x_ushort;
 
-/// Fake errno to make FreeRTOS+ APIs easier to use
-#define O4F_LOCAL_STORAGE_OFFSET_ERRNO (configNUM_THREAD_LOCAL_STORAGE_POINTERS-2)
+/// Place to store x_errno if we are not yet running in FreeRTOS task
+static x_int global_errno;
 
-/// Local storage slot (in the FreeRTOS task control block) where we store a pointer back to our x_thread pointer
+/// Local storage slot (in the FreeRTOS task control block) where we store a pointer to the task_errno field of our x_Thread.
+#define O4F_LOCAL_STORAGE_OFFSET_X_ERRNO (configNUM_THREAD_LOCAL_STORAGE_POINTERS-2)
+
+/// Local storage slot (in the FreeRTOS task control block) where we store a pointer back to our x_Thread.
 #define O4F_LOCAL_STORAGE_OFFSET_X_THREAD (configNUM_THREAD_LOCAL_STORAGE_POINTERS-1)
 
 /// Amount of memory to reserve for `static' allocations during OS startup (Wonka doesn't need any).
@@ -134,6 +136,7 @@ typedef struct x_Mutex {
 typedef struct x_Thread {
   volatile x_state      state;
   TaskHandle_t          handle;
+  x_int                 task_errno;
   char                  name[MAX_THREAD_NAME_LENGTH + 1];
   x_ushort              stack_depth;
   w_size                task_priority;    /* Priority this thread is mapped to. */
@@ -255,6 +258,13 @@ x_long x_ticks2usecs(x_size ticks);
  */
 extern void x_now_plus_ticks(x_long ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
+
+/**
+ * For x_errno we use a location in the OSwald thread control block, and we set a pointer to this in 
+ * the FreeRTOS ThreadLocal array so that we can get a pointer without going through x_thread_current().
+ * x_error is a macro which looks like a global variable.
+*/
+#define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_ERRNO) : &global_errno))
 
 void _o4f_abort(char *file, int line, int type, char *message, x_status rc);
 

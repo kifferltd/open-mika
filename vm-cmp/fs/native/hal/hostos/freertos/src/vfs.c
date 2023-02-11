@@ -55,6 +55,7 @@ static void dumpDir(const char *path, int level) {
 #endif
 
 #define FLASH_DISK_NAME    "/"
+#define SET_ERRNO(n) { x_int temp = (n); woempa(7, "Set x_errno to %d\n", temp); x_errno = temp; }
 
 static FF_Disk_t *vfs_flashDisk;
 
@@ -66,7 +67,7 @@ void init_vfs(void) {
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
   if (!current_working_dir) {
-    woempa(7, "ff_getcwd returned NULL, errno = %d\n", errno);
+    woempa(7, "ff_getcwd returned NULL, errno = %d\n", stdioGET_ERRNO());
   }
   current_working_dir = reallocMem(cwdbuffer, strlen(cwdbuffer) + 1);
   current_root_dir = fsroot;
@@ -92,23 +93,22 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode) {
     }
   }
 
-  w_int fat_errno = stdioGET_ERRNO();
+  // looks we ran out of file descriptors
+  x_mutex_unlock(fd_table_mutex);
+  SET_ERRNO(pdFREERTOS_ERRNO_ENMFILE);
   
-  woempa(7, "unable to open %s in mode %s, fat_errno = %d\n", pathname, how, fat_errno);
-  // TODO we should set errno
   return -1;
 }
 
 w_int vfs_ftell(w_int fd) {
-  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
-  if (!ff_fileptr) {
-    woempa(7, "failed to read from fd %d, fd is not in use\n", fd);
-    // TODO set errno
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
     return -1;
   }
 
-  // TODO set errno on error
-  return ff_ftell(ff_fileptr);
+  return fde->ops->tell(fde);
 }
 
 w_int vfs_read(w_int fd, void *buf, w_size length) {
@@ -140,9 +140,9 @@ w_int vfs_read(w_int fd, void *buf, w_size length) {
     return effective;
   }
 
-  w_int fat_errno = stdioGET_ERRNO();
-  woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", effective, fd, fat_errno);
-  // TODO set errno
+  woempa(7, "failed to read %d bytes from %s\n", effective, fde->path);
+  SET_ERRNO(stdioGET_ERRNO());
+
   return -1;
 }
 
@@ -175,7 +175,7 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
   if (!ff_fileptr) {
     wabort(ABORT_WONKA, "failed to seek %d bytes from fd %d, fd is not in use\n", offset, fd);
-    // TODO set errno
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
     return -1;
   }
 
@@ -198,10 +198,10 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   Looks like there aint't no stat function that works with ff_fileptr, always need a path
 
 w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
-  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
+  FF_FILE *ff_fileptr = (FF_FILE *)vfs_fd_table[fd]->data;
   if (!ff_fileptr) {
     wabort(ABORT_WONKA, "failed to stat fd %d, fd is not in use\n", fd);
-    // TODO set errno
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
     return -1;
   }
 
@@ -211,7 +211,7 @@ w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
 */
 
 w_int vfs_close(w_int fd) {
-  FF_FILE *ff_fileptr = vfs_fd_table[fd].ff_fileptr;
+  FF_FILE *ff_fileptr = (FF_FILE *)vfs_fd_table[fd]->data;
   if (!ff_fileptr) {
     woempa(7, "failed to close fd %d, fd is not in use\n", fd);
     // TODO set errno
@@ -219,8 +219,11 @@ w_int vfs_close(w_int fd) {
   }
 
   int rc = ff_fclose(ff_fileptr);
-  // TODO set errno
   if (rc) return rc;
-  vfs_fd_table[fd].ff_fileptr = NULL;
+  x_mutex_lock(fd_table_mutex, x_eternal);
+  // TODO release oathname
+  releaseMem(vfs_fd_table[fd]);
+  vfs_fd_table[fd]->data = NULL;
+  x_mutex_unlock(fd_table_mutex);
   woempa(1, "closed fd %d\n", fd);
 }

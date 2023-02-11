@@ -33,15 +33,12 @@
 ERROR - non-blocking file access is not supported on FreeRTOS
 #endif
 
-/* Set _FILE_OFFSET_BITS to 32 to make these functions work with glibc2.2 */
-
 #define _FILE_OFFSET_BITS 32
 
 #include <unistd.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <ff_stdio.h>
 #include <utime.h>
  

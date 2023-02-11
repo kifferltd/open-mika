@@ -214,8 +214,8 @@ void start_routine(void *thread_ptr) {
 
   num_started += 1;
   thread = (x_thread )thread_ptr;
-  loempa(2, "setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, thread);
-  vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread);
+  loempa(2, "setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, &thread->task_errno);
+  vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD, &thread->task_errno);
   if (thread->xref) {
     loempa(2,"Mika thread %t starting\n", thread->xref);
   }
