@@ -1,26 +1,30 @@
 /**************************************************************************
-* Copyright  (c) 2001 by Acunia N.V. All rights reserved.                 *
+* Copyright (c) 2022 by Chris Gray, KIFFER Ltd.  All rights reserved.     *
 *                                                                         *
-* This software is copyrighted by and is the sole property of Acunia N.V. *
-* and its licensors, if any. All rights, title, ownership, or other       *
-* interests in the software remain the property of Acunia N.V. and its    *
-* licensors, if any.                                                      *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
-* This software may only be used in accordance with the corresponding     *
-* license agreement. Any unauthorized use, duplication, transmission,     *
-*  distribution or disclosure of this software is expressly forbidden.    *
-*                                                                         *
-* This Copyright notice may not be removed or modified without prior      *
-* written consent of Acunia N.V.                                          *
-*                                                                         *
-* Acunia N.V. reserves the right to modify this software without notice.  *
-*                                                                         *
-*   Acunia N.V.                                                           *
-*   Vanden Tymplestraat 35      info@acunia.com                           *
-*   3000 Leuven                 http://www.acunia.com                     *
-*   Belgium - EUROPE                                                      *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
-
 
 package gnu.testlet.wonka.security.Permissions; //complete the package name ...
 
@@ -31,7 +35,6 @@ import java.security.*; // at least the class you are testing ...
 import java.net.SocketPermission;
 import java.net.NetPermission;
 import java.io.FilePermission;
-import java.awt.AWTPermission;
 import java.util.Enumeration;
 import java.util.Vector;
 import java.util.PropertyPermission;
@@ -101,8 +104,6 @@ public class AcuniaPermissionsTest implements Testlet
     catch(NoSuchElementException nse) { th.check(true); }
     Permission p = new SecurityPermission("com.*");
     Vector v = new Vector(11);
-    p = new AWTPermission("com.*");
-    v.add(p); ps.add(p);
     p = new NetPermission("com.*");
     v.add(p); ps.add(p);
     p = new FilePermission("com.*","read,write");
@@ -110,8 +111,6 @@ public class AcuniaPermissionsTest implements Testlet
     p = new PropertyPermission("com.*","read");
     v.add(p); ps.add(p);
     p = new AllPermission();
-    v.add(p); ps.add(p);
-    p = new AWTPermission("funny");
     v.add(p); ps.add(p);
     p = new SocketPermission("*.com","connect");
     v.add(p); ps.add(p);
@@ -146,9 +145,6 @@ public class AcuniaPermissionsTest implements Testlet
     th.checkPoint("implies(java.security.Permission)boolean");
     Permissions ps = new Permissions();
     Permission p = new SecurityPermission("com.*");
-    p = new AWTPermission("com.*");
-    ps.add(p);
-    th.check(ps.implies(p) , "implies - 1");
     p = new NetPermission("com.*");
     ps.add(p);
     th.check(ps.implies(p) , "implies - 2");
@@ -161,9 +157,6 @@ public class AcuniaPermissionsTest implements Testlet
     p = new NetPermission("not");
     ps.add(p);
     th.check(ps.implies(p) , "implies - 5");
-    p = new AWTPermission("funny");
-    ps.add(p);
-    th.check(ps.implies(p) , "implies - 6");
     p = new SocketPermission("*.com","connect");
     ps.add(p);
     th.check(ps.implies(p) , "implies - 7");
@@ -180,7 +173,6 @@ public class AcuniaPermissionsTest implements Testlet
     th.check(!ps.implies(new ReflectPermission("java.lang.*")) ,"not implied - 1");
     th.check(ps.implies(new SecurityPermission("java.lang.*")) ,"implied - 12");
     th.check(!ps.implies(new NetPermission("java.lang.*")) ,"not implied - 2");
-    th.check(!ps.implies(new AWTPermission("java.lang.*")) ,"not implied - 3");
     th.check(!ps.implies(new FilePermission("java.lang.*","execute")) ,"not implied - 4");
     th.check(!ps.implies(new SocketPermission("*.ac.be","connect")) ,"not implied - 5");
     th.check(!ps.implies(new UnresolvedPermission("java","java",null,null)) ,"not implied - 6");
