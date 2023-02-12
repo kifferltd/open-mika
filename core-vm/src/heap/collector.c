@@ -2294,7 +2294,7 @@ w_size gc_reclaim(w_int requested, w_instance caller) {
 
   if (blocking_all_threads) {
     if (isSet(verbose_flags, VERBOSE_FLAG_GC)) {
-      w_printf("GC: cowardly refusal by thread %t to start a garbage collection cycle while blocked by %s\n"", thread, BLOCKED_BY_TEXT);
+      w_printf("GC: cowardly refusal by thread %t to start a garbage collection cycle while blocked by %s\n", thread, BLOCKED_BY_TEXT);
       reclaim_accumulator /= 2;
     }
     return 0;

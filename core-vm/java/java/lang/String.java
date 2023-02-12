@@ -287,7 +287,7 @@ public final class String implements java.io.Serializable,Comparable, CharSequen
     else {
       return this_substring.equals(other_substring);
     }
-}
+  }
   
   public boolean regionMatches(int toffset, String other, int ooffset, int len) throws NullPointerException {
     return regionMatches(false, toffset, other, ooffset, len);

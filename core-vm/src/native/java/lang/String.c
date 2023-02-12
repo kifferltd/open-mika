@@ -462,6 +462,46 @@ void fast_String_length(w_frame frame) {
   }
 }
 
+w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w_int to, w_instance Other, w_int oo, w_int len) {
+  w_boolean result = WONKA_TRUE;
+  w_string this_string = String2string(This);
+  w_string other_string;
+  w_int i;
+  
+  if (Other) {
+    other_string = String2string(Other);
+    if (to < 0 || oo < 0 || to + len > (w_int)string_length(this_string) || oo + len > (w_int)string_length(other_string)) {
+      result = WONKA_FALSE;
+    }
+    else {
+      if (ic == WONKA_FALSE) {
+        for (i = 0; i < len; i++) {
+          if (string_char(this_string, i + to) != string_char(other_string, oo + i)) {
+            result = WONKA_FALSE;
+            break;
+          }
+        }
+      }
+      else {
+        for (i = 0; i < len; i++) {
+          w_char this_char = string_char(this_string, i + to);
+          w_char that_char = string_char(other_string, oo + i);
+          if ((char2upper(this_char) != char2upper(that_char)) && (char2lower(this_char) != char2lower(that_char))) {
+            result = WONKA_FALSE;
+            break;
+          }
+        }
+      }
+    }
+  }
+  else {
+    throwException(thread, clazzNullPointerException, NULL);
+  }
+  
+  return result;
+  
+}
+
 static w_boolean i_String_startsWith(w_string this_string, w_string prefix, w_int offset) {
   w_size i;
 
@@ -690,70 +730,76 @@ void fast_String_indexOf_char(w_frame frame) {
 }
 
 w_int String_indexOf_String(w_thread thread, w_instance thisString, w_instance otherString, w_int fromIndex) {
-  w_string string;
-  w_string other;
-  w_int where;
-  w_int max;
-  w_int result = -1;
-  w_size length;
-  w_boolean this_is_latin1;
-  w_boolean other_is_latin1;
-  w_int s;
-  w_int o;
-
   if (!otherString) {
     throwException(thread, clazzNullPointerException, NULL);
   }
-  else {
-    string = String2string(thisString);
-    other = String2string(otherString);
-    length = string_length(other);
-    this_is_latin1 = string_is_latin1(string);
-    other_is_latin1 = string_is_latin1(other);
-    woempa(1,"findstring '%w' in '%w' starting at %d\n",other,string,fromIndex);
-    
-    if (string_length(other) == 0) {
-    	return  fromIndex;
-    }
 
-    if (fromIndex < (w_int)string_length(string)) {
-      where = fromIndex<0?0:fromIndex;
-      max = string_length(string) - string_length(other);
-      while (where <= max) {
-        woempa(1,"trying offset %d\n",where);
-        if (this_is_latin1 && other_is_latin1) {
-          if (memcmp(string->contents.bytes + where, other->contents.bytes, length * sizeof(w_ubyte)) == 0) {
-            woempa(1,"match at offset %d\n",where);
+  w_string string = String2string(thisString);
+  w_string other = String2string(otherString);
+  w_size length = string_length(other);
+  w_int result = -1;
 
-            return where;
+  if (length == 0) {
+    woempa(1,"findstring '' in '%w' starting at %d -> return 0\n", string, fromIndex);
+    return 0;
+  }
 
-          }
-        }
-        else if (!this_is_latin1 && !other_is_latin1) {
-          if (memcmp(string->contents.chars + where, other->contents.chars, length * sizeof(w_char)) == 0) {
-            woempa(1,"match at offset %d\n",where);
+  if (string_length(string) == 0 || fromIndex < 0 || fromIndex + length >= (w_int)string_length(string)) {
+    woempa(1,"findstring '%s' in '%w' starting at %d -> return -1\n", other, string, fromIndex);
+    	return  -1;
+  }
 
-            return where;
+  woempa(1,"findstring '%w' in '%w' starting at %d\n",other,string,fromIndex);
 
-          }
-        }
-        else {
-          for (s = where, o = 0; o < (w_int)string_length(other); o++, s++) {
-            woempa(1, "A = %d, B = %d\n", string_char(string, s), string_char(other, o)); 
-            if (string_char(string, s) != string_char(other, o)) {
-              woempa(1,"mismatch after %d chars\n",o);
-              break;
-            }
-          }
-          if (o == (w_int)string_length(other)) {
-            woempa(1,"match at offset %d\n",where);
+  w_boolean this_is_latin1 = string_is_latin1(string);
+  w_boolean other_is_latin1 = string_is_latin1(other);
+  w_int where = fromIndex;
+  w_int max = string_length(string) - string_length(other);
+  w_int s;
+  w_int o;
 
-            return where;
+  if (this_is_latin1 && other_is_latin1) {
+    woempa(1,"both strings are latin1, comparing %n bytes\n", length * sizeof(w_ubyte));
+    while (where <= max) {
+      woempa(1,"trying offset %d\n", where);
+      if (memcmp(string->contents.bytes + where, other->contents.bytes, length * sizeof(w_ubyte)) == 0) {
+        woempa(1,"match at offset %d\n",where);
 
-          }
-        }
-        where += 1;
+        return where;
       }
+      where += 1;
+    }
+  }
+  else if (!this_is_latin1 && !other_is_latin1) {
+    woempa(1,"neither string is latin1, comparing %n bytes\n", length * sizeof(w_char));
+    while (where <= max) {
+      woempa(1,"trying offset %d\n", where);
+      if (memcmp(string->contents.chars + where, other->contents.chars, length * sizeof(w_char)) == 0) {
+        woempa(1,"match at offset %d\n",where);
+
+        return where;
+      }
+      where += 1;
+    }
+  }
+  else {
+    woempa(1,"just one string is latin1, looping over chars\n");
+    while (where <= max) {
+      woempa(1,"trying offset %d\n",where);
+      for (s = where, o = 0; o < length; o++, s++) {
+        woempa(1, "A = %d, B = %d\n", string_char(string, s), string_char(other, o)); 
+        if (string_char(string, s) != string_char(other, o)) {
+          woempa(1,"mismatch after %d chars\n",o);
+
+          break;
+        }
+      }
+      if (o == length) {
+        woempa(1,"match at offset %d\n",where);
+
+        return where;
+      }
+      where += 1;
     }
   }
   
@@ -841,7 +887,7 @@ w_instance String_toUpperCase(w_thread thread, w_instance This, w_instance Local
   w_char *dst;
   w_string string;
 
-  loempa(7, "String_toUpperCase : This = %p, this_string = %p, Locale = instance %p of clazz %p (%k)\n", This, this_string, Locale, instance2clazz(Locale), instance2clazz(Locale));
+  loempa(2, "String_toUpperCase : This = %p, this_string = %p, Locale = instance %p of clazz %p (%k)\n", This, this_string, Locale, instance2clazz(Locale), instance2clazz(Locale));
   buffer = allocMem(string_length(this_string) * sizeof(w_char));
   if (buffer) {
     dst = buffer;
