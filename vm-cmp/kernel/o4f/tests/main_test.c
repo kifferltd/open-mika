@@ -78,7 +78,14 @@ int main(int argc, char * argv[]) {
 
 x_size prio_offset = 0;
 
-x_ubyte* x_os_main(int argc, char** argv, w_ubyte *memory) {
+/*
+** Dummy to replace memory pointer which is no longer passed to x_os_main()
+*/
+w_ubyte* memory = NULL;
+
+// WAS: w_ubyte* as return type
+
+void x_os_main(int argc, char** argv) {
 
   x_size used = (x_size)memory;
 
@@ -163,9 +170,6 @@ x_ubyte* x_os_main(int argc, char** argv, w_ubyte *memory) {
   used = (x_size) memory - used;
   
   oempa("Done initializing, used %d static bytes.\n", used);
-  
-  return memory;
- 
 }
 
 /*
