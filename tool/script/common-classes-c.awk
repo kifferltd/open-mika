@@ -356,10 +356,26 @@ END {
   printf "/* dispatchers */\n"
   printf ""
 
+  printf "/* code to return a void result */\n"
+  printf ""
+
   printf "static void return_void(w_frame caller, w_int depth);\n\n"
   printf "static void return_void(w_frame caller, w_int depth) {\n"
   printf "  caller->jstack_top += -depth;\n"
   printf "}\n\n"
+
+  printf "/* code to return a reference result */\n"
+  printf ""
+
+  printf "static void return_reference(w_frame caller, w_int depth, w_word result);\n\n"
+  printf "static void return_reference(w_frame caller, w_int depth, w_word result) {\n"
+  printf "  caller->jstack_top[-depth].c = result;\n"
+  printf "  caller->jstack_top[-depth].s = stack_trace;\n"
+  printf "  caller->jstack_top += -depth + 1;\n"
+  printf "}\n\n"
+
+  printf "/* code to return a non-reference, single-slot result */\n"
+  printf ""
 
   printf "static void return_oneslot(w_frame caller, w_int depth, w_word result);\n\n"
   printf "static void return_oneslot(w_frame caller, w_int depth, w_word result) {\n"
@@ -367,6 +383,9 @@ END {
   printf "  caller->jstack_top[-depth].s = stack_notrace;\n"
   printf "  caller->jstack_top += -depth + 1;\n"
   printf "}\n\n"
+
+  printf "/* code to return a w_double result */\n"
+  printf ""
 
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result);\n\n"
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result) {\n"
@@ -378,6 +397,9 @@ END {
   printf "    caller->jstack_top[-depth + 1].s = stack_notrace;\n"
   printf "    caller->jstack_top += -depth + 2;\n"
   printf "}\n\n"
+
+  printf "/* code to return a w_double result */\n"
+  printf ""
 
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result);\n\n"
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result) {\n"
@@ -433,7 +455,7 @@ END {
       }
       else {
         printf "    woempa(1, \"%%m result = %%%s\\n\", method, result);\n", nonvoid ? "08x" : "p"
-        printf "    return_oneslot(caller, depth, result);\n"
+        printf "    return_%s(caller, depth, result);\n", reference ? "reference" : "oneslot"
       }
       if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
       printf "    thread->top = caller;\n"
