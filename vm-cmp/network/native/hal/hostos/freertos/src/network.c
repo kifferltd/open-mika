@@ -36,7 +36,6 @@ w_word FreeRTOS_GatewayAddress;
 w_word FreeRTOS_DNSServerAddress;
 
 void startNetwork(void) {
-  // nothing to do???
 }
 
 static char hostname[32] = {'I', 'm', 's', 'y', 's', 0};
@@ -141,6 +140,9 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
     printf("MAC address not available\n");
   }
 
+  FreeRTOS_GetAddressConfiguration(&FreeRTOS_IPAddress, &FreeRTOS_NetMask, &FreeRTOS_GatewayAddress, &FreeRTOS_DNSServerAddress );
+  printf("IPAdress = %s Netmask = %s GatewayAddress = %s DNSServerAddress = %s\n", ipaddress_word2cstring(FreeRTOS_IPAddress), ipaddress_word2cstring(FreeRTOS_NetMask), ipaddress_word2cstring(FreeRTOS_GatewayAddress), ipaddress_word2cstring(FreeRTOS_DNSServerAddress));
+//#endif
 #ifdef FREERTOS_CLI
   if (rc == TCP_SUCCESS) {
     if(_xCliServerHandle == NULL) {
@@ -152,10 +154,6 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent) {
     _xCliServerHandle = NULL;
   }
 #endif
-
-  FreeRTOS_GetAddressConfiguration(&FreeRTOS_IPAddress, &FreeRTOS_NetMask, &FreeRTOS_GatewayAddress, &FreeRTOS_DNSServerAddress );
-  printf("IPAdress = %s Netmask = %s GatewayAddress = %s DNSServerAddress = %s\n", ipaddress_word2cstring(FreeRTOS_IPAddress), ipaddress_word2cstring(FreeRTOS_NetMask), ipaddress_word2cstring(FreeRTOS_GatewayAddress), ipaddress_word2cstring(FreeRTOS_DNSServerAddress));
-//#endif
 }
 
 void tcpPingSendHook(uint32_t address) {

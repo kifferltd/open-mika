@@ -72,6 +72,8 @@
 #define w_socketclose(s)	FreeRTOS_closesocket(s)
 #define w_send(s,b,l,f)    	FreeRTOS_send(s,b,l,f)
 #define w_sockaddr              freertos_sockaddr
+#define w_sockaddr_in           freertos_sockaddr
+#define w_hostent               w_word
 
 #define AF_INET     FREERTOS_AF_INET
 #define PF_INET     FREERTOS_AF_INET
