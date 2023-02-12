@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -30,12 +30,16 @@
 #include "iot_uart.h"
 #include "im4000uart.h"
 
+#define UART_TYPEAHEAD_BUFFER_SIZE 64;
+
 static IotUARTHandle_t uart_handle = NULL;
-static SemaphoreHandle_t uart_mutex;
+static SemaphoreHandle_t uart_read_mutex;
+static SemaphoreHandle_t uart_write_mutex;
 
 #define ABORT_BUFSIZE 256
 #define LOEMPA_BUFSIZE 1024
 static char loempa_buf[LOEMPA_BUFSIZE];
+static char uart_rx_buf[1];
 
 static void initDebugUart(void) {
   w_int lUartInstance = IM4000_COM3;
@@ -46,8 +50,10 @@ static void initDebugUart(void) {
   IotUARTConfig_t xUARTConfig;
   w_int iNumBytesRead = 0;
 
-  uart_mutex = xSemaphoreCreateMutex();
-  configASSERT( NULL != uart_mutex );
+  uart_read_mutex = xSemaphoreCreateMutex();
+  configASSERT( NULL != uart_read_mutex );
+  uart_write_mutex = xSemaphoreCreateMutex();
+  configASSERT( NULL != uart_write_mutex );
 
   uart_handle = iot_uart_open( lUartInstance );
   configASSERT( NULL != uart_handle );
@@ -76,8 +82,9 @@ static bool ensureUartIsInitialised() {
 w_int x_debug_read(const void *buf, size_t count) {
   w_int bytes_read = -1;
   if (ensureUartIsInitialised()) {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
-      xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    if (isSchedulerRunning) { 
+      xSemaphoreTake(uart_read_mutex, portMAX_DELAY);
     }
 
     w_int rc = iot_uart_read_sync(uart_handle, buf, count);
@@ -89,22 +96,68 @@ w_int x_debug_read(const void *buf, size_t count) {
       bytes_read = -rc;
     }
 
-    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
-      xSemaphoreGive(uart_mutex);
+    if (isSchedulerRunning) { 
+      xSemaphoreGive(uart_read_mutex);
     }
   }
 
   return bytes_read;
 }
 
+// TODO turn this into a type-ahead buffer
+static w_byte poll_buf[1];
+static w_int poll_available;
+
+static void x_debug_poll_callback( IotUARTOperationStatus_t xStatus, void * pvUserContext ) {
+  w_int bytes_read = 0;
+  
+  if (IOT_UART_SUCCESS == xStatus ) {
+    iot_uart_ioctl(uart_handle, eGetRxNoOfbytes, &bytes_read);
+    poll_available |= bytes_read;
+  }
+}
+
+w_int x_debug_poll() {
+  w_int result = -1;
+  if (ensureUartIsInitialised()) {
+    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    if (isSchedulerRunning) { 
+      xSemaphoreTake(uart_read_mutex, portMAX_DELAY);
+    }
+
+    if (poll_available) {
+      result = poll_buf[0];
+      poll_available = 0;
+    }
+
+    switch (result) {
+    case 3:
+      printf("CONTROL_C_EVENT\n");
+
+    case 28:
+      printf("CONTROL_BREAK_EVENT\n");
+
+    default:
+      ;
+    }
+
+    if (isSchedulerRunning) { 
+      xSemaphoreGive(uart_read_mutex);
+    }
+  }
+
+  return result;
+}
+
 void x_debug_write(const void *buf, size_t count) {
   if (ensureUartIsInitialised()) {
-    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
-      xSemaphoreTake(uart_mutex, portMAX_DELAY);
+    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    if (isSchedulerRunning) { 
+      xSemaphoreTake(uart_write_mutex, portMAX_DELAY);
     }
     iot_uart_write_sync(uart_handle, buf, count);
-    if (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) { 
-      xSemaphoreGive(uart_mutex);
+    if (isSchedulerRunning) { 
+      xSemaphoreGive(uart_write_mutex);
     }
   }
 }
