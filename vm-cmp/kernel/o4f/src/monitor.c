@@ -70,11 +70,11 @@ x_status x_monitor_delete(x_monitor monitor) {
   loempa(2, "Deleting the monitor at %p\n", monitor);
   monitor->magic = 0;
   if (monitor->owner)  {
-    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: monitor is still owned by  a thread", monitor->owner);
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: monitor is still owned by a thread", monitor->owner);
   }
 
   if (!x_list_is_empty(&monitor->monitor_queue))  {
-    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: atleast one thread is queued on monitor", monitor->monitor_queue.next);
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: at least one thread is queued on monitor", monitor->monitor_queue.next);
   }
   vSemaphoreDelete(monitor->owner_mutex);
 
@@ -117,7 +117,7 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
       return xs_no_instance;
 
     default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTake() returned unknown code", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTake() returned unknown code %d", retcode);
 
   }
 
@@ -129,7 +129,6 @@ x_status x_monitor_enter(x_monitor monitor, x_sleep timeout) {
 */
 x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   x_thread current = x_thread_current();
-  x_sleep expiry_ticks = ADD_TICKS(timeout, xTaskGetTickCount());
   BaseType_t retcode; 
 
   if (monitor->owner != current) {
@@ -152,7 +151,6 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   x_list_insert(&monitor->monitor_queue, &current->monitor_queue);
   retcode = xTaskResumeAll();
   loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
-  loempa(2, "Thread %p is waiting on monitor %p until tick %d\n", current, monitor, expiry_ticks);
 
   // Ensure there is no notification hanging around from befor the wait
   xTaskNotifyStateClear(NULL);
@@ -160,25 +158,31 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   retcode = xSemaphoreGive(monitor->owner_mutex);
   if (retcode != pdPASS) {
       // The only reason to fail is if we are not the owner, but this should never happen
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreGive() failed", retcode);
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreGive() failed", xs_unknown);
   }
 
-// normally we will block here, UNLESS another thread snuck in and already called x_monitor_notify
-  uint32_t old_count = ulTaskNotifyTake(pdFALSE, timeout );
+  // normally we will block here, UNLESS another thread snuck in and already called x_monitor_notify
+  uint32_t old_count = ulTaskNotifyTake(pdFALSE, timeout);
 
   if (monitor->magic != 0xf1e2d3c4) {
     return xs_deleted;
   }
 
   loempa(2, "Thread %p has been notified on monitor %p, count was %d\n", current, monitor, old_count);
-  // somebody gave the semaphore, time to re-acquire the mutex
+  // either somebody gave the semaphore or we timed out, time to re-acquire the mutex
   vTaskSuspendAll();
   x_list_remove(&current->monitor_queue);
   current->monitor_queue.monitor = NULL;
-  retcode = xTaskResumeAll();
-  loempa(2, "xTaskResumeAll() returned %s, see FreeRTOS Reference Manual for interpretation\n", retcode ? "pdTRUE" : "pdFALSE");
-  x_sleep remaining = SUBTRACT_TICKS(expiry_ticks, xTaskGetTickCount());
-  retcode = xSemaphoreTake(monitor->owner_mutex, remaining == (x_sleep) remaining ? (x_sleep) remaining : 0);
+  xTaskResumeAll();
+
+  // now we need to regain ownership of the monitor
+  // no time limit here, otherwise we could end up exiting the function without owning the monitor
+  retcode = xSemaphoreTake(monitor->owner_mutex, portMAX_DELAY);
+  if (retcode != pdPASS) {
+      // This would mean that we did not obtain the monitorr, but this should not happen with timeout = portMAX_DELAY
+      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_wait: xSemaphoreTake() failed", xs_unknown);
+  }
+
   unsetFlag(current->flags, TF_TIMEOUT);
 
   // we are the owner of the monitor again
@@ -191,19 +195,13 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
   current->waiting_with = 0;
   current->state = xt_ready;
 
-  switch (retcode) {
-    case pdPASS: {
-      return xs_success;
-    }
+  /*
+  ** xSemaphoreTake() returns pdFAIL in case of a timeout, but for us this is also a normal case -
+  ** so we return xs_success regardless (as expected by the higher-level waitMonitor() function).
+  */
+  loempa(2, "x_monitor_enter: xSemaphoreTake() returned %d\n", retcode);
 
-    case pdFAIL:
-      return xs_no_instance;
-
-    default:
-      o4f_abort(O4F_ABORT_MONITOR, "x_monitor_enter: xSemaphoreTake() returned unknown code", retcode);
-  }
-
-  return xs_unknown; // (unreachable)
+  return xs_success;
 }
 
 /*
@@ -250,7 +248,7 @@ x_status x_monitor_exit(x_monitor monitor) {
   }
 
   if (current->monitor_queue.monitor) {
-    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: thread is still waiting on a monitor", current);
+    o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: thread is still waiting on a monitor", xs_unknown);
   }
 
   xTaskNotifyStateClear(NULL);
@@ -265,7 +263,7 @@ x_status x_monitor_exit(x_monitor monitor) {
         return xs_success;
 
       default:
-        o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGive() failed with return code", retcode);
+        o4f_abort(O4F_ABORT_MONITOR, "x_monitor_exit: xSemaphoreGive() failed with return code %d", retcode);
         return xs_unknown;
     }
   }
