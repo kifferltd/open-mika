@@ -120,7 +120,7 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
   w_method super;
 
   if (isSet(m->flags, METHOD_IS_CONSTRUCTOR) && m->exec.code && (m->exec.code_length > 4) && (m->exec.code[0] == 0x2a) && (m->exec.code[1] == 0xb7)) {
-    woempa(7, "First byte of %M is 0x2a (aload_0), second is 0xb7 (invokespecial)\n", m);
+    woempa(2, "First byte of %M is 0x2a (aload_0), second is 0xb7 (invokespecial)\n", m);
     j = (unsigned char)m->exec.code[2];
     j = (j << 8) | (unsigned char)m->exec.code[3];
     super = getMethodConstant(clazz, j);
@@ -130,7 +130,7 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
       return;
 
     }
-    woempa(7, "Method being called is %M with code length %d\n", super, super->exec.code_length);
+    woempa(2, "Method being called is %M with code length %d\n", super, super->exec.code_length);
     if (isNotSet(super->flags, METHOD_NO_OVERRIDE)) {
       woempa(9, "Method being called can be overridden, no optimisation possible.\n");
 
@@ -141,10 +141,10 @@ static void doSuperConstructorHack(w_clazz clazz, w_method m) {
       j = 0;
       if (super->exec.code[0] == 0xa7) {
         j = (super->exec.code[1] << 8) | super->exec.code[2];
-        woempa(7, "  begins with a jump to pc %d, opcode = 0x%02x\n", j, super->exec.code[j]);
+        woempa(2, "  begins with a jump to pc %d, opcode = 0x%02x\n", j, super->exec.code[j]);
       }
       if (super->exec.code[j] == 0xb1) {
-        woempa(7, "Removing call from %M to trivial constructor %M :)\n", m, super);
+        woempa(2, "Removing call from %M to trivial constructor %M :)\n", m, super);
         m->exec.code[0] = 0xa7; // j_goto
         m->exec.code[1] = 0;
         m->exec.code[2] = 4;
@@ -297,7 +297,7 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
   */
   fixup = (w_fixup)ht_read_no_lock(fixup2_hashtable,(w_word) clazz->dotified);
   if (fixup) {
-    woempa(7,"fixup2 for %k = %p\n", clazz,fixup);
+    woempa(2,"fixup2 for %k = %p\n", clazz,fixup);
     fixup(clazz);
   }
 
@@ -439,7 +439,7 @@ w_int mustBeInitialized(w_clazz clazz) {
   }
 
   if (state == CLAZZ_STATE_LINKED) {
-    woempa(7, "Initializing %K\n", clazz);
+    woempa(2, "Initializing %K\n", clazz);
     clazz->resolution_thread = thread;
     setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
     x_monitor_exit(clazz->resolution_monitor);
