@@ -43,6 +43,7 @@
  ** another thread is sweeping the heap.
  */
 static void alloc_barrier(w_thread thread) {
+/* [CG 20221129] suppress this for now
   if (gc_monitor && !marking_thread && sweeping_thread && sweeping_thread != thread) {
     int p = thread ? thread->jpriority : 5;
     if (p < 10) {
@@ -50,6 +51,7 @@ static void alloc_barrier(w_thread thread) {
       x_thread_sleep((*gc_kicks_pointer + memory_load_factor + 1) * (5 - p / 2));
     }
   }
+*/
 }
 
 #ifdef RESMON
@@ -372,7 +374,9 @@ static w_chunk checkChunk(void * block, w_int for_realloc, const char * file, co
   */
 
   if (! for_realloc) {
+/* [CG 20221129] suppress this for now
     memset(chunk->data, FREED_DATA, chunk->size);
+*/
     chunk->data[chunk->back] = FREED_BYTE;
   }
 
