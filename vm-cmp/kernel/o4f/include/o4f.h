@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+//#include <errno.h>
 #include <sched.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -136,11 +137,9 @@ typedef struct x_Mutex {
 typedef struct x_Thread {
   volatile x_state      state;
   TaskHandle_t          handle;
-  x_int                 task_errno;
-  char                  name[MAX_THREAD_NAME_LENGTH + 1];
   x_ushort              stack_depth;
   w_size                task_priority;    /* Priority this thread is mapped to. */
-
+  x_int                 task_errno;
   void *                task_function;    /* The function the thread will call when it runs */
   void *                task_parameters;        /* The argument to be passed to that function */
   x_thread              o4f_thread_next;        /* Next thread in our linked list */
@@ -153,6 +152,7 @@ typedef struct x_Thread {
 
   volatile void *       xref;                   /* May be used to point to user thread control block */
   x_report              report;
+  char                  name[MAX_THREAD_NAME_LENGTH + 1];
 #ifdef JAVA_PROFILE
   w_long     time_delta;
 #endif
@@ -263,7 +263,7 @@ extern x_boolean x_deadline_passed(struct timespec *ts);
  * For x_errno we use a location in the OSwald thread control block, and we set a pointer to this in 
  * the FreeRTOS ThreadLocal array so that we can get a pointer without going through x_thread_current().
  * x_error is a macro which looks like a global variable.
-*/
+ */
 #define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_ERRNO) : &global_errno))
 
 void _o4f_abort(char *file, int line, int type, char *message, x_status rc);
