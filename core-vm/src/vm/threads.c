@@ -803,7 +803,6 @@ void _gcSafePoint(w_thread thread
 
   if (thread->to_be_reclaimed) {
     x_monitor_exit(safe_points_monitor);
-    checkOswaldStatus(status);
     x_thread_yield();
     status = x_monitor_eternal(safe_points_monitor);
     checkOswaldStatus(status);

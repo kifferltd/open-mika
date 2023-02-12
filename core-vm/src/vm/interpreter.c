@@ -531,7 +531,7 @@ static void checkSingleStep2(w_frame frame) {
     goto * jumps[*current];               \
   }                                       \
   else {                                  \
-    gcSafePoint(thread);                \
+    gcSafePoint(thread);                  \
     current += short_operand;             \
     updateDebugInfo(frame, current, tos); \
     checkSingleStep1(frame, current, tos);\

@@ -48,7 +48,7 @@ public class TestRunner
 
   static {
     String testclassfilename = System.getProperty("gnu.testlet.script.name", "wonkatest");
-    testclassfile = "/resource/" + testclassfilename + ".properties";;
+    testclassfile = "/resource/" + testclassfilename + ".properties";
   }
 
 /************************************************************
