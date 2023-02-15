@@ -216,7 +216,7 @@ inline static int allocedAtLine(void * block) {
  ** 1. a reference to each Thread object (and hence to its jstack, etc.);
  ** 2. global references created by JNI.
  */
-w_hashtable globals_hashtable;
+extern w_hashtable globals_hashtable;
 
 #ifdef JNI
 // reserve space for plenty of the beasties
