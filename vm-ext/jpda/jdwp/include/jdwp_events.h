@@ -196,7 +196,7 @@ w_void  jdwp_event_class_prepare(w_clazz clazz);
 w_void  jdwp_event_thread_start(w_thread thread);
 w_void  jdwp_event_thread_end(w_thread thread);
 
-w_boolean jdwp_holding_events;
+extern w_boolean jdwp_holding_events;
 
 void jdwp_single_step_set(jdwp_event event);
 void jdwp_single_step_clear(jdwp_event event);
