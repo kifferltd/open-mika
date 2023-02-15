@@ -30,7 +30,6 @@
 package gnu.testlet.wonka.security;
 
 import gnu.testlet.*;
-import com.acunia.wonka.*;
 import java.util.Dictionary;
 import java.util.Enumeration;
 import java.security.Permission;
