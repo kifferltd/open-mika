@@ -133,6 +133,7 @@ export mathobjdir = $(objdir)/math/$(MATH)
 export networkobjdir = $(objdir)/network/$(NETWORK)
 export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
 
+export imagedir = $(MIKA_TOP)/image/$(PLATFORM)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
 export mikadeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
@@ -557,9 +558,9 @@ export CFLAGS
 export LDFLAGS
 export JNI
 
-.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app
+.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app image
 
-mika : echo builddir deployable kernel core-vm test
+mika : echo builddir deployable image kernel core-vm test
 
 $(MIKA_LIB) : 
 	make -C core-vm libs
@@ -589,6 +590,8 @@ echo : kecho
 	@echo "fsinc = " $(fsinc)
 
 builddir :
+	@echo "Creating " $(imagedir)
+	@mkdir -p $(imagedir)
 	@echo "Creating " $(deploydir)
 	@mkdir -p $(deploydir)
 	@echo "Creating " $(mikadeploydir)
@@ -599,19 +602,19 @@ builddir :
 	@mkdir -p $(objdir)
 	@echo "Creating " $(testdeploydir)
 	@mkdir -p $(testdeploydir)
-	@echo "Creating " awtobjdir
+	@echo "Creating " $(awtobjdir)
 	@mkdir -p $(awtobjdir)
-	@echo "Creating " filesystemobjdir
+	@echo "Creating " $(filesystemobjdir)
 	@mkdir -p $(filesystemobjdir)
-	@echo "Creating " fpobjdir
+	@echo "Creating " $(fpobjdir)
 	@mkdir -p $(fpobjdir)
-	@echo "Creating " mathobjdir
+	@echo "Creating " $(mathobjdir)
 	@mkdir -p $(mathobjdir)
-	@echo "Creating " networkobjdir
+	@echo "Creating " $(networkobjdir)
 	@mkdir -p $(networkobjdir)
-	@echo "Creating " schedulerobjdir
+	@echo "Creating " $(schedulerobjdir)
 	@mkdir -p $(schedulerobjdir)
-	@echo "Creating " generatedobjdir
+	@echo "Creating " $(objdir)/generated
 	@mkdir -p $(objdir)/generated
 	@echo "Creating " $(libdir)
 	@mkdir -p $(libdir)
@@ -665,12 +668,22 @@ endif
 
 deployable : binary jarfile resource app
 
+# TODO this is totally IM4000-specific
+image : builddir deployable
+	rm -f ${imagedir}/open-mika.vfat
+	mkfs.vfat -S 512 -s 1 -F 16 -C ${imagedir}/open-mika.vfat 8192
+	mlabel -i ${imagedir}/open-mika.vfat ::OPENMIKA
+	echo '{ "flash": { "format": true, "load": true } }' | mcopy -i ${imagedir}/open-mika.vfat - ::/conf.json
+	mmd -i ${imagedir}/open-mika.vfat ::/flash
+	mcopy -i ${imagedir}/open-mika.vfat -s ${deploydir}/* ::/flash
+
 install : mika
 	@echo "Installing mika binary in ${INSTALL_DIR}"
 	cp core-vm/mika ${INSTALL_DIR}
 
 clean :
 	@rm -rf $(gendir)
+	@rm -rf $(imagedir)
 	@rm -rf $(deploydir)
 	@rm -rf $(objdir)
 	@rm -rf $(libdir)
