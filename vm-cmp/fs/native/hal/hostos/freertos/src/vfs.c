@@ -60,7 +60,7 @@ static void dumpDir(const char *path, int level) {
     vTaskDelay(500);
     if ((findData->ucAttributes & FF_FAT_ATTR_DIR) && strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
       pathbuf = allocMem(strlen(path) + strlen(findData->pcFileName) + 2);
-      sprintf(pathbuf, "%s%s/", path, findData->pcFileName);
+      sprintf(pathbuf, "%s/%s/", path, findData->pcFileName);
       putFifo(fifi, strdup(pathbuf));
     }
     rc =  ff_findnext( findData ) == 0;
