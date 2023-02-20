@@ -42,7 +42,9 @@ x_status x_monitor_create(x_monitor monitor) {
   monitor->monitor_queue.monitor = monitor;
 // N.B. this creates the mutex in the free state
 // The mutex doesn't need to be recursive, because we do our own counting
+  x_mem_lock(x_eternal); // coz this allocates memory
   monitor->owner_mutex = xSemaphoreCreateMutex();
+  x_mem_unlock();
 
   loempa(2, "Monitor at %p has mutex %p\n", monitor, &monitor->owner_mutex);
 
@@ -76,7 +78,9 @@ x_status x_monitor_delete(x_monitor monitor) {
   if (!x_list_is_empty(&monitor->monitor_queue))  {
     o4f_abort(O4F_ABORT_MONITOR, "x_monitor_delete: at least one thread is queued on monitor", monitor->monitor_queue.next);
   }
+  x_mem_lock(x_eternal); // coz this frees memory
   vSemaphoreDelete(monitor->owner_mutex);
+  x_mem_unlock();
 
   loempa(2, "Monitor at %p deleted\n", monitor);
 

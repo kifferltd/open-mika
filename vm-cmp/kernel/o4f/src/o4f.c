@@ -56,12 +56,12 @@ void *start_routine(void *thread_ptr);
 static void oswaldEnvInit(void) {
 
   static O4fEnv theEnvironment = { O4F_ENV_STATUS_INIT };
+  static StaticSemaphore_t threads_mutex_storage;
   
   o4fe = &theEnvironment;
 
 // N.B. xSemaphoreCreateRecursiveMutex() creates the mutex in the "free" state
-  o4fe->timer_mutex = xSemaphoreCreateBinary();
-  o4fe->threads_mutex = xSemaphoreCreateRecursiveMutex();
+  o4fe->threads_mutex = xSemaphoreCreateRecursiveMutexStatic(&threads_mutex_storage);
 
 }
 

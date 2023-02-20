@@ -39,7 +39,9 @@
  */
                                                                                                          
 x_status x_queue_create(x_queue queue, void *messages, w_size capacity) {
+    x_mem_lock(x_eternal); // coz this calls malloc
     QueueHandle_t qh = xQueueCreate(capacity, sizeof(void*));
+    x_mem_unlock();
     queue->handle = qh;
     if (!qh) {
         return xs_insufficient_memory;
@@ -60,7 +62,9 @@ x_status x_queue_delete(x_queue queue) {
         return xs_deleted;
     }
     if (queue->handle) {
+        x_mem_lock(x_eternal); // coz this calls free
         vQueueDelete(queue->handle);
+        x_mem_unlock();
     }
     queue->magic = 0;
     queue->handle = 0;

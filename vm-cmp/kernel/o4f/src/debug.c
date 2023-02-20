@@ -35,6 +35,8 @@
 static IotUARTHandle_t uart_handle = NULL;
 static SemaphoreHandle_t uart_read_mutex;
 static SemaphoreHandle_t uart_write_mutex;
+static StaticSemaphore_t uart_read_mutex_storage;
+static StaticSemaphore_t uart_write_mutex_storage;
 
 #define ABORT_BUFSIZE 256
 #define LOEMPA_BUFSIZE 1024
@@ -49,10 +51,9 @@ static void initDebugUart(void) {
   w_ubyte puTxBuffer[ sizeof( puRxBuffer ) + 2 ] = { 0 };
   IotUARTConfig_t xUARTConfig;
   w_int iNumBytesRead = 0;
-
-  uart_read_mutex = xSemaphoreCreateMutex();
+  uart_read_mutex = xSemaphoreCreateMutexStatic(&uart_read_mutex_storage);
   configASSERT( NULL != uart_read_mutex );
-  uart_write_mutex = xSemaphoreCreateMutex();
+  uart_write_mutex = xSemaphoreCreateMutexStatic(&uart_write_mutex_storage);
   configASSERT( NULL != uart_write_mutex );
 
   uart_handle = iot_uart_open( lUartInstance );

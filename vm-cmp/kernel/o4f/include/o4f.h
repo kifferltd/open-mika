@@ -177,7 +177,6 @@ typedef struct O4fEnv {
   int scheduler;
   x_thread threads;                      /* pointer to first element in linked list of threads */
   SemaphoreHandle_t threads_mutex;           
-  SemaphoreHandle_t timer_mutex;           
   FILE *log;
 } O4fEnv;
 

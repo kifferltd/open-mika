@@ -29,7 +29,6 @@
 #include "oswald.h"
 
 #include "fifo.h"
-#include "wordset.h"
 #include "oswald.h"
 
 x_size usecs_per_tick;

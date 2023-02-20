@@ -241,6 +241,7 @@ void start_routine(void *thread_ptr) {
   }
 
   thread->state = xt_ended;
+  // memory will be releqsed by the Idle Task, let's hope this is safe
   vTaskDelete(NULL);
   vTaskSuspend(NULL);
 }
@@ -335,7 +336,9 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      //thread->name[0] = 0;
      loempa(2, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
+     x_mem_lock(x_eternal); // coz this calls malloc
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
+     x_mem_unlock();
      loempa(2, "===>>>  status = %d\n", status);
      if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
         return xs_no_mem;
@@ -475,7 +478,9 @@ x_status x_thread_resume(x_thread thread) {
     thread->state = xt_ready;
     loempa(7, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
+    x_mem_lock(x_eternal); // coz this calls malloc
     status = xTaskCreate(start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
+    x_mem_unlock();
     loempa(7, "===>>>  status = %d\n", status);
     if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
        return xs_no_mem;
