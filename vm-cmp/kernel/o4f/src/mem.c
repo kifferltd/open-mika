@@ -37,7 +37,7 @@ x_size max_heap_bytes;
 
 #define FreeRTOS_heap_remaining (sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE))
 
-static SemaphoreHandle_t memoryMutex;
+SemaphoreHandle_t memoryMutex;
 static StaticSemaphore_t memoryMutex_storage;
 
 inline x_status x_mem_lock(x_sleep timeout) {
@@ -154,7 +154,7 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   }
     
   x_mem_lock(x_eternal);
-  newchunk = malloc(sizeof(o4f_Memory_Chunk) + size);
+  newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -191,7 +191,8 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
   }
     
   x_mem_lock(x_eternal);
-  newchunk = calloc(sizeof(o4f_Memory_Chunk) + size, 1);
+  newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
+  memset(newchunk, sizeof(o4f_Memory_Chunk) + size, 0);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -238,15 +239,16 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   x_list_remove(oldchunk);
   oldsize = oldchunk->size + sizeof(o4f_Memory_Chunk);
   newsize = size + sizeof(o4f_Memory_Chunk);
-  newchunk = realloc(oldchunk, newsize);
+  newchunk = pvPortMalloc(newsize);
   if (!newchunk) {
     x_mem_unlock();
-    free(oldchunk);
+    vPortFree(oldchunk);
     heap_remaining = 0;
 
     return NULL;
   }
 
+  memcpy(newchunk, oldchunk, newsize);
   newchunk->file = (char*)file;
   newchunk->line = line;
   newchunk->size = size;
@@ -269,7 +271,7 @@ void *_x_mem_alloc(w_size size) {
   }
 
   x_mem_lock(x_eternal);
-  newchunk = malloc(sizeof(o4f_Memory_Chunk) + size);
+  newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -299,7 +301,8 @@ void *_x_mem_calloc(w_size size) {
   }
 
   x_mem_lock(x_eternal);
-  newchunk = calloc(sizeof(o4f_Memory_Chunk) + size, 1);
+  newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
+  memset(newchunk, sizeof(o4f_Memory_Chunk) + size, 0);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -335,16 +338,17 @@ void *_x_mem_realloc(void *old, w_size size) {
   x_list_remove(oldchunk);
   oldsize = oldchunk->size + sizeof(o4f_Memory_Chunk);
   newsize = size + sizeof(o4f_Memory_Chunk);
-  newchunk = realloc(oldchunk, newsize);
+  newchunk = pvPortMalloc(newsize);
   if (!newchunk) {
     heap_remaining = 0;
-    free(oldchunk);
+    vPortFree(oldchunk);
     x_mem_unlock();
 
     return NULL;
 
   }
 
+  memcpy(newchunk, oldchunk, newsize);
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
@@ -375,7 +379,7 @@ void x_mem_free(void *block) {
   heap_remaining = FreeRTOS_heap_remaining;
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
-  free(chunk);
+  vPortFree(chunk);
   x_mem_unlock();
 }
 
