@@ -516,7 +516,7 @@ extern char * print_thread_long(char*, int*, void*, int w, int p, unsigned int f
 ** This variable changes from FALSE to TRUE when the initial Wonka threads
 ** have been set up.
 */
-extern w_boolean haveWonkaThreads;
+extern volatile w_boolean haveWonkaThreads;
 
 void addLocalReference(w_thread thread, w_instance instance);
 void pushLocalReference(w_frame frame, w_instance instance);

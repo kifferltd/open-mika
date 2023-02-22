@@ -46,7 +46,7 @@ extern void pre_thread_termination(w_thread thread);
 #define pre_thread_termination(t)
 #endif
 
-w_boolean haveWonkaThreads = FALSE;
+volatile w_boolean haveWonkaThreads = FALSE;
 
 w_hashtable thread_hashtable;
 

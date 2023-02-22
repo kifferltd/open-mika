@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2020, 2021, 2022, 2023 by KIFFER Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -411,6 +412,8 @@ void startWonka(void* data) {
   struct timespec ts;
 #endif
 
+  haveWonkaThreads = WONKA_TRUE;
+
   x_formatter('w', print_string);
   x_formatter('k', print_clazz_short);
   x_formatter('K', print_clazz_long);
@@ -425,12 +428,12 @@ void startWonka(void* data) {
   x_formatter('T', print_thread_long);
   x_formatter('y', print_descriptor);
 
-  make_ISO3309_CRC_table();
-
   /*
   ** Here we start routines that require a valid heap (for malloc) to
   ** be set up...
   */
+  make_ISO3309_CRC_table();
+
   globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   if (!globals_hashtable) {
     wabort(ABORT_WONKA, "Unable to create globals_hashtable\n");
@@ -471,7 +474,7 @@ void startWonka(void* data) {
  
   registerDriver((w_driver)&deflate_driver);
 
-  haveWonkaThreads = WONKA_TRUE;
+// WAS here: haveWonkaThreads = WONKA_TRUE;
 
 #ifdef JNI
   JNIEnv *env;
