@@ -240,7 +240,7 @@ x_status x_mem_unlock(void);
 
 // only exposed so that dump.c can say who owns it - do not use directly
 // TODO create a function to get the owner as an x_thread
-// extern SemaphoreHandle_t memoryMutex;
+extern SemaphoreHandle_t memoryMutex;
 
 /*
 ** Unconditionally walk all blocks in memory, calling a callback on each one.

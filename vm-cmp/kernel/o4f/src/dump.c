@@ -92,7 +92,7 @@ void x_dump_mutex(char * msg, x_mutex mutex) {
     }
     TaskHandle_t task = xSemaphoreGetMutexHolder(mutex->owner_mutex);
     if(task) {
-        x_thread thread = pvTaskGetThreadLocalStoragePointer(task, 0);
+        x_thread thread = pvTaskGetThreadLocalStoragePointer(task, O4F_LOCAL_STORAGE_OFFSET_X_THREAD);
         w_dump("   %sLocked", msg);
         if(thread && thread->xref) {
           w_dump(" by \"%w\"", w_dump_name((void*)thread->xref));
