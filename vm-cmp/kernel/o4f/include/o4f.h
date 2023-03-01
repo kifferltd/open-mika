@@ -52,9 +52,6 @@ typedef unsigned short         x_ushort;
 /// Place to store x_errno if we are not yet running in FreeRTOS task
 static x_int global_errno;
 
-/// Local storage slot (in the FreeRTOS task control block) where we store a pointer to the task_errno field of our x_Thread.
-#define O4F_LOCAL_STORAGE_OFFSET_X_ERRNO (configNUM_THREAD_LOCAL_STORAGE_POINTERS-2)
-
 /// Local storage slot (in the FreeRTOS task control block) where we store a pointer back to our x_Thread.
 #define O4F_LOCAL_STORAGE_OFFSET_X_THREAD (configNUM_THREAD_LOCAL_STORAGE_POINTERS-1)
 
@@ -175,8 +172,8 @@ static inline x_long x_systime_get(void) {
 typedef struct O4fEnv {
   int status;
   int scheduler;
-  x_thread threads;                      /* pointer to first element in linked list of threads */
   SemaphoreHandle_t threads_mutex;           
+  x_thread threads;                      /* pointer to first element in linked list of threads */
   FILE *log;
 } O4fEnv;
 
@@ -263,7 +260,7 @@ extern x_boolean x_deadline_passed(struct timespec *ts);
  * the FreeRTOS ThreadLocal array so that we can get a pointer without going through x_thread_current().
  * x_error is a macro which looks like a global variable.
  */
-#define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_ERRNO) : &global_errno))
+#define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? &x_thread_current()->task_errno : &global_errno))
 
 void _o4f_abort(char *file, int line, int type, char *message, x_status rc);
 

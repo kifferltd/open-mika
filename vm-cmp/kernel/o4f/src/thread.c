@@ -216,8 +216,6 @@ void start_routine(void *thread_ptr) {
   thread = (x_thread )thread_ptr;
   loempa(2, "setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread->handle, thread);
   vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_THREAD, thread);
-  loempa(2, "setting ThreadLocalStoragePointer[%i] of task %p to %p\n", O4F_LOCAL_STORAGE_OFFSET_X_ERRNO, thread->handle, &thread->task_errno);
-  vTaskSetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_ERRNO, &thread->task_errno);
   if (thread->xref) {
     loempa(2,"Mika thread %t starting\n", thread->xref);
   }
@@ -338,9 +336,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      //thread->name[0] = 0;
      loempa(2, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
-     x_mem_lock(x_eternal); // coz this calls malloc
      status = xTaskCreate(start_routine, thread->name, stack_size, (void *)thread, thread->task_priority, &thread->handle);
-     x_mem_unlock();
      loempa(2, "===>>>  status = %d\n", status);
      if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
         return xs_no_mem;
@@ -480,9 +476,7 @@ x_status x_thread_resume(x_thread thread) {
     thread->state = xt_ready;
     loempa(7, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
                                        start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
-    x_mem_lock(x_eternal); // coz this calls malloc
     status = xTaskCreate(start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
-    x_mem_unlock();
     loempa(7, "===>>>  status = %d\n", status);
     if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
        return xs_no_mem;
