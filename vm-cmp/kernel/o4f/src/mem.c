@@ -192,7 +192,6 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
     
   x_mem_lock(x_eternal);
   newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
-  memset(newchunk, sizeof(o4f_Memory_Chunk) + size, 0);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -203,6 +202,7 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
 
   }
 
+  memset(newchunk, 0, sizeof(o4f_Memory_Chunk) + size);
   newchunk->file = (char*)file;
   newchunk->line = line;
   newchunk->size = size;
@@ -302,7 +302,6 @@ void *_x_mem_calloc(w_size size) {
 
   x_mem_lock(x_eternal);
   newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
-  memset(newchunk, sizeof(o4f_Memory_Chunk) + size, 0);
 
   if (!newchunk) {
     x_mem_unlock();
@@ -312,6 +311,7 @@ void *_x_mem_calloc(w_size size) {
 
   }
 
+  memset(newchunk, 0, sizeof(o4f_Memory_Chunk) + size);
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
   x_mem_unlock();
