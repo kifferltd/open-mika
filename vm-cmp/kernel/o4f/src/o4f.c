@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -47,6 +47,9 @@ O4fEnv *o4fe;
 static char init_task_name[10];
 static int init_task_seq;
 
+static O4fEnv theEnvironment = { O4F_ENV_STATUS_INIT };
+static StaticSemaphore_t threads_mutex_storage;
+  
 void *start_routine(void *thread_ptr);
 
 /*
@@ -55,9 +58,6 @@ void *start_routine(void *thread_ptr);
 
 static void oswaldEnvInit(void) {
 
-  static O4fEnv theEnvironment = { O4F_ENV_STATUS_INIT };
-  static StaticSemaphore_t threads_mutex_storage;
-  
   o4fe = &theEnvironment;
 
 // N.B. xSemaphoreCreateRecursiveMutex() creates the mutex in the "free" state
