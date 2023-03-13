@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2021, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -324,7 +324,13 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
 
    loempa(2, "x_thread_create: registering FreeRTOS task %s\n", "");
    threadRegister(thread);
-   snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
+
+   if (thread->xref) {
+     x_snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "%t", thread->xref);
+   }
+   else if (thread->name == 0) {
+     snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
+   }
 
    if (flags & TF_SUSPENDED) {
      thread->state = xt_newborn;
@@ -474,10 +480,7 @@ x_status x_thread_resume(x_thread thread) {
 
     loempa(2, "Starting new born thread %p\n", thread);
     thread->state = xt_ready;
-    loempa(7, "===>>>  creating task using pvTaskCode %p, pcName %s, usStackDepth %d, pvParameters %p, uxPriority %d, pxCreatedTask %p\n", 
-                                       start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
     status = xTaskCreate(start_routine, thread->name, thread->stack_depth, (void *)thread, thread->task_priority, &thread->handle);
-    loempa(7, "===>>>  status = %d\n", status);
     if (status == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
        return xs_no_mem;
     }

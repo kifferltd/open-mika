@@ -110,6 +110,11 @@ void initWonka(void) {
 #ifdef O4P
   install_term_handler();
 #endif
+#ifdef FREERTOS
+// just so the FreeRTOS task gets a nice name
+  strcpy(ur_thread_x_Thread.name, "MikaMain");
+#endif
+
   x_thread_create(&ur_thread_x_Thread, 
     startWonka, NULL, ur_thread_stack, 
     SYSTEM_STACK_SIZE, SYSTEM_GROUP_MANAGER_PRIORITY, TF_START);
@@ -448,6 +453,8 @@ void startWonka(void* data) {
 
   startDeviceRegistry();
   startDriverRegistry();
+
+  createCharacterTables();
   
 #ifdef FSENABLE
 #ifdef ECOS
