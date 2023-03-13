@@ -26,9 +26,6 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-export toolclassdir = $(MIKA_TOP)/tool/class
-export tooldeploydir = $(MIKA_TOP)/deploy/tool
-
 test : toolclassdir
 	@echo "Creating test tools"
 ifeq ($(TESTS), true)

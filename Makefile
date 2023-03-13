@@ -100,14 +100,16 @@ export JAVAX = java
 export javadir = $(MIKA_TOP)/core-vm/$(JAVAX)
 
 # TODO: SECURITY can take different values
-export SECURITY = none
+export SECURITY ?= none
 export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
 
 # TODO: SECURITY_PROVIDER can take different values e.g. harmony or none
-export SECURITY_PROVIDER = none
+export SECURITY_PROVIDER ?= none
 export secprovdir = $(MIKA_TOP)/vm-cmp/security/provider/$(SECURITY_PROVIDER)/$(JAVAX)
 # FIXME only if SECURITY_PROVIDER is not 'none'
-# export secanyprovdir = $(MIKA_TOP)/vm-cmp/security/provider/any/$(JAVAX)
+# ifneq ($(SECURITY), none)
+#   export secanyprovdir = $(MIKA_TOP)/vm-cmp/security/provider/any/$(JAVAX)
+# endif
 
 export javamathdir = $(MIKA_TOP)/vm-cmp/math/${MATH}/$(JAVAX)
 
@@ -124,6 +126,7 @@ export builddir = $(MIKA_TOP)/build/$(PLATFORM)
 export libdir = $(builddir)/lib
 export objdir = $(builddir)/obj
 export classdir = $(builddir)/class
+export toolclassdir = $(MIKA_TOP)/tool/class
 export emptydir = $(builddir)/java/empty
 
 export awtobjdir = $(objdir)/awt/$(AWT)
@@ -138,6 +141,8 @@ export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
 export mikadeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
 export testdeploydir = $(deploydir)/test
+export tooldeploydir = $(MIKA_TOP)/deploy/tool
+
 
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/fp/$(FLOATING_POINT)/include
 
@@ -666,7 +671,7 @@ ifneq ($(APP_DIR),"none")
 	make -C $(APP_DIR) classes
 endif
 
-deployable : binary jarfile resource app
+deployable : binary jarfile resource app test
 
 # TODO this is totally IM4000-specific
 image : builddir deployable
@@ -676,6 +681,7 @@ image : builddir deployable
 	echo '{ "flash": { "format": true, "load": true } }' | mcopy -i ${imagedir}/open-mika.vfat - ::/conf.json
 	mmd -i ${imagedir}/open-mika.vfat ::/flash
 	mcopy -i ${imagedir}/open-mika.vfat -s ${deploydir}/* ::/flash
+	mcopy -i ${imagedir}/open-mika.vfat -s ${tooldeploydir}/mauve/* ::/flash/test
 
 install : mika
 	@echo "Installing mika binary in ${INSTALL_DIR}"
