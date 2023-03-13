@@ -253,7 +253,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
 
     if (addInterface(super, clazz->interfaces, &n)) {
       ++clazz->numDirectInterfaces;
-      woempa(7, "Added superinterface %k to %k\n", super, clazz);
+      woempa(1, "Added superinterface %k to %k\n", super, clazz);
     }
     else {
       woempa(1, "Ignored duplicate superinterface %k of %k\n", super, clazz);
@@ -272,7 +272,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
 
     for (j = 0; j < super->numInterfaces; ++j) {
       if (addInterface(super->interfaces[j], clazz->interfaces, &n)) {
-        woempa(7, "Added supersuperinterface %k to %k\n", super->interfaces[j], clazz);
+        woempa(1, "Added supersuperinterface %k to %k\n", super->interfaces[j], clazz);
       }
       else {
         woempa(1, "Ignored duplicate supersuperinterface %k of %k\n", super->interfaces[j], clazz);
@@ -287,7 +287,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   if (super) {
     for (j = 0; j < super->numInterfaces; ++j) {
       if (addInterface(super->interfaces[j], clazz->interfaces, &n)) {
-        woempa(7, "Added supersuperinterface %k to %k\n", super->interfaces[j], clazz);
+        woempa(1, "Added supersuperinterface %k to %k\n", super->interfaces[j], clazz);
       }
       else {
         woempa(1, "Ignored duplicate supersuperinterface %k of %k\n", super->interfaces[j], clazz);

@@ -385,8 +385,8 @@ void interpret_getter(w_frame caller, w_method method) {
     case in_invokestatic:
     // The method cannot be overridden, so patch the point of call to a getfield opcode.
       const_index = addResolvedFieldConstantToPool(caller->method->spec.declaring_clazz, field);
-      woempa(7, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
-      woempa(7, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
+      woempa(1, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
+      woempa(1, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
       caller->current[0] = getfield;
       caller->current[1] = const_index >> 8;
       caller->current[2] = const_index & 0xff;
@@ -455,8 +455,8 @@ void interpret_setter(w_frame caller, w_method method) {
     case in_invokestatic:
       // The method cannot be overridden, so patch the point of call to a putfield opcode.
       const_index = addResolvedFieldConstantToPool(caller->method->spec.declaring_clazz, field);
-      woempa(7, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
-      woempa(7, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
+      woempa(1, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
+      woempa(1, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
       caller->current[0] = putfield;
       caller->current[1] = const_index >> 8;
       caller->current[2] = const_index & 0xff;
@@ -518,8 +518,8 @@ void interpret_getstaticker(w_frame caller, w_method method) {
     case in_invokestatic:
     // The method cannot be overridden, so patch the point of call to a getfield opcode.
       const_index = addResolvedFieldConstantToPool(caller->method->spec.declaring_clazz, field);
-      woempa(7, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
-      woempa(7, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
+      woempa(1, "Add new resolved field (%k %w of %k) constant to %k : %d\n", field->value_clazz, field->name, field->declaring_clazz, caller->method->spec.declaring_clazz, const_index);
+      woempa(1, "Replacing call to %M at pc[%d] of %M by a getfield instruction<n", method, caller->current - caller->method->exec.code, caller->method);
       caller->current[0] = getstatic;
       caller->current[1] = const_index >> 8;
       caller->current[2] = const_index & 0xff;

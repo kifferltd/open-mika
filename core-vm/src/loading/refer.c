@@ -287,7 +287,7 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
 
   threadMustBeSafe(currentWonkaThread);
 
-  woempa(7, "Cloning %M in %K\n", original, clazz);
+  woempa(1, "Cloning %M in %K\n", original, clazz);
   ++clazz->numDeclaredMethods;
   if (clazz->own_methods) {
     clazz->own_methods = reallocMem(clazz->own_methods, (clazz->numDeclaredMethods) * sizeof(w_Method));
@@ -803,7 +803,7 @@ static w_int referenceClazz(w_clazz clazz) {
   }
 
   clazz->bytes_needed = (((clazz->instanceSize + 1) & ~1) * sizeof(w_word)) + sizeof(w_Object);
-  woempa(7,"class %k has instance size %d words and %d words of static fields, each instance requires %d bytes\n", clazz, clazz->instanceSize, clazz->numStaticWords, clazz->bytes_needed);
+  woempa(1,"class %k has instance size %d words and %d words of static fields, each instance requires %d bytes\n", clazz, clazz->instanceSize, clazz->numStaticWords, clazz->bytes_needed);
 
 #ifdef JDWP
   jdwp_event_class_prepare(clazz);
