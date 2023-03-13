@@ -65,16 +65,16 @@ public final class JarFileClassLoader extends URLClassLoader {
     String icpString = manifest.getMainAttributes().getValue(Attributes.Name.CLASS_PATH);
     int icpCursor = 0;
     String elem;
-    while (true) {
+    while (icpString != null) {
       int colon = icpString.indexOf(':', icpCursor);
       if (colon < 0) {
         elem = icpString.substring(icpCursor);
-        addURL(new URL(elem));
-        break;
+        icpString = null;
       }
-
-      elem = icpString.substring(icpCursor, colon);
-      icpCursor = colon + 1;
+      else {
+        elem = icpString.substring(icpCursor, colon);
+        icpCursor = colon + 1;
+      }
       addURL(new URL(elem));
     }
   }
@@ -152,6 +152,9 @@ public final class JarFileClassLoader extends URLClassLoader {
   }
 
   public InputStream getResourceAsStream(String resource){
+    while (resource.charAt(0) == '/') {
+      resource = resource.substring(1);
+    }
     try {
       ZipEntry ze = jarfile.getEntry(resource);
       if(ze != null){

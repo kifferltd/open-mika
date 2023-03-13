@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2008, 2009, 2015, 2022 by KIFFER Ltd.                     *
+* Copyright (c) 2008, 2009, 2015, 2022, 2023 by KIFFER Ltd.               *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -30,6 +30,7 @@
 package wonka.vm;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -127,64 +128,19 @@ final class Init {
    ** element found is added to the URL list of the Application Class Loader
    ** (after prepending the path to the jar file).
    */
-  private static String getJarStartClassName(String[] args) {
+  private static String getJarStartClassName(JarFile jf) throws IOException {
     String start_class_name = null;
-    if(args.length < 2){
-      System.err.println("Init: -jar option is used but no JarFile is mentioned");
+
+    Manifest man = jf.getManifest();
+    if(man == null){
+      System.err.println("Init: " + jf + " has no Manifest");
 
       return null;
 
     }
-
-    try {
-      File file = new File(args[1]);
-      JarFile jf = new JarFile(file);
-      Manifest man = jf.getManifest();
-      if(man == null){
-        System.err.println("Init: JarFile "+args[1]+" has no Manifest");
-
-        return null;
-
-      }
-      start_class_name = man.getMainAttributes().getValue("Main-Class");
-      if(start_class_name == null){
-        System.err.println("Init: no Main-Class attribute in Manifest of JarFile "+args[1]);
-
-        return null;
-
-      }
-      String jarpath;
-      int jarpathend = args[1].lastIndexOf('/');
-      if (jarpathend < 0) {
-        jarpath = "";
-      }
-      else {
-        jarpath = args[1].substring(0, jarpathend + 1);
-      }
-      URL url = new URL("jar:"+file.toURL()+"!/");
-      Method m = URLClassLoader.class.getDeclaredMethod("addURL",  new Class[]{url.getClass()});
-      m.setAccessible(true);
-      m.invoke(application_class_loader,new Object[]{url});
-      String jarclasspath = man.getMainAttributes().getValue("Class-Path");
-      if (jarclasspath != null) {
-        debug("Jarfile " + file + " has Class-Path " + jarclasspath);
-        StringTokenizer toks = new StringTokenizer(jarclasspath);
-        try {
-          while (true) {
-            file = new File(jarpath + toks.nextToken());
-            url = new URL("jar:"+file.toURL()+"!/");
-            debug("  Appending " + url + " to application class path");
-            m.invoke(application_class_loader,new Object[]{url});
-          }
-        }
-        catch (NoSuchElementException nsee) {
-          debug("Finished with jarfile Class-Path");
-        }
-      }
-    }
-    catch(Exception e){
-      System.err.println("Init: failed to load jar "+args[1]+" due to "+e);
-      e.printStackTrace();
+    start_class_name = man.getMainAttributes().getValue("Main-Class");
+    if(start_class_name == null){
+      System.err.println("Init: no Main-Class attribute in Manifest of  " + jf);
 
       return null;
 
@@ -320,9 +276,20 @@ final class Init {
     
     if (effective_args[0].equals("-jar")) {
       debug("Init: '-jar' is used");
-      jar_class_path = effective_args[1];
-      start_class_name = getJarStartClassName(effective_args);
-      start_class_args = processArgsArray(effective_args, 2);
+      try {
+        File file = new File(effective_args[1]);
+        JarFile jf = new JarFile(file);
+        application_class_loader = new JarFileClassLoader(jf, application_class_loader);
+        jar_class_path = effective_args[1];
+        start_class_name = getJarStartClassName(jf);
+        start_class_args = processArgsArray(effective_args, 2);
+      }
+      catch (IOException ioe) {
+        System.err.println("Init: unable to process jarfile " + effective_args[1] + ", exception thrown.");
+        ioe.printStackTrace();
+        System.err.println("Init: Game over.");
+        System.exit(1);
+      }
     }
     else {
       start_class_name = effective_args[0];
@@ -470,6 +437,7 @@ final class Init {
 	    If a JAR file is installed as an extension, then any JAR-class-path it defines is ignored. All the classes required by an extension are presumed to be part of the SDK or to have themselves been installed as extensions.
       */
 
+      System.out.println("java.class.path was: " + System.getProperty("java.class.path"));
       System.setProperty("java.class.path", jar_class_path);
     }
 
