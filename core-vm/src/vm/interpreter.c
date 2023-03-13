@@ -1,6 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2012, 2020,     *
-* 2021, 2022 by KIFFER Ltd. All rights reserved.                          *
+* 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1428,7 +1428,11 @@ void interpret(w_frame caller, w_method method) {
 #ifdef CACHE_TOS
     tos_cache =
 #endif
-    tos[0].c = (w_int) (w_byte) byte_operand;
+// WAS:    tos[0].c = (w_int) (w_byte) byte_operand;
+    w_int shift1 = byte_operand << 24;
+    w_int shift2 = shift1 >> 24;
+    tos[0].c = (w_word) shift2;
+//
     tos += 1;
     do_next_opcode;
   }
@@ -3644,7 +3648,7 @@ void interpret(w_frame caller, w_method method) {
     }
 
     if (isSet(x->flags, METHOD_NO_OVERRIDE) && x->exec.code) {
-      woempa(7, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
+      woempa(1, "Replacing invokevirtual by invokenonvirtual for %M at [%d] in %M\n", x, current - method->exec.code, method);
       *current = in_invokenonvirtual;
 
       goto i_invokenonvirtual;
