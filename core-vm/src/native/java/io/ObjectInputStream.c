@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2021, 2022 by KIFFER Ltd.   *
-* All rights reserved.                                                    *
+* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2021, 2022, 2023            *
+* by KIFFER Ltd.  All rights reserved.                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -34,6 +34,7 @@
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
+#include "interpreter.h" // for pushFrame()
 #include "loading.h"
 #include "network.h"
 #include "methods.h"

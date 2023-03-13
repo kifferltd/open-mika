@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2009, 2021 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2007, 2009, 2021, 2023 by KIFFER Ltd. All rights reserved.*
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -60,7 +60,7 @@ w_int FileInputStream_readIntoBuffer
   (w_thread thread, w_instance thisFileInputStream, w_instance buffer, w_int offset, w_int length) {
   w_instance     fdObj;
   w_int    fd;
-  w_int        result;
+  w_int        result = -1;
   w_byte       *bytes;
   w_byte       *data;
 
