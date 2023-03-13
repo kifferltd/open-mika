@@ -46,36 +46,76 @@ static vfs_FileOperations placeholder_ops;
 
 static w_fifo fifi;
 
-static void dumpDir(const char *path, int level) {
+static void dumpSubDir(const char *path, int level) {
   char *pathbuf = NULL;
 
-  woempa(7, "%*sScanning directory %s\n", level * 4, "", path);
-  if (0 == level) {
-    fifi = allocFifo(30);
-  }
+  woempa(7, "%*sScanning directory %s\n", level * 4, " ", path);
   FF_FindData_t *findData = allocClearedMem(sizeof(FF_FindData_t));
   int rc = ff_findfirst(path, findData );
   while (rc == 0) {
-    woempa(7, "%*s%s [%s %s] [size=%d]\n", level * 4, "", findData->pcFileName, (findData->ucAttributes & FF_FAT_ATTR_DIR) ? "DIR" : "", (findData->ucAttributes && FF_FAT_ATTR_READONLY) ? "RO" : "", findData->ulFileSize);
-    vTaskDelay(500);
-    if ((findData->ucAttributes & FF_FAT_ATTR_DIR) && strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
-      pathbuf = allocMem(strlen(path) + strlen(findData->pcFileName) + 2);
-      sprintf(pathbuf, "%s/%s/", path, findData->pcFileName);
-      putFifo(fifi, strdup(pathbuf));
+    bool isDir = findData->ucAttributes & FF_FAT_ATTR_DIR;
+    bool isReadOnly = findData->ucAttributes && FF_FAT_ATTR_READONLY;
+    // ignore . and ..
+    if (strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
+      woempa(7, "%*s%s [%s %s] [size=%d]\n", level * 4, "", findData->pcFileName, isDir ? "DIR" : "", isReadOnly ? "RO" : "", findData->ulFileSize);
+      if (isDir) {
+        size_t pathlen = strlen(path) + strlen(findData->pcFileName) + 4;
+        pathbuf = allocMem(pathlen);
+        snprintf(pathbuf, pathlen, "%s%s/", path, findData->pcFileName);
+        woempa(1, "pushing %s onto fifo\n", pathbuf);
+        putFifo(pathbuf, fifi);
+      }
     }
-    rc =  ff_findnext( findData ) == 0;
+    rc =  ff_findnext( findData );
   }
   releaseMem(findData);
   woempa(7, "%*sEnd of directory %s\n", level * 4, "", path);
 
-  while ((pathbuf == getFifo(fifi))) {
-    dumpDir(pathbuf, level + 1);
+  while ((pathbuf = getFifo(fifi))) {
+    woempa(1, "pulled %s from fifo\n", pathbuf);
+    dumpSubDir(pathbuf, level + 1);
+    releaseMem(pathbuf);
+  }
+}
+
+/*
+ * Dump out the contents of a directory and all its subdirectories.
+ * 'path' should begin and end with a slash, e.g. "/" or "/app/".
+ */
+static void dumpDir(const char *path) {
+  char *pathbuf = NULL;
+
+  woempa(7, "Scanning directory %s\n", path);
+  fifi = allocFifo(30);
+
+  FF_FindData_t *findData = allocClearedMem(sizeof(FF_FindData_t));
+  int rc = ff_findfirst(path, findData );
+  while (rc == 0) {
+    bool isDir = findData->ucAttributes & FF_FAT_ATTR_DIR;
+    bool isReadOnly = findData->ucAttributes && FF_FAT_ATTR_READONLY;
+    // ignore . and ..
+    if (strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
+      woempa(7, "%s [%s %s] [size=%d]\n", findData->pcFileName, isDir ? "DIR" : "", isReadOnly ? "RO" : "", findData->ulFileSize);
+      if ((findData->ucAttributes & FF_FAT_ATTR_DIR) && strcmp(findData->pcFileName, ".") && strcmp(findData->pcFileName, "..")) {
+        size_t pathlen = strlen(path) + strlen(findData->pcFileName) + 2;
+        pathbuf = allocMem(pathlen);
+        snprintf(pathbuf, pathlen, "%s%s/", path, findData->pcFileName);
+        woempa(1, "pushing %s onto fifo\n", pathbuf);
+        putFifo(pathbuf, fifi);
+      }
+    }
+    rc =  ff_findnext( findData );
+  }
+  releaseMem(findData);
+  woempa(7, "End of directory %s\n", path);
+
+  while ((pathbuf = getFifo(fifi))) {
+    woempa(1, "pulled %s from fifo\n", pathbuf);
+    dumpSubDir(pathbuf, 1);
     releaseMem(pathbuf);
   }
 
-  if (0 == level) {
-    releaseFifo(fifi);
-  }
+  releaseFifo(fifi);
 }
 #endif
 
@@ -135,7 +175,7 @@ void init_vfs(void) {
   x_mutex_create(fd_table_mutex);
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
 #ifdef DEBUG
-  dumpDir("/", 0);
+  dumpDir("/");
 #endif
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
@@ -303,18 +343,17 @@ w_int vfs_write(w_int fd, void *buf, w_size length) {
     return -1;
   }
 
-  woempa(1, "writing to %d bytes to fd %d\n", length, fd);
-  // TODO !!!
-  int rc = ff_fwrite(buf, 1, length, ff_fileptr );
-  w_int fat_errno = stdioGET_ERRNO();
-  if (fat_errno) {
-    woempa(7, "failed to read %d bytes from fd %d, fat_errno = %d\n", length, fd, fat_errno);
-    // TODO set errno
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+  woempa(7, "writing %d bytes to fd %d\n", length, fd);
+  size_t written = ff_fwrite(buf, 1, length, ff_fileptr );
+  if (written < length) {
+    // less items written than requested => error
+    woempa(7, "failed to write %d bytes to fd %d, errno = %d\n", length, fd, stdioGET_ERRNO());
+    SET_ERRNO(stdioGET_ERRNO());
+
     return -1;
   }
 
-  return rc;
+  return written;
 }
 
 w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
