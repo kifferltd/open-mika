@@ -157,34 +157,41 @@ public class ZipFile implements ZipConstants {
   ** called from constructor ... (no synchronization needed on raf)!
   **
   ** We read the file in blocks of BKLSIZE bytes, plus 4 to be sure we cath the CD sentinel.
-  ** This is usually near the end, so we stat with the last block (which may be an odd size),
+  ** This is usually near the end, so we start with the last block (which may be an odd size),
   ** and then we seek backwards in units of BLKSIZE.
   */
   private void getEntries() throws IOException {
-   	long pos = raf.length();
-        wonka.vm.Etc.woempa(7, "hello world, raf.length() = " + pos);
-        // TODO - check that this works for short zipfiles
-        int read_length = (int)(pos - (pos % BLKSIZE));
-        if (read_length < 4) {
-            read_length += BLKSIZE;
-        }
-   	while (pos > 0) {
-   	        byte [] bytes = new byte[read_length];
-   		pos -= read_length - 4;
-        wonka.vm.Etc.woempa(7, "seeking to offset " + pos + " and reading " + read_length + " bytes");
-   		raf.seek(pos);
-   		raf.readFully(bytes,0,read_length);
-   		int cd_offset = locateEndCD(bytes, read_length);
-   		if (cd_offset == -1) {
-        wonka.vm.Etc.woempa(7, "no central directory in this chunk");
-   		 	break;
-   		}
-   		if (cd_offset > 0) {
-        wonka.vm.Etc.woempa(7, "central directory in this chunk, ends at offset " + cd_offset);
-   		 	System.arraycopy(bytes,0,bytes,bytes.length-cd_offset,cd_offset);
-   		}
-                read_length = BLKSIZE + 4;
-   	}
+     long file_length = raf.length();
+     if (file_length < 4) {
+       throw new IOException("zip file size < 4");
+     }
+     if (file_length > Integer.MAX_VALUE) {
+       throw new IOException("zip file size > Integer.MAX_VALUE");
+     }
+
+     int int_filelen = (int)file_length;
+     int stride = BLKSIZE - 4;
+     wonka.vm.Etc.woempa(7, "raf.length() = " + file_length + ", stride = " + stride);
+     int read_length = int_filelen - stride * (int_filelen / stride) + 4;
+     int pos = int_filelen - read_length;
+
+     while (pos > 0) {
+       byte [] bytes = new byte[read_length];
+       wonka.vm.Etc.woempa(7, "seeking to offset " + pos + " and reading " + read_length + " bytes");
+       raf.seek(pos);
+       raf.readFully(bytes,0,read_length);
+       int cd_offset = locateEndCD(bytes, read_length);
+       if (cd_offset == -1) {
+         wonka.vm.Etc.woempa(7, "no central directory in this chunk");
+         break;
+       }
+       if (cd_offset > 0) {
+         wonka.vm.Etc.woempa(7, "central directory in this chunk, ends at offset " + cd_offset);
+     	System.arraycopy(bytes,0,bytes,bytes.length-cd_offset,cd_offset);
+       }
+       read_length = BLKSIZE;
+       pos -= stride;
+    }
   }
 
   /**
