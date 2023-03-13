@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2008, 2009, 2010, 2011, 2013, 2018 by KIFFER Ltd.         #
+# Copyright (c) 2008, 2009, 2010, 2011, 2013, 2018, 2023 by KIFFER Ltd.   #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -339,7 +339,6 @@ java/lang/Boolean
         getWrappedClass         ()Ljava/lang/Class;                             Boolean_getWrappedClass
 java/lang/Character
 	value			C
-	createTables		()V		Character_static_createTables
 	isDefined		(C)Z		Character_static_isDefined
 	isWhitespace		(C)Z		Character_static_isWhitespace
 	isFormat		(C)Z		Character_static_isFormat
