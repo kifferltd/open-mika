@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2020, 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.*
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -93,15 +93,8 @@ void PutHex (unsigned int Value, unsigned int Width) {
 
 void PutDec (unsigned int Value, unsigned int Width) {
   char buf[12];
-  int i, x;
+  unsigned int i, x = Value;
   char sign;
-
-  x = Value;
-  if (x<0) {
-    sign = '-';
-    x = -x;
-  }
-  else sign = 0;
 
   for (i=10;i>=0;--i) {
     buf[i] = '0'+(x%10);
@@ -267,6 +260,13 @@ void _woempa(const char *file, const char *function, int line, int level, const 
     w_frame  jframe  = jthread ? jthread->top : NULL;
     w_method jmeth   = jframe  ? jframe->method : NULL;
     
+    while (jmeth->spec.declaring_clazz == clazzEtc
+        && strncmp(jmeth->spec.name->contents.bytes, "woempa",6) ==0
+          ) {
+      jframe = jframe->previous;
+      jmeth = jframe  ? jframe->method : NULL;
+    }
+
     x_snprintf(woempa_buffer, bufsize, 
 #ifdef WOEMPA_JTHREAD_FORMAT
        WOEMPA_JTHREAD_FORMAT " "
