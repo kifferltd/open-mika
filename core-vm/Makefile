@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2022 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2018, 2020, 2022, 2023 by Chris Gray, KIFFER Ltd.         #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -141,9 +141,10 @@ jpda : core-vm $(gendir)/core-classes.h
 fp:
 	make -C ../vm-cmp/fp/$(FLOATING_POINT) $(MAKECMDGOALS)
 
-# TODO: we probably only need this if SECURITY_PROVIDER is not 'none'
 security :
+ifneq ($(SECURITY), "none")
 	make -C ../vm-cmp/security/provider/any/src/native/wonka/security $(MAKECMDGOALS)
+endif
 
 math :
 ifeq ($(MATH), native)

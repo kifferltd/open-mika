@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2021, 2022 by Chris Gray, KIFFER Ltd.         #
+# Copyright (c) 2018, 2020, 2021, 2022, 2023 by Chris Gray, KIFFER Ltd.   #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -99,7 +99,6 @@ export JAVAC
 export JAVAX = java
 export javadir = $(MIKA_TOP)/core-vm/$(JAVAX)
 
-# TODO: SECURITY can take different values
 export SECURITY ?= none
 export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
 
@@ -472,7 +471,7 @@ ifeq ($(HOSTOS), winnt)
   CFLAGS += -fno-leading-underscore
 endif
 
-export FILESYSTEM NETWORK SECURITY
+export FILESYSTEM NETWORK
 export JAVA5_SUPPORT JDWP JAVAX_COMM BYTECODE_VERIFIER
 export FLOATING_POINT MATH UNICODE_SUBSETS
 export ENABLE_THREAD_RECYCLING

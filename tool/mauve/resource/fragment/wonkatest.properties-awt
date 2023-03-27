@@ -1,0 +1,15 @@
+
+#java.awt
+//Color
+gnu.testlet.wonka.awt.Color.ColorTest
+//Component
+gnu.testlet.wonka.awt.Component.ComponentTest
+//Font
+gnu.testlet.wonka.awt.Font.FontTest
+//GridBagConstraints
+gnu.testlet.wonka.awt.GridBagConstraints.GridBagConstraintsTest
+//Image
+gnu.testlet.wonka.awt.Image.ImageTest
+//Insets
+gnu.testlet.wonka.awt.Insets.InsetsTest
+
