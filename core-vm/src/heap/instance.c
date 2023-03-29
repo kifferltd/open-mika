@@ -186,9 +186,22 @@ static w_instance allocInstance_common(w_thread thread, w_object object, w_clazz
   return object->fields;
 }
 
+#ifdef FREERTOS
+int trace_count = 0;
+#endif
+
 w_instance allocInstance(w_thread thread, w_clazz clazz) {
   w_object object = NULL;
 
+// replace this by TRACE_MEM_ALLOC to enable the check in DEBUG mode
+#ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
+  if (++trace_count > 3500) {
+  heapCheck;
+  }
+#endif
+#ifdef FREERTOS
+  lowMemoryCheck;
+#endif
   checkClazz(clazz);
 
   if (clazz == clazzString) {

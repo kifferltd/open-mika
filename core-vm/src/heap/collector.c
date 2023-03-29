@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2018,     *
-* 2021, 2022 by Chris Gray, KIFFER Ltd.  All rights reserved.             *
+* Copyright (c) 2007, 2008, 2009, 2010, 2011, 2018, 2021, 2022, 2023      *
+* by Chris Gray, KIFFER Ltd.  All rights reserved.                        *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -1526,6 +1526,10 @@ w_boolean preparation_iteration(void * mem, void * arg) {
 }
 #endif
 
+#ifdef FREERTOS
+extern  int trace_count;
+#endif
+
 static void prepreparation(w_thread thread) {
   woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
@@ -1541,8 +1545,14 @@ static void prepreparation(w_thread thread) {
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
   woempa(7, "%t: finished locking other threads\n", marking_thread);
-#ifdef TRACE_MEM_ALLOC
+// replace this by TRACE_MEM_ALLOC to enable the check in DEBUG mode
+#ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
+  if (++trace_count > 3500) {
   heapCheck;
+  }
+#endif
+#ifdef FREERTOS
+  lowMemoryCheck;
 #endif
 // [CG 20221129] suppress this for now
 //  x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
@@ -1599,8 +1609,14 @@ w_int preparationPhase(void) {
   }
   killing_soft_references = (*gc_kicks_pointer) || (memory_load_factor > 1);
 
-#ifdef TRACE_MEM_ALLOC
+// replace this by TRACE_MEM_ALLOC to enable the check in DEBUG mode
+#ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
+  if (++trace_count > 3500) {
   heapCheck;
+  }
+#endif
+#ifdef FREERTOS
+  lowMemoryCheck;
 #endif
 
 #ifdef USE_OBJECT_HASHTABLE
