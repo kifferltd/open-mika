@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2022 by Chris Gray, KIFFER Ltd. All rights reserved.      #
+# Copyright (c) 2022, 2023 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -28,7 +29,7 @@
 
 export mauvedeploydir = ${tooldeploydir}/mauve
 
-.PHONY : test clean dirs classes
+.PHONY : test clean dirs classes resources
 
 test : jarfile
 
@@ -40,11 +41,25 @@ test : jarfile
 classes : 
 	make -C java classes
 
-jarfile : classes
+resources :
+	truncate -s 0 resource/wonkatest.properties
+	cat resource/fragment/wonkatest.properties-prelude > resource/wonkatest.properties
+ifneq ($(AWT),none)
+	@echo "Prepending AWT tests to wonkatest.properties"
+	cat resource/fragment/wonkatest.properties-awt >> resource/wonkatest.properties
+endif
+	@echo "Adding main tests to wonkatest.properties"
+	cat resource/fragment/wonkatest.properties-main >> resource/wonkatest.properties
+ifneq ($(JNI),false)
+	@echo "Appending JNI tests to wonkatest.properties"
+	cat resource/fragment/wonkatest.properties-jni >> resource/wonkatest.properties
+endif
+
+jarfile : classes resources
 	mkdir -p $(mauvedeploydir)
 	cd $(toolclassdir); find gnu -name \*\.class | xargs ${JAVA6_HOME}/bin/jar cmf ${MIKA_TOP}/tool/mauve/mauve.mf ${mauvedeploydir}/mauve-suite.jar 
 	cd $(toolclassdir); find JUnitTests -name \*\.class | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar 
-	find resource | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar
+	find resource -type f -path resource/fragment -prune -o -print | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar
 
 ifdef JNI 
 # TODO compile jnitest_natives ;

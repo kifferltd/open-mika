@@ -1,7 +1,3 @@
-//DEF VERBOSE
-DEF DEBUG
-DEF FILE results
-
 # temporary to get these tested first
 gnu.testlet.wonka.io.DataOutputStream.WriteRead
 gnu.testlet.wonka.io.DataOutputStream.WriteRead2
