@@ -102,6 +102,8 @@ public final class Heartbeat implements Runnable {
     while(!shutdown) {
       nativesleep(PERIOD);
 
+      Etc.memoryCheck();
+
       if(isKilled()) {
         if (DEBUG) {
           System.out.println("Heartbeat: fatal signal received, invoking shutdown");
