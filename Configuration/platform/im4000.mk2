@@ -1,0 +1,11 @@
+
+image : builddir deployable
+	rm -f ${imagedir}/open-mika.vfat
+	mkfs.vfat -S 512 -s 1 -F 16 -C ${imagedir}/open-mika.vfat 8192
+	mlabel -i ${imagedir}/open-mika.vfat ::OPENMIKA
+	echo '{ "flash": { "format": true, "load": true } }' | mcopy -i ${imagedir}/open-mika.vfat - ::/conf.json
+	mmd -i ${imagedir}/open-mika.vfat ::/flash
+	mcopy -i ${imagedir}/open-mika.vfat -s ${deploydir}/* ::/flash
+	mcopy -i ${imagedir}/open-mika.vfat -s ${tooldeploydir}/mauve/* ::/flash/test
+
+

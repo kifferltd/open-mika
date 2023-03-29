@@ -564,7 +564,7 @@ export JNI
 
 .PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app image
 
-mika : echo builddir deployable image kernel core-vm test
+mika : echo builddir deployable kernel core-vm test
 
 $(MIKA_LIB) : 
 	make -C core-vm libs
@@ -672,16 +672,7 @@ endif
 
 deployable : binary jarfile resource app test
 
-# TODO this is totally IM4000-specific
-image : builddir deployable
-	rm -f ${imagedir}/open-mika.vfat
-	mkfs.vfat -S 512 -s 1 -F 16 -C ${imagedir}/open-mika.vfat 8192
-	mlabel -i ${imagedir}/open-mika.vfat ::OPENMIKA
-	echo '{ "flash": { "format": true, "load": true } }' | mcopy -i ${imagedir}/open-mika.vfat - ::/conf.json
-	mmd -i ${imagedir}/open-mika.vfat ::/flash
-	mcopy -i ${imagedir}/open-mika.vfat -s ${deploydir}/* ::/flash
-	mcopy -i ${imagedir}/open-mika.vfat -s ${tooldeploydir}/mauve/* ::/flash/test
-
+# note: image target was here
 install : mika
 	@echo "Installing mika binary in ${INSTALL_DIR}"
 	cp core-vm/mika ${INSTALL_DIR}
@@ -727,3 +718,5 @@ common-test :
 #	make -C vm-cmp/math/$(MATH) test
 #	make -C vm-ext/comm test
 #	make -C max/src/native/mika/max test
+
+include $(wildcard ./Configuration/platform/$(PLATFORM).mk2)
