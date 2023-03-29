@@ -499,7 +499,10 @@ void w_dump_locks(void) {
   x_dump_mutex("    Lock hashtable mutex : ", &lock_hashtable->mutex);
   x_dump_mutex("  String hashtable mutex : ", &string_hashtable->mutex);
   x_dump_monitor("        Reclaim listener : ", reclaim_listener_mutex);
+// FIXME
+#ifdef O4F
   x_dump_mutex("            Memory mutex : ", memoryMutex);
+#endif
   x_dump_monitor("              GC monitor : ", gc_monitor);
 #if defined(AWT_XSIM) || defined(AWT_FDEV)
   x_dump_monitor("            AWT treelock : ", tree_lock);
