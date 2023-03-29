@@ -40,7 +40,14 @@ x_size max_heap_bytes;
 SemaphoreHandle_t memoryMutex;
 static StaticSemaphore_t memoryMutex_storage;
 
+#ifdef DEBUG
+int32_t x_mem_lock_depth = 0;
+#endif
+
 inline x_status x_mem_lock(x_sleep timeout) {
+#ifdef DEBUG
+  ++x_mem_lock_depth;
+#endif
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
     switch(xSemaphoreTakeRecursive(memoryMutex, timeout == x_eternal ? portMAX_DELAY : timeout)) {
       case pdPASS:  return xs_success;
@@ -51,11 +58,26 @@ inline x_status x_mem_lock(x_sleep timeout) {
 }
 
 inline x_status x_mem_unlock() {
+#ifdef DEBUG
+  if (--x_mem_lock_depth < 0) {
+    o4f_abort(O4F_ABORT_THREAD, "Too many x_mem_unlock()!\n", x_mem_lock_depth);
+  }
+#endif
   if (o4fe->status == O4F_ENV_STATUS_NORMAL) {
-    switch (xSemaphoreGiveRecursive(memoryMutex)) {
-      case pdPASS: return xs_success;
-      case pdFAIL: return xs_not_owner;
-      default :    return xs_unknown;
+    int status = xSemaphoreGiveRecursive(memoryMutex);
+    switch (status) {
+      case pdPASS:
+        return xs_success;
+      case pdFAIL:
+#ifdef DEBUG
+        o4f_abort(O4F_ABORT_THREAD, "x_mem_unlock() when not lock owner\n", status);
+#endif
+        return xs_not_owner;
+      default :   
+#ifdef DEBUG
+        o4f_abort(O4F_ABORT_THREAD, "x_mem_unlock() when not lock owner\n", status);
+#endif
+        return xs_unknown;
     }
   }
 }
@@ -174,8 +196,8 @@ void *_x_mem_alloc(w_size size, const char *file, int line) {
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_list_insert(memory_sentinel, newchunk);
   loempa(1,"heap_remaining was %d\n", heap_remaining);
-  x_mem_unlock();
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -209,8 +231,8 @@ void *_x_mem_calloc(w_size size, const char *file, int line) {
   newchunk->check = (char*)magic;
   loempa(1,"%s:%d Allocated %d bytes at %p\n", newchunk->file, newchunk->line, size, newchunk);
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -253,8 +275,8 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
   newchunk->line = line;
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -264,11 +286,6 @@ void *_x_mem_realloc(void *old, w_size size, const char *file, int line) {
 
 void *_x_mem_alloc(w_size size) {
   o4f_memory_chunk newchunk;
-
-  if (size > FreeRTOS_heap_remaining) {
-
-    return NULL;
-  }
 
   x_mem_lock(x_eternal);
   newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
@@ -284,9 +301,9 @@ void *_x_mem_alloc(w_size size) {
   newchunk->id = 0;
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
 
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -294,11 +311,6 @@ void *_x_mem_alloc(w_size size) {
 
 void *_x_mem_calloc(w_size size) {
   o4f_memory_chunk newchunk;
-
-  if (size > FreeRTOS_heap_remaining) {
-
-    return NULL;
-  }
 
   x_mem_lock(x_eternal);
   newchunk = pvPortMalloc(sizeof(o4f_Memory_Chunk) + size);
@@ -314,9 +326,9 @@ void *_x_mem_calloc(w_size size) {
   memset(newchunk, 0, sizeof(o4f_Memory_Chunk) + size);
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
 
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
@@ -327,12 +339,6 @@ void *_x_mem_realloc(void *old, w_size size) {
   o4f_memory_chunk newchunk;
   w_size oldsize;
   w_size newsize;
-
-  if (size > oldchunk->size && size - oldchunk->size > FreeRTOS_heap_remaining) {
-    loempa(9,"%s:d Attempt to allocate %d bytes, available space is %d!\n",file,line,size - oldchunk->size, FreeRTOS_heap_remaining);
-
-    return NULL;
-  }
 
   x_mem_lock(x_eternal);
   x_list_remove(oldchunk);
@@ -351,9 +357,9 @@ void *_x_mem_realloc(void *old, w_size size) {
   memcpy(newchunk, oldchunk, newsize);
   newchunk->size = size;
   x_list_insert(memory_sentinel, newchunk);
-  x_mem_unlock();
 
   heap_remaining = FreeRTOS_heap_remaining;
+  x_mem_unlock();
   loempa(1,"Heap remaining: %d bytes\n", heap_remaining);
 
   return chunk2mem(newchunk);
