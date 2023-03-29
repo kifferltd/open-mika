@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2010, 2021 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2010, 2021, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -47,7 +47,7 @@ w_int PushbackReader_read(w_thread thread, w_instance thisPushbackReader) {
   w_instance in;
   w_frame new_frame;
   w_int result;
-  w_word *posptr;
+  w_int *posptr;
 
   m = getMonitor(lock);
   x_monitor_eternal(m);
@@ -59,7 +59,7 @@ w_int PushbackReader_read(w_thread thread, w_instance thisPushbackReader) {
     return -1;
   }
 
-  posptr = wordFieldPointer(thisPushbackReader, F_PushbackReader_pos);
+  posptr = (w_int*)wordFieldPointer(thisPushbackReader, F_PushbackReader_pos);
   if (*posptr < instance2Array_length(chars)){
     result = instance2Array_char(chars)[*posptr];
     ++(*posptr);
