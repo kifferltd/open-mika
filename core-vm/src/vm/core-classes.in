@@ -627,7 +627,7 @@ wonka/vm/Etc
 	setTriggerLevel (Ljava/lang/String;I)V	Etc_static_setTriggerLevel
 	setAllTriggerLevel (I)V			Etc_static_setAllTriggerLevel
         woempa		(ILjava/lang/String;)V	Etc_static_woempa
-        heapCheck       ()V			Etc_static_heapCheck
+        memoryCheck	()V			Etc_static_memoryCheck
 # TODO turn these off if JNI is not enabled
 # wonka/vm/NativeThread
 # wonka/vm/NativeLibrary

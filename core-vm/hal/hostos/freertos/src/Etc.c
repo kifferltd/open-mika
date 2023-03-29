@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -60,11 +60,14 @@ Etc_static_woempa
   woempa(triggerLevel, "%w\n", String2string ( theString));
 }
 
-void Etc_static_heapCheck(w_thread thread, w_instance classSystem){
-#ifdef DEBUG
-  woempa(9, "calling heapCheck for Etc\n");
+void 
+Etc_static_memoryCheck ( w_thread thread, w_instance classSystem) {
+// change this to TRACE_MEM_ALLOC to enable the check in DEBUG mode
+#ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
+  woempa(7, "calling heapCheck via Etc\n");
   heapCheck;
+  woempa(7, "calling lowMemoryCheck via Etc\n");
+  lowMemoryCheck;
 #endif //DEBUG
-
 }
 

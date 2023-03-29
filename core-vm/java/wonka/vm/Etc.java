@@ -41,11 +41,11 @@ public class Etc {
 
   public static native void woempa(int triggerLevel, String message);
 
-  public static native void heapCheck();
+  public static native void memoryCheck();
 
-  public static void heapCheck(String message){
-    System.out.println("Etc.heapCheck is called: "+message);
-    heapCheck();
+  public static void memoryCheck(String message){
+    System.out.println("Performing memory check " + message);
+    memoryCheck();
   }
 
 
