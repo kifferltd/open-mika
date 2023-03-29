@@ -50,3 +50,44 @@ w_boolean Wonka_static_useCli(w_thread thread, w_instance theClass) {
 #endif
 }
 
+#define ROW_WIDTH 16
+#define NO_OF_ROWS 16 // WAS: 64
+
+uint8_t saved_low_memory[NO_OF_ROWS][ROW_WIDTH];
+
+void grab_low_memory() {
+  memcpy(saved_low_memory, NULL, ROW_WIDTH*NO_OF_ROWS);
+  for (int row = 0; row < NO_OF_ROWS; ++row) {
+    uint8_t* saved_row = saved_low_memory[row];
+    woempa(1, "%p : %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+      row*ROW_WIDTH, 
+      saved_row[0], saved_row[1], saved_row[2], saved_row[3], 
+      saved_row[4], saved_row[5], saved_row[6], saved_row[7], 
+      saved_row[8], saved_row[9], saved_row[10], saved_row[11], 
+      saved_row[12], saved_row[13], saved_row[14], saved_row[15]);
+  }
+}
+
+void _lowMemoryCheck(const char *fun, int line) {
+  for (int row = 0; row < NO_OF_ROWS; ++row) {
+    uint8_t* saved_row = &saved_low_memory[row][0];
+    uint8_t *found_row = (uint8_t*)(row*ROW_WIDTH);
+    if (memcmp(found_row, saved_row, ROW_WIDTH)) {
+
+      _wabort(fun, line, ABORT_WONKA, "Urk - low memory corruption in row %p!\n"
+        "  found   : %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n"
+        "  expected: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+        found_row,
+        found_row[0],  found_row[1],  found_row[2],  found_row[3],
+        found_row[4],  found_row[5],  found_row[6],  found_row[7],
+        found_row[8],  found_row[9],  found_row[10], found_row[11],
+        found_row[12], found_row[13], found_row[14], found_row[15], 
+        saved_row[0], saved_row[1], saved_row[2], saved_row[3], 
+        saved_row[4], saved_row[5], saved_row[6], saved_row[7], 
+        saved_row[8], saved_row[9], saved_row[10], saved_row[11], 
+        saved_row[12], saved_row[13], saved_row[14], saved_row[15]
+      );
+    }
+  }
+  woempa(1, "Low memory all present and correct.\n");
+}

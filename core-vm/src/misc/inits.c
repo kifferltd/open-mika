@@ -416,8 +416,14 @@ void startWonka(void* data) {
 #ifdef O4P
   struct timespec ts;
 #endif
+// temporary hack
+#ifdef FREERTOS
+  grab_low_memory();
+#endif
 
   haveWonkaThreads = WONKA_TRUE;
+
+  lowMemoryCheck;
 
   x_formatter('w', print_string);
   x_formatter('k', print_clazz_short);
@@ -433,11 +439,17 @@ void startWonka(void* data) {
   x_formatter('T', print_thread_long);
   x_formatter('y', print_descriptor);
 
+  lowMemoryCheck;
+
   /*
   ** Here we start routines that require a valid heap (for malloc) to
   ** be set up...
   */
+  lowMemoryCheck;
+
   make_ISO3309_CRC_table();
+
+  lowMemoryCheck;
 
   globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   if (!globals_hashtable) {
@@ -445,14 +457,24 @@ void startWonka(void* data) {
   }
   woempa(7, "created globals_hashtable at %p\n", globals_hashtable);
 
+  lowMemoryCheck;
+
   assertions_fifo = allocFifo(30);
+
+  lowMemoryCheck;
 
   args_read();
 
+  lowMemoryCheck;
+
   startStrings();
+
+  lowMemoryCheck;
 
   startDeviceRegistry();
   startDriverRegistry();
+
+  lowMemoryCheck;
 
   createCharacterTables();
   
@@ -468,12 +490,18 @@ void startWonka(void* data) {
 
   /* Initialize known filesystems */
   
+  lowMemoryCheck;
+
 #if (defined(FSENABLE)) 
   init_e2fs(); 
 #endif
   startVFS();
 
+  lowMemoryCheck;
+
   startNetwork();
+
+  lowMemoryCheck;
 
   registerDevice("unzip_", "zip", 0, wdt_byte_serial);
   registerDevice("zip_", "zip", 20, wdt_byte_serial);
@@ -482,6 +510,8 @@ void startWonka(void* data) {
   registerDriver((w_driver)&deflate_driver);
 
 // WAS here: haveWonkaThreads = WONKA_TRUE;
+
+  lowMemoryCheck;
 
 #ifdef JNI
   JNIEnv *env;
@@ -501,6 +531,8 @@ void startWonka(void* data) {
 #endif
 #endif
 #endif
+
+  lowMemoryCheck;
 
 }
 
