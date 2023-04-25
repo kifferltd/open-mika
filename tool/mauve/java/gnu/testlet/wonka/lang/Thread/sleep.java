@@ -284,10 +284,10 @@ public class sleep implements Testlet, Runnable
     helper_sleep = 1000;
     thread = Thread.currentThread();
 
-    // Wait for the helper to start (and sleep immediately).
-    helper.start();
     synchronized(this)
       {
+      // Wait for the helper to start (and sleep immediately).
+        helper.start();
 	try
 	  {
 	    while (!helper_started)
@@ -332,10 +332,10 @@ public class sleep implements Testlet, Runnable
     helper_sleep = 1000;
     thread = Thread.currentThread();
     
-    // Wait for the helper to start (and sleep immediately).
-    helper.start();
     synchronized(this)
       {
+      // Wait for the helper to start (and sleep immediately).
+        helper.start();
 	try
 	  {
 	    while (!helper_started)
