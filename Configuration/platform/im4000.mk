@@ -34,6 +34,7 @@ export USE_LIBFFI = false
 
 export AWT = none
 export FLOATING_POINT = hauser
+export MATH = java
 export SHARED_OBJECTS = false
 
 export HOSTOS = freertos
@@ -60,12 +61,11 @@ CFLAGS += -isystem$(FREERTOS_PORT_INCLUDE_DIR)
 CFLAGS += -isystem$(FREERTOS_FAT_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_TCP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_TCP_COMPILER_DIR) 
-CFLAGS += -isystem$(FREERTOS_CLI_INCLUDE_DIR)
+# CFLAGS += -isystem$(FREERTOS_CLI_INCLUDE_DIR)
+CFLAGS += -isystem/home/chris/Imsys/env-isal/sw-imsys-freertos/libraries/freertos_plus/standard/freertos_plus_cli/include
 CFLAGS += -isystem$(FREERTOS_APP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_IO_INCLUDE_DIR) 
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
-# TODO should this be settable at cmake level?
-CFLAGS += -DFREERTOS_CLI
 
 export JDWP = true
 export JNI = false
@@ -84,3 +84,19 @@ export FSROOT = /
 
 BOOTCLASSDIR  = /lib/mika
 BOOTCLASSFILE = mcl.jar
+
+# Set this false to create uncompressed jar files (including mcl.jar)
+COMPRESS_JAR_FILES = false
+
+# FreeRTOS-specific stuff which is defined here because choices may depend on the platform-specific
+# configuration of FreeRTOS.
+
+# TODO should this be settable at cmake level?
+# CFLAGS += -DFREERTOS_CLI
+
+# If JAVA_THREAD_YIELD_IS_FREERTOS_DELAY is defined in CFLAGS, the Thread.yield() method will be
+# implmemted as vTaskDelay(1) rather than as taskYIELD().
+
+CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY
+
+
