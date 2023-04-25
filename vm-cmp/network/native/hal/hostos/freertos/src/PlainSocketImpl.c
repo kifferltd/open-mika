@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2020, 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.*
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -97,7 +97,7 @@ void PlainSocketImpl_nativeCreate(w_thread thread , w_instance ThisImpl) {
     throwException(thread, clazzIOException, "socket is already open");
   }
   else {
-    sock = w_socket (pf, SOCK_STREAM, IPPROT_TCP);
+    sock = w_socket (pf, SOCK_STREAM, IPPROTO_TCP);
     setWotsitField(ThisImpl, F_PlainSocketImpl_wotsit, sock);	
     woempa(1, "%j : socket is %d\n", ThisImpl, sock);
 

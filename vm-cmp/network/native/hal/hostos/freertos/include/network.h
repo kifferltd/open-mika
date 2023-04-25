@@ -2,7 +2,7 @@
 #define _NETWORK_H
 
 /**************************************************************************
-* Copyright (c) 2020, 2022 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2022, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -78,7 +78,8 @@
 #define AF_INET     FREERTOS_AF_INET
 #define PF_INET     FREERTOS_AF_INET
 #define SOCK_STREAM FREERTOS_SOCK_STREAM
-#define IPPROT_TCP  FREERTOS_IPPROTO_TCP
+#define IPPROTO_TCP FREERTOS_IPPROTO_TCP
+#define IPPROTO_UDP FREERTOS_IPPROTO_UDP
 #define SOL_SOCKET  FREERTOS_SOL_SOCKET
 #define SO_RCVBUF   FREERTOS_SO_RCVBUF
 #define SO_SNDBUF   FREERTOS_SO_SNDBUF
