@@ -255,6 +255,10 @@ w_boolean Heartbeat_isKilled(w_thread thread, w_instance theClass) {
   switch(dumping_info) {
     case 1: 
       dumping_info = -1; 
+// HACK so we can set dumping_info to 1 to trigger a dump
+#ifdef FREERTOS
+      w_dump_info();
+#endif
       break;
     case -1: 
       dumping_info = 0;
