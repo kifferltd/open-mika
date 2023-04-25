@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2022 by KIFFER Ltd. All rights reserved.            *
+* Copyright (c) 2020, 2022, 2023 by KIFFER Ltd. All rights reserved.      *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -740,8 +740,9 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
   ++ number_unsafe_threads;
   woempa(2, "enterUnsafeRegion: %t incremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   setFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  status = x_monitor_notify_all(safe_points_monitor);
-  checkOswaldStatus(status);
+// no point in this after incrementing number_unsafe_threads
+//  status = x_monitor_notify_all(safe_points_monitor);
+//  checkOswaldStatus(status);
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 
@@ -769,8 +770,10 @@ w_boolean enterSafeRegion(const w_thread thread) {
   -- number_unsafe_threads;
   woempa(2, "enterSafeRegion: %t decremented number_unsafe_threads to %d\n", thread, number_unsafe_threads);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  status = x_monitor_notify_all(safe_points_monitor);
-  checkOswaldStatus(status);
+  if (number_unsafe_threads == 0) {
+    status = x_monitor_notify_all(safe_points_monitor);
+    checkOswaldStatus(status);
+  }
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 
@@ -798,8 +801,10 @@ void _gcSafePoint(w_thread thread
   -- number_unsafe_threads;
   woempa(7, "gcSafePoint -> enterSafeRegion: %t decremented number_unsafe_threads to %d in %s:%d\n", thread, number_unsafe_threads, file, line);
   unsetFlag(thread->flags, WT_THREAD_NOT_GC_SAFE);
-  status = x_monitor_notify_all(safe_points_monitor);
-  checkOswaldStatus(status);
+  if (number_unsafe_threads == 0) {
+    status = x_monitor_notify_all(safe_points_monitor);
+    checkOswaldStatus(status);
+  }
 
   if (thread->to_be_reclaimed) {
     x_monitor_exit(safe_points_monitor);
