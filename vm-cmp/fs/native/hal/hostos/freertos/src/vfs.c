@@ -46,7 +46,20 @@ static vfs_FileOperations placeholder_ops;
 
 static w_fifo fifi;
 
-static void dumpSubDir(const char *path, int level) {
+static int countSlashes(const char* s) {
+  int n = 0;
+  char *cursor = strchr(s,'/');
+  const char *end = s + strlen(s);
+  while (cursor && cursor < end) {
+    n++;
+    cursor=strchr(cursor+1,'.');
+  }
+
+  return n;
+}
+
+static void dumpSubDir(const char *path) {
+  const int level = countSlashes(path) - 1;
   char *pathbuf = NULL;
 
   woempa(7, "%*sScanning directory %s\n", level * 4, " ", path);
@@ -73,7 +86,7 @@ static void dumpSubDir(const char *path, int level) {
 
   while ((pathbuf = getFifo(fifi))) {
     woempa(1, "pulled %s from fifo\n", pathbuf);
-    dumpSubDir(pathbuf, level + 1);
+    dumpSubDir(pathbuf);
     releaseMem(pathbuf);
   }
 }
@@ -111,12 +124,33 @@ static void dumpDir(const char *path) {
 
   while ((pathbuf = getFifo(fifi))) {
     woempa(1, "pulled %s from fifo\n", pathbuf);
-    dumpSubDir(pathbuf, 1);
+    dumpSubDir(pathbuf);
     releaseMem(pathbuf);
   }
 
   releaseFifo(fifi);
 }
+
+static void dumpFile(const char *path) {
+  FF_FILE *ff_fileptr = ff_fopen(path, "r");
+  char *buffer = allocClearedMem(65);
+  int rc;
+
+  if (!ff_fileptr) {
+    woempa(9, "Could not open %s!\n", path);
+    return;
+  }
+
+  while (rc = ff_fread(buffer, 1, 64, ff_fileptr)) {
+    buffer[rc] = 0;
+    x_debug_puts(buffer);
+    x_thread_sleep(x_millis2ticks(100));
+  }
+
+  ff_fclose(ff_fileptr);
+  releaseMem(buffer);
+}
+
 #endif
 
 #define FLASH_DISK_NAME    "/"
@@ -133,6 +167,7 @@ w_int  fat_tell  (vfs_fd_entry fde);
 w_int  fat_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  fat_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  fat_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
+w_int  fat_close  (vfs_fd_entry fde);
 
 w_int  placeholder_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
 size_t placeholder_get_length(vfs_fd_entry fde);
@@ -140,33 +175,38 @@ w_boolean placeholder_is_eof(vfs_fd_entry fde);
 w_int  placeholder_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  placeholder_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
+w_int placeholder_close(vfs_fd_entry fde);
 
 w_int  placeholder_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
   woempa(9, "placeholder : attempt to open a file on an fd where an open is already taking place\n"); 
 }
 
 size_t placeholder_get_length(vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to get the length of an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to get the length of an fd where an open is currently taking place\n"); 
 }
 
 w_boolean placeholder_is_eof(vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to check for EOF on an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to check for EOF on an fd where an open is currently taking place\n"); 
 }
 
 w_int  placeholder_tell  (vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to tell in an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to tell in an fd where an open is currently taking place\n"); 
 }
 
 w_int  placeholder_seek  (vfs_fd_entry fde, w_int offset, w_int whence) {
-  woempa(9, "placeholder : attempt to seek in an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to seek in an fd where an open is currently taking place\n"); 
 }
 
 w_int  placeholder_read  (vfs_fd_entry fde, char *bufer, w_size length, w_int *pos) {
-  woempa(9, "placeholder : attempt to read from an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to read from an fd where an open is currently taking place\n"); 
 }
 
 w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos) {
-  woempa(9, "placeholder : attempt to write to an fd where an open is currentlyy taking place\n"); 
+  woempa(9, "placeholder : attempt to write to an fd where an open is currently taking place\n"); 
+}
+
+w_int placeholder_close(vfs_fd_entry fde) {
+  woempa(9, "placeholder : attempt to close an fd where an open is currently taking place\n"); 
 }
 
 void init_vfs(void) {
@@ -176,6 +216,7 @@ void init_vfs(void) {
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
 #ifdef DEBUG
   dumpDir("/");
+  dumpFile("/results");
 #endif
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
@@ -194,6 +235,7 @@ void init_vfs(void) {
   fat_ops.seek = fat_seek;
   fat_ops.read = fat_read;
   fat_ops.write = fat_write;
+  fat_ops.close = fat_close;
 
   placeholder_ops.dummy = NULL;
   placeholder_ops.get_length = placeholder_get_length;
@@ -202,6 +244,7 @@ void init_vfs(void) {
   placeholder_ops.seek = placeholder_seek;
   placeholder_ops.read = placeholder_read;
   placeholder_ops.write = placeholder_write;
+  placeholder_ops.close = placeholder_close;
   placeholder.path = "placeholder";
   placeholder.ops = &placeholder_ops;
 }
@@ -219,8 +262,10 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
       vfs_fd_entry fde = allocClearedMem(sizeof(vfs_FD_Entry));
       w_int rc = fat_open(fde, path, flags, mode);
       if (0 == rc) {
-// TODO should we use AllocMem and friends here? strdup is going direct to malloc
-        fde->path = strdup(path);
+// WAS:        fde->path = strdup(path);
+// TODO: check for memory leaks
+        fde->path = allocMem(strlen(path) + 1);
+        strcpy(fde->path, path);
         vfs_fd_table[fd] = fde;
 
         return fd;
@@ -238,6 +283,74 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
   SET_ERRNO(pdFREERTOS_ERRNO_ENMFILE);
   
   return -1;
+}
+
+w_int vfs_ftell(w_int fd) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->tell(fde);
+}
+ 
+w_int vfs_read(w_int fd, void *buf, w_size length) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    woempa(7, "failed to read from fd %d, is not open\n", fde->path);
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->read(fde, buf, length, NULL);
+}
+
+w_int vfs_write(w_int fd, void *buf, w_size length) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->write(fde, buf, length, NULL);
+}
+
+w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    woempa(7, "failed to seek in fd %d (%s), is not open\n", fd, fde->path);
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->seek(fde, offset, whence);
+}
+
+w_int vfs_close(w_int fd) {
+  x_mutex_lock(fd_table_mutex, x_eternal);
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  vfs_fd_table[fd] = NULL;
+  x_mutex_unlock(fd_table_mutex);
+
+  if (!fde) {
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+
+  w_int rc = fde->ops->close(fde);
+
+  // only now is it safe to free the fde memory
+  releaseMem(fde->path);
+  releaseMem(fde);
+
+  return rc;
 }
 
 w_int fat_open(vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
@@ -269,34 +382,11 @@ w_int fat_open(vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
   return -1;
 }
 
-w_int vfs_ftell(w_int fd) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->tell(fde);
-}
- 
 w_int fat_tell(vfs_fd_entry fde) {
   FF_FILE *ff_fileptr = (FF_FILE *)fde->data;
 
   // N.B. ff_tell returns a 64-bit value
   return (w_int)ff_ftell(ff_fileptr);
-}
-
-w_int vfs_read(w_int fd, void *buf, w_size length) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    woempa(7, "failed to read from fd %d, is not open\n", fde->path);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->read(fde, buf, length, NULL);
 }
 
 w_int fat_read(vfs_fd_entry fde, char *buffer, w_size length, w_int *pos) {
@@ -332,40 +422,6 @@ w_int fat_read(vfs_fd_entry fde, char *buffer, w_size length, w_int *pos) {
   SET_ERRNO(stdioGET_ERRNO());
 
   return -1;
-}
-
-w_int vfs_write(w_int fd, void *buf, w_size length) {
-  FF_FILE *ff_fileptr = (FF_FILE *)vfs_fd_table[fd]->data;
-  if (!ff_fileptr) {
-    woempa(7, "failed to write to fd %d, fd is not in use\n", fd);
-    // TODO set errno
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-    return -1;
-  }
-
-  woempa(7, "writing %d bytes to fd %d\n", length, fd);
-  size_t written = ff_fwrite(buf, 1, length, ff_fileptr );
-  if (written < length) {
-    // less items written than requested => error
-    woempa(7, "failed to write %d bytes to fd %d, errno = %d\n", length, fd, stdioGET_ERRNO());
-    SET_ERRNO(stdioGET_ERRNO());
-
-    return -1;
-  }
-
-  return written;
-}
-
-w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    woempa(7, "failed to seek in fd %d, is not open\n", fde->path);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->seek(fde, offset, whence);
 }
 
 w_int fat_seek(vfs_fd_entry fde, w_int offset, w_int whence) {
@@ -411,24 +467,18 @@ w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
 }
 */
 
-w_int vfs_close(w_int fd) {
-  FF_FILE *ff_fileptr = (FF_FILE *)vfs_fd_table[fd]->data;
-  if (!ff_fileptr) {
-    woempa(7, "failed to close fd %d, fd is not in use\n", fd);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-    return -1;
+w_int fat_close(vfs_fd_entry fde) {
+  FF_FILE *ff_fileptr = fde->data;
+
+  woempa(7, "closing %s\n", fde->path);
+  if (ff_fclose(ff_fileptr) == 0) {
+    woempa(7, "successfully closed %s\n", fde->path);
+    return 0;
   }
 
-  int rc = ff_fclose(ff_fileptr);
-  // TODO set errno
-  // SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-  if (rc) return rc;
-  x_mutex_lock(fd_table_mutex, x_eternal);
-  // TODO release oathname
-  releaseMem(vfs_fd_table[fd]);
-  vfs_fd_table[fd]->data = NULL;
-  x_mutex_unlock(fd_table_mutex);
-  woempa(1, "closed fd %d\n", fd);
+  SET_ERRNO(stdioGET_ERRNO());
+
+  return -1;
 }
 
 size_t fat_get_length(vfs_fd_entry fde) {
@@ -442,6 +492,19 @@ w_boolean fat_is_eof(vfs_fd_entry fde) {
 }
 
 w_int fat_write(vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos) {
+  FF_FILE *ff_fileptr = (FF_FILE *)fde->data;
+
+  woempa(7, "writing %d bytes from %p to %s\n", length, buffer, fde->path);
+  if (ff_fwrite(buffer, length, 1, ff_fileptr )) {
+    woempa(7, "successfully wrote %d bytes to %s\n", length, fde->path);
+    // TODO set pos
+    return length;
+  }
+
+  // less items written than requested => error
+  woempa(7, "failed to write %d bytes to %s, errno = %d\n", length, fde->path, stdioGET_ERRNO());
+  SET_ERRNO(stdioGET_ERRNO());
+
   return -1;
 }
 

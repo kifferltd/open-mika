@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020, 2021, 2022 by KIFFER Ltd. All rights reserved.      *
+* Copyright (c) 2020, 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.*
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -75,7 +75,6 @@ extern w_int vfs_close(w_int fd);
 #define vfs_getcwd(b,l)           ff_getcwd(b,l)
 //#define vfs_fopen(path, ...)      ff_fopen(path, __VA_ARGS__)
 //#define vfs_fdopen(...)           fdopen(__VA_ARGS__)
-//#define vfs_fclose(...)           fclose(__VA_ARGS__)
 
 //#define vfs_fseek(...)            fseek(__VA_ARGS__)
 //#define vfs_ftell(...)            ftell(__VA_ARGS__)
@@ -88,7 +87,6 @@ extern w_int vfs_close(w_int fd);
 
 #define vfs_fopen(path, ...)      fopen(path, __VA_ARGS__)
 #define vfs_fdopen(...)           fdopen(__VA_ARGS__)
-#define vfs_fclose(...)           fclose(__VA_ARGS__)
 
 #define vfs_feof(...)             feof(__VA_ARGS__)
 #define vfs_ferror(...)           ferror(__VA_ARGS__)
