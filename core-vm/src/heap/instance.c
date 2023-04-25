@@ -198,9 +198,9 @@ w_instance allocInstance(w_thread thread, w_clazz clazz) {
   if (++trace_count > 3500) {
   heapCheck;
   }
-#endif
 #ifdef FREERTOS
   lowMemoryCheck;
+#endif
 #endif
   checkClazz(clazz);
 
