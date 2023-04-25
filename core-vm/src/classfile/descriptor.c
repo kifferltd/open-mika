@@ -313,8 +313,8 @@ w_string clazz2desc(w_clazz clazz) {
       return cstring2String("J", 1);
     }
     else {
-      woempa(1, "Descriptor is 'V'\n");
       woempa(1, "Descriptor is '%c'\n", 'V');
+      return cstring2String("V", 1);
     }
   }
   else if (string_char(clazz->dotified, 0) == '[') {
