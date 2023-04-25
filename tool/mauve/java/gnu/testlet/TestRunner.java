@@ -42,13 +42,14 @@ public class TestRunner
   private String description;
   private String classname;  
   private String current_checkitem;
+  private String outpath = null;
   private FileWriter outfile = null;
 
   static int loops = 0;
 
   static {
     String testclassfilename = System.getProperty("gnu.testlet.script.name", "wonkatest");
-    testclassfile = "/resource/" + testclassfilename + ".properties";
+    testclassfile = "resource/" + testclassfilename + ".properties";
   }
 
 /************************************************************
@@ -267,7 +268,8 @@ public int getTestsFailed() {
       if (loops > 0) name = name + "." + (loop+1);
       //new output file
       printLine("*** Write output to <" + name + "> ***");
-       outfile = new FileWriter(name);
+      outpath = name;
+      outfile = new FileWriter(outpath);
       // position writer at end of file
       //outfile.seek(outfile.length() );
     }
@@ -378,6 +380,9 @@ public int getTestsFailed() {
        try
        {
          outfile.write(message + "\n");
+         // flush output
+         outfile.close();
+         outfile = new FileWriter(outpath, true);
         }
        catch(IOException e)
        {
