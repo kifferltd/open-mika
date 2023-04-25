@@ -105,14 +105,14 @@ void _wabort(const char *function, int line, int scope, const char *format, ...)
 **   WOEMPA_BYTECODECOUNT_FORMAT prints the count of opcodes executed
 **                               (summed over all threads).
 **   WOEMPA_METHOD_FORMAT        prints the current method's declaring class
-**                               and name, and the current PC.
+**                               and name, and the current PC and line number.
 **   WOEMPA_FUNCTION_FORMAT      prints the current C function name and line
 **                               number.
 */
 #define WOEMPA_JTHREAD_FORMAT       "%t"
 // #define WOEMPA_LEVEL_FORMAT         "(%d)"
 // #define WOEMPA_BYTECODECOUNT_FORMAT "%d"
-#define WOEMPA_METHOD_FORMAT        "[%k/%w:%d]"
+#define WOEMPA_METHOD_FORMAT        "[%k/%w:%d/%d]"
 #define WOEMPA_FUNCTION_FORMAT      "[%s:%d]"
 
 void w_dump(const char *fmt, ... );

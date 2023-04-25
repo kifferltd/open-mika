@@ -297,6 +297,7 @@ void _woempa(const char *file, const char *function, int line, int level, const 
       jmeth ? jmeth->spec.declaring_clazz : NULL,
       jmeth ? jmeth->spec.name : NULL,
       jmeth && jmeth->exec.code ? jframe->current - jmeth->exec.code : 0,
+      jmeth && jmeth->exec.code ? code2line(jmeth, jframe->current) : 0,
 #endif
 #ifdef WOEMPA_FUNCTION_FORMAT
       function,
