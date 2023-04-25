@@ -89,5 +89,5 @@ void _lowMemoryCheck(const char *fun, int line) {
       );
     }
   }
-  woempa(1, "Low memory all present and correct.\n");
+  woempa(1, "Low memory all present and correct at %s:%d.\n", fun, line);
 }
