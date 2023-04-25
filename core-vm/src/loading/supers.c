@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2009, 2010, 2015 by Chris Gray,   *
-* /k/ Embedded Java Solutions and KIFFER Ltd. All rights reserved.        *
+* Copyright (c) 2007, 2009, 2010, 2015, 2023 by Chris Gray, KIFFER Ltd.   *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -115,7 +115,7 @@ w_int loadSuperClasses(w_clazz clazz, w_thread thread) {
     clazz->supers[i] = super->supers[i - n + super->numSuperClasses];
   }
 
-  woempa(7, "Class %k has total of %d superclasses\n", clazz, n);
+  woempa(1, "Class %k has total of %d superclasses\n", clazz, n);
   clazz->supers = reallocMem(clazz->supers, n * sizeof(w_clazz));
   if (!clazz->supers) {
     return CLASS_LOADING_FAILED;
@@ -296,7 +296,7 @@ w_int loadSuperInterfaces(w_clazz clazz, w_thread thread) {
   }
 
   clazz->numInterfaces = n;
-  woempa(7, "Class %k has total of %d superinterfaces, of which %d direct\n", clazz, n, clazz->numDirectInterfaces);
+  woempa(1, "Class %k has total of %d superinterfaces, of which %d direct\n", clazz, n, clazz->numDirectInterfaces);
   if (clazz->temp.interface_index) {
     releaseMem(clazz->temp.interface_index);
   }
