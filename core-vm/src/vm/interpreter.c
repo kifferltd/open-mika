@@ -68,15 +68,6 @@
 #include "jdwp_events.h"
 #endif
 
-/*
-** If CACHE_TOS is defined, we carry forward the top element of the stack in a
-** register variable from one opcode to the next (so long as it is single-length).
-** Disabled for now, because it adds a couple of KB code size but only speeds
-** up execution by about 1% - according to Caffeine marks, maybe other
-** benchmarks will give a different result.
-*/
-//#define CACHE_TOS
-
 // #define woempa(level, ...) _woempa(__FILE__, __FUNCTION__, __LINE__, level, __VA_ARGS__)
 void _woempa(const char *file, const char *function, int line, int level, const char *format, ...);
 
@@ -252,7 +243,8 @@ static void acquireJitcLock(w_thread thread) {
   setFlag(blocking_all_threads, BLOCKED_BY_JITC);
   jitting_thread = currentWonkaThread;
 
-  x_monitor_notify_all(safe_points_monitor);
+// no point after setting a blocking flag
+//  x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
 }
 
@@ -380,7 +372,7 @@ inline static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
 }
 
 static void do_frem(w_Slot**);
-static void do_drem(w_Slot**);
+static w_double do_drem(w_Slot**);
 
 #define byte_operand             (* (++current))
 #define short_operand            ((w_short)(current[1] << 8 | current[2]))
@@ -814,9 +806,6 @@ void interpret(w_frame caller, w_method method) {
   void ** jumps = codeJumpTable;
 #endif
   w_Slot *tos;
-#ifdef CACHE_TOS
-  register w_word tos_cache = 0; // else we get 'may be used before assignment'
-#endif
   w_int i;
   w_instance o;
   w_instance a = NULL;
@@ -887,9 +876,6 @@ void interpret(w_frame caller, w_method method) {
   goto * jumps[*current];
 
   c_aload: {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[byte_operand].c;
     tos[0].s = stack_trace;
     ++tos;
@@ -897,9 +883,6 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_aload_0: {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[0].c;
     tos[0].s = stack_trace;
     ++tos;
@@ -907,9 +890,6 @@ void interpret(w_frame caller, w_method method) {
   }
   
   c_aload_1: {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[1].c;
     tos[0].s = stack_trace;
     ++tos;
@@ -917,9 +897,6 @@ void interpret(w_frame caller, w_method method) {
   }
   
   c_aload_2: {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[2].c;
     tos[0].s = stack_trace;
     ++tos;
@@ -927,9 +904,6 @@ void interpret(w_frame caller, w_method method) {
   }
   
   c_aload_3: {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[3].c;
     tos[0].s = stack_trace;
     ++tos;
@@ -940,20 +914,13 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_byte: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = *byteFieldPointer(o, i);
 
     add_to_opcode(3);
@@ -963,20 +930,13 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_single: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = *wordFieldPointer(o, i);
 
     add_to_opcode(3);
@@ -989,11 +949,7 @@ void interpret(w_frame caller, w_method method) {
     isVolatile = isSet(field->flags, ACC_VOLATILE);
 
     i = FIELD_OFFSET(field->size_and_slot);
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1019,19 +975,12 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_ref: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = field->size_and_slot;
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = o[instance2clazz(o)->instanceSize  + i];
     tos[-1].s = stack_trace;
     add_to_opcode(3);
@@ -1040,11 +989,7 @@ void interpret(w_frame caller, w_method method) {
   c_ireturn: c_freturn: {
     caller->jstack_top -= method->exec.arg_i;
     caller->jstack_top[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    caller->jstack_top[0].c = tos_cache;
-#else
     caller->jstack_top[0].c = tos[-1].c;
-#endif
     caller->jstack_top += 1;
     frame->jstack_top = tos;
     goto c_common_return;
@@ -1052,9 +997,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iload_0: c_fload_0: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[0].c;
     ++tos;
     do_next_opcode;
@@ -1067,20 +1009,11 @@ void interpret(w_frame caller, w_method method) {
 
   c_ifeq: c_ifnull: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i == 0);
-#else
     do_conditional(tos[0].c == 0);
-#endif
   }
   
   c_iload_1: c_fload_1: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[1].c;
     ++tos;
     do_next_opcode;
@@ -1088,9 +1021,6 @@ void interpret(w_frame caller, w_method method) {
   
   c_iload_2: c_fload_2: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[2].c;
     ++tos;
     do_next_opcode;
@@ -1098,9 +1028,6 @@ void interpret(w_frame caller, w_method method) {
   
   c_iload_3: c_fload_3: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[3].c;
     ++tos;
     do_next_opcode;
@@ -1108,9 +1035,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iload: c_fload: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = frame->jstack_base[byte_operand].c;
     ++tos;
     do_next_opcode;
@@ -1120,9 +1044,6 @@ void interpret(w_frame caller, w_method method) {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
 
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     ++tos;
 
@@ -1152,9 +1073,6 @@ void interpret(w_frame caller, w_method method) {
   i_getstatic_ref: {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
 
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
     tos[0].s = stack_trace;
     ++tos;
@@ -1166,14 +1084,8 @@ void interpret(w_frame caller, w_method method) {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
-#ifdef CACHE_TOS
-    *ptr = tos_cache;
-    --tos;
-    tos_cache = tos[-1].c;
-#else
     *ptr = tos[-1].c;
     --tos;
-#endif
     add_to_opcode(3);
   }
 
@@ -1191,9 +1103,6 @@ void interpret(w_frame caller, w_method method) {
       x_mutex_unlock(mutex64);
     }
     tos -= 2;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     add_to_opcode(3);
   }
 
@@ -1201,14 +1110,8 @@ void interpret(w_frame caller, w_method method) {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
-#ifdef CACHE_TOS
-    *ptr = tos_cache;
-    --tos;
-    tos_cache = tos[-1].c;
-#else
     *ptr = tos[-1].c;
     --tos;
-#endif
     add_to_opcode(3);
   }
 
@@ -1231,22 +1134,12 @@ void interpret(w_frame caller, w_method method) {
 
   c_ifne: c_ifnonnull: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i != 0);
-#else
     do_conditional(tos[0].c != 0);
-#endif
   }
 
   c_aaload: {
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1257,9 +1150,6 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = (w_word) instance2Array_instance(a)[i];
 
     do_next_opcode;
@@ -1269,28 +1159,16 @@ void interpret(w_frame caller, w_method method) {
     tos -= 1;
     frame->jstack_base[3].s = stack_notrace;
     frame->jstack_base[3].c = tos[0].c;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_ifge: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i >= 0);
-#else
     do_conditional((w_int) tos[0].c >= 0);
-#endif
   }
 
   c_iconst_0: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 0;
     tos += 1;
     do_next_opcode;
@@ -1302,11 +1180,7 @@ void interpret(w_frame caller, w_method method) {
   do_fcmp: {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
-#ifdef CACHE_TOS
-    float_y.w = tos_cache;
-#else
     float_y.w = tos[-1].c;
-#endif
     float_x.w = tos[-2].c;
     --tos;
     if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) ) {
@@ -1321,9 +1195,6 @@ void interpret(w_frame caller, w_method method) {
     else {
       i = 1;
     }
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = i;
     do_next_opcode;
   }
@@ -1340,32 +1211,18 @@ void interpret(w_frame caller, w_method method) {
     tos -= 1;
     i = byte_operand;
     frame->jstack_base[i].s = stack_notrace;
-#ifdef CACHE_TOS
-    frame->jstack_base[i].c = tos_cache;
-    tos_cache = tos[-1].c;
-#else
     frame->jstack_base[i].c = tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_isub: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache =
-    tos[-1].c = (w_int) tos[-1].c - (w_int) tos_cache;
-#else
     tos[-1].c = (w_int) tos[-1].c - (w_int) tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_irem: {
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (i == 0) {
       do_throw_clazz(clazzArithmeticException);
@@ -1374,15 +1231,9 @@ void interpret(w_frame caller, w_method method) {
     s = (w_int) tos[-2].c;
 
     if (s != (w_int) 0x80000000 || i != -1) {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
       tos[-2].c = s - (w_int) (s / i) * i;
     }
     else {
-#ifdef CACHE_TOS
-      tos_cache =
-#endif
       tos[-2].c = 0;
     }
   
@@ -1404,11 +1255,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
     if (o) {
       w_boolean compatible;
 
@@ -1425,23 +1272,15 @@ void interpret(w_frame caller, w_method method) {
 
   c_bipush: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
-// WAS:    tos[0].c = (w_int) (w_byte) byte_operand;
     w_int shift1 = byte_operand << 24;
     w_int shift2 = shift1 >> 24;
     tos[0].c = (w_word) shift2;
-//
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_1: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 1;
     tos += 1;
     do_next_opcode;
@@ -1454,11 +1293,7 @@ void interpret(w_frame caller, w_method method) {
       caller->jstack_top += 1;
     }
     else {
-#ifdef CACHE_TOS
-      caller->jstack_top[0].c = tos_cache;
-#else
       caller->jstack_top[0].c = tos[-1].c;
-#endif
       caller->jstack_top[0].s = stack_trace;
       caller->jstack_top += 1;
     }
@@ -1468,26 +1303,16 @@ void interpret(w_frame caller, w_method method) {
 
   c_ldc2_w: {
     w_ushort operand = short_operand;
-    union{w_long l; w_word w[2];} long_x;
-
-    memcpy(&long_x.l, (void*)&cclazz->values[operand], sizeof(w_long));
-    tos[0].s = stack_notrace;
-    tos[0].c = long_x.w[0];
-    tos[1].s = stack_notrace;
-    tos[1].c = long_x.w[1];
+    w_long j;
+    memcpy(&j, (void*)&cclazz->values[operand], sizeof(w_long));
+    w_long2slots(j, tos);
     tos += 2;
     add_to_opcode(3);
   }
 
   c_if_icmplt: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c  < i);
-#else
     do_conditional((w_int) tos[0].c  < (w_int) tos[1].c);
-#endif
   }
   
 #ifdef PACK_BYTE_FIELDS
@@ -1499,14 +1324,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-#ifdef CACHE_TOS
-    *byteFieldPointer(o, i) = (w_sbyte)tos_cache;
-    tos -= 2;
-    tos_cache = tos[-1].c;
-#else
     *byteFieldPointer(o, i) = (w_sbyte)tos[-1].c;
     tos -= 2;
-#endif
     add_to_opcode(3);
   }
 #endif
@@ -1519,14 +1338,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-#ifdef CACHE_TOS
-    *wordFieldPointer(o, i) = tos_cache;
-    tos -= 2;
-    tos_cache = tos[-1].c;
-#else
     *wordFieldPointer(o, i) = tos[-1].c;
     tos -= 2;
-#endif
     add_to_opcode(3);
   }
 
@@ -1552,9 +1365,6 @@ void interpret(w_frame caller, w_method method) {
       x_mutex_unlock(mutex64);
     }
     tos -= 3;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     add_to_opcode(3);
   }
 
@@ -1566,46 +1376,24 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-#ifdef CACHE_TOS
-    setReferenceField_unsafe(o, (w_instance) tos_cache, i);
-    tos -= 2;
-    tos_cache = tos[-1].c;
-#else
     setReferenceField_unsafe(o, (w_instance) tos[-1].c, i);
     tos -= 2;
-#endif
     add_to_opcode(3);
   }
 
   c_if_icmpeq: c_if_acmpeq: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c == i);
-#else
     do_conditional((w_int) tos[0].c == (w_int) tos[1].c);
-#endif
   }
   
   c_iflt: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i  < 0);
-#else
     do_conditional((w_int) tos[0].c  < 0);
-#endif
   }
 
   c_iadd: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = (w_int) tos[-1].c + (w_int) tos_cache;
-#else
     tos[-1].c += (w_int) tos[0].c;
-#endif
     do_next_opcode;
   }
 
@@ -1632,18 +1420,11 @@ void interpret(w_frame caller, w_method method) {
     else {
       tos[-1].c = 1;
     }
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_dup: {
-#ifdef CACHE_TOS
-    tos[0].c = tos_cache;
-#else
     tos[0].c = tos[-1].c;
-#endif
     tos[0].s = tos[-1].s;
     tos += 1;
     do_next_opcode;
@@ -1651,29 +1432,18 @@ void interpret(w_frame caller, w_method method) {
 
   c_astore: {
     do_astore(frame, byte_operand, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_iand: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c & tos_cache;
-#else
     tos[-1].c &= tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_baload: {
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1686,15 +1456,9 @@ void interpret(w_frame caller, w_method method) {
     tos -= 1;
     tos[-1].s = stack_notrace;
     if (instance2object(a)->clazz->previousDimension == clazz_boolean) {
-#ifdef CACHE_TOS
-      tos_cache = 
-#endif
       tos[-1].c = (instance2Array_byte(a)[i / 8] >> (i % 8)) & 1;
     }
     else {
-#ifdef CACHE_TOS
-      tos_cache = 
-#endif
       tos[-1].c = instance2Array_byte(a)[i];
     }
 
@@ -1703,14 +1467,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_i2f: {
     union {w_float f; w_word w;} float_x;
-#ifdef CACHE_TOS
-    float_x.f = wfp_int32_to_float32((w_int)tos_cache);
-#else
     float_x.f = wfp_int32_to_float32((w_int)tos[-1].c);
-#endif
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_x.w;
     do_next_opcode;
   }
@@ -1728,9 +1485,6 @@ void interpret(w_frame caller, w_method method) {
     }
     o = allocInstance(thread, clazz);
     tos[0].s = stack_trace;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[0].c = (w_word)o;
     if (thread->exception) {
       do_the_exception;
@@ -1755,9 +1509,6 @@ void interpret(w_frame caller, w_method method) {
       current = searchHandler(frame);
       tos = (w_Slot*)frame->jstack_top;
     }
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
@@ -1765,26 +1516,16 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-#ifdef CACHE_TOS
-    float_y.w = tos_cache;
-#else
     float_y.w = tos[-1].c;
-#endif
     float_x.w = tos[-2].c;
     float_z.f = wfp_float32_mul(float_x.f, float_y.f);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
   c_sipush: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = (w_int) short_operand;
     tos += 1;
     add_to_opcode(3);
@@ -1802,11 +1543,7 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
     if (o) {
       w_boolean compatible;
 
@@ -1820,89 +1557,63 @@ void interpret(w_frame caller, w_method method) {
     }
     setArrayReferenceField_unsafe(a, o, i);
     tos -= 3;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_astore_2: {
     do_astore(frame, 2, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_l2i: {
+    woempa(1, "l2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_int int_x = (w_int) slots2w_long(tos-2);
+    tos[-2].c = (w_word) int_x;
+    woempa(1, "l2i : result = %08x\n", tos[-2].c);
+/* WAS:
     union {w_long l; w_word w[2];} long_x;
     long_x.w[0] = tos[-2].c;
     long_x.w[1] = tos[-1].c;
     tos[-2].c = (w_int)long_x.l;
     // tos[-2].s should already be 0
+*/
     goto c_pop;
   }
 
   c_pop: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_istore_2: c_fstore_2: {
     tos -= 1;
     frame->jstack_base[2].s = stack_notrace;
-#ifdef CACHE_TOS
-    frame->jstack_base[2].c = tos_cache;
-    tos_cache = tos[-1].c;
-#else
     frame->jstack_base[2].c = tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_astore_3: {
     do_astore(frame, 3, &tos); 
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_arraylength: {
-#ifdef CACHE_TOS
-    a = (w_instance) tos_cache;
-#else
     a = (w_instance) tos[-1].c;
-#endif
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = instance2Array_length(a);
     do_next_opcode;
   }
 
   c_i2c: {
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c & 0x0000ffff;
-#else
     tos[-1].c &= 0x0000ffff;
-#endif
     do_next_opcode;
   }
 
   c_monitorenter: {
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
     woempa(1, "monitorenter(%j)\n", o);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1923,11 +1634,7 @@ void interpret(w_frame caller, w_method method) {
     w_slot base = frame->auxstack_base;
     w_boolean found = FALSE;
 
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-#else
     o = (w_instance) tos[-1].c;
-#endif
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
@@ -1963,9 +1670,6 @@ void interpret(w_frame caller, w_method method) {
     }
       
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
@@ -1991,32 +1695,16 @@ void interpret(w_frame caller, w_method method) {
       instance2Array_byte(a)[i] = truncate_i2b(tos[-1].c);
     }
     tos -= 3;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_lcmp: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
+    woempa(1, "lcmp : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long long_x = slots2w_long(tos-4);
+    w_long long_y = slots2w_long(tos-2);
     tos -= 3;
-    if (long_x.l > long_y.l) {
-      tos[-1].c = 1;
-    }
-    else if (long_x.l == long_y.l) {
-      tos[-1].c = 0;
-    }
-    else {
-      tos[-1].c = -1;
-    }
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
+    tos[-1].c = (long_x > long_y) ? 1 : (long_x == long_y) ? 0 : 0xffffffff;
+    woempa(1, "lcmp : result = %08x\n", tos[-1].c);
     do_next_opcode;
   }
 
@@ -2026,9 +1714,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_aconst_null: {
     tos[0].s = stack_trace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 0;
     tos += 1;
     do_next_opcode;
@@ -2036,9 +1721,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iconst_m1: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = -1;
     tos += 1;
     do_next_opcode;
@@ -2046,9 +1728,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iconst_2: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 2;
     tos += 1;
     do_next_opcode;
@@ -2056,9 +1735,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iconst_3: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 3;
     tos += 1;
     do_next_opcode;
@@ -2066,9 +1742,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iconst_4: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 4;
     tos += 1;
     do_next_opcode;
@@ -2076,9 +1749,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_iconst_5: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = 5;
     tos += 1;
     do_next_opcode;
@@ -2086,9 +1756,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_fconst_0: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = F_ZERO;
     tos += 1;
     do_next_opcode;
@@ -2096,9 +1763,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_fconst_1: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = F_ONE;
     tos += 1;
     do_next_opcode;
@@ -2106,50 +1770,34 @@ void interpret(w_frame caller, w_method method) {
 
   c_fconst_2: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = F_TWO;
     tos += 1;
     do_next_opcode;
   }
 
-  c_lconst_0: c_dconst_0: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 0;
-    ++tos;
-    tos[0].s = stack_notrace;
-    tos[0].c = 0;
-    ++tos;
+  c_lconst_0: {
+    w_long2slots(0LL, tos);
+    tos += 2;
     do_next_opcode;
   }
 
   c_lconst_1: {
-    // TODO: make this assignment once, at start-up
-    union {w_long l; w_word w[2];} long_one;
-    long_one.l = 1LL;
-    tos[0].s = stack_notrace;
-    tos[0].c = long_one.w[0];
-    ++tos;
-    tos[0].s = stack_notrace;
-    tos[0].c = long_one.w[1];
-    ++tos;
+    w_long2slots(1LL, tos);
+    tos += 2;
+    do_next_opcode;
+  }
+
+  c_dconst_0: {
+    w_double2slots(D_ZERO, tos);
+    tos += 2;
     do_next_opcode;
   }
 
   c_dconst_1: {
-    // TODO: make this assignment once, at start-up
-    union {w_double d; w_word w[2];} double_one;
-    double_one.d = D_ONE;
-    tos[0].s = stack_notrace;
-    tos[0].c = double_one.w[0];
-    ++tos;
-    tos[0].s = stack_notrace;
-    tos[0].c = double_one.w[1];
-    ++tos;
+    w_double2slots(D_ONE, tos);
+    tos += 2;
     do_next_opcode;
   }
-
 
   c_ldc_w: {
     w_ConstantType *tag; 
@@ -2165,9 +1813,6 @@ void interpret(w_frame caller, w_method method) {
       if (thread->exception) {
         do_the_exception;
       }
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
       tos[0].c = (w_word)clazz2Class(target_clazz);
       tos[0].s = stack_trace;
       *current = in_ldc_w_class;
@@ -2175,9 +1820,6 @@ void interpret(w_frame caller, w_method method) {
     else
 #endif
     if (*tag == RESOLVED_STRING) {
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
       tos[0].c = cclazz->values[i];
       tos[0].s = stack_trace;
       *current = in_ldc_w_string;
@@ -2197,9 +1839,6 @@ void interpret(w_frame caller, w_method method) {
   
   i_ldc_w_scalar: {
     i = (w_ushort) short_operand; 
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = cclazz->values[i];
     tos[0].s = stack_notrace;
     current += 2;
@@ -2209,9 +1848,6 @@ void interpret(w_frame caller, w_method method) {
 
   i_ldc_w_string: {
     i = (w_ushort) short_operand; 
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = cclazz->values[i];
     tos[0].s = stack_trace;
     current += 2;
@@ -2224,9 +1860,6 @@ void interpret(w_frame caller, w_method method) {
     w_clazz target_clazz;
     i = (w_ushort) short_operand; 
     target_clazz = getResolvedClassConstant(cclazz, i);
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = (w_word)target_clazz->Class;
     tos[0].s = stack_trace;
     current += 2;
@@ -2274,9 +1907,6 @@ void interpret(w_frame caller, w_method method) {
 
   i_ldc_scalar: {
     i = (w_ushort) byte_operand;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = cclazz->values[i];
     tos[0].s = stack_notrace;
     tos += 1;
@@ -2285,9 +1915,6 @@ void interpret(w_frame caller, w_method method) {
 
   i_ldc_string: {
     i = (w_ushort) byte_operand;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = cclazz->values[i];
     tos[0].s = stack_trace;
     tos += 1;
@@ -2299,9 +1926,6 @@ void interpret(w_frame caller, w_method method) {
     w_clazz target_clazz;
     i = (w_ushort) byte_operand;
     target_clazz = getResolvedClassConstant(cclazz, i);
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[0].c = (w_word)target_clazz->Class;
     tos[0].s = stack_trace;
     tos += 1;
@@ -2331,11 +1955,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_iaload: c_faload: {
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -2347,9 +1967,6 @@ void interpret(w_frame caller, w_method method) {
 
     tos -= 1;
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = instance2Array_float(a)[i];
 
     do_next_opcode;
@@ -2358,11 +1975,7 @@ void interpret(w_frame caller, w_method method) {
   c_daload: c_laload: {
     union{w_long l; w_word w[2];} long_x;
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -2381,11 +1994,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_caload: {
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -2397,20 +2006,13 @@ void interpret(w_frame caller, w_method method) {
 
     tos -= 1;
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = instance2Array_char(a)[i];
     do_next_opcode;
   }
 
   c_saload: {
     a = (w_instance) tos[-2].c;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-#else
     i = (w_int) tos[-1].c;
-#endif
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -2422,91 +2024,57 @@ void interpret(w_frame caller, w_method method) {
 
     tos -= 1;
     tos[-1].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = instance2Array_short(a)[i];
     do_next_opcode;
   }
 
   c_lstore: c_dstore: {
     do_zstore(frame, byte_operand, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_istore_0: c_fstore_0: {
     tos -= 1;
     frame->jstack_base[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    frame->jstack_base[0].c = tos_cache;
-    tos_cache = tos[-1].c;
-#else
     frame->jstack_base[0].c = tos[0].c;
-#endif
     do_next_opcode;
   }
   
   c_istore_1: c_fstore_1: {
     tos -= 1;
     frame->jstack_base[1].s = stack_notrace;
-#ifdef CACHE_TOS
-    frame->jstack_base[1].c = tos_cache;
-    tos_cache = tos[-1].c;
-#else
     frame->jstack_base[1].c = tos[0].c;
-#endif
     do_next_opcode;
   }
   
 
   c_lstore_0: c_dstore_0: {
     do_zstore(frame, 0, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
   
   c_lstore_1: c_dstore_1: {
     do_zstore(frame, 1, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
   
   c_lstore_2: c_dstore_2: {
     do_zstore(frame, 2, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
   
   c_lstore_3: c_dstore_3: {
     do_zstore(frame, 3, &tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_astore_0: {
     do_astore(frame, 0, &tos); 
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_astore_1: {
     do_astore(frame, 1, &tos); 
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
   
@@ -2522,14 +2090,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-#ifdef CACHE_TOS
-    instance2Array_float(a)[i] = tos_cache;
-    tos -= 3;
-    tos_cache = tos[-1].c;
-#else
     instance2Array_float(a)[i] = tos[-1].c;
     tos -= 3;
-#endif
     do_next_opcode;
   }
 
@@ -2550,9 +2112,6 @@ void interpret(w_frame caller, w_method method) {
     thing.w[1] = tos[-1].c;
     instance2Array_long(a)[i] = thing.dw;
     tos -= 4;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
@@ -2569,23 +2128,14 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-#ifdef CACHE_TOS
-    instance2Array_char(a)[i] = (tos_cache & 0x0000ffff);
-    tos -= 3;
-    tos_cache = tos[-1].c;
-#else
     instance2Array_char(a)[i] = (tos[-1].c & 0x0000ffff);
     tos -= 3;
-#endif
     do_next_opcode;
   }
   
 
   c_pop2: {
     tos -= 2;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
@@ -2655,15 +2205,9 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_swap: {
-#ifdef CACHE_TOS
-    i = tos_cache;
-    s = tos[-1].s;
-    tos_cache = tos[-1].c = tos[-2].c;
-#else
     i = tos[-1].c;
     s = tos[-1].s;
     tos[-1].c = tos[-2].c;
-#endif
     tos[-1].s = tos[-2].s;
     tos[-2].c = i;
     tos[-2].s = s;
@@ -2671,16 +2215,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_ladd: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
-    long_x.l += long_y.l;
-    tos[-4].c = long_x.w[0];
-    tos[-3].c = long_x.w[1];
+    woempa(1, "ladd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long sum = slots2w_long(tos-4) + slots2w_long(tos-2);
     tos -= 2;
+    w_long2slots(sum, tos-2);
+    woempa(1, "ladd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2688,48 +2227,29 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-#ifdef CACHE_TOS
-    float_y.w = tos_cache;
-#else
     float_y.w = tos[-1].c;
-#endif
     float_x.w = tos[-2].c;
     float_z.f = wfp_float32_add(float_x.f, float_y.f);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
   c_dadd: {
-    union {w_double d; w_word w[2];} double_x;
-    union {w_double d; w_word w[2];} double_y;
-    double_x.w[0] = tos[-4].c;
-    double_x.w[1] = tos[-3].c;
-    double_y.w[0] = tos[-2].c;
-    double_y.w[1] = tos[-1].c;
-    double_x.d = wfp_float64_add(double_x.d, double_y.d);
-    tos[-4].c = double_x.w[0];
-    tos[-3].c = double_x.w[1];
+    woempa(7, "dadd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_double sum = wfp_float64_add(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
+    w_double2slots(sum, tos-2);
+    woempa(7, "dadd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_lsub: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
-    long_x.l -= long_y.l;
-    tos[-4].c = long_x.w[0];
-    tos[-3].c = long_x.w[1];
+    woempa(1, "lsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long diff = slots2w_long(tos-4) - slots2w_long(tos-2);
     tos -= 2;
+    w_long2slots(diff, tos-2);
     woempa(1, "lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-    // w_printf("lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2737,80 +2257,50 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-#ifdef CACHE_TOS
-    float_y.w = tos_cache;
-#else
     float_y.w = tos[-1].c;
-#endif
     float_x.w = tos[-2].c;
     float_z.f = wfp_float32_sub(float_x.f, float_y.f);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
   c_dsub: {
-    union {w_double d; w_word w[2];} double_x;
-    union {w_double d; w_word w[2];} double_y;
-    double_x.w[0] = tos[-4].c;
-    double_x.w[1] = tos[-3].c;
-    double_y.w[0] = tos[-2].c;
-    double_y.w[1] = tos[-1].c;
-    double_x.d = wfp_float64_sub(double_x.d, double_y.d);
-    tos[-4].c = double_x.w[0];
-    tos[-3].c = double_x.w[1];
+    woempa(7, "dsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_double diff = wfp_float64_sub(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
+    w_double2slots(diff, tos-2);
+    woempa(7, "dsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_imul: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = (w_int) tos[-1].c * (w_int) tos_cache;
-#else
     tos[-1].c = (w_int) tos[-1].c * (w_int) tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_lmul: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
-    long_x.l *= long_y.l;
-    tos[-4].c = long_x.w[0];
-    tos[-3].c = long_x.w[1];
+    woempa(1, "lmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long prod = slots2w_long(tos-4) * slots2w_long(tos-2);
     tos -= 2;
+    w_long2slots(prod, tos-2);
+    woempa(1, "lmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_dmul: {
-    union {w_double d; w_word w[2];} double_x;
-    union {w_double d; w_word w[2];} double_y;
-    double_x.w[0] = tos[-4].c;
-    double_x.w[1] = tos[-3].c;
-    double_y.w[0] = tos[-2].c;
-    double_y.w[1] = tos[-1].c;
-    double_x.d = wfp_float64_mul(double_x.d, double_y.d);
-    tos[-4].c = double_x.w[0];
-    tos[-3].c = double_x.w[1];
+    woempa(7, "dmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_double product = wfp_float64_mul(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
+    w_double2slots(product, tos-2);
+    woempa(7, "dmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_idiv: {
     w_int v1 = (w_int)tos[-2].c;
-#ifdef CACHE_TOS
-    w_int v2 = (w_int)tos_cache;
-#else
     w_int v2 = (w_int)tos[-1].c;
-#endif
 
     if (v2 == 0) {
       do_throw_clazz(clazzArithmeticException);
@@ -2844,52 +2334,47 @@ void interpret(w_frame caller, w_method method) {
     }
   
     tos += 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_ldiv: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    union {w_long l; w_word w[2];} long_z;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
-    if (long_y.l == 0LL) {
+    woempa(1, "ldiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long dividend = slots2w_long(tos-4);
+    w_long divisor = slots2w_long(tos-2);
+    w_long quotient;
+
+    if (divisor == 0LL) {
       do_throw_clazz(clazzArithmeticException);
     }
 
-    if (long_x.l >= 0LL && long_y.l > 0LL) {
-      long_z.l = long_x.l / long_y.l;
+    if (dividend >= 0LL && divisor > 0LL) {
+      quotient = dividend / divisor;
     }
-    else if (long_x.l == (w_long) 0x8000000000000000LL) {
-      if (long_y.l == -1) {
-        long_z.l = 0x8000000000000000LL;
+    else if (dividend == (w_long) 0x8000000000000000LL) {
+      if (divisor == -1) {
+        quotient = 0x8000000000000000LL;
       }
       else {
-        long_z.l = long_x.l / long_y.l;
+        quotient = dividend / divisor;
       }
     }
-    else if (long_x.l < 0LL && long_y.l < 0LL) {
-      long_x.l = -long_x.l;
-      long_y.l = -long_y.l;
-      long_z.l = long_x.l / long_y.l;
+    else if (dividend < 0LL && divisor < 0LL) {
+      dividend = -dividend;
+      divisor = -divisor;
+      quotient = dividend / divisor;
     }
-    else if (long_x.l < 0LL) { /* long_y > 0LL */
-      long_x.l = -long_x.l;
-      long_z.l = -(long_x.l / long_y.l);
+    else if (dividend < 0LL) { /* divisor > 0LL */
+      dividend = -dividend;
+      quotient = -(dividend / divisor);
     }
-    else { /* long_x > 0, long_y < 0 */
-      long_y.l = -long_y.l;
-      long_z.l = -(long_x.l / long_y.l);
+    else { /* dividend > 0, divisor < 0 */
+      divisor = -divisor;
+      quotient = -(dividend / divisor);
     }
 
-    tos[-4].c = long_z.w[0];
-    tos[-3].c = long_z.w[1];
     tos -= 2;
+    w_long2slots(quotient, tos-2);
+    woempa(1, "ldiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2897,152 +2382,111 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-#ifdef CACHE_TOS
-    float_y.w = tos_cache;
-#else
     float_y.w = tos[-1].c;
-#endif
     float_x.w = tos[-2].c;
     float_z.f = wfp_float32_div(float_x.f, float_y.f);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_z.w;
     do_next_opcode;
   }
 
   c_ddiv: {
-    union {w_double d; w_word w[2];} double_x;
-    union {w_double d; w_word w[2];} double_y;
-    double_x.w[0] = tos[-4].c;
-    double_x.w[1] = tos[-3].c;
-    double_y.w[0] = tos[-2].c;
-    double_y.w[1] = tos[-1].c;
-    double_x.d = wfp_float64_div(double_x.d, double_y.d);
-    tos[-4].c = double_x.w[0];
-    tos[-3].c = double_x.w[1];
+    woempa(7, "ddiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_double quotient = wfp_float64_div(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
+    w_double2slots(quotient, tos-2);
+    woempa(7, "ddiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_lrem: {
-    union {w_long l; w_word w[2];} long_x;
-    union {w_long l; w_word w[2];} long_y;
-    union {w_long l; w_word w[2];} long_z;
-    long_x.w[0] = tos[-4].c;
-    long_x.w[1] = tos[-3].c;
-    long_y.w[0] = tos[-2].c;
-    long_y.w[1] = tos[-1].c;
-    if (long_y.l == 0LL) {
+    woempa(1, "lrem : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long dividend = slots2w_long(tos-4);
+    w_long divisor = slots2w_long(tos-2);
+    w_long remainder;
+
+    if (divisor == 0LL) {
       do_throw_clazz(clazzArithmeticException);
     }
 
-    if (long_x.l == (w_long) 0x8000000000000000LL && long_y.l == -1LL) {
-      long_z.l = 0LL;
+    if (dividend == (w_long) 0x8000000000000000LL && divisor == -1LL) {
+      remainder = 0LL;
     }
     else {
-      long_z.l = long_x.l - long_y.l * (w_long) (long_x.l / long_y.l);
+      remainder = dividend - divisor * (w_long) (dividend / divisor);
     }
 
-    tos[-4].c = long_z.w[0];
-    tos[-3].c = long_z.w[1];
     tos -= 2;
+    w_long2slots(remainder, tos-2);
+    woempa(1, "lrem : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_frem: {
     do_frem(&tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_drem: {
-    do_drem(&tos);
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
+    woempa(7, "drem : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_double2slots(do_drem(&tos), tos-2);
+    woempa(7, "drem : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_ineg: {
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = - (w_int) tos_cache;
-#else
     tos[-1].c = - (w_int) tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_lneg: {
-    union {w_long l; w_word w[2];} long_x;
-    long_x.w[0] = tos[-2].c;
-    long_x.w[1] = tos[-1].c;
-    long_x.l = -long_x.l;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
+    woempa(1, "lneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_long2slots(-slots2w_long(tos-2), tos-2);
+    woempa(1, "lneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_fneg: {
     union {w_float f; w_word w;} float_x;
-#ifdef CACHE_TOS
-    float_x.w = tos_cache;
-#else
     float_x.w = tos[-1].c;
-#endif
     float_x.f = wfp_float32_negate(float_x.f);
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_x.w;
     do_next_opcode;
   }
 
   c_dneg: {
-    union {w_double d; w_word w[2];} double_x;
-    double_x.w[0] = tos[-2].c;
-    double_x.w[1] = tos[-1].c;
-    double_x.d = wfp_float64_negate(double_x.d);
-    tos[-2].c = double_x.w[0];
-    tos[-1].c = double_x.w[1];
+    woempa(7, "dneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_double2slots(wfp_float64_negate(slots2w_double(tos-2)), tos-2);
+    woempa(7, "dneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_ishl: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c << (tos_cache & 0x0000001f);
-#else
     tos[-1].c <<= (tos[0].c & 0x0000001f);
-#endif
     do_next_opcode;
   }
 
   c_lshl: {
+    i = tos[-1].c & 0x0000003f;
+    tos -= 1;
+    woempa(7, "lshl : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    w_long2slots(slots2w_long(tos-2) << i, tos-2);
+    woempa(7, "lshl : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     union {w_ulong l; w_word w[2];} long_x;
     long_x.w[0] = tos[-3].c;
     long_x.w[1] = tos[-2].c;
-#ifdef CACHE_TOS
-    i = tos_cache & 0x0000003f;
-#else
     i = tos[-1].c & 0x0000003f;
-#endif
-    tos -= 1;
     long_x.l <<= i;
     tos[-2].c = long_x.w[0];
     tos[-1].c = long_x.w[1];
+*/
     do_next_opcode;
   }
 
   c_ishr: {
-#ifdef CACHE_TOS
-    s = tos_cache & 0x0000001f;
-#else
     s = tos[-1].c & 0x0000001f;
-#endif
     i = tos[-2].c;
     tos -= 1;
     if (i > 0) {
@@ -3051,21 +2495,22 @@ void interpret(w_frame caller, w_method method) {
     else {
       tos[-1].c = -1 - (( -1 - i) >> s);
     }
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
   c_lshr: {
+    i = tos[-1].c & 0x0000003f;
+    tos -= 1;
+    woempa(7, "lshr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    w_long shiftee = slots2w_long(tos-2);
+    w_long shifted = shiftee >> i;
+    w_long2slots(shifted, tos-2);
+    woempa(7, "lshr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     union {w_long l; w_word w[2];} long_x;
     long_x.w[0] = tos[-3].c;
     long_x.w[1] = tos[-2].c;
-#ifdef CACHE_TOS
-    s = tos_cache & 0x0000003f;
-#else
     s = tos[-1].c & 0x0000003f;
-#endif
     tos -= 1;
     if (long_x.l > 0) {
       long_x.l >>= s;
@@ -3075,100 +2520,108 @@ void interpret(w_frame caller, w_method method) {
     }
     tos[-2].c = long_x.w[0];
     tos[-1].c = long_x.w[1];
+*/
     do_next_opcode;
   }
 
   c_iushr: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c >> (tos_cache & 0x0000001f);
-#else
     tos[-1].c >>= (tos[0].c & 0x0000001f);
-#endif
     do_next_opcode;
   }
 
   c_lushr: {
+    i = tos[-1].c & 0x0000003f;
+    tos -= 1;
+    woempa(7, "lushr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    w_long shiftee = slots2w_long(tos-2);
+    w_long shifted = shiftee < 0LL ? ~((~shiftee) >> i) : shiftee >> i;
+    w_long2slots(shifted, tos-2);
+    woempa(7, "lushr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     union {w_ulong l; w_word w[2];} long_x;
     long_x.w[0] = tos[-3].c;
     long_x.w[1] = tos[-2].c;
-#ifdef CACHE_TOS
-    s = tos_cache & 0x0000003f;
-#else
     s = tos[-1].c & 0x0000003f;
-#endif
     tos -= 1;
     long_x.l >>= s;
     tos[-2].c = long_x.w[0];
     tos[-1].c = long_x.w[1];
+*/
     do_next_opcode;
   }
 
 
   c_land: {
+    woempa(1, "land : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long2slots(slots2w_long(tos-4) & slots2w_long(tos-2), tos-4);
+    tos -= 2;
+    woempa(1, "land : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     tos -= 2; 
     tos[-1].c &= tos[1].c;
     tos[-2].c &= tos[0].c;
+*/
     do_next_opcode;
   }
 
   c_ior: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c | tos_cache;
-#else
     tos[-1].c |= tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_lor: {
+    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long2slots(slots2w_long(tos-4) | slots2w_long(tos-2), tos-4);
+    tos -= 2;
+    woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     tos -= 2;
     tos[-1].c |= tos[1].c;
     tos[-2].c |= tos[0].c;
+*/
     do_next_opcode;
   }
 
   c_ixor: {
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = tos[-1].c ^ tos[0].c;
-#else
     tos[-1].c ^= tos[0].c;
-#endif
     do_next_opcode;
   }
 
   c_lxor: {
+    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    w_long2slots(slots2w_long(tos-4) ^ slots2w_long(tos-2), tos-4);
     tos -= 2;
-    tos[-1].c ^= tos[1].c;
-    tos[-2].c ^= tos[0].c;
+    woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
+    union {w_float f; w_word w;} float_x;
+    union {w_float f; w_word w;} float_y;
+    union {w_float f; w_word w;} float_z;
+    float_y.w = tos[-1].c;
+    float_x.w = tos[-2].c;
+    float_z.f = wfp_float32_div(float_x.f, float_y.f);
+    tos -= 1;
+    tos[-1].c = float_z.w;
+*/
     do_next_opcode;
   }
 
   c_i2l: {
-    union {w_long l; w_word w[2];} long_x;
-    long_x.l = (signed long long) (w_int) 
-#ifdef CACHE_TOS
-                                          tos_cache;
-#else
-                                          tos[-1].c;
-#endif
-    tos[ 0].s = stack_notrace;
+    woempa(1, "i2l: x = %08x\n", tos[-1].c);
+    w_long convert = (w_long)tos[-1].c;
+    convert <<= 32;
+    convert >>= 32;
     tos += 1;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
+    w_long2slots(convert, tos-2);
+    woempa(1, "i2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_i2d: {
     union {w_double d; w_word w[2];} double_x;
-    double_x.d = wfp_int32_to_float64
-#ifdef CACHE_TOS
-                                     ((w_int)tos_cache);
-#else
-                                     ((w_int)tos[-1].c);
-#endif
+    double_x.d = wfp_int32_to_float64((w_int)tos[-1].c);
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = double_x.w[0];
@@ -3177,13 +2630,16 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_f2l: {
-    union{w_long l; w_word w[2];} long_x;
+    woempa(1, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     union{w_float f; w_word w;} float_x;
-#ifdef CACHE_TOS
-    float_x.w = tos_cache;
-#else
     float_x.w = tos[-1].c;
-#endif
+    w_long convert = wfp_float32_is_NaN(float_x.f) ? 0LL : wfp_float32_to_int64_round_to_zero(float_x.f);
+    tos += 1;
+    w_long2slots(convert, tos-2);
+    woempa(1, "l2f : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
+    union{w_long l; w_word w[2];} long_x;
+    float_x.w = tos[-1].c;
     if (wfp_float32_is_NaN(float_x.f)) {
       long_x.l = 0LL;
     }
@@ -3194,84 +2650,100 @@ void interpret(w_frame caller, w_method method) {
     tos += 1;
     tos[-2].c = long_x.w[0];
     tos[-1].c = long_x.w[1];
+*/
     do_next_opcode;
   }
 
   c_f2d: {
+    woempa(1, "f2d: x = %08x\n", tos[-1].c);
+    union {w_float f; w_word w;} float_x;
+    float_x.w = tos[-1].c;
+    w_double double_x = slots2w_double(tos-2);
+    tos += 1;
+    w_double2slots(wfp_float32_to_float64(float_x.f), tos-2);
+    woempa(1, "f2d : result = %08x %08x\n", tos[-1].c, tos[-2].c);
+/* WAS:
     union {w_double d; w_word w[2];} double_x;
     union {w_float f; w_word w;} float_x;
-#ifdef CACHE_TOS
-    float_x.w = tos_cache;
-#else
     float_x.w = tos[-1].c;
-#endif
     double_x.d = wfp_float32_to_float64(float_x.f);
     tos[ 0].s = stack_notrace;
     tos += 1;
     tos[-2].c = double_x.w[0];
     tos[-1].c = double_x.w[1];
+*/
     do_next_opcode;
   }
 
   c_l2f: {
+    woempa(7, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    union {w_float f; w_word w;} float_x;
+    float_x.f = wfp_int64_to_float32(slots2w_long(tos-2));
+    tos[-2].c = float_x.w;
+    woempa(7, "l2f : result = %08x\n", tos[-2].c);
+    goto c_pop;
+/* WAS:
     union {w_long l; w_word w[2];} long_x;
     union {w_float f; w_word w;} float_x;
     long_x.w[0] = tos[-2].c;
     long_x.w[1] = tos[-1].c;
     float_x.f = wfp_int64_to_float32(long_x.l);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_x.w;
     do_next_opcode;
+*/
   }
 
   c_l2d: {
+    woempa(7, "l2d: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_double2slots(wfp_int64_to_float64(slots2w_long(tos-2)), tos-2);
+    woempa(7, "l2d : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/*WAS:
     union {w_long l; w_double d; w_word w[2];} thing;
     thing.w[0] = tos[-2].c;
     thing.w[1] = tos[-1].c;
     thing.d = wfp_int64_to_float64(thing.l);
     tos[-2].c = thing.w[0];
     tos[-1].c = thing.w[1];
+*/
     do_next_opcode;
   }
 
   c_f2i: {
     union {w_float f; w_word w;} float_x;
-#ifdef CACHE_TOS
-    float_x.w = tos_cache;
-#else
     float_x.w = tos[-1].c;
-#endif
-#ifdef CACHE_TOS
-    tos_cache =
-#endif
     tos[-1].c = wfp_float32_is_NaN(float_x.f) ? 0 : wfp_float32_to_int32_round_to_zero(float_x.f);
     do_next_opcode;
   }
 
   c_d2i: {
+    woempa(7, "d2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_double double_x = slots2w_double(tos-2);
+    tos -= 1;
+    tos[-1].c = wfp_float64_is_NaN(double_x) ? 0 : (w_int) wfp_float64_to_int32_round_to_zero(double_x);
+    woempa(7, "d2i : result = %08x\n", tos[-1].c);
+/* WAS:
     union {w_double d; w_word w[2];} double_x;
     double_x.w[0] = tos[-2].c;
     double_x.w[1] = tos[-1].c;
     tos -= 1;
     if (wfp_float64_is_NaN(double_x.d)) {
-#ifdef CACHE_TOS
-      tos_cache =
-#endif
       tos[-1].c = 0;
     }
     else {
-#ifdef CACHE_TOS
-      tos_cache =
-#endif
       tos[-1].c = (w_int) wfp_float64_to_int32_round_to_zero(double_x.d);
     }
+*/
     do_next_opcode;
   }
 
   c_d2l: {
+    woempa(7, "d2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_double d = slots2w_double(tos-2);
+    w_long result = wfp_float64_is_NaN(d) ? 0LL : wfp_float64_to_int64_round_to_zero(d);
+    w_long2slots(result, tos-2);
+    woempa(7, "d2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+/* WAS:
     union {w_long l; w_double d; w_word w[2];} thing;
     thing.w[0] = tos[-2].c;
     thing.w[1] = tos[-1].c;
@@ -3283,113 +2755,71 @@ void interpret(w_frame caller, w_method method) {
     }
     tos[-2].c = thing.w[0];
     tos[-1].c = thing.w[1];
+*/
     do_next_opcode;
   }
 
   c_d2f: {
+    woempa(7, "d2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    w_double double_x = slots2w_double(tos-2);
+    tos -= 1;
+    tos[-1].c = wfp_float64_to_float32(double_x);
+    woempa(7, "d2f : result = %08x\n", tos[-1].c);
+/* WAS:
     union {w_double d; w_word w[2];} double_x;
     union {w_float f; w_word w;} float_x;
     double_x.w[0] = tos[-2].c;
     double_x.w[1] = tos[-1].c;
     float_x.f = wfp_float64_to_float32(double_x.d);
     tos -= 1;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[-1].c = float_x.w;
+*/
     do_next_opcode;
   }
 
   c_i2b: {
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = extend_b2i(tos_cache & 0x000000ff);
-#else
     tos[-1].c = extend_b2i(tos[-1].c & 0x000000ff);
-#endif
     do_next_opcode;
   }
 
 
   c_i2s: {
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c = extend_s2i(tos_cache & 0x0000ffff);
-#else
     tos[-1].c = extend_s2i(tos[-1].c & 0x0000ffff);
-#endif
     do_next_opcode;
   }
 
   c_ifgt: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i  > 0);
-#else
     do_conditional((w_int) tos[0].c  > 0);
-#endif
   }
 
   c_ifle: {
     tos -= 1; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional(i <= 0);
-#else
     do_conditional((w_int) tos[0].c <= 0);
-#endif
   }
 
   c_if_icmpne: c_if_acmpne: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c != i);
-#else
     do_conditional((w_int) tos[0].c != (w_int) tos[1].c);
-#endif
   }
   
   c_if_icmpge: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c >= i);
-#else
     do_conditional((w_int) tos[0].c >= (w_int) tos[1].c);
-#endif
   }
   
   c_if_icmpgt: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c  > i);
-#else
     do_conditional((w_int) tos[0].c  > (w_int) tos[1].c);
-#endif
   }
   
   c_if_icmple: {
     tos -= 2; 
-#ifdef CACHE_TOS
-    i = tos_cache;
-    tos_cache = tos[-1].c;
-    do_conditional((w_int) tos[0].c <= i);
-#else
     do_conditional((w_int) tos[0].c <= (w_int) tos[1].c);
-#endif
   }
 
   c_jsr: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[0].c = (w_word) (current + 3);
     tos += 1;
     add_to_opcode(short_operand);
@@ -3405,12 +2835,7 @@ void interpret(w_frame caller, w_method method) {
     operand_ptr = (w_code) ((w_word)(current + 4) & ~3);
     table = (w_int*) operand_ptr;
     tos -= 1;
-#ifdef CACHE_TOS
-    i = (w_int) tos_cache;
-    tos_cache = tos[-1].c;
-#else
      i = (w_int) tos[0].c;
-#endif
     if (i >= table[1] && i <= table[2]) {
       add_to_opcode(table[i - table[1] + 3]);
     }
@@ -3427,12 +2852,7 @@ void interpret(w_frame caller, w_method method) {
     mopair = (w_Mopair *) (table + 2);
 
     tos -= 1;
-#ifdef CACHE_TOS
-    s = (w_int) tos_cache;
-    tos_cache = tos[-1].c;
-#else
     s = (w_int) tos[0].c;
-#endif
 
     for (i = 0; i < table[1]; i++) {
       if (mopair[i].m == s) {
@@ -3719,9 +3139,6 @@ void interpret(w_frame caller, w_method method) {
           *(++current) = x->exec.arg_i > 2 ? pop : nop;
           woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
           tos -= x->exec.arg_i - 1;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
           do_next_opcode;
           // that's a goto, code below is not executed
         }
@@ -3818,9 +3235,6 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     tos = (w_Slot*)frame->jstack_top;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     add_to_opcode(3);
   }
 
@@ -3947,11 +3361,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_newarray: {
     w_size bytes;
-#ifdef CACHE_TOS
-    s = tos_cache;
-#else
     s = tos[-1].c;
-#endif
 
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
@@ -3986,11 +3396,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_anewarray: {
     w_size bytes;
-#ifdef CACHE_TOS
-    s = tos_cache;
-#else
     s = tos[-1].c;
-#endif
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
     }
@@ -4044,17 +3450,10 @@ void interpret(w_frame caller, w_method method) {
       }
     }
 */
-#ifdef CACHE_TOS
-    if (tos_cache == 0) {
-      do_throw_clazz(clazzNullPointerException);
-    }
-    thread->exception = (w_instance) tos_cache;
-#else
     if (tos[-1].c == 0) {
       do_throw_clazz(clazzNullPointerException);
     }
     thread->exception = (w_instance) tos[-1].c;
-#endif
     frame->jstack_top = tos;
     do_the_exception;
   }
@@ -4070,13 +3469,8 @@ void interpret(w_frame caller, w_method method) {
     tos[-1].s = stack_notrace;
     // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
     enterSafeRegion(thread);
-#ifdef CACHE_TOS
-    o = (w_instance) tos_cache;
-    tos_cache = tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
-#else
     o = (w_instance) tos[-1].c;
     tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
-#endif
     enterUnsafeRegion(thread);
     add_to_opcode(3);
   }
@@ -4091,17 +3485,11 @@ void interpret(w_frame caller, w_method method) {
       case iload:  
       case fload: 
         tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-	tos_cache =
-#endif
         tos[0].c = frame->jstack_base[i].c;
         tos += 1;
         add_to_opcode(3);
 
       case aload: 
-#ifdef CACHE_TOS
-	tos_cache =
-#endif
         tos[0].c = frame->jstack_base[i].c;
         tos[0].s = stack_trace;
 	++tos;
@@ -4116,27 +3504,16 @@ void interpret(w_frame caller, w_method method) {
       case fstore: 
         tos -= 1;
         frame->jstack_base[i].s = stack_notrace;
-#ifdef CACHE_TOS
-        frame->jstack_base[i].c = tos_cache;
-        tos_cache = tos[-1].c;
-#else
         frame->jstack_base[i].c = tos[0].c;
-#endif
         add_to_opcode(3);
 
       case astore:
         do_astore(frame, i, &tos); 
-#ifdef CACHE_TOS
-        tos_cache = tos[-1].c;
-#endif
         add_to_opcode(3);
 
       case lstore: 
       case dstore: 
         do_zstore(frame, i, &tos); 
-#ifdef CACHE_TOS
-        tos_cache = tos[-1].c;
-#endif
         add_to_opcode(3);
 
       case ret: 
@@ -4160,6 +3537,9 @@ void interpret(w_frame caller, w_method method) {
 
     frame->jstack_top = tos;
     ndims = current[3];
+// CG 20230422 I guess this is the intention?
+    s = ndims;
+//
     dimensions = allocMem(sizeof(w_int) * ndims);
     if (!dimensions) {
       do_the_exception;
@@ -4212,9 +3592,6 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[0].c = (w_word) a;
     tos[0].s = stack_trace;
     tos += 1;
@@ -4230,9 +3607,6 @@ void interpret(w_frame caller, w_method method) {
 
   c_jsr_w: {
     tos[0].s = stack_notrace;
-#ifdef CACHE_TOS
-    tos_cache = 
-#endif
     tos[0].c = (w_word) (current + 5);
     tos += 1;
     add_to_opcode(int_operand);
@@ -4332,9 +3706,6 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     current = searchHandler(frame);
     tos = (w_Slot*)frame->jstack_top;
-#ifdef CACHE_TOS
-    tos_cache = tos[-1].c;
-#endif
     do_next_opcode;
   }
 
@@ -4408,7 +3779,67 @@ void do_frem(w_Slot **tosptr) {
 
 }
 
-void do_drem(w_Slot **tosptr) {
+w_double do_drem(w_Slot **tosptr) {
+  w_double double_x = slots2w_double(*tosptr-4);
+  w_double double_y = slots2w_double(*tosptr-2);
+  w_double double_z = wfp_float64_div(double_x, double_y);
+    w_double quotient = wfp_float64_div(slots2w_double(*tosptr-4), slots2w_double(*tosptr-2));
+  *tosptr -= 2;
+  if (wfp_float64_is_NaN(double_x) || wfp_float64_is_NaN(double_y) || wfp_float64_eq(double_y, D_ZERO) || wfp_float64_is_Infinite(double_x)) {
+    return D_NAN; 
+  }               
+
+  if (wfp_float64_eq(double_x, D_ZERO) || wfp_float64_is_Infinite(double_y)) {
+    return double_x;
+  }
+
+  double_z = wfp_float64_mul(wfp_float64_abs(double_y), D_DOUBLE_MAX_VALUE);
+  if (wfp_float64_lt(double_z, wfp_float64_abs(double_x))) {
+    woempa(7, "drem: division would overflow, returning zero as remainder.\n");
+    if (wfp_float64_is_negative(double_x)) {
+      return D_MINUS_ZERO;
+    }
+    else {
+      return D_ZERO;
+    }
+  }
+
+  double_z = wfp_float64_div(double_x, double_y);
+
+  /*
+  ** Rounding is not what we would like since it doesn't round to zero ...
+  */
+
+  double_z = wfp_float64_round_to_int(double_z);
+  double_z = wfp_float64_mul(double_y, double_z);
+  double_z = wfp_float64_sub(double_x, double_z);
+
+  /*
+  ** The sign of result must be equal to sign of n this is not guaranteed
+  ** anymore because of the rounding.
+  */
+
+  if (wfp_float64_signBit(double_x) && (! wfp_float64_signBit(double_z) && double_z)) {
+    if (wfp_float64_signBit(double_y)){
+      return wfp_float64_add(double_y, double_z);
+    }
+    else{
+      return wfp_float64_sub(double_z, double_y);
+    }
+  }
+
+  if ((! wfp_float64_signBit(double_x)) && wfp_float64_signBit(double_z) && double_z) {
+    if (wfp_float64_signBit(double_y)){
+      return wfp_float64_sub(double_z, double_y);
+    }
+    else{
+      return wfp_float64_add(double_y, double_z);
+    }
+  }
+
+  return double_z;
+
+/* WAS:
   union {w_double d; w_word w[2];} double_x;
   union {w_double d; w_word w[2];} double_y;
   union {w_double d; w_word w[2];} double_z;
@@ -4441,18 +3872,18 @@ void do_drem(w_Slot **tosptr) {
       else {
         double_z.d = wfp_float64_div(double_x.d, double_y.d);
 
-        /*
-        ** Rounding is not what we would like since it doesn't round to zero ...
-        */
+        /.
+        .. Rounding is not what we would like since it doesn't round to zero ...
+        ./
 
         double_z.d = wfp_float64_round_to_int(double_z.d);
         double_z.d = wfp_float64_mul(double_y.d, double_z.d);
         double_z.d = wfp_float64_sub(double_x.d, double_z.d);
 
-        /*
-        ** The sign of result must be equal to sign of n this is not guaranteed
-        ** anymore because of the rounding.
-        */
+        /.
+        .. The sign of result must be equal to sign of n this is not guaranteed
+        .. anymore because of the rounding.
+        ./
 
         if (wfp_float64_signBit(double_x.d) && (! wfp_float64_signBit(double_z.d) && double_z.d)) {
           if (wfp_float64_signBit(double_y.d)){
@@ -4476,6 +3907,7 @@ void do_drem(w_Slot **tosptr) {
 
   (*tosptr)[-2].c = double_z.w[0];
   (*tosptr)[-1].c = double_z.w[1];
+*/
 }
 
 #ifdef JDWP

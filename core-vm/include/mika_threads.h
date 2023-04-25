@@ -141,6 +141,8 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 #define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
 #define WT_THREAD_SUSPEND_COUNT_SHIFT 16
 
+// TODO split this out into a separate stack.h header file
+
 /*
  * Each slot consists of two words: the slot contents (c) and the slot data type (s).
  */
@@ -175,9 +177,11 @@ typedef struct w_Frame {
 } w_Frame;
 
 /*
-** Tag symbols for the auxillary stack; note that when a tag is greater than 'stack_trace', the symbol contains
-** the address of the monitor that is used to lock the object! Use the isMonitoredSlot function to check wether
-** it is a monitored object.
+** Tag symbols for the main and auxiliary stack.
+** Note that when a tag is greater than 'stack_trace', the symbol contains
+** the address of the monitor that is used to lock the object!
+** Use the isMonitoredSlot function to check whether a slot contains
+** a monitored object.
 */
 
 static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
@@ -185,7 +189,57 @@ static const w_word stack_trace     = 1; // Refers to an object that needs GC tr
 
 #define isMonitoredSlot(slot) ((slot)->s > stack_trace)
 
-void callMethod(w_frame arguments, w_method method);
+/*
+** Copy a double value from two adjacent stack slots to a variable in memory.
+** The order of the two slots in memory will determine the order of the two
+** 32-bit halves of the variable as it is stored.
+*/ 
+INLINE static w_double slots2w_double(const w_slot first) {
+  union{w_double d; w_word w[2];} two_words;
+  two_words.w[0] = first[0].c;
+  two_words.w[1] = first[1].c;
+  return two_words.d;
+}
+
+/*
+** Copy a long value from two adjacent stack slots to a variable in memory.
+** The order of the two slots in memory will determine the order of the two
+** 32-bit halves of the variable as it is stored.
+*/ 
+INLINE static w_long slots2w_long(const w_slot first) {
+  union{w_long j; w_word w[2];} two_words;
+  two_words.w[0] = first[0].c;
+  two_words.w[1] = first[1].c;
+  return two_words.j;
+}
+
+/*
+** Copy a double value from a variable in memory to two adjacent stack slots.
+** The order of the two slots in memory will be the same as the two 32-bit 
+** halves of the variable as it was stored.
+*/ 
+INLINE static void w_double2slots(const w_double value, const w_slot first) {
+    union{w_double d; w_word w[2];} two_words;
+    two_words.d = value;
+    first[0].s = stack_notrace;
+    first[0].c = two_words.w[0];
+    first[1].s = stack_notrace;
+    first[1].c = two_words.w[1];
+}
+
+/*
+** Copy a long value from a variable in memory to two adjacent stack slots.
+** The order of the two slots in memory will be the same as the two 32-bit 
+** halves of the variable as it was stored.
+*/ 
+INLINE static void w_long2slots(const w_long value, const w_slot first) {
+    union{w_long j; w_word w[2];} two_words;
+    two_words.j = value;
+    first[0].s = stack_notrace;
+    first[0].c = two_words.w[0];
+    first[1].s = stack_notrace;
+    first[1].c = two_words.w[1];
+}
 
 /*
 * Stack frame flags
@@ -200,6 +254,9 @@ void callMethod(w_frame arguments, w_method method);
 #define FRAME_PRIVILEGED    0x00000040   /* Frame was built using doPrivileged */
 #define FRAME_STACKMAP      0x00000080   /* Frame has stack map  */
 
+// end TODO
+
+void callMethod(w_frame arguments, w_method method);
 
 /**
 ** Get the security domain associated with a frame.

@@ -1,3 +1,32 @@
+###########################################################################
+# Copyright (c) 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.      #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of KIFFER Ltd nor the names of other contributors   #
+#    may be used to endorse or promote products derived from this         #
+#    software without specific prior written permission.                  #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    #
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      #
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       #
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           #
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    #
+# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         #
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  #
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              #
+###########################################################################
+
+# Function to parse a method descriptor.
 
 BEGIN {
   if(JNI=="true") {
@@ -339,20 +368,6 @@ END {
   printf "#endif\n"
   printf "}\n\n"
 
-  printf "static w_double slots2w_double(w_slot first) {\n"
-  printf "  union{w_double d; w_word w[2];} two_words;\n"
-  printf "  two_words.w[0] = first[0].c;\n"
-  printf "  two_words.w[1] = first[1].c;\n"
-  printf "  return two_words.d;\n"
-  printf "}\n\n"
-
-  printf "static w_long slots2w_long(w_slot first) {\n"
-  printf "  union{w_long j; w_word w[2];} two_words;\n"
-  printf "  two_words.w[0] = first[0].c;\n"
-  printf "  two_words.w[1] = first[1].c;\n"
-  printf "  return two_words.j;\n"
-  printf "}\n\n"
-
   printf "/* dispatchers */\n"
   printf ""
 
@@ -389,12 +404,15 @@ END {
 
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result);\n\n"
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result) {\n"
+  printf "  w_long2slots(result, caller->jstack_top-depth);\n"
+  printf "/* WAS:\n"
   printf "    union{w_long l; w_word w[2];} two_words;\n"
   printf "    two_words.l = result;\n"
   printf "    caller->jstack_top[-depth].c = two_words.w[0];\n"
   printf "    caller->jstack_top[-depth].s = stack_notrace;\n"
   printf "    caller->jstack_top[-depth + 1].c = two_words.w[1];\n"
   printf "    caller->jstack_top[-depth + 1].s = stack_notrace;\n"
+  printf "*/\n"
   printf "    caller->jstack_top += -depth + 2;\n"
   printf "}\n\n"
 
@@ -403,12 +421,15 @@ END {
 
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result);\n\n"
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result) {\n"
+  printf "  w_long2slots(result, caller->jstack_top-depth);\n"
+  printf "/* WAS:\n"
   printf "    union{w_double d; w_word w[2];} two_words;\n"
   printf "    two_words.d = result;\n"
   printf "    caller->jstack_top[-depth].c = two_words.w[0];\n"
   printf "    caller->jstack_top[-depth].s = stack_notrace;\n"
   printf "    caller->jstack_top[-depth + 1].c = two_words.w[1];\n"
   printf "    caller->jstack_top[-depth + 1].s = stack_notrace;\n"
+  printf "*/\n"
   printf "    caller->jstack_top += -depth + 2;\n"
   printf "}\n\n"
 
@@ -479,7 +500,7 @@ END {
     printf "  { \"%s\", native_dispatcher_%s", descr, idmap[descr]
     printf " },\n"
   }
-  printf "  { NULL, NULL, NULL }\n};\n\n"
+  printf "  { NULL, NULL }\n};\n\n"
 
   printf "void collect%sDispatchers(w_hashtable hashtable, w_hashtable instance_hashtable) {\n", Module
   printf "  w_string descr_string;\n\n"
