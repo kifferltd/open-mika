@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2020 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2020, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -136,7 +136,7 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   ** Fill in the header of the packet.
   */
 
-  command->length = swap_int((offsetof(jdwp_Reply_Packet, data) + (*gb)->occupancy));
+  command->length = offsetof(jdwp_Reply_Packet, data) + (*gb)->occupancy;
   command->id = current_cmdID++;
   command->flags = 0;
   command->command_set = cmd_set;
@@ -145,7 +145,7 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     char *contents = bytes2hex((w_ubyte*) (*gb)->contents, (*gb)->occupancy);
 
-    w_printf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], swap_int(command->length), contents);
+    w_printf("JDWP: Sending command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", command->id, command->command_set, cmd_set == 64 ? "Event" : command_set_names[cmd_set], cmd, cmd_set == 64 ? "Composite" : command_names[cmd_set][cmd], command->length, contents);
     releaseMem(contents);
   }
 
@@ -171,6 +171,28 @@ void jdwp_send_command(w_grobag* gb, w_int cmd_set, w_int cmd) {
   releaseMem(command);
 }
 
+
+/*
+** Set default values for .
+*/
+
+static void jdwp_set_defaults(void) {
+  jdwp_config_suspend = 0;
+  jdwp_config_server = 1;
+
+#ifdef FREERTOS
+// HACK HACK HACK
+  jdwp_address_host = allocMem(16);
+  x_snprintf(jdwp_address_host, 16, "%d.%d.%d.%d",
+    (FreeRTOS_IPAddress >> 24) & 0xff,
+    (FreeRTOS_IPAddress >> 16) & 0xff,
+    (FreeRTOS_IPAddress >> 8) & 0xff,
+     FreeRTOS_IPAddress & 0xff);
+#else
+  jdwp_address_host = "127.0.0.1";
+#endif
+  jdwp_address_port = "5555";
+}
 
 /*
 ** Parse jdwp arguments.
@@ -256,31 +278,23 @@ void jdwp_parse_arguments(char *args) {
 
     /*
     ** address: the address and/or port to listen/connect to.
+    ** TODO: fix it so that host address can be an interface name or "*".
     */
     
     else if(strcmp(key, "address") == 0) {
       jdwp_address_host = value;
-      jdwp_address_port = strchr(value, ':');
-      if(jdwp_address_port == value) {
-        // hostname part is empty, port is present
-        jdwp_address_host = "127.0.0.1";
-        jdwp_address_port++;
-        if (!*jdwp_address_port) {
-          jdwp_address_port = "5555";
+      char *colon = strchr(value, ':');
+      if(colon == value) {
+        // hostname part is empty, port may be present
+        if (colon[1]) {
+          jdwp_address_port = colon + 1;;
         }
       }
-      else if(jdwp_address_port) {
+      else if(colon) {
         // both hostname and port are present, insert a null char between them
-        *jdwp_address_port++ = 0;
-        if (!*jdwp_address_port) {
-          jdwp_address_port = "5555";
-        }
-      } else {
-        // no colon found, use default port
-        jdwp_address_port = "5555";
-        if (!*value) {
-          // no address either (empty string)
-          jdwp_address_host = "127.0.0.1";
+        *colon = 0;
+        if (colon[1]) {
+          jdwp_address_port = colon + 1;
         }
       }
       woempa(7, "Setting jdwp_address_host to %s, jdwp_address_port to %s\n", jdwp_address_host, jdwp_address_port);
@@ -314,6 +328,7 @@ void jdwp_dispatcher() {
 
   }
 
+  jdwp_set_defaults();
   if(jdwp_args) {
     jdwp_parse_arguments(jdwp_args);
   }
@@ -380,10 +395,10 @@ void jdwp_dispatcher() {
         ** It's a command packet.
         */
 
-        if (cmd->command_set > 0 || cmd->command_set <= 17) {
+        if (cmd->command_set > 0 && cmd->command_set <= 17) {
           if (cmd->command <= 0 || cmd->command > command_set_max_command[cmd->command_set]) {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
-              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (unknown!),  length: %d - ignoring\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, swap_int(cmd->length));
+              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (unknown!),  length: %d - ignoring\n", cmd->id, cmd->command_set, command_set_names[cmd->command_set], cmd->command, cmd->length);
             }
             continue;
           }
@@ -391,7 +406,7 @@ void jdwp_dispatcher() {
             if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
               char *contents = bytes2hex((w_ubyte*) cmd->data, swap_int(cmd->length) - 11);
 
-              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", swap_int(cmd->id), cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], swap_int(cmd->length), contents);
+              w_printf("JDWP: Received command id %d, command set: %d (%s),  command: %d (%s),  length: %d, contents: %s\n", cmd->id, cmd->command_set, command_set_names[cmd->command_set], cmd->command, command_names[cmd->command_set][cmd->command], cmd->length, contents);
               releaseMem(contents);
             }
           }
@@ -419,7 +434,7 @@ void jdwp_dispatcher() {
           continue;
         }
 
-        woempa(9, "Command id %d, command set: %d,  command: %d,  length: %d\n", swap_int(cmd->id), cmd->command_set, cmd->command, swap_int(cmd->length));
+        woempa(9, "Command id %d, command set: %d,  command: %d,  length: %d\n", cmd->id, cmd->command_set, cmd->command, cmd->length);
 
         x_mutex_lock(jdwp_mutex, x_eternal);
         switch((jdwp_cmdset)cmd->command_set) {
@@ -483,26 +498,24 @@ void jdwp_dispatcher() {
 
 
 /*
-** Convert a Wonka String to a JDWP UTF8 string. This UTF8 is different from those used in
-** Wonka because the length at the beginning of the string is 4 bytes instead of 2 bytes.
+** Convert a Wonka String to a JDWP UTF8 string, and put the length of the
+** string into *count if length is non-NULL.
 ** The memory used to hold the string is allocated using allocMem(), and the 
 ** caller should release it using releaseMem().
-*/
+TODO: is this still in use?
 
-w_ubyte *jdwp_string2UTF8(w_string string, w_int *length) {
-  w_ubyte *UTF8string;
-  w_ubyte *result;
+w_ubyte *jdwp_string2UTF8(w_string string, w_int *count) {
   
-  UTF8string = string2UTF8(string, length);
-  result = allocMem((w_word)(*length + 2));
-  memcpy(&result[2], UTF8string, (w_word)*length);
-  *length = swap_int((*length - 2));
-  memcpy(&result[0], length, 4);
-  *length = swap_int(*length);
-  releaseMem(UTF8string);
+  w_ubyte *utf8string = w_string2UTF8(string, count);
+  w_int l = strlen(utf8string);
+  w_ubyte *result = allocMem(l + sizeof(w_int));
+  memcpy(result, swap_int(l), sizeof(w_int));
+  memcpy(result + sizeof(w_int), utf8string, l);
+  releaseMem(utf8string);
 
   return result;
 }
+*/
 
 
 /*

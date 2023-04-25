@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (C) 2006, 2009, 2018 by Chris Gray, KIFFER Ltd.               *
+* Copyright (C) 2006, 2009, 2018, 2023 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -296,13 +296,13 @@ void jdwp_put_cstring(w_grobag *gb, char *b, w_size l) {
 
 void jdwp_put_string(w_grobag *gb, w_string string) {
   w_int length;
-  w_ubyte *cstring = jdwp_string2UTF8(string, &length);
+  w_ubyte *cstring = w_string2UTF8(string, &length);
 
   if (isSet(verbose_flags, VERBOSE_FLAG_JDWP)) {
     w_printf("JDWP: put string = %w\n", string);
   }
   i_put_u4(gb, length);
-  appendToGrobag(gb, cstring + 4, length);
+  appendToGrobag(gb, cstring, length);
   releaseMem(cstring);
 }
 
@@ -343,10 +343,10 @@ void jdwp_send_reply(w_int id, w_grobag *gb, w_int error) {
   jdwp_reply_packet reply;
   w_int length = (gb && *gb) ? (*gb)->occupancy : 0;
 
-  woempa(7, "Replying to commandID %d, length = %d, error = %d\n", swap_int(id), length, error);
+  woempa(7, "Replying to commandID %d, length = %d, error = %d\n", id, length, error);
   reply = allocMem(offsetof(jdwp_Reply_Packet, data) + length);
 
-  reply->length = swap_int((offsetof(jdwp_Reply_Packet, data) + length));
+  reply->length = offsetof(jdwp_Reply_Packet, data) + length;
   reply->id = id;
   reply->flags = 0x80;
   reply->err1 = (error >> 8) & 0x00FF;
@@ -355,11 +355,11 @@ void jdwp_send_reply(w_int id, w_grobag *gb, w_int error) {
     if (length) {
       char *contents = bytes2hex((w_ubyte*)(*gb)->contents, length);
 
-      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d, contents:%s\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length), contents);
+      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d, contents:%s\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], reply->length, contents);
       releaseMem(contents);
     }
     else {
-      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], swap_int(reply->length));
+      w_printf("JDWP: Sending reply id %d, error code %d (%s),  length: %d\n", swap_int(id), error, error > MAX_ERROR ? UNKERR : error_names[error], reply->length);
     }
   }
 

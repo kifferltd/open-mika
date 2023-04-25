@@ -27,9 +27,9 @@
 **************************************************************************/
 
 #include <stdio.h>
-//#include <sys/socket.h>
 
 #include "jdwp.h"
+
 #include "network.h"
 
 /*
@@ -88,7 +88,7 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
   ** Get a socket and fill in the address structure.
   */
 
-  sock = w_socket(PF_INET, SOCK_STREAM, 0);
+  sock = w_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
   if(sock == -1) {
     report_error(jdwp_address_host, jdwp_address_port, NULL);
@@ -216,7 +216,6 @@ w_boolean jdwp_connect_dt_socket(const char *jdwp_address_host, const char *jdwp
 */
 
 void *jdwp_recv_packet_dt_socket(void) {
-/* TODO : re-write me
   
   jdwp_command_packet cmd;
   w_int peek;
@@ -224,32 +223,29 @@ void *jdwp_recv_packet_dt_socket(void) {
   w_int timeout = 0;
   w_int rc = 0;
   
-  /.
-  .. First peek to get the length of this packet
-  ./
-    
-  while (rc < 4) {
-    rc = w_recv(sock, &peek, sizeof(w_int), MSG_PEEK, (w_int *)&timeout);
+  while (rc < sizeof(w_int)) {
+    // Note: not using MSG_PEEK because FreeRTOS does not support this.
+    rc = w_recv(sock, &peek, sizeof(w_int), 0, &timeout);
   }
-  peek = swap_int(peek);
-  woempa(1, "Peek result = %d, peek = 0x%08x\n", rc, peek);
+  peek = w_ntohl(peek);
+  woempa(7, "Peek result = %d, peek = 0x%08x\n", rc, peek);
 
-  /.
-  .. We now know the length of the entire command so we can allocate a
-  .. buffer and retrieve the whole packet.
-  ./
+  /*
+  ** We now know the length of the entire command so we can allocate a
+  ** buffer and retrieve the whole packet.
+  */
     
-  cmd = allocMem((w_word)peek);
+  cmd = allocMem((w_size)peek);
+  cmd->length = peek;
+  count = sizeof(w_int);
   while(count < peek) {
-    rc = w_recv(sock, ((w_ubyte *)cmd + count), (w_word)(peek - count), 0, (w_int *)&timeout);
+    rc = w_recv(sock, ((w_ubyte *)cmd + count), (w_size)(peek - count), 0, &timeout);
     woempa(1, "Recv result = %d\n", rc);
     if (rc > 0) count += rc;
     woempa(1, "      count = %d\n", count);
   }
   
   return cmd;
-  */
-  return NULL;
 }
 
 
@@ -258,7 +254,7 @@ void *jdwp_recv_packet_dt_socket(void) {
 */
 
 void jdwp_send_packet_dt_socket(void *packet) {
-  w_send(sock, packet, swap_int(((jdwp_reply_packet)packet)->length), 0);
+  w_send(sock, packet, ((jdwp_reply_packet)packet)->length, 0);
   return;
 }
 

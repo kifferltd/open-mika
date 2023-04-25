@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2006, 2016 by Chris Gray, KIFFER Ltd.               *
+* Copyright (c) 2004, 2006, 2016, 2023 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -278,8 +278,8 @@ static void jdwp_vm_classes(jdwp_command_packet cmd) {
       jdwp_put_tagged_type(&reply_grobag, clazz);
       sig_string = clazz2desc(clazz);
       woempa(1, "  %K descriptor %w\n", clazz, sig_string);
-      sig = jdwp_string2UTF8(sig_string, &length);
-      jdwp_put_bytes(&reply_grobag, sig, length + 4);
+      sig = w_string2UTF8(sig_string, &length);
+      jdwp_put_cstring(&reply_grobag, sig, length);
       deregisterString(sig_string);
       releaseMem(sig);
       jdwp_put_u4(&reply_grobag, clazz2status(clazz));
@@ -409,11 +409,11 @@ struct idSizes {
 };
 
 static void jdwp_vm_sizes(jdwp_command_packet cmd) {
-  jdwp_put_u4(&reply_grobag, 4); // fieldIDSize = w_field
-  jdwp_put_u4(&reply_grobag, 4); // methodIDSize = w_method
-  jdwp_put_u4(&reply_grobag, 4); // objectIDSize = w_instance
-  jdwp_put_u4(&reply_grobag, 4); // refTypeIDSize = w_clazz
-  jdwp_put_u4(&reply_grobag, 4); // frameIDSize = w_frame
+  jdwp_put_u4(&reply_grobag, sizeof(w_field));    // fieldIDSize
+  jdwp_put_u4(&reply_grobag, sizeof(w_method));   // methodIDSize
+  jdwp_put_u4(&reply_grobag, sizeof(w_instance)); // objectIDSize
+  jdwp_put_u4(&reply_grobag, sizeof(w_clazz));    // refTypeIDSize
+  jdwp_put_u4(&reply_grobag, sizeof(w_frame));    // frameIDSize 
 
   jdwp_send_reply(cmd->id, &reply_grobag, jdwp_err_none);
 }
@@ -531,95 +531,91 @@ static void jdwp_capabilities_new(jdwp_command_packet cmd) {
 extern Wonka_InitArgs *system_vm_args;
 extern char *bootclasspath;
 
+static char **analyseClasspath(const char *cp, w_int *count) {
+  char *finger = (char*)cp;
+  char *next;
+  char **array;
+  int i;
+  int l;
+  int n;
+
+  woempa(7, "fsroot = %s\n", fsroot);
+  woempa(7, "classpath = %s\n", cp);
+  n = 0;
+  while (finger) {
+    n++;
+    finger = strstr(++finger, ":");
+  }
+  woempa(7, "classpath has %d components\n", n);
+  array = allocClearedMem((n + 1) * sizeof(char*));
+  finger = (char*)cp;
+  i = 0;
+  while (finger) {
+    next = strstr(finger, ":");
+    l = next ? next - finger : (int)strlen(finger);
+    if (l >= 3 && finger[0] == '{' && finger[1] == '}' && finger[2] == '/') {
+      woempa(7, "component begins with {}/, substituting fsroot '%s'\n", fsroot);
+      int fsrootlen = strlen(fsroot);
+      if (fsroot[fsrootlen - 1] == '/') {
+        --fsrootlen;
+      }
+      array[i] = allocMem(l + fsrootlen);
+      strcpy(array[i], fsroot);
+      memcpy(array[i] + fsrootlen, finger + 2, l);
+      array[i][fsrootlen + l - 2] = 0;
+      woempa(7, "component: %s\n", array[i]);
+      ++i;
+    }
+    else if (l > 0) {
+      array[i] = allocMem(l + 1);
+      strncpy(array[i], finger, l);
+      array[i][l] = 0;
+      woempa(7, "component: %s\n", array[i]);
+      ++i;
+    }
+    // else this is an empty string, and we add nothing to the array
+
+    finger = next ? next + 1 : NULL;
+  }
+
+  if (count) {
+    *count = i;
+  }
+
+  return array;
+}
+
 /*
 ** Classpaths command
 */
 
 static void jdwp_vm_classpaths(jdwp_command_packet cmd) {
-  char *finger = (char*)system_vm_args->classpath;
-  char *next;
   char **array;
-  int fsrootlen = strlen(fsroot);
   int i;
   int l;
   int n;
 
+  woempa(7, "Classpath = %s\n", system_vm_args->classpath);
+  woempa(1, "fsroot = %s\n", fsroot);
   woempa(7, "Base dir = %s\n", base_directory);
   // baseDir
   jdwp_put_cstring(&reply_grobag, base_directory, strlen(base_directory));
+  array = analyseClasspath(system_vm_args->classpath, &n);
 
-  if (fsroot[fsrootlen - 1] == '/') {
-    --fsrootlen;
-  }
-  woempa(7, "fsroot = %s\n", fsroot);
-  woempa(7, "Classpath = %s\n", system_vm_args->classpath);
-  n = 0;
-  while (finger) {
-    n++;
-    finger = strstr(++finger, ":");
-  }
-  woempa(7, "Classpath has %d components\n", n);
-  array = allocMem(n * sizeof(char*));
-  finger = (char*)system_vm_args->classpath;
-  i = 0;
-  while (finger) {
-    next = strstr(finger, ":");
-    l = next ? next - finger : (int)strlen(finger);
-    if (l >= 3 && finger[0] == '{' && finger[1] == '}' && finger[2] == '/') {
-      array[i] = allocMem(l + fsrootlen);
-      strcpy(array[i], fsroot);
-      memcpy(array[i] + fsrootlen, finger + 2, l);
-      array[i][fsrootlen + l - 2] = 0;
-    }
-    else {
-      array[i] = allocMem(l + 1);
-      strcpy(array[i], finger);
-    }
-    woempa(7, "  %s\n", array[i]);
-    ++i;
-    finger = next ? next + 1 : NULL;
-  }
-  // classpaths
+  // classpath
   jdwp_put_u4(&reply_grobag, n);
   for (i = 0; i < n; ++i) {
-    woempa(7, "  %s\n", array[i]);
     jdwp_put_cstring(&reply_grobag, array[i], strlen(array[i]));
     releaseMem(array[i]);
   }
+  releaseMem(array);
   
-  finger = bootclasspath;
-
   woempa(7, "Bootclasspath = %s\n", bootclasspath);
-  n = 0;
-  while (finger) {
-    n++;
-    finger = strstr(++finger, ":");
-  }
-  woempa(7, "Bootclasspath has %d components\n", n);
-  array = reallocMem(array, n * sizeof(char*));
-  finger = bootclasspath;
-  i = 0;
-  while (finger) {
-    next = strstr(finger, ":");
-    l = next ? next - finger : (int)strlen(finger);
-    if (l >= 3 && finger[0] == '{' && finger[1] == '}' && finger[2] == '/') {
-      array[i] = allocMem(l + fsrootlen);
-      strcpy(array[i], fsroot);
-      memcpy(array[i] + fsrootlen, finger + 2, l);
-      array[i][fsrootlen + l - 2] = 0;
-    }
-    else {
-      array[i] = allocMem(l + 1);
-      strcpy(array[i], finger);
-    }
-    woempa(7, "  %s\n", array[i]);
-    ++i;
-    finger = next ? next + 1 : NULL;
-  }
-  // bootclasspaths
+  array = analyseClasspath(bootclasspath, &n);
+
+  // bootclasspath
   jdwp_put_u4(&reply_grobag, n);
   for (i = 0; i < n; ++i) {
-    woempa(7, "  %s\n", array[i]);
     jdwp_put_cstring(&reply_grobag, array[i], strlen(array[i]));
     releaseMem(array[i]);
   }
@@ -730,6 +726,8 @@ void dispatch_vm(jdwp_command_packet cmd) {
     case jdwp_vm_capabilitiesNew:
       jdwp_capabilities_new(cmd);
       break;
+    case jdwp_vm_redefineClasses:
+    case jdwp_vm_popObsoleteFrames:
     default:
       jdwp_send_not_implemented(cmd->id);
   } 
