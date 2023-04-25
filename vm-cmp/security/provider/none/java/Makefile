@@ -28,7 +28,6 @@
 
 .PHONY : classes
 
-# FIXME: should use $JAVAC here
 classes:
 	@echo "Classpath = ${classpath}:${javamathdir}:${javajardir}:${securitydir}:${secprovdir}"
-	find . -name \*\.java | xargs ${JAVA6_HOME}/bin/javac -bootclasspath ${emptydir} -classpath ${classpath}:${javamathdir}:${javajardir}:${securitydir}:${secprovdir} -source 1.4 -target 1.4 -d ${classdir} 
+	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -classpath ${classpath}:${javamathdir}:${javajardir}:${securitydir}:${secprovdir} -source 1.4 -target 1.4 -d ${classdir} 

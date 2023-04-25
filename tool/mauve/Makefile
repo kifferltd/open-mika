@@ -37,7 +37,6 @@ test : jarfile
 #    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
 #    echo Git branch is $(GIT_BRANCH)
 
-# FIXME: should use $JAVAC here
 classes : 
 	make -C java classes
 
@@ -57,9 +56,9 @@ endif
 
 jarfile : classes resources
 	mkdir -p $(mauvedeploydir)
-	cd $(toolclassdir); find gnu -name \*\.class | xargs ${JAVA6_HOME}/bin/jar cmf ${MIKA_TOP}/tool/mauve/mauve.mf ${mauvedeploydir}/mauve-suite.jar 
+	cd $(toolclassdir); find gnu -name \*\.class | xargs ${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) ${MIKA_TOP}/tool/mauve/mauve.mf ${mauvedeploydir}/mauve-suite.jar 
 	cd $(toolclassdir); find JUnitTests -name \*\.class | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar 
-	find resource -type f -path resource/fragment -prune -o -print | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar
+	find resource -type f | grep -v "^resource/fragment" | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar
 
 ifdef JNI 
 # TODO compile jnitest_natives ;

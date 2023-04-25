@@ -32,7 +32,6 @@
 #    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
 #    echo Git branch is $(GIT_BRANCH)
 
-# FIXME: should use $JAVAC here
 classes:
-	find . -name \*\.java | xargs ${JAVA6_HOME}/bin/javac -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
+	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
 
