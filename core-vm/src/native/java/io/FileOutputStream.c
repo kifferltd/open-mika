@@ -117,8 +117,8 @@ void FileOutputStream_close
     if(file == NULL) {
       woempa(9, "Filedescriptor is empty\n");
     } else {
-      woempa(9, "Calling vfs_fclose\n");
-      vfs_fclose(file);
+      woempa(9, "Calling vfs_close\n");
+      vfs_close(file);
       setReferenceField(thisFileOutputStream, NULL, F_FileOutputStream_fd);
     }
   }
