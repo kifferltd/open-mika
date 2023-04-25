@@ -255,6 +255,15 @@ x_long x_ticks2usecs(x_size ticks);
 extern void x_now_plus_ticks(x_long ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
 
+/*
+** XOR-shift PRNG which generates a 32-bit unsigned int on each call.
+** See: https://en.wikipedia.org/wiki/Xorshift
+*/
+
+/* The state word must be initialized to non-zero */
+static uint32_t xor32state = 0x3569ac;
+
+extern x_word xorshift32(x_word state);
 /**
  * For x_errno we use a location in the OSwald thread control block, and we set a pointer to this in 
  * the FreeRTOS ThreadLocal array so that we can get a pointer without going through x_thread_current().

@@ -53,6 +53,23 @@ static StaticSemaphore_t threads_mutex_storage;
 void *start_routine(void *thread_ptr);
 
 /*
+** XOR-shift PRNG which generates a 32-bit unsigned int on each call.
+** See: https://en.wikipedia.org/wiki/Xorshift
+*/
+
+/* The state word must be initialized to non-zero */
+// static uint32_t xor32state = 0x3569ac;
+
+x_word xorshift32(x_word state) {
+        /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+        uint32_t x = xor32state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        return xor32state = x;
+}
+
+/*
 ** Initialize the emulation environment.
 */
 
