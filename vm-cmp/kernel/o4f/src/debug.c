@@ -159,6 +159,8 @@ void x_debug_write(const void *buf, size_t count) {
     iot_uart_write_sync(uart_handle, buf, count);
     if (isSchedulerRunning) { 
       xSemaphoreGive(uart_write_mutex);
+// HACK to avoid buffer over-runs
+      x_thread_sleep(count/9 + 1);
     }
   }
 }
