@@ -56,7 +56,7 @@ w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescript
   fd = vfs_open(path, flags, 0);
   woempa(7, "fd = %d\n", fd);
   if (fd < 0) {
-    throwException(thread, clazzFileNotFoundException, "could not open file '%s' in mode %d using flags '%x': x_errno = %n\n", path, modenum, flags, x_errno);
+    throwException(thread, clazzFileNotFoundException, "could not open file '%s' in mode %d using flags '%x': x_errno = %d\n", path, modenum, flags, x_errno);
   }
   releaseMem(path);
 
