@@ -71,6 +71,11 @@ typedef struct vfs_FileOperations {
   w_int (*write) (vfs_fd_entry, const char *, w_size, w_int *);
 
   /**
+   * universal 'close' operation
+   */
+  w_int (*close) (vfs_fd_entry);
+
+  /**
    * file-like objects only: directory searc
    */
   //int (*readdir) (vfs_fd_entry, void *, filldir_t);
