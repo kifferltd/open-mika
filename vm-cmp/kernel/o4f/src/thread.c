@@ -107,7 +107,11 @@ x_thread x_thread_current() {
 
 void x_thread_yield() {
 
+#ifdef JAVA_THREAD_YIELD_IS_FREERTOS_DELAY
+  vTaskDelay(1);
+#else 
   taskYIELD();
+#endif
 
 }
 
