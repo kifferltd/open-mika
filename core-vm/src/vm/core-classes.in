@@ -753,7 +753,7 @@ java/io/FileOutputStream
         close                   ()V                                             FileOutputStream_close
         flush                   ()V                                             FileOutputStream_flush
 java/io/File
-	absname			Ljava/lang/String;
+	hostpath		Ljava/lang/String;
         _createNew		()Z                     File_createNew
         _exists			()Z                     File_exists
         _list			()[Ljava/lang/String;   File_list
