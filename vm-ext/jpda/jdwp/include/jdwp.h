@@ -492,8 +492,11 @@ typedef jdwp_Reply_Packet  *jdwp_reply_packet;
 
 
 /*
-** Everything numerical has to be in a big endian format. If Wonka is running on a 
-** little endian platform, then the bytes of all the numbers have to be swapped 
+** Inside the data[] array, everything numerical has to be in big endian format.
+** (The length field of jdwp_Command/Reply_Packet is stored in host endianness
+** and any necessary byte-swapping is performed in jdwp_recv/send_packet_dt_socket()).
+** If Wonka is running on a little endian platform, then the bytes of all
+** numerical parameters parameters have to be swapped.
 */
 
 #if __BYTE_ORDER == __BIG_ENDIAN
