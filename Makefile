@@ -93,11 +93,17 @@ export AWT_DEF ?= none
 export APP_DIR ?= $(MIKA_TOP)/sample/apps/java
 export CPU HOSTOS SCHEDULER
 export AR
-export JAVAC
+export JAVAC ?= ${JAVA6_HOME}/bin/javac
 
 # TODO: JAVAX could be java5 (or whatever)
 export JAVAX = java
 export javadir = $(MIKA_TOP)/core-vm/$(JAVAX)
+
+# if COMPRESS_JAR_FILES is set to false, we will add the -0 flag to the jar command.
+# otherwise we will not add this flag and the jar command will default to compression level 9.
+ifeq ($(COMPRESS_JAR_FILES),false)
+  export JAR_CMD_COMPRESSION_LEVEL=0
+endif
 
 export SECURITY ?= none
 export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
@@ -106,9 +112,9 @@ export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
 export SECURITY_PROVIDER ?= none
 export secprovdir = $(MIKA_TOP)/vm-cmp/security/provider/$(SECURITY_PROVIDER)/$(JAVAX)
 # FIXME only if SECURITY_PROVIDER is not 'none'
-# ifneq ($(SECURITY), none)
-#   export secanyprovdir = $(MIKA_TOP)/vm-cmp/security/provider/any/$(JAVAX)
-# endif
+ifneq ($(SECURITY), none)
+  export secanyprovdir = $(MIKA_TOP)/vm-cmp/security/provider/any/$(JAVAX)
+endif
 
 export javamathdir = $(MIKA_TOP)/vm-cmp/math/${MATH}/$(JAVAX)
 
@@ -323,6 +329,7 @@ ifndef GDB_SYMBOLS
 endif
 
 ifeq ($(DEBUG), true)
+  JFLAGS += -g
   
   CFLAGS += -DDEBUG -DRUNTIME_CHECKS
   
@@ -559,6 +566,7 @@ CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 # objdirlist += $(objdir)/network/$(NETWORK)
 
 export CFLAGS
+export JFLAGS
 export LDFLAGS
 export JNI
 
@@ -567,6 +575,7 @@ export JNI
 mika : echo builddir deployable kernel core-vm test
 
 $(MIKA_LIB) : 
+	@echo "CFLAGS =" $(CFLAGS)
 	make -C core-vm libs
 
 libs: kernel $(MIKA_LIB)
@@ -592,6 +601,9 @@ echo : kecho
 	@echo "AWT_LIB = " $(AWT_LIB)
 	@echo "networkinc = " $(networkinc)
 	@echo "fsinc = " $(fsinc)
+ifeq ($(JAR_CMD_COMPRESSION_LEVEL),0)
+	@echo "Creating uncompressed jar files."
+endif
 
 builddir :
 	@echo "Creating " $(imagedir)
@@ -659,7 +671,7 @@ jarfile :
 	make -C ${javajardir} classes
 	make -C core-vm/$(JAVAX) classes
 	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
-	${JAVA6_HOME}/bin/jar cmf core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
 
 resource :
 	@echo "Copying resources to ${mikadeploydir}"
