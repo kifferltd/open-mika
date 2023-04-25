@@ -41,9 +41,7 @@
 x_status x_mutex_create(x_mutex mutex) {
 
   mutex->magic = 0x7774756d;
-  x_mem_lock(x_eternal); // coz this allocates memory
   mutex->owner_mutex = xSemaphoreCreateRecursiveMutex();
-  x_mem_unlock();
   if (!mutex->owner_mutex) {
     return xs_insufficient_memory;
   }
@@ -61,9 +59,7 @@ x_status x_mutex_create(x_mutex mutex) {
  */
 x_status x_mutex_delete(x_mutex mutex) {
 
-  x_mem_lock(x_eternal); // coz this calls free
   vSemaphoreDelete(mutex->owner_mutex);
-  x_mem_unlock();
 
   return xs_success;
 }

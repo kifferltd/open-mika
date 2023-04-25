@@ -409,7 +409,6 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   if (pre_alloc_check(thread, rsize)) {
     alloc_barrier(thread);
-    x_mem_lock(x_eternal);
     chunk = _x_mem_calloc(sizeof(w_Chunk) + rsize, file, line);
   }
   else {
@@ -417,7 +416,6 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   }
 
   if (!chunk) {
-    x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes\n", rsize);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -430,7 +428,6 @@ void * _d_allocClearedMem(w_size rsize, const char * file, const int line) {
   post_alloc(thread, chunk);
   woempa(1,"%s.%d: Allocated %d bytes at %p\n", file, line, rsize, chunk);
   prepareChunk(chunk, rsize, file, line);  
-  x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
 
   return chunk->data;
@@ -447,7 +444,6 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   if (pre_alloc_check(thread, rsize)) {
     alloc_barrier(thread);
-    x_mem_lock(x_eternal);
     chunk = _x_mem_alloc(sizeof(w_Chunk) + rsize, file, line);
   }
   else {
@@ -458,7 +454,6 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
     post_alloc(thread, chunk);
   }
   else {
-    x_mem_unlock();
     woempa(9, "Failed to allocate %d bytes for %s:%d\n", rsize, file, line);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -470,7 +465,6 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
 
   woempa(1,"%s.%d: Allocated %d bytes at %p\n", file, line, rsize, chunk);
   prepareChunk(chunk, rsize, file, line);  
-  x_mem_unlock();
   checkChunk(chunk->data, 1, file, line);
   
   return chunk->data;
@@ -499,7 +493,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   if (pre_realloc_check(thread, newsize, oldsize)) {
     alloc_barrier(thread);
-    x_mem_lock(x_eternal);
     newchunk = _x_mem_realloc(oldchunk, sizeof(w_Chunk) + newsize, file, line);
   }
   else {
@@ -510,7 +503,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
     post_alloc(thread, newchunk);
   }
   else {
-    x_mem_unlock();
     printf("Failed to reallocate %d bytes for %s:%d\n", newsize, file, line);
 
     if (thread && thread->Thread && isNotSet(thread->flags, WT_THREAD_THROWING_OOME)) {
@@ -523,7 +515,6 @@ void * _d_reallocMem(void * block, w_size newsize, const char * file, const int 
 
   woempa(1,"%s.%d: Reallocated %d bytes at %p\n", file, line, newsize, newchunk);
   prepareChunk(newchunk, newsize, file, line);  
-  x_mem_unlock();
   checkChunk(newchunk->data, 1, file, line);
 
   return newchunk->data;
