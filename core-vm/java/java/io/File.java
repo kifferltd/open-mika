@@ -1,5 +1,5 @@
 /**************************************************************************
-* Parts copyright (c) 2009, 2022 by Chris Gray, KIFFER Ltd.               *
+* Parts copyright (c) 2009, 2022, 2023 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -34,9 +34,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.NoSuchElementException;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
+import java.util.List;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -44,6 +45,12 @@ import java.util.Vector;
 import wonka.vm.Etc;
 import wonka.vm.SecurityConfiguration;
 
+/**
+ * Representation of an abstract path name which can be resolved to a file.
+ *
+ * This implementation aims to be usable both on unixey filesystems and on
+ * dossy systems such as FreeRTOS+FAT.
+ */
 public class File implements Comparable, Serializable {
 
   private static final long serialVersionUID = 301077366599181567L;
@@ -59,27 +66,77 @@ public class File implements Comparable, Serializable {
   private static String fsroot_dir;
   private static String fsrootedPrefix;
   private static Random prng;
+  private static final String delimiter;
 
   /**
-   ** Name by which the File object was created ('path' parameter of the constructor).
+   * Pathname by which the File object was created. 
+   * Compared to the pathname string used in the constructor, alternative
+   * separators are replaced by {@link #separator} and repeated separator
+   * characters are replaced by a single character, but canonicalisation
+   * is not performed (so sequences such as "./" or "../" are left in place).
    */
   private transient  String     fullname;
-  /*
-  ** If the path begins with '/', this is stripped off and 'absolute' is set.
-  ** If the path begins with '{}/', this is stripped off and 'fsrooted' is set.
-  ** The remainder of the path is then split at the last '/':
-  **  - everything up to the last '/' (exclusive) goes in 'dirpath'.
-  **  - everything after the last '/' (exclusive) goes in 'filename'.
+
+  /**
+   * The 'prefix' part of {@link #fullname}.
+   * The prefix can be any of the following:
+   *  - '/' for an absolute path in unices
+   *  - one letter plus ':\\' for an absolute path in dosland
+   *  - one letter plus ':' for a relative path in dosland
+   *  - '//' for a UNC pathname in dosland
+   *  - empty for all relative paths in unices, or a driveletter-free relative path in dosland.
   */
+  private transient  String     prefix;
+
+  private static final String UNIX_PREFIX = "/";
+  private static final String UNC_PREFIX = "\\\\";
+  private static final String ALT_UNC_PREFIX = "//";
+  private static final String ROMAN_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  /**
+   * The name-list contains one String for each component of the path.
+   * The prefix is NOT present in this list.
+   * The last component may be a filename or a directory name.
+   */
+  private transient  List       name_list;
+
+  /**
+   * Set true iff the File was created with an empty path (and no parent).
+   */
   private transient  boolean    empty;
+
+  /**
+   * Set true iff the File represents an absolute path.
+   */
   private transient  boolean    absolute;
+
+  /**
+   * Set true iff the File represents a fsrooted path.
+   */
   private transient  boolean    fsrooted;
+
+  /**
+   * The dosland drive letter if present, else '\0'.
+   */
+  private transient  char       driveletter;
+
+  /**
+   * The part of the path up to the last '/' character (DEPRECATED).
+   */
   private transient  String     dirpath;
+
+  /**
+   * The part of the path after the last '/' character (DEPRECATED).
+   */
   private transient  String     filename;
+
+  /**
+   * The hashcode of the File object, calculated on first use.
+   */
   private transient  int        hashcode;
 
   /**
-   ** The absolute path used to open the file, after path mungeing.
+   ** The absolute path used to open the file, after path mungeing. (DEPRECATED)
    */
   private transient  String     absolutePath;
 
@@ -90,20 +147,37 @@ public class File implements Comparable, Serializable {
   private transient String canonicalPath;
 
   /**
-   ** Same as absolutePath. Used by the native functions to access the file.
+   ** Path used by the native functions to access the file.
+   ** May or may not be the same as absolutePath.
    */
-  final transient String absname;
+  final transient String hostpath;
 
+  /**
+   * Get the Current Working Directory from the OS.
+   */
   private static native String get_CWD();
+
+  /**
+   * Get the path which is to be substituted for the fsroot prefix.
+   */
   private static native String get_fsroot();
   
+  /**
+   * Extract the path element from a file: URI.
+   *
+   * @param  uri  URI from which the file path is to be extracted.
+   *
+   * @throws IllegalArgumentException if uri is not an absolute, hierarchical
+   * URI with protocol "file", a non-empty path component, and no authority,
+   * query, or fragment part.
+   */
   private static String extractPathFromURI(URI uri) throws IllegalArgumentException {
     Etc.woempa(7, "Extracting Path from URI " +  uri);
     if (!uri.isAbsolute()) {
       throw new IllegalArgumentException("URI is not absolute: " + uri);
     }
 
-    if (!uri.getRawSchemeSpecificPart().startsWith("/")) {
+    if (!uri.getRawSchemeSpecificPart().startsWith(UNIX_PREFIX)) {
       throw new IllegalArgumentException("URI is not hierarchical: " + uri);
     }
 
@@ -137,6 +211,7 @@ public class File implements Comparable, Serializable {
     separatorChar = separator.charAt(0);
     pathSeparatorChar = pathSeparator.charAt(0);
     fsrootedPrefix = "{}" + separator;
+    delimiter = separator == "\\" ? "\\/" : separator;
 
     current_working_dir = get_CWD();
     if (!current_working_dir.endsWith(separator)) {
@@ -150,8 +225,9 @@ public class File implements Comparable, Serializable {
     System.getProperties().setProperty("user.dir", current_working_dir);
   }
 
+  // TODO link to mount table when we have one
   public static File[] listRoots() {
-    return new File[] { new File("/") };
+    return new File[] { new File(UNIX_PREFIX) };
   }
 
   public static File createTempFile(String pre, String suf) throws IllegalArgumentException, IOException {
@@ -229,26 +305,117 @@ public class File implements Comparable, Serializable {
     return result;
   }
 
-  public File(String path) throws NullPointerException {
-    String relpath;
-    hashcode = path.hashCode() ^ 1234321;
+  /**
+   * Extract the prefix part from the given pathname string, and set zero
+   * or more of the booleans {@link #absolute}, {@link #fsrooted}, {@link #empty}.
+   * If the prefix contains a drive letter, store this in {@link #driveletter}.
+   *
+   * @param pathname the pathname string to be analysed
+   * @return the length of the prefix part
+   * @throw  NullPointerException if pathname is null
+   */ 
+  private int extractPrefix(String pathname) {
 
-    if(path.length() == 0) {
-      path = current_working_dir;
-      relpath = ".";
-      empty = true;
-    } else if(path.charAt(0) == separatorChar) {  // Absolute path
-      relpath = path.substring(1);
+    Etc.woempa(7, "Extracting prefix from '" + pathname + "'");
+    if (pathname.startsWith(UNIX_PREFIX)) {
+      prefix = UNIX_PREFIX;
       absolute = true;
-    } else if(path.startsWith(fsrootedPrefix)) {  // fsrooted path
-      relpath = path.substring(3);
+    }
+    else if (pathname.startsWith(fsrootedPrefix)) {
+      prefix = fsrootedPrefix;
       fsrooted = true;
-    } else {
-      relpath = path;
+      absolute = true;
+    }
+    // TODO should we also allow "//"?
+    else if (pathname.startsWith(UNC_PREFIX) || pathname.startsWith(ALT_UNC_PREFIX)) {
+      prefix = UNC_PREFIX;
+      absolute = true;
+    }
+    else if (pathname.length() > 1
+          && ROMAN_ALPHABET.indexOf(pathname.charAt(0)) >= 0
+          && pathname.charAt(1) == ':'
+            ) {
+      driveletter = pathname.charAt(0);
+      absolute = pathname.length() > 2 && pathname.charAt(2) ==  '\\';
+      prefix = pathname.substring(0, absolute ? 3 : 2);
+    }
+    else {
+      prefix = "";
+    }
+    Etc.woempa(7, "prefix = '" + prefix + "' absolute = " + absolute + " fsrooted = " + fsrooted);
+
+    empty = pathname.length() == 0;
+
+    return prefix.length();
+  }
+
+  public File(String name) throws NullPointerException {
+    this((File)null, name);
+  }
+
+  public File(String dirname, String name) throws NullPointerException {
+    this(dirname == null ? null : new File(dirname), name);
+  }
+
+  public File(File dir, String name) throws NullPointerException {
+    if (dir == null) {
+      Etc.woempa(7, "Parent path is null, file path is '" + name + "'");
+      int pfxlen = extractPrefix(name);
+      String name_seq = name.substring(pfxlen);
+      Etc.woempa(7, "Prefix is '" + prefix + "', name_seq is '" + name_seq +"'");
+
+      name_list = new ArrayList();
+      StringTokenizer toks = new StringTokenizer(name_seq, delimiter);
+      while (toks.hasMoreTokens()) {
+        String element = toks.nextToken();
+/* No - leave the little blighters in there
+        if (".".equals(element)) {
+          continue;
+        }
+        if ("..".equals(element)) {
+          name_list.remove(name_list.size() - 1);
+          continue;
+        }
+*/
+        name_list.add(element);
+      }
+
+    }
+    else {
+      prefix = dir.prefix;
+      name_list = dir.name_list;
+      empty = dir.empty && name.length() == 0;
+      absolute = dir.absolute;
+      fsrooted = dir.fsrooted;
+      Etc.woempa(7, "Parent path is '" + dir + "', prefix is '" + prefix + "'");
+      File temp = new File(name);
+      Iterator nameIter = temp.name_list.iterator();
+      while (nameIter.hasNext()) {
+        name_list.add(nameIter.next());
+      }
     }
 
-    relpath = stripSlashes(relpath);
+// compatibility code: generate fullname and relpath
+    StringBuffer relpath_buffer = null;
+    Iterator pathIter = name_list.iterator();
+    while (pathIter.hasNext()) {
+      String element = (String)pathIter.next();
+      Etc.woempa(7, "  path element: " + element);
+      if (relpath_buffer == null) {
+        relpath_buffer = new StringBuffer(element);
+      }
+      else  {
+        relpath_buffer.append(separator);
+        relpath_buffer.append(element);
+      }
+    }
+    String relpath = relpath_buffer.toString();
+    String fullname = empty ? "" : prefix + relpath;
+    Etc.woempa(7, "fullname is " + fullname + ", relpath is " + relpath);
 
+    hashcode = fullname.hashCode() ^ 1234321;
+
+    // derive DEPRECATED fields
     try {
 
       int dirpathlen = relpath.lastIndexOf(separatorChar);
@@ -264,7 +431,7 @@ public class File implements Comparable, Serializable {
       e.printStackTrace();
     }
 
-    fullname = empty ? "" : stripSlashes(path);
+    // TODO resolve and construct absolute path on first use
     if (absolute) {
       absolutePath = fullname;
     }
@@ -279,16 +446,8 @@ public class File implements Comparable, Serializable {
       absolutePath = absolutePath.substring(0, len);
     }
 
-    Etc.woempa(7, "File " + path + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
-    absname = absolutePath;
-  }
-
-  public File(String dirname, String name) throws NullPointerException {
-    this(name == null ? null : (dirname == null ? "" : (dirname.equals("") ? "" : dirname.endsWith("/") ? dirname : dirname + separatorChar)) + name);
-  }
-
-  public File(File dir, String name) throws NullPointerException {
-    this((dir == null ? "" : dir.getPath()), name);
+    Etc.woempa(7, "File " + fullname + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
+    hostpath = absolutePath;
   }
 
   public File(URI uri) throws NullPointerException, IllegalArgumentException {
@@ -321,17 +480,7 @@ public class File implements Comparable, Serializable {
   }
 
   public String getName() {
-    if (empty) {
-      return "";
-    }
-
-    String result = new String(filename);
-    int snip = filename.lastIndexOf(separatorChar);
-    if (snip >= 0) {
-      result = result.substring(snip+1);
-    }
-
-    return result;
+    return empty ? "" : (String)name_list.get(name_list.size() - 1);
   }
 
   public String getPath() {
@@ -362,6 +511,31 @@ public class File implements Comparable, Serializable {
   }
 
   public String getParent() {
+    // Need to have at least two path elements (including the prefix, if any)
+    // otherwise we should return null.
+    int nelems = name_list.size();
+    if (prefix != null) {
+      ++nelems;
+    }
+    if (nelems < 2) {
+      return null;
+    }
+
+    StringBuffer parentbuf = new StringBuffer();
+    if (prefix != null) {
+      parentbuf.append(prefix);
+    }
+    Iterator parentiter = name_list.iterator();
+    if (parentiter.hasNext()) {
+      parentbuf.append(parentiter.next());
+    }
+    while (parentiter.hasNext()) {
+      parentbuf.append(separator);
+      parentbuf.append(parentiter.next());
+    }
+
+    return parentbuf.toString();
+/* WAS:
     if (dirpath == null || dirpath.length() + filename.length() == 0) {
 
       return null;
@@ -377,8 +551,11 @@ public class File implements Comparable, Serializable {
     }
 
     return prefix + dirpath;
+*/
   }
 
+  // TODO make this work at the abstract path level instead of constructing
+  // a pathname string and re-analysing it.
   public File getParentFile() {
     String parentName = getParent();
  

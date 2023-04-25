@@ -41,7 +41,7 @@ char *getFileName(w_instance thisFile) {
   w_instance pathString;
   w_string path;
 
-  pathString = getReferenceField(thisFile, F_File_absname);
+  pathString = getReferenceField(thisFile, F_File_hostpath);
   path = String2string(pathString);
 
   return w_string2UTF8(path, NULL);	  
@@ -71,7 +71,7 @@ w_boolean File_createNew (w_thread thread, w_instance thisFile) {
   if (result) {
     file = vfs_fopen(pathname, "w+");
     if (file) {
-      vfs_fclose(file);
+      vfs_close(file);
     }
     else {
       throwException(thread, clazzIOException, "could not open file '%s' using mode w+: %s\n", pathname, strerror(errno));
