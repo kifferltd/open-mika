@@ -26,7 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = argument.c  environment.c  ErrorOutputStream.c  StandardInputStream.c  StandardOutputStream.c
+sources = argument.c  environment.c  ErrorOutputStream.c  NativeLibrary.c NativeProcess.c StandardInputStream.c  StandardOutputStream.c
 
 halobjdir = $(objdir)/core-vm/hal
 objects=$(patsubst %.c, $(halobjdir)/%.o, $(sources))

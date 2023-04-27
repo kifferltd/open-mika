@@ -40,7 +40,7 @@
 #include "exception.h"
 #include "jni.h"
 
-w_int StandardInputStream_read(JNIEnv *env, w_instance theStandardInputStream, w_instance byte_array_instance, w_int off, w_int len) {
+w_int StandardInputStream_read(w_thread thread, w_instance theStandardInputStream, w_instance byte_array_instance, w_int off, w_int len) {
   w_int result = read(0, instance2Array_byte(byte_array_instance) + off, len);
   while (result < 0 && errno == EINTR) {
     result = read(0, instance2Array_byte(byte_array_instance) + off, len);
@@ -49,7 +49,7 @@ w_int StandardInputStream_read(JNIEnv *env, w_instance theStandardInputStream, w
     return -1;
   }
   else if(result < 0) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "stdin: read: %s", strerror(errno));
+    throwException(w_thread, clazzIOException, "stdin: read: %s", strerror(errno));
   }
 
   return result;
@@ -57,7 +57,7 @@ w_int StandardInputStream_read(JNIEnv *env, w_instance theStandardInputStream, w
 
 static char junk[256];
 
-w_long StandardInputStream_skip(JNIEnv *env, w_instance theStandardInputStream, w_long l) {
+w_long StandardInputStream_skip(w_thread thread, w_instance theStandardInputStream, w_long l) {
   w_long result = 0;
   w_long remaining = l;
   w_int  available = 1;
@@ -79,11 +79,11 @@ w_long StandardInputStream_skip(JNIEnv *env, w_instance theStandardInputStream, 
   return result;
 }
 
-w_int StandardInputStream_available(JNIEnv *env, w_instance theStandardInputStream) {
+w_int StandardInputStream_available(w_thread thread, w_instance theStandardInputStream) {
   w_int result;
 
   if (ioctl(0, FIONREAD, &result) < 0) {
-    throwException(JNIEnv2w_thread(env), clazzIOException, "stdin: ioctl(0, FIONREAD, &result) failed");
+    throwException(w_thread, clazzIOException, "stdin: ioctl(0, FIONREAD, &result) failed");
 
     return 0;
 

@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -31,6 +31,7 @@
 #ifndef FREERTOS
 #include "wonka.h"
 #include "core-classes.h"
+#include "jni-classes.h"
 #include "exec.h"
 #include "fields.h"
 #include "mika_threads.h"

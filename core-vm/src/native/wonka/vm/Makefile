@@ -26,7 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = ArrayUtil.c Finalizer.c GarbageCollector.c Heartbeat.c Init.c JDWP.c NativeLibrary.c NativeProcess.c SystemClassLoader.c Wonka.c
+sources = ArrayUtil.c Finalizer.c GarbageCollector.c Heartbeat.c Init.c JDWP.c SystemClassLoader.c Wonka.c
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
 

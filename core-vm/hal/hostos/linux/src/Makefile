@@ -26,7 +26,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = Etc.c exec.c platform.c
+sources = Etc.c NativeLibrary.c NativeProcess.c exec.c platform.c
 
 halobjdir = $(objdir)/core-vm/hal
 objects=$(patsubst %.c, $(halobjdir)/%.o, $(sources))
