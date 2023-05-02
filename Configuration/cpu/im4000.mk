@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2019, 2020, 2021 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2019, 2020, 2021, 2023 by Chris Gray, KIFFER Ltd.         #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-CFLAGS += -DIM4000
+CFLAGS += -DIM4000 -fno-inline-functions
 
 
 
