@@ -78,93 +78,89 @@ int main(int argc, char * argv[]) {
 
 x_size prio_offset = 0;
 
-x_ubyte * x_os_main(x_int argc, char * argv[], x_ubyte *memory) {
-
-  x_size used = (x_size)memory;
+void x_os_main(int argc, char **argv) {
 
   if (do_all) {
     oempa("Initializing all test modules...\n");
 #if 0
-    memory = monitor_test(memory);
-    memory = timer_test(memory);
-    memory = mutex_test(memory);
-    memory = thread_test(memory);
-    memory = atomic_test(memory);
-    memory = queue_test(memory);
+    monitor_test();
+    timer_test();
+    mutex_test();
+    thread_test();
+    atomic_test();
+    queue_test();
 #endif
-    memory = sem_test(memory);
+    sem_test();
 #if 0
-    memory = block_test(memory);
-    memory = map_test(memory);
-    memory = signals_test(memory);
-//    memory = list_test(memory);
-//    memory = modules_test(memory);
-    memory = exception_test(memory);
-//    memory = stack_test(memory);
-    memory = join_test(memory);
-    memory = memory_test(memory);
+    block_test();
+    map_test();
+    signals_test();
+//    list_test();
+//    modules_test();
+    exception_test();
+//    stack_test();
+    join_test();
+    _test();
 #endif
   }
   else {
     if (do_monitor) {
-      memory = monitor_test(memory);
+      monitor_test();
     }
 #if 0
     if (do_timer) {
-      memory = timer_test(memory);
+      timer_test();
     }
     if (do_mutex) {
-      memory = mutex_test(memory);
+      mutex_test();
     }
     if (do_thread) {
-      memory = thread_test(memory);
+      thread_test();
     }
     if (do_atomic) {
-      memory = atomic_test(memory);
+      atomic_test();
     }
     if (do_queue) {
-      memory = queue_test(memory);
+      queue_test();
     }
 #endif
     if (do_sem) {
-      memory = sem_test(memory);
+      sem_test();
     }
 #if 0
     if (do_block) {
-      memory = block_test(memory);
+      block_test();
     }
     if (do_map) {
-      memory = map_test(memory);
+      map_test();
     }
     if (do_signals) {
-      memory = signals_test(memory);
+      signals_test();
     }
     if (do_exception) {
-      memory = exception_test(memory);
+      exception_test();
     }
     if (do_stack) {
-//      memory = stack_test(memory);
+//      stack_test();
     }
     if (do_list) {
-//      memory = list_test(memory);
+//      list_test();
     }
     if (do_modules) {
-//      memory = modules_test(memory);
+//      modules_test();
     }
     if (do_join) {
-      memory = join_test(memory);
+      join_test();
     }
     if (do_memory) {
-      memory = memory_test(memory);
+      memory_test();
     }
 #endif
   }
 
-  used = (x_size) memory - used;
+  oempa("Done initializing.\n");
   
-  oempa("Done initializing, used %d static bytes.\n", used);
-  
-  return memory;
+  return;
  
 }
 

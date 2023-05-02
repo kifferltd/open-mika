@@ -69,7 +69,6 @@ static void oswaldEnvInit(void) {
   o4pe = &theEnvironment;
   
   o4pe->threads = NULL;
-  o4pe->staticMemory = malloc(STATIC_MEMORY_SIZE);
   o4pe->status = O4P_ENV_STATUS_INIT;
   o4pe->timer_ticks = 0;
   if (geteuid()) {
@@ -126,7 +125,7 @@ static void x_setup_kernel(x_size millis) {
   ** condition.
   */
 
-  x_os_main(command_line_argument_count, command_line_arguments, o4pe->staticMemory);
+  x_os_main(command_line_argument_count, command_line_arguments);
 
   heap_remaining = heap_size;
   x_mem_init();

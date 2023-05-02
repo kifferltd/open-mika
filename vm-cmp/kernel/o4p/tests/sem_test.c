@@ -524,54 +524,52 @@ static void consumer(void * t) {
 static x_thread th_a;
 static x_thread th_b;
 
-static x_ubyte * consumer_producer(x_ubyte * memory) {
+static void consumer_producer() {
 
   x_ubyte * stack;
   x_status status;
 
   init(&buffer);
 
-  th_a = x_alloc_static_mem(memory, sizeof(x_Thread));
-  th_b = x_alloc_static_mem(memory, sizeof(x_Thread));
+  th_a = x_alloc_mem(sizeof(x_Thread));
+  th_b = x_alloc_mem(sizeof(x_Thread));
 
   /*
   ** The producer and consumer threads. Note that the producer has a lower 
   ** priority than the consumer. 
   */
 
-  stack = x_alloc_static_mem(memory, SEMT_STACK_SIZE);
+  stack = x_alloc_mem(SEMT_STACK_SIZE);
   status = x_thread_create(th_a, producer, th_a, stack, SEMT_STACK_SIZE, prio_offset + 5, TF_START);
   if (status != xs_success) {
     oempa("%s: status = '%s'\n", __FILE__, x_status2char(status));
     exit(0);
   }
 
-  stack = x_alloc_static_mem(memory, SEMT_STACK_SIZE);
+  stack = x_alloc_mem(SEMT_STACK_SIZE);
   status = x_thread_create(th_b, consumer, th_b, stack, SEMT_STACK_SIZE, prio_offset + 4, TF_START);
   if (status != xs_success) {
     oempa("%s: status = '%s'\n", __FILE__, x_status2char(status));
     exit(0);
   }
 
-  return memory;
+  return;
   
 }
 
-x_ubyte * sem_test(x_ubyte * memory) {
+void sem_test() {
 
   x_status status;
 
   second = x_seconds2ticks(1);
     
-  cd_control = x_alloc_static_mem(memory, sizeof(x_Thread));
-  status = x_thread_create(cd_control, cd_sem, cd_control, x_alloc_static_mem(memory, SEMT_STACK_SIZE), SEMT_STACK_SIZE, prio_offset + 5, TF_START);
+  cd_control = x_alloc_mem(sizeof(x_Thread));
+  status = x_thread_create(cd_control, cd_sem, cd_control, x_alloc_mem(SEMT_STACK_SIZE), SEMT_STACK_SIZE, prio_offset + 5, TF_START);
   if (status != xs_success) {
     oempa("%s: status = '%s'\n", __FILE__, x_status2char(status));
     exit(0);
   }
 
-  memory = consumer_producer(memory);
-
-  return memory;
+  return;
   
 }

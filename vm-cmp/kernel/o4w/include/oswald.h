@@ -89,7 +89,7 @@
 ** This is the entry point which the OS will call when it has completed
 ** its own internal initialisation.
 */
-x_ubyte* x_os_main(int argc, char** argv, x_ubyte *first_unused_memory);
+void x_os_main(int argc, char** argv);
 
 
 /*

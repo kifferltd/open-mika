@@ -47,22 +47,22 @@
 
 #include "oswald.h"
 
-x_ubyte * timer_test(x_ubyte * memory);
-x_ubyte * mutex_test(x_ubyte * memory);
-x_ubyte * thread_test(x_ubyte * memory);
-x_ubyte * block_test(x_ubyte * memory);
-x_ubyte * memory_test(x_ubyte * memory);
-x_ubyte * sem_test(x_ubyte * memory);
-x_ubyte * queue_test(x_ubyte * memory);
-x_ubyte * monitor_test(x_ubyte * memory);
-x_ubyte * signals_test(x_ubyte * memory);
-x_ubyte * map_test(x_ubyte * memory);
-x_ubyte * atomic_test(x_ubyte * memory);
-x_ubyte * modules_test(x_ubyte * memory);
-x_ubyte * exception_test(x_ubyte * memory);
-x_ubyte * list_test(x_ubyte * memory);
-x_ubyte * stack_test(x_ubyte * memory);
-x_ubyte * join_test(x_ubyte * memory);
+void timer_test(void);
+void mutex_test(void);
+void thread_test(void);
+void block_test(void);
+void memory_test(void);
+void sem_test(void);
+void queue_test(void);
+void monitor_test(void);
+void signals_test(void);
+void map_test(void);
+void atomic_test(void);
+void modules_test(void);
+void exception_test(void);
+void list_test(void);
+void stack_test(void);
+void join_test(void);
 
 void * x_mem_get(x_size size);
 x_int find_thread_in_pcbs(x_thread thread);

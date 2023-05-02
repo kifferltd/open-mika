@@ -549,7 +549,7 @@ static x_ubyte * p_stack;
 static x_thread control;
 static x_int state = 0;
 
-static void monitor_tests(void * t) {
+static void monitor_tests(void) {
 
   x_status status;
   x_int counter = 0;
@@ -1732,7 +1732,7 @@ static void monitor_stopper(void * thread) {
 
 }
 
-x_ubyte * monitor_test(x_ubyte * memory) {
+void monitor_test() {
 
   x_status status;
 
@@ -1742,8 +1742,7 @@ x_ubyte * monitor_test(x_ubyte * memory) {
   fsm_sleep_time = x_usecs2ticks(500000);
   oempa("FSM sleep time = %d ticks.\n", fsm_sleep_time);
   
-  control = x_alloc_static_mem(memory, sizeof(x_Thread));
-  status = x_thread_create(control, monitor_tests, control, x_alloc_static_mem(memory, MONT_STACK_SIZE), MONT_STACK_SIZE, prio_offset + 2, TF_START);
+  status = x_thread_create(control, monitor_tests, control, x_alloc_mem(MONT_STACK_SIZE), MONT_STACK_SIZE, prio_offset + 2, TF_START);
   if (status != xs_success) {
     oempa("%s: status = '%s'\n", __FILE__, x_status2char(status));
     exit(0);
@@ -1752,8 +1751,8 @@ x_ubyte * monitor_test(x_ubyte * memory) {
     oempa("Monitor control thread 1, id = %p\n", control);
   }
 #if 0
-  fsm_thread = x_alloc_static_mem(memory, sizeof(x_Thread));
-  status = x_thread_create(fsm_thread, monitor_fsm, fsm_thread, x_alloc_static_mem(memory, MONT_STACK_SIZE), MONT_STACK_SIZE, prio_offset + fsm_prio_high, TF_START);
+  fsm_thread = x_alloc_mem(sizeof(x_Thread));
+  status = x_thread_create(fsm_thread, monitor_fsm, fsm_thread, x_alloc_mem(MONT_STACK_SIZE), MONT_STACK_SIZE, prio_offset + fsm_prio_high, TF_START);
   if (status != xs_success) {
     oempa("%s: status = '%s'\n", __FILE__, x_status2char(status));
     exit(0);
@@ -1763,9 +1762,9 @@ x_ubyte * monitor_test(x_ubyte * memory) {
   }
 #endif
 
-  int_thread = x_alloc_static_mem(memory, sizeof(x_Thread));
-  status = x_thread_create(int_thread, monitor_stopper, int_thread, x_alloc_static_mem(memory, MONT_STACK_SIZE), MONT_STACK_SIZE, 4, TF_START);
+  int_thread = x_alloc_mem(sizeof(x_Thread));
+  status = x_thread_create(int_thread, monitor_stopper, int_thread, x_alloc_mem(MONT_STACK_SIZE), MONT_STACK_SIZE, 4, TF_START);
 
-  return memory;
+  return;
 
 }

@@ -1,7 +1,6 @@
 /**************************************************************************
-* Parts copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights     *
-* reserved. Parts copyright (c) 2004, 2005, 2009 by /k/ Embedded Java     *
-* Solutions. All rights reserved.                                         *
+* Copyright (c) 2009, 2023 by Chris Gray, KIFFER Ltd.                     *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -11,22 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of /k/ Embedded Java Solutions*
-*    nor the names of other contributors may be used to endorse or promote*
-*    products derived from this software without specific prior written   *
-*    permission.                                                          *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, /K/ EMBEDDED JAVA SOLUTIONS OR OTHER *
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,   *
-* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,     *
-* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR      *
-* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF  *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING    *
-* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS      *
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #ifndef _O4P_H
@@ -115,10 +113,6 @@
 
 typedef unsigned short         x_ushort;
 
-/// Amount of memory to reserve for `static' allocations during OS startup (Wonka doesn't need any).
-#ifndef STATIC_MEMORY_SIZE
-#define STATIC_MEMORY_SIZE 4096
-#endif 
 extern int num_x_threads;
 
 #define S_RR    SCHED_RR
@@ -249,7 +243,6 @@ static inline x_long x_systime_get(void) {
 typedef struct O4pEnv {
   int scheduler;
   int status;
-  void *staticMemory;                    /* memory used to fake Oswald's static allocation thang */
   x_thread threads;                      /* pointer to first element in linked list of threads */
   pthread_mutex_t threadsLock;           
   pthread_mutex_t timer_lock;           
@@ -261,9 +254,6 @@ extern O4pEnv *o4pe;
 
 typedef void(*x_entry)(void* arg);
 
-//void x_setup_kernel(void);
-  /* Enter kernel. */
-  
 void setScheduler(int scheduler);
 
 #define currentTicks                 (o4pe->timer_ticks)
@@ -336,6 +326,8 @@ x_long x_ticks2usecs(x_size ticks);
  */
 extern void x_now_plus_ticks(x_long ticks, struct timespec *ts);
 extern x_boolean x_deadline_passed(struct timespec *ts);
+
+#define x_errno errno
 
 void _o4p_abort(char *file, int line, int type, char *message, int rc);
 
