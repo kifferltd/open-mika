@@ -153,26 +153,29 @@ w_int Component_isLightweight(r_component component) {
 
 w_void Component_getBackground(r_component component, w_instance *colorInstance, w_instance defaultColor) {
   w_thread    thread = currentWonkaThread;
-  JNIEnv      *env = w_thread2JNIEnv(thread);
   w_clazz     clazz = instance2clazz(component->instance);
-  jclass      component_class = clazz2Class(clazz);
-  jthrowable  exception;
+  w_instance  exception;
   jmethodID   method;
 
-  method = (*env)->GetMethodID(env, component_class, "getBackground", "()Ljava/awt/Color;");
+  method = find_method(clazz, "getBackground", "()Ljava/awt/Color;");
+  w_frame new_frame = activateFrame(thread, method, 0, 1, component->instance, stack_trace);
+  *colorInstance = (w_instance) new_frame->jstack_top[-1].c;
+  deactivateFrame(new_frame, NULL);
+  removeLocalReference(thread, component->instance);
 
-  *colorInstance = (*env)->CallObjectMethod(env, component->instance, method);
-  exception = (jthrowable)((*env)->ExceptionOccurred(env));
+  exception = exceptionThrown(thread);
   if(exception) {
-    (*env)->ExceptionClear(env);
-    component_class = (*env)->GetObjectClass(env, exception);
-    method = (*env)->GetMethodID(env, component_class, "printStackTrace", "()V");
-    (*env)->CallVoidMethod(env, exception, method);
+    clearException(thread);
+    clazz = instance2clazz(exception);
+    method = find_method(clazz, "printStackTrace", "()V");
+    new_frame = activateFrame(thread, method, 0, 1, component->instance, stack_trace);
+    deactivateFrame(new_frame, NULL);
+    removeLocalReference(thread, component->instance);
   }
 
   if(!*colorInstance) *colorInstance = defaultColor;
 
-  (*env)->DeleteLocalRef(env, *colorInstance);
+  removeLocalReference(thread, *colorInstance);
 }
   
 w_instance Component_getColor(int slot) {
@@ -424,7 +427,7 @@ w_int Component_isVisible(r_component component) {
 ** Native methods.
 */
 
-w_void Component_createPeer(JNIEnv *env, jobject thisPeer) {
+w_void Component_createPeer(w_thread thread, jobject thisPeer) {
  
   jobject componentInstance = (jobject)getReferenceField(thisPeer, F_DefaultComponent_component);
   r_component component = allocClearedMem(sizeof(r_Component));
@@ -442,7 +445,7 @@ w_void Component_createPeer(JNIEnv *env, jobject thisPeer) {
   setWotsitField(thisPeer, F_DefaultComponent_wotsit, component);
 }
 
-w_void Component_finalize(JNIEnv *env, jobject thisPeer) {
+w_void Component_finalize(w_thread thread, jobject thisPeer) {
 
 #ifdef DEBUG
   jobject thisComponent = getReferenceField(thisPeer, F_DefaultComponent_component);
@@ -542,7 +545,7 @@ w_void Component_finalize(JNIEnv *env, jobject thisPeer) {
   rudolph_unlock();
 }
 
-w_int Component_getAbsX(JNIEnv *env, jobject thisPeer) {
+w_int Component_getAbsX(w_thread thread, jobject thisPeer) {
   w_int dx, dy, w, h, ox, oy;
   r_component component = getWotsitField(thisPeer, F_DefaultComponent_wotsit);
 
@@ -551,7 +554,7 @@ w_int Component_getAbsX(JNIEnv *env, jobject thisPeer) {
   return dx - ox;
 }
 
-w_int Component_getAbsY(JNIEnv *env, jobject thisPeer) {
+w_int Component_getAbsY(w_thread thread, jobject thisPeer) {
   w_int dx, dy, w, h, ox, oy;
   r_component component = getWotsitField(thisPeer, F_DefaultComponent_wotsit);
 
@@ -560,7 +563,7 @@ w_int Component_getAbsY(JNIEnv *env, jobject thisPeer) {
   return dy - oy;
 }
 
-jobject Component_createImage(JNIEnv *env, jobject thisPeer, jint width, jint height) {
+jobject Component_createImage(w_thread thread, jobject thisPeer, jint width, jint height) {
 
   jobject thisComponent = getReferenceField(thisPeer, F_DefaultComponent_component);
   r_component component = getWotsitField(thisPeer, F_DefaultComponent_wotsit);
@@ -673,14 +676,13 @@ jobject Component_createImage(JNIEnv *env, jobject thisPeer, jint width, jint he
     drawHLine(image->buffer, 0, i, image->w, color);
   }
 
-  woempa(8, "called Component_createImage(%p, %p, %d, %d)\n", env, thisComponent, width, height);
+  woempa(8, "called Component_createImage(%p, %p, %d, %d)\n", thread, thisComponent, width, height);
 
   return (w_instance)imageInstance;
 }
 
-w_instance Component_getGraphics(JNIEnv *env, jobject thisPeer) {
+w_instance Component_getGraphics(w_thread thread, jobject thisPeer) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance graphicalCntxt = NULL;
   w_instance fontInstance = NULL;
   w_instance foregroundInstance = NULL;
@@ -741,7 +743,7 @@ w_instance Component_getGraphics(JNIEnv *env, jobject thisPeer) {
   
 }
 
-w_void Component_tag(JNIEnv *env, jobject thisPeer, jint type, jboolean render) {
+w_void Component_tag(w_thread thread, jobject thisPeer, jint type, jboolean render) {
 
   r_component component = getWotsitField(thisPeer, F_DefaultComponent_wotsit);
   

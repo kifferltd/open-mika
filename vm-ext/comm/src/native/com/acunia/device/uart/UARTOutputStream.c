@@ -46,10 +46,9 @@
 */
 void
 UARTOutputStream_createFromString
-(  JNIEnv *env, w_instance thisOutputStream,
+(  w_thread thread, w_instance thisOutputStream,
   w_instance nameString
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_string   nameStr;
   w_device commport;
   
@@ -92,10 +91,9 @@ UARTOutputStream_createFromString
 */
 void
 UARTOutputStream_write
-(  JNIEnv *env, w_instance thisOutputStream,
+(  w_thread thread, w_instance thisOutputStream,
   w_int oneByte
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_sbyte    b = oneByte & 0xff;
   w_size     dummy;
   w_device s = (w_device)getWotsitField(thisOutputStream, F_UARTOutputStream_wotsit);
@@ -117,10 +115,9 @@ UARTOutputStream_write
 */
 void
 UARTOutputStream_writeFromBuffer
-(  JNIEnv *env, w_instance thisOutputStream,
+(  w_thread thread, w_instance thisOutputStream,
   w_instance ByteArray, w_int offset, w_int length
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device s = (w_device)getWotsitField(thisOutputStream, F_UARTOutputStream_wotsit);
   w_sbyte    *byte_array = instance2Array_byte(ByteArray);
   w_sbyte    *dest = byte_array + offset;
@@ -155,7 +152,7 @@ UARTOutputStream_writeFromBuffer
 */
 void
 UARTOutputStream_flush
-(  JNIEnv *env, w_instance thisOutputStream
+(  w_thread thread, w_instance thisOutputStream
 ) {
 }
 
@@ -165,7 +162,7 @@ UARTOutputStream_flush
 */
 void
 UARTOutputStream_close0
-(  JNIEnv *env, w_instance thisOutputStream
+(  w_thread thread, w_instance thisOutputStream
 ) {
   w_device s = (w_device)getWotsitField(thisOutputStream, F_UARTOutputStream_wotsit);
 

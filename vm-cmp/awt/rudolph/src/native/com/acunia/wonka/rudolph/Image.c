@@ -51,7 +51,7 @@
 ** Create the r_image from a pixel array.
 */
 
-w_void Image_createImage(JNIEnv *env, jobject thisObject) {
+w_void Image_createImage(w_thread thread, jobject thisObject) {
   r_image    image = getWotsitField(thisObject, F_Image_wotsit);
 
   if(image == NULL) {
@@ -151,9 +151,8 @@ w_void Image_createImage(JNIEnv *env, jobject thisObject) {
 ** Simply return the graphics object created by the Component from which this image was derived.
 */
 
-w_instance Image_getGraphics (JNIEnv *env, jobject thisImage) {
+w_instance Image_getGraphics (w_thread thread, jobject thisImage) {
 
-  w_thread thread = JNIEnv2w_thread(env);
   w_instance fontInstance = NULL;
   w_instance foregroundInstance = NULL;
   w_instance backgroundInstance = NULL;
@@ -162,7 +161,7 @@ w_instance Image_getGraphics (JNIEnv *env, jobject thisImage) {
   w_instance graphicalCntxt;
 
   if(getReferenceField(thisImage, F_Image_producer)) {
-    throwException(JNIEnv2w_thread(env), clazzClassCastException, NULL);
+    throwException(w_thread, clazzClassCastException, NULL);
     return NULL;
   }
   
@@ -199,18 +198,17 @@ w_instance Image_getGraphics (JNIEnv *env, jobject thisImage) {
     setReferenceField(graphicalCntxt, component->instance, F_Graphics_component);
 
     class_Graphics = clazz2Class(clazzGraphics);
-    method = (*env)->GetMethodID(env, class_Graphics, "<init>", "()V");
+    method = find_method(clazzGraphics, "<init>", "()V");
     
     if(!method) {
       wabort(ABORT_WONKA,"Graphics has no constructor ???\n");
     }
 
-    (*env)->CallVoidMethod(env, graphicalCntxt, method);
+    w_frame new_frame = activateFrame(thread, method, 0, 1, graphicalCntxt, stack_trace);
+    deactivateFrame(new_frame, NULL);
+    removeLocalReference(thread, component->instance);
     
-    if ((*env)->ExceptionCheck(env)) {
-      // wabort(ABORT_WONKA,"Game over 2.\n");
       // Leave the exception for the interpreter to handle...
-    }
 
     Component_getFontInstance(component->parent, &fontInstance);
     setReferenceField(graphicalCntxt, fontInstance, F_Graphics_font);
@@ -229,7 +227,7 @@ w_instance Image_getGraphics (JNIEnv *env, jobject thisImage) {
   
 }
 
-jint Image_convertRGB (JNIEnv *env, w_instance ImageClass, jint r, jint g, jint b) {
+jint Image_convertRGB (w_thread thread, w_instance ImageClass, jint r, jint g, jint b) {
   
   /* 
   ** Native so that the AWT classes aren't dependent on a particular Wonka
@@ -239,12 +237,12 @@ jint Image_convertRGB (JNIEnv *env, w_instance ImageClass, jint r, jint g, jint 
   return rgb2pixel(r,g,b);
 }
 
-w_void Image_setPixel (JNIEnv *env, jobject this_image, jint x, jint y, jint scanlen, jint pixel) {
+w_void Image_setPixel (w_thread thread, jobject this_image, jint x, jint y, jint scanlen, jint pixel) {
   w_ubyte *pixels = instance2Array_byte(getReferenceField(this_image, F_Image_pixels));
   pixelset(pixel, pixels, scanlen, x, y);
 }
 
-w_void Image_finalize0 (JNIEnv *env, jobject thisImage) {
+w_void Image_finalize0 (w_thread thread, jobject thisImage) {
   r_image image = getWotsitField(thisImage, F_Image_wotsit);
 
   woempa(5, "called Image_finalize0()\n");
@@ -558,7 +556,7 @@ w_boolean Image_drawImage(r_buffer dst_buffer, r_image image, int dx1, int dy1, 
 
 }
 
-w_void Image_conversion_index(JNIEnv *env, jobject thisImage, jobject srcArray, jobject dstArray, 
+w_void Image_conversion_index(w_thread thread, jobject thisImage, jobject srcArray, jobject dstArray, 
                               jobject model, jint x, jint y, jint w, jint h, jint offset, jint scansize) {
   
   w_int      *internal = (w_int *)instance2Array_int(getReferenceField(model, F_IndexColorModel_internal));
@@ -613,7 +611,7 @@ w_void Image_conversion_index(JNIEnv *env, jobject thisImage, jobject srcArray, 
   }
 }
 
-w_void Image_conversion_direct(JNIEnv *env, jobject thisImage, jobject srcArray, jobject dstArray, 
+w_void Image_conversion_direct(w_thread thread, jobject thisImage, jobject srcArray, jobject dstArray, 
                               jobject model, jint x, jint y, jint w, jint h, jint offset, jint scansize) {
   
   w_instance alpha_array = getReferenceField(thisImage, F_Image_alpha);
@@ -649,7 +647,7 @@ w_void Image_conversion_direct(JNIEnv *env, jobject thisImage, jobject srcArray,
   }
 }
 
-w_void IndexColorModel_fill_internal(JNIEnv *env, jobject model) {
+w_void IndexColorModel_fill_internal(w_thread thread, jobject model) {
   w_ubyte *reds = (w_ubyte *)instance2Array_byte(getReferenceField(model, F_IndexColorModel_reds));
   w_ubyte *greens = (w_ubyte *)instance2Array_byte(getReferenceField(model, F_IndexColorModel_greens));
   w_ubyte *blues = (w_ubyte *)instance2Array_byte(getReferenceField(model, F_IndexColorModel_blues));

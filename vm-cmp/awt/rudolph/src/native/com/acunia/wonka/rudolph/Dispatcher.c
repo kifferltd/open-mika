@@ -99,7 +99,7 @@ extern char* awt_splash;
 static void do_clearscreen(w_ubyte *scr, int w, int h);
 static void do_splashscreen(w_ubyte *scr, int w, int h);
 
-void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
+void Dispatcher_init(w_thread thread, jobject thisObj, w_instance theEventQueue) {
   static int init = 1;
   
   if (init == 1) {
@@ -117,35 +117,35 @@ void Dispatcher_init(JNIEnv *env, jobject thisObj, w_instance theEventQueue) {
     */
     
     if (mustBeInitialized(clazzToolkit) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Toolkit: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Toolkit: %e", exceptionThrown(w_thread));
     }
     
     if (mustBeInitialized(clazzComponent) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.Component: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to load class java.awt.Component: %e", exceptionThrown(w_thread));
     }
 
     if (mustBeInitialized(clazzSystemColor) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.SystemColor: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.SystemColor: %e", exceptionThrown(w_thread));
     }
 
     if (mustBeInitialized(clazzGraphics) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Graphics: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Graphics: %e", exceptionThrown(w_thread));
     }
     
     if (mustBeInitialized(clazzFont) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Font: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.Font: %e", exceptionThrown(w_thread));
     }
 
     if (mustBeInitialized(clazzMouseEvent) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.MouseEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.MouseEvent: %e", exceptionThrown(w_thread));
     }
     
     if (mustBeInitialized(clazzKeyEvent) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.KeyEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.KeyEvent: %e", exceptionThrown(w_thread));
     }
 
     if (mustBeInitialized(clazzFocusEvent) == CLASS_LOADING_FAILED) {
-      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.FocusEvent: %e", exceptionThrown(JNIEnv2w_thread(env)));
+      wabort(ABORT_WONKA, "AWT was unable to initialize class java.awt.event.FocusEvent: %e", exceptionThrown(w_thread));
     }
     
     /*

@@ -48,10 +48,9 @@
 */
 void
 UARTInputStream_createFromString
-(  JNIEnv *env, w_instance thisInputStream,
+(  w_thread thread, w_instance thisInputStream,
   w_instance nameString
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_string   nameStr;
   w_device commport;
   
@@ -89,10 +88,9 @@ UARTInputStream_createFromString
 */
 w_int
 UARTInputStream_readIntoBuffer
-(  JNIEnv *env, w_instance thisInputStream,
+(  w_thread thread, w_instance thisInputStream,
   w_instance ByteArray, w_int offset, w_int length
 ) {
-  w_thread     thread = JNIEnv2w_thread(env);
   w_device   s = (w_device)getWotsitField(thisInputStream, F_UARTInputStream_wotsit);
   w_sbyte      *byte_array  = instance2Array_byte(ByteArray);
   w_sbyte      *dest  = byte_array + offset;
@@ -124,10 +122,9 @@ UARTInputStream_readIntoBuffer
 */
 w_long
 UARTInputStream_skip0
-(  JNIEnv *env, w_instance thisInputStream,
+(  w_thread thread, w_instance thisInputStream,
   w_long n
 ) {
-  w_thread     thread = JNIEnv2w_thread(env);
   w_device   s = (w_device)getWotsitField(thisInputStream, F_UARTInputStream_wotsit);
   w_long       l = 0;
   w_size       lread;
@@ -159,9 +156,8 @@ UARTInputStream_skip0
 */
 w_int
 UARTInputStream_available
-(  JNIEnv *env, w_instance thisInputStream
+(  w_thread thread, w_instance thisInputStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device s = (w_device)getWotsitField(thisInputStream, F_UARTInputStream_wotsit);
   w_word     reply;
 
@@ -184,7 +180,7 @@ UARTInputStream_available
 */
 void
 UARTInputStream_close0
-(  JNIEnv *env, w_instance thisInputStream
+(  w_thread thread, w_instance thisInputStream
 ) {
   w_device s = (w_device)getWotsitField(thisInputStream, F_UARTInputStream_wotsit);
 

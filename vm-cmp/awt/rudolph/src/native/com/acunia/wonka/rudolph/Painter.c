@@ -106,7 +106,7 @@ static inline w_word *canvas_transpose(w_ubyte *src, w_int width, w_int height) 
 
 w_int something_changed = 0;
 
-void Painter_paint(JNIEnv *env, jobject thisObj) {
+void Painter_paint(w_thread thread, jobject thisObj) {
   r_component component;
   r_canvas canvas;
   w_ubyte *src;
@@ -118,10 +118,9 @@ void Painter_paint(JNIEnv *env, jobject thisObj) {
   int h;
   int dx;
   int dy;
-  w_thread thread = JNIEnv2w_thread(env);
     
-  if(x_thread_priority_get(JNIEnv2w_thread(env)->kthread) != 5) {
-     x_thread_priority_set(JNIEnv2w_thread(env)->kthread, 5);
+  if(x_thread_priority_get(w_thread->kthread) != 5) {
+     x_thread_priority_set(w_thread->kthread, 5);
   }
 
     if(rootCanvas->component->refresh) {

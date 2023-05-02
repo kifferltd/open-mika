@@ -53,8 +53,7 @@ static r_font *fonts = NULL;
 static w_int num_fonts = 0;
 static char *fonts_path;
 
-w_void Font_initialize(JNIEnv *env, jclass thisClass, jstring name, jstring file) {
-  w_thread      thread = JNIEnv2w_thread(env);
+w_void Font_initialize(w_thread thread, jclass thisClass, jstring name, jstring file) {
   w_int         i;
   FontFilePtr	  input = 0;
   FontPropsRec  fontProps;
@@ -350,8 +349,7 @@ w_void Font_initialize(JNIEnv *env, jclass thisClass, jstring name, jstring file
 ** the main call of java.awt.Font.<constructor>(String fontname, w_int style, w_int size)
 */
 
-w_void Font_create(JNIEnv *env, jobject thisFont, jobject name, jint style, jint size) {
-  w_thread   thread = JNIEnv2w_thread(env);
+w_void Font_create(w_thread thread, jobject thisFont, jobject name, jint style, jint size) {
   w_string   wString;
   char*      cString;
   w_instance stringInstanceName;
@@ -600,7 +598,7 @@ w_boolean Font_loadFont(r_font font) {
 }
 
 /*
-w_void Font_unloadFont(JNIEnv *env, jobject thisFont){
+w_void Font_unloadFont(w_thread thread, jobject thisFont){
 
   r_font font = getWotsitField(thisFont, F_Font_wotsit);
 

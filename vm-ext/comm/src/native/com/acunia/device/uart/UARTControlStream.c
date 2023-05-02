@@ -67,10 +67,9 @@
 */
 void
 UARTControlStream_createFromString
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_instance nameString
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_string   nameStr;
   w_device commport;
   char      *name;
@@ -106,9 +105,8 @@ UARTControlStream_createFromString
 */
 w_int
 UARTControlStream_getbaudrate
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -127,10 +125,9 @@ UARTControlStream_getbaudrate
 */
 w_int
 UARTControlStream_setbaudrate
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_int     newrate
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply = 0;
 
@@ -149,9 +146,8 @@ UARTControlStream_setbaudrate
 */
 w_int
 UARTControlStream_getdatabits
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -171,10 +167,9 @@ UARTControlStream_getdatabits
 */
 w_int
 UARTControlStream_setdatabits
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_int     newbits
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply = 0;
 
@@ -193,9 +188,8 @@ UARTControlStream_setdatabits
 */
 w_int
 UARTControlStream_getstopbits
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -214,10 +208,9 @@ UARTControlStream_getstopbits
 */
 w_int
 UARTControlStream_setstopbits
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_int     newbits
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -236,9 +229,8 @@ UARTControlStream_setstopbits
 */
 w_int
 UARTControlStream_getflowcontrol
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -259,10 +251,9 @@ UARTControlStream_getflowcontrol
 */
 w_int
 UARTControlStream_setflowcontrol
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_int     newflowcon
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -281,9 +272,8 @@ UARTControlStream_setflowcontrol
 */
 w_int
 UARTControlStream_getparity
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -302,10 +292,9 @@ UARTControlStream_getparity
 */
 w_int
 UARTControlStream_setparity
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_int     newparity
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -325,9 +314,8 @@ UARTControlStream_setparity
 */
 w_boolean
 UARTControlStream_getdsr
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -344,9 +332,8 @@ UARTControlStream_getdsr
 */
 w_boolean
 UARTControlStream_getcd
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -363,9 +350,8 @@ UARTControlStream_getcd
 */
 w_boolean
 UARTControlStream_getcts
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -382,9 +368,8 @@ UARTControlStream_getcts
 */
 w_boolean
 UARTControlStream_getri
-( JNIEnv *env, w_instance thisUARTControlStream
+( w_thread thread, w_instance thisUARTControlStream
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -403,10 +388,9 @@ UARTControlStream_getri
 */
 w_boolean
 UARTControlStream_setdtr
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_boolean newdtr
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -428,10 +412,9 @@ UARTControlStream_setdtr
 */
 w_boolean
 UARTControlStream_setrts
-( JNIEnv *env, w_instance thisUARTControlStream,
+( w_thread thread, w_instance thisUARTControlStream,
   w_boolean newrts
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_word     reply;
 
@@ -451,10 +434,9 @@ UARTControlStream_setrts
 ** Uses the \textsf{set} function of the underlying driver.
 */
 void
-UARTControlStream_sendbreak (JNIEnv *env, w_instance thisUARTControlStream,
+UARTControlStream_sendbreak (w_thread thread, w_instance thisUARTControlStream,
   w_int millis
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
 
   if(commport == NULL || deviceBSSet(commport, wdi_send_break, (w_word)millis, x_eternal) != wds_success) {
@@ -467,10 +449,9 @@ UARTControlStream_sendbreak (JNIEnv *env, w_instance thisUARTControlStream,
 ** Call the underlying driver's \textsf{ioevt} function, and analyse the result.
 */
 void
-UARTControlStream_waitforevent (JNIEnv *env, w_instance thisUARTControlStream,
+UARTControlStream_waitforevent (w_thread thread, w_instance thisUARTControlStream,
   w_instance  theSerialPortEvent
 ) {
-  w_thread   thread = JNIEnv2w_thread(env);
   w_device commport = (w_device)getWotsitField(thisUARTControlStream, F_UARTControlStream_wotsit);
   w_int      event;
   w_int      param;
@@ -541,7 +522,7 @@ UARTControlStream_waitforevent (JNIEnv *env, w_instance thisUARTControlStream,
 ** Ask the underlying driver to close the device for input.
 */
 void
-UARTControlStream_close(JNIEnv *env, w_instance thisStream) {
+UARTControlStream_close(w_thread thread, w_instance thisStream) {
   w_device s = (w_device)getWotsitField(thisStream, F_UARTControlStream_wotsit);
 
   if (s) {
