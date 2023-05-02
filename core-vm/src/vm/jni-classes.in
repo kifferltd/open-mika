@@ -1,0 +1,109 @@
+###########################################################################
+# Copyright (c) 2023 by KIFFER Ltd.  All rights reserved.                 #
+#                                                                         #
+# Redistribution and use in source and binary forms, with or without      #
+# modification, are permitted provided that the following conditions      #
+# are met:                                                                #
+# 1. Redistributions of source code must retain the above copyright       #
+#    notice, this list of conditions and the following disclaimer.        #
+# 2. Redistributions in binary form must reproduce the above copyright    #
+#    notice, this list of conditions and the following disclaimer in the  #
+#    documentation and/or other materials provided with the distribution. #
+# 3. Neither the name of KIFFER Ltd nor the names of other contributors   #
+#    may be used to endorse or promote products derived from this         #
+#    software without specific prior written permission.                  #
+#                                                                         #
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    #
+# IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    #
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      #
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS #
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   #
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     #
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   #
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      #
+# POSSIBILITY OF SUCH DAMAGE.                                             #
+###########################################################################
+
+# 
+# This file is used to generate jni-classes.h and jni-classes.c.  
+# It contains two types of record:
+#
+# 1. A single field which is a fully-qualified class name, e.g.
+#   java/lang/Object
+# There must be no whitespace preceding the name.
+#
+# This causes code to be generated for two static strings:
+#    string_Object	value "java/lang/Object" and
+#    string_ObjectDesc  value "Ljava/lang/Object;"
+# and for w_clazz clazzObject, initialized by resolving java/lang/Object.
+# It also sets the context for the type-2 records which follow.
+#
+# 2. one or two fields preceded and separated by whitespace 
+# (space or tab characters).
+#
+# 2a.
+# 	<field>       <descr>
+#
+# (where <descr> is a field descriptor) causes an int F_<class>_<field> 
+# to be declared and set to the offset of the slot for <field> within an 
+# instance of <class>. The <class> is a not fully qualified name like e.g.
+# 'Object' or 'StringBuffer'.
+#
+# 2b.
+# 	<field>       +
+#
+# causes an int F_<class>_<field> to be declared and set equal to the current
+# instanceSize, which is then incremented.  The "fictitious" field(s) so
+# created follow all "real" fields in the instance structure.
+# 
+# N.B. The "+"-type fields of Class, Array, Object and String are included 
+# in this file for documentation purposes only: the corresponding values are 
+# initialized "by hand" in array.c and clazz.c.
+#
+# 2c.    
+# 	<method name> <method descriptor>     <entry point>
+#
+# causes the function <entrypoint> to be registered as the implementation
+# of <class>.<method name> <method descriptor>.
+#
+# What needs to be in here?
+#
+# A class should be included in the file if the clazz_... or string_...
+# declarations are needed, or if it is essential that the class be loaded
+# before Init.run() is executed; this includes all those subclasses of 
+# Throwable for which a WS_... constant needs to be defined.  A class
+# must also be included if any of its fields or methods are to be included:
+# native methods and "fictitious" fields obviously need to be included, but
+# other methods and fields need only be present if the F_... declaration
+# is needed.
+#
+wonka/vm/NativeThread
+wonka/vm/NativeLibrary
+	handle		I
+	finalize	()V			NativeLibrary_finalize
+#
+wonka/vm/ProcessInfo
+	wotsit	+
+	id		I
+	destroyed	Z
+	cleanUp	()V		ProcessInfo_cleanUp
+	destroy	()V		ProcessInfo_destroy
+	nativeReturnValue (I)V	ProcessInfo_setReturnValue
+wonka/vm/ProcessMonitor
+	returnvalue	I
+	nativeExec    ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Lwonka/vm/ProcessInfo;  NativeProcess_exec
+	waitForAllProcesses	()I	ProcessMonitor_WaitForAll
+wonka/vm/ProcessInputStream
+	info   	Lwonka/vm/ProcessInfo;
+	input      	Z
+	available    ()I    	ProcessInputStream_available
+	read         ()I    	ProcessInputStream_read
+	read         ([BII)I  ProcessInputStream_read_Array
+#  nativeClose  ()V	ProcessInputStream_close
+wonka/vm/ProcessOutputStream
+	info   	Lwonka/vm/ProcessInfo;
+	write        (I)V   	ProcessOutputStream_write
+	write        ([BII)V	ProcessOutputStream_write_Array
+	nativeClose  ()V	ProcessOutputStream_close

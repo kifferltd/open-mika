@@ -39,7 +39,7 @@
 #include "arrays.h"
 #include "bar.h"
 #include "clazz.h"
-#include "core-classes.h"
+#include "jni-classes.h"
 #include "descriptor.h"
 #include "fields.h"
 #include "hashtable.h"
