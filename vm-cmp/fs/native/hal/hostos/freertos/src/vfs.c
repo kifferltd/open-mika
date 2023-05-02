@@ -296,6 +296,17 @@ w_int vfs_ftell(w_int fd) {
   return fde->ops->tell(fde);
 }
  
+w_int vfs_get_length(w_int fd) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->get_length(fde);
+}
+ 
 w_int vfs_read(w_int fd, void *buf, w_size length) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
