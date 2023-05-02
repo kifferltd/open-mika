@@ -80,8 +80,7 @@ w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_
     return 1;
   }
 
-  // FIXME this should use the vfs_ abstraction
-  if (statbuf.st_mode != FF_IFREG) {
+  if (statbuf.st_mode != VFS_S_IFREG) {
     woempa(9, "vfs_stat(%s, %p) did not report a regular file\n", pathname, &statbuf);
     return 1;
   }
@@ -167,14 +166,7 @@ w_int RandomAccessFile_skipBytes (w_thread thread, w_instance thisRAF, w_int n) 
     throwIOException(thread);
   } else {
     struct vfs_STAT statbuf;
-    w_long size = 0;
-
-// FIXME at vfs level
-    size = ff_filelength((FF_FILE *)vfs_fd_table[fd]->data);
-    if (size <= 0) {
-      throwIOException(thread);
-      return -1;
-    }
+    w_long size = (w_long)vfs_get_length(fd);
 
     prev_pos = vfs_ftell(fd);
     if (prev_pos < 0) {
@@ -273,9 +265,8 @@ w_long RandomAccessFile_length (w_thread thread, w_instance thisRAF) {
   struct vfs_STAT statbuf;
   w_long result = 0;
 
-  // FIXME this should use the vfs_ abstraction
   w_int fd = RAF2FD(thisRAF);
-  result = ff_filelength((FF_FILE *)vfs_fd_table[fd]->data);
+  result = (w_long)vfs_get_length(fd);
 
   return result;
 }

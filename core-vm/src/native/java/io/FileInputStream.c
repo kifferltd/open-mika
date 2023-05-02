@@ -140,9 +140,7 @@ w_int FileInputStream_available
     throwIOException(thread);
     result = 0;
   } else {
-    // FIXME this should use the vfs_ abstraction
-    woempa(7, "FILE ptr = %p\n", (FF_FILE *)vfs_fd_table[fd]->data);
-    size_t flen = ff_filelength((FF_FILE *)vfs_fd_table[fd]->data);
+    size_t flen = vfs_get_length(fd);
     woempa(7, "file length = %d errno = %d\n", flen, errno);
     if (flen > 0 || errno == 0) {
       result = flen;
@@ -167,7 +165,8 @@ void FileInputStream_close
     fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
     if(fd >= 0) {
-      vfs_fclose(fd);
+      woempa(9, "Calling vfs_close\n");
+      vfs_close(fd);
       setIntegerField(fdObj, F_FileDescriptor_fd, -1);
     }
     setReferenceField(thisFileInputStream, F_FileInputStream_fd, NULL);
