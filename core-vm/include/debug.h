@@ -168,6 +168,8 @@ extern int woempa_bytecodetrigger;
 void grab_low_memory(void);
 void _lowMemoryCheck(const char *fun, int line);
 #define lowMemoryCheck _lowMemoryCheck(__FUNCTION__, __LINE__)
+#else
+#define lowMemoryCheck 
 #endif
 
 #endif /* _DEBUG_H */
