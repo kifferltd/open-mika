@@ -121,7 +121,7 @@ static void threadEntry(void * athread) {
 
 #ifdef O4P
     w_int pid = getpid();
-    w_int tid = syscall(__NR_gettid);
+    w_int tid = gettid();
 #ifdef RESMON
     setIntegerField(thread->Thread, F_Thread_pid, pid);
     setIntegerField(thread->Thread, F_Thread_tid, tid);
@@ -161,7 +161,7 @@ static void threadEntry(void * athread) {
     thread->state = wt_dead;
     if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
 #ifdef O4P
-      w_printf("Finish %t: pid was %d lwp %d\n", thread, getpid(), syscall(__NR_gettid));
+      w_printf("Finish %t: pid was %d lwp %d\n", thread, getpid(), gettid());
 #else
       w_printf("Finish %t\n", thread);
 #endif
