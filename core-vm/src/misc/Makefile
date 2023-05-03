@@ -27,7 +27,7 @@
 ###########################################################################
 
 # HACK sources = debug.c inits.c misc.c modules.c
-sources = debug.c inits.c misc.c 
+sources = debug.c inits.c misc.c launcher.c
 miscobjdir = $(objdir)/core-vm/misc
 objects=$(patsubst %.c, $(miscobjdir)/%.o, $(sources))
 
