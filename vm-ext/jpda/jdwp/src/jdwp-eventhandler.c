@@ -27,37 +27,6 @@
 * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
 **************************************************************************/
 
-/**************************************************************************
-* Parts copyright (c) 2001 by Punch Telematix. All rights reserved.       *
-* Parts copyright (c) 2004, 2006, 2009, 2018 by Chris Gray, KIFFER Ltd.   *
-* All rights reserved.                                                    *
-*                                                                         *
-* Redistribution and use in source and binary forms, with or without      *
-* modification, are permitted provided that the following conditions      *
-* are met:                                                                *
-* 1. Redistributions of source code must retain the above copyright       *
-*    notice, this list of conditions and the following disclaimer.        *
-* 2. Redistributions in binary form must reproduce the above copyright    *
-*    notice, this list of conditions and the following disclaimer in the  *
-*    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix or of KIFFER Ltd nor the names   *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written            *
-*    permission.                                                          *
-*                                                                         *
-* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX, KIFFER LTD OR OTHER CONTRIBUTORS     *
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,     *
-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT    *
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR      *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,       *
-* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                      *
-**************************************************************************/
-
 #include "clazz.h"
 #include "core-classes.h"
 #include "descriptor.h"
@@ -611,13 +580,41 @@ void jdwp_single_step_clear(jdwp_event event) {
       thread = modifier->condition.step.thread;
       woempa(7, "Clearing steppoint in thread '%t'\n", thread);
       step = (jdwp_step) thread->step;
-      releaseMem(step);
       thread->step = NULL;
+      releaseMem(step);
 
       return;
     }
     modifier = modifier->next;
   }
+}
+
+/*
+** Clear all steppoints.
+*/
+
+w_void jdwp_clear_all_steppoints() {
+  w_int i;
+  jdwp_event event;
+  jdwp_event temp;
+
+  event = jdwp_events_by_kind[jdwp_evt_single_step];
+      
+  while(event) {
+    // TODO can we use OSwald linked list macros?
+    temp = event->next;
+    event->prev->next = NULL;
+
+    jdwp_single_step_clear(event);
+
+    ht_erase(jdwp_event_hashtable, event->eventID);
+        
+    jdwp_dealloc_event(event);
+        
+    event = temp;
+  }
+    
+  jdwp_events_by_kind[jdwp_evt_single_step] = NULL;
 }
 
 /*
@@ -1314,6 +1311,9 @@ void jdwp_internal_suspend_all(void) {
 }
 
 void jdwp_internal_resume_all(void) {
+  // [CG 20230508] clear any outstanding steppoints as well
+  jdwp_clear_all_steppoints();
+  
   // [GR 20100317] Sometimes this function is called with
   // [GR 20100317] 'jdwp_global_suspend_count' set to 0. This could caused
   // [GR 20100317] long-lasting loops ...
