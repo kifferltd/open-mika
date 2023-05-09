@@ -154,9 +154,14 @@ endif
 generated :
 	$(CC) -c -o $(objdir)/generated/core-classes.o $(CFLAGS) $(gendir)/core-classes.c
 	$(CC) -c -o $(objdir)/generated/unicode.o $(CFLAGS) $(gendir)/unicode.c
+ifeq ($(JNI), true)
+	$(CC) -c -o $(objdir)/generated/jni-classes.o $(CFLAGS) $(gendir)/jni-classes.c
+endif
 ifeq ($(MATH), native)
 	$(CC) -c -o $(objdir)/generated/math-classes.o $(CFLAGS) $(gendir)/math-classes.c
 endif
+
+# TODO we probably don't need the JNI=$(JNI) bit
 
 core-vm:
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
@@ -165,6 +170,10 @@ ifeq ($(JAVA5_SUPPORT), true)
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes5.in > $(gendir)/core-classes.c
 else
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes.in > $(gendir)/core-classes.c
+endif
+ifeq ($(JNI), true)
+	awk -v JNI=$(JNI) -f $(scriptdir)/jni-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/jni-classes.in > $(gendir)/jni-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/jni-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/jni-classes.in > $(gendir)/jni-classes.c
 endif
 	make -C src 
 	make -C hal 

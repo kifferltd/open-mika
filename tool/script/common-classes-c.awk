@@ -29,10 +29,6 @@
 # Function to parse a method descriptor.
 
 BEGIN {
-  if(JNI=="true") {
-  }
-  else {
-  } 
 
   d2id["B"] = "b"
   d2id["C"] = "c"

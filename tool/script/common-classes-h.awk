@@ -151,7 +151,6 @@ BEGIN {
         paramlist = type
       }
     }
-#
 
     result = substr(descriptor,endparen+1)
 
@@ -166,11 +165,11 @@ BEGIN {
 }
 
 END {
+# TODO include the header file for the 64bit var<-> slot moves
   print "#include \"dispatcher.h\"" 
   print "#include \"hashtable.h\"" 
   print ""
   print "extern w_hashtable dispatchers_hashtable;"
-#  print "extern w_hashtable instance_dispatchers_hashtable;"
 
   print " "
   print "/*"
