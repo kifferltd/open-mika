@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2022 by Chris Gray, KIFFER Ltd. All rights reserved.      #
+# Copyright (c) 2022, 2023 by Chris Gray, KIFFER Ltd. All rights reserved.#
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -32,6 +32,10 @@ ifeq ($(TESTS), true)
 	make -C mauve $(MAKECMDGOALS)
 ifeq ($(AWT), rudolph)
 	make -C visualtest $(MAKECMDGOALS)
+endif
+# TODO map our targets to jembench mqkefile targets
+ifeq ($(HOSTOS), freertos)
+	make -C jembench/src 
 endif
 endif
 
