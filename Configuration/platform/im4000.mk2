@@ -7,5 +7,12 @@ image : builddir deployable
 	mmd -i ${imagedir}/open-mika.vfat ::/flash
 	mcopy -i ${imagedir}/open-mika.vfat -s ${deploydir}/* ::/flash
 	mcopy -i ${imagedir}/open-mika.vfat -s ${tooldeploydir}/mauve/* ::/flash/test
+	mcopy -i ${imagedir}/open-mika.vfat -s ${tooldeploydir}/jembench/* ::/flash/test
+	@echo
+	@minfo -i ${imagedir}/open-mika.vfat ::
+	@echo
+	@echo "file sizes (in sectors)"
+	@echo "-----------------------"
+	@mdu -a -i ${imagedir}/open-mika.vfat :: | sed -e 's%::/flash/%/%' -e 's%::/flash%===========\nTOTAL%' -e 's%::/%  plus overhead ->%'
 
 
