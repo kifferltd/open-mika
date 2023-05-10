@@ -402,6 +402,12 @@ virtual machine to test
       File currentdir = new File("");
       String canonicalrootpath=currentdir.getCanonicalPath();      //  => /home/wonka
       int pos = canonicalrootpath.lastIndexOf('/');
+// [CG 20230509 this test cannot work if current dir is '/'
+      if (pos == 0) {
+        harness.verbose("Current dir is '/', skipping these tests.");
+        return;
+      }
+//
       String superpath = canonicalrootpath.substring(0,pos);       //  => /home
       String currentdirname = canonicalrootpath.substring(pos+1);  //  => wonka
         harness.verbose("current canonicalpath = "+canonicalrootpath);
@@ -695,6 +701,12 @@ File("/","title.txt") and File(new File("/"),"title.txt"), so they are equally d
         harness.verbose("canonicaldirpath = "+canonicaldirpath);
 
       int pos = canonicalrootpath.lastIndexOf('/');
+// [CG 20230509 this test cannot work if current dir is '/'
+      if (pos == 0) {
+        harness.verbose("Current dir is '/', skipping these tests.");
+        return;
+      }
+//
       String superpath = canonicalrootpath.substring(0,pos);                  //  => /home
       String currentdirname = canonicalrootpath.substring(pos+1);             //  => wonka
         harness.verbose("superpath = "+superpath);
@@ -774,6 +786,12 @@ File("/","title.txt") and File(new File("/"),"title.txt"), so they are equally d
         harness.verbose("canonicalfilepath = "+canonicalfilepath);
 
       int pos = canonicalrootpath.lastIndexOf('/');
+// [CG 20230509 this test cannot work if current dir is '/'
+      if (pos == 0) {
+        harness.verbose("Current dir is '/', skipping these tests.");
+        return;
+      }
+//
       String superpath = canonicalrootpath.substring(0,pos);                  //  => /home
       String currentdirname = canonicalrootpath.substring(pos+1);             //  => wonka
       String superfilename = superpath+File.separator+testfilestring;   //  => wonka/testfile.scr
@@ -893,6 +911,12 @@ File("/","title.txt") and File(new File("/"),"title.txt"), so they are equally d
       File currentdir = new File("");
       String canonicalrootpath = currentdir.getCanonicalPath();                     //  => /home/wonka
       int pos = canonicalrootpath.lastIndexOf('/');
+// [CG 20230509 this test cannot work if current dir is '/'
+      if (pos == 0) {
+        harness.verbose("Current dir is '/', skipping these tests.");
+        return;
+      }
+//
       String superpath = canonicalrootpath.substring(0,pos);                        //  => /home
       String canonicaldirpath =  superpath+ File.separator +parallelstring;         //  => /home/parallel
       String canonicalfilepath = canonicaldirpath+ File.separator +testfilestring;  //  => /home/parallel/testfile.scr
