@@ -13,6 +13,6 @@ image : builddir deployable
 	@echo
 	@echo "file sizes (in sectors)"
 	@echo "-----------------------"
-	@mdu -a -i ${imagedir}/open-mika.vfat :: | sed -e 's%::/flash/%/%' -e 's%::/flash%===========\nTOTAL%' -e 's%::/%  plus overhead ->%'
+	@mdu -a -i ${imagedir}/open-mika.vfat :: | sed -e 's%::/flash%%' -e 's%::/ %  plus conf.json -> total %'
 
 
