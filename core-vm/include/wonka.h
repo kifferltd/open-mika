@@ -95,7 +95,7 @@ typedef volatile u4 w_ConstantValue;
 
 
 #define LSW_PART(l)                  (w_word)(l)
-#define MSW_PART(l)                  (w_word)((w_ulong)(l)>>32)
+#define MSW_PART(l)                  (w_word)(((w_ulong)(l))>>32)
 #define DWORD_TO_WORDS(c, cm, cl)    (cm) = MSW_PART(c); (cl) = LSW_PART(c)
 
 #if (defined(DEBUG) || defined(LOWMEM))
