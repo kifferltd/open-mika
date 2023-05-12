@@ -210,10 +210,11 @@ x_status x_monitor_wait(x_monitor monitor, x_sleep timeout) {
 x_status x_monitor_notify(x_monitor monitor) {
   if (x_list_is_empty(&monitor->monitor_queue)) {
     loempa(2, "Thread %p is not notifying any thread of monitor %p, because none is waiting\n", x_thread_current(), monitor);
-    return xs_no_instance;
   }
-  loempa(2, "Thread %p is notifying thread %p waiting on monitor %p\n", x_thread_current(), monitor->monitor_queue.next->thread, monitor);
-  xTaskNotifyGive(monitor->monitor_queue.next->thread->handle);
+  else {
+    loempa(2, "Thread %p is notifying thread %p waiting on monitor %p\n", x_thread_current(), monitor->monitor_queue.next->thread, monitor);
+    xTaskNotifyGive(monitor->monitor_queue.next->thread->handle);
+  }
 
   return xs_success;
 }
