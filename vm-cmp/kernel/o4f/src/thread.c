@@ -562,16 +562,12 @@ x_status x_thread_suspend(x_thread thread) {
 x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
   x_status status = xs_unknown;
   x_thread joiner = x_thread_current();
-  struct timespec one_tick_ts;
-  struct timespec end;
+  x_long end;
 
   if (!joinee->state) {
     return xs_success;
   }
 
-  one_tick_ts.tv_sec = 0;
-  one_tick_ts.tv_nsec = 1000 * x_ticks2usecs(1);
-  
   joiner->state = xt_joining;
 
   if (timeout == x_eternal) {
@@ -596,7 +592,7 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
        }
 
        vTaskDelay(joinee->task_priority < joiner->task_priority);
-     } while (!x_deadline_passed(&end));
+     } while (!x_deadline_passed(end));
   }
 
   joiner->state = xt_ready;
@@ -618,17 +614,24 @@ x_status x_thread_join(x_thread joinee, void **result, x_sleep timeout) {
 */
 
 x_status x_thread_wakeup(x_thread thread) {
-  xTaskNotify(thread->handle, 0, eNoAction);
+  // TODO - determine whether xTaskAbortDelay() is the right solution in all cases.
  
-  return xs_success;
+  return xTaskAbortDelay(thread->handle) == pdPASS ? xs_success : xs_no_instance;
 }
 
+/*
+** Wake up a thread that is waiting on a monitor, limited or eternal. If the thread
+** is not sleeping or joining, nothing happens and we return the xs_no_instance status.
+*/
 x_status x_thread_stop_waiting(x_thread thread) {
   x_monitor monitor = thread->waiting_on;
 
+  // TODO - check how join() should be handled.
   if (monitor) {
     loempa(2, "Thread %p will stop thread %p from waiting on %p\n", x_thread_current(), thread, monitor);
-    return x_monitor_stop_waiting(monitor, thread);
+    xTaskNotify(thread->handle, 0, eNoAction);
+
+    return xs_success;
   }
 
   return xs_no_instance;

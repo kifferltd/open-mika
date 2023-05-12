@@ -38,41 +38,18 @@ void x_setup_timers(x_size millis_per_tick) {
 }
 
 x_long x_time_now_millis() {
-  struct timeval tv;
-  x_long result;
-
-// TODO could be time to start using clock_gettime(CLOCK_MONOTONIC, ...)?
-  gettimeofday(&tv, NULL);
-  result = (x_long)tv.tv_sec * 1000;
-  result += ((x_long)tv.tv_usec + 500) / 1000;
-
-  return result;
+  return x_ticks2millis(xTaskGetTickCount());
 }
 
-void x_now_plus_ticks(x_long ticks, struct timespec *ts)
+void x_now_plus_ticks(x_long ticks, x_long *then)
 {
-  // volatile 'coz I don't trust gcc any further than I can throw it
-  volatile x_long usec; 
-  struct timeval now, diff, result;
-
-  usec =  x_ticks2usecs(ticks);
-
-  diff.tv_sec = usec / 1000000;
-  diff.tv_usec = usec % 1000000;
-
-// TODO could be time to start using clock_gettime(CLOCK_MONOTONIC, ...)?
-  gettimeofday(&now, NULL);
-  timeradd(&now, &diff, &result);
-  ts->tv_sec = result.tv_sec;
-  ts->tv_nsec = result.tv_usec * 1000;
+  *then = xTaskGetTickCount() + ticks;
 }
 
-x_boolean x_deadline_passed(struct timespec *ts) {
-  struct timeval now;
+x_boolean x_deadline_passed(x_long then) {
+  x_long now = xTaskGetTickCount();
 
-  gettimeofday(&now, NULL);
-
-  return (ts->tv_sec < now.tv_sec)  || ((ts->tv_sec == now.tv_sec) && (ts->tv_nsec <= now.tv_usec));
+  return then < now;
 }
 
 /*
