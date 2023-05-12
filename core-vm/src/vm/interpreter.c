@@ -1570,13 +1570,6 @@ void interpret(w_frame caller, w_method method) {
     w_int int_x = (w_int) slots2w_long(tos-2);
     tos[-2].c = (w_word) int_x;
     woempa(1, "l2i : result = %08x\n", tos[-2].c);
-/* WAS:
-    union {w_long l; w_word w[2];} long_x;
-    long_x.w[0] = tos[-2].c;
-    long_x.w[1] = tos[-1].c;
-    tos[-2].c = (w_int)long_x.l;
-    // tos[-2].s should already be 0
-*/
     goto c_pop;
   }
 
@@ -2236,11 +2229,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_dadd: {
-    woempa(7, "dadd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dadd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
     w_double sum = wfp_float64_add(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(sum, tos-2);
-    woempa(7, "dadd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dadd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2290,11 +2283,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_dmul: {
-    woempa(7, "dmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
     w_double product = wfp_float64_mul(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(product, tos-2);
-    woempa(7, "dmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2391,11 +2384,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_ddiv: {
-    woempa(7, "ddiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "ddiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
     w_double quotient = wfp_float64_div(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(quotient, tos-2);
-    woempa(7, "ddiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "ddiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2455,9 +2448,9 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_dneg: {
-    woempa(7, "dneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
     w_double2slots(wfp_float64_negate(slots2w_double(tos-2)), tos-2);
-    woempa(7, "dneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2470,18 +2463,9 @@ void interpret(w_frame caller, w_method method) {
   c_lshl: {
     i = tos[-1].c & 0x0000003f;
     tos -= 1;
-    woempa(7, "lshl : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    woempa(1, "lshl : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
     w_long2slots(slots2w_long(tos-2) << i, tos-2);
-    woempa(7, "lshl : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union {w_ulong l; w_word w[2];} long_x;
-    long_x.w[0] = tos[-3].c;
-    long_x.w[1] = tos[-2].c;
-    i = tos[-1].c & 0x0000003f;
-    long_x.l <<= i;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
-*/
+    woempa(1, "lshl : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2501,26 +2485,11 @@ void interpret(w_frame caller, w_method method) {
   c_lshr: {
     i = tos[-1].c & 0x0000003f;
     tos -= 1;
-    woempa(7, "lshr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    woempa(1, "lshr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
     w_long shiftee = slots2w_long(tos-2);
     w_long shifted = shiftee >> i;
     w_long2slots(shifted, tos-2);
-    woempa(7, "lshr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union {w_long l; w_word w[2];} long_x;
-    long_x.w[0] = tos[-3].c;
-    long_x.w[1] = tos[-2].c;
-    s = tos[-1].c & 0x0000003f;
-    tos -= 1;
-    if (long_x.l > 0) {
-      long_x.l >>= s;
-    } 
-    else {
-      long_x.l = -1 - ((-1 - long_x.l) >> s);
-    }
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
-*/
+    woempa(1, "lshr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2533,21 +2502,11 @@ void interpret(w_frame caller, w_method method) {
   c_lushr: {
     i = tos[-1].c & 0x0000003f;
     tos -= 1;
-    woempa(7, "lushr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    woempa(1, "lushr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
     w_long shiftee = slots2w_long(tos-2);
     w_long shifted = shiftee < 0LL ? ~((~shiftee) >> i) : shiftee >> i;
     w_long2slots(shifted, tos-2);
-    woempa(7, "lushr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union {w_ulong l; w_word w[2];} long_x;
-    long_x.w[0] = tos[-3].c;
-    long_x.w[1] = tos[-2].c;
-    s = tos[-1].c & 0x0000003f;
-    tos -= 1;
-    long_x.l >>= s;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
-*/
+    woempa(1, "lushr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2557,11 +2516,6 @@ void interpret(w_frame caller, w_method method) {
     w_long2slots(slots2w_long(tos-4) & slots2w_long(tos-2), tos-4);
     tos -= 2;
     woempa(1, "land : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    tos -= 2; 
-    tos[-1].c &= tos[1].c;
-    tos[-2].c &= tos[0].c;
-*/
     do_next_opcode;
   }
 
@@ -2576,11 +2530,6 @@ void interpret(w_frame caller, w_method method) {
     w_long2slots(slots2w_long(tos-4) | slots2w_long(tos-2), tos-4);
     tos -= 2;
     woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    tos -= 2;
-    tos[-1].c |= tos[1].c;
-    tos[-2].c |= tos[0].c;
-*/
     do_next_opcode;
   }
 
@@ -2595,16 +2544,6 @@ void interpret(w_frame caller, w_method method) {
     w_long2slots(slots2w_long(tos-4) ^ slots2w_long(tos-2), tos-4);
     tos -= 2;
     woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union {w_float f; w_word w;} float_x;
-    union {w_float f; w_word w;} float_y;
-    union {w_float f; w_word w;} float_z;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
-    float_z.f = wfp_float32_div(float_x.f, float_y.f);
-    tos -= 1;
-    tos[-1].c = float_z.w;
-*/
     do_next_opcode;
   }
 
@@ -2630,27 +2569,13 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_f2l: {
-    woempa(1, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "f2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     union{w_float f; w_word w;} float_x;
     float_x.w = tos[-1].c;
     w_long convert = wfp_float32_is_NaN(float_x.f) ? 0LL : wfp_float32_to_int64_round_to_zero(float_x.f);
     tos += 1;
     w_long2slots(convert, tos-2);
     woempa(1, "l2f : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union{w_long l; w_word w[2];} long_x;
-    float_x.w = tos[-1].c;
-    if (wfp_float32_is_NaN(float_x.f)) {
-      long_x.l = 0LL;
-    }
-    else {
-      long_x.l = wfp_float32_to_int64_round_to_zero(float_x.f);
-    }
-    tos[ 0].s = stack_notrace;
-    tos += 1;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
-*/
     do_next_opcode;
   }
 
@@ -2662,50 +2587,22 @@ void interpret(w_frame caller, w_method method) {
     tos += 1;
     w_double2slots(wfp_float32_to_float64(float_x.f), tos-2);
     woempa(1, "f2d : result = %08x %08x\n", tos[-1].c, tos[-2].c);
-/* WAS:
-    union {w_double d; w_word w[2];} double_x;
-    union {w_float f; w_word w;} float_x;
-    float_x.w = tos[-1].c;
-    double_x.d = wfp_float32_to_float64(float_x.f);
-    tos[ 0].s = stack_notrace;
-    tos += 1;
-    tos[-2].c = double_x.w[0];
-    tos[-1].c = double_x.w[1];
-*/
     do_next_opcode;
   }
 
   c_l2f: {
-    woempa(7, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     union {w_float f; w_word w;} float_x;
     float_x.f = wfp_int64_to_float32(slots2w_long(tos-2));
     tos[-2].c = float_x.w;
-    woempa(7, "l2f : result = %08x\n", tos[-2].c);
+    woempa(1, "l2f : result = %08x\n", tos[-2].c);
     goto c_pop;
-/* WAS:
-    union {w_long l; w_word w[2];} long_x;
-    union {w_float f; w_word w;} float_x;
-    long_x.w[0] = tos[-2].c;
-    long_x.w[1] = tos[-1].c;
-    float_x.f = wfp_int64_to_float32(long_x.l);
-    tos -= 1;
-    tos[-1].c = float_x.w;
-    do_next_opcode;
-*/
   }
 
   c_l2d: {
-    woempa(7, "l2d: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2d: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     w_double2slots(wfp_int64_to_float64(slots2w_long(tos-2)), tos-2);
-    woempa(7, "l2d : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/*WAS:
-    union {w_long l; w_double d; w_word w[2];} thing;
-    thing.w[0] = tos[-2].c;
-    thing.w[1] = tos[-1].c;
-    thing.d = wfp_int64_to_float64(thing.l);
-    tos[-2].c = thing.w[0];
-    tos[-1].c = thing.w[1];
-*/
+    woempa(1, "l2d : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
@@ -2717,63 +2614,29 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_d2i: {
-    woempa(7, "d2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     w_double double_x = slots2w_double(tos-2);
     tos -= 1;
     tos[-1].c = wfp_float64_is_NaN(double_x) ? 0 : (w_int) wfp_float64_to_int32_round_to_zero(double_x);
-    woempa(7, "d2i : result = %08x\n", tos[-1].c);
-/* WAS:
-    union {w_double d; w_word w[2];} double_x;
-    double_x.w[0] = tos[-2].c;
-    double_x.w[1] = tos[-1].c;
-    tos -= 1;
-    if (wfp_float64_is_NaN(double_x.d)) {
-      tos[-1].c = 0;
-    }
-    else {
-      tos[-1].c = (w_int) wfp_float64_to_int32_round_to_zero(double_x.d);
-    }
-*/
+    woempa(1, "d2i : result = %08x\n", tos[-1].c);
     do_next_opcode;
   }
 
   c_d2l: {
-    woempa(7, "d2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     w_double d = slots2w_double(tos-2);
     w_long result = wfp_float64_is_NaN(d) ? 0LL : wfp_float64_to_int64_round_to_zero(d);
     w_long2slots(result, tos-2);
-    woempa(7, "d2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
-/* WAS:
-    union {w_long l; w_double d; w_word w[2];} thing;
-    thing.w[0] = tos[-2].c;
-    thing.w[1] = tos[-1].c;
-    if (wfp_float64_is_NaN(thing.d)) {
-      thing.l = 0LL;
-    }
-    else {
-      thing.l = wfp_float64_to_int64_round_to_zero(thing.d);
-    }
-    tos[-2].c = thing.w[0];
-    tos[-1].c = thing.w[1];
-*/
+    woempa(1, "d2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
   c_d2f: {
-    woempa(7, "d2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
     w_double double_x = slots2w_double(tos-2);
     tos -= 1;
     tos[-1].c = wfp_float64_to_float32(double_x);
-    woempa(7, "d2f : result = %08x\n", tos[-1].c);
-/* WAS:
-    union {w_double d; w_word w[2];} double_x;
-    union {w_float f; w_word w;} float_x;
-    double_x.w[0] = tos[-2].c;
-    double_x.w[1] = tos[-1].c;
-    float_x.f = wfp_float64_to_float32(double_x.d);
-    tos -= 1;
-    tos[-1].c = float_x.w;
-*/
+    woempa(1, "d2f : result = %08x\n", tos[-1].c);
     do_next_opcode;
   }
 

@@ -203,7 +203,6 @@ public final class GarbageCollector implements Runnable {
     if (kicks < 3) {
       kicks += 3;
     }
-    // [CG 20050620] WAS: thread.interrupt();
     this.notifyAll();
   }
 

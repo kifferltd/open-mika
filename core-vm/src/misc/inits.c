@@ -455,7 +455,7 @@ void startWonka(void* data) {
   if (!globals_hashtable) {
     wabort(ABORT_WONKA, "Unable to create globals_hashtable\n");
   }
-  woempa(7, "created globals_hashtable at %p\n", globals_hashtable);
+  woempa(1, "created globals_hashtable at %p\n", globals_hashtable);
 
   lowMemoryCheck;
 
