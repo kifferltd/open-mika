@@ -123,9 +123,7 @@ void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
 void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const char *function, const int line) {
   w_instance oome;
 
-  threadMustBeSafe(thread);
   if (thread) {
-    enterUnsafeRegion(thread);
 
     woempa(9,"FREE MEMORY %i TOTAL MEMORY %i\n",x_mem_avail(),  x_mem_total());
     if (instance2clazz(exceptionThrown(thread)) == clazzOutOfMemoryError) {
@@ -134,6 +132,7 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
     else if(!exceptionThrown(thread)) {
       woempa(9, "First OutOfMemoryError thrown in %t at line %d in %s (%s)\n", thread, line, function, file);
       setFlag(thread->flags, WT_THREAD_THROWING_OOME);
+      bool was_unsafe = enterUnsafeRegion(thread);
       oome = allocThrowableInstance(thread, clazzOutOfMemoryError);
       if (!oome) {
         wabort(ABORT_WONKA, "Could not allocate memory for OutOfMemoryError!");
@@ -149,6 +148,9 @@ void _throwOutOfMemoryError(w_thread thread, w_int size, const char *file, const
       }
       else {
         bootstrap_exception = oome;
+      }
+      if (!was_unsafe) {
+        enterSafeRegion(thread);
       }
       unsetFlag(thread->flags, WT_THREAD_THROWING_OOME);
     }
