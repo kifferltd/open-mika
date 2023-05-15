@@ -106,6 +106,10 @@ ifeq ($(COMPRESS_JAR_FILES),false)
   export JAR_CMD_COMPRESSION_LEVEL=0
 endif
 
+export ENGINE ?= generic
+export enginedir = $(MIKA_TOP)/vm-cmp/engine/$(ENGINE)
+export enginecomdir = $(MIKA_TOP)/vm-cmp/engine/common
+
 export SECURITY ?= none
 export securitydir = $(MIKA_TOP)/vm-cmp/security/$(SECURITY)/$(JAVAX)
 
@@ -136,6 +140,7 @@ export toolclassdir = $(MIKA_TOP)/tool/class
 export emptydir = $(builddir)/java/empty
 
 export awtobjdir = $(objdir)/awt/$(AWT)
+export engineobjdir = $(objdir)/vm-cmp/engine
 export filesystemobjdir = $(objdir)/filesystem/$(FILESYSTEM)
 export fpobjdir = $(objdir)/fp/$(FLOATING_POINT)
 export mathobjdir = $(objdir)/math/$(MATH)
@@ -488,7 +493,7 @@ ifeq ($(HOSTOS), winnt)
   CFLAGS += -fno-leading-underscore
 endif
 
-export FILESYSTEM NETWORK
+export ENGINE FILESYSTEM NETWORK
 export JAVA5_SUPPORT JDWP JAVAX_COMM BYTECODE_VERIFIER
 export FLOATING_POINT MATH UNICODE_SUBSETS
 export ENABLE_THREAD_RECYCLING
@@ -709,6 +714,7 @@ clean :
 	@rm -rf $(classdir)
 	-make -C vm-cmp/kernel/$(SCHEDULER) clean
 	-make -C vm-cmp/kernel/common clean
+	-make -C vm-cmp/engine/$(ENGINE) clean
 	-make -C vm-cmp/fs/$(FILESYSTEM) clean
 	-make -C vm-cmp/network/$(NETWORK) clean
 	-make -C vm-cmp/awt/$(AWT) clean
@@ -731,6 +737,7 @@ scheduler-test : common-test
 common-test :
 	make -C vm-cmp/kernel/common test
 
+#	make -C vm-cmp/fs/$(ENGINE) test
 #	make -C vm-cmp/fs/$(FILESYSTEM) test
 #	make -C vm-cmp/network/$(NETWORK) test
 #	make -C vm-cmp/awt/$(AWT) test

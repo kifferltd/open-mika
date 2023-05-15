@@ -26,17 +26,31 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-CFLAGS += $(MIKA_TOP)/vm-cmp/engine/hal/cpu/im4000/include
 
-.PHONY : mika libs clean
+ENGINE_TOP = $(MIKA_TOP)/vm-cmp/engine/generic
+
+CFLAGS += -I $(MIKA_TOP)/core-vm/include
+CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
+CFLAGS += -I $(ENGINE_TOP)/include
+
+sources = interpreter.c
+objects=$(patsubst %.c, $(engineobjdir)/%.o, $(sources))
+
+.PHONY : mika libs
 mika : libs
 
-libs :
-	make -C src $(MAKECMDGOALS)
+libs : $(engineobjdir) $(objects)
 
-clean :
-	make -C src $(MAKECMDGOALS)
+$(engineobjdir) :
+	@echo Creating $(engineobjdir)
+	@mkdir -p $(engineobjdir)
 
+$(objects) : $(engineobjdir)/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
 
 
 
