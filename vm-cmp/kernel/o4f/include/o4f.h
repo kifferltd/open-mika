@@ -249,11 +249,11 @@ x_long x_ticks2usecs(x_size ticks);
 
 /**
  * Add the length of time represented by 'ticks' to the current system time,
- * placing the result in 'ts'.  The number of milliseconds to be added must
+ * placing the result in 'then'.  The number of milliseconds to be added must
  * not exceed the maximum value of an x_long (2**63 - 1), i.e. about 24 days.
  */
-extern void x_now_plus_ticks(x_long ticks, struct timespec *ts);
-extern x_boolean x_deadline_passed(struct timespec *ts);
+extern void x_now_plus_ticks(x_long ticks, x_long *then);
+extern x_boolean x_deadline_passed(x_long then);
 
 /*
 ** XOR-shift PRNG which generates a 32-bit unsigned int on each call.
