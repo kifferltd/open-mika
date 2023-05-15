@@ -110,7 +110,7 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-.PHONY : awt filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
+.PHONY : awt engine filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
 
 mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
@@ -120,10 +120,14 @@ libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
 
 main.o : main.c
 
-$(MIKA_LIB) : awt filesystem network fp jpda math security core-vm generated 
+$(MIKA_LIB) : awt engine filesystem network fp jpda math security core-vm generated 
 	@echo "Archiving object files from directories $(wildcard $(objdir)/core-vm/*) $(wildcard $(objdir)/vm-cmp/*) $(wildcard $(objdir)/vm-ext/*) $(objdir)/generated"
 	$(AR) $@ $(foreach dir, $(wildcard $(objdir)/core-vm/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-cmp/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-ext/*), $(wildcard $(dir)/*.o)) $(wildcard $(objdir)/generated/*.o)
 	$(RANLIB) $@
+
+engine :
+	make -C ../vm-cmp/engine/common $(MAKECMDGOALS)
+	make -C ../vm-cmp/engine/$(ENGINE) $(MAKECMDGOALS)
 
 filesystem :
 	make -C ../vm-cmp/fs/$(FILESYSTEM) $(MAKECMDGOALS)
@@ -209,6 +213,8 @@ endif
 clean:
 	rm main.o
 	make -C ../vm-cmp/awt/$(AWT) $(MAKECMDGOALS)
+	make -C ../vm-cmp/engine/common $(MAKECMDGOALS)
+	make -C ../vm-cmp/engine/$(ENGINE) $(MAKECMDGOALS)
 	make -C ../vm-cmp/fp/$(FLOATING_POINT) $(MAKECMDGOALS)
 	make -C ../vm-cmp/fs/$(FILESYSTEM) $(MAKECMDGOALS)
 	make -C ../vm-cmp/network/$(NETWORK) $(MAKECMDGOALS)
