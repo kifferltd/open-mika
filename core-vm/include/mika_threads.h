@@ -33,14 +33,7 @@
 #include "jni.h"
 #include "oswald.h"
 #include "wonka.h"
-
-// If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
-// user-defined class loader in each frame.
-#if (defined(DEBUG) || defined(RESMON))
-#ifndef TRACE_CLASSLOADERS
-#define TRACE_CLASSLOADERS
-#endif
-#endif
+#include "mika_stack.h"
 
 #ifdef RESMON
 extern w_boolean pre_thread_start_check(w_thread creatorThread, w_instance newThreadInstance);
@@ -133,138 +126,6 @@ w_int priority_j2k(w_int java_prio, w_int trim);
 
 #define w_threadFromThreadInstance(i)       (getWotsitField((i), F_Thread_wotsit))
 
-#define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
-#define WT_THREAD_INTERRUPTED         0x00000002 /* the thread has been interrupted */
-#define WT_THREAD_THROWING_OOME       0x00000004 /* the thread is throwing an OutOfMemoryError */
-#define WT_THREAD_GC_PENDING          0x00000008 /* the thread should perform GC as soon as it becomes safe. */
-#define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
-#define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
-#define WT_THREAD_SUSPEND_COUNT_SHIFT 16
-
-// TODO split this out into a separate stack.h header file
-
-/*
- * Each slot consists of two words: the slot contents (c) and the slot data type (s).
- */
-typedef struct w_Slot {
-  w_word c;
-  w_word s;
-} w_Slot;
-
-/*
- * For the flags which a frame can have, see the WT__xxx symbols above.
- * The label of a frame is ASCII "frame", optionally followed by more chars.
- *
- * jstack_base points to the start of the Java stack for this method (often
- * local variable #0 = 'this'), while jstack_top points to the location where
- * the next push would occur.
- */
-typedef struct w_Frame {
-  volatile w_word flags;               // Flags
-  char *label;
-  w_slot jstack_base;                  // Array of slots for locals, stack, and return value
-  volatile w_slot auxstack_top;        // push ==> *top->c = c; *top->s = s; top -= 1; pop ==> l->c = top[+1].c; l->s = top[+1].s; top += 1;
-  w_slot auxstack_base;                  // Array of slots for locals, stack, and return value
-  volatile w_slot jstack_top;          // push ==> *top->c = c; *top->s = s; top += 1; pop ==> l->c = top[-1].c; l->s = top[-1].s; top -= 1;
-  w_frame         previous;            // points to caller or arguments stub frame
-  volatile w_method method;            // points to method that this frame refers to, when NULL it's a stub frame
-  w_thread        thread;              // points to current wonka thread
-  volatile w_code current;             // The opcode pointer at method call or exception; pc = frame->current - frame->method_.exec.code
-  volatile w_instance * map;           // A pointer to an array of references (stack map)
-#ifdef TRACE_CLASSLOADERS
-  w_instance      udcl;                // Nearest user-defined class loader or NULL
-#endif
-} w_Frame;
-
-/*
-** Tag symbols for the main and auxiliary stack.
-** Note that when a tag is greater than 'stack_trace', the symbol contains
-** the address of the monitor that is used to lock the object!
-** Use the isMonitoredSlot function to check whether a slot contains
-** a monitored object.
-*/
-
-static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
-static const w_word stack_trace     = 1; // Refers to an object that needs GC tracing, main stack and auxillary stack.
-
-#define isMonitoredSlot(slot) ((slot)->s > stack_trace)
-
-/*
-** Copy a double value from two adjacent stack slots to a variable in memory.
-** The order of the two slots in memory will determine the order of the two
-** 32-bit halves of the variable as it is stored.
-*/ 
-INLINE static w_double slots2w_double(const w_slot first) {
-  union{w_double d; w_word w[2];} two_words;
-  two_words.w[0] = first[0].c;
-  two_words.w[1] = first[1].c;
-  return two_words.d;
-}
-
-/*
-** Copy a long value from two adjacent stack slots to a variable in memory.
-** The order of the two slots in memory will determine the order of the two
-** 32-bit halves of the variable as it is stored.
-*/ 
-INLINE static w_long slots2w_long(const w_slot first) {
-  union{w_long j; w_word w[2];} two_words;
-  two_words.w[0] = first[0].c;
-  two_words.w[1] = first[1].c;
-  return two_words.j;
-}
-
-/*
-** Copy a double value from a variable in memory to two adjacent stack slots.
-** The order of the two slots in memory will be the same as the two 32-bit 
-** halves of the variable as it was stored.
-*/ 
-INLINE static void w_double2slots(const w_double value, const w_slot first) {
-    union{w_double d; w_word w[2];} two_words;
-    two_words.d = value;
-    first[0].s = stack_notrace;
-    first[0].c = two_words.w[0];
-    first[1].s = stack_notrace;
-    first[1].c = two_words.w[1];
-}
-
-/*
-** Copy a long value from a variable in memory to two adjacent stack slots.
-** The order of the two slots in memory will be the same as the two 32-bit 
-** halves of the variable as it was stored.
-*/ 
-INLINE static void w_long2slots(const w_long value, const w_slot first) {
-    union{w_long j; w_word w[2];} two_words;
-    two_words.j = value;
-    first[0].s = stack_notrace;
-    first[0].c = two_words.w[0];
-    first[1].s = stack_notrace;
-    first[1].c = two_words.w[1];
-}
-
-/*
-* Stack frame flags
-*/
-
-#define FRAME_NATIVE        0x00000001   /* Frame is a host frame for a native method */
-#define FRAME_JNI           0x00000002   /* Frame is used in a JNI call */
-#define FRAME_LOADING       0x00000004   /* Frame built to invoke classloader */
-#define FRAME_CLINIT        0x00000008   /* Frame is used to run a <clinit> method  */
-#define FRAME_REFLECTION    0x00000010   /* Frame is used in reflection invocation */
-#define FRAME_ROOT          0x00000020   /* Frame is the root frame of a thread */
-#define FRAME_PRIVILEGED    0x00000040   /* Frame was built using doPrivileged */
-#define FRAME_STACKMAP      0x00000080   /* Frame has stack map  */
-
-// end TODO
-
-void callMethod(w_frame arguments, w_method method);
-
-/**
-** Get the security domain associated with a frame.
-** Note that for the time being we simply ignore native code.
-** Steven, you may need to adapt this.
-*/
-#define frame2domain(f) getReferenceField(clazz2Class((f)->method->clazz), F_Class_domain))
-
 /**
 ** getCurrentMethod and getCurrentClazz return the Java method currently
 ** being executed and the class in which it was defined, respectively.
@@ -300,6 +161,14 @@ extern w_int java_stack_size;
  */
 #define MIN_FREE_SLOTS 32
 
+#define WT_THREAD_IS_NATIVE           0x00000001 /* the thread joined the VM using the AttachCurrentThread JNI call */
+#define WT_THREAD_INTERRUPTED         0x00000002 /* the thread has been interrupted */
+#define WT_THREAD_THROWING_OOME       0x00000004 /* the thread is throwing an OutOfMemoryError */
+#define WT_THREAD_GC_PENDING          0x00000008 /* the thread should perform GC as soon as it becomes safe. */
+#define WT_THREAD_NOT_GC_SAFE         0x00001000 /* the thread is engaged in activity which conflicts with GC. */
+#define WT_THREAD_SUSPEND_COUNT_MASK  0xffff0000 /* Number of times JDWP suspend has been invoked */
+#define WT_THREAD_SUSPEND_COUNT_SHIFT 16
+
 typedef struct w_Thread {
   const JNINativeInterface*   natenv;
 
@@ -334,14 +203,9 @@ typedef struct w_Thread {
   void      *native_stack_base;
   int        native_stack_max_depth;
 #endif
-  w_Frame    rootFrame;               // The root frame.
+  w_Frame   rootFrame;               // The root frame.
   volatile w_Slot  slots[0];  // Need to add space for the slots when allocating
 } w_Thread;
-
-/*
- * Pointer to the last slot (auxstack_base of the root frame).
- */
-#define last_slot(t) ((t)->slots + SLOTS_PER_THREAD - 1)
 
 /*
 ** Thread states
@@ -575,21 +439,6 @@ extern char * print_thread_long(char*, int*, void*, int w, int p, unsigned int f
 */
 extern volatile w_boolean haveWonkaThreads;
 
-void addLocalReference(w_thread thread, w_instance instance);
-void pushLocalReference(w_frame frame, w_instance instance);
-void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monitor);
-void removeLocalReference(w_thread thread, w_instance instance);
-
-/*
-** Remove the topmost local reference from a stack frame.
-*/
-inline static void popLocalReference(w_frame frame) {
-  if (frame->auxstack_top < frame->auxstack_base) {
-    woempa(7, "Popping aux[%d] of %t (%j)\n", last_slot(frame->thread) - frame->auxstack_top, frame->thread, frame->auxstack_top[1].c);
-    frame->auxstack_top += 1;
-  }
-}
-
 /*
 ** Allocate and clear out the necessary fields for a new thread structure.
 */
@@ -617,6 +466,5 @@ w_boolean testForInterrupt(w_thread thread);
 extern w_fifo xthread_fifo;
 extern x_monitor xthreads_monitor;
 #endif // ENABLE_THREAD_RECYCLING
-
 
 #endif /* _THREADS_H */
