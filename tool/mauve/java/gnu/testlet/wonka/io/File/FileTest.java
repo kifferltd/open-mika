@@ -1361,10 +1361,13 @@ the same applies to File("/","title.txt") and File(new File("/"),"title.txt"),
 */
   private void testHiddenFiles()
   {
-   if(File.separatorChar == '/') //unix/linux
+   String osname = System.getProperty("os.name","");
+   int n = osname.indexOf('n');
+   int x = osname.indexOf('x');
+   if (n > 0 && x == n + 2) // TODO come up with a better check
    {
      harness.checkPoint("Checking hidden files (Unix/Linux only)");
-     //in unix/linux, a file is considerd hidden when it starts with a '.'
+     //in unix/linux, a file is considered hidden when it starts with a '.'
      try
      {
         File currentdir = new File("");

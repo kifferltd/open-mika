@@ -216,7 +216,9 @@ void init_vfs(void) {
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
 #ifdef DEBUG
   dumpDir("/");
-  dumpFile("/results");
+  woempa(7, "\nDumping results from previous run\n\n");
+  dumpFile("/test/workspace/results");
+  woempa(7, "\n===========================\n\n");
 #endif
   cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);

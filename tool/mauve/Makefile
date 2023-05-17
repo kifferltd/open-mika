@@ -31,7 +31,13 @@ export mauvedeploydir = ${tooldeploydir}/mauve
 
 .PHONY : test clean dirs classes resources
 
-test : jarfile
+test : dirs jarfile
+
+dirs:
+	@echo "Creating " $(mauvedeploydir)
+	mkdir -p $(mauvedeploydir)
+	@echo "Creating " $(mauvedeploydir)/workspace
+	@mkdir -p $(mauvedeploydir)/workspace
 
 # Note to self: this is how to get the output of a comand into a make variable ...
 #    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
@@ -55,7 +61,6 @@ ifneq ($(JNI),false)
 endif
 
 jarfile : classes resources
-	mkdir -p $(mauvedeploydir)
 	cd $(toolclassdir); find gnu -name \*\.class | xargs ${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) ${MIKA_TOP}/tool/mauve/mauve.mf ${mauvedeploydir}/mauve-suite.jar 
 	cd $(toolclassdir); find JUnitTests -name \*\.class | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar 
 	find resource -type f | grep -v "^resource/fragment" | xargs ${JAVA6_HOME}/bin/jar uf ${mauvedeploydir}/mauve-suite.jar
@@ -66,5 +71,7 @@ endif
 
 clean :
 	make -C java clean
-	rm ${mauvedeploydir}/mauve-suite.jar
+	rm -f ${mauvedeploydir}/mauve-suite.jar
+	rm -f ${mauvedeploydir}/resource/wonkatest.properties
+	rm -rf ${mauvedeploydir}/workspace/*
 # TODO

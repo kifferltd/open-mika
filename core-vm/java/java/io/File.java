@@ -33,6 +33,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.Iterator;
@@ -62,7 +63,7 @@ public class File implements Comparable, Serializable {
   public static final String pathSeparator;
   public static final char   pathSeparatorChar;
 
-  private static String current_working_dir;
+//  private static String current_working_dir;
   private static String fsroot_dir;
   private static String fsrootedPrefix;
   private static Random prng;
@@ -101,11 +102,6 @@ public class File implements Comparable, Serializable {
   private transient  List       name_list;
 
   /**
-   * Set true iff the File was created with an empty path (and no parent).
-   */
-  private transient  boolean    empty;
-
-  /**
    * Set true iff the File represents an absolute path.
    */
   private transient  boolean    absolute;
@@ -119,16 +115,6 @@ public class File implements Comparable, Serializable {
    * The dosland drive letter if present, else '\0'.
    */
   private transient  char       driveletter;
-
-  /**
-   * The part of the path up to the last '/' character (DEPRECATED).
-   */
-  private transient  String     dirpath;
-
-  /**
-   * The part of the path after the last '/' character (DEPRECATED).
-   */
-  private transient  String     filename;
 
   /**
    * The hashcode of the File object, calculated on first use.
@@ -153,7 +139,11 @@ public class File implements Comparable, Serializable {
   final transient String hostpath;
 
   /**
-   * Get the Current Working Directory from the OS.
+   * Get the Current Working Directory from the host OS.
+   *
+   * In the case of an RTOS this may return null, in which case the role of host OS current dir and the
+   * user.dir property are reversed: instead of setting user.dir to the host OS current dir at initialisation
+   * time, we set the host OS current dir from user.dir dynamically.
    */
   private static native String get_CWD();
 
@@ -213,16 +203,39 @@ public class File implements Comparable, Serializable {
     fsrootedPrefix = "{}" + separator;
     delimiter = separator == "\\" ? "\\/" : separator;
 
-    current_working_dir = get_CWD();
-    if (!current_working_dir.endsWith(separator)) {
-      current_working_dir = current_working_dir + separator;
-    }
+//    current_working_dir = get_CWD();
+//    if (current_working_dir != null) {
+//      current_working_dir = trimTrailingSeparator(current_working_dir);
+//      System.getProperties().setProperty("user.dir", current_working_dir);
+//    }
+
     fsroot_dir = get_fsroot();
     if (!fsroot_dir.endsWith(separator)) {
       fsroot_dir = fsroot_dir + separator;
     }
-    // TODO: shouldn't we have a GetSystemProperty-like mechanism here?
-    System.getProperties().setProperty("user.dir", current_working_dir);
+  }
+
+  private static String current_working_path() {
+    String cwd = get_CWD();
+    if (cwd != null) {
+      Etc.woempa(7, "get_CWD returned " + cwd + ", using this and setting user.dir appropriately");
+      cwd = trimTrailingSeparator(cwd);
+      System.setProperty("user.dir", cwd);
+      return cwd;
+    }
+
+    Etc.woempa(7, "get_CWD returned null, checking user.dir property");
+    if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
+      GetSystemProperty gsp = new GetSystemProperty("user.dir","");
+      AccessController.doPrivileged(gsp);
+      cwd =  gsp.get();
+    }
+    else {
+      cwd =  System.getProperty("user.dir", "");
+    }
+    Etc.woempa(7, "user.dir = " + cwd + ", using this");
+
+    return cwd;
   }
 
   // TODO link to mount table when we have one
@@ -257,6 +270,21 @@ public class File implements Comparable, Serializable {
     return result;
   }
 
+  /**
+   * If s ends with a separator, snip it off.
+   */
+  private static String trimTrailingSeparator(String s) {
+    int l = s.length();
+    // using delimiter so that both '\' and '/' will be snipped for DOSsy filesystems.
+    // (this will result in '\\' or '//' -> '\' resp. '/', but who cares)
+    if(l > 0 && delimiter.indexOf(s.charAt(l-1)) >= 0) {
+      return s.substring(0, l-1);
+    }
+
+    return s;
+  }
+
+  // TODO work with path_seq instead
   private String pack(String path) {
     String result = "";
     LinkedList list = new LinkedList();
@@ -307,7 +335,7 @@ public class File implements Comparable, Serializable {
 
   /**
    * Extract the prefix part from the given pathname string, and set zero
-   * or more of the booleans {@link #absolute}, {@link #fsrooted}, {@link #empty}.
+   * or more of the booleans {@link #absolute}, {@link #fsrooted}.
    * If the prefix contains a drive letter, store this in {@link #driveletter}.
    *
    * @param pathname the pathname string to be analysed
@@ -344,8 +372,6 @@ public class File implements Comparable, Serializable {
     }
     Etc.woempa(7, "prefix = '" + prefix + "' absolute = " + absolute + " fsrooted = " + fsrooted);
 
-    empty = pathname.length() == 0;
-
     return prefix.length();
   }
 
@@ -354,7 +380,7 @@ public class File implements Comparable, Serializable {
   }
 
   public File(String dirname, String name) throws NullPointerException {
-    this(dirname == null ? null : new File(dirname), name);
+    this(dirname == null ? (File) null : new File(dirname), name);
   }
 
   public File(File dir, String name) throws NullPointerException {
@@ -382,12 +408,14 @@ public class File implements Comparable, Serializable {
 
     }
     else {
-      prefix = dir.prefix;
-      name_list = dir.name_list;
-      empty = dir.empty && name.length() == 0;
-      absolute = dir.absolute;
-      fsrooted = dir.fsrooted;
-      Etc.woempa(7, "Parent path is '" + dir + "', prefix is '" + prefix + "'");
+      // special case - dir with empty path acts as if it were the current dir
+// TEMP HACK to test whether effective_dir is really needed
+      File effective_dir = dir; // WAS : dir.name_list.isEmpty() ? new File(current_working_dir) : dir;
+      prefix = effective_dir.prefix;
+      name_list = (List) ((ArrayList)effective_dir.name_list).clone();
+      absolute = effective_dir.absolute;
+      fsrooted = effective_dir.fsrooted;
+      Etc.woempa(7, "Parent path is '" + effective_dir + "', prefix is '" + prefix + "'");
       File temp = new File(name);
       Iterator nameIter = temp.name_list.iterator();
       while (nameIter.hasNext()) {
@@ -395,12 +423,12 @@ public class File implements Comparable, Serializable {
       }
     }
 
-// compatibility code: generate fullname and relpath
+// compatibility code: generate fullname and hashcode
     StringBuffer relpath_buffer = null;
     Iterator pathIter = name_list.iterator();
     while (pathIter.hasNext()) {
       String element = (String)pathIter.next();
-      Etc.woempa(7, "  path element: " + element);
+      Etc.woempa(1, "  path element: " + element);
       if (relpath_buffer == null) {
         relpath_buffer = new StringBuffer(element);
       }
@@ -409,27 +437,13 @@ public class File implements Comparable, Serializable {
         relpath_buffer.append(element);
       }
     }
-    String relpath = relpath_buffer.toString();
-    String fullname = empty ? "" : prefix + relpath;
+    String relpath = relpath_buffer == null ? "" : relpath_buffer.toString();
+    fullname = prefix + relpath;
     Etc.woempa(7, "fullname is " + fullname + ", relpath is " + relpath);
 
     hashcode = fullname.hashCode() ^ 1234321;
 
     // derive DEPRECATED fields
-    try {
-
-      int dirpathlen = relpath.lastIndexOf(separatorChar);
-
-      if (dirpathlen < 0) {
-        dirpath = null;
-        filename = relpath;
-      } else {
-        dirpath = relpath.substring(0, dirpathlen);
-        filename = relpath.substring(dirpathlen + 1);
-      }
-    } catch (IndexOutOfBoundsException e) {
-      e.printStackTrace();
-    }
 
     // TODO resolve and construct absolute path on first use
     if (absolute) {
@@ -439,12 +453,10 @@ public class File implements Comparable, Serializable {
       absolutePath = fsroot_dir + relpath;
     }
     else {
-      absolutePath = current_working_dir + relpath;
+      absolutePath = current_working_path() + separator + relpath;
     }
-    int len = absolutePath.length() - 1;
-    if(len > 0 && absolutePath.charAt(len) == '/') {
-      absolutePath = absolutePath.substring(0, len);
-    }
+
+    absolutePath = trimTrailingSeparator(absolutePath);
 
     Etc.woempa(7, "File " + fullname + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
     hostpath = absolutePath;
@@ -470,9 +482,7 @@ public class File implements Comparable, Serializable {
   }
 
   public int compareTo(Object obj) {
-    if (obj instanceof File) {
-      return (absolutePath.compareTo(((File)obj).getAbsolutePath()));
-    } else { throw new ClassCastException(); }
+    return compareTo((File)obj);
   }
 
   public int hashCode() {
@@ -480,16 +490,16 @@ public class File implements Comparable, Serializable {
   }
 
   public String getName() {
-    return empty ? "" : (String)name_list.get(name_list.size() - 1);
+    return name_list.isEmpty() ? "" : (String)name_list.get(name_list.size() - 1);
   }
 
   public String getPath() {
-    return empty ? "" : fullname;
+    return fullname;
   }
 
   public String getAbsolutePath() {
     // bizarre but it seems to be what Sun is doing
-    if (empty) {
+    if (name_list.isEmpty()) {
       return "./";
     }
     return absolutePath;
@@ -499,10 +509,12 @@ public class File implements Comparable, Serializable {
     return new File(absolutePath);
   }
 
+  // TODO spec implies that canonicalPath is derived from real OS path (after following symlinks)!
   public String getCanonicalPath() throws IOException {
-    if(canonicalPath == null) {
+    if (canonicalPath == null) {
       canonicalPath = pack(absolutePath);
     }
+
     return canonicalPath;
   }
 
@@ -511,21 +523,28 @@ public class File implements Comparable, Serializable {
   }
 
   public String getParent() {
-    // Need to have at least two path elements (including the prefix, if any)
-    // otherwise we should return null.
-    int nelems = name_list.size();
-    if (prefix != null) {
-      ++nelems;
-    }
-    if (nelems < 2) {
+    // Calculate the number of elements (including the prefix, if present) which make up the parent.
+    // If there is not at least one element then there is no parent and we should bale out.
+    boolean noprefix = prefix == null || prefix.length() == 0;
+    int parent_num_elements = name_list.size() + (noprefix ? 0 : 1) - 1;
+    if (parent_num_elements < 1) {
       return null;
     }
 
-    StringBuffer parentbuf = new StringBuffer();
-    if (prefix != null) {
-      parentbuf.append(prefix);
+    // Create a list which contains all the path elements of the parent.
+    List parent_list = (List) ((ArrayList)name_list).clone();
+    parent_list.remove(parent_list.size() - 1);
+
+    StringBuffer parentbuf;
+    if (prefix == null) {
+      parentbuf = new StringBuffer();
     }
-    Iterator parentiter = name_list.iterator();
+    else {
+      parentbuf = new StringBuffer(prefix);
+    }
+
+    Iterator parentiter = parent_list.iterator();
+    String element = null;
     if (parentiter.hasNext()) {
       parentbuf.append(parentiter.next());
     }
@@ -572,7 +591,8 @@ public class File implements Comparable, Serializable {
 
   public boolean isHidden() throws SecurityException {
     readCheck(); 
-    return (filename.charAt(0) == '.');
+    // TODO !!!
+    return false;
   }
   
   // TODO: this is supposed to be atomic wrt any other file ops!
@@ -733,7 +753,7 @@ public class File implements Comparable, Serializable {
 
   public boolean setReadOnly() throws SecurityException {
     writeCheck();
-    if (empty) {
+    if (name_list.isEmpty()) {
       // imitate Sun
       return false;
     }
@@ -785,7 +805,7 @@ public class File implements Comparable, Serializable {
   public native boolean _delete();
 
   public URL toURL() throws MalformedURLException {
-    if (empty) {
+    if (name_list.isEmpty()) {
       return new URL("file:./");
     }
 
@@ -796,7 +816,7 @@ public class File implements Comparable, Serializable {
   }
 
   public URI toURI() {
-    String uriPath = empty ? "./" : canonicalPath;
+    String uriPath = name_list.isEmpty() ? "./" : canonicalPath;
 
     if(uriPath == null) {
       canonicalPath = pack(absolutePath);

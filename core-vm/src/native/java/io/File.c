@@ -89,8 +89,21 @@ w_boolean File_exists (w_thread thread, w_instance thisFile) {
   return statFile(thisFile, &statbuf);
 }
 
+/**
+ * Get the current working directory (without any trailing slash).
+ * When running under an RTOS this will return NULL, and the Java code will use the value of
+ * the user.dir property instead.
+ */
 w_instance File_get_CWD (w_thread thread, w_instance thisFile) {
-  return getStringInstance(utf2String(current_working_dir, strlen(current_working_dir)));
+#ifdef FREERTOS
+  return NULL;
+#else
+  w_int cwdlen = strlen(current_working_dir);
+  if (current_working_dir[cwdlen-1] == '/') {
+    --cwdlen;
+  }
+  return getStringInstance(utf2String(current_working_dir, cwdlen));
+#endif
 }
 
 w_instance File_get_fsroot (w_thread thread, w_instance thisFile) {

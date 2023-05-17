@@ -1,5 +1,5 @@
-// DEF VERBOSE
+DEF VERBOSE
 DEF DEBUG
-DEF FILE results
+DEF FILE /test/results
 
 
