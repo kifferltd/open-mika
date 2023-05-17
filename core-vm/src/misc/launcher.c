@@ -28,7 +28,10 @@
 
 #include <unistd.h>
 
+#ifdef FREERTOS
 #include "FreeRTOS.h"
+#include "FreeRTOSConfig.h"
+#endif
 #include "wonka.h"
 #include "argument.h"
 #include "mika_threads.h"
@@ -230,13 +233,13 @@ static w_int getInitialHeapSize(int *argument_count_ptr, char *arguments[]) {
   }
   else {
 #ifdef DEBUG
-    printf("Using -Xms%l\n", configMINIMAL_STACK_SIZE);
+    // printf("Using -Xms%l\n", configMINIMAL_STACK_SIZE);
 #endif
     return configMINIMAL_STACK_SIZE;
   }
 
 #ifdef DEBUG
-  printf("Using -Xms%s\n", ms + 4);
+  // printf("Using -Xms%s\n", ms + 4);
 #endif
 
   initsize = getSize(ms + 4);
@@ -282,7 +285,7 @@ static w_int getMaxHeapSize(int *argument_count_ptr, char *arguments[]) {
   maxsize = getSize(mx + 4);
 
 #ifdef DEBUG
-  printf("Max heap size = %d\n", maxsize);
+  // printf("Max heap size = %d\n", maxsize);
 #endif
 
   return maxsize;
@@ -310,19 +313,19 @@ static w_int getJavaStackSize(int *argument_count_ptr, char *arguments[]) {
   }
   else {
 #ifdef DEBUG
-    printf("Max stack size = %d\n", configMINIMAL_STACK_SIZE);
+    // printf("Max stack size = %d\n", configMINIMAL_STACK_SIZE);
 #endif
     return configMINIMAL_STACK_SIZE;
   }
 
 #ifdef DEBUG
-  printf("Using -Xss%s\n", ss + 4);
+  // printf("Using -Xss%s\n", ss + 4);
 #endif
 
   stacksize = getSize(ss + 4);
 
 #ifdef DEBUG
-  printf("Max stack size = %d\n", stacksize);
+  // printf("Max stack size = %d\n", stacksize);
 #endif
 
   return stacksize;
@@ -399,11 +402,15 @@ void launchMika(int argc, char *argv[]){
 #ifdef USE_NANOSLEEP
   struct timespec ts;
 #endif
+
+  w_int host_timer_granularity_millis =
 #ifdef HOST_TIMER_GRANULARITY
-  w_int host_timer_granularity_millis = HOST_TIMER_GRANULARITY / 1000;
+        HOST_TIMER_GRANULARITY / 1000;
+#elif defined(FREERTOS)
+        1000 / (configTICK_RATE_HZ); 
 #else
-//#warning HOST_TIMER_GRANULARITY not defined, assuming 10000 (usec)
-  w_int host_timer_granularity_millis = 10;
+// pretty arbitrary, assuming 100 Hz
+        10;
 #endif
 
   help_texts[0] = general_help_text;
@@ -434,10 +441,10 @@ void launchMika(int argc, char *argv[]){
   }
   java_stack_size = getJavaStackSize(&argc, argv);
 
-#ifdef O4P
+#if defined(O4F) || defined(O4P)
   tick_millis = host_timer_granularity_millis;
 #ifdef DEBUG
-  printf("Using %d milliseconds per tick\n", tick_millis);
+  // printf("Using %d milliseconds per tick\n", tick_millis);
 #endif
 #else
   tick_millis = 25000 / cpu_mips;

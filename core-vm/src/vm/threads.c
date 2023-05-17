@@ -271,7 +271,6 @@ static void invokeInitMain(w_instance arglist) {
   w_size   i;
   w_size   j;
 
-  printf("looking up ThreadGroup.register, ThreadGroup.deregister\n");
   w_string registerThread_name_string = utf2String("registerThread", strlen("registerThread"));
   w_string deregisterThread_name_string = utf2String("deregisterThread", strlen("deregisterThread"));
   w_string reg_dereg_desc_string = utf2String("(Ljava/lang/Thread;)V", strlen("(Ljava/lang/Thread;)V"));
@@ -314,7 +313,6 @@ static void invokeInitMain(w_instance arglist) {
 
   // TODO check exceptionThrown(W_Thread_sysInit) is null after each method call?
 
-  printf("registering system thread\n");
   frame = pushFrame(W_Thread_sysInit, register_method);
   frame->flags |= FRAME_NATIVE;
 
@@ -337,7 +335,6 @@ static void invokeInitMain(w_instance arglist) {
 
   mustBeLinked(initClazz);
 
-  printf("looking up Init.main\n");
   w_string main_name_string = utf2String("main", strlen("main"));
   w_string main_desc_string = utf2String("([Ljava/lang/String;)V", strlen("([Ljava/lang/String;)V"));
   if (createMethodSpecUsingDescriptor(initClazz, main_name_string, main_desc_string, &spec) == CLASS_LOADING_FAILED) {
