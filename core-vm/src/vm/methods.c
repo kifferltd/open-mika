@@ -325,7 +325,7 @@ void _registerNativeMethod(w_clazz clazz, w_fun_dec fp, const char * utf8name, c
     w_method m = &clazz->own_methods[i];
 
     woempa(1, "Candidate: %m\n", m);
-    if (m->spec.name == name_string && m->desc == desc_string && methodMatchesSpec(m, spec)) {
+    if (m->spec.name == name_string && m->spec.desc == desc_string && methodMatchesSpec(m, spec)) {
       method = m;
       break;
     }
@@ -405,8 +405,8 @@ char * print_method_short(char * buffer, int * remain, void * data, int w, int p
     }
     nbytes = x_snprintf(temp, *remain, ")%y", method->spec.return_type);
   }
-  else if (method->desc) {
-    nbytes = x_snprintf(temp, *remain, "%w", method->desc);
+  else if (method->spec.desc) {
+    nbytes = x_snprintf(temp, *remain, "%w", method->spec.desc);
   }
   else {
     nbytes = x_snprintf(temp, *remain, "(?unknown?)?unknown?");
@@ -509,8 +509,8 @@ char * print_method_long(char * buffer, int * remain, void * data, int w, int p,
     }
     nbytes = x_snprintf(temp, *remain, ")%y", method->spec.return_type);
   }
-  else if (method->desc) {
-    nbytes = x_snprintf(temp, *remain, "%w", method->desc);
+  else if (method->spec.desc) {
+    nbytes = x_snprintf(temp, *remain, "%w", method->spec.desc);
   }
   else {
     nbytes = x_snprintf(temp, *remain, "(?)?");
@@ -576,12 +576,12 @@ w_method interfaceLookup(w_method imethod, w_clazz clazz) {
   result = (w_method)ht2k_read(interface_hashtable, (w_word)clazz, (w_word)imethod);
 
   if (!result) {
-    woempa(1, "Searching %K for method %w %w\n", clazz, imethod->spec.name, imethod->desc);
+    woempa(1, "Searching %K for method %w %w\n", clazz, imethod->spec.name, imethod->spec.desc);
 
     for (i = 0; i < clazz->numDeclaredMethods; ++i) {
       w_method m = &clazz->own_methods[i];
 
-      if (m->spec.name == imethod->spec.name && m->desc == imethod->desc) {
+      if (m->spec.name == imethod->spec.name && m->spec.desc == imethod->spec.desc) {
         woempa(1, "Candidate is %M\n", m);
         result = m;
         break;
@@ -592,7 +592,7 @@ w_method interfaceLookup(w_method imethod, w_clazz clazz) {
       for (i = 0; i < clazz->supers[0]->numInheritableMethods; ++i) {
         w_method m = clazz->supers[0]->vmlt[i];
 
-        if (m->spec.name == imethod->spec.name && m->desc == imethod->desc) {
+        if (m->spec.name == imethod->spec.name && m->spec.desc == imethod->spec.desc) {
           woempa(1, "Candidate is %M\n", m);
           result = m;
           break;
@@ -662,7 +662,7 @@ w_method find_method(w_clazz clazz, const char* method_name, const char* method_
     w_method candidate = &clazz->own_methods[i];
     woempa(1, "Checking %M\n", candidate);
 
-    if (candidate->spec.name == method_name_string && candidate->desc == method_desc_string) {
+    if (candidate->spec.name == method_name_string && candidate->spec.desc == method_desc_string) {
       the_method = candidate;
       woempa(7, "Found %k.%s%s at %p\n", clazz, method_name, method_descriptor);
       break;

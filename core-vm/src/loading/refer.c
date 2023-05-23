@@ -231,7 +231,7 @@ w_int referenceMethod(w_method method) {
     result = inheritMethodDescriptor(method, parent);
   }
   else {
-    result = parseMethodDescriptor(method, method->desc);
+    result = parseMethodDescriptor(method, method->spec.desc);
   }
 
   if (result == CLASS_LOADING_FAILED) {
@@ -300,7 +300,7 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
   memcpy(copy, original, sizeof(w_Method));
   copy->spec.declaring_clazz = clazz;
   registerString(copy->spec.name);
-  copy->desc = registerString(original->desc);
+  copy->spec.desc = registerString(original->spec.desc);
   copy->spec.arg_types = NULL;
   copy->spec.return_type = NULL;
   copy->parent = original;
@@ -377,7 +377,7 @@ static w_int inheritMethods(w_clazz clazz) {
     m1 = &clazz->own_methods[i];
     if (isNotSet(m1->flags, ACC_STATIC)) {
       woempa(1, "%k declares a method %m\n", clazz, m1);
-      ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc, (w_word)m1);
+      ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc, (w_word)m1);
     }
   }
 
@@ -396,17 +396,17 @@ static w_int inheritMethods(w_clazz clazz) {
         woempa(1, "%k inherits %m from superclass %k\n", clazz, m1, m1->spec.declaring_clazz);
         if (isSet(m1->flags, ACC_FINAL)) {
           woempa(1, "%m of %k is final, no override is possible\n", m1, m1->spec.declaring_clazz);
-          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc);
+          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc);
           if (m2) {
             woempa(1, "Interestingly enough, %k does declare a method %m, which is rather naughty of it. But we are not deceived ...\n", clazz, m2);
           }
           else {
             woempa(1, "Method %M is not overridden by %k, slot is %d\n", m1, clazz, m1->slot);
-            ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc, (w_word)m1);
+            ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc, (w_word)m1);
           }
         }
         else {
-          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc);
+          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc);
           if (m2) {
             m2->slot = m1->slot;
             m2->parent = m1;
@@ -414,7 +414,7 @@ static w_int inheritMethods(w_clazz clazz) {
           }
           else {
             woempa(1, "Method %M is not overridden by %k, slot is %d\n", m1, clazz, m1->slot);
-            ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc, (w_word)m1);
+            ht2k_write_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc, (w_word)m1);
           }
         }
       }
@@ -440,7 +440,7 @@ static w_int inheritMethods(w_clazz clazz) {
         m1 = &super->own_methods[j];
         if (isNotSet(m1->flags, ACC_STATIC) && (same_package || isSet(m1->flags, ACC_PROTECTED | ACC_PUBLIC))) {
           woempa(1, "Inheriting %M from %k\n", m1, super);
-          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->desc);
+          m2 = (w_method)ht2k_read_no_lock(temp, (w_word)m1->spec.name, (w_word)m1->spec.desc);
           if (m2) {
             woempa(1, "Method %M implements %M\n", m2, m1);
           }
@@ -467,7 +467,7 @@ static w_int inheritMethods(w_clazz clazz) {
             default:
               m2->exec.function.void_fun = (w_void_fun)voidProxyMethodCode;
             }
-            ht2k_write_no_lock(temp, (w_word)m2->spec.name, (w_word)m2->desc, (w_word)m2);
+            ht2k_write_no_lock(temp, (w_word)m2->spec.name, (w_word)m2->spec.desc, (w_word)m2);
             woempa(7, "%k: increased numDeclaredMethods to %d\n", clazz, clazz->numDeclaredMethods);
           }
           else {
@@ -481,7 +481,7 @@ static w_int inheritMethods(w_clazz clazz) {
             setFlag(m2->flags, METHOD_IS_MIRANDA);
             setFlag(m2->flags, ACC_PUBLIC | ACC_ABSTRACT); // just in case
             unsetFlag(m2->flags, METHOD_IS_INTERFACE);
-            ht2k_write_no_lock(temp, (w_word)m2->spec.name, (w_word)m2->desc, (w_word)m2);
+            ht2k_write_no_lock(temp, (w_word)m2->spec.name, (w_word)m2->spec.desc, (w_word)m2);
             woempa(1, "%k: increased numDeclaredMethods to %d\n", clazz, clazz->numDeclaredMethods);
           }
         }
@@ -763,7 +763,7 @@ static w_int referenceClazz(w_clazz clazz) {
   if (isNotSet(clazz->flags, CLAZZ_IS_TRUSTED)) {
     for (i = 0; i < n; i++) {
       for (j = i + 1; j < n; j++) {
-        if (clazz->own_methods[i].spec.name == clazz->own_methods[j].spec.name && clazz->own_methods[i].desc== clazz->own_methods[j].desc) {
+        if (clazz->own_methods[i].spec.name == clazz->own_methods[j].spec.name && clazz->own_methods[i].spec.desc== clazz->own_methods[j].spec.desc) {
           throwException(thread, clazzClassFormatError, "duplicate method %m", &clazz->own_methods[i]);
 
           return CLASS_LOADING_FAILED;

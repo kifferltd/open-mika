@@ -165,6 +165,7 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
           wabort(ABORT_WONKA, "Unable to create %s\n", "temp_string");
         }
         result = identifyClazz(temp_string, NULL);
+        deregisterString(temp_string);
         break;
   
       case 'L':
@@ -189,13 +190,13 @@ w_clazz parseDescriptor(w_string descriptor, w_size *start, w_size end, w_instan
           wabort(ABORT_WONKA, "Unable to dotify %s\n", "desc");
         }
         result = identifyClazz(temp_string, loader);
+        deregisterString(temp_string);
         deregisterString(desc_string);
         break;
   
       default:
         woempa(9, "Illegal char %c\n", string_char(descriptor, *start-1));
       }
-      deregisterString(temp_string);
     }
     else {
       switch (string_char(descriptor, (*start)++)) {

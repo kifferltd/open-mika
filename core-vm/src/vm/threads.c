@@ -284,11 +284,11 @@ static void invokeInitMain(w_instance arglist) {
     candidate = &clazzThreadGroup->own_methods[i];
     woempa(1, "Checking %M\n", candidate);
 
-    if (candidate->spec.name == registerThread_name_string && candidate->desc == reg_dereg_desc_string) {
+    if (candidate->spec.name == registerThread_name_string && candidate->spec.desc == reg_dereg_desc_string) {
       register_method = candidate;
       woempa(1, "Found ThreadGroup.registerThread() at %p\n", register_method);
     }
-    else if (candidate->spec.name == deregisterThread_name_string && candidate->desc == reg_dereg_desc_string) {
+    else if (candidate->spec.name == deregisterThread_name_string && candidate->spec.desc == reg_dereg_desc_string) {
       deregister_method = candidate;
       woempa(1, "Found ThreadGroup.deregisterThread() at %p\n", deregister_method);
     }
@@ -345,7 +345,7 @@ static void invokeInitMain(w_instance arglist) {
   for (i = 0; i < clazzInit->numDeclaredMethods; ++i) {
     candidate = &clazzInit->own_methods[i];
 
-    if (candidate->spec.name == main_name_string && candidate->desc == main_desc_string) {
+    if (candidate->spec.name == main_name_string && candidate->spec.desc == main_desc_string) {
       main_method = candidate;
       break;
     }

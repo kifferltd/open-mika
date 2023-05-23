@@ -279,8 +279,8 @@ static void jdwp_ref_methods(jdwp_command_packet cmd) {
       woempa(7, "  method %m\n", method);
       jdwp_put_method(&reply_grobag, method);
       jdwp_put_string(&reply_grobag, method->spec.name);
-      jdwp_put_string(&reply_grobag, method->desc);
-      woempa(7, "  name = %w, descriptor = %w\n", method->spec.name, method->desc);
+      jdwp_put_string(&reply_grobag, method->spec.desc);
+      woempa(7, "  name = %w, descriptor = %w\n", method->spec.name, method->spec.desc);
       flags = method->flags & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC | ACC_FINAL | ACC_SYNCHRONIZED | ACC_NATIVE | ACC_ABSTRACT);
       // TODO: | 0xf0000000 if synthetic
       woempa(7, "  flags = 0x%08x\n", flags);

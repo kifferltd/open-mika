@@ -2006,8 +2006,8 @@ jmethodID GetStaticMethodID(JNIEnv *env, jclass class, const char *utf8name, con
   for (i = 0; i < clazz->numDeclaredMethods; ++i) {
     candidate = &clazz->own_methods[i];
 
-    woempa(1, "  candidate: %w %w\n", candidate->desc, candidate->desc);
-    if ((candidate->spec.name == name_string) && (candidate->desc == desc_string)) {
+    woempa(1, "  candidate: %w %w\n", candidate->spec.desc, candidate->spec.desc);
+    if ((candidate->spec.name == name_string) && (candidate->spec.desc == desc_string)) {
       method = candidate;
       break;
     }
@@ -2020,7 +2020,7 @@ jmethodID GetStaticMethodID(JNIEnv *env, jclass class, const char *utf8name, con
       for (i = 0; i < super->numDeclaredMethods; ++i) {
         candidate = &super->own_methods[i];
 
-        if (candidate->spec.name == name_string && candidate->desc == desc_string) {
+        if (candidate->spec.name == name_string && candidate->spec.desc == desc_string) {
           method = candidate;
           break;
         }
@@ -2080,7 +2080,7 @@ jmethodID GetMethodID(JNIEnv *env, jclass class, const char *utf8name, const cha
   for (i = 0; i < clazz->numDeclaredMethods; ++i) {
     candidate = &clazz->own_methods[i];
 
-    if (candidate->spec.name == name_string && candidate->desc == desc_string) {
+    if (candidate->spec.name == name_string && candidate->spec.desc == desc_string) {
       method = candidate;
       break;
     }
@@ -2093,7 +2093,7 @@ jmethodID GetMethodID(JNIEnv *env, jclass class, const char *utf8name, const cha
       for (i = 0; i < super->numDeclaredMethods; ++i) {
         candidate = &super->own_methods[i];
 
-        if (candidate->spec.name == name_string && candidate->desc == desc_string) {
+        if (candidate->spec.name == name_string && candidate->spec.desc == desc_string) {
           method = candidate;
           break;
         }
@@ -2108,7 +2108,7 @@ jmethodID GetMethodID(JNIEnv *env, jclass class, const char *utf8name, const cha
       for (i = 0; i < super->numDeclaredMethods; ++i) {
         candidate = &super->own_methods[i];
 
-        if (candidate->spec.name == name_string && candidate->desc == desc_string) {
+        if (candidate->spec.name == name_string && candidate->spec.desc == desc_string) {
           method = candidate;
           break;
         }

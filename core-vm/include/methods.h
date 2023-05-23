@@ -97,6 +97,7 @@ typedef struct w_Exception {
 typedef struct w_MethodSpec {
   w_clazz  declaring_clazz; /* Class in which the method is declared       */
   w_string name;            /* Method name                                 */
+  w_string desc;            /* descriptor                                 */
   w_clazz *arg_types;       /* Types of arguments, null-terminated         */
   w_clazz  return_type;     /* Return type                                 */
 #ifdef JAVA5
@@ -142,7 +143,6 @@ typedef struct w_Method {
   w_MethodSpec spec;         /* Method spec, see above                     */
   w_int        slot;         /* Offset in vmlt (-1 for abstract methods)   */
   w_flags      flags;
-  w_string     desc;         /* descriptor                                 */
   w_method     parent;       /* method which we override or implement      */
   w_ushort     dummy;
   w_short      numThrows;    /* number of classes in the `throws' clause   */

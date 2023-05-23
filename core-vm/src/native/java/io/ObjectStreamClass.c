@@ -58,14 +58,15 @@ w_method findInheritedMethod(const w_clazz clazz, const char *method_name, const
 
       w_method the_method = NULL;
       w_clazz search_clazz = clazz;
-      w_int i, j;
+      w_size i;
+      w_int j;
       for (j = 0; the_method == NULL && j < clazz->numSuperClasses;) {
         for (i = 0; i < clazz->numDeclaredMethods; ++i) {
           woempa(1, "Seek %w in %K\n", spec->name, search_clazz);
           candidate = &search_clazz->own_methods[i];
           woempa(1, "Checking %M\n", candidate);
 
-          if (candidate->spec.name == method_name_string && candidate->desc == method_desc_string) {
+          if (candidate->spec.name == method_name_string && candidate->spec.desc == method_desc_string) {
             the_method = candidate;
             woempa(1, "Found %s.%s at %p\n", method_name_string, method_desc_string, the_method);
             break;
@@ -414,9 +415,9 @@ w_instance ObjectStreamClass_createFields(w_thread thread, w_instance thisOSC) {
 
 
   if(isAssignmentCompatible(clazz, clazzSerializable)){
-    w_field flds = clazz->own_fields;
+    // w_field flds = clazz->own_fields;
     w_word stop = clazz->numStaticFields;
-    w_word i;
+    // w_word i;
     w_field spf_field = NULL;
     w_string name = cstring2String("serialPersistentFields", strlen("serialPersistentFields"));
     w_string desc = cstring2String("[Ljava/io/ObjectStreamClass", 16);
@@ -448,7 +449,7 @@ w_instance ObjectStreamClass_createFields(w_thread thread, w_instance thisOSC) {
             for( ; i < length ; i++){
               w_instance OsField = osFields[i];
               w_instance Name;
-              w_string name;
+              // w_string name;
               w_instance Type;
               w_clazz type;
               w_word j;

@@ -531,7 +531,7 @@ static void identify_special_methods(void) {
 
   for (i = 0; i < clazzObject->numDeclaredMethods; i++) {
     m = &clazzObject->own_methods[i];
-    if (m->spec.name == string_finalize && m->desc == string_no_params_V) {
+    if (m->spec.name == string_finalize && m->spec.desc == string_no_params_V) {
       woempa(1, "Class %k has finalizer %m\n", clazzObject, m);
       finalize_method = m;
     }
@@ -542,7 +542,7 @@ static void identify_special_methods(void) {
 
   for (i = 0; i < clazzClassLoader->numDeclaredMethods; i++) {
     m = &clazzClassLoader->own_methods[i];
-    if (m->spec.name == string_loadClass && m->desc == string_params_String_return_Class) {
+    if (m->spec.name == string_loadClass && m->spec.desc == string_params_String_return_Class) {
       woempa(7, "Class %k has loadClass method %m\n", clazzClassLoader, m);
       loadClass_method = m;
     }

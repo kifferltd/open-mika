@@ -1425,7 +1425,7 @@ static void parseMethod(w_clazz clazz, w_size idx, w_bar s) {
   clazz->own_methods[idx].flags = access_flags;
   clazz->own_methods[idx].spec.declaring_clazz = clazz;
   clazz->own_methods[idx].spec.name = name;
-  clazz->own_methods[idx].desc = resolveUtf8Constant(clazz, get_u2(s));
+  clazz->own_methods[idx].spec.desc = resolveUtf8Constant(clazz, get_u2(s));
   clazz->own_methods[idx].slot = SLOT_NOT_ALLOCATED;
   clazz->own_methods[idx].numThrows = 0;
 
@@ -2014,12 +2014,12 @@ w_instance attachClassInstance(w_clazz clazz, w_thread thread) {
 ** Destroy a w_Method structure.
 */
 static void destroyMethod(w_method method) {
-  woempa(7, "  Destroying method %w%w\n", method->spec.name, method->desc);
+  woempa(7, "  Destroying method %w%w\n", method->spec.name, method->spec.desc);
 
   releaseMethodSpec(&method->spec);
 
-  if (method->desc) {
-    deregisterString(method->desc);
+  if (method->spec.desc) {
+    deregisterString(method->spec.desc);
   }
   if (method->throws) {
     releaseMem(method->throws);

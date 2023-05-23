@@ -835,9 +835,9 @@ static w_method seekMethodInClass(w_string name, w_string desc_string, w_MethodS
   for (i = 0; i < search_clazz->numDeclaredMethods; ++i) {
     m = &search_clazz->own_methods[i];
 
-    woempa(1, "Candidate: %w%w\n", m->spec.name, m->desc);
+    woempa(1, "Candidate: %w%w\n", m->spec.name, m->spec.desc);
     woempa(1, "Is %spublic, %sprivate, %sprotected, %ssame package, %sancestor\n", isSet(m->flags, ACC_PUBLIC) ? "" : "not ", isSet(m->flags, ACC_PRIVATE) ? "" : "not ", isSet(m->flags, ACC_PROTECTED) ? "" : "not ", same_package ? " " : "not ", ancestor ? " " : "not ");
-    if (m->spec.name == name && m->desc == desc_string) {
+    if (m->spec.name == name && m->spec.desc == desc_string) {
       woempa(1, "=> name matches, descriptor matches ...\n");
       if (methodMatchesSpec(m, spec)) {
 
@@ -1043,7 +1043,7 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
       woempa(1, "  searching %K\n", current_clazz);
       for (i = 0; i < current_clazz->numDeclaredMethods; ++i) {
         candidate = &current_clazz->own_methods[i];
-        if (candidate->spec.name == name && candidate->desc == desc_string) {
+        if (candidate->spec.name == name && candidate->spec.desc == desc_string) {
           method = candidate;
           break;
         }
@@ -1064,7 +1064,7 @@ static void reallyResolveIMethodConstant(w_clazz clazz, w_ConstantType *c, w_Con
           spec->declaring_clazz = current_clazz;
           for (i = 0; i < current_clazz->numDeclaredMethods; ++i) {
              candidate = &current_clazz->own_methods[i];
-            if (candidate->spec.name == name && candidate->desc == desc_string) {
+            if (candidate->spec.name == name && candidate->spec.desc == desc_string) {
               method = candidate;
               break;
             }
@@ -1241,7 +1241,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
   }
   else if (isMethodConstant(clazz, idx) || isIMethodConstant(clazz, idx)) {
     m = (w_method)clazz->values[idx];
-    woempa(1, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->desc);
+    woempa(1, "Resolved [I]Method constant: %k %w %w\n", m->spec.declaring_clazz, m->spec.name, m->spec.desc);
     if (declaring_clazz_ptr) {
       *declaring_clazz_ptr = dots2slashes(m->spec.declaring_clazz->dotified);
     }
@@ -1249,7 +1249,7 @@ static w_boolean internal_getMemberConstantStrings(w_clazz clazz, w_int idx, w_s
       *member_name_ptr = registerString(m->spec.name);
     }
     if (member_type_ptr) {
-      *member_type_ptr = registerString(m->desc);
+      *member_type_ptr = registerString(m->spec.desc);
     }
 
     return TRUE;

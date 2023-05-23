@@ -754,8 +754,8 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   }
 
   // logic using pre-computed dispatchers
-  woempa(1, "Looking up descriptor %w in dispatchers_hashtable\n", method->desc);
-  w_word disp = ht_read(dispatchers_hashtable, (w_word)method->desc);
+  woempa(1, "Looking up descriptor %w in dispatchers_hashtable\n", method->spec.desc);
+  w_word disp = ht_read(dispatchers_hashtable, (w_word)method->spec.desc);
   if (disp) {
     woempa(1, "Will call native code at %p using dispatcher at %0x08\n", method->exec.function.void_fun, disp);
     method->exec.dispatcher = (w_callfun)disp;
@@ -765,7 +765,7 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   }
 
 #ifndef JNI
-  wabort(ABORT_WONKA, "No dispatcher found for descriptor %w", method->desc);
+  wabort(ABORT_WONKA, "No dispatcher found for descriptor %w", method->spec.desc);
 #endif
 
   // remaining code is dead so long as we do not use brute-force call sequences
@@ -794,7 +794,7 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   woempa(1, "Will call native code at %p using dispatcher[%d]\n", method->exec.function.void_fun, i);
   method->exec.dispatcher = dispatchers[i];
 #ifdef USE_LIBFFI
-  method->exec.cif = desc2cif(method->desc);
+  method->exec.cif = desc2cif(method->spec.desc);
 #endif
 
   callMethod(caller, method);
