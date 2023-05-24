@@ -265,7 +265,6 @@ static w_string string_sysThreadGroup;
  ** Register system thread and call Init.main() from there, without using JNI.
  */
 static void invokeInitMain(w_instance arglist) {
-  w_MethodSpec *spec;
   w_method candidate;
   w_frame frame;
   w_size   i;
@@ -274,9 +273,6 @@ static void invokeInitMain(w_instance arglist) {
   w_string registerThread_name_string = utf2String("registerThread", strlen("registerThread"));
   w_string deregisterThread_name_string = utf2String("deregisterThread", strlen("deregisterThread"));
   w_string reg_dereg_desc_string = utf2String("(Ljava/lang/Thread;)V", strlen("(Ljava/lang/Thread;)V"));
-  if (createMethodSpecUsingDescriptor(clazzThreadGroup, registerThread_name_string, reg_dereg_desc_string, &spec) == CLASS_LOADING_FAILED) {
-    wabort(ABORT_WONKA,"Uh oh: failed to build method spec using declaring_clazz %k, name %w, desc %w.\n",clazzThreadGroup, registerThread_name_string, reg_dereg_desc_string);
-  }
 
   w_method register_method = NULL;
   w_method deregister_method = NULL;
@@ -298,8 +294,6 @@ static void invokeInitMain(w_instance arglist) {
     }
   }
 
-  releaseMethodSpec(spec);
-  releaseMem(spec);
   deregisterString(registerThread_name_string);
   deregisterString(deregisterThread_name_string);
   deregisterString(reg_dereg_desc_string);
@@ -337,9 +331,6 @@ static void invokeInitMain(w_instance arglist) {
 
   w_string main_name_string = utf2String("main", strlen("main"));
   w_string main_desc_string = utf2String("([Ljava/lang/String;)V", strlen("([Ljava/lang/String;)V"));
-  if (createMethodSpecUsingDescriptor(initClazz, main_name_string, main_desc_string, &spec) == CLASS_LOADING_FAILED) {
-    wabort(ABORT_WONKA,"Uh oh: failed to build method spec using declaring_clazz %k, name %w, desc %w.\n",initClazz, main_name_string, main_desc_string);
-  }
 
   w_method main_method = NULL;
   for (i = 0; i < clazzInit->numDeclaredMethods; ++i) {
@@ -355,9 +346,6 @@ static void invokeInitMain(w_instance arglist) {
   frame = pushFrame(W_Thread_sysInit, main_method);
   frame->flags |= FRAME_NATIVE;
 
-  frame->jstack_top[0].c = 0;
-  frame->jstack_top[0].s = stack_notrace;
-  frame->jstack_top += 1;
   frame->jstack_top[0].c = (w_word) arglist;
   frame->jstack_top[0].s = stack_trace;
   frame->jstack_top += 1;
