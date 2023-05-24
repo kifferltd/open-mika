@@ -50,7 +50,7 @@ export ISALFEATURE=@IMSYS_ISAL_PHASE@
 
 ################################################################################
 
-MAKEFLAGS="MATH=native PLATFORM=im4000"
+MAKEFLAGS="PLATFORM=im4000"
 
 # Disable case-sensitive matching for the following string comparisons.
 SHELLNOCASEMATCH=$(shopt -p nocasematch; true)
