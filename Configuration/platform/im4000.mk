@@ -97,6 +97,6 @@ COMPRESS_JAR_FILES = false
 # If JAVA_THREAD_YIELD_IS_FREERTOS_DELAY is defined in CFLAGS, the Thread.yield() method will be
 # implmemted as vTaskDelay(1) rather than as taskYIELD().
 
-CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY
+CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE
 
 

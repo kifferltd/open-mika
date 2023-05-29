@@ -26,8 +26,8 @@
 * POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
-#ifndef HAVE_STACK_H
-#define HAVE_STACK_H
+#ifndef HAVE_MIKA_STACK_H
+#define HAVE_MIKA_STACK_H
 
 // If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
 // user-defined class loader in each frame.
@@ -42,8 +42,50 @@
  */
 typedef struct w_Slot {
   w_word c;
+#ifndef _USE_OBJECT_HASHTABLE
   w_word s;
+#endif
 } w_Slot;
+
+/**
+ * Set the contents of a stack slot.
+ * @param slotptr x_slot pointer to the w_Slot.
+ * @param contents w_word the data to be stored in the slot.
+*/
+#define SET_SLOT_CONTENTS(slotptr,contents) (slotptr)->c = (contents)
+
+/**
+ * Set the type of a stack slot.
+ * @param slotptr x_slot pointer to the w_Slot.
+ * @param scan    w_word the data to be stored in the slot.
+ * @param slot... if USE_OBJECT_HASHTABLE is set, not used and may be omitted (hence the ...).
+ *                Otherwise, one of slot_noscan, slot_scan, or a pointer to a x_Monitor.
+ */
+#ifdef _USE_OBJECT_HASHTABLE
+#define SET_SLOT_SCANNING(slotptr,scan...)
+#else
+#define SET_SLOT_SCANNING(slotptr,scan...) (slotptr)->s = (scan)
+#endif
+
+/**
+ * Write an object reference into a w_Slot. 
+ * If USE_OBJECT_HASHTABLE is set, the reference is simply written to the slot.
+ * Otherwise, the slot type is set to slot_scan after the reference is written into the slot. 
+ * @param slotptr x_slot pointer to the w_Slot.
+ * @param contents w_word the data to be stored in the slot.
+ */
+#define SET_REFERENCE_SLOT(slotptr,contents) SET_SLOT_CONTENTS((slotptr),(contents));\
+        SET_SLOT_SCANNING((slotptr),slot_trace)
+
+/**
+ * Write a value which is not an object reference into a w_Slot. 
+ * If USE_OBJECT_HASHTABLE is set, the value is simply written to the slot.
+ * Otherwise, the slot type is set to slot_noscan before the value is written into the slot.
+ * @param slotptr x_slot pointer to the w_Slot.
+ * @param contents w_word the data to be stored in the slot.
+ */
+#define SET_SCALAR_SLOT(slotptr,contents) SET_SLOT_SCANNING((slotptr),slot_notrace);\
+        SET_SLOT_CONTENTS((slotptr),(contents))
 
 /*
  * For the flags which a frame can have, see the WT__xxx symbols above.
@@ -81,7 +123,11 @@ typedef struct w_Frame {
 static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
 static const w_word stack_trace     = 1; // Refers to an object that needs GC tracing, main stack and auxillary stack.
 
+#ifdef _USE_OBJECT_HASHTABLE
+TODO - look up in locks hashtable?
+#else
 #define isMonitoredSlot(slot) ((slot)->s > stack_trace)
+#endif
 
 /*
  * Pointer to the last slot (auxstack_base of the root frame).
@@ -126,10 +172,10 @@ INLINE static w_long slots2w_long(const w_slot first) {
 INLINE static void w_double2slots(const w_double value, const w_slot first) {
     union{w_double d; w_word w[2];} two_words;
     two_words.d = value;
-    first[0].s = stack_notrace;
-    first[0].c = two_words.w[0];
-    first[1].s = stack_notrace;
-    first[1].c = two_words.w[1];
+    SET_SLOT_SCANNING(first, stack_notrace);
+    SET_SLOT_CONTENTS(first, two_words.w[0]);
+    SET_SLOT_SCANNING(first+1, stack_notrace);
+    SET_SLOT_CONTENTS(first+1, two_words.w[1]);
 }
 
 /*
@@ -140,10 +186,10 @@ INLINE static void w_double2slots(const w_double value, const w_slot first) {
 INLINE static void w_long2slots(const w_long value, const w_slot first) {
     union{w_long j; w_word w[2];} two_words;
     two_words.j = value;
-    first[0].s = stack_notrace;
-    first[0].c = two_words.w[0];
-    first[1].s = stack_notrace;
-    first[1].c = two_words.w[1];
+    SET_SLOT_SCANNING(first, stack_notrace);
+    SET_SLOT_CONTENTS(first, two_words.w[0]);
+    SET_SLOT_SCANNING(first+1, stack_notrace);
+    SET_SLOT_CONTENTS(first+1, two_words.w[1]);
 }
 
 /*
@@ -169,4 +215,4 @@ void callMethod(w_frame arguments, w_method method);
 #define frame2domain(f) getReferenceField(clazz2Class((f)->method->clazz), F_Class_domain))
 
 
-#endif // HAVE_STACK_H
+#endif // HAVE_MIKA_STACK_H

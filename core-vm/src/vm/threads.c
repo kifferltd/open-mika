@@ -49,6 +49,7 @@ extern void pre_thread_termination(w_thread thread);
 volatile w_boolean haveWonkaThreads = FALSE;
 
 w_hashtable thread_hashtable;
+w_hashtable object_hashtable;
 
 w_int java_stack_size;
 

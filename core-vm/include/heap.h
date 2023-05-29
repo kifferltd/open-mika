@@ -460,7 +460,7 @@ extern w_fifo window_fifo;
 //#define USE_OBJECT_HASHTABLE
 
 #ifdef USE_OBJECT_HASHTABLE
-w_hashtable object_hashtable;
+extern w_hashtable object_hashtable;
 
 #define isProbablyAnInstance(foo) (!object_hashtable || ht_read(object_hashtable, instance2object(foo)))
 #else
