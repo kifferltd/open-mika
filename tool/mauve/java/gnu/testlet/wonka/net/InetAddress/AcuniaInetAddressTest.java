@@ -104,10 +104,10 @@ public class AcuniaInetAddressTest implements Testlet
   private void testRandomByName()
   {
     harness.checkPoint("InetAddress getByName(random adress) for valid and invalid address strings");
-    checkByName("www.kuleuven.ac.be"); //valid adress
+    checkByName("www.kuleuven.be"); //valid adress
      failByName("www.sun","no web adress extension");
-    checkByName("users.skynet.be");//valid address start
-     failByName("users.skynet.be/bs975938","no extensions");
+    checkByName("www.amazon.de");//valid address start
+     failByName("www.amazon.de/bs975938","no extensions");
     checkByName("mail.yahoo.com");//valid address start
      failByName("www.yahoo.com/r/m1","no extensions (redirects to mail)");
      failByName("www.yah123.com","unexisting page");
@@ -228,8 +228,8 @@ public class AcuniaInetAddressTest implements Testlet
 /*
  * Doesn't work any more: one hostname yields 134.58.64.12 and the other 134.58.64.12
       harness.checkPoint("Testing HashCode : addresses to self");
-      checkEquality(InetAddress.getByName("www.kuleuven.ac.be"),InetAddress.getByName("www.kuleuven.ac.be"),true );
-      checkEquality(InetAddress.getByName("www.kuleuven.ac.be"),InetAddress.getByName("www.kul.be"),false );
+      checkEquality(InetAddress.getByName("www.kuleuven.be"),InetAddress.getByName("www.kuleuven.be"),true );
+      checkEquality(InetAddress.getByName("www.kuleuven.be"),InetAddress.getByName("www.kul.be"),false );
 */
 
       harness.checkPoint("Testing HashCode : local to definite other addresses");
@@ -237,7 +237,7 @@ public class AcuniaInetAddressTest implements Testlet
       checkHashCodes(InetAddress.getByName("kiffer.ltd.uk"),local );
 
       harness.checkPoint("Testing HashCode : definite different addresses");
-      checkHashCodes(InetAddress.getByName("kiffer.ltd.uk"),InetAddress.getByName("www.kul.be"));
+      checkHashCodes(InetAddress.getByName("kiffer.ltd.uk"),InetAddress.getByName("www.kuleuven.be"));
       checkHashCodes(InetAddress.getByName("194.7.211.212"),InetAddress.getByName("195.0.76.33"));
     }
     catch(Exception e)

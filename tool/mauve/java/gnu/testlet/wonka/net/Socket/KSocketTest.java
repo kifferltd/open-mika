@@ -34,7 +34,7 @@ public class KSocketTest implements Testlet {
 
   protected TestHarness th;
 
-  private static String server = "www.k-embedded-java.com";
+  private static String server = "www.kiffer.ltd.uk";
   private static int port = 80;
 
   private Object lock = new Object();

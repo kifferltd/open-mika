@@ -223,7 +223,7 @@ public class AcuniaDatagramSocketTest implements Testlet {
        InetAddress laddr = InetAddress.getLocalHost();
        DatagramPacket recvp = new DatagramPacket(new byte[128],20,20);
        String s = "01234MESSAGE: HELLOWORLD! HOW ARE YOU ALL TODAY ! END12345";
-       DatagramPacket sendp = new DatagramPacket(s.getBytes(),5, s.length()-10, laddr, 11234);
+       DatagramPacket sendp = new DatagramPacket(s.getBytes(),5, "MESSAGE: HELLOWORLD!".length()-10, laddr, 11234);
        ds = new DatagramSocket(11234,laddr);
        ds.send(sendp);
        ds.receive(recvp);
