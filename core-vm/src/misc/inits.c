@@ -116,7 +116,7 @@ void initWonka(void) {
 #endif
 #ifdef FREERTOS
 // just so the FreeRTOS task gets a nice name
-  strcpy(ur_thread_x_Thread.name, "MikaMain");
+  strcpy(ur_thread_x_Thread.name, INIT_THREAD_NAME);
 #endif
 
   x_thread_create(&ur_thread_x_Thread, 

@@ -525,7 +525,7 @@ void startKernel() {
   woempa(1,"created I_ThreadGroup_system at %p\n",I_ThreadGroup_system);
   string_sysThreadGroup = cstring2String("SystemThreadGroup", 17);
   I_Thread_sysInit = allocInstance(NULL, clazzThread);
-  string_sysThread = cstring2String("SystemInitThread", 16);
+  string_sysThread = cstring2String(INIT_THREAD_NAME, strlen(INIT_THREAD_NAME));
 
   W_Thread_sysInit = allocClearedMem(sizeof(w_Thread) + java_stack_size);
 

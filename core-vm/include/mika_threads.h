@@ -35,6 +35,8 @@
 #include "wonka.h"
 #include "mika_stack.h"
 
+#define INIT_THREAD_NAME "SystemInitThread"
+
 #ifdef RESMON
 extern w_boolean pre_thread_start_check(w_thread creatorThread, w_instance newThreadInstance);
 extern void pre_thread_termination(w_thread thread);

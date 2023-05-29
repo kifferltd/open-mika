@@ -62,7 +62,7 @@ public final class Heartbeat implements Runnable {
       t.printStackTrace();
     }
 
-    thread = new Thread(this, "Heartbeat");
+    thread = new Thread(this, "Watchman");
     thread.setPriority(1);
     thread.setDaemon(true);
     setThread(thread);
