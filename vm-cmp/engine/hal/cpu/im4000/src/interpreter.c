@@ -430,7 +430,7 @@ static void checkSingleStep1(w_frame frame, w_code current, w_slot tos) {
   }
 
   if (step->frame && step->frame != frame) {
-    woempa(7, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
+    woempa(1, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
 
     return;
   }
@@ -2259,11 +2259,11 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_dsub: {
-    woempa(7, "dsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
     w_double diff = wfp_float64_sub(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(diff, tos-2);
-    woempa(7, "dsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
     do_next_opcode;
   }
 
