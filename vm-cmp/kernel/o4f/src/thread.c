@@ -267,6 +267,9 @@ static void dumpTaskState(x_thread thread) {
       case eDeleted :
          printf( "Task %s has been Deleted\n", thread->name);
          break;
+      case eInvalid :
+         printf( "Task %s is Invalid\n", thread->name);
+         break;
       default:
          printf("Task %s has unknown state %d\n", thread->name);
    }
@@ -305,7 +308,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
      return xs_bad_argument;
    }
 
-   if ((priority < 0) || (priority >= configMAX_PRIORITIES)) {
+   if (priority >= configMAX_PRIORITIES) {
      loempa(2, "Prio is %d! EXIT\n", priority);
      return xs_bad_argument;
    }
@@ -332,7 +335,7 @@ x_status x_thread_create(x_thread thread, void (*entry_function)(void*), void* e
    if (thread->xref) {
      x_snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "%t", thread->xref);
    }
-   else if (thread->name == 0) {
+   else if (thread->name[0] == 0) {
      snprintf(thread->name, MAX_THREAD_NAME_LENGTH, "task_%04d", ++task_seq);
    }
 

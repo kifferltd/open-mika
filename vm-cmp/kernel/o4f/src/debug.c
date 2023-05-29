@@ -160,7 +160,7 @@ void x_debug_write(const void *buf, size_t count) {
     if (isSchedulerRunning) { 
       xSemaphoreGive(uart_write_mutex);
 // HACK to avoid buffer over-runs
-      x_thread_sleep(count/9 + 1);
+      x_thread_sleep(count/7 + 1);
     }
   }
 }

@@ -851,7 +851,7 @@ w_int markClazzReachable(w_clazz clazz, w_fifo fifo, w_word flag) {
   if (getClazzState(clazz) >= CLAZZ_STATE_SUPERS_LOADED) {
     w_clazz super = getSuper(clazz);
     if (super) {
-      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super[0], clazz);
+      woempa(1, "(GC) Marking Class instance of superclass (%K) of %K\n", super, clazz);
       child_instance = clazz2Class(super);
       if (child_instance) {
         retcode = markInstance(child_instance, fifo, flag);
