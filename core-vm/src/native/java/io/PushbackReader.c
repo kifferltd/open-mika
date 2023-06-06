@@ -73,7 +73,7 @@ w_int PushbackReader_read(w_thread thread, w_instance thisPushbackReader) {
     }
     in = getReferenceField(thisPushbackReader, F_PushbackReader_in);
     new_frame = activateFrame(thread, virtualLookup(read_method, instance2clazz(in)), 0, 1, in, stack_trace);
-    result = (w_int) new_frame->jstack_top[-1].c;
+    result = (w_int) GET_SLOT_CONTENTS(new_frame->jstack_top - 1);
     deactivateFrame(new_frame, NULL);
     removeLocalReference(thread, in);
   }

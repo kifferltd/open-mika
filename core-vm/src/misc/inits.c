@@ -57,6 +57,10 @@
 extern void  x_symtab_kernel(void);
 #endif
 
+#ifdef USE_OBJECT_HASHTABLE
+w_hashtable object_hashtable;
+#endif
+
 char *bootclasspath = BOOTCLASSDIR "/" BOOTCLASSFILE ":" BOOTCLASSDIR "/";
 
 char *fsroot = NULL;
@@ -449,13 +453,16 @@ void startWonka(void* data) {
 
   make_ISO3309_CRC_table();
 
-  lowMemoryCheck;
-
   globals_hashtable = ht_create((char*)"hashtable:global-refs", GLOBALS_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   if (!globals_hashtable) {
     wabort(ABORT_WONKA, "Unable to create globals_hashtable\n");
   }
   woempa(1, "created globals_hashtable at %p\n", globals_hashtable);
+
+#ifdef USE_OBJECT_HASHTABLE
+  object_hashtable = ht_create((char*)"hashtable:objects", 32767, NULL, NULL, 0, 0);
+  woempa(7, "Created object_hashtable at %p\n",object_hashtable);
+#endif
 
   lowMemoryCheck;
 

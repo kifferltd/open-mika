@@ -135,8 +135,7 @@ w_instance ObjectInputStream_allocNewInstance(w_thread thread, w_instance this, 
       w_frame new_frame = pushFrame(thread, cons);
       new_frame->flags |= FRAME_REFLECTION;
 
-      new_frame->jstack_top[0].c = (w_word)newInstance;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_REFERENCE_SLOT(new_frame->jstack_top, newInstance);
       new_frame->jstack_top += 1;
       woempa(7, "Calling %M with parameter(%j)\n", cons, newInstance);
       callMethod(new_frame, cons);
@@ -186,8 +185,7 @@ w_instance ObjectInputStream_allocNewInstance(w_thread thread, w_instance this, 
         w_frame new_frame = pushFrame(thread, cons);
         new_frame->flags |= FRAME_REFLECTION;
   
-        new_frame->jstack_top[0].c = (w_word)newInstance;
-        new_frame->jstack_top[0].s = stack_trace;
+        SET_REFERENCE_SLOT(new_frame->jstack_top, newInstance);
         new_frame->jstack_top += 1;
         woempa(7, "Calling %M with parameter(%j)\n", cons, newInstance);
         callMethod(new_frame, cons);
@@ -242,14 +240,11 @@ w_instance ObjectInputStream_createAndFillByteArray(w_thread thread, w_instance 
       w_frame new_frame = pushFrame(thread, gbs);
       new_frame->flags |= FRAME_REFLECTION;
 
-      new_frame->jstack_top[0].c = (w_word)size;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_SCALAR_SLOT(new_frame->jstack_top, (w_word)size);
       new_frame->jstack_top += 1;
-      new_frame->jstack_top[0].c = (w_word)Bytes;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_REFERENCE_SLOT(new_frame->jstack_top, Bytes);
       new_frame->jstack_top += 1;
-      new_frame->jstack_top[0].c = (w_word)this;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_REFERENCE_SLOT(new_frame->jstack_top, this);
       new_frame->jstack_top += 1;
       woempa(7, "Calling %M of %j with parameters(%j, %d)\n", gbs, this, Bytes, size);
       callMethod(new_frame, gbs);
@@ -455,14 +450,11 @@ w_instance ObjectInputStream_createPrimitiveArray(w_thread thread, w_instance th
       w_frame new_frame = pushFrame(thread, gbs);
       new_frame->flags |= FRAME_REFLECTION;
 
-      new_frame->jstack_top[0].c = (w_word)length;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_SCALAR_SLOT(new_frame->jstack_top, (w_word)length);
       new_frame->jstack_top += 1;
-      new_frame->jstack_top[0].c = (w_word)Array;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_REFERENCE_SLOT(new_frame->jstack_top, Array);
       new_frame->jstack_top += 1;
-      new_frame->jstack_top[0].c = (w_word)this;
-      new_frame->jstack_top[0].s = stack_trace;
+      SET_REFERENCE_SLOT(new_frame->jstack_top, this);
       new_frame->jstack_top += 1;
       woempa(7, "Calling %m of %j with parameters(%j, %d)\n", gbs, this, Array, length);
       callMethod(new_frame, gbs);

@@ -36,6 +36,8 @@
 #include "mika_threads.h"
 #include "wonka.h"
 
+// TODO &GET_SLOT_CONTENTS() is not very pretty, consider adding a new macro in heap.h
+
 void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
   w_slot slot = *slotloc;
   jvalue *jvalptr = *jvalptrloc;
@@ -49,7 +51,7 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
       case VM_TYPE_FLOAT:
       case VM_TYPE_BOOLEAN:
         {
-          jvalptr->i = slot->c;
+          jvalptr->i = GET_SLOT_CONTENTS(slot);
           woempa(1, "  word parameter: %08x\n", jvalptr->i);
           *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -58,9 +60,9 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
 
       case VM_TYPE_LONG:
         {
-          memcpy(&jvalptr->j, (const void*)&slot->c, 4);
+          memcpy(&jvalptr->j, (const void*)&GET_SLOT_CONTENTS(slot), 4);
           ++slot;
-          memcpy((char*)&jvalptr->j + 4, (const void*)&slot->c, 4);
+          memcpy((char*)&jvalptr->j + 4, (const void*)&GET_SLOT_CONTENTS(slot), 4);
           woempa(1, "  long parameter: %0%08x\n", jvalptr->j >> 32, jvalptr->j & 0x0ffffffffULL);
           *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -69,9 +71,9 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
 
       case VM_TYPE_DOUBLE:
         {
-          memcpy(&jvalptr->d, (const void*)&slot->c, 4);
+          memcpy(&jvalptr->d, (const void*)&GET_SLOT_CONTENTS(slot), 4);
           ++slot;
-          memcpy((char*)&jvalptr->d + 4, (const void*)&slot->c, 4);
+          memcpy((char*)&jvalptr->d + 4, (const void*)&GET_SLOT_CONTENTS(slot), 4);
           woempa(1, "  double parameter: %0%08x\n", jvalptr->d >> 32, jvalptr->d & 0x0ffffffffULL);
           *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -84,7 +86,7 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
     }
   }
   else {
-    jvalptr->l = (w_instance)slot->c;
+    jvalptr->l = (w_instance) GET_SLOT_CONTENTS(slot);
     woempa(1, "  instance parameter: %p %j\n", jvalptr->l, jvalptr->l);
     *slotloc = slot + 1;
           *jvalptrloc = jvalptr + 1;
@@ -134,8 +136,8 @@ w_long _call_instance(w_thread thread, w_slot top, w_method m) {
   woempa(1, "instance method %m has %d parameters\n", m, m->exec.nargs);
   actuals[0] = &thread;
   woempa(1, "calling thread = %t\n", thread);
-  actuals[1] = &nextparm->c;
-  woempa(1, "instance = %j\n", nextparm->c);
+  actuals[1] = &GET_SLOT_CONTENTS(nextparm);
+  woempa(1, "instance = %j\n", GET_SLOT_CONTENTS(nextparm));
   nextparm++;
   for (i = 0; i < m->exec.nargs; ++i) {
     w_clazz c = m->spec.arg_types[i];

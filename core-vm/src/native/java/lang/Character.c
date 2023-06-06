@@ -70,15 +70,15 @@ w_boolean Character_static_isDigit
 }
 
 void fast_Character_isLetter(w_frame frame) {
-  frame->jstack_top[-1].c = charIsLetter(frame->jstack_top[-1].c);
+  SET_SLOT_CONTENTS(frame->jstack_top -1, charIsLetter(GET_SLOT_CONTENTS(frame->jstack_top - 1)));
 }
 
 void fast_Character_isWhitespace(w_frame frame) {
-  frame->jstack_top[-1].c = charIsWhitespace(frame->jstack_top[-1].c);
+  SET_SLOT_CONTENTS(frame->jstack_top -1, charIsWhitespace(GET_SLOT_CONTENTS(frame->jstack_top - 1)));
 }
 
 void fast_Character_isDigit_char(w_frame frame) {
-  frame->jstack_top[-1].c = charIsDigit(frame->jstack_top[-1].c);
+  SET_SLOT_CONTENTS(frame->jstack_top -1, charIsDigit(GET_SLOT_CONTENTS(frame->jstack_top - 1)));
 }
 
 #define MIN_RADIX 2
@@ -116,7 +116,7 @@ w_char Character_static_forDigit
 }
 
 void fast_Character_forDigit_int_int(w_frame frame) {
-  frame->jstack_top[-2].c = forDigit(frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+  SET_SLOT_CONTENTS(frame->jstack_top - 2, forDigit(GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1)));
   frame->jstack_top -= 1;
 }
 
@@ -180,7 +180,7 @@ w_int Character_static_digit
 }
 
 void fast_Character_digit_char_int(w_frame frame) {
-  frame->jstack_top[-2].c = i_digit(frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+  SET_SLOT_CONTENTS(frame->jstack_top - 2, i_digit(GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1)));
   frame->jstack_top -= 1;
 }
 

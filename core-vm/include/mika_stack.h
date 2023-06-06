@@ -37,8 +37,11 @@
 #endif
 #endif
 
+#define _USE_OBJECT_HASHTABLE
+
 /*
- * Each slot consists of two words: the slot contents (c) and the slot data type (s).
+ * If USE_OBJECT_HASHTABLE is set, each slot consists of a single (32-bit) word.
+ * Otherwise each slot consists of two words: the slot contents (c) and the slot data type (s).
  */
 typedef struct w_Slot {
   w_word c;
@@ -48,6 +51,13 @@ typedef struct w_Slot {
 } w_Slot;
 
 /**
+ * Get the contents of a stack slot.
+ * @param slotptr x_slot pointer to the w_Slot.
+ * @return w_word the data stored in the slot.
+*/
+#define GET_SLOT_CONTENTS(slotptr) (slotptr)->c
+
+/**
  * Set the contents of a stack slot.
  * @param slotptr x_slot pointer to the w_Slot.
  * @param contents w_word the data to be stored in the slot.
@@ -55,8 +65,20 @@ typedef struct w_Slot {
 #define SET_SLOT_CONTENTS(slotptr,contents) (slotptr)->c = (contents)
 
 /**
+ * Get the type of a stack slot.
+ * @param slotptr w_slot pointer to the w_Slot.
+ * @return if USE_OBJECT_HASHTABLE is set, always rerurns 0 (slot)_noscan).
+ *                Otherwise, one of slot_noscan, slot_scan, or a pointer to a x_Monitor.
+ */
+#ifdef _USE_OBJECT_HASHTABLE
+#define GET_SLOT_SCANNING(slotptr)
+#else
+#define GET_SLOT_SCANNING(slotptr) (slotptr)->s
+#endif
+
+/**
  * Set the type of a stack slot.
- * @param slotptr x_slot pointer to the w_Slot.
+ * @param slotptr w_slot pointer to the w_Slot.
  * @param scan    w_word the data to be stored in the slot.
  * @param slot... if USE_OBJECT_HASHTABLE is set, not used and may be omitted (hence the ...).
  *                Otherwise, one of slot_noscan, slot_scan, or a pointer to a x_Monitor.
@@ -67,25 +89,41 @@ typedef struct w_Slot {
 #define SET_SLOT_SCANNING(slotptr,scan...) (slotptr)->s = (scan)
 #endif
 
+#ifdef _USE_OBJECT_HASHTABLE
+// TODO this could probably use some optimisation
+#define SLOT_IS_REFERENCE(slotptr) !!ht_read(object_hashtable,instance2object((slotptr)->c))
+#else
+#define SLOT_IS_REFERENCE(slotptr) ((slotptr)->s == stack_trace && (slotptr)->c)
+#endif
+
+#define SLOT_IS_SCALAR(slotptr) (!SLOT_IS_REFERENCE(slotptr))
+
+#ifdef _USE_OBJECT_HASHTABLE
+#define COPY_SLOT_TO_FROM(toptr,fromptr) (toptr)->c = (fromptr)->c
+#else
+// We assume that the copy is initially redundant frim a stack-scanning p.o.v., so we first set it no_trace before copying s. 
+#define COPY_SLOT_TO_FROM(toptr,fromptr) {(toptr)->s = stack_notrace; (toptr)->c = (fromptr)->c; (toptr)->s = (fromptr)->s;}
+#endif
+
 /**
  * Write an object reference into a w_Slot. 
  * If USE_OBJECT_HASHTABLE is set, the reference is simply written to the slot.
  * Otherwise, the slot type is set to slot_scan after the reference is written into the slot. 
- * @param slotptr x_slot pointer to the w_Slot.
- * @param contents w_word the data to be stored in the slot.
+ * @param slotptr w_slot pointer to the w_Slot.
+ * @param contents w_instance the data to be stored in the slot.
  */
-#define SET_REFERENCE_SLOT(slotptr,contents) SET_SLOT_CONTENTS((slotptr),(contents));\
-        SET_SLOT_SCANNING((slotptr),slot_trace)
+#define SET_REFERENCE_SLOT(slotptr,contents) {SET_SLOT_CONTENTS((slotptr),(w_word)(contents));\
+        SET_SLOT_SCANNING((slotptr),(contents) ? stack_trace : stack_notrace);}
 
 /**
  * Write a value which is not an object reference into a w_Slot. 
  * If USE_OBJECT_HASHTABLE is set, the value is simply written to the slot.
  * Otherwise, the slot type is set to slot_noscan before the value is written into the slot.
- * @param slotptr x_slot pointer to the w_Slot.
+ * @param slotptr w_slot pointer to the w_Slot.
  * @param contents w_word the data to be stored in the slot.
  */
-#define SET_SCALAR_SLOT(slotptr,contents) SET_SLOT_SCANNING((slotptr),slot_notrace);\
-        SET_SLOT_CONTENTS((slotptr),(contents))
+#define SET_SCALAR_SLOT(slotptr,contents) {SET_SLOT_SCANNING((slotptr),stack_notrace);\
+        SET_SLOT_CONTENTS((slotptr),(contents));}
 
 /*
  * For the flags which a frame can have, see the WT__xxx symbols above.
@@ -123,10 +161,9 @@ typedef struct w_Frame {
 static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
 static const w_word stack_trace     = 1; // Refers to an object that needs GC tracing, main stack and auxillary stack.
 
-#ifdef _USE_OBJECT_HASHTABLE
-TODO - look up in locks hashtable?
-#else
+#ifndef _USE_OBJECT_HASHTABLE
 #define isMonitoredSlot(slot) ((slot)->s > stack_trace)
+void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monitor);
 #endif
 
 /*
@@ -137,7 +174,6 @@ TODO - look up in locks hashtable?
 void addLocalReference(w_thread thread, w_instance instance);
 void pushLocalReference(w_frame frame, w_instance instance);
 void popLocalReference(w_frame frame);
-void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monitor);
 void removeLocalReference(w_thread thread, w_instance instance);
 
 /*
@@ -147,8 +183,8 @@ void removeLocalReference(w_thread thread, w_instance instance);
 */ 
 INLINE static w_double slots2w_double(const w_slot first) {
   union{w_double d; w_word w[2];} two_words;
-  two_words.w[0] = first[0].c;
-  two_words.w[1] = first[1].c;
+  two_words.w[0] = GET_SLOT_CONTENTS(first);
+  two_words.w[1] = GET_SLOT_CONTENTS(first + 1);
   return two_words.d;
 }
 
@@ -159,8 +195,8 @@ INLINE static w_double slots2w_double(const w_slot first) {
 */ 
 INLINE static w_long slots2w_long(const w_slot first) {
   union{w_long j; w_word w[2];} two_words;
-  two_words.w[0] = first[0].c;
-  two_words.w[1] = first[1].c;
+  two_words.w[0] = GET_SLOT_CONTENTS(first);
+  two_words.w[1] = GET_SLOT_CONTENTS(first + 1);
   return two_words.j;
 }
 
@@ -172,10 +208,8 @@ INLINE static w_long slots2w_long(const w_slot first) {
 INLINE static void w_double2slots(const w_double value, const w_slot first) {
     union{w_double d; w_word w[2];} two_words;
     two_words.d = value;
-    SET_SLOT_SCANNING(first, stack_notrace);
-    SET_SLOT_CONTENTS(first, two_words.w[0]);
-    SET_SLOT_SCANNING(first+1, stack_notrace);
-    SET_SLOT_CONTENTS(first+1, two_words.w[1]);
+    SET_SCALAR_SLOT(first, two_words.w[0]);
+    SET_SCALAR_SLOT(first+1, two_words.w[1]);
 }
 
 /*
@@ -186,10 +220,8 @@ INLINE static void w_double2slots(const w_double value, const w_slot first) {
 INLINE static void w_long2slots(const w_long value, const w_slot first) {
     union{w_long j; w_word w[2];} two_words;
     two_words.j = value;
-    SET_SLOT_SCANNING(first, stack_notrace);
-    SET_SLOT_CONTENTS(first, two_words.w[0]);
-    SET_SLOT_SCANNING(first+1, stack_notrace);
-    SET_SLOT_CONTENTS(first+1, two_words.w[1]);
+    SET_SCALAR_SLOT(first, two_words.w[0]);
+    SET_SCALAR_SLOT(first+1, two_words.w[1]);
 }
 
 /*

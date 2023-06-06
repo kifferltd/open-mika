@@ -121,6 +121,11 @@ static void registerObject(w_object object, w_thread thread) {
   addLocalReference(thread, object->fields);
   setFlag(object->flags, O_IS_JAVA_INSTANCE | O_BLACK);
 #ifdef USE_OBJECT_HASHTABLE
+#ifdef DEBUG
+  if (!object_hashtable || !object_hashtable->label || strncmp(object_hashtable->label, "hashtable", 9)) {
+    wabort(ABORT_WONKA, "Confound it! Time to register an object, and object_hashtable has not been initialised!\n");
+  }
+#endif
   if (ht_write(object_hashtable, (w_word)object, (w_word)object)) {
     wabort(ABORT_WONKA, "Sky! Could not add object %p to object hashtable!\n", object);
   }

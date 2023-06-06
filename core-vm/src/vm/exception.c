@@ -296,10 +296,6 @@ w_instance clearException(w_thread thread) {
 
   w_instance exception = exceptionThrown(thread);
 
-// We should protect the cleared exception somehow...
-//  thread->top->auxs[0].c = exception;
-//  thread->top->auxs[0].s = stack_exception;
-//  thread->top->auxs += 1;
   if (thread) {
     thread->exception = NULL; // but leave the thrown field unchanged for protection from GC
   }

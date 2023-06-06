@@ -55,7 +55,7 @@ w_instance do_privileged_action(w_thread thread, w_instance action, w_instance i
     woempa(1, "(PRIVILEGED) Done calling %M, exception %k was thrown.\n", instance2clazz(action)->runner, instance2clazz(exceptionThrown(thread)));
   }
   else{
-    result = (w_instance) frame->jstack_top[-1].c;
+    result = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
   }
   deactivateFrame(frame, result);
   woempa(1, "(PRIVILEGED) Done calling %M, returned %p.\n", instance2clazz(action)->runner, result);

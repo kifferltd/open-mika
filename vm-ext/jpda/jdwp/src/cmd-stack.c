@@ -88,27 +88,27 @@ w_void jdwp_stack_get_values(jdwp_command_packet cmd) {
           case 'B':
           case 'Z':
             jdwp_put_u1(&reply_grobag, tag);
-            jdwp_put_u1(&reply_grobag, (w_ubyte)frame->jstack_base[slot].c);
+            jdwp_put_u1(&reply_grobag, (w_ubyte)GET_SLOT_CONTENTS(frame->jstack_base + slot));
             break;  
           case 'C':
           case 'S':
             jdwp_put_u1(&reply_grobag, tag);
-            jdwp_put_u2(&reply_grobag, (w_ushort)frame->jstack_base[slot].c);
+            jdwp_put_u2(&reply_grobag, (w_ushort)GET_SLOT_CONTENTS(frame->jstack_base + slot));
             break;
           case 'F':
           case 'I':
             jdwp_put_u1(&reply_grobag, tag);
-            jdwp_put_u4(&reply_grobag, frame->jstack_base[slot].c);
+            jdwp_put_u4(&reply_grobag, GET_SLOT_CONTENTS(frame->jstack_base + slot));
             break;
           case 'J':
           case 'D':
             jdwp_put_u1(&reply_grobag, tag);
-            jdwp_put_u4(&reply_grobag, frame->jstack_base[slot + WORD_MSW].c);
-            jdwp_put_u4(&reply_grobag, frame->jstack_base[slot + WORD_LSW].c);
+            jdwp_put_u4(&reply_grobag, GET_SLOT_CONTENTS(frame->jstack_base + slot + WORD_MSW));
+            jdwp_put_u4(&reply_grobag, GET_SLOT_CONTENTS(frame->jstack_base + slot + WORD_LSW));
             break;
           default:
-            jdwp_put_u1(&reply_grobag, clazz2sigbyte(instance2clazz((w_instance)frame->jstack_base[slot].c)));
-            jdwp_put_objectref(&reply_grobag, (w_instance)frame->jstack_base[slot].c);
+            jdwp_put_u1(&reply_grobag, clazz2sigbyte(instance2clazz((w_instance)GET_SLOT_CONTENTS(frame->jstack_base + slot))));
+            jdwp_put_objectref(&reply_grobag, (w_instance)GET_SLOT_CONTENTS(frame->jstack_base + slot));
         }
       }
 
@@ -152,23 +152,23 @@ w_void jdwp_stack_set_values(jdwp_command_packet cmd) {
             break;
           case 'B':
           case 'Z':
-            frame->jstack_base[slot].c = jdwp_get_u1(cmd->data, &offset);
+            SET_SLOT_CONTENTS(frame->jstack_base + slot, jdwp_get_u1(cmd->data, &offset));
             break;  
           case 'C':
           case 'S':
-            frame->jstack_base[slot].c = jdwp_get_u2(cmd->data, &offset);
+            SET_SLOT_CONTENTS(frame->jstack_base + slot, jdwp_get_u2(cmd->data, &offset));
             break;
           case 'F':
           case 'I':
-            frame->jstack_base[slot].c = jdwp_get_u4(cmd->data, &offset);
+            SET_SLOT_CONTENTS(frame->jstack_base + slot, jdwp_get_u4(cmd->data, &offset));
             break;
           case 'J':
           case 'D':
-            frame->jstack_base[slot + WORD_MSW].c = jdwp_get_u4(cmd->data, &offset);
-            frame->jstack_base[slot + WORD_LSW].c = jdwp_get_u4(cmd->data, &offset);
+            SET_SLOT_CONTENTS(frame->jstack_base + slot + WORD_MSW, jdwp_get_u4(cmd->data, &offset));
+            SET_SLOT_CONTENTS(frame->jstack_base + slot + WORD_LSW, jdwp_get_u4(cmd->data, &offset));
             break;
         default:
-          frame->jstack_base[slot].c = (w_word)jdwp_get_objectref(cmd->data, &offset);
+          SET_SLOT_CONTENTS(frame->jstack_base + slot, (w_word)jdwp_get_objectref(cmd->data, &offset));
         }
       }
 
@@ -203,7 +203,7 @@ w_void jdwp_stack_this(jdwp_command_packet cmd) {
   
     if (thread) {
       if (!isSet(frame->flags, FRAME_NATIVE) && !isSet(frame->method->flags, ACC_STATIC)) {
-        instance = (w_instance)frame->jstack_base[0].c;
+        instance = (w_instance)GET_SLOT_CONTENTS(frame->jstack_base);
         clazz = instance2clazz(instance);
         if(clazz->dims) {
           tag = jdwp_tag_array;

@@ -123,7 +123,7 @@ function id2iplist(id) {
       case "s":
       case "z":
 # take 1 word from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
+        plist = sprintf("%s, (%s)GET_SLOT_CONTENTS(top - %d)",plist,id2type[letter],depth--)
         break
       case "d":
       case "j":
@@ -158,7 +158,7 @@ function id2splist(id) {
       case "s":
       case "z":
 # take 1 word from stack
-        plist = sprintf("%s, (%s)top[-%d].c",plist,id2type[letter],depth--)
+        plist = sprintf("%s, (%s)GET_SLOT_CONTENTS(top - %d)",plist,id2type[letter],depth--)
         break
       case "d":
       case "j":
@@ -355,10 +355,10 @@ END {
 
   printf "static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w_method method) {\n"
   print "  frame->flags = FRAME_NATIVE;\n  frame->label = \"frame\";\n  frame->previous = caller;\n  frame->thread = thread; frame->method = method;\n"
-  print "  frame->jstack_top = frame->jstack_base;\n  frame->jstack_base[0].s = stack_notrace;\n "
+  print "  frame->jstack_top = frame->jstack_base;\n  SET_SLOT_SCANNING(frame->jstack_base, stack_notrace);\n "
   printf "  frame->auxstack_base = caller->auxstack_top;\n  frame->auxstack_top = caller->auxstack_top;\n\n"
   printf "#ifdef TRACE_CLASSLOADERS\n"
-  printf "  {\n    w_instance loader = isSet(method->flags, ACC_STATIC)\n        ? method->spec.declaring_clazz->loader\n        : instance2clazz((w_instance)frame->jstack_base[- method->exec.arg_i].c)->loader;\n"
+  printf "  {\n    w_instance loader = isSet(method->flags, ACC_STATIC)\n        ? method->spec.declaring_clazz->loader\n        : instance2clazz((w_instance) GET_SLOT_CONTENTS(frame->jstack_base - method->exec.arg_i))->loader;\n"
   printf "    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {\n      frame->udcl = loader;\n    }\n"
   printf "    else {\n      frame->udcl = caller->udcl;\n    }\n  }\n"
   printf "#endif\n"
@@ -380,8 +380,7 @@ END {
 
   printf "static void return_reference(w_frame caller, w_int depth, w_word result);\n\n"
   printf "static void return_reference(w_frame caller, w_int depth, w_word result) {\n"
-  printf "  caller->jstack_top[-depth].c = result;\n"
-  printf "  caller->jstack_top[-depth].s = stack_trace;\n"
+  printf "  SET_REFERENCE_SLOT(caller->jstack_top - depth, result);\n"
   printf "  caller->jstack_top += -depth + 1;\n"
   printf "}\n\n"
 
@@ -390,8 +389,7 @@ END {
 
   printf "static void return_oneslot(w_frame caller, w_int depth, w_word result);\n\n"
   printf "static void return_oneslot(w_frame caller, w_int depth, w_word result) {\n"
-  printf "  caller->jstack_top[-depth].c = result;\n"
-  printf "  caller->jstack_top[-depth].s = stack_notrace;\n"
+  printf "  SET_SCALAR_SLOT(caller->jstack_top - depth, result);\n"
   printf "  caller->jstack_top += -depth + 1;\n"
   printf "}\n\n"
 
@@ -401,15 +399,7 @@ END {
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result);\n\n"
   printf "static void return_w_long(w_frame caller, w_int depth, w_long result) {\n"
   printf "  w_long2slots(result, caller->jstack_top-depth);\n"
-  printf "/* WAS:\n"
-  printf "    union{w_long l; w_word w[2];} two_words;\n"
-  printf "    two_words.l = result;\n"
-  printf "    caller->jstack_top[-depth].c = two_words.w[0];\n"
-  printf "    caller->jstack_top[-depth].s = stack_notrace;\n"
-  printf "    caller->jstack_top[-depth + 1].c = two_words.w[1];\n"
-  printf "    caller->jstack_top[-depth + 1].s = stack_notrace;\n"
-  printf "*/\n"
-  printf "    caller->jstack_top += -depth + 2;\n"
+  printf "  caller->jstack_top += -depth + 2;\n"
   printf "}\n\n"
 
   printf "/* code to return a w_double result */\n"
@@ -418,15 +408,7 @@ END {
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result);\n\n"
   printf "static void return_w_double(w_frame caller, w_int depth, w_double result) {\n"
   printf "  w_long2slots(result, caller->jstack_top-depth);\n"
-  printf "/* WAS:\n"
-  printf "    union{w_double d; w_word w[2];} two_words;\n"
-  printf "    two_words.d = result;\n"
-  printf "    caller->jstack_top[-depth].c = two_words.w[0];\n"
-  printf "    caller->jstack_top[-depth].s = stack_notrace;\n"
-  printf "    caller->jstack_top[-depth + 1].c = two_words.w[1];\n"
-  printf "    caller->jstack_top[-depth + 1].s = stack_notrace;\n"
-  printf "*/\n"
-  printf "    caller->jstack_top += -depth + 2;\n"
+  printf "  caller->jstack_top += -depth + 2;\n"
   printf "}\n\n"
 
   for (id in protos) {
@@ -436,7 +418,7 @@ END {
     printf "  w_Frame theFrame;\n"
     printf "  w_frame frame = &theFrame;\n"
     printf "  w_int depth = method->exec.arg_i;\n"
-    printf "  w_instance target = isSet(method->flags, ACC_STATIC) ? clazz2Class(method->spec.declaring_clazz) : (w_instance) caller->jstack_top[-depth].c;\n"
+    printf "  w_instance target = isSet(method->flags, ACC_STATIC) ? clazz2Class(method->spec.declaring_clazz) : (w_instance) GET_SLOT_CONTENTS(caller->jstack_top - depth);\n"
     printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
     nonvoid = rtypes[id] != "void"
     reference = rtypes[id] == "w_instance"

@@ -90,7 +90,7 @@ w_int BufferedReader_read(w_thread thread, w_instance thisBufferedReader) {
       woempa(7,"updateBuffer_method is %M\n",updateBuffer_method);
     }
     new_frame = activateFrame(thread, updateBuffer_method, 0, 1, thisBufferedReader, stack_trace);
-    updated = (w_boolean) new_frame->jstack_top[-1].c;
+    updated = (w_boolean) GET_SLOT_CONTENTS(new_frame->jstack_top - 1);
     deactivateFrame(new_frame, NULL);
     removeLocalReference(thread, thisBufferedReader);
     if (!updated) {

@@ -312,26 +312,26 @@ static void jvalues2items(w_method method, jvalue arguments[], w_frame frame) {
       if (mustBeLoaded(&method->spec.arg_types[i]) != CLASS_LOADING_FAILED) {
         arg_clazz = method->spec.arg_types[i];
         if (clazzIsPrimitive(arg_clazz)) {
-          frame->jstack_top[0].s = stack_notrace;
+          SET_SLOT_SCANNING(frame->jstack_top, stack_notrace);
           switch (arg_clazz->type & 0x0f) {
-            case VM_TYPE_BOOLEAN: frame->jstack_top[0].c = arguments[i].z; break;
-            case VM_TYPE_CHAR:    frame->jstack_top[0].c = arguments[i].c; break;
-            case VM_TYPE_FLOAT:   frame->jstack_top[0].c = arguments[i].f; break;
-            case VM_TYPE_BYTE:    frame->jstack_top[0].c = arguments[i].b; break;
-            case VM_TYPE_SHORT:   frame->jstack_top[0].c = arguments[i].s; break;
-            case VM_TYPE_INT:     frame->jstack_top[0].c = arguments[i].i; break;
+            case VM_TYPE_BOOLEAN: SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].z); break;
+            case VM_TYPE_CHAR:    SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].c); break;
+            case VM_TYPE_FLOAT:   SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].f); break;
+            case VM_TYPE_BYTE:    SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].b); break;
+            case VM_TYPE_SHORT:   SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].s); break;
+            case VM_TYPE_INT:     SET_SLOT_CONTENTS(frame->jstack_top, arguments[i].i); break;
 
             case VM_TYPE_LONG: 
-              frame->jstack_top[0].c = ((w_word*)&arguments[i])[0];
-              frame->jstack_top[1].c = ((w_word*)&arguments[i])[1];
-              frame->jstack_top[1].s = stack_notrace;
+              SET_SLOT_CONTENTS(frame->jstack_top, ((w_word*)&arguments[i])[0]);
+              SET_SLOT_CONTENTS(frame->jstack_top+1, ((w_word*)&arguments[i])[1]);
+              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace;
               frame->jstack_top += 1;
               break;
 
             case VM_TYPE_DOUBLE:
-              frame->jstack_top[0].c = ((w_word*)&arguments[i])[0];
-              frame->jstack_top[1].c = ((w_word*)&arguments[i])[1];
-              frame->jstack_top[1].s = stack_notrace;
+              SET_SLOT_CONTENTS(frame->jstack_top, ((w_word*)&arguments[i])[0]);
+              SET_SLOT_CONTENTS(frame->jstack_top+1, ((w_word*)&arguments[i])[1]);
+              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace;
               frame->jstack_top += 1;
               break;
 
@@ -340,8 +340,7 @@ static void jvalues2items(w_method method, jvalue arguments[], w_frame frame) {
           }
         }
         else {
-          frame->jstack_top[0].c = arguments[i].i;
-          frame->jstack_top[0].s = stack_trace;
+          SET_REFERENCE_SLOT(frame->jstack_top, arguments[i].i);
         }
         frame->jstack_top += 1;
       }
@@ -362,7 +361,7 @@ static void va_list2items(w_method method, va_list list, w_frame frame) {
   if (method->spec.arg_types) {
     for (i = 0; method->spec.arg_types[i]; i++) {
       if (mustBeLoaded(&method->spec.arg_types[i]) != CLASS_LOADING_FAILED) {
-        frame->jstack_top[0].s = stack_notrace;
+        SET_SLOT_SCANNING(frame->jstack_top, stack_notrace);
         arg_clazz = method->spec.arg_types[i];
         if (clazzIsPrimitive(arg_clazz)) {
           switch (arg_clazz->type & 0x0f) {
@@ -371,20 +370,20 @@ static void va_list2items(w_method method, va_list list, w_frame frame) {
             case VM_TYPE_BYTE:
             case VM_TYPE_SHORT:
             case VM_TYPE_INT:
-              frame->jstack_top[0].c = va_arg(list, w_word);
+              SET_SLOT_CONTENTS(frame->jstack_top, va_arg(list, w_word));
               break;
   
             case VM_TYPE_FLOAT:
-              frame->jstack_top[0].c = va_arg(list, wfp_float32);
+              SET_SLOT_CONTENTS(frame->jstack_top, va_arg(list, wfp_float32));
               break;
             
             case VM_TYPE_LONG:
 	      {
                 union { w_long l; w_word w[2]; } arg;
                 arg.l = va_arg(list, w_long);
-                frame->jstack_top[0].c = arg.w[0];
-                frame->jstack_top[1].c = arg.w[1];
-                frame->jstack_top[1].s = stack_notrace;
+                SET_SLOT_CONTENTS(frame->jstack_top, arg.w[0]);
+                SET_SLOT_CONTENTS(frame->jstack_top+1, arg.w[1]);
+                SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace);
                 frame->jstack_top += 1;
                 break;
 	      }
@@ -392,18 +391,9 @@ static void va_list2items(w_method method, va_list list, w_frame frame) {
               {
                 union { wfp_float64 d; w_word w[2]; } arg;
                 arg.d = va_arg(list, wfp_float64);
-		/*
-#ifdef ARM
-                frame->jstack_top[1].c = arg.w[0];
-                frame->jstack_top[0].c = arg.w[1];
-#else
-*/
-                frame->jstack_top[0].c = arg.w[0];
-                frame->jstack_top[1].c = arg.w[1];
-		/*
-#endif
-*/
-                frame->jstack_top[1].s = stack_notrace;
+                SET_SLOT_CONTENTS(frame->jstack_top, arg.w[0]);
+                SET_SLOT_CONTENTS(frame->jstack_top+1, arg.w[1]);
+                SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace);
                 frame->jstack_top += 1;
               }
               break;
@@ -411,8 +401,8 @@ static void va_list2items(w_method method, va_list list, w_frame frame) {
           }
         }
         else {
-          frame->jstack_top[0].c = (w_word) va_arg(list, jobject);
-          frame->jstack_top[0].s = stack_trace;
+          jobject o = va_arg(list, jobject);
+          SET_REFERENCE_SLOT(frame->jstack_top, o);
         }
         frame->jstack_top += 1;
       }
@@ -836,8 +826,7 @@ jobject NewObject(JNIEnv *env, jclass class, jmethodID methodID, ...) {
   if (new) {
     frame = pushFrame(thread, methodID);
     frame->flags |= FRAME_JNI;
-    frame->jstack_top[0].c = (w_word) new;
-    frame->jstack_top[0].s = stack_trace;
+    SET_REFERENCE_SLOT(frame->jstack_top, new);
     frame->jstack_top += 1;
     va_start(list, methodID);
     va_list2items(methodID, list, frame);
@@ -872,8 +861,7 @@ jobject NewObjectV(JNIEnv *env, jclass class, jmethodID methodID, va_list args) 
   if (new) {
     frame = pushFrame(thread, methodID);
     frame->flags |= FRAME_JNI;
-    frame->jstack_top[0].c = (w_word) new;
-    frame->jstack_top[0].s = stack_trace;
+    SET_REFERENCE_SLOT(frame->jstack_top, new);
     frame->jstack_top += 1;
     va_list2items(methodID, args, frame);
     if (exceptionThrown(thread)) {
@@ -907,8 +895,7 @@ jobject NewObjectA(JNIEnv *env, jclass class, jmethodID methodID, jvalue *args) 
   if (new) {
     frame = pushFrame(thread, methodID);
     frame->flags |= FRAME_JNI;
-    frame->jstack_top[0].c = (w_word) new;
-    frame->jstack_top[0].s = stack_trace;
+    SET_REFERENCE_SLOT(frame->jstack_top, new);
     frame->jstack_top += 1;
     jvalues2items(methodID, args, frame);
     if (exceptionThrown(thread)) {
@@ -963,8 +950,7 @@ w_word CallMethod32(JNIEnv *env, jobject instance, w_method method, va_list args
   frame = pushFrame(thread, method);
   frame->flags |= FRAME_JNI;
 
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, instance);
   frame->jstack_top += 1;
 
   va_list2items(method, args, frame);
@@ -981,8 +967,7 @@ w_word CallMethod32A(JNIEnv *env, jobject instance, w_method method, jvalue *arg
   w_frame frame = pushFrame(thread, method);
   frame->flags |= FRAME_JNI;
 
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, (w_word) instance);
   frame->jstack_top += 1;
 
   jvalues2items(method, args, frame);
@@ -999,8 +984,7 @@ w_dword CallMethod64(JNIEnv *env, jobject instance, w_method method, va_list arg
   w_frame frame = pushFrame(thread, method);
 
   frame->flags |= FRAME_JNI;
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, instance);
   frame->jstack_top += 1;
 
   va_list2items(method, args, frame);
@@ -1016,8 +1000,7 @@ w_dword CallMethod64A(JNIEnv *env, jobject instance, w_method method, jvalue *ar
   w_frame frame = pushFrame(thread, method);
 
   frame->flags |= FRAME_JNI;
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, instance);
   frame->jstack_top += 1;
 
   jvalues2items(method, args, frame);
@@ -1032,8 +1015,7 @@ w_void CallMethodVoid(JNIEnv *env, jobject instance, w_method method, va_list ar
   w_frame frame = pushFrame(thread, method);
   frame->flags |= FRAME_JNI;
 
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, instance);
   frame->jstack_top += 1;
 
   va_list2items(method, args, frame);
@@ -1050,8 +1032,7 @@ w_void CallMethodVoidA(JNIEnv *env, jobject instance, w_method method, jvalue *a
   w_frame frame = pushFrame(thread, method);
   frame->flags |= FRAME_JNI;
 
-  frame->jstack_top[0].c = (w_word) instance;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, instance);
   frame->jstack_top += 1;
 
   jvalues2items(method, args, frame);
@@ -3307,8 +3288,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
     wabort(ABORT_WONKA,"Uh oh: class %k doesn't have a _()V method.  Game over.\n", clazzNativeThread);
   }
 
-  thread->top->jstack_top[0].c = (w_word) Thread;
-  thread->top->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(thread->top->jstack_top, Thread);
   thread->top->jstack_top += 1;
   thread->top->method = method;
 

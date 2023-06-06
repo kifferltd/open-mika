@@ -54,12 +54,10 @@ void fast_System_static_currentTimeMillis(w_frame frame) {
   volatile union {w_long l; w_word w[2];} millis;
 
   millis.l = x_time_now_millis();
-  frame->jstack_top[0].s = 0;
-  frame->jstack_top[0].c = millis.w[0];
-  frame->jstack_top[1].s = 0;
-  frame->jstack_top[1].c = millis.w[1];
+  SET_SCALAR_SLOT(frame->jstack_top, millis.w[0]);
+  SET_SCALAR_SLOT(frame->jstack_top+1, millis.w[1]);
   frame->jstack_top += 2;
-  woempa(1, "returning 0x%08x 0x%08x\n", frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+  woempa(1, "returning 0x%08x 0x%08x\n", GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1));
 }
 
 static void do_boolean_arraycopy(w_instance Src, w_int srco, w_instance Dst, w_int dsto, w_int length) {

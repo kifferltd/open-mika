@@ -36,6 +36,7 @@
 #include "fields.h"
 #include "heap.h"
 #include "loading.h"
+#include "locks.h"
 #include "methods.h"
 #include "fastcall.h"
 #include "ts-mem.h"
@@ -249,7 +250,7 @@ w_instance StringBuffer_append_String(w_thread thread, w_instance thisStringBuff
 }
 
 void fast_StringBuffer_append_char(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
   w_thread thread = frame->thread;
   w_int curr_length;
 
@@ -265,7 +266,7 @@ void fast_StringBuffer_append_char(w_frame frame) {
     m = getMonitor(objectref);
     x_monitor_eternal(m);
     curr_length  = getIntegerField(objectref, F_StringBuffer_count);
-    c = frame->jstack_top[-1].c;
+    c = GET_SLOT_CONTENTS(frame->jstack_top - 1);
     i_ensureCapacity(thread, objectref, curr_length + 1);
     (void)i_StringBuffer_append_char(thread, objectref, c);
     x_monitor_exit(m);
@@ -275,7 +276,7 @@ void fast_StringBuffer_append_char(w_frame frame) {
 }
 
 void fast_StringBuffer_append_String(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
   w_thread thread = frame->thread;
   w_int curr_length;
 
@@ -291,12 +292,12 @@ void fast_StringBuffer_append_String(w_frame frame) {
     x_monitor_eternal(m);
     curr_length  = getIntegerField(objectref, F_StringBuffer_count);
  
-    if (frame->jstack_top[-1].c) {
-      w_string string = String2string((w_instance)frame->jstack_top[-1].c);
+    if (GET_SLOT_CONTENTS(frame->jstack_top - 1)) {
+      w_string string = String2string((w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 1));
       w_int    src_length = string_length(string);
 
       i_ensureCapacity(thread, objectref, src_length + curr_length);
-      (void)i_StringBuffer_append_String(thread, objectref, (w_instance)frame->jstack_top[-1].c);
+      (void)i_StringBuffer_append_String(thread, objectref, (w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 1));
     }
     else {
       i_ensureCapacity(thread, objectref, 4 + curr_length);
@@ -357,7 +358,7 @@ w_instance StringBuffer_toString(w_thread thread, w_instance thisStringBuffer) {
 }
 
 void fast_StringBuffer_toString(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-1].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
   w_instance theString;
   w_thread   thread = frame->thread;
 
@@ -365,7 +366,7 @@ void fast_StringBuffer_toString(w_frame frame) {
   if (objectref) {
     theString = i_StringBuffer_toString(objectref);
     enterUnsafeRegion(thread);
-    frame->jstack_top[-1].c = (w_word)theString;
+    SET_SLOT_CONTENTS(frame->jstack_top - 1, (w_word)theString);
     if (!exceptionThrown(thread)) {
       setFlag(instance2flags(theString), O_BLACK);
       removeLocalReference(thread, theString);

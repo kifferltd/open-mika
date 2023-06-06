@@ -49,7 +49,6 @@ extern void pre_thread_termination(w_thread thread);
 volatile w_boolean haveWonkaThreads = FALSE;
 
 w_hashtable thread_hashtable;
-w_hashtable object_hashtable;
 
 w_int java_stack_size;
 
@@ -119,18 +118,18 @@ static const char *unborn_thread_report(x_thread);
 ** Allocate and clear out the necessary fields for a new thread structure.
 */
 
-void setUpRootFrame(w_thread new) {
-
-  new->rootFrame.previous = NULL;
-  new->rootFrame.method = NULL;
-  new->exception = NULL;
-  new->rootFrame.flags = FRAME_ROOT;
-  new->rootFrame.thread = new;
-  new->rootFrame.jstack_base = new->slots;
-  new->rootFrame.jstack_top = new->rootFrame.jstack_base;
-  new->rootFrame.auxstack_base = last_slot(new);
-  new->rootFrame.auxstack_top = new->rootFrame.auxstack_base;
-  new->top = & new->rootFrame;
+void setUpRootFrame(w_thread thread) {
+  thread->rootFrame.label = "frame:root";
+  thread->rootFrame.previous = NULL;
+  thread->rootFrame.method = NULL;
+  thread->exception = NULL;
+  thread->rootFrame.flags = FRAME_ROOT;
+  thread->rootFrame.thread = thread;
+  thread->rootFrame.jstack_base = thread->slots;
+  thread->rootFrame.jstack_top = thread->rootFrame.jstack_base;
+  thread->rootFrame.auxstack_base = last_slot(thread);
+  thread->rootFrame.auxstack_top = thread->rootFrame.auxstack_base;
+  thread->top = & thread->rootFrame;
 }
 
 //  Java priority -------->    0   1   2   3   4   5   6   7   8   9  10
@@ -176,8 +175,7 @@ w_thread createThread(w_thread parentthread, w_instance Thread, w_instance paren
   newthread->kpriority = priority_j2k(newthread->jpriority,0);
   newthread->isDaemon = parentthread->isDaemon;
 
-  newthread->top->jstack_top[0].c = (w_word) Thread;
-  newthread->top->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(newthread->top->jstack_top, Thread);
   newthread->top->jstack_top += 1;
   newthread->state = wt_unstarted;
   setWotsitField(Thread, F_Thread_wotsit,  newthread);
@@ -311,11 +309,9 @@ static void invokeInitMain(w_instance arglist) {
   frame = pushFrame(W_Thread_sysInit, register_method);
   frame->flags |= FRAME_NATIVE;
 
-  frame->jstack_top[0].c = (w_word) I_ThreadGroup_system;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, I_ThreadGroup_system);
   frame->jstack_top += 1;
-  frame->jstack_top[0].c = (w_word) I_Thread_sysInit;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, I_Thread_sysInit);
   frame->jstack_top += 1;
 
   callMethod(frame, register_method);
@@ -347,8 +343,7 @@ static void invokeInitMain(w_instance arglist) {
   frame = pushFrame(W_Thread_sysInit, main_method);
   frame->flags |= FRAME_NATIVE;
 
-  frame->jstack_top[0].c = (w_word) arglist;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, arglist);
   frame->jstack_top += 1;
 
   callMethod(frame, main_method);
@@ -358,11 +353,9 @@ static void invokeInitMain(w_instance arglist) {
   frame = pushFrame(W_Thread_sysInit, deregister_method);
   frame->flags |= FRAME_NATIVE;
 
-  frame->jstack_top[0].c = (w_word) I_ThreadGroup_system;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, I_ThreadGroup_system);
   frame->jstack_top += 1;
-  frame->jstack_top[0].c = (w_word) I_Thread_sysInit;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, I_Thread_sysInit);
   frame->jstack_top += 1;
 
   callMethod(frame, register_method);
@@ -528,10 +521,6 @@ void startKernel() {
 
   thread_hashtable = ht_create((char*)"hashtable:threads", THREAD_HASHTABLE_SIZE, NULL, NULL, 0, 0);
   woempa(7, "Created thread_hashtable at %p\n",thread_hashtable);
-#ifdef USE_OBJECT_HASHTABLE
-  object_hashtable = ht_create((char*)"hashtable:objects", 32767, NULL, NULL, 0, 0);
-  woempa(7, "Created object_hashtable at %p\n",object_hashtable);
-#endif
   I_ThreadGroup_system = allocInstance(NULL, clazzThreadGroup);
   woempa(1,"created I_ThreadGroup_system at %p\n",I_ThreadGroup_system);
   string_sysThreadGroup = cstring2String("SystemThreadGroup", 17);

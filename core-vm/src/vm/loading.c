@@ -1592,7 +1592,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   frame = activateFrame(thread, method, FRAME_LOADING, 2, initiating_loader, stack_trace, Name, stack_trace);
   exception = exceptionThrown(thread);
   if (! exception) {
-    theClass = (w_instance) frame->jstack_top[-1].c;
+    theClass = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
   }
   deactivateFrame(frame, theClass);
   removeLocalReference(thread, Name);

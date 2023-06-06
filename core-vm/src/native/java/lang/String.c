@@ -57,7 +57,7 @@ void String_create_empty(w_thread thread, w_instance String) {
 */
 
 void fast_String_create_empty(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-1].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
   w_string s;
 
   enterSafeRegion(frame->thread);
@@ -136,7 +136,7 @@ void String_create_char(w_thread thread, w_instance thisString, w_instance charA
 
 void fast_String_create_char(w_frame frame) {
   enterSafeRegion(frame->thread);
-  i_String_create_char(frame->thread, (w_instance)frame->jstack_top[-4].c, (w_instance)frame->jstack_top[-3].c, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+  i_String_create_char(frame->thread, (w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 4), (w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 3), GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1));
   frame->jstack_top -= 4;
   enterUnsafeRegion(frame->thread);
 }
@@ -199,13 +199,13 @@ void String_create_byte(w_thread thread, w_instance thisString, w_instance byteA
 
 void fast_String_create_byte(w_frame frame) {
   enterSafeRegion(frame->thread);
-  i_String_create_byte(frame->thread, (w_instance)frame->jstack_top[-5].c, (w_instance)frame->jstack_top[-4].c, frame->jstack_top[-3].c, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+  i_String_create_byte(frame->thread, (w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 5), (w_instance)GET_SLOT_CONTENTS(frame->jstack_top - 4), GET_SLOT_CONTENTS(frame->jstack_top - 3), GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1));
   frame->jstack_top -= 5;
   enterUnsafeRegion(frame->thread);
 }
 
 void fast_String_toString(w_frame frame) {
-  if (!frame->jstack_top[-1].c) {
+  if (!GET_SLOT_CONTENTS(frame->jstack_top - 1)) {
     enterSafeRegion(frame->thread);
     throwException(frame->thread, clazzNullPointerException, NULL);
     enterUnsafeRegion(frame->thread);
@@ -217,15 +217,15 @@ w_instance String_toCharArray(w_thread thread, w_instance This) {
   w_string this_string = String2string(This);
   w_instance result;
   
-  length = string_length(this_string);
+  length = (w_int)string_length(this_string);
   woempa(1, "Allocating array of char[%d]\n", length);
   enterUnsafeRegion(thread);
   result = allocArrayInstance_1d(thread, atype2clazz[P_char], length);
   enterSafeRegion(thread);
   if (result) {
     if (string_is_latin1(this_string)) {
-      w_size i;
-      for (i = 0; i < string_length(this_string); ++i) {
+      w_int i;
+      for (i = 0; i < (w_int)string_length(this_string); ++i) {
         instance2Array_char(result)[i] = (w_char)this_string->contents.bytes[i];
       }
     }
@@ -311,7 +311,7 @@ w_instance String_getBytes(w_thread thread, w_instance This, w_boolean Enc) {
     }
   }
   else {
-    w_int length = string_length(this_string);
+    w_int length = (w_int)string_length(this_string);
 
     result = allocArrayInstance_1d(thread, atype2clazz[P_byte], length);
     if (result) {
@@ -348,12 +348,11 @@ w_boolean String_equals(w_thread thread, w_instance thisString, w_instance other
 }
 
 void fast_String_equals(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
-  w_instance otherref = (w_instance) frame->jstack_top[-1].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
+  w_instance otherref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
 
   if (objectref) {
-    frame->jstack_top[-2].s = 0;
-    frame->jstack_top[-2].c = i_String_equals(frame->thread, objectref, otherref);
+    SET_SCALAR_SLOT(frame->jstack_top-2, i_String_equals(frame->thread, objectref, otherref));
     frame->jstack_top -= 1;
   }
   else {
@@ -420,11 +419,10 @@ w_int String_hashCode(w_thread thread, w_instance thisString) {
 }
 
 void fast_String_hashCode(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-1].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
 
   if (objectref) {
-    frame->jstack_top[-1].s = 0;
-    frame->jstack_top[-1].c = i_String_hashCode(frame->thread, objectref);
+    SET_SCALAR_SLOT(frame->jstack_top-1, i_String_hashCode(frame->thread, objectref));
   }
   else {
     enterSafeRegion(frame->thread);
@@ -441,19 +439,18 @@ w_int String_length(w_thread thread, w_instance String) {
   w_string string = String2string(String);
   woempa(1, "%p '%w'\n", String, string);
 
-  return string_length(string);
+  return (w_int)string_length(string);
 
 }
 
 void fast_String_length(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-1].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
 
   if (objectref) {
     w_string string = String2string(objectref);
 
     woempa(1, "%p '%w'\n", objectref, string);
-    frame->jstack_top[-1].s = 0;
-    frame->jstack_top[-1].c = string_length(string);
+    SET_SCALAR_SLOT(frame->jstack_top-1, string_length(string));
   }
   else {
     enterSafeRegion(frame->thread);
@@ -503,7 +500,7 @@ w_boolean String_regionMatches(w_thread thread, w_instance This, w_boolean ic, w
 }
 
 static w_boolean i_String_startsWith(w_string this_string, w_string prefix, w_int offset) {
-  w_size i;
+  w_int i;
 
   if (string_length(prefix) == 0) {
     return TRUE;
@@ -514,7 +511,7 @@ static w_boolean i_String_startsWith(w_string this_string, w_string prefix, w_in
   }
 
   if (offset < (w_int)string_length(this_string) && string_length(prefix) <= (string_length(this_string) - offset)) {
-    for (i = 0; i < string_length(prefix); ++i) {
+    for (i = 0; i < (w_int)string_length(prefix); ++i) {
       if (string_char(this_string, offset + i) != string_char(prefix, i)) {
         return FALSE;
       }
@@ -537,12 +534,11 @@ w_boolean String_startsWith(w_thread thread, w_instance This, w_instance Prefix,
 }
 
 void fast_String_startsWith(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-3].c;
-  w_instance otherref = (w_instance) frame->jstack_top[-2].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 3);
+  w_instance otherref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
 
   if (objectref && otherref) {
-    frame->jstack_top[-3].s = 0;
-    frame->jstack_top[-3].c = (w_word)i_String_startsWith(String2string(objectref), String2string(otherref), frame->jstack_top[-1].c);
+    SET_SCALAR_SLOT(frame->jstack_top-3, (w_word)i_String_startsWith(String2string(objectref), String2string(otherref), GET_SLOT_CONTENTS(frame->jstack_top - 1)));
     frame->jstack_top -= 2;
   }
   else {
@@ -557,7 +553,7 @@ w_boolean String_endsWith(w_thread thread, w_instance This, w_instance Suffix) {
   w_string this_string;
   w_string suffix;
   w_int offset;
-  w_size i;
+  w_int i;
   
   if (!Suffix) {
     throwException(thread, clazzNullPointerException, NULL);
@@ -577,7 +573,7 @@ w_boolean String_endsWith(w_thread thread, w_instance This, w_instance Suffix) {
   }
 
   if (offset > 0) {
-    for (i = 0; i < string_length(suffix); ++i) {
+    for (i = 0; i < (w_int)string_length(suffix); ++i) {
       if (string_char(this_string, offset + i) != string_char(suffix, i)) {
         return FALSE;
       }
@@ -611,14 +607,13 @@ w_char String_charAt(w_thread thread, w_instance thisString, w_int idx) {
 }
 
 void fast_String_charAt(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-2].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
 
   if (objectref) {
-    w_int idx = frame->jstack_top[-1].c;
+    w_int idx = GET_SLOT_CONTENTS(frame->jstack_top - 1);
     w_string string = String2string(objectref);
     if (idx >= 0 && idx < (w_int)string_length(string)) {
-      frame->jstack_top[-2].s = 0;
-      frame->jstack_top[-2].c = string_char(string, idx); 
+      SET_SCALAR_SLOT(frame->jstack_top-2, string_char(string, idx)); 
       frame->jstack_top -= 1;
     }
     else {
@@ -693,7 +688,7 @@ static w_int i_String_indexOf_char(w_thread thread, w_instance thisString, w_int
   w_int length;
 
   string = String2string(thisString);
-  length = string_length(string);
+  length = (w_int)string_length(string);
   offset = offset < 0 ? 0 : offset;
   woempa(1, "Searching %slatin1 string '%w' for %d starting at offset %d\n", string_is_latin1(string) ? "" : "non-", string, ch, offset);
 
@@ -715,11 +710,10 @@ w_int String_indexOf_char(w_thread thread, w_instance thisString, w_int ch, w_in
 }
 
 void fast_String_indexOf_char(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-3].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 3);
 
   if (objectref) {
-    frame->jstack_top[-3].s = 0;
-    frame->jstack_top[-3].c = (w_word)i_String_indexOf_char(frame->thread, objectref, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+    SET_SCALAR_SLOT(frame->jstack_top-3, (w_word)i_String_indexOf_char(frame->thread, objectref, GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1)));
     frame->jstack_top -= 2;
   }
   else {
@@ -736,7 +730,7 @@ w_int String_indexOf_String(w_thread thread, w_instance thisString, w_instance o
 
   w_string string = String2string(thisString);
   w_string other = String2string(otherString);
-  w_size length = string_length(other);
+  w_int length = (w_int)string_length(other);
   w_int result = -1;
 
   if (length == 0) {
@@ -786,7 +780,7 @@ w_int String_indexOf_String(w_thread thread, w_instance thisString, w_instance o
     woempa(1,"just one string is latin1, looping over chars\n");
     while (where <= max) {
       woempa(1,"trying offset %d\n",where);
-      for (s = where, o = 0; o < length; o++, s++) {
+      for (s = where, o = 0; o < (w_int)length; o++, s++) {
         woempa(1, "A = %d, B = %d\n", string_char(string, s), string_char(other, o)); 
         if (string_char(string, s) != string_char(other, o)) {
           woempa(1,"mismatch after %d chars\n",o);
@@ -1067,14 +1061,14 @@ w_instance String_substring(w_thread thread, w_instance thisString, w_int offset
 }
 
 void fast_String_substring(w_frame frame) {
-  w_instance objectref = (w_instance) frame->jstack_top[-3].c;
+  w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 3);
   w_thread thread = frame->thread;
 
   enterSafeRegion(thread);
   if (objectref) {
-    w_instance subString = i_String_substring(frame->thread, objectref, frame->jstack_top[-2].c, frame->jstack_top[-1].c);
+    w_instance subString = i_String_substring(frame->thread, objectref, GET_SLOT_CONTENTS(frame->jstack_top - 2), GET_SLOT_CONTENTS(frame->jstack_top - 1));
     enterUnsafeRegion(thread);
-    frame->jstack_top[-3].c = (w_word)subString;
+    SET_SLOT_CONTENTS(frame->jstack_top - 3, (w_word)subString);
     if (subString) {
       setFlag(instance2flags(subString), O_BLACK);
       removeLocalReference(thread, subString);
@@ -1111,7 +1105,7 @@ w_instance String_trim(w_thread thread, w_instance This) {
   w_string this_string = String2string(This);
   w_instance Result = This;
   w_string result;
-  w_size i;
+  w_int i;
   w_int leading;
   w_int trailing;
   w_char * buffer = NULL;
@@ -1125,7 +1119,7 @@ w_instance String_trim(w_thread thread, w_instance This) {
     buffer = allocMem(string_length(this_string) * sizeof(w_char));
     if (buffer) {
       if (string_is_latin1(this_string)) {
-        for (i = 0; i < string_length(this_string); ++i) {
+        for (i = 0; i < (w_int)string_length(this_string); ++i) {
           buffer[i] = (w_char)this_string->contents.bytes[i];
         }
       }
@@ -1134,13 +1128,13 @@ w_instance String_trim(w_thread thread, w_instance This) {
       }
       leading = 0;
       trailing = 0;
-      for (i = 0; i < string_length(this_string); i++) {
+      for (i = 0; i < (w_int)string_length(this_string); i++) {
         if (buffer[i] > 0x0020) {
           break;
         }
         leading += 1;
       }
-      for (i = string_length(this_string) - 1; i >= 0; i--) {
+      for (i = (w_int)string_length(this_string) - 1; i >= 0; i--) {
         if (buffer[i] > 0x0020) {
           break;
         }

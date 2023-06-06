@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2008, 2011, 2012, 2021, 2022 by KIFFER Ltd.               *
+* Copyright (c) 2008, 2011, 2012, 2021, 2022, 2023 by KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -211,7 +211,7 @@ void interpret_instance_synchronized(w_frame caller, w_method method) {
   x_monitor m;
   x_status status;
   
-  thiz = (w_instance) caller->jstack_top[- method->exec.arg_i].c;
+  thiz = (w_instance) GET_SLOT_CONTENTS(caller->jstack_top - method->exec.arg_i);
   woempa(1, "Dispatching %m, lock = %j\n", method, thiz);
 
   m = getMonitor(thiz);
@@ -355,15 +355,13 @@ void return_this(w_frame caller, w_method method) {
 void return_null(w_frame caller, w_method method) {
   woempa(1, "Dispatching %m()\n", method);
   caller->jstack_top -= method->exec.arg_i - 1;
-  caller->jstack_top[-1].s = stack_trace;
-  caller->jstack_top[-1].c = 0;
+  SET_REFERENCE_SLOT(caller->jstack_top-1, 0);
 }
 
 void return_iconst(w_frame caller, w_method method) {
   woempa(1, "Dispatching %m()\n", method);
   caller->jstack_top -= method->exec.arg_i - 1;
-  caller->jstack_top[-1].s = stack_notrace;
-  caller->jstack_top[-1].c = method->exec.code[0] == iconst_m1 ? -1 : method->exec.code[0] - iconst_0;
+  SET_SCALAR_SLOT(caller->jstack_top-1, method->exec.code[0] == iconst_m1 ? -1 : method->exec.code[0] - iconst_0);
 }
 
 void interpret_getter(w_frame caller, w_method method) {
@@ -402,21 +400,21 @@ void interpret_getter(w_frame caller, w_method method) {
         removeLocalReference(caller->thread, caller->thread->exception);
       }
       else {
-        caller->jstack_top[-1].s = stack_notrace;
+        SET_SLOT_SCANNING(caller->jstack_top-1, stack_notrace);
         if (isSet(field->flags, FIELD_IS_REFERENCE)) {
-          caller->jstack_top[-1].c = objectref[instance2clazz(objectref)->instanceSize + field->size_and_slot];
-          caller->jstack_top[-1].s = stack_trace;
+          SET_SLOT_CONTENTS(caller->jstack_top-1, objectref[instance2clazz(objectref)->instanceSize + field->size_and_slot]);
+          SET_SLOT_SCANNING(caller->jstack_top-1, stack_trace);
         }
 #ifdef PACK_BYTE_FIELDS
         else if ((field->size_and_slot & FIELD_SIZE_MASK) <= FIELD_SIZE_8_BITS) {
-          caller->jstack_top[-1].c = *byteFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot));
+          SET_SLOT_CONTENTS(caller->jstack_top-1, *byteFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot)));
         }
 #endif
         else {
-          caller->jstack_top[-1].c = wordFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot))[0];
+          SET_SLOT_CONTENTS(caller->jstack_top-1, wordFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot))[0]);
           if (isSet(field->flags, FIELD_IS_LONG)) {
-            caller->jstack_top[ 0].s = stack_notrace;
-            caller->jstack_top[ 0].c = wordFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot))[1];
+            SET_SLOT_SCANNING(caller->jstack_top, stack_notrace);
+            SET_SLOT_CONTENTS(caller->jstack_top, wordFieldPointer(objectref, FIELD_OFFSET(field->size_and_slot))[1]);
             woempa(1, "getfield %w of %j : got %08x %08x\n", field->name, objectref, caller->jstack_top[-1].c, caller->jstack_top[0].c);
             caller->jstack_top += 1;
           }
@@ -529,18 +527,16 @@ void interpret_getstaticker(w_frame caller, w_method method) {
       // point of call. But now we are here, let's do the getstatic ...
 #endif
       woempa(1, "Dispatching %m\n", method);
-      caller->jstack_top[0].s = stack_notrace;
-      caller->jstack_top[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
+      SET_SCALAR_SLOT(caller->jstack_top, field->declaring_clazz->staticFields[field->size_and_slot]);
 
       if (isSet(field->flags, FIELD_IS_LONG)) {
-        caller->jstack_top[1].s = stack_notrace;
-        caller->jstack_top[1].c = field->declaring_clazz->staticFields[field->size_and_slot + 1];
+        SET_SCALAR_SLOT(caller->jstack_top+1, field->declaring_clazz->staticFields[field->size_and_slot + 1]);
         woempa(1, "getstatic %w of %k : got %08x %08x\n", field->name, field->declaring_clazz, caller->jstack_top[0].c, caller->jstack_top[1].c);
         caller->jstack_top += 2;
       }
       else {
         if (isSet(field->flags, FIELD_IS_REFERENCE)) {
-          caller->jstack_top[0].s = stack_trace;
+          SET_SLOT_SCANNING(caller->jstack_top, stack_trace);
         }
         caller->jstack_top += 1;
       }
@@ -808,14 +804,14 @@ static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w
   frame->thread = thread;
   frame->method = method;
   frame->jstack_top = frame->jstack_base;
-  frame->jstack_base[0].s = stack_notrace;
+  SET_SLOT_SCANNING(frame->jstack_base, stack_notrace);
   frame->auxstack_base = caller->auxstack_top;
   frame->auxstack_top = caller->auxstack_top;
 #ifdef TRACE_CLASSLOADERS
   { 
     w_instance loader = isSet(method->flags, ACC_STATIC) 
                         ? method->spec.declaring_clazz->loader
-                        : instance2clazz(frame->jstack_base[- method->exec.arg_i].c)->loader;
+                        : instance2clazz(GET_SLOT_CONTENTS(frame->jstack_base - method->exec.arg_i))->loader;
     if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
       frame->udcl = loader;
     }
@@ -841,29 +837,27 @@ void native_instance_synchronized_reference(w_frame caller, w_method method) {
 
   threadMustBeSafe(thread);
 
-  o = (w_instance) caller->jstack_top[idx].c;
+  o = (w_instance) GET_SLOT_CONTENTS(caller->jstack_top + idx);
   m = getMonitor(o);
   x_monitor_eternal(m);
 
   thread->top = frame;
 
-  frame->jstack_top[0].c = 0;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, 0);
   frame->jstack_top += 1;
   ref_result = _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
 
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
-    caller->jstack_top[idx].s = stack_notrace;
+    SET_SLOT_SCANNING(caller->jstack_top+idx, stack_notrace);
     caller->jstack_top += idx + 1;
     thread->top = caller;
   }
   else {
     enterUnsafeRegion(thread);
     woempa(1, "%m result = %08x\n", method, ref_result);
-    caller->jstack_top[idx].c = (w_word)ref_result;
-    caller->jstack_top[idx].s = stack_trace;
+    SET_REFERENCE_SLOT(caller->jstack_top+idx, (w_word)ref_result);
     caller->jstack_top += idx + 1;
     if (ref_result) {
       setFlag(instance2flags(ref_result), O_BLACK);
@@ -889,7 +883,7 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
 
   threadMustBeSafe(thread);
 
-  o = (w_instance) caller->jstack_top[idx].c;
+  o = (w_instance) GET_SLOT_CONTENTS(caller->jstack_top + idx);
   m = getMonitor(o);
   x_monitor_eternal(m);
 
@@ -900,9 +894,8 @@ void native_instance_synchronized_32bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = word_result;
-  woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
+  SET_SCALAR_SLOT(caller->jstack_top, word_result);
+  woempa(1, "%m result = %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top));
   caller->jstack_top += 1;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -924,7 +917,7 @@ void native_instance_synchronized_64bits(w_frame caller, w_method method) {
 
   threadMustBeSafe(thread);
 
-  o = (w_instance) caller->jstack_top[idx].c;
+  o = (w_instance) GET_SLOT_CONTENTS(caller->jstack_top + idx);
   m = getMonitor(o);
   x_monitor_eternal(m);
 
@@ -935,11 +928,9 @@ void native_instance_synchronized_64bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = result.w[0];
-  caller->jstack_top[1].s = stack_notrace;
-  caller->jstack_top[1].c = result.w[1];
-  woempa(1, "%m result = %08x %08x\n", method, caller->jstack_top[0].c, caller->jstack_top[1].c);
+  SET_SCALAR_SLOT(caller->jstack_top, result.w[0]);
+  SET_SCALAR_SLOT(caller->jstack_top+1, result.w[1]);
+  woempa(1, "%m result = %08x %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top), GET_SLOT_CONTENTS(caller->jstack_top + 1));
   caller->jstack_top += 2;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -960,7 +951,7 @@ void native_instance_synchronized_void(w_frame caller, w_method method) {
 
   threadMustBeSafe(thread);
 
-  o = (w_instance) caller->jstack_top[idx].c;
+  o = (w_instance) GET_SLOT_CONTENTS(caller->jstack_top + idx);
   m = getMonitor(o);
   x_monitor_eternal(m);
 
@@ -990,22 +981,20 @@ void native_instance_unsynchronized_reference(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  frame->jstack_top[0].c = 0;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, 0);
   frame->jstack_top += 1;
   ref_result = _call_instance_reference(thread, (w_slot)caller->jstack_top, method);
 
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
-    caller->jstack_top[idx].s = stack_notrace;
+    SET_SLOT_SCANNING(caller->jstack_top+idx, stack_notrace);
     caller->jstack_top += idx + 1;
     thread->top = caller;
   }
   else {
     enterUnsafeRegion(thread);
     woempa(1, "%m result = %08x\n", method, ref_result);
-    caller->jstack_top[idx].c = (w_word)ref_result;
-    caller->jstack_top[idx].s = stack_trace;
+    SET_REFERENCE_SLOT(caller->jstack_top+idx, ref_result);
     caller->jstack_top += idx + 1;
     // See note above
     if (ref_result) {
@@ -1033,9 +1022,8 @@ void native_instance_unsynchronized_32bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = word_result;
-  woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
+  SET_SCALAR_SLOT(caller->jstack_top, word_result);
+  woempa(1, "%m result = %08x\n", method, GET_SCALAR_SLOT(caller->jstack_top));
   caller->jstack_top += 1;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -1059,11 +1047,9 @@ void native_instance_unsynchronized_64bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = result.w[0];
-  caller->jstack_top[1].s = stack_notrace;
-  caller->jstack_top[1].c = result.w[1];
-  woempa(1, "%m result = %08x %08x\n", method, caller->jstack_top[0].c, caller->jstack_top[1].c);
+  SET_SCALAR_SLOT(caller->jstack_top, result.w[0]);
+  SET_SCALAR_SLOT(caller->jstack_top+1, result.w[1]);
+  woempa(1, "%m result = %08x %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top), GET_SLOT_CONTENTS(caller->jstack_top + 1));
   caller->jstack_top += 2;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -1112,22 +1098,20 @@ void native_static_synchronized_reference(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  frame->jstack_top[0].c = 0;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, 0);
   frame->jstack_top += 1;
   ref_result = _call_static_reference(thread, o, (w_slot)caller->jstack_top, method);
   x_monitor_exit(m);
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
-    caller->jstack_top[idx].s = stack_notrace;
+    SET_SLOT_SCANNING(caller->jstack_top+idx, stack_notrace);
     caller->jstack_top += idx + 1;
     thread->top = caller;
   }
   else {
     enterUnsafeRegion(thread);
     woempa(1, "%m result = %08x\n", method, ref_result);
-    caller->jstack_top[idx].c = (w_word)ref_result;
-    caller->jstack_top[idx].s = stack_trace;
+    SET_REFERENCE_SLOT(caller->jstack_top+idx, ref_result);
     caller->jstack_top += idx + 1;
     // See remark above
     if (ref_result) {
@@ -1165,9 +1149,8 @@ void native_static_synchronized_32bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = word_result;
-  woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
+  SET_SCALAR_SLOT(caller->jstack_top, word_result);
+  woempa(1, "%m result = %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top));
   caller->jstack_top += 1;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -1200,11 +1183,9 @@ void native_static_synchronized_64bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = result.w[0];
-  caller->jstack_top[1].s = stack_notrace;
-  caller->jstack_top[1].c = result.w[1];
-  woempa(1, "%m result = %08x %08x\n", method, caller->jstack_top[0].c, caller->jstack_top[1].c);
+  SET_SCALAR_SLOT(caller->jstack_top, result.w[0]);
+  SET_SCALAR_SLOT(caller->jstack_top+1, result.w[1]);
+  woempa(1, "%m result = %08x %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top), GET_SLOT_CONTENTS(caller->jstack_top + 1));
   caller->jstack_top += 2;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -1254,21 +1235,19 @@ void native_static_unsynchronized_reference(w_frame caller, w_method method) {
 
   thread->top = frame;
   
-  frame->jstack_top[0].c = 0;
-  frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(frame->jstack_top, 0);
   frame->jstack_top += 1;
   ref_result = _call_static_reference(thread, clazz2Class(frame->method->spec.declaring_clazz), (w_slot)caller->jstack_top, method);
   if (thread->exception) {
     woempa(1, "%m threw %e, ignoring return value\n", method, thread->exception);
-    caller->jstack_top[idx].s = stack_notrace;
+    SET_SLOT_SCANNING(caller->jstack_top+idx, stack_notrace);
     caller->jstack_top += idx + 1;
     thread->top = caller;
   }
   else {
     enterUnsafeRegion(thread);
     woempa(1, "%m result = %08x\n", method, ref_result);
-    caller->jstack_top[idx].c = (w_word)ref_result;
-    caller->jstack_top[idx].s = stack_trace;
+    SET_REFERENCE_SLOT(caller->jstack_top+idx, (w_word)ref_result);
     caller->jstack_top += idx + 1;
     if (ref_result) {
       setFlag(instance2flags(ref_result), O_BLACK);
@@ -1296,9 +1275,8 @@ void native_static_unsynchronized_32bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = word_result;
-  woempa(1, "%m result = %08x\n", method, caller->jstack_top[0].c);
+  SET_SCALAR_SLOT(caller->jstack_top, word_result);
+  woempa(1, "%m result = %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top));
   caller->jstack_top += 1;
   thread->top = caller;
   enterSafeRegion(thread);
@@ -1322,11 +1300,9 @@ void native_static_unsynchronized_64bits(w_frame caller, w_method method) {
 
   enterUnsafeRegion(thread);
   caller->jstack_top += idx;
-  caller->jstack_top[0].s = stack_notrace;
-  caller->jstack_top[0].c = result.w[0];
-  caller->jstack_top[1].s = stack_notrace;
-  caller->jstack_top[1].c = result.w[1];
-  woempa(1, "%m result = %08x %08x\n", method, caller->jstack_top[0].c, caller->jstack_top[1].c);
+  SET_SCALAR_SLOT(caller->jstack_top, result.w[0]);
+  SET_SCALAR_SLOT(caller->jstack_top+1, result.w[1]);
+  woempa(1, "%m result = %08x %08x\n", method, GET_SLOT_CONTENTS(caller->jstack_top), GET_SLOT_CONTENTS(caller->jstack_top + 1));
   caller->jstack_top += 2;
   thread->top = caller;
   enterSafeRegion(thread);

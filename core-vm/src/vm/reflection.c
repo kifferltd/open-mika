@@ -578,8 +578,7 @@ w_frame invoke(w_thread thread, w_method method, w_instance This, w_instance Arg
           frame->udcl = frame->previous->udcl;
         }
 #endif
-        frame->jstack_top[0].c = (w_word) This;
-        frame->jstack_top[0].s = stack_trace;
+        SET_REFERENCE_SLOT(frame->jstack_top, (w_word) This);
         frame->jstack_top += 1;
       }
       arguments = instance2Array_instance(Arguments);
@@ -604,23 +603,19 @@ w_frame invoke(w_thread thread, w_method method, w_instance This, w_instance Arg
           }
 
           if (isSet(T_clazz->type, VM_TYPE_TWO_CELL)) {
-            frame->jstack_top[0].c = T_data[0];
-            frame->jstack_top[0].s = stack_notrace;
-            frame->jstack_top[1].c = T_data[1];
-            frame->jstack_top[1].s = stack_notrace;
+            SET_SCALAR_SLOT(frame->jstack_top, T_data[0]);
+            SET_SCALAR_SLOT(frame->jstack_top+1, T_data[1]);
             frame->jstack_top += 2;
           }
           else {
-            frame->jstack_top[0].c = T_data[0];
-            frame->jstack_top[0].s = stack_notrace;
+            SET_SCALAR_SLOT(frame->jstack_top, T_data[0]);
             frame->jstack_top += 1;
           }
         }
         else {
           woempa(1, "Argument %d: target class is %k, argument is %j\n", i, T_clazz, arguments[i]);
           if (arguments[i] == NULL || isAssignmentCompatible(instance2clazz(arguments[i]), T_clazz)) {
-            frame->jstack_top[0].c = (w_word) arguments[i];
-            frame->jstack_top[0].s = stack_trace;
+            SET_REFERENCE_SLOT(frame->jstack_top, (w_word) arguments[i]);
             frame->jstack_top += 1;
           }
           else {
@@ -917,19 +912,15 @@ void voidProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
   new_frame = pushFrame(thread, target_method);
   new_frame->flags |= FRAME_REFLECTION;
 
-  new_frame->jstack_top[0].c = (w_word)handler;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)handler);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)thisProxy;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)thisProxy);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)currentMethod;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)currentMethod);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)arguments;
-  new_frame->jstack_top[0].s = arguments? stack_trace : stack_notrace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)arguments);
   new_frame->jstack_top += 1;
-  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, new_frame->jstack_top[-4].c, new_frame->jstack_top[-3].c, new_frame->jstack_top[-2].c, new_frame->jstack_top[-1].c);
+  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, GET_SLOT_CONTENTS(new_frame->jstack_top - 4), GET_SLOT_CONTENTS(new_frame->jstack_top - 3), GET_SLOT_CONTENTS(new_frame->jstack_top - 2), GET_SLOT_CONTENTS(new_frame->jstack_top - 1));
   removeLocalReference(thread, currentMethod);
   callMethod(new_frame, target_method);
 
@@ -1006,19 +997,15 @@ w_word singleProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
   new_frame = pushFrame(thread, target_method);
   new_frame->flags |= FRAME_REFLECTION;
 
-  new_frame->jstack_top[0].c = (w_word)handler;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)handler);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)thisProxy;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)thisProxy);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)currentMethod;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)currentMethod);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)arguments;
-  new_frame->jstack_top[0].s = arguments? stack_trace : stack_notrace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)arguments);
   new_frame->jstack_top += 1;
-  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, new_frame->jstack_top[-4].c, new_frame->jstack_top[-3].c, new_frame->jstack_top[-2].c, new_frame->jstack_top[-1].c);
+  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, GET_SLOT_CONTENTS(new_frame->jstack_top - 4), GET_SLOT_CONTENTS(new_frame->jstack_top - 3), GET_SLOT_CONTENTS(new_frame->jstack_top - 2), GET_SLOT_CONTENTS(new_frame->jstack_top - 1));
   removeLocalReference(thread, currentMethod);
   callMethod(new_frame, target_method);
   // TODO - if the exception thrown is neither declared by the interface
@@ -1031,7 +1018,7 @@ w_word singleProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
   }
   else {
     if (isSet(return_type->flags, CLAZZ_IS_PRIMITIVE)) {
-      w_instance wrapped = (w_instance)new_frame->jstack_top[-1].c;
+      w_instance wrapped = (w_instance)GET_SLOT_CONTENTS(new_frame->jstack_top - 1);
       w_word *data;
 
       if (wrapped) {
@@ -1043,7 +1030,7 @@ w_word singleProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
       }
     }
     else {
-      result = new_frame->jstack_top[-1].c;
+      result = GET_SLOT_CONTENTS(new_frame->jstack_top - 1);
       protect = (w_instance)result;
     }
   }
@@ -1117,19 +1104,15 @@ w_long doubleProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
   new_frame = pushFrame(thread, target_method);
   new_frame->flags |= FRAME_REFLECTION;
 
-  new_frame->jstack_top[0].c = (w_word)handler;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)handler);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)thisProxy;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)thisProxy);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)currentMethod;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)currentMethod);
   new_frame->jstack_top += 1;
-  new_frame->jstack_top[0].c = (w_word)arguments;
-  new_frame->jstack_top[0].s = stack_trace;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, (w_word)arguments);
   new_frame->jstack_top += 1;
-  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, new_frame->jstack_top[-4].c, new_frame->jstack_top[-3].c, new_frame->jstack_top[-2].c, new_frame->jstack_top[-1].c);
+  woempa(7, "Calling %m with parameters(%j, %j, %j, %j)\n", target_method, GET_SLOT_CONTENTS(new_frame->jstack_top - 4), GET_SLOT_CONTENTS(new_frame->jstack_top - 3), GET_SLOT_CONTENTS(new_frame->jstack_top - 2), GET_SLOT_CONTENTS(new_frame->jstack_top - 1));
   removeLocalReference(thread, currentMethod);
   callMethod(new_frame, target_method);
   // TODO - if the exception thrown is neither declared by the interface
@@ -1140,7 +1123,7 @@ w_long doubleProxyMethodCode(w_thread thread, w_instance thisProxy, ...) {
     result.l = 0LL;
   }
   else {
-    w_instance wrapped = (w_instance)new_frame->jstack_top[-1].c;
+    w_instance wrapped = (w_instance) GET_SLOT_CONTENTS(new_frame->jstack_top - 1);
     union {w_long l; w_word w[2];} *data;
 
     getWrappedValue(wrapped, (void**)&data);

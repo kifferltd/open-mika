@@ -942,8 +942,8 @@ w_int markFrameReachable(w_frame frame, w_fifo fifo, w_word flag) {
       // repeat test, because auxstack_top + 1 could be past end of frame if auxstack is empty
       continue;
     }
-    if (item->s == stack_trace && item->c) {
-      child_instance = (w_instance) item->c;
+    if (SLOT_IS_REFERENCE(item)) {
+      child_instance = (w_instance) GET_SLOT_CONTENTS(item);
       if (child_instance != thisThread) {
         retcode = markInstance(child_instance, fifo, flag);
         if (retcode < 0) {
@@ -993,8 +993,8 @@ w_int markThreadReachable(w_object object, w_fifo fifo, w_word flag) {
 
   woempa(1, "Scanning aux stack of %t (%d items)\n", thread, last_slot(thread) - thread->top->auxstack_top);
   for (auxs = (volatile w_slot) last_slot(thread); auxs > (volatile w_slot) thread->top->auxstack_top; auxs -= 1) {
-    if (auxs->c && (auxs->s == stack_trace || isMonitoredSlot(auxs))) {
-      i = (w_instance) auxs->c;
+    if (SLOT_IS_REFERENCE(auxs)) {
+      i = (w_instance) GET_SLOT_CONTENTS(auxs);
       retcode = markInstance(i, fifo, flag);
       if (retcode < 0) {
 

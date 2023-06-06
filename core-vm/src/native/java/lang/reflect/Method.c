@@ -283,25 +283,25 @@ w_instance Method_invoke0(w_thread thread, w_instance thisMethod, w_instance the
         }
 
         if (isSet(returns->type, VM_TYPE_TWO_CELL)) {
-          wordFieldPointer(result, slot)[1] = frame->jstack_top[-1].c;
-          wordFieldPointer(result, slot)[0] = frame->jstack_top[-2].c;
+          wordFieldPointer(result, slot)[1] = GET_SLOT_CONTENTS(frame->jstack_top - 1);
+          wordFieldPointer(result, slot)[0] = GET_SLOT_CONTENTS(frame->jstack_top - 2);
         }
         else {
 #ifdef PACK_BYTE_FIELDS
           if ((slot & FIELD_SIZE_MASK) <= FIELD_SIZE_8_BITS) {
-            *byteFieldPointer(result, slot) = (char)frame->jstack_top[-1].c;
+            *byteFieldPointer(result, slot) = (char)GET_SLOT_CONTENTS(frame->jstack_top - 1);
           }
           else {
-            *wordFieldPointer(result, slot) = frame->jstack_top[-1].c;
+            *wordFieldPointer(result, slot) = GET_SLOT_CONTENTS(frame->jstack_top - 1);
           }
 #else
-          *wordFieldPointer(result, slot) = frame->jstack_top[-1].c;
+          *wordFieldPointer(result, slot) = GET_SLOT_CONTENTS(frame->jstack_top - 1);
 #endif
         }
       }
     }
     else {
-      result = (w_instance) frame->jstack_top[-1].c;
+      result = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 1);
       protected = result;
     }
   }

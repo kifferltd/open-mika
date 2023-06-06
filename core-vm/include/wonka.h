@@ -30,6 +30,8 @@
 #ifndef _WONKA_H
 #define _WONKA_H
 
+#define _USE_OBJECT_HASHTABLE
+
 #ifndef FALSE
 #define FALSE 0
 #endif

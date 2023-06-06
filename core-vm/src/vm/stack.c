@@ -152,7 +152,7 @@ w_instance getCurrentInstance(w_thread thread) {
   w_frame frame = getCurrentFrame(thread);
 
   if (frame && isNotSet(frame->method->flags, ACC_STATIC)) {
-    return (w_instance) frame->jstack_base[0].c;
+    return (w_instance) GET_SLOT_CONTENTS(frame->jstack_base);
   }
 
   return NULL;
@@ -164,7 +164,7 @@ w_instance getCallingInstance(w_thread thread) {
   w_frame frame = getCallingFrame(thread);
   
   if (frame && isNotSet(frame->method->flags, ACC_STATIC)) {
-    return (w_instance) frame->jstack_base[0].c;
+    return (w_instance) GET_SLOT_CONTENTS(frame->jstack_base);
   }
   
   return NULL;
@@ -195,9 +195,7 @@ inline static void i_pushLocalReference(w_frame frame, w_instance instance) {
   }
   else {
     woempa(1, "Pushing %j as aux[%d] of %t\n", instance, last_slot(thread) - frame->auxstack_top, thread);
-    frame->auxstack_top[0].c = (w_word) instance;
-    frame->auxstack_top[0].s = stack_trace;
-    frame->auxstack_top -= 1;
+    SET_REFERENCE_SLOT(frame->auxstack_top, instance);
 
     setFlag(instance2flags(instance), O_BLACK);
   }
@@ -212,11 +210,12 @@ inline static void i_pushLocalReference(w_frame frame, w_instance instance) {
 */
 void popLocalReference(w_frame frame) {
   if (frame->auxstack_top < frame->auxstack_base) {
-    woempa(7, "Popping aux[%d] of %t (%j)\n", last_slot(frame->thread) - frame->auxstack_top, frame->thread, frame->auxstack_top[1].c);
+    woempa(7, "Popping aux[%d] of %t (%j)\n", last_slot(frame->thread) - frame->auxstack_top, frame->thread, GET_SLOT_CONTENTS(frame->auxstack_top + 1));
     frame->auxstack_top += 1;
   }
 }
 
+#ifndef USE_OBJECT_HASHTABLE
 void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monitor) {
   w_thread thread = frame->thread;
   w_boolean unsafe = enterUnsafeRegion(thread);
@@ -230,7 +229,7 @@ void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monito
   }
   else {
     woempa(1, "Pushing %j as aux[%d] of %t\n", instance, last_slot(thread) - frame->auxstack_top, thread);
-    frame->auxstack_top[0].c = (w_word) instance;
+    SET_SLOT_CONTENTS(frame->auxstack_top, (w_word) instance);
     frame->auxstack_top[0].s = (w_word) monitor;
     frame->auxstack_top -= 1;
   }
@@ -239,6 +238,7 @@ void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monito
     enterSafeRegion(thread);
   }
 }
+#endif
 
 void pushLocalReference(w_frame frame, w_instance instance) {
   i_pushLocalReference(frame, instance);
@@ -259,13 +259,13 @@ void removeLocalReference(w_thread thread, w_instance instance) {
 
   woempa(1, "Removing %j from auxs of %t\n", instance, thread);
   for (slot = (w_slot)frame->auxstack_top + 1; slot <= frame->auxstack_base; ++slot) {
-    if (slot->c == (w_word) instance && slot->s == stack_trace) {
+    if (GET_SLOT_CONTENTS(slot) == (w_word) instance && SLOT_IS_REFERENCE(slot)) {
       woempa(1, "  - is aux[%d]\n", last_slot(thread) - slot);
-      slot->s = stack_notrace;
+      SET_SLOT_SCANNING(slot, stack_notrace);
       break;
     }
   }
-  while (frame->auxstack_top < frame->auxstack_base && frame->auxstack_top[1].s == stack_notrace) {
+  while (frame->auxstack_top < frame->auxstack_base && SLOT_IS_SCALAR(frame->auxstack_top+1)) {
     frame->auxstack_top += 1;
     woempa(1, "  - skipped a zombie, now have %d auxs\n", last_slot(frame->thread) - frame->auxstack_top);
   }
