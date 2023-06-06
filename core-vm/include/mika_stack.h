@@ -37,6 +37,8 @@
 #endif
 #endif
 
+#define _USE_OBJECT_HASHTABLE
+
 /*
  * If USE_OBJECT_HASHTABLE is set, each slot consists of a single (32-bit) word.
  * Otherwise each slot consists of two words: the slot contents (c) and the slot data type (s).
