@@ -37,15 +37,13 @@
 #endif
 #endif
 
-#define _USE_OBJECT_HASHTABLE
-
 /*
  * If USE_OBJECT_HASHTABLE is set, each slot consists of a single (32-bit) word.
  * Otherwise each slot consists of two words: the slot contents (c) and the slot data type (s).
  */
 typedef struct w_Slot {
   w_word c;
-#ifndef _USE_OBJECT_HASHTABLE
+#ifndef USE_OBJECT_HASHTABLE
   w_word s;
 #endif
 } w_Slot;
@@ -70,7 +68,7 @@ typedef struct w_Slot {
  * @return if USE_OBJECT_HASHTABLE is set, always rerurns 0 (slot)_noscan).
  *                Otherwise, one of slot_noscan, slot_scan, or a pointer to a x_Monitor.
  */
-#ifdef _USE_OBJECT_HASHTABLE
+#ifdef USE_OBJECT_HASHTABLE
 #define GET_SLOT_SCANNING(slotptr)
 #else
 #define GET_SLOT_SCANNING(slotptr) (slotptr)->s
@@ -83,13 +81,13 @@ typedef struct w_Slot {
  * @param slot... if USE_OBJECT_HASHTABLE is set, not used and may be omitted (hence the ...).
  *                Otherwise, one of slot_noscan, slot_scan, or a pointer to a x_Monitor.
  */
-#ifdef _USE_OBJECT_HASHTABLE
+#ifdef USE_OBJECT_HASHTABLE
 #define SET_SLOT_SCANNING(slotptr,scan...)
 #else
 #define SET_SLOT_SCANNING(slotptr,scan...) (slotptr)->s = (scan)
 #endif
 
-#ifdef _USE_OBJECT_HASHTABLE
+#ifdef USE_OBJECT_HASHTABLE
 // TODO this could probably use some optimisation
 #define SLOT_IS_REFERENCE(slotptr) !!ht_read(object_hashtable,instance2object((slotptr)->c))
 #else
@@ -98,7 +96,7 @@ typedef struct w_Slot {
 
 #define SLOT_IS_SCALAR(slotptr) (!SLOT_IS_REFERENCE(slotptr))
 
-#ifdef _USE_OBJECT_HASHTABLE
+#ifdef USE_OBJECT_HASHTABLE
 #define COPY_SLOT_TO_FROM(toptr,fromptr) (toptr)->c = (fromptr)->c
 #else
 // We assume that the copy is initially redundant frim a stack-scanning p.o.v., so we first set it no_trace before copying s. 
@@ -161,7 +159,7 @@ typedef struct w_Frame {
 static const w_word stack_notrace   = 0; // The stack item does not refer to an object that needs GC tracing; must be 0!
 static const w_word stack_trace     = 1; // Refers to an object that needs GC tracing, main stack and auxillary stack.
 
-#ifndef _USE_OBJECT_HASHTABLE
+#ifndef USE_OBJECT_HASHTABLE
 #define isMonitoredSlot(slot) ((slot)->s > stack_trace)
 void pushMonitoredReference(w_frame frame, w_instance instance, x_monitor monitor);
 #endif
