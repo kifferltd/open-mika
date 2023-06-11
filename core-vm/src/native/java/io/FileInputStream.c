@@ -89,7 +89,7 @@ w_int FileInputStream_readIntoBuffer
   } else {
     data = bytes + offset;
     result = vfs_read(fd, data, length);
-    woempa(7, "vfs_read(%d, %p, %d) returned %d\n", fd, data, length, result);
+    woempa(1, "vfs_read(%d, %p, %d) returned %d\n", fd, data, length, result);
   }
 
   return result;
@@ -133,15 +133,15 @@ w_int FileInputStream_available
   const char      *filename;
   fdObj = getReferenceField(thisFileInputStream, F_FileInputStream_fd);
   fd = getIntegerField(fdObj, F_FileDescriptor_fd);
-  woempa(7, "fd = %d\n", fd);
+  woempa(1, "fd = %d\n", fd);
   
   if(fd < 0) {
-    woempa(7, "fd < 0, gettin outa here\n");
+    woempa(1, "fd < 0, gettin outa here\n");
     throwIOException(thread);
     result = 0;
   } else {
     size_t flen = vfs_get_length(fd);
-    woempa(7, "file length = %d errno = %d\n", flen, errno);
+    woempa(1, "file length = %d errno = %d\n", flen, errno);
     if (flen > 0 || errno == 0) {
       result = flen;
     } else {

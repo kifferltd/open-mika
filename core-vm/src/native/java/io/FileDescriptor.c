@@ -48,13 +48,13 @@ w_int FileDescriptor_createFromPath(w_thread thread, w_instance thisFileDescript
   w_word flags = modenum == 0 ? VFS_O_RDONLY : modenum == 1 ? VFS_O_WRONLY : modenum == 2 ? (VFS_O_WRONLY|VFS_O_APPEND) : 0xffffffff;
   w_int fd;
 
-  woempa(7, "flags = %d\n", flags);
+  woempa(1, "flags = %d\n", flags);
   if (flags == 0xffffffff) {
     throwException(thread, clazzInternalError, NULL);
   }
 
   fd = vfs_open(path, flags, 0);
-  woempa(7, "fd = %d\n", fd);
+  woempa(1, "fd = %d\n", fd);
   if (fd < 0) {
     throwException(thread, clazzFileNotFoundException, "could not open file '%s' in mode %d using flags '%x': x_errno = %d\n", path, modenum, flags, x_errno);
   }

@@ -162,7 +162,7 @@ public class File implements Comparable, Serializable {
    * query, or fragment part.
    */
   private static String extractPathFromURI(URI uri) throws IllegalArgumentException {
-    Etc.woempa(7, "Extracting Path from URI " +  uri);
+    Etc.woempa(1, "Extracting Path from URI " +  uri);
     if (!uri.isAbsolute()) {
       throw new IllegalArgumentException("URI is not absolute: " + uri);
     }
@@ -218,13 +218,13 @@ public class File implements Comparable, Serializable {
   private static String current_working_path() {
     String cwd = get_CWD();
     if (cwd != null) {
-      Etc.woempa(7, "get_CWD returned " + cwd + ", using this and setting user.dir appropriately");
+      Etc.woempa(1, "get_CWD returned " + cwd + ", using this and setting user.dir appropriately");
       cwd = trimTrailingSeparator(cwd);
       System.setProperty("user.dir", cwd);
       return cwd;
     }
 
-    Etc.woempa(7, "get_CWD returned null, checking user.dir property");
+    Etc.woempa(1, "get_CWD returned null, checking user.dir property");
     if (SecurityConfiguration.ENABLE_SECURITY_CHECKS) {
       GetSystemProperty gsp = new GetSystemProperty("user.dir","");
       AccessController.doPrivileged(gsp);
@@ -233,7 +233,7 @@ public class File implements Comparable, Serializable {
     else {
       cwd =  System.getProperty("user.dir", "");
     }
-    Etc.woempa(7, "user.dir = " + cwd + ", using this");
+    Etc.woempa(1, "user.dir = " + cwd + ", using this");
 
     return cwd;
   }
@@ -328,7 +328,7 @@ public class File implements Comparable, Serializable {
     if (i > 0 && i == result.length() - 1) {
       result = result.substring(0, i);
     }
-    Etc.woempa(7, "stripSlashes(" + path + ") => " + result);
+    Etc.woempa(1, "stripSlashes(" + path + ") => " + result);
  
     return result;
   }
@@ -344,7 +344,7 @@ public class File implements Comparable, Serializable {
    */ 
   private int extractPrefix(String pathname) {
 
-    Etc.woempa(7, "Extracting prefix from '" + pathname + "'");
+    Etc.woempa(1, "Extracting prefix from '" + pathname + "'");
     if (pathname.startsWith(UNIX_PREFIX)) {
       prefix = UNIX_PREFIX;
       absolute = true;
@@ -370,7 +370,7 @@ public class File implements Comparable, Serializable {
     else {
       prefix = "";
     }
-    Etc.woempa(7, "prefix = '" + prefix + "' absolute = " + absolute + " fsrooted = " + fsrooted);
+    Etc.woempa(1, "prefix = '" + prefix + "' absolute = " + absolute + " fsrooted = " + fsrooted);
 
     return prefix.length();
   }
@@ -385,10 +385,10 @@ public class File implements Comparable, Serializable {
 
   public File(File dir, String name) throws NullPointerException {
     if (dir == null) {
-      Etc.woempa(7, "Parent path is null, file path is '" + name + "'");
+      Etc.woempa(1, "Parent path is null, file path is '" + name + "'");
       int pfxlen = extractPrefix(name);
       String name_seq = name.substring(pfxlen);
-      Etc.woempa(7, "Prefix is '" + prefix + "', name_seq is '" + name_seq +"'");
+      Etc.woempa(1, "Prefix is '" + prefix + "', name_seq is '" + name_seq +"'");
 
       name_list = new ArrayList();
       StringTokenizer toks = new StringTokenizer(name_seq, delimiter);
@@ -415,7 +415,7 @@ public class File implements Comparable, Serializable {
       name_list = (List) ((ArrayList)effective_dir.name_list).clone();
       absolute = effective_dir.absolute;
       fsrooted = effective_dir.fsrooted;
-      Etc.woempa(7, "Parent path is '" + effective_dir + "', prefix is '" + prefix + "'");
+      Etc.woempa(1, "Parent path is '" + effective_dir + "', prefix is '" + prefix + "'");
       File temp = new File(name);
       Iterator nameIter = temp.name_list.iterator();
       while (nameIter.hasNext()) {
@@ -439,7 +439,7 @@ public class File implements Comparable, Serializable {
     }
     String relpath = relpath_buffer == null ? "" : relpath_buffer.toString();
     fullname = prefix + relpath;
-    Etc.woempa(7, "fullname is " + fullname + ", relpath is " + relpath);
+    Etc.woempa(1, "fullname is " + fullname + ", relpath is " + relpath);
 
     hashcode = fullname.hashCode() ^ 1234321;
 
@@ -458,7 +458,7 @@ public class File implements Comparable, Serializable {
 
     absolutePath = trimTrailingSeparator(absolutePath);
 
-    Etc.woempa(7, "File " + fullname + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
+    Etc.woempa(1, "File " + fullname + " is " + (absolute ? "absolute" : fsrooted ? "fsrooted" : "relative") + ", absolute path = " + absolutePath);
     hostpath = absolutePath;
   }
 
