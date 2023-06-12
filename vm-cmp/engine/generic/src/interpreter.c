@@ -2459,7 +2459,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_lor: {
     woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
-    w_long2slots(slots2w_long(tos-4) | slots2w_long(tos-2), tos-4);
+    w_long disj = slots2w_long(tos-4) | slots2w_long(tos-2);
+    w_long2slots(disj, tos-4);
     tos -= 2;
     woempa(1, "lor : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
