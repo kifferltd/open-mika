@@ -1926,7 +1926,6 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_daload: c_laload: {
-    union{w_long l; w_word w[2];} long_x;
     a = (w_instance) GET_SLOT_CONTENTS(tos-2);
     i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
@@ -1938,9 +1937,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    long_x.l = instance2Array_long(a)[i];
-    SET_SCALAR_SLOT(tos-2, long_x.w[0]);
-    SET_SCALAR_SLOT(tos-1, long_x.w[1]);
+    w_long l = instance2Array_long(a)[i];
+    w_long2slots(l, tos-2);
     do_next_opcode;
   }
 
@@ -2044,7 +2042,6 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_lastore: c_dastore: {
-    union {w_dword dw; w_word w[2];} thing;
     a = (w_instance) GET_SLOT_CONTENTS(tos-4);
     i = (w_int) GET_SLOT_CONTENTS(tos-3);
 
@@ -2056,9 +2053,8 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    thing.w[0] = GET_SLOT_CONTENTS(tos-2);
-    thing.w[1] = GET_SLOT_CONTENTS(tos-1);
-    instance2Array_long(a)[i] = thing.dw;
+    w_long l = slots2w_long(tos-2);
+    instance2Array_long(a)[i] = l;
     tos -= 4;
     do_next_opcode;
   }
@@ -2367,7 +2363,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_lneg: {
     woempa(1, "lneg : x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
-    w_long2slots(-slots2w_long(tos-2), tos-2);
+    w_long negation = -slots2w_long(tos-2);
+    w_long2slots(negation, tos-2);
     woempa(1, "lneg : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
@@ -2397,7 +2394,8 @@ void interpret(w_frame caller, w_method method) {
     i = GET_SLOT_CONTENTS(tos-1) & 0x0000003f;
     tos -= 1;
     woempa(1, "lshl : x = %08x %08x, i = %d\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1), i);
-    w_long2slots(slots2w_long(tos-2) << i, tos-2);
+    w_long shifted = slots2w_long(tos-2) << i;
+    w_long2slots(shifted, tos-2);
     woempa(1, "lshl : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
@@ -2446,7 +2444,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_land: {
     woempa(1, "land : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
-    w_long2slots(slots2w_long(tos-4) & slots2w_long(tos-2), tos-4);
+    w_long conj = slots2w_long(tos-4) & slots2w_long(tos-2);
+    w_long2slots(conj, tos-4);
     tos -= 2;
     woempa(1, "land : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
@@ -2460,7 +2459,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_lor: {
     woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
-    w_long2slots(slots2w_long(tos-4) | slots2w_long(tos-2), tos-4);
+    w_long disj = slots2w_long(tos-4) | slots2w_long(tos-2);
+    w_long2slots(disj, tos-4);
     tos -= 2;
     woempa(1, "lor : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
@@ -2474,7 +2474,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_lxor: {
     woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
-    w_long2slots(slots2w_long(tos-4) ^ slots2w_long(tos-2), tos-4);
+    w_long xor = slots2w_long(tos-4) ^ slots2w_long(tos-2);
+    w_long2slots(xor, tos-4);
     tos -= 2;
     woempa(1, "lor : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
@@ -3754,8 +3755,8 @@ static w_code searchHandler(w_frame frame) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
             w_printf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
           }
-          woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
-          woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
+          woempa(7, ">>>> Found a handler for %j (as %k) at pc = %d in method %M <<<<\n",
+              pending, cc, ex->handler_pc, frame->method);
           frame->jstack_top = frame->jstack_base + frame->method->exec.local_i;
           SET_REFERENCE_SLOT(frame->jstack_top, pending);
           frame->jstack_top += 1;
