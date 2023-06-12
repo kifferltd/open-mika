@@ -71,7 +71,7 @@ static w_size string_reclaim_callback(w_int requested, w_instance instance);
 static int counter;
 
 static void printAllocStringReport(w_size length) {
-  woempa(7, "this is a printAllocStringReport\n");
+  woempa(1, "this is a printAllocStringReport\n");
 }
 #endif
 

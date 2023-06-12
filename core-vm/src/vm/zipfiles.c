@@ -492,7 +492,7 @@ static z_zipEntry findDirectoryHeader(z_zipFile zipFile,w_size *offset_ptr) {
         wabort(ABORT_WONKA, "OOH LAH LAH %07o %02x %02x %02x %02x %02x %02x %02x ...\n", *offset_ptr, trawlbuf[0], trawlbuf[1], trawlbuf[2], trawlbuf[3], trawlbuf[4], trawlbuf[5], trawlbuf[6], trawlbuf[7]);
       }
 #endif
-      woempa(7, "looking for pattern %02x %02x %02x %02x in bytes 0%07o to 0%07o\n", Z_SENTINEL0, Z_SENTINEL1, Z_DIR_BYTE0, Z_DIR_BYTE1, *offset_ptr, *offset_ptr + l - 1);
+      woempa(1, "looking for pattern %02x %02x %02x %02x in bytes 0%07o to 0%07o\n", Z_SENTINEL0, Z_SENTINEL1, Z_DIR_BYTE0, Z_DIR_BYTE1, *offset_ptr, *offset_ptr + l - 1);
       for (i = 0; i + 4 < l; ++i) {
         if (trawlbuf[i] == Z_SENTINEL0 && trawlbuf[i + 1] == Z_SENTINEL1 && trawlbuf[i + 2] == Z_DIR_BYTE0 && trawlbuf[i + 3] == Z_DIR_BYTE1) {
           woempa(7, "Found directory sentinel at offset 0%07o + 0%o\n", *offset_ptr, i);

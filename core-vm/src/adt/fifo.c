@@ -115,7 +115,7 @@ w_boolean expandFifo(w_size newsize, w_fifo f) {
 
   }
 
-  woempa(7, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), capacityOfFifo(f), newsize);
+  woempa(1, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), capacityOfFifo(f), newsize);
   for (i = occupancyOfFifo(f); i < newsize; ++i) {
     ++j;
     if (j == f->elementsPerLeaf) {
@@ -133,7 +133,7 @@ w_boolean expandFifo(w_size newsize, w_fifo f) {
         }
       
         CRITICAL_ENTER
-	woempa(7, "inserting new leaf %p after %p\n", newLeaf, leaf);
+	woempa(1, "inserting new leaf %p after %p\n", newLeaf, leaf);
         newLeaf->next = leaf->next;
         leaf->next = newLeaf;
         leaf = newLeaf->next;
@@ -286,8 +286,8 @@ w_int putFifo(void *e, w_fifo f) {
       }
       
       CRITICAL_ENTER
-      woempa(7, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), capacityOfFifo(f), capacityOfFifo(f) + f->elementsPerLeaf);
-      woempa(7, "inserting new leaf %p after %p\n", newLeaf, f->putFifoLeaf);
+      woempa(1, "current size is %d: expanding capacity from %d to %d\n", occupancyOfFifo(f), capacityOfFifo(f), capacityOfFifo(f) + f->elementsPerLeaf);
+      woempa(1, "inserting new leaf %p after %p\n", newLeaf, f->putFifoLeaf);
       f->numLeaves += 1;
       newLeaf->next = f->putFifoLeaf->next;
       f->putFifoLeaf->next = newLeaf;

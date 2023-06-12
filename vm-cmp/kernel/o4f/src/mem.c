@@ -39,7 +39,7 @@ x_size max_heap_bytes;
 #define FreeRTOS_heap_remaining (sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE))
 
 static w_int heap_remaining_check_count;
-#define HEAP_REMAINING_CHECK_DIVISOR 1000
+#define HEAP_REMAINING_CHECK_DIVISOR 10000
 #define HEAP_OVERHEAD (sizeof(o4f_Memory_Chunk) + 16)
 
 static inline void check_heap_remaining() {

@@ -507,9 +507,9 @@ w_boolean fat_is_eof(vfs_fd_entry fde) {
 w_int fat_write(vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos) {
   FF_FILE *ff_fileptr = (FF_FILE *)fde->data;
 
-  woempa(7, "writing %d bytes from %p to %s\n", length, buffer, fde->path);
+  woempa(1, "writing %d bytes from %p to %s\n", length, buffer, fde->path);
   if (ff_fwrite(buffer, length, 1, ff_fileptr )) {
-    woempa(7, "successfully wrote %d bytes to %s\n", length, fde->path);
+    woempa(1, "successfully wrote %d bytes to %s\n", length, fde->path);
     // TODO set pos
     return length;
   }

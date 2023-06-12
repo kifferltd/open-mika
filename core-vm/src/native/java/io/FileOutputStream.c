@@ -106,18 +106,18 @@ void FileOutputStream_close
 
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
-  woempa(9, "Closing file\n");
+  woempa(1, "Closing file\n");
 
   if(fdObj != NULL) {
 
-    woempa(9, "Still have a filedescriptor\n");
+    woempa(1, "Still have a filedescriptor\n");
     
     file = getWotsitField(fdObj, F_FileDescriptor_fd);
 
     if(file == NULL) {
-      woempa(9, "Filedescriptor is empty\n");
+      woempa(1, "Filedescriptor is empty\n");
     } else {
-      woempa(9, "Calling vfs_close\n");
+      woempa(1, "Calling vfs_close\n");
       vfs_close(file);
       setReferenceField(thisFileOutputStream, NULL, F_FileOutputStream_fd);
     }

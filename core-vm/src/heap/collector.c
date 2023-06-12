@@ -1307,8 +1307,8 @@ w_int markFifo(w_fifo fifo, w_word flag) {
     */
     else if (isSet(parent_object->clazz->flags, CLAZZ_IS_REFERENCE)) {
       w_instance referent = getWotsitField(parent_instance, F_Reference_referent);
-      woempa(7, "(GC) Object %p is instance of %k, a subclass of Reference\n", parent_object, parent_object->clazz);
-      woempa(7, "(GC) It refers to %j\n", referent);
+      woempa(1, "(GC) Object %p is instance of %k, a subclass of Reference\n", parent_object, parent_object->clazz);
+      woempa(1, "(GC) It refers to %j\n", referent);
       if(isSet(parent_object->flags, O_ENQUEUEABLE)) {
         retcode = tryPutFifo(parent_instance, reference_fifo);
         if (retcode < 0) {
