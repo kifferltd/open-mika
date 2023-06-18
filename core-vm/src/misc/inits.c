@@ -61,7 +61,13 @@ extern void  x_symtab_kernel(void);
 w_hashtable object_hashtable;
 #endif
 
-char *bootclasspath = BOOTCLASSDIR "/" BOOTCLASSFILE ":" BOOTCLASSDIR "/";
+char *bootclasspath =
+#ifdef BOOTCLASSSUBDIR
+    BOOTCLASSDIR "/" BOOTCLASSSUBDIR
+#else
+    BOOTCLASSDIR "/" BOOTCLASSFILE
+#endif
+    ":" BOOTCLASSDIR "/";
 
 char *fsroot = NULL;
 

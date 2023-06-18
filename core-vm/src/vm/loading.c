@@ -27,6 +27,7 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "argument.h"
@@ -41,6 +42,7 @@
 #include "methods.h"
 #include "reflection.h"
 #include "ts-mem.h"
+#include "vfs.h"
 #include "wstrings.h"
 #include "wonka.h"
 #include "fastcall.h"
@@ -85,12 +87,24 @@ w_hashtable2k interface_hashtable;
 */
 w_hashtable dispatchers_hashtable;
 
-char     *bootzipname;
+typedef enum {
+  no_paths_found,
+  archive_only,
+  directory_only,
+  jar_then_dir,
+  dir_then_jar
+} bcp_enum_t;
+
+bcp_enum_t found_bootpaths;
+
+char     *bootzippath;
 #ifdef USE_ZLIB
 unzFile bootzipfile;
 #else
 z_zipFile bootzipfile;
 #endif
+
+char     *bootdirpath;
 
 /*
 ** Some well-known strings that are required during loading.
@@ -586,13 +600,136 @@ static void attach_class_instances(void) {
   }
 }
 
+static char *expandPath(char *start, int length) {
+  w_int empty_fsroot = 0;
+
+  if (fsroot[0] == '/' && fsroot[1] == 0) {
+    woempa(7, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
+    empty_fsroot = 1;
+  }
+
+  w_int length_change = 0;
+  if ((length > 2 ) && (start[0] == '{') && (start[1] == '}') && start[2] == '/') {
+    woempa(7, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
+    if (empty_fsroot) {
+      length_change = -2;
+    }
+    else {
+      length_change = strlen(fsroot) - 2;
+    }
+  }
+
+  woempa(7, "Allocating %d bytes for expanded path\n", length + length_change + 1);
+  char *path = allocClearedMem(length + length_change + 1);
+  if (!empty_fsroot) {
+    strncpy(path, fsroot, strlen(fsroot));
+  }
+  if (length_change > 0) {
+    strncpy(path + length_change + 2 - empty_fsroot, start + 2, length - 2);
+    path[length + length_change - empty_fsroot] = 0;
+  }
+  else {
+    // negative length_change -> strip chars from start of path! Sorry for the double negatives ...
+    strncpy(path, start - length_change, length + length_change);
+    path[length] = 0;
+  }
+
+  return path;
+}
+
+/*
+** Search colon-separated list bcp and extract the first string which ends
+** in `.jar' or `.zip' and the first string which does NOT end this way.
+** Each string in bcp should be the path to either a jar/zip archive or a directory.
+** The strings are returned in allocMem'd memory, bcp is not modified.
+** @param bcp             char*  The colon-separated list of paths.
+** @param first_archive   char** Will be set to a pointer to the first jar/zip, or NULL if none is found.
+** @param first_directory char** Will be set to a pointer to the first non-jar/zip, or NULL if none is found.
+** @return bcp_enum_t Indicates which kinds of path were found and in what order.
+*/
+static bcp_enum_t analyseBootClassPath(char *bcp, char **first_archive, char **first_directory) {
+  bcp_enum_t found = no_paths_found;
+  *first_archive = NULL;
+  *first_directory = NULL;
+
+  if (!bcp) {
+    wabort(ABORT_WONKA, "Boot classpath is NULL!");
+  }
+
+  w_int i = 0;
+  w_int j = 0;
+  w_int l = strlen(bcp);
+  woempa(7, "bootclasspath is %s, length is %d\n", bcp, l);
+  while (i < l) {
+    bool is_archive;
+    for (j = i; j < l && bcp[j] != ':'; ++j);
+    woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
+    if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
+      woempa(7, "Element ends in `jar', so bcp[%d..%d] is an archive\n", i, j - 1);
+      is_archive = true; 
+    }
+    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
+      woempa(7, "Element ends in `zip', so bcp[%d..%d] is an archive\n", i, j - 1);
+      is_archive = true; 
+    }
+    else {
+      woempa(7, "Element does not end in `jar' or `zip', so bcp[%d..%d] is a directory\n", i, j - 1);
+      is_archive = false;
+    }
+
+    switch (found) {
+      case no_paths_found:
+        if (is_archive) {
+          *first_archive = expandPath(&bcp[i], j - i);
+          found = archive_only;
+        }
+        else {
+          *first_directory = expandPath(&bcp[i], j - i);
+          found = directory_only;
+        }
+        break;
+
+      case archive_only:
+        if (is_archive) {
+          // ignore
+        }
+        else {
+          *first_directory = expandPath(&bcp[i], j - i);
+          found = jar_then_dir;
+          // no need to search further, so break out of loop
+          j = l;
+        }
+        break;
+
+      case directory_only:
+        if (is_archive) {
+          *first_archive = expandPath(&bcp[i], j - i);
+          found = dir_then_jar;
+          // no need to search further, so break out of loop
+          j = l;
+        }
+        else {
+          // ignore
+        }
+        break;
+
+      default:
+        /* ignore */;
+    }
+
+    i = j + 1;
+  }
+
+  return found;
+}
+
 /*
 ** Search colon-separated list bcp and extract the first string which ends
 ** in `.jar' or `.zip'.
 ** The string is returned in allocMem'd memory, bcp is not modified.
-*/
-static char *getFirstJarFileName(char *bcp) {
-  char *firstzipname = NULL;
+static char *getFirstJarFilePath(char *bcp) {
+  char *firstzippath = NULL;
+  char *firstdirpath = NULL;
 
   if (bcp) {
     w_int empty_fsroot = 0;
@@ -638,23 +775,102 @@ static char *getFirstJarFileName(char *bcp) {
         woempa(7, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
         k = strlen(fsroot) - 2;
       }
-      woempa(7, "Allocating %d bytes for firstzipname\n", j - i + k + 1);
-      firstzipname = allocClearedMem(j - i + k + 1);
+      woempa(7, "Allocating %d bytes for firstzippath\n", j - i + k + 1);
+      firstzippath = allocClearedMem(j - i + k + 1);
       if (k) {
-        strncpy(firstzipname, fsroot, strlen(fsroot));
-        strncpy(firstzipname + k + 2 - empty_fsroot, &bcp[i + 2], j - i - 2);
-        firstzipname[j - i + k - empty_fsroot] = 0;
+        strncpy(firstzippath, fsroot, strlen(fsroot));
+        strncpy(firstzippath + k + 2 - empty_fsroot, &bcp[i + 2], j - i - 2);
+        firstzippath[j - i + k - empty_fsroot] = 0;
       }
       else {
-        strncpy(firstzipname, &bcp[i], j - i);
-        firstzipname[j - i] = 0;
+        strncpy(firstzippath, &bcp[i], j - i);
+        firstzippath[j - i] = 0;
       }
-      woempa(7, "firstzipname = '%s'\n", firstzipname);
+      woempa(7, "firstzippath = '%s'\n", firstzippath);
     }
   }
 
-  return firstzipname ? firstzipname : (char*)""; // TODO : think of a better default?
+  return firstzippath ? firstzippath : (char*)""; // TODO : think of a better default?
 }
+*/
+
+/*
+** Search colon-separated list bcp and extract the first string which does
+** NOT end in `.jar' or `.zip'. This is assumed to be a directory.
+** The string is returned in allocMem'd memory, bcp is not modified.
+** TODO merge this with the preceding function?
+static char *getFirstDirectoryPath(char *bcp) {
+  char *firstdirpath = NULL;
+
+  if (bcp) {
+    w_int empty_fsroot = 0;
+    if (fsroot[0] == '/' && fsroot[1] == 0) {
+      woempa(7, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
+      empty_fsroot = 1;
+    }
+
+    w_int i = 0;
+    w_int j = 0;
+    w_int l = strlen(bcp);
+    woempa(7, "bootclasspath is %s, length is %d\n", bcp, l);
+    for (i = 0, j = 0; bcp[i]; i = j + 1) {
+      for (j = i; j < l && bcp[j] != ':'; ++j);
+      woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
+      if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
+        woempa(7, "Element ends in `.jar', so we skip it\n");
+
+        continue;
+
+      }
+      if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
+        woempa(7, "Element ends in `.zip', so we skip it\n");
+
+        continue;
+
+      }
+
+      if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
+        woempa(7, "Element does not end in `.jar' or `.zip', so we use bcp[%d..%d]\n", i, j - 1);
+
+        break;
+
+      }
+
+      if (j == l) {
+        woempa(7, "All elements ended with `.jar' or `.zip' and bootclasspath exhausted\n");
+
+        break;
+
+      }
+
+      woempa(7, "Element ends with `jar' or `zip', start again from bcp[%d]\n", j + 1);
+      i = j + 1;
+    }
+
+    if (i < l) {
+      w_int k = 0;
+      if ((l - i > 2 ) && (bcp[i] == '{') && (bcp[i + 1] == '}') && bcp[i + 2] == '/') {
+        woempa(7, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
+        k = strlen(fsroot) - 2;
+      }
+      woempa(7, "Allocating %d bytes for firstdirpath\n", j - i + k + 1);
+      firstdirpath = allocClearedMem(j - i + k + 1);
+      if (k) {
+        strncpy(firstdirpath, fsroot, strlen(fsroot));
+        strncpy(firstdirpath + k + 2 - empty_fsroot, &bcp[i + 2], j - i - 2);
+        firstdirpath[j - i + k - empty_fsroot] = 0;
+      }
+      else {
+        strncpy(firstdirpath, &bcp[i], j - i);
+        firstdirpath[j - i] = 0;
+      }
+      woempa(7, "firstdirpath = '%s'\n", firstdirpath);
+    }
+  }
+
+  return firstdirpath ? firstdirpath : (char*)""; // TODO : think of a better default?
+}
+*/
 
 extern x_size heap_remaining;
 
@@ -724,15 +940,17 @@ void startLoading(void) {
   clazz_long    = createPrimitive(string_long, VM_TYPE_LONG + VM_TYPE_TWO_CELL, 64);
   clazz_void    = createPrimitive(string_void, VM_TYPE_VOID, 0);
 
-  bootzipname = getFirstJarFileName(bootclasspath);
-  woempa(7, "Using boot zipfile `%s'\n", bootzipname);
+  found_bootpaths = analyseBootClassPath(bootclasspath, &bootzippath, &bootdirpath);
+
+  if (bootzippath) {
 #ifdef USE_ZLIB
-  bootzipfile = unzOpen(bootzipname);
+    bootzipfile = unzOpen(bootzippath);
 #else
-  bootzipfile = parseZipFile(bootzipname);
+    bootzipfile = parseZipFile(bootzippath);
 #endif
-  if (!bootzipfile) {
-    wabort(ABORT_WONKA, "Unable to open zipfile `%s'\n", bootzipname);
+    if (!bootzipfile) {
+      wabort(ABORT_WONKA, "Unable to open zipfile `%s'\n", bootzippath);
+    }
   }
 
   fixup1_hashtable = ht_create((char*)"hashtable:fixup1", NATIVE_FUN_HT_SIZE, NULL , NULL, 0, 0);
@@ -1635,34 +1853,34 @@ static void wabort_unzip_problem(char * zipfilename, char *entryname, const char
 #endif
 
 /**
- ** Look for an entry called 'filename' in bootzipfile; if found, set *barptr
+ ** Look for an entry called 'pathname' in bootzipfile; if found, set *barptr
  ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
  */
-w_boolean getBootstrapFile(char *filename, w_BAR *barptr) {
+w_boolean getBootstrapFileFromZip(char *pathname, w_BAR *barptr) {
 #ifdef USE_ZLIB
   int      z_rc;
   char    *buffer;
   unz_file_info file_info;
 
-  z_rc = unzLocateFile(bootzipfile, filename, 1);
+  z_rc = unzLocateFile(bootzipfile, pathname, 1);
   if (z_rc != UNZ_OK) {
-    wabort_unzip_problem(bootzipname, filename, "cannot locate entry", z_rc);
+    wabort_unzip_problem(bootzippath, pathname, "cannot locate entry", z_rc);
   }
   z_rc = unzGetCurrentFileInfo(bootzipfile, &file_info, NULL, 0, NULL, 0, NULL, 0);
   if (z_rc != UNZ_OK) {
-    wabort_unzip_problem(bootzipname, filename, "cannot get info for entry", z_rc);
+    wabort_unzip_problem(bootzippath, pathname, "cannot get info for entry", z_rc);
   }
   buffer = allocMem(file_info.uncompressed_size);
   if (!buffer) {
-    wabort_unzip_problem(bootzipname, filename, "cannot allocate buffer for entry", 0);
+    wabort_unzip_problem(bootzippath, pathname, "cannot allocate buffer for entry", 0);
   }
   z_rc = unzOpenCurrentFile(bootzipfile);
   if (z_rc != UNZ_OK) {
-    wabort_unzip_problem(bootzipname, filename, "cannot open entry", z_rc);
+    wabort_unzip_problem(bootzippath, pathname, "cannot open entry", z_rc);
   }
   z_rc = unzReadCurrentFile(bootzipfile, buffer, file_info.uncompressed_size);
   if (z_rc < 0) {
-    wabort_unzip_problem(bootzipname, filename, "cannot extract entry", z_rc);
+    wabort_unzip_problem(bootzippath, pathname, "cannot extract entry", z_rc);
   }
   barptr->buffer = buffer;
   barptr->length = file_info.uncompressed_size;
@@ -1671,14 +1889,14 @@ w_boolean getBootstrapFile(char *filename, w_BAR *barptr) {
 #else
   z_zipEntry ze;
 
-  ze = findZipEntry(bootzipfile, filename);
+  ze = findZipEntry(bootzipfile, pathname);
   if (!ze) {
 
     return FALSE;
 
   }
 
-  woempa(1, "Zip file entry '%s' at %p\n", filename, ze);
+  woempa(1, "Zip file entry '%s' at %p\n", pathname, ze);
   if (!uncompressZipEntry(ze)) {
 
     return FALSE;
@@ -1695,17 +1913,89 @@ w_boolean getBootstrapFile(char *filename, w_BAR *barptr) {
 }
 
 /**
+ ** Look for an entry called 'pathname' in bootdirfile; if found, set *barptr
+ ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
+ */
+w_boolean getBootstrapFileFromDir(char *path, w_BAR *barptr) {
+  char *fullpath = allocMem(strlen(bootdirpath) + strlen(path) + 2);
+  strcpy(fullpath, bootdirpath);
+  char *bdp_end = fullpath + strlen(bootdirpath);
+  if (bdp_end[-1] != '/') {
+    *bdp_end++ = '/';
+  }
+  strcpy(bdp_end, path);
+
+  struct vfs_STAT statbuf;
+  w_int fd;
+  w_int rc;
+
+  if (vfs_stat(fullpath, &statbuf) < 0
+   || (fd = vfs_open(fullpath, VFS_O_RDONLY, 0)) < 0)  {
+    return FALSE;
+  }
+
+  char *buffer = allocMem(statbuf.st_size);
+  if (!buffer) {
+    wabort(ABORT_WONKA, "Unable to allocate buffer");
+  }
+
+  rc = vfs_read(fd, buffer, statbuf.st_size);
+  if (rc < (w_int)statbuf.st_size) {
+    wabort(ABORT_WONKA, "Failed to read %d bytes from %s, rc was %d\n", statbuf.st_size, fullpath, rc);
+  }
+
+  barptr->buffer = buffer;
+  barptr->length = statbuf.st_size;
+  barptr->current = 0;
+  vfs_close(fd);
+  releaseMem(fullpath);
+
+  return TRUE;
+}
+
+/**
+ ** Look for an entry called 'pathname' in bootstrapdir or bootzipfile; if found, set *barptr
+ ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
+ ** TODO make it possible to change the search order
+ */
+w_boolean getBootstrapFile(char *pathname, w_BAR *barptr) {
+  switch(found_bootpaths) {
+    case archive_only:
+      woempa(7, "Searching for %s in archive %s\n", pathname, bootzippath);
+      return getBootstrapFileFromZip(pathname, barptr);
+
+    case directory_only:
+      woempa(7, "Searching for %s in directory %s\n", pathname, bootdirpath);
+      return getBootstrapFileFromDir(pathname, barptr);
+
+    case jar_then_dir:
+      woempa(7, "Searching for %s in archive %s and directory %s\n", pathname, bootzippath, bootdirpath);
+      return getBootstrapFileFromDir(pathname, barptr) || getBootstrapFileFromZip(pathname, barptr);
+
+    case dir_then_jar:
+      woempa(7, "Searching for %s in directory %s and archive %s\n", pathname, bootdirpath, bootzippath);
+      return getBootstrapFileFromZip(pathname, barptr) || getBootstrapFileFromDir(pathname, barptr);
+
+    default:
+      woempa(7, "Don't know where to search for %s\n", pathname);
+      return false;
+  }
+}
+
+/**
  ** Remove a file from bootzipfile. 
  ** FIXME: Currently does nothing when USE_ZLIB is defined.
  */
-void deleteBootstrapFile(char *filename) {
+void deleteBootstrapFile (char *pathname) {
 #ifndef USE_ZLIB
+/* Temp "fix" - do nothing
   z_zipEntry ze;
 
-  ze = findZipEntry(bootzipfile, filename);
+  ze = findZipEntry(bootzipfile, pathname);
   if (ze) {
     deleteZipEntry(ze);
   }
+*/
 #endif
 }
 
@@ -1744,7 +2034,7 @@ w_clazz loadBootstrapClass(w_string name) {
   }
   woempa(1, "Need a file called '%s'\n", filename);
   if (!getBootstrapFile(filename, &bar)) {
-    wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap jar file '%s'\n", filename, bootzipname);
+    wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap jar file '%s'\n", filename, bootzippath);
   }
 
   clazz = createClazz(NULL, NULL, &bar, NULL, TRUE);

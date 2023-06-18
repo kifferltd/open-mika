@@ -77,13 +77,15 @@ export FSROOT = /
 
 #
 # If Mika is run with no -Xbootclasspath parameter, the bootstrap class 
-# loader will search the file $(BOOTCLASSFILE), located in $(BOOTCLASSDIR).
+# loader will search the zip/jarfile $(BOOTCLASSFILE) or the directory
+# $(BOOTCLASSSUBDIR), located in $(BOOTCLASSDIR).
 # These variables also specify where the zipfile of bootstrap classes will
 # be created, and what name it will be given. 
 #
 
-BOOTCLASSDIR  = /lib/mika
+# BOOTCLASSDIR  = /lib/mika
 BOOTCLASSFILE = mcl.jar
+BOOTCLASSSUBDIR = mcl
 
 # Set this false to create uncompressed jar files (including mcl.jar)
 COMPRESS_JAR_FILES = false
