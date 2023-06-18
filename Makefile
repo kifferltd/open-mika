@@ -689,6 +689,18 @@ jarfile :
 	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
 	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
 
+# FIXME: select right security dir(s)
+mcldir :
+	# make -C ${secanyprovdir} classes
+	make -C ${secprovdir} classes
+	make -C ${securitydir} classes
+	make -C ${javajardir} classes
+	make -C core-vm/$(JAVAX) classes
+	@echo "Building ${mikadeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
+	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+
 resource :
 	@echo "Copying resources to ${mikadeploydir}"
 	cp -r core-vm/resource/system/* ${mikadeploydir}	
