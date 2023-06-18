@@ -79,6 +79,7 @@ CFLAGS += \
     -Wno-variadic-macros \
     -Wno-visibility \
     -Wno-zero-length-array \
+    -fno-inline-functions
 
 export MIKA_TOP = $(PWD)
 
@@ -216,6 +217,13 @@ CFLAGS += -DEXTCLASSDIR=\"$(BOOTCLASSDIR)/ext\"
 CFLAGS += -DDEFAULT_HEAP_SIZE=\"$(DEFAULT_HEAP_SIZE)\"
 CFLAGS += -DDEFAULT_STACK_SIZE=\"$(DEFAULT_STACK_SIZE)\"
 CFLAGS += -DVERSION_STRING=\"$(VERSION_STRING)\"
+
+ifdef BOOTCLASSSUBDIR 
+  CFLAGS += -DBOOTCLASSSUBDIR=\"$(BOOTCLASSSUBDIR)\"
+  mcltarget = mcldir
+else
+  mcltarget = jarfile
+endif
 
 ifeq ($(JAVA5_SUPPORT), true)
   CFLAGS += -DJAVA5
@@ -569,7 +577,7 @@ export JFLAGS
 export LDFLAGS
 export JNI
 
-.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile resource app image
+.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile mcldir resource app image
 
 mika : echo builddir deployable kernel core-vm test
 
@@ -674,6 +682,18 @@ jarfile :
 	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
 	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
 
+# FIXME: select right security dir(s)
+mcldir :
+	# make -C ${secanyprovdir} classes
+	make -C ${secprovdir} classes
+	make -C ${securitydir} classes
+	make -C ${javajardir} classes
+	make -C core-vm/$(JAVAX) classes
+	@echo "Building ${mikadeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
+	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+
 resource :
 	@echo "Copying resources to ${mikadeploydir}"
 	cp -r core-vm/resource/system/* ${mikadeploydir}	
@@ -683,7 +703,7 @@ ifneq ($(APP_DIR),"none")
 	make -C $(APP_DIR) classes
 endif
 
-deployable : binary jarfile resource app test
+deployable : binary $(mcltarget) resource app test
 
 # note: image target was here
 install : mika
@@ -711,7 +731,7 @@ clean :
 	-make -C core-vm clean
 	-make -C max/src/native/mika/max clean
 
-test : echo builddir kernel jarfile scheduler-test
+test : echo builddir kernel $(mcltarget) scheduler-test
 	@echo "Creating tools"
 	make -C tool test
 
