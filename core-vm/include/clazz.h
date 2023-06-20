@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2018, 2020      *
+* Copyright (c) 2005, 2006, 2007, 2008, 2009, 2010, 2018, 2020, 2023      *
 * by KIFFER Ltd. All rights reserved.                                     *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -298,23 +298,44 @@ typedef struct w_UnloadedClazz {
 #define getSuper(clazz) (clazz->numSuperClasses && clazz->supers ? clazz->supers[0] : NULL)
 
 /*
-** Return true iff T_clazz is a strict superclass of S_clazz.  Will return
-** WONKA_FALSE if T_clazz == S_clazz ! S_clazz and T_clazz must be at least 
-** in state CLAZZ_SUPERS_LOADED.
+** Return true iff T_clazz is a strict superclass of S_clazz.
+** Returns FALSE if T_clazz == S_clazz !
+** @param T_clazz w_clazz the supposed superclass - must already be in state CLAZZ_SUPERS_LOADED.
+** @param S_clazz w_clazz the supposed subclass - must already be in state CLAZZ_SUPERS_LOADED.
 */
+static w_boolean isStrictSuperClass(w_clazz T_clazz, w_clazz S_clazz) {
+  if (!S_clazz->supers) {
+    return false;
+  }
+  w_int nTsupers = T_clazz->numSuperClasses;
+  w_int nSsupers = S_clazz->numSuperClasses;
+  if (nSsupers <= nTsupers) {
+    return false;
+  }
+  return S_clazz->supers[nSsupers - nTsupers - 1] == T_clazz;
+}
+ 
+/* WAS:
 #define isStrictSuperClass(T_clazz,S_clazz) \
   (  (S_clazz)->supers \
   && (S_clazz)->numSuperClasses > (T_clazz)->numSuperClasses \
   && (S_clazz)->supers[(S_clazz)->numSuperClasses - (T_clazz)->numSuperClasses - 1] == (T_clazz) \
   )
+*/
 
 /*
-** Return WONKA_TRUE if T_clazz and S_clazz are identical or T_clazz is a
-** superclass of S_clazz, WONKA_FALSE otherwise. S_clazz and T_clazz must
-** be at least in state CLAZZ_SUPERS_LOADED.
+** Return true iff T_clazz and S_clazz are identical or T_clazz is a
+** superclass of S_clazz, false otherwise.
+** @param T_clazz w_clazz the supposed superclass - must already be in state CLAZZ_SUPERS_LOADED.
+** @param S_clazz w_clazz the supposed subclass - must already be in state CLAZZ_SUPERS_LOADED.
 */
-#define isSuperClass(T_clazz,S_clazz) ((T_clazz) == (S_clazz) || isStrictSuperClass((T_clazz), (S_clazz)))
+static w_boolean isSuperClass(w_clazz T_clazz, w_clazz S_clazz) {
+  return T_clazz == S_clazz || isStrictSuperClass(T_clazz, S_clazz);
+}
 
+/* WAS:
+#define isSuperClass(T_clazz,S_clazz) ((T_clazz) == (S_clazz) || isStrictSuperClass((T_clazz), (S_clazz)))
+*/
 
 /** Attach an instance of java.lang.Class to this clazz.
  ** Note that this is not currently used for array clazzes
