@@ -1,5 +1,5 @@
 DEF VERBOSE
 DEF DEBUG
-DEF FILE /test/results
+DEF FILE /test/workspace/results
 
 
