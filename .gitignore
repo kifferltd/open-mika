@@ -1,2 +1,6 @@
 build
 deploy
+tool/mauve/resource/wonkatest.properties
+tool/class/
+tool/jembench/bld/
+
