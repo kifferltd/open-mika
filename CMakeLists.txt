@@ -30,7 +30,8 @@ set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_SOURCE_DIR}/core-vm/include)
 set (IMSYS_MIKA_LIB_DIR ${IMSYS_MIKA_BUILD_DIR}/im4000/lib)
 set (IMSYS_MIKA_LIBOSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
 set (IMSYS_MIKA_LIBMIKA_FILE ${IMSYS_MIKA_LIB_DIR}/libmika.a)
-set (IMSYS_MIKA_LIBCOMM_FILE ${IMSYS_MIKA_LIB_DIR}/libcomm.a)
+set (IMSYS_MIKA_LIBJAVAXCOMM_FILE ${IMSYS_MIKA_LIB_DIR}/libjavax_comm.a)
+set (IMSYS_MIKA_LIBIMSYS_FILE ${IMSYS_MIKA_LIB_DIR}/libimsys.a)
 set (IMSYS_MIKA_LIBAWT_FILE ${IMSYS_MIKA_LIB_DIR}/libawt.a)
 
 if (${IMSYS_MIKA_REBUILD} STREQUAL ALWAYS)
@@ -93,10 +94,25 @@ if (hasParent)
     target_include_directories (imsys-mika-libcomm INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
     set_target_properties (imsys-mika-libcomm
         PROPERTIES
+<<<<<<< HEAD
         IMPORTED_LOCATION ${IMSYS_MIKA_LIBCOMM_FILE}
     )
     add_dependencies (imsys-mika-libcomm imsys-mika-build)
 
+=======
+        IMPORTED_LOCATION ${IMSYS_MIKA_LIBJAVAXCOMM_FILE}
+    )
+    add_dependencies (imsys-mika-libcomm imsys-mika-build)
+
+    add_library (imsys-mika-libimsys STATIC IMPORTED GLOBAL)
+    target_include_directories (imsys-mika-libimsys INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
+    set_target_properties (imsys-mika-libimsys
+        PROPERTIES
+        IMPORTED_LOCATION ${IMSYS_MIKA_LIBIMSYS_FILE}
+    )
+    add_dependencies (imsys-mika-libimsys imsys-mika-build)
+
+>>>>>>> 6a5cd3e (Fix merge of stashed changes)
     add_library (imsys-mika-libawt STATIC IMPORTED GLOBAL)
     target_include_directories (imsys-mika-libawt INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
     set_target_properties (imsys-mika-libawt
@@ -105,6 +121,12 @@ if (hasParent)
     )
     add_dependencies (imsys-mika-libawt imsys-mika-build)
 
+<<<<<<< HEAD
     set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libcomm imsys-mika-libawt PARENT_SCOPE)
+=======
+    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libawt PARENT_SCOPE)
+    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libcomm imsys-mika-libimsys imsys-mika-libawt PARENT_SCOPE)
+    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libcomm imsys-mika-libimsys imsys-mika-libawt PARENT_SCOPE)
+>>>>>>> 6a5cd3e (Fix merge of stashed changes)
 
 endif()

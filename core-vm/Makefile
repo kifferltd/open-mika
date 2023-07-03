@@ -170,6 +170,7 @@ generated : core-vm dispatchers
 	$(CC) -c -o $(objdir)/generated/core-classes.o $(CFLAGS) $(gendir)/core-classes.c
 	$(CC) -c -o $(objdir)/generated/dispatchers.o $(CFLAGS) $(gendir)/dispatchers.c
 	$(CC) -c -o $(objdir)/generated/unicode.o $(CFLAGS) $(gendir)/unicode.c
+	$(CC) -c -o $(objdir)/generated/extensions.o $(CFLAGS) $(gendir)/extensions.c
 ifeq ($(JNI), true)
 	$(CC) -c -o $(objdir)/generated/jni-classes.o $(CFLAGS) $(gendir)/jni-classes.c
 endif

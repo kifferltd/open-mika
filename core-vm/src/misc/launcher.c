@@ -40,19 +40,12 @@
 #ifdef JAVAX_COMM
 #include "driver_byteserial.h"
 extern w_Driver_ByteSerial sio_driver;
-extern void init_comm(void);
 #endif
 
 #ifdef MODULES 
 void loadExtensions(void) {
 #ifdef JAVAX_COMM  
   loadModule("mod_comm");
-#endif
-}
-#else 
-void init_extensions(void) {
-#ifdef JAVAX_COMM  
-  init_comm();
 #endif
 }
 #endif

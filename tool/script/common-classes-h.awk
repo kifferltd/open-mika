@@ -156,10 +156,10 @@ BEGIN {
 
     parse(result)
     if (length(paramlist) == 0) {
-      printf "%-10s %s(w_thread, jobject);\n", type, functionname
+      printf "%-10s %s(w_thread, w_instance);\n", type, functionname
     }
     else {
-      printf "%-10s %s(w_thread, jobject, %s);\n", type, functionname, paramlist
+      printf "%-10s %s(w_thread, w_instance, %s);\n", type, functionname, paramlist
     }
   } 
 }
