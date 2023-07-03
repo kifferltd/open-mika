@@ -219,7 +219,10 @@ CFLAGS += -DDEFAULT_HEAP_SIZE=\"$(DEFAULT_HEAP_SIZE)\"
 CFLAGS += -DDEFAULT_STACK_SIZE=\"$(DEFAULT_STACK_SIZE)\"
 CFLAGS += -DVERSION_STRING=\"$(VERSION_STRING)\"
 
-ifdef BOOTCLASSSUBDIR 
+ifdef USE_ROMFS
+  CFLAGS += -DUSE_ROMFS
+  mcltarget = romfs
+else ifdef BOOTCLASSSUBDIR 
   CFLAGS += -DBOOTCLASSSUBDIR=\"$(BOOTCLASSSUBDIR)\"
   mcltarget = mcldir
 else
@@ -578,11 +581,13 @@ export JFLAGS
 export LDFLAGS
 export JNI
 
-.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile mcldir resource app image
+.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile mcldir romfs resource app image
 
 mika : echo builddir deployable kernel core-vm test
 
-$(MIKA_LIB) : 
+# TODO : only depends on $(mcltarget) when this is romfs
+$(MIKA_LIB) : $(mcltarget)
+	@echo "mcltarget =" $(mcltarget)
 	@echo "CFLAGS =" $(CFLAGS)
 	make -C core-vm libs
 
@@ -609,6 +614,9 @@ echo : kecho
 	@echo "AWT_LIB = " $(AWT_LIB)
 	@echo "networkinc = " $(networkinc)
 	@echo "fsinc = " $(fsinc)
+ifdef USE_ROMFS
+	@echo "using ROMFS"
+endif
 ifeq ($(JAR_CMD_COMPRESSION_LEVEL),0)
 	@echo "Creating uncompressed jar files."
 endif
@@ -671,27 +679,7 @@ core-vm : builddir comm max
 binary : 
 	@echo "TODO: here we would copy the open-mika binary to ${mikadeploydir}"
 
-# FIXME: select right security dir(s)
-jarfile : 
-	# make -C ${secanyprovdir} classes
-	make -C ${secprovdir} classes
-	make -C ${securitydir} classes
-	make -C ${javajardir} classes
-	make -C core-vm/$(JAVAX) classes
-	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
-	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
-
-# FIXME: select right security dir(s)
-mcldir :
-	# make -C ${secanyprovdir} classes
-	make -C ${secprovdir} classes
-	make -C ${securitydir} classes
-	make -C ${javajardir} classes
-	make -C core-vm/$(JAVAX) classes
-	@echo "Building ${mikadeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
-	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
-	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
-	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+# romfs woz here
 
 resource :
 	@echo "Copying resources to ${mikadeploydir}"

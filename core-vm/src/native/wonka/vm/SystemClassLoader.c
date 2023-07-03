@@ -42,7 +42,6 @@
 #include "jni.h"
 
 extern Wonka_InitArgs *system_vm_args;
-extern w_boolean getBootstrapFile(char *filename, w_BAR *barptr);
 
 w_instance SystemClassLoader_getBootclasspath(w_thread thread, w_instance class) {
   return getStringInstance(cstring2String(bootclasspath, strlen(bootclasspath)));
@@ -53,7 +52,7 @@ void SystemClassLoader_setSystemClassLoader(w_thread thread, w_instance class, w
 }
 
 w_instance SystemClassLoader_getBootstrapFile(w_thread thread, w_instance theSystemClassLoader, w_instance filename) {
-  w_BAR bar;
+  w_bar bar;
   w_instance arrayInstance;
   w_string filename_string;
   char *filename_utf8;
@@ -64,12 +63,15 @@ w_instance SystemClassLoader_getBootstrapFile(w_thread thread, w_instance theSys
   woempa(7, "filename_string = %w\n", filename_string);
   filename_utf8 = (char *)string2UTF8(filename_string, &len);
   woempa(7, "filename_utf8 = %s\n", filename_utf8 + 2);
-  if (getBootstrapFile(filename_utf8 + 2, &bar)) {
-    releaseMem(filename_utf8);
+  bar = getBootstrapFile(filename_utf8 + 2);
+  releaseMem(filename_utf8);
+  if (bar) {
     enterUnsafeRegion(thread);
-    arrayInstance = allocArrayInstance_1d(thread, atype2clazz[P_byte], bar.length);
+    arrayInstance = allocArrayInstance_1d(thread, atype2clazz[P_byte], bar->length);
     enterSafeRegion(thread);
-    memcpy(instance2Array_byte(arrayInstance), bar.buffer, bar.length);
+    // TODO: bar_read returns 1 on success, 0 on failure; last param is bytes read
+    bar_read(bar,instance2Array_byte(arrayInstance), bar->length, NULL);
+    // WAS : memcpy(instance2Array_byte(arrayInstance), bar->buffer, bar->length);
 
     return arrayInstance;
   }
