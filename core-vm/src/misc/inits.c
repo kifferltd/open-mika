@@ -62,12 +62,17 @@ w_hashtable object_hashtable;
 #endif
 
 char *bootclasspath =
+#ifdef USE_ROMFS
+    "ROMFS"
+#else
 #ifdef BOOTCLASSSUBDIR
     BOOTCLASSDIR "/" BOOTCLASSSUBDIR
 #else
     BOOTCLASSDIR "/" BOOTCLASSFILE
 #endif
-    ":" BOOTCLASSDIR "/";
+    ":" BOOTCLASSDIR "/"
+#endif
+;
 
 char *fsroot = NULL;
 
@@ -528,7 +533,11 @@ void startWonka(void* data) {
  
   registerDriver((w_driver)&deflate_driver);
 
-// WAS here: haveWonkaThreads = WONKA_TRUE;
+  lowMemoryCheck;
+
+#ifdef USE_ROMFS
+  init_romfs();
+#endif
 
   lowMemoryCheck;
 

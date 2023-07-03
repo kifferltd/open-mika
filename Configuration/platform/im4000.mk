@@ -80,12 +80,13 @@ export FSROOT = /
 # loader will search the zip/jarfile $(BOOTCLASSFILE) or the directory
 # $(BOOTCLASSSUBDIR), located in $(BOOTCLASSDIR).
 # These variables also specify where the zipfile of bootstrap classes will
-# be created, and what name it will be given. 
+# be created at build time, and what name it will be given. 
 #
 
+export USE_ROMFS = true
 # BOOTCLASSDIR  = /lib/mika
-BOOTCLASSFILE = mcl.jar
-BOOTCLASSSUBDIR = mcl
+# BOOTCLASSFILE = mcl.jar
+# BOOTCLASSSUBDIR = mcl
 
 # Set this false to create uncompressed jar files (including mcl.jar)
 COMPRESS_JAR_FILES = false
@@ -99,6 +100,6 @@ COMPRESS_JAR_FILES = false
 # If JAVA_THREAD_YIELD_IS_FREERTOS_DELAY is defined in CFLAGS, the Thread.yield() method will be
 # implmemted as vTaskDelay(1) rather than as taskYIELD().
 
-CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE
+CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE 
 
 

@@ -108,7 +108,7 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-.PHONY : awt filesystem network fp jpda math security core-vm generated libs
+.PHONY : awt filesystem network fp jpda math security core-vm generated jarfile mcldir romfs libs javaclasses
 
 mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
@@ -160,10 +160,34 @@ endif
 ifeq ($(MATH), native)
 	$(CC) -c -o $(objdir)/generated/math-classes.o $(CFLAGS) $(gendir)/math-classes.c
 endif
+ifeq ($(USE_ROMFS),true)
+	$(CC) -c -o $(objdir)/generated/romfs.o $(CFLAGS) $(gendir)/romfs.c
+endif
+
+# FIXME: select right security dir(s)
+jarfile : 
+	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
+
+# FIXME: select right security dir(s)
+mcldir :
+	@echo "Building ${mikadeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
+	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+
+romfs :
+
+# FIXME: select right security dir(s)
+javaclasses:
+	# make -C ${secanyprovdir} classes
+	make -C ${secprovdir} classes
+	make -C ${securitydir} classes
+	make -C ${javajardir} classes
+	make -C $(JAVAX) classes
 
 # TODO we probably don't need the JNI=$(JNI) bit
-
-core-vm:
+core-vm : javaclasses
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)
@@ -174,6 +198,10 @@ endif
 ifeq ($(JNI), true)
 	awk -v JNI=$(JNI) -f $(scriptdir)/jni-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/jni-classes.in > $(gendir)/jni-classes.h
 	awk -v JNI=$(JNI) -f $(scriptdir)/jni-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/jni-classes.in > $(gendir)/jni-classes.c
+endif
+ifeq ($(USE_ROMFS), true)
+	@echo "Building ROMFS from classes in ${classdir}"
+	(cd $(classdir); find -type f -print -exec od -An -tu1 {} \;) | awk -f $(scriptdir)/romify.awk > ${gendir}/romfs.c
 endif
 	make -C src 
 	make -C hal 

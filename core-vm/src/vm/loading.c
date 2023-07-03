@@ -87,6 +87,11 @@ w_hashtable2k interface_hashtable;
 */
 w_hashtable dispatchers_hashtable;
 
+w_bar getBootstrapFileFromZip(void *resource, char *pathname);
+w_bar getBootstrapFileFromHashtable(void *resource, char *pathname);
+w_bar getBootstrapFileFromDir(void *resource, char *path);
+
+
 typedef enum {
   no_paths_found,
   archive_only,
@@ -95,8 +100,9 @@ typedef enum {
   dir_then_jar
 } bcp_enum_t;
 
-bcp_enum_t found_bootpaths;
+mika_bcpe_t bcpe_list = NULL;
 
+/*
 char     *bootzippath;
 #ifdef USE_ZLIB
 unzFile bootzipfile;
@@ -105,6 +111,7 @@ z_zipFile bootzipfile;
 #endif
 
 char     *bootdirpath;
+*/
 
 /*
 ** Some well-known strings that are required during loading.
@@ -637,20 +644,17 @@ static char *expandPath(char *start, int length) {
   return path;
 }
 
+// TODO
+extern w_hashtable romfs_hashtable;
+
 /*
-** Search colon-separated list bcp and extract the first string which ends
-** in `.jar' or `.zip' and the first string which does NOT end this way.
-** Each string in bcp should be the path to either a jar/zip archive or a directory.
-** The strings are returned in allocMem'd memory, bcp is not modified.
-** @param bcp             char*  The colon-separated list of paths.
-** @param first_archive   char** Will be set to a pointer to the first jar/zip, or NULL if none is found.
-** @param first_directory char** Will be set to a pointer to the first non-jar/zip, or NULL if none is found.
-** @return bcp_enum_t Indicates which kinds of path were found and in what order.
+** Scan colon-separated list bcp and construct a list of mika_bcpe_t entries.
+** Each string in bcp should be the path to either a jar/zip archive or a directory, or the reserved string 'ROMFS'.
+** The results are returned in allocMem'd memory, bcp is not modified.
+** @param bcp       const char*  The colon-separated list of paths.
+** @return          mika_bcpe_t  The first entry in the list.
 */
-static bcp_enum_t analyseBootClassPath(char *bcp, char **first_archive, char **first_directory) {
-  bcp_enum_t found = no_paths_found;
-  *first_archive = NULL;
-  *first_directory = NULL;
+static mika_bcpe_t analyseBootClassPath(const char *bcp) {
 
   if (!bcp) {
     wabort(ABORT_WONKA, "Boot classpath is NULL!");
@@ -659,68 +663,60 @@ static bcp_enum_t analyseBootClassPath(char *bcp, char **first_archive, char **f
   w_int i = 0;
   w_int j = 0;
   w_int l = strlen(bcp);
+  mika_bcpe_t first_bcpe = NULL;
+  mika_bcpe_t prev_bcpe = NULL;
   woempa(7, "bootclasspath is %s, length is %d\n", bcp, l);
   while (i < l) {
-    bool is_archive;
+    mika_bcpe_t this_bcpe = allocClearedMem(sizeof(struct mika_BootClassPathElement));
     for (j = i; j < l && bcp[j] != ':'; ++j);
     woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
-    if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
-      woempa(7, "Element ends in `jar', so bcp[%d..%d] is an archive\n", i, j - 1);
-      is_archive = true; 
+    if (j == i + 5 && strncmp(bcp + i, "ROMFS", 5) == 0) {
+      woempa(7, "Element is `ROMFS', so bcp[%d..%d] is a ROMFS\n", i, j - 1);
+      this_bcpe->getter = getBootstrapFileFromHashtable;
+      this_bcpe->resource = romfs_hashtable;
     }
-    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
-      woempa(7, "Element ends in `zip', so bcp[%d..%d] is an archive\n", i, j - 1);
-      is_archive = true; 
+// WAS :    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
+    else if (strncmp(bcp + j - 4, ".jar", 4) == 0) {
+      woempa(7, "Element ends in `.jar', so bcp[%d..%d] is an archive\n", i, j - 1);
+      this_bcpe->getter = getBootstrapFileFromZip;
+      char *jarpath = expandPath(&bcp[i], j - i);
+#ifdef USE_ZLIB
+      this_bcpe->resource = unzOpen(jarpath);
+#else
+      this_bcpe->resource = parseZipFile(jarpath);
+#endif
+    }
+// TODO merge with previous block
+// WAS :    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
+    else if (strncmp(bcp + j - 4, ".zip", 4) == 0) {
+      woempa(7, "Element ends in `.zip', so bcp[%d..%d] is an archive\n", i, j - 1);
+      this_bcpe->getter = getBootstrapFileFromZip;
+      char *zippath = expandPath(&bcp[i], j - i);
+#ifdef USE_ZLIB
+      this_bcpe->resource = unzOpen(zippath);
+#else
+      this_bcpe->resource = parseZipFile(zippath);
+#endif
     }
     else {
-      woempa(7, "Element does not end in `jar' or `zip', so bcp[%d..%d] is a directory\n", i, j - 1);
-      is_archive = false;
+      woempa(7, "Element is not `ROMFS' and does not end in `jar' or `zip', so bcp[%d..%d] is a directory\n", i, j - 1);
+      this_bcpe->getter = getBootstrapFileFromDir;
+      this_bcpe->resource = expandPath(&bcp[i], j - i);
     }
 
-    switch (found) {
-      case no_paths_found:
-        if (is_archive) {
-          *first_archive = expandPath(&bcp[i], j - i);
-          found = archive_only;
-        }
-        else {
-          *first_directory = expandPath(&bcp[i], j - i);
-          found = directory_only;
-        }
-        break;
-
-      case archive_only:
-        if (is_archive) {
-          // ignore
-        }
-        else {
-          *first_directory = expandPath(&bcp[i], j - i);
-          found = jar_then_dir;
-          // no need to search further, so break out of loop
-          j = l;
-        }
-        break;
-
-      case directory_only:
-        if (is_archive) {
-          *first_archive = expandPath(&bcp[i], j - i);
-          found = dir_then_jar;
-          // no need to search further, so break out of loop
-          j = l;
-        }
-        else {
-          // ignore
-        }
-        break;
-
-      default:
-        /* ignore */;
+    this_bcpe->prev = prev_bcpe;
+    if (prev_bcpe) {
+      prev_bcpe->next = this_bcpe;
     }
+    else if (!first_bcpe) {
+      first_bcpe = this_bcpe;
+    }
+    prev_bcpe = this_bcpe;
 
     i = j + 1;
   }
 
-  return found;
+  return first_bcpe;
 }
 
 /*
@@ -940,18 +936,7 @@ void startLoading(void) {
   clazz_long    = createPrimitive(string_long, VM_TYPE_LONG + VM_TYPE_TWO_CELL, 64);
   clazz_void    = createPrimitive(string_void, VM_TYPE_VOID, 0);
 
-  found_bootpaths = analyseBootClassPath(bootclasspath, &bootzippath, &bootdirpath);
-
-  if (bootzippath) {
-#ifdef USE_ZLIB
-    bootzipfile = unzOpen(bootzippath);
-#else
-    bootzipfile = parseZipFile(bootzippath);
-#endif
-    if (!bootzipfile) {
-      wabort(ABORT_WONKA, "Unable to open zipfile `%s'\n", bootzippath);
-    }
-  }
+  bcpe_list = analyseBootClassPath(bootclasspath);
 
   fixup1_hashtable = ht_create((char*)"hashtable:fixup1", NATIVE_FUN_HT_SIZE, NULL , NULL, 0, 0);
   fixup2_hashtable = ht_create((char*)"hashtable:fixup2", NATIVE_FUN_HT_SIZE, NULL , NULL, 0, 0);
@@ -1853,14 +1838,19 @@ static void wabort_unzip_problem(char * zipfilename, char *entryname, const char
 #endif
 
 /**
- ** Look for an entry called 'pathname' in bootzipfile; if found, set *barptr
- ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
+ ** Look for an entry called 'pathname' in bootzipfile; if found, create and return
+ ** a w_BAR struct which can be used to read in the contents of the file. Otehrwise return NULL.
+ ** @param resource void* pointer to the unzFile or w_ZipFile which contains the class data.
+ ** @param pathname char* relative path to the file as derived from the class name.
+ ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
-w_boolean getBootstrapFileFromZip(char *pathname, w_BAR *barptr) {
+w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
 #ifdef USE_ZLIB
   int      z_rc;
   char    *buffer;
   unz_file_info file_info;
+
+  unzFile bootzipfile = (unzFile)resource;
 
   z_rc = unzLocateFile(bootzipfile, pathname, 1);
   if (z_rc != UNZ_OK) {
@@ -1882,48 +1872,69 @@ w_boolean getBootstrapFileFromZip(char *pathname, w_BAR *barptr) {
   if (z_rc < 0) {
     wabort_unzip_problem(bootzippath, pathname, "cannot extract entry", z_rc);
   }
-  barptr->buffer = buffer;
-  barptr->length = file_info.uncompressed_size;
-  barptr->current = 0;
+
+  w_bar bar = allocMem(sizeof(w_BAR));
+  bar->buffer = buffer;
+  bar->length = file_info.uncompressed_size;
+  bar->current = 0;
   releaseMem(buffer);
 #else
+  z_zipFile bootzipfile = (z_zipFile)resource;
   z_zipEntry ze;
 
   ze = findZipEntry(bootzipfile, pathname);
   if (!ze) {
 
-    return FALSE;
+    return NULL;
 
   }
 
   woempa(1, "Zip file entry '%s' at %p\n", pathname, ze);
   if (!uncompressZipEntry(ze)) {
 
-    return FALSE;
+    return NULL;
 
   }
 
   woempa(1, "Uncompressed data at %p, length is %d bytes\n", ze->u_data, ze->u_size);
-  barptr->buffer = ze->u_data;
-  barptr->length = ze->u_size;
-  barptr->current = 0;
+  w_bar bar = allocMem(sizeof(w_BAR));
+  bar->buffer = ze->u_data;
+  bar->length = ze->u_size;
+  bar->current = 0;
 #endif
 
-  return TRUE;
+  return bar;
 }
 
 /**
- ** Look for an entry called 'pathname' in bootdirfile; if found, set *barptr
- ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
+ ** Look for an entry called 'pathname' in hashtable; if found, create and return
+ ** a w_BAR struct which can be used to read in the contents of the file. Othrwise return NULL.
+ ** @param resource void* pointer to the w_hashtable which contains the class data.
+ ** @param pathname char* path to the file as derived from the class name.
+ ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
-w_boolean getBootstrapFileFromDir(char *path, w_BAR *barptr) {
-  char *fullpath = allocMem(strlen(bootdirpath) + strlen(path) + 2);
+w_bar getBootstrapFileFromHashtable(void *resource, char *pathname) {
+  w_hashtable ht = (w_hashtable) resource;
+
+  return ht_read(ht, pathname);
+}
+
+/**
+ ** Look for an entry called 'pathname' in the path indicated by dir; if found, create and return
+ ** a w_BAR struct which can be used to read in the contents of the file. Othrwise return NULL.
+ ** @param resource void* pointer to a C string containing the path to the directory which contains the class data.
+ ** @param pathname char* relative path to the file as derived from the class name.
+ ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
+ */
+w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
+  char *bootdirpath = (char *)resource;
+  char *fullpath = allocMem(strlen(bootdirpath) + strlen(pathname) + 2);
   strcpy(fullpath, bootdirpath);
   char *bdp_end = fullpath + strlen(bootdirpath);
   if (bdp_end[-1] != '/') {
     *bdp_end++ = '/';
   }
-  strcpy(bdp_end, path);
+  strcpy(bdp_end, pathname);
 
   struct vfs_STAT statbuf;
   w_int fd;
@@ -1931,55 +1942,49 @@ w_boolean getBootstrapFileFromDir(char *path, w_BAR *barptr) {
 
   if (vfs_stat(fullpath, &statbuf) < 0
    || (fd = vfs_open(fullpath, VFS_O_RDONLY, 0)) < 0)  {
-    return FALSE;
+    return NULL;
   }
 
-  char *buffer = allocMem(statbuf.st_size);
-  if (!buffer) {
-    wabort(ABORT_WONKA, "Unable to allocate buffer");
+  char *buffer = NULL;
+  if (statbuf.st_size) {
+    buffer = allocMem(statbuf.st_size);
+    if (!buffer) {
+      wabort(ABORT_WONKA, "Unable to allocate buffer");
+    }
+
+   rc = vfs_read(fd, buffer, statbuf.st_size);
+   if (rc < (w_int)statbuf.st_size) {
+     wabort(ABORT_WONKA, "Failed to read %d bytes from %s, rc was %d\n", statbuf.st_size, fullpath, rc);
+   }
   }
 
-  rc = vfs_read(fd, buffer, statbuf.st_size);
-  if (rc < (w_int)statbuf.st_size) {
-    wabort(ABORT_WONKA, "Failed to read %d bytes from %s, rc was %d\n", statbuf.st_size, fullpath, rc);
-  }
-
-  barptr->buffer = buffer;
-  barptr->length = statbuf.st_size;
-  barptr->current = 0;
+  w_bar bar = allocMem(sizeof(w_BAR));
+  bar->buffer = buffer;
+  bar->length = statbuf.st_size;
+  bar->current = 0;
   vfs_close(fd);
   releaseMem(fullpath);
 
-  return TRUE;
+  return bar;
 }
 
 /**
- ** Look for an entry called 'pathname' in bootstrapdir or bootzipfile; if found, set *barptr
- ** accordingly and return TRUE. Otherwise return FALSE and leave *barfile alone.
- ** TODO make it possible to change the search order
+ ** Look for an entry called 'pathname' in the boot class path; if found, create and return
+** a w_BAR struct which can be used to read in the contents of the file. Otherwise return NULL.
+ ** @param pathname char* relative path to the file as derived from the class name.
+ ** @return         w_bar pointer to a w_BAR struct holding the class data and length, or NULL.
  */
-w_boolean getBootstrapFile(char *pathname, w_BAR *barptr) {
-  switch(found_bootpaths) {
-    case archive_only:
-      woempa(7, "Searching for %s in archive %s\n", pathname, bootzippath);
-      return getBootstrapFileFromZip(pathname, barptr);
-
-    case directory_only:
-      woempa(7, "Searching for %s in directory %s\n", pathname, bootdirpath);
-      return getBootstrapFileFromDir(pathname, barptr);
-
-    case jar_then_dir:
-      woempa(7, "Searching for %s in archive %s and directory %s\n", pathname, bootzippath, bootdirpath);
-      return getBootstrapFileFromDir(pathname, barptr) || getBootstrapFileFromZip(pathname, barptr);
-
-    case dir_then_jar:
-      woempa(7, "Searching for %s in directory %s and archive %s\n", pathname, bootdirpath, bootzippath);
-      return getBootstrapFileFromZip(pathname, barptr) || getBootstrapFileFromDir(pathname, barptr);
-
-    default:
-      woempa(7, "Don't know where to search for %s\n", pathname);
-      return false;
+w_bar getBootstrapFile(char *pathname) {
+  lowMemoryCheck;
+  mika_bcpe_t bcpe = bcpe_list;
+  w_bar found = NULL;
+  while ( !found && bcpe) {
+    found = bcpe->getter(bcpe->resource, pathname);
+    bcpe = bcpe->next;
   }
+  lowMemoryCheck;
+  
+  return found;
 }
 
 /**
@@ -2007,7 +2012,7 @@ w_clazz loadBootstrapClass(w_string name) {
   w_size   length;
   char    *filename;
   w_clazz  clazz = NULL;
-  w_BAR    bar;
+  w_bar    class_bytes;
   w_size   i;
   char    *dollar;
   w_char   ch;
@@ -2033,15 +2038,18 @@ w_clazz loadBootstrapClass(w_string name) {
     memcpy(dollar + 1, dollar + 8, (filename + length) - dollar - 7);
   }
   woempa(1, "Need a file called '%s'\n", filename);
-  if (!getBootstrapFile(filename, &bar)) {
-    wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap jar file '%s'\n", filename, bootzippath);
+  class_bytes = getBootstrapFile(filename);
+  if (!class_bytes) {
+    wabort(ABORT_WONKA, "Unable to find entry '%s' in bootstrap class path\n", filename);
   }
 
-  clazz = createClazz(NULL, NULL, &bar, NULL, TRUE);
+  clazz = createClazz(NULL, NULL, class_bytes, NULL, TRUE);
   if (!clazz) {
     wabort(ABORT_WONKA, "Swoggle my horn! Attempt to load system class %w failed ...\n",name);
   }
 
+// TODO release class_bytes? 
+// Probably better to replace deleteBootstrapFile with a "cleanup" instruction
   deleteBootstrapFile(filename);
   releaseMem(filename);
 
