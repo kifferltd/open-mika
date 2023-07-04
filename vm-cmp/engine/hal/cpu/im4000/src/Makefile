@@ -35,19 +35,23 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(ENGINE_TOP)/include
 
-sources = interpreter.c
-objects=$(patsubst %.c, $(engineobjdir)/%.o, $(sources))
+sources = interpreter.c c_emulations.c bc_emulations.s invoke.s
+cobjects=$(patsubst %.c, $(engineobjdir)/%.o, $(sources))
+sobjects=$(patsubst %.s, $(engineobjdir)/%.o, $(sources))
 
 .PHONY : mika libs
 mika : libs
 
-libs : $(engineobjdir) $(objects)
+libs : $(engineobjdir) $(cobjects) $(sobjects)
 
 $(engineobjdir) :
 	@echo Creating $(engineobjdir)
 	@mkdir -p $(engineobjdir)
 
-$(objects) : $(engineobjdir)/%.o : %.c
+$(cobjects) : $(engineobjdir)/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(sobjects) : $(engineobjdir)/%.o : %.s
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

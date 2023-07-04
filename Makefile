@@ -106,7 +106,7 @@ ifeq ($(COMPRESS_JAR_FILES),false)
   export JAR_CMD_COMPRESSION_LEVEL=0
 endif
 
-export ENGINE ?= generic
+export ENGINE ?= hal/cpu/im4000
 export enginedir = $(MIKA_TOP)/vm-cmp/engine/$(ENGINE)
 export enginecomdir = $(MIKA_TOP)/vm-cmp/engine/common
 
