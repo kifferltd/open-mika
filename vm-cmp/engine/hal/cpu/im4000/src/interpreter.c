@@ -127,13 +127,15 @@ static void stackCheck(w_frame frame) {
 
   /*
   ** Check for stuff on the stack and in locals that is marked traceable and is not an object.
+  ** Probably not feasible if slots do not have a separate type word. 
   */
 
+#ifndef USE_OBJECT_HASHTABLE
   i = 0;
   for (slot = frame->jstack_base; slot < frame->jstack_base + frame->method->exec.local_i; slot += 1) {
-    instance = (w_instance) slot->c;
-    if (slot->c) {
-      if (slot->s == stack_trace && ! (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG)) {
+    instance = (w_instance) GET_SLOT_CONTENTS(slot);
+    if (instance) {
+      if (GET_SLOT_SCANNING(slot) == stack_trace && ! (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG)) {
         woempa(9, "A %lld opcodes done...\n", checks);
         woempa(9, "A Method %M, slot %d\n", frame->method, i);
         woempa(9, "A Method takes %d argument slots.\n", frame->method->exec.arg_i);
@@ -145,9 +147,9 @@ static void stackCheck(w_frame frame) {
 
   i = 0;
   for (slot = frame->jstack_base + frame->method->exec.local_i; slot < frame->jstack_top; slot += 1) {
-    instance = (w_instance) slot->c;
-    if (slot->c) {
-      if (slot->s == stack_trace && ! (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG)) {
+    instance = (w_instance) GET_SLOT_CONTENTS(slot);
+    if (instance) {
+      if (SET_SLOT_SCANNIN(slot) == stack_trace && ! (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG)) {
         woempa(9, "B %lld opcodes done, reference %p...\n", checks, instance);
         woempa(9, "B Method %M, item %d\n", frame->method, i);
         woempa(9, "B Method takes %d stack slots.\n", frame->method->exec.stack_i);
@@ -155,6 +157,7 @@ static void stackCheck(w_frame frame) {
       }
     }
   }
+#endif
 
   /*
   ** See if anything unprotected is on the stack or slots...
@@ -164,8 +167,8 @@ static void stackCheck(w_frame frame) {
 
   i = 0;
   for (slot = frame->jstack_base; slot < frame->jstack_base + frame->method->exec.local_i; slot += 1) {
-    instance = (w_instance) slot->c;
-    if (slot->s == stack_notrace && (w_ubyte *) instance > heap_start && (w_ubyte *) instance < heap_current) {
+    instance = (w_instance) GET_SLOT_CONTENTS(slot);
+    if (GET_SLOT_SCANNING(slot) == stack_notrace && (w_ubyte *) instance > heap_start && (w_ubyte *) instance < heap_current) {
       if (x_mem_is_block(block2chunk(instance2object(instance)))) {
         if (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG) {
           woempa(9, "C %lld opcodes done %lld...\n", checks, bcc);
@@ -184,8 +187,8 @@ static void stackCheck(w_frame frame) {
 
   i = 0;
   for (slot = frame->jstack_base + frame->method->exec.local_i; slot < frame->jstack_top; slot += 1) {
-    instance = (w_instance) slot->c;
-    if (slot->s == stack_notrace && (w_ubyte *) instance > heap_start && (w_ubyte *) instance < heap_current) {
+    instance = (w_instance) GET_SLOT_CONTENTS(slot);
+    if (GET_SLOT_SCANNING(slot) == stack_notrace && (w_ubyte *) instance > heap_start && (w_ubyte *) instance < heap_current) {
       if (x_mem_is_block(block2chunk(instance2object(instance)))) {
         if (x_mem_tag_get(block2chunk(instance2object(instance))) & OBJECT_TAG) {
           woempa(9, "D %lld opcodes done, reference %p...\n", checks, instance);
@@ -293,33 +296,50 @@ static void releaseJitcLock(w_thread thread) {
 
 inline static void stack2locals(w_Slot locals[], volatile w_Slot *args, w_int num) {
 
+  w_slot argsptr = args - 1;
+  w_slot localsptr = locals + num - 1;
 
   args -= num;
 
   switch (num) {
     default: {
       while (16 < num--) {
-        locals[num].c = args[num].c;
-        locals[num].s = args[num].s;
+        COPY_SLOT_TO_FROM(localsptr--, argsptr--);
       }
     }
     
-    case 16: locals[15].c = args[15].c; locals[15].s = args[15].s;
-    case 15: locals[14].c = args[14].c; locals[14].s = args[14].s;
-    case 14: locals[13].c = args[13].c; locals[13].s = args[13].s;
-    case 13: locals[12].c = args[12].c; locals[12].s = args[12].s;
-    case 12: locals[11].c = args[11].c; locals[11].s = args[11].s;
-    case 11: locals[10].c = args[10].c; locals[10].s = args[10].s;
-    case 10: locals[ 9].c = args[ 9].c; locals[ 9].s = args[ 9].s;
-    case  9: locals[ 8].c = args[ 8].c; locals[ 8].s = args[ 8].s;
-    case  8: locals[ 7].c = args[ 7].c; locals[ 7].s = args[ 7].s;
-    case  7: locals[ 6].c = args[ 6].c; locals[ 6].s = args[ 6].s;
-    case  6: locals[ 5].c = args[ 5].c; locals[ 5].s = args[ 5].s;
-    case  5: locals[ 4].c = args[ 4].c; locals[ 4].s = args[ 4].s;
-    case  4: locals[ 3].c = args[ 3].c; locals[ 3].s = args[ 3].s;
-    case  3: locals[ 2].c = args[ 2].c; locals[ 2].s = args[ 2].s;
-    case  2: locals[ 1].c = args[ 1].c; locals[ 1].s = args[ 1].s;
-    case  1: locals[ 0].c = args[ 0].c; locals[ 0].s = args[ 0].s;
+    case 16:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 15:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 14:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 13:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 12:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 11:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case 10:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  9:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  8:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  7:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  6:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  5:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  4:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  3:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  2:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
+    case  1:
+      COPY_SLOT_TO_FROM(localsptr--, argsptr--);
     case  0: break;
 
   }
@@ -340,22 +360,19 @@ inline static w_int extend_s2i(w_int s) {
 }
 
 // FIXME: not declared inline because gcc bleats about it being to big
+// Note: The top of stack can also contain return address of 'jsr'.
 static void do_astore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
-  frame->jstack_base[slot].s = stack_notrace;    // Set safe situation for GC if we would be interrupted before assigning value
-  frame->jstack_base[slot].c = (*tosptr)[-1].c; // The top of stack can also contain return address of 'jsr' ...
-  frame->jstack_base[slot].s = (*tosptr)[-1].s; // ... so use tag of stack, not 'stack_trace' explicitely.
+  COPY_SLOT_TO_FROM(frame->jstack_base+slot, (*tosptr)-1);
   (*tosptr) -= 1;
 
 }
 
 inline static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 
-  (*tosptr)[0].s = stack_notrace;
-  (*tosptr)[1].s = stack_notrace;
-  (*tosptr)[0].c = frame->jstack_base[slot + 0].c;
-  (*tosptr)[1].c = frame->jstack_base[slot + 1].c;
-  woempa(1, "zload %d : loaded %08x %08x\n", slot, (*tosptr)[0].c, (*tosptr)[1].c);
+  COPY_SLOT_TO_FROM((*tosptr), frame->jstack_base+slot);
+  COPY_SLOT_TO_FROM((*tosptr)+1, frame->jstack_base+slot + 1);
+  woempa(1, "zload %d : loaded %08x %08x\n", slot, GET_SLOT_CONTENTS(*tosptr), GET_SLOT_CONTENTS((*tosptr) + 1));
   (*tosptr) += 2;
 
 }
@@ -363,11 +380,9 @@ inline static void do_zload(w_frame frame, w_word slot, w_Slot **tosptr) {
 inline static void do_zstore(w_frame frame, w_word slot, w_Slot **tosptr) {
 
   (*tosptr) -= 2;
-  frame->jstack_base[slot].s = stack_notrace;
-  frame->jstack_base[slot + 1].s = stack_notrace;
-  frame->jstack_base[slot].c = (*tosptr)[0].c;
-  frame->jstack_base[slot + 1].c = (*tosptr)[1].c;
-  woempa(1, "zstore %d : stored %08x %08x\n", slot, (*tosptr)[0].c, (*tosptr)[1].c);
+  COPY_SLOT_TO_FROM(frame->jstack_base+slot, (*tosptr));
+  COPY_SLOT_TO_FROM(frame->jstack_base+slot + 1, (*tosptr)+1);
+  woempa(1, "zstore %d : stored %08x %08x\n", slot, GET_SLOT_CONTENTS(*tosptr), GET_SLOT_CONTENTS((*tosptr) + 1));
 
 }
 
@@ -392,16 +407,6 @@ static void updateDebugInfo(w_frame frame, w_code current, w_slot tos) {
 }
 #else
 #define updateDebugInfo(f,c,t)
-/*
-// FIXME: not declared inline because gcc bleats about it being to big
-static void updateDebugInfo(w_frame frame, w_code current, w_Slot *tos) {
-  woempa_bytecodecount += 1; 
-  if (woempa_bytecodecount > 763230) {
-    w_printf("%d %t %M offset[%d] (%s)\n", woempa_bytecodecount, frame->thread, frame->method, current - frame->method->exec.code, opcode_names[*current]);
-    fflush(NULL);
-  }
-}
-*/
 #endif
 
 #ifdef JDWP
@@ -430,7 +435,7 @@ static void checkSingleStep1(w_frame frame, w_code current, w_slot tos) {
   }
 
   if (step->frame && step->frame != frame) {
-    woempa(7, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
+    woempa(1, "Not in target frame %p (%m), will not trigger SingleStep event\n", step->frame, step->frame->method);
 
     return;
   }
@@ -840,7 +845,7 @@ void interpret(w_frame caller, w_method method) {
   { 
     w_instance loader = isSet(method->flags, ACC_STATIC)
                         ? method->spec.declaring_clazz->loader
-                        : instance2clazz(frame->jstack_base[0].c)->loader;
+                        : instance2clazz(GET_SLOT_CONTENTS(frame->jstack_base))->loader;
     if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {
       frame->udcl = loader;
     }
@@ -853,8 +858,9 @@ void interpret(w_frame caller, w_method method) {
 #ifndef OVERLAPPING_FRAMES
   stack2locals(frame->jstack_base, caller->jstack_top, method->exec.arg_i);
 #endif
+  // [CG 20230530] I guess this is meant to permit GC of copied arguments? Looks dubious. 
   for (i = method->exec.arg_i; i < method->exec.local_i; i++) {
-    frame->jstack_base[i].s = stack_notrace;
+    SET_SLOT_SCANNING(frame->jstack_base + i, stack_notrace);
   }
 
   /*
@@ -876,36 +882,32 @@ void interpret(w_frame caller, w_method method) {
   goto * jumps[*current];
 
   c_aload: {
-    tos[0].c = frame->jstack_base[byte_operand].c;
-    tos[0].s = stack_trace;
+    i = byte_operand;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + i);
     ++tos;
     do_next_opcode;
   }
 
   c_aload_0: {
-    tos[0].c = frame->jstack_base[0].c;
-    tos[0].s = stack_trace;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base);
     ++tos;
     do_next_opcode;
   }
   
   c_aload_1: {
-    tos[0].c = frame->jstack_base[1].c;
-    tos[0].s = stack_trace;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 1);
     ++tos;
     do_next_opcode;
   }
   
   c_aload_2: {
-    tos[0].c = frame->jstack_base[2].c;
-    tos[0].s = stack_trace;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 2);
     ++tos;
     do_next_opcode;
   }
   
   c_aload_3: {
-    tos[0].c = frame->jstack_base[3].c;
-    tos[0].s = stack_trace;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 3);
     ++tos;
     do_next_opcode;
   }
@@ -914,14 +916,13 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_byte: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    tos[-1].s = stack_notrace;
-    tos[-1].c = *byteFieldPointer(o, i);
+    SET_SCALAR_SLOT(tos-1, *byteFieldPointer(o, i));
 
     add_to_opcode(3);
   }
@@ -930,14 +931,13 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_single: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    tos[-1].s = stack_notrace;
-    tos[-1].c = *wordFieldPointer(o, i);
+    SET_SCALAR_SLOT(tos-1, *wordFieldPointer(o, i));
 
     add_to_opcode(3);
   }
@@ -949,7 +949,7 @@ void interpret(w_frame caller, w_method method) {
     isVolatile = isSet(field->flags, ACC_VOLATILE);
 
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -959,11 +959,9 @@ void interpret(w_frame caller, w_method method) {
       x_mutex_lock(mutex64, x_eternal);
     }
 
-    tos[-1].s = stack_notrace;
-    tos[-1].c = wordFieldPointer(o, i)[0];
-    tos[ 0].s = stack_notrace;
-    tos[ 0].c = wordFieldPointer(o, i)[1];
-    woempa(1, "getfield %w of %j : got %08x %08x\n", field->name, o, tos[-1].c, tos[0].c);
+    SET_SCALAR_SLOT(tos-1, wordFieldPointer(o, i)[0]);
+    SET_SCALAR_SLOT(tos, wordFieldPointer(o, i)[1]);
+    woempa(1, "getfield %w of %j : got %08x %08x\n", field->name, o, GET_SLOT_CONTENTS(tos-1), GET_SLOT_CONTENTS(tos));
     if (isVolatile) {
       x_mutex_unlock(mutex64);
     }
@@ -975,29 +973,26 @@ void interpret(w_frame caller, w_method method) {
   i_getfield_ref: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = field->size_and_slot;
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
 
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    tos[-1].c = o[instance2clazz(o)->instanceSize  + i];
-    tos[-1].s = stack_trace;
+    SET_REFERENCE_SLOT(tos-1, o[instance2clazz(o)->instanceSize  + i]);
     add_to_opcode(3);
   }
 
   c_ireturn: c_freturn: {
     caller->jstack_top -= method->exec.arg_i;
-    caller->jstack_top[0].s = stack_notrace;
-    caller->jstack_top[0].c = tos[-1].c;
+    COPY_SLOT_TO_FROM(caller->jstack_top, tos-1);
     caller->jstack_top += 1;
     frame->jstack_top = tos;
     goto c_common_return;
   }
 
   c_iload_0: c_fload_0: {
-    tos[0].s = stack_notrace;
-    tos[0].c = frame->jstack_base[0].c;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base);
     ++tos;
     do_next_opcode;
   }
@@ -1009,42 +1004,37 @@ void interpret(w_frame caller, w_method method) {
 
   c_ifeq: c_ifnull: {
     tos -= 1; 
-    do_conditional(tos[0].c == 0);
+    do_conditional(GET_SLOT_CONTENTS(tos) == 0);
   }
   
   c_iload_1: c_fload_1: {
-    tos[0].s = stack_notrace;
-    tos[0].c = frame->jstack_base[1].c;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 1);
     ++tos;
     do_next_opcode;
   }
   
   c_iload_2: c_fload_2: {
-    tos[0].s = stack_notrace;
-    tos[0].c = frame->jstack_base[2].c;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 2);
     ++tos;
     do_next_opcode;
   }
   
   c_iload_3: c_fload_3: {
-    tos[0].s = stack_notrace;
-    tos[0].c = frame->jstack_base[3].c;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + 3);
     ++tos;
     do_next_opcode;
   }
 
   c_iload: c_fload: {
-    tos[0].s = stack_notrace;
-    tos[0].c = frame->jstack_base[byte_operand].c;
+    i = byte_operand;
+    COPY_SLOT_TO_FROM(tos, frame->jstack_base + i);
     ++tos;
     do_next_opcode;
   }
 
   i_getstatic_single: {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
-
-    tos[0].s = stack_notrace;
-    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
+    SET_SCALAR_SLOT(tos, field->declaring_clazz->staticFields[field->size_and_slot]);
     ++tos;
 
     add_to_opcode(3);
@@ -1057,11 +1047,9 @@ void interpret(w_frame caller, w_method method) {
     if (isVolatile) {
       x_mutex_lock(mutex64, x_eternal);
     }
-    tos[0].s = stack_notrace;
-    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
+    SET_SCALAR_SLOT(tos, field->declaring_clazz->staticFields[field->size_and_slot]);
     ++tos;
-    tos[0].s = stack_notrace;
-    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot + 1];
+    SET_SCALAR_SLOT(tos, field->declaring_clazz->staticFields[field->size_and_slot + 1]);
     ++tos;
     if (isVolatile) {
       x_mutex_unlock(mutex64);
@@ -1072,9 +1060,7 @@ void interpret(w_frame caller, w_method method) {
 
   i_getstatic_ref: {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
-
-    tos[0].c = field->declaring_clazz->staticFields[field->size_and_slot];
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, field->declaring_clazz->staticFields[field->size_and_slot]);
     ++tos;
 
     add_to_opcode(3);
@@ -1083,8 +1069,7 @@ void interpret(w_frame caller, w_method method) {
   i_putstatic_single: {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
-
-    *ptr = tos[-1].c;
+    *ptr = GET_SLOT_CONTENTS(tos-1);
     --tos;
     add_to_opcode(3);
   }
@@ -1097,8 +1082,8 @@ void interpret(w_frame caller, w_method method) {
     if (isVolatile) {
       x_mutex_lock(mutex64, x_eternal);
     }
-    *ptr++ = tos[-2].c;
-    *ptr = tos[-1].c;
+    *ptr++ = GET_SLOT_CONTENTS(tos-2);
+    *ptr = GET_SLOT_CONTENTS(tos-1);
     if (isVolatile) {
       x_mutex_unlock(mutex64);
     }
@@ -1110,7 +1095,7 @@ void interpret(w_frame caller, w_method method) {
     field = (w_field)cclazz->values[(w_ushort) short_operand];
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
 
-    *ptr = tos[-1].c;
+    *ptr = GET_SLOT_CONTENTS(tos-1);
     --tos;
     add_to_opcode(3);
   }
@@ -1134,12 +1119,12 @@ void interpret(w_frame caller, w_method method) {
 
   c_ifne: c_ifnonnull: {
     tos -= 1; 
-    do_conditional(tos[0].c != 0);
+    do_conditional(GET_SLOT_CONTENTS(tos) != 0);
   }
 
   c_aaload: {
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1150,26 +1135,24 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-    tos[-1].c = (w_word) instance2Array_instance(a)[i];
+    SET_SLOT_CONTENTS(tos-1, (w_word) instance2Array_instance(a)[i]);
 
     do_next_opcode;
   }
 
   c_istore_3: c_fstore_3: {
     tos -= 1;
-    frame->jstack_base[3].s = stack_notrace;
-    frame->jstack_base[3].c = tos[0].c;
+    COPY_SLOT_TO_FROM(frame->jstack_base+3, tos);
     do_next_opcode;
   }
 
   c_ifge: {
     tos -= 1; 
-    do_conditional((w_int) tos[0].c >= 0);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) >= 0);
   }
 
   c_iconst_0: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 0;
+    SET_SCALAR_SLOT(tos, 0);
     tos += 1;
     do_next_opcode;
   }
@@ -1180,8 +1163,8 @@ void interpret(w_frame caller, w_method method) {
   do_fcmp: {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
+    float_y.w = GET_SLOT_CONTENTS(tos-1);
+    float_x.w = GET_SLOT_CONTENTS(tos-2);
     --tos;
     if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) ) {
       // do nothing, result will be 'i' on entry
@@ -1195,14 +1178,14 @@ void interpret(w_frame caller, w_method method) {
     else {
       i = 1;
     }
-    tos[-1].c = i;
+    SET_SLOT_CONTENTS(tos-1, i);
     do_next_opcode;
   }
 
   c_iinc: {
     i = byte_operand;
     s = (w_int) (w_sbyte) byte_operand;
-    frame->jstack_base[i].c += s;
+    SET_SLOT_CONTENTS(frame->jstack_base + i, GET_SLOT_CONTENTS(frame->jstack_base + i) + s);
     do_next_opcode;
   }
 
@@ -1210,31 +1193,30 @@ void interpret(w_frame caller, w_method method) {
   c_istore: c_fstore: {
     tos -= 1;
     i = byte_operand;
-    frame->jstack_base[i].s = stack_notrace;
-    frame->jstack_base[i].c = tos[0].c;
+    COPY_SLOT_TO_FROM(frame->jstack_base+i, tos);
     do_next_opcode;
   }
 
   c_isub: {
     tos -= 1;
-    tos[-1].c = (w_int) tos[-1].c - (w_int) tos[0].c;
+    SET_SCALAR_SLOT(tos-1, (w_int) GET_SLOT_CONTENTS(tos-1) - (w_int) GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
   c_irem: {
-    i = (w_int) tos[-1].c;
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (i == 0) {
       do_throw_clazz(clazzArithmeticException);
     }
 
-    s = (w_int) tos[-2].c;
+    s = (w_int) GET_SLOT_CONTENTS(tos-2);
 
     if (s != (w_int) 0x80000000 || i != -1) {
-      tos[-2].c = s - (w_int) (s / i) * i;
+      SET_SLOT_CONTENTS(tos-2, s - (w_int) (s / i) * i);
     }
     else {
-      tos[-2].c = 0;
+      SET_SLOT_CONTENTS(tos-2, 0);
     }
   
     tos -= 1;
@@ -1255,7 +1237,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
     if (o) {
       w_boolean compatible;
 
@@ -1271,17 +1253,15 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_bipush: {
-    tos[0].s = stack_notrace;
     w_int shift1 = byte_operand << 24;
     w_int shift2 = shift1 >> 24;
-    tos[0].c = (w_word) shift2;
+    SET_SCALAR_SLOT(tos, (w_word) shift2);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_1: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 1;
+    SET_SCALAR_SLOT(tos, 1);
     tos += 1;
     do_next_opcode;
   }
@@ -1289,12 +1269,11 @@ void interpret(w_frame caller, w_method method) {
   c_areturn: {
     caller->jstack_top -= method->exec.arg_i;
     if (thread->exception) {
-      caller->jstack_top[0].s = stack_notrace;
+      SET_SLOT_SCANNING(caller->jstack_top, stack_notrace);
       caller->jstack_top += 1;
     }
     else {
-      caller->jstack_top[0].c = tos[-1].c;
-      caller->jstack_top[0].s = stack_trace;
+      COPY_SLOT_TO_FROM(caller->jstack_top, tos-1);
       caller->jstack_top += 1;
     }
     frame->jstack_top = tos;
@@ -1312,19 +1291,19 @@ void interpret(w_frame caller, w_method method) {
 
   c_if_icmplt: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c  < (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos)  < (w_int) GET_SLOT_CONTENTS(tos+1));
   }
   
 #ifdef PACK_BYTE_FIELDS
   i_putfield_byte: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-2].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-2);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    *byteFieldPointer(o, i) = (w_sbyte)tos[-1].c;
+    *byteFieldPointer(o, i) = (w_sbyte)GET_SLOT_CONTENTS(tos-1);
     tos -= 2;
     add_to_opcode(3);
   }
@@ -1333,12 +1312,12 @@ void interpret(w_frame caller, w_method method) {
   i_putfield_single: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-2].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-2);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    *wordFieldPointer(o, i) = tos[-1].c;
+    *wordFieldPointer(o, i) = GET_SLOT_CONTENTS(tos-1);
     tos -= 2;
     add_to_opcode(3);
   }
@@ -1350,7 +1329,7 @@ void interpret(w_frame caller, w_method method) {
     isVolatile = isSet(field->flags, ACC_VOLATILE);
 
     i = FIELD_OFFSET(field->size_and_slot);
-    o = (w_instance) tos[-3].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-3);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
@@ -1358,9 +1337,9 @@ void interpret(w_frame caller, w_method method) {
     if (isVolatile) {
       x_mutex_lock(mutex64, x_eternal);
     }
-    wordFieldPointer(o, i)[0] = tos[-2].c;
-    wordFieldPointer(o, i)[1] = tos[-1].c;
-    woempa(1, "putfield %w of %j : put %08x %08x\n", field->name, o, tos[-2].c, tos[-1].c);
+    wordFieldPointer(o, i)[0] = GET_SLOT_CONTENTS(tos-2);
+    wordFieldPointer(o, i)[1] = GET_SLOT_CONTENTS(tos-1);
+    woempa(1, "putfield %w of %j : put %08x %08x\n", field->name, o, GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     if (isVolatile) {
       x_mutex_unlock(mutex64);
     }
@@ -1371,29 +1350,29 @@ void interpret(w_frame caller, w_method method) {
   i_putfield_ref: {
     field = getResolvedFieldConstant(cclazz, short_operand);
     i = field->size_and_slot;
-    o = (w_instance) tos[-2].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-2);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
-    setReferenceField_unsafe(o, (w_instance) tos[-1].c, i);
+    setReferenceField_unsafe(o, (w_instance) GET_SLOT_CONTENTS(tos-1), i);
     tos -= 2;
     add_to_opcode(3);
   }
 
   c_if_icmpeq: c_if_acmpeq: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c == (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) == (w_int) GET_SLOT_CONTENTS(tos+1));
   }
   
   c_iflt: {
     tos -= 1; 
-    do_conditional((w_int) tos[0].c  < 0);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos)  < 0);
   }
 
   c_iadd: {
     tos -= 1;
-    tos[-1].c += (w_int) tos[0].c;
+    SET_SLOT_CONTENTS(tos-1, (w_int) GET_SLOT_CONTENTS(tos-1) + (w_int) GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
@@ -1403,29 +1382,28 @@ void interpret(w_frame caller, w_method method) {
   do_dcmp: {
     union {w_double d; w_word w[2];} double_x;
     union {w_double d; w_word w[2];} double_y;
-    double_x.w[0] = tos[-4].c;
-    double_x.w[1] = tos[-3].c;
-    double_y.w[0] = tos[-2].c;
-    double_y.w[1] = tos[-1].c;
+    double_x.w[0] = GET_SLOT_CONTENTS(tos-4);
+    double_x.w[1] = GET_SLOT_CONTENTS(tos-3);
+    double_y.w[0] = GET_SLOT_CONTENTS(tos-2);
+    double_y.w[1] = GET_SLOT_CONTENTS(tos-1);
     tos -= 3;
     if (wfp_float64_is_NaN(double_x.d) || wfp_float64_is_NaN(double_y.d) ) {
-      tos[-1].c = i;
+      SET_SLOT_CONTENTS(tos-1, i);
     }
     else if (wfp_float64_lt(double_x.d, double_y.d)) {
-      tos[-1].c = -1;
+      SET_SLOT_CONTENTS(tos-1, -1);
     }
     else if (wfp_float64_eq(double_x.d, double_y.d)) {
-      tos[-1].c = 0;
+      SET_SLOT_CONTENTS(tos-1, 0);
     }
     else {
-      tos[-1].c = 1;
+      SET_SLOT_CONTENTS(tos-1, 1);
     }
     do_next_opcode;
   }
 
   c_dup: {
-    tos[0].c = tos[-1].c;
-    tos[0].s = tos[-1].s;
+    COPY_SLOT_TO_FROM(tos, tos-1);
     tos += 1;
     do_next_opcode;
   }
@@ -1437,13 +1415,13 @@ void interpret(w_frame caller, w_method method) {
 
   c_iand: {
     tos -= 1;
-    tos[-1].c &= tos[0].c;
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) & GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
   c_baload: {
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1454,12 +1432,11 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-    tos[-1].s = stack_notrace;
     if (instance2object(a)->clazz->previousDimension == clazz_boolean) {
-      tos[-1].c = (instance2Array_byte(a)[i / 8] >> (i % 8)) & 1;
+      SET_SCALAR_SLOT(tos-1, (instance2Array_byte(a)[i / 8] >> (i % 8)) & 1);
     }
     else {
-      tos[-1].c = instance2Array_byte(a)[i];
+      SET_SCALAR_SLOT(tos-1, instance2Array_byte(a)[i]);
     }
 
     do_next_opcode;
@@ -1467,8 +1444,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_i2f: {
     union {w_float f; w_word w;} float_x;
-    float_x.f = wfp_int32_to_float32((w_int)tos[-1].c);
-    tos[-1].c = float_x.w;
+    float_x.f = wfp_int32_to_float32((w_int)GET_SLOT_CONTENTS(tos-1));
+    SET_SLOT_CONTENTS(tos-1, float_x.w);
     do_next_opcode;
   }
 
@@ -1484,8 +1461,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     o = allocInstance(thread, clazz);
-    tos[0].s = stack_trace;
-    tos[0].c = (w_word)o;
+    SET_REFERENCE_SLOT(tos, o);
     if (thread->exception) {
       do_the_exception;
     }
@@ -1516,24 +1492,23 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
+    float_y.w = GET_SLOT_CONTENTS(tos-1);
+    float_x.w = GET_SLOT_CONTENTS(tos-2);
     float_z.f = wfp_float32_mul(float_x.f, float_y.f);
     tos -= 1;
-    tos[-1].c = float_z.w;
+    SET_SLOT_CONTENTS(tos-1, float_z.w);
     do_next_opcode;
   }
 
   c_sipush: {
-    tos[0].s = stack_notrace;
-    tos[0].c = (w_int) short_operand;
+    SET_SCALAR_SLOT(tos, (w_int) short_operand);
     tos += 1;
     add_to_opcode(3);
   }
 
   c_aastore: {
-    a = (w_instance) tos[-3].c;
-    i = (w_int) tos[-2].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-3);
+    i = (w_int) GET_SLOT_CONTENTS(tos-2);
 
     if (! a) {
       do_throw_clazz(clazzNullPointerException);
@@ -1543,7 +1518,7 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
     if (o) {
       w_boolean compatible;
 
@@ -1566,10 +1541,10 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_l2i: {
-    woempa(1, "l2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2i: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_int int_x = (w_int) slots2w_long(tos-2);
-    tos[-2].c = (w_word) int_x;
-    woempa(1, "l2i : result = %08x\n", tos[-2].c);
+    SET_SLOT_CONTENTS(tos-2, (w_word) int_x);
+    woempa(1, "l2i : result = %08x\n", GET_SLOT_CONTENTS(tos-2));
     goto c_pop;
   }
 
@@ -1580,8 +1555,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_istore_2: c_fstore_2: {
     tos -= 1;
-    frame->jstack_base[2].s = stack_notrace;
-    frame->jstack_base[2].c = tos[0].c;
+    COPY_SLOT_TO_FROM(frame->jstack_base+2, tos);
     do_next_opcode;
   }
 
@@ -1591,22 +1565,21 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_arraylength: {
-    a = (w_instance) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-1);
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
-    tos[-1].s = stack_notrace;
-    tos[-1].c = instance2Array_length(a);
+    SET_SCALAR_SLOT(tos-1, instance2Array_length(a));
     do_next_opcode;
   }
 
   c_i2c: {
-    tos[-1].c &= 0x0000ffff;
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) & 0x0000ffff);
     do_next_opcode;
   }
 
   c_monitorenter: {
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
     woempa(1, "monitorenter(%j)\n", o);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1617,7 +1590,8 @@ void interpret(w_frame caller, w_method method) {
     m = getMonitor(o);
     x_monitor_eternal(m);
     enterUnsafeRegion(thread);
-    pushMonitoredReference(frame, o, m);
+    // [CG 20230530] suppressing structured locking tests for now
+    // pushMonitoredReference(frame, o, m);
     tos -= 1;
     goto check_async_exception;
   }
@@ -1627,26 +1601,28 @@ void interpret(w_frame caller, w_method method) {
     w_slot base = frame->auxstack_base;
     w_boolean found = FALSE;
 
-    o = (w_instance) tos[-1].c;
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
     if (o == NULL) {
       do_throw_clazz(clazzNullPointerException);
     }
 
+    // [CG 20230530] suppressing structured locking tests for now
+    /*
     for (slot = frame->auxstack_top + 1; base - slot >= 0; ++slot) {
       if (isMonitoredSlot(slot)) {
-        woempa(1, "  aux[%d] is a monitored slot : o = %j\n", last_slot(frame->thread) - slot, slot->c);
-        if (slot->c == (w_word) o) {
+        woempa(1, "  aux[%d] is a monitored slot : o = %j\n", last_slot(frame->thread) - slot, GET_SLOT_CONTENTS(slot));
+        if (GET_SLOT_CONTENTS(slot) == (w_word) o) {
           found = TRUE;
           m = (x_monitor) slot->s;
           if (x_monitor_exit(m) == xs_not_owner) {
             do_throw_clazz(clazzIllegalMonitorStateException);
           }
-          slot->s = stack_notrace;
+          SET_SLOT_SCANNING(slot, stack_notrace);
           woempa(1, "Removed monitored object %j from aux[%d] of %t\n", o, last_slot(frame->thread) - slot, frame->thread);
           break;
         }
         else {
-          woempa(9, "Monitored object mismatch - expected %j, found %j\n", o, slot->c);
+          woempa(9, "Monitored object mismatch - expected %j, found %j\n", o, GET_SLOT_CONTENTS(slot));
           do_throw_clazz(clazzInternalError);
         }
       }
@@ -1661,14 +1637,20 @@ void interpret(w_frame caller, w_method method) {
       frame->auxstack_top += 1;
       woempa(1, "Removed zombie from thread %t, now have %d auxs\n", frame->thread, frame->auxstack_top - last_slot(frame->thread));
     }
+    */
+    // [CG 20230530] simplified code without structured locking tests
+    m = getMonitor(o);
+    if (x_monitor_exit(m) == xs_not_owner) {
+      do_throw_clazz(clazzIllegalMonitorStateException);
+    }
       
     tos -= 1;
     do_next_opcode;
   }
 
   c_bastore: {
-    a = (w_instance) tos[-3].c;
-    i = (w_int) tos[-2].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-3);
+    i = (w_int) GET_SLOT_CONTENTS(tos-2);
 
     if (! a) {
       do_throw_clazz(clazzNullPointerException);
@@ -1682,22 +1664,22 @@ void interpret(w_frame caller, w_method method) {
       s = instance2Array_byte(a)[i / 8];
       // TODO: this is not thread-safe!!! FIXME
       s &= 0xff ^ (1 << i % 8);
-      instance2Array_byte(a)[i / 8] = s | ((tos[-1].c & 1) << (i % 8));
+      instance2Array_byte(a)[i / 8] = s | ((GET_SLOT_CONTENTS(tos-1) & 1) << (i % 8));
     }
     else {
-      instance2Array_byte(a)[i] = truncate_i2b(tos[-1].c);
+      instance2Array_byte(a)[i] = truncate_i2b(GET_SLOT_CONTENTS(tos-1));
     }
     tos -= 3;
     do_next_opcode;
   }
 
   c_lcmp: {
-    woempa(1, "lcmp : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "lcmp : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long long_x = slots2w_long(tos-4);
     w_long long_y = slots2w_long(tos-2);
     tos -= 3;
-    tos[-1].c = (long_x > long_y) ? 1 : (long_x == long_y) ? 0 : 0xffffffff;
-    woempa(1, "lcmp : result = %08x\n", tos[-1].c);
+    SET_SLOT_CONTENTS(tos-1, (long_x > long_y) ? 1 : (long_x == long_y) ? 0 : 0xffffffff);
+    woempa(1, "lcmp : result = %08x\n", GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
@@ -1706,64 +1688,55 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_aconst_null: {
-    tos[0].s = stack_trace;
-    tos[0].c = 0;
+    SET_SCALAR_SLOT(tos, 0);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_m1: {
-    tos[0].s = stack_notrace;
-    tos[0].c = -1;
+    SET_SCALAR_SLOT(tos, -1);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_2: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 2;
+    SET_SCALAR_SLOT(tos, 2);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_3: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 3;
+    SET_SCALAR_SLOT(tos, 3);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_4: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 4;
+    SET_SCALAR_SLOT(tos, 4);
     tos += 1;
     do_next_opcode;
   }
 
   c_iconst_5: {
-    tos[0].s = stack_notrace;
-    tos[0].c = 5;
+    SET_SCALAR_SLOT(tos, 5);
     tos += 1;
     do_next_opcode;
   }
 
   c_fconst_0: {
-    tos[0].s = stack_notrace;
-    tos[0].c = F_ZERO;
+    SET_SCALAR_SLOT(tos, F_ZERO);
     tos += 1;
     do_next_opcode;
   }
 
   c_fconst_1: {
-    tos[0].s = stack_notrace;
-    tos[0].c = F_ONE;
+    SET_SCALAR_SLOT(tos, F_ONE);
     tos += 1;
     do_next_opcode;
   }
 
   c_fconst_2: {
-    tos[0].s = stack_notrace;
-    tos[0].c = F_TWO;
+    SET_SCALAR_SLOT(tos, F_TWO);
     tos += 1;
     do_next_opcode;
   }
@@ -1806,23 +1779,20 @@ void interpret(w_frame caller, w_method method) {
       if (thread->exception) {
         do_the_exception;
       }
-      tos[0].c = (w_word)clazz2Class(target_clazz);
-      tos[0].s = stack_trace;
+      SET_REFERENCE_SLOT(tos, clazz2Class(target_clazz));
       *current = in_ldc_w_class;
     }
     else
 #endif
     if (*tag == RESOLVED_STRING) {
-      tos[0].c = cclazz->values[i];
-      tos[0].s = stack_trace;
+      SET_REFERENCE_SLOT(tos, cclazz->values[i]);
       *current = in_ldc_w_string;
     }
     else if (*tag & 0x0f == 8) {
       wabort(ABORT_WONKA, "loading unresolved string constant!");
     }
     else {
-      tos[0].c = cclazz->values[i];
-      tos[0].s = stack_notrace;
+      SET_SCALAR_SLOT(tos, cclazz->values[i]);
       *current = in_ldc_w_scalar;
     }
     current += 2;
@@ -1832,8 +1802,7 @@ void interpret(w_frame caller, w_method method) {
   
   i_ldc_w_scalar: {
     i = (w_ushort) short_operand; 
-    tos[0].c = cclazz->values[i];
-    tos[0].s = stack_notrace;
+    SET_SCALAR_SLOT(tos, cclazz->values[i]);
     current += 2;
     tos += 1;
     do_next_opcode;
@@ -1841,8 +1810,7 @@ void interpret(w_frame caller, w_method method) {
 
   i_ldc_w_string: {
     i = (w_ushort) short_operand; 
-    tos[0].c = cclazz->values[i];
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, cclazz->values[i]);
     current += 2;
     tos += 1;
     do_next_opcode;
@@ -1853,8 +1821,7 @@ void interpret(w_frame caller, w_method method) {
     w_clazz target_clazz;
     i = (w_ushort) short_operand; 
     target_clazz = getResolvedClassConstant(cclazz, i);
-    tos[0].c = (w_word)target_clazz->Class;
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, target_clazz->Class);
     current += 2;
     tos += 1;
     do_next_opcode;
@@ -1875,23 +1842,20 @@ void interpret(w_frame caller, w_method method) {
       if (thread->exception) {
         do_the_exception;
       }
-      tos[0].c = (w_word)clazz2Class(target_clazz);
-      tos[0].s = stack_trace;
+      SET_REFERENCE_SLOT(tos, clazz2Class(target_clazz));
       current[-1] = in_ldc_class;
     }
     else
 #endif
     if (*tag == RESOLVED_STRING) {
-      tos[0].c = cclazz->values[i];
-      tos[0].s = stack_trace;
+      SET_REFERENCE_SLOT(tos, cclazz->values[i]);
       current[-1] = in_ldc_string;
     }
     else if (*tag & 0x0f == 8) {
       wabort(ABORT_WONKA, "loading unresolved string constant!");
     }
     else {
-      tos[0].c = cclazz->values[i];
-      tos[0].s = stack_notrace;
+      SET_SCALAR_SLOT(tos, cclazz->values[i]);
       current[-1] = in_ldc_scalar;
     }
     tos += 1;
@@ -1900,16 +1864,14 @@ void interpret(w_frame caller, w_method method) {
 
   i_ldc_scalar: {
     i = (w_ushort) byte_operand;
-    tos[0].c = cclazz->values[i];
-    tos[0].s = stack_notrace;
+    SET_SCALAR_SLOT(tos, cclazz->values[i]);
     tos += 1;
     do_next_opcode;
   }
 
   i_ldc_string: {
     i = (w_ushort) byte_operand;
-    tos[0].c = cclazz->values[i];
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, cclazz->values[i]);
     tos += 1;
     do_next_opcode;
   }
@@ -1919,8 +1881,7 @@ void interpret(w_frame caller, w_method method) {
     w_clazz target_clazz;
     i = (w_ushort) byte_operand;
     target_clazz = getResolvedClassConstant(cclazz, i);
-    tos[0].c = (w_word)target_clazz->Class;
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, target_clazz->Class);
     tos += 1;
     do_next_opcode;
   }
@@ -1947,8 +1908,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_iaload: c_faload: {
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1959,16 +1920,14 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-    tos[-1].s = stack_notrace;
-    tos[-1].c = instance2Array_float(a)[i];
+    SET_SCALAR_SLOT(tos-1, instance2Array_float(a)[i]);
 
     do_next_opcode;
   }
 
   c_daload: c_laload: {
-    union{w_long l; w_word w[2];} long_x;
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1978,16 +1937,14 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    long_x.l = instance2Array_long(a)[i];
-    tos[-2].s = stack_notrace;
-    tos[-2].c = long_x.w[0];
-    tos[-1].c = long_x.w[1];
+    w_long l = instance2Array_long(a)[i];
+    w_long2slots(l, tos-2);
     do_next_opcode;
   }
 
   c_caload: {
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -1998,14 +1955,13 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-    tos[-1].s = stack_notrace;
-    tos[-1].c = instance2Array_char(a)[i];
+    SET_SCALAR_SLOT(tos-1, instance2Array_char(a)[i]);
     do_next_opcode;
   }
 
   c_saload: {
-    a = (w_instance) tos[-2].c;
-    i = (w_int) tos[-1].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-2);
+    i = (w_int) GET_SLOT_CONTENTS(tos-1);
 
     if (a == NULL) {
       do_throw_clazz(clazzNullPointerException);
@@ -2016,8 +1972,7 @@ void interpret(w_frame caller, w_method method) {
     }
 
     tos -= 1;
-    tos[-1].s = stack_notrace;
-    tos[-1].c = instance2Array_short(a)[i];
+    SET_SCALAR_SLOT(tos-1, instance2Array_short(a)[i]);
     do_next_opcode;
   }
 
@@ -2028,15 +1983,13 @@ void interpret(w_frame caller, w_method method) {
 
   c_istore_0: c_fstore_0: {
     tos -= 1;
-    frame->jstack_base[0].s = stack_notrace;
-    frame->jstack_base[0].c = tos[0].c;
+    COPY_SLOT_TO_FROM(frame->jstack_base, tos);
     do_next_opcode;
   }
   
   c_istore_1: c_fstore_1: {
     tos -= 1;
-    frame->jstack_base[1].s = stack_notrace;
-    frame->jstack_base[1].c = tos[0].c;
+    COPY_SLOT_TO_FROM(frame->jstack_base+1, tos);
     do_next_opcode;
   }
   
@@ -2072,8 +2025,8 @@ void interpret(w_frame caller, w_method method) {
   }
   
   c_iastore: c_fastore: {
-    a = (w_instance) tos[-3].c;
-    i = (w_int) tos[-2].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-3);
+    i = (w_int) GET_SLOT_CONTENTS(tos-2);
 
     if (! a) {
       do_throw_clazz(clazzNullPointerException);
@@ -2083,15 +2036,14 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    instance2Array_float(a)[i] = tos[-1].c;
+    instance2Array_float(a)[i] = GET_SLOT_CONTENTS(tos-1);
     tos -= 3;
     do_next_opcode;
   }
 
   c_lastore: c_dastore: {
-    union {w_dword dw; w_word w[2];} thing;
-    a = (w_instance) tos[-4].c;
-    i = (w_int) tos[-3].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-4);
+    i = (w_int) GET_SLOT_CONTENTS(tos-3);
 
     if (! a) {
       do_throw_clazz(clazzNullPointerException);
@@ -2101,17 +2053,16 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    thing.w[0] = tos[-2].c;
-    thing.w[1] = tos[-1].c;
-    instance2Array_long(a)[i] = thing.dw;
+    w_long l = slots2w_long(tos-2);
+    instance2Array_long(a)[i] = l;
     tos -= 4;
     do_next_opcode;
   }
 
 
   c_castore: c_sastore: {
-    a = (w_instance) tos[-3].c;
-    i = (w_int) tos[-2].c;
+    a = (w_instance) GET_SLOT_CONTENTS(tos-3);
+    i = (w_int) GET_SLOT_CONTENTS(tos-2);
 
     if (! a) {
       do_throw_clazz(clazzNullPointerException);
@@ -2121,7 +2072,7 @@ void interpret(w_frame caller, w_method method) {
       do_throw_clazz(clazzArrayIndexOutOfBoundsException);
     }
 
-    instance2Array_char(a)[i] = (tos[-1].c & 0x0000ffff);
+    instance2Array_char(a)[i] = (GET_SLOT_CONTENTS(tos-1) & 0x0000ffff);
     tos -= 3;
     do_next_opcode;
   }
@@ -2133,86 +2084,64 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_dup_x1: {
-    tos[ 0].c = tos[-1].c;
-    tos[ 0].s = tos[-1].s;
-    tos[-1].c = tos[-2].c;
-    tos[-1].s = tos[-2].s;
-    tos[-2].c = tos[ 0].c;
-    tos[-2].s = tos[ 0].s;
+    COPY_SLOT_TO_FROM(tos, tos-1);
+    COPY_SLOT_TO_FROM(tos-1, tos-2);
+    COPY_SLOT_TO_FROM(tos-2, tos);
     tos += 1;
     do_next_opcode;
   }
 
   c_dup_x2: {
-    tos[ 0].c = tos[-1].c;
-    tos[ 0].s = tos[-1].s;
-    tos[-1].c = tos[-2].c;
-    tos[-1].s = tos[-2].s;
-    tos[-2].c = tos[-3].c;
-    tos[-2].s = tos[-3].s;
-    tos[-3].c = tos[ 0].c;
-    tos[-3].s = tos[ 0].s;
+    COPY_SLOT_TO_FROM(tos, tos-1);
+    COPY_SLOT_TO_FROM(tos-1, tos-2);
+    COPY_SLOT_TO_FROM(tos-2, tos-3);
+    COPY_SLOT_TO_FROM(tos-3, tos);
     tos += 1;
     do_next_opcode;
   }
 
   c_dup2: {
-    tos[1].c = tos[-1].c;
-    tos[1].s = tos[-1].s;
-    tos[0].c = tos[-2].c;
-    tos[0].s = tos[-2].s;
+    COPY_SLOT_TO_FROM(tos+1, tos-1);
+    COPY_SLOT_TO_FROM(tos, tos-2);
     tos += 2;
     do_next_opcode;
   }
 
   c_dup2_x1: {
-    tos[ 1].c = tos[-1].c;
-    tos[ 1].s = tos[-1].s;
-    tos[ 0].c = tos[-2].c;
-    tos[ 0].s = tos[-2].s;
-    tos[-1].c = tos[-3].c;
-    tos[-1].s = tos[-3].s;
-    tos[-2].c = tos[ 1].c;
-    tos[-2].s = tos[ 1].s;
-    tos[-3].c = tos[ 0].c;
-    tos[-3].s = tos[ 0].s;
+    COPY_SLOT_TO_FROM(tos+1, tos-1);
+    COPY_SLOT_TO_FROM(tos, tos-2);
+    COPY_SLOT_TO_FROM(tos-1, tos-3);
+    COPY_SLOT_TO_FROM(tos-2, tos+1);
+    COPY_SLOT_TO_FROM(tos-3, tos);
     tos += 2;
     do_next_opcode;
   }
 
   c_dup2_x2: {
     tos += 2;
-    tos[-1].c = tos[-3].c;
-    tos[-1].s = tos[-3].s;
-    tos[-2].c = tos[-4].c;
-    tos[-2].s = tos[-4].s;
-    tos[-3].c = tos[-5].c;
-    tos[-3].s = tos[-5].s;
-    tos[-4].c = tos[-6].c;
-    tos[-4].s = tos[-6].s;
-    tos[-5].c = tos[-1].c;
-    tos[-5].s = tos[-1].s;
-    tos[-6].c = tos[-2].c;
-    tos[-6].s = tos[-2].s;
+    COPY_SLOT_TO_FROM(tos-1, tos-3);
+    COPY_SLOT_TO_FROM(tos-2, tos-4);
+    COPY_SLOT_TO_FROM(tos-3, tos-5);
+    COPY_SLOT_TO_FROM(tos-4, tos-6);
+    COPY_SLOT_TO_FROM(tos-5, tos-1);
+    COPY_SLOT_TO_FROM(tos-6, tos-2);
     do_next_opcode;
   }
 
   c_swap: {
-    i = tos[-1].c;
-    s = tos[-1].s;
-    tos[-1].c = tos[-2].c;
-    tos[-1].s = tos[-2].s;
-    tos[-2].c = i;
-    tos[-2].s = s;
+    // Using *tos for temporary storage, without incrementing tos afterward
+    COPY_SLOT_TO_FROM(tos, tos-1);
+    COPY_SLOT_TO_FROM(tos-1, tos-2);
+    COPY_SLOT_TO_FROM(tos-2, tos);
     do_next_opcode;
   }
 
   c_ladd: {
-    woempa(1, "ladd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "ladd : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long sum = slots2w_long(tos-4) + slots2w_long(tos-2);
     tos -= 2;
     w_long2slots(sum, tos-2);
-    woempa(1, "ladd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "ladd : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
@@ -2220,29 +2149,29 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
+    float_y.w = GET_SLOT_CONTENTS(tos-1);
+    float_x.w = GET_SLOT_CONTENTS(tos-2);
     float_z.f = wfp_float32_add(float_x.f, float_y.f);
     tos -= 1;
-    tos[-1].c = float_z.w;
+    SET_SLOT_CONTENTS(tos-1, float_z.w);
     do_next_opcode;
   }
 
   c_dadd: {
-    woempa(1, "dadd : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dadd : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double sum = wfp_float64_add(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(sum, tos-2);
-    woempa(1, "dadd : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dadd : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_lsub: {
-    woempa(1, "lsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "lsub : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long diff = slots2w_long(tos-4) - slots2w_long(tos-2);
     tos -= 2;
     w_long2slots(diff, tos-2);
-    woempa(1, "lsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lsub : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
@@ -2250,50 +2179,50 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
+    float_y.w = GET_SLOT_CONTENTS(tos-1);
+    float_x.w = GET_SLOT_CONTENTS(tos-2);
     float_z.f = wfp_float32_sub(float_x.f, float_y.f);
     tos -= 1;
-    tos[-1].c = float_z.w;
+    SET_SLOT_CONTENTS(tos-1, float_z.w);
     do_next_opcode;
   }
 
   c_dsub: {
-    woempa(7, "dsub : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dsub : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double diff = wfp_float64_sub(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(diff, tos-2);
-    woempa(7, "dsub : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dsub : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_imul: {
     tos -= 1;
-    tos[-1].c = (w_int) tos[-1].c * (w_int) tos[0].c;
+    SET_SLOT_CONTENTS(tos-1, (w_int) GET_SLOT_CONTENTS(tos-1) * (w_int) GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
   c_lmul: {
-    woempa(1, "lmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "lmul : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long prod = slots2w_long(tos-4) * slots2w_long(tos-2);
     tos -= 2;
     w_long2slots(prod, tos-2);
-    woempa(1, "lmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lmul : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_dmul: {
-    woempa(1, "dmul : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "dmul : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double product = wfp_float64_mul(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(product, tos-2);
-    woempa(1, "dmul : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dmul : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_idiv: {
-    w_int v1 = (w_int)tos[-2].c;
-    w_int v2 = (w_int)tos[-1].c;
+    w_int v1 = (w_int)GET_SLOT_CONTENTS(tos-2);
+    w_int v2 = (w_int)GET_SLOT_CONTENTS(tos-1);
 
     if (v2 == 0) {
       do_throw_clazz(clazzArithmeticException);
@@ -2302,28 +2231,28 @@ void interpret(w_frame caller, w_method method) {
     tos -= 2;
 
     if ((v1 >= 0) && (v2 > 0)) {
-      tos[0].c = v1 / v2;
+      SET_SLOT_CONTENTS(tos, v1 / v2);
     }
     else if (v1 == (w_int) 0x80000000) {
       if (v2 == -1) {
-        tos[0].c = 0x80000000;
+        SET_SLOT_CONTENTS(tos, 0x80000000);
       }
       else {
-        tos[0].c = v1 / v2;      
+        SET_SLOT_CONTENTS(tos, v1 / v2);      
       }
     }
     else if ((v1 < 0) && (v2 < 0)) {
       v1 = -v1;
       v2 = -v2;
-      tos[0].c = v1 / v2;
+      SET_SLOT_CONTENTS(tos, v1 / v2);
     }
     else if (v1 < 0) {
       v1 = -v1;
-      tos[0].c = -(v1 / v2);
+      SET_SLOT_CONTENTS(tos, -(v1 / v2));
     }
     else {
       v2 = -v2;
-      tos[0].c = -(v1 / v2);
+      SET_SLOT_CONTENTS(tos, -(v1 / v2));
     }
   
     tos += 1;
@@ -2331,7 +2260,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_ldiv: {
-    woempa(1, "ldiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "ldiv : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long dividend = slots2w_long(tos-4);
     w_long divisor = slots2w_long(tos-2);
     w_long quotient;
@@ -2367,7 +2296,7 @@ void interpret(w_frame caller, w_method method) {
 
     tos -= 2;
     w_long2slots(quotient, tos-2);
-    woempa(1, "ldiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "ldiv : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
@@ -2375,25 +2304,25 @@ void interpret(w_frame caller, w_method method) {
     union {w_float f; w_word w;} float_x;
     union {w_float f; w_word w;} float_y;
     union {w_float f; w_word w;} float_z;
-    float_y.w = tos[-1].c;
-    float_x.w = tos[-2].c;
+    float_y.w = GET_SLOT_CONTENTS(tos-1);
+    float_x.w = GET_SLOT_CONTENTS(tos-2);
     float_z.f = wfp_float32_div(float_x.f, float_y.f);
     tos -= 1;
-    tos[-1].c = float_z.w;
+    SET_SLOT_CONTENTS(tos-1, float_z.w);
     do_next_opcode;
   }
 
   c_ddiv: {
-    woempa(1, "ddiv : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "ddiv : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double quotient = wfp_float64_div(slots2w_double(tos-4), slots2w_double(tos-2));
     tos -= 2;
     w_double2slots(quotient, tos-2);
-    woempa(1, "ddiv : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "ddiv : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_lrem: {
-    woempa(1, "lrem : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(1, "lrem : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_long dividend = slots2w_long(tos-4);
     w_long divisor = slots2w_long(tos-2);
     w_long remainder;
@@ -2411,7 +2340,7 @@ void interpret(w_frame caller, w_method method) {
 
     tos -= 2;
     w_long2slots(remainder, tos-2);
-    woempa(1, "lrem : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lrem : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
@@ -2421,275 +2350,278 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_drem: {
-    woempa(7, "drem : x = %08x %08x y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
+    woempa(7, "drem : x = %08x %08x y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double2slots(do_drem(&tos), tos-2);
-    woempa(7, "drem : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(7, "drem : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_ineg: {
-    tos[-1].c = - (w_int) tos[-1].c;
+    SET_SLOT_CONTENTS(tos-1, - (w_int) GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_lneg: {
-    woempa(1, "lneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
-    w_long2slots(-slots2w_long(tos-2), tos-2);
-    woempa(1, "lneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lneg : x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
+    w_long negation = -slots2w_long(tos-2);
+    w_long2slots(negation, tos-2);
+    woempa(1, "lneg : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_fneg: {
     union {w_float f; w_word w;} float_x;
-    float_x.w = tos[-1].c;
+    float_x.w = GET_SLOT_CONTENTS(tos-1);
     float_x.f = wfp_float32_negate(float_x.f);
-    tos[-1].c = float_x.w;
+    SET_SLOT_CONTENTS(tos-1, float_x.w);
     do_next_opcode;
   }
 
   c_dneg: {
-    woempa(1, "dneg : x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dneg : x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double2slots(wfp_float64_negate(slots2w_double(tos-2)), tos-2);
-    woempa(1, "dneg : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "dneg : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_ishl: {
     tos -= 1;
-    tos[-1].c <<= (tos[0].c & 0x0000001f);
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) << (GET_SLOT_CONTENTS(tos) & 0x0000001f));
     do_next_opcode;
   }
 
   c_lshl: {
-    i = tos[-1].c & 0x0000003f;
+    i = GET_SLOT_CONTENTS(tos-1) & 0x0000003f;
     tos -= 1;
-    woempa(1, "lshl : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
-    w_long2slots(slots2w_long(tos-2) << i, tos-2);
-    woempa(1, "lshl : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lshl : x = %08x %08x, i = %d\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1), i);
+    w_long shifted = slots2w_long(tos-2) << i;
+    w_long2slots(shifted, tos-2);
+    woempa(1, "lshl : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_ishr: {
-    s = tos[-1].c & 0x0000001f;
-    i = tos[-2].c;
+    s = GET_SLOT_CONTENTS(tos-1) & 0x0000001f;
+    i = GET_SLOT_CONTENTS(tos-2);
     tos -= 1;
     if (i > 0) {
-      tos[-1].c = i >> s;
+      SET_SLOT_CONTENTS(tos-1, i >> s);
     }
     else {
-      tos[-1].c = -1 - (( -1 - i) >> s);
+      SET_SLOT_CONTENTS(tos-1, -1 - (( -1 - i) >> s));
     }
     do_next_opcode;
   }
 
   c_lshr: {
-    i = tos[-1].c & 0x0000003f;
+    i = GET_SLOT_CONTENTS(tos-1) & 0x0000003f;
     tos -= 1;
-    woempa(1, "lshr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    woempa(1, "lshr : x = %08x %08x, i = %d\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1), i);
     w_long shiftee = slots2w_long(tos-2);
     w_long shifted = shiftee >> i;
     w_long2slots(shifted, tos-2);
-    woempa(1, "lshr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lshr : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_iushr: {
     tos -= 1;
-    tos[-1].c >>= (tos[0].c & 0x0000001f);
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) >> (GET_SLOT_CONTENTS(tos) & 0x0000001f));
     do_next_opcode;
   }
 
   c_lushr: {
-    i = tos[-1].c & 0x0000003f;
+    i = GET_SLOT_CONTENTS(tos-1) & 0x0000003f;
     tos -= 1;
-    woempa(1, "lushr : x = %08x %08x, i = %d\n", tos[-2].c, tos[-1].c, i);
+    woempa(1, "lushr : x = %08x %08x, i = %d\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1), i);
     w_long shiftee = slots2w_long(tos-2);
     w_long shifted = shiftee < 0LL ? ~((~shiftee) >> i) : shiftee >> i;
     w_long2slots(shifted, tos-2);
-    woempa(1, "lushr : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lushr : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
 
   c_land: {
-    woempa(1, "land : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
-    w_long2slots(slots2w_long(tos-4) & slots2w_long(tos-2), tos-4);
+    woempa(1, "land : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
+    w_long conj = slots2w_long(tos-4) & slots2w_long(tos-2);
+    w_long2slots(conj, tos-4);
     tos -= 2;
-    woempa(1, "land : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "land : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_ior: {
     tos -= 1;
-    tos[-1].c |= tos[0].c;
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) | GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
   c_lor: {
-    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
-    w_long2slots(slots2w_long(tos-4) | slots2w_long(tos-2), tos-4);
+    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
+    w_long disj = slots2w_long(tos-4) | slots2w_long(tos-2);
+    w_long2slots(disj, tos-4);
     tos -= 2;
-    woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lor : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_ixor: {
     tos -= 1;
-    tos[-1].c ^= tos[0].c;
+    SET_SLOT_CONTENTS(tos-1, GET_SLOT_CONTENTS(tos-1) ^ GET_SLOT_CONTENTS(tos));
     do_next_opcode;
   }
 
   c_lxor: {
-    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", tos[-4].c, tos[-3].c, tos[-2].c, tos[-1].c);
-    w_long2slots(slots2w_long(tos-4) ^ slots2w_long(tos-2), tos-4);
+    woempa(1, "lor : x = %08x %08x, y = %08x %08x\n", GET_SLOT_CONTENTS(tos-4), GET_SLOT_CONTENTS(tos-3), GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
+    w_long xor = slots2w_long(tos-4) ^ slots2w_long(tos-2);
+    w_long2slots(xor, tos-4);
     tos -= 2;
-    woempa(1, "lor : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "lor : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_i2l: {
-    woempa(1, "i2l: x = %08x\n", tos[-1].c);
-    w_long convert = (w_long)tos[-1].c;
+    woempa(1, "i2l: x = %08x\n", GET_SLOT_CONTENTS(tos-1));
+    w_long convert = (w_long)GET_SLOT_CONTENTS(tos-1);
     convert <<= 32;
     convert >>= 32;
     tos += 1;
     w_long2slots(convert, tos-2);
-    woempa(1, "i2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "i2l : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_i2d: {
     union {w_double d; w_word w[2];} double_x;
-    double_x.d = wfp_int32_to_float64((w_int)tos[-1].c);
-    tos[ 0].s = stack_notrace;
+    double_x.d = wfp_int32_to_float64((w_int)GET_SLOT_CONTENTS(tos-1));
     tos += 1;
-    tos[-2].c = double_x.w[0];
-    tos[-1].c = double_x.w[1];
+    SET_SCALAR_SLOT(tos-2, double_x.w[0]);
+    SET_SCALAR_SLOT(tos-1, double_x.w[1]);
     do_next_opcode;
   }
 
   c_f2l: {
-    woempa(1, "f2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "f2l: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     union{w_float f; w_word w;} float_x;
-    float_x.w = tos[-1].c;
+    float_x.w = GET_SLOT_CONTENTS(tos-1);
     w_long convert = wfp_float32_is_NaN(float_x.f) ? 0LL : wfp_float32_to_int64_round_to_zero(float_x.f);
     tos += 1;
     w_long2slots(convert, tos-2);
-    woempa(1, "l2f : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2f : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_f2d: {
-    woempa(1, "f2d: x = %08x\n", tos[-1].c);
+    woempa(1, "f2d: x = %08x\n", GET_SLOT_CONTENTS(tos-1));
     union {w_float f; w_word w;} float_x;
-    float_x.w = tos[-1].c;
+    float_x.w = GET_SLOT_CONTENTS(tos-1);
     w_double double_x = slots2w_double(tos-2);
     tos += 1;
     w_double2slots(wfp_float32_to_float64(float_x.f), tos-2);
-    woempa(1, "f2d : result = %08x %08x\n", tos[-1].c, tos[-2].c);
+    woempa(1, "f2d : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-1), GET_SLOT_CONTENTS(tos-2));
     do_next_opcode;
   }
 
   c_l2f: {
-    woempa(1, "l2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2f: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     union {w_float f; w_word w;} float_x;
     float_x.f = wfp_int64_to_float32(slots2w_long(tos-2));
-    tos[-2].c = float_x.w;
-    woempa(1, "l2f : result = %08x\n", tos[-2].c);
+    SET_SLOT_CONTENTS(tos-2, float_x.w);
+    woempa(1, "l2f : result = %08x\n", GET_SLOT_CONTENTS(tos-2));
     goto c_pop;
   }
 
   c_l2d: {
-    woempa(1, "l2d: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2d: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double2slots(wfp_int64_to_float64(slots2w_long(tos-2)), tos-2);
-    woempa(1, "l2d : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "l2d : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_f2i: {
     union {w_float f; w_word w;} float_x;
-    float_x.w = tos[-1].c;
-    tos[-1].c = wfp_float32_is_NaN(float_x.f) ? 0 : wfp_float32_to_int32_round_to_zero(float_x.f);
+    float_x.w = GET_SLOT_CONTENTS(tos-1);
+    SET_SLOT_CONTENTS(tos-1, wfp_float32_is_NaN(float_x.f) ? 0 : wfp_float32_to_int32_round_to_zero(float_x.f));
     do_next_opcode;
   }
 
   c_d2i: {
-    woempa(1, "d2i: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2i: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double double_x = slots2w_double(tos-2);
     tos -= 1;
-    tos[-1].c = wfp_float64_is_NaN(double_x) ? 0 : (w_int) wfp_float64_to_int32_round_to_zero(double_x);
-    woempa(1, "d2i : result = %08x\n", tos[-1].c);
+    SET_SLOT_CONTENTS(tos-1, wfp_float64_is_NaN(double_x) ? 0 : (w_int) wfp_float64_to_int32_round_to_zero(double_x));
+    woempa(1, "d2i : result = %08x\n", GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_d2l: {
-    woempa(1, "d2l: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2l: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double d = slots2w_double(tos-2);
     w_long result = wfp_float64_is_NaN(d) ? 0LL : wfp_float64_to_int64_round_to_zero(d);
     w_long2slots(result, tos-2);
-    woempa(1, "d2l : result = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2l : result = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_d2f: {
-    woempa(1, "d2f: x = %08x %08x\n", tos[-2].c, tos[-1].c);
+    woempa(1, "d2f: x = %08x %08x\n", GET_SLOT_CONTENTS(tos-2), GET_SLOT_CONTENTS(tos-1));
     w_double double_x = slots2w_double(tos-2);
     tos -= 1;
-    tos[-1].c = wfp_float64_to_float32(double_x);
-    woempa(1, "d2f : result = %08x\n", tos[-1].c);
+    SET_SLOT_CONTENTS(tos-1, wfp_float64_to_float32(double_x));
+    woempa(1, "d2f : result = %08x\n", GET_SLOT_CONTENTS(tos-1));
     do_next_opcode;
   }
 
   c_i2b: {
-    tos[-1].c = extend_b2i(tos[-1].c & 0x000000ff);
+    SET_SLOT_CONTENTS(tos-1, extend_b2i(GET_SLOT_CONTENTS(tos-1) & 0x000000ff));
     do_next_opcode;
   }
 
 
   c_i2s: {
-    tos[-1].c = extend_s2i(tos[-1].c & 0x0000ffff);
+    SET_SLOT_CONTENTS(tos-1, extend_s2i(GET_SLOT_CONTENTS(tos-1) & 0x0000ffff));
     do_next_opcode;
   }
 
   c_ifgt: {
     tos -= 1; 
-    do_conditional((w_int) tos[0].c  > 0);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos)  > 0);
   }
 
   c_ifle: {
     tos -= 1; 
-    do_conditional((w_int) tos[0].c <= 0);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) <= 0);
   }
 
   c_if_icmpne: c_if_acmpne: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c != (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) != (w_int) GET_SLOT_CONTENTS(tos+1));
   }
   
   c_if_icmpge: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c >= (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) >= (w_int) GET_SLOT_CONTENTS(tos+1));
   }
   
   c_if_icmpgt: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c  > (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos)  > (w_int) GET_SLOT_CONTENTS(tos+1));
   }
   
   c_if_icmple: {
     tos -= 2; 
-    do_conditional((w_int) tos[0].c <= (w_int) tos[1].c);
+    do_conditional((w_int) GET_SLOT_CONTENTS(tos) <= (w_int) GET_SLOT_CONTENTS(tos+1));
   }
 
   c_jsr: {
-    tos[0].s = stack_notrace;
-    tos[0].c = (w_word) (current + 3);
+    SET_SCALAR_SLOT(tos, (w_word) (current + 3));
     tos += 1;
     add_to_opcode(short_operand);
   }
 
   c_ret: {
-    current = (w_code) frame->jstack_base[*(current + 1)].c;
+    current = (w_code) GET_SLOT_CONTENTS(frame->jstack_base + *(current + 1));
     do_this_opcode;
   }
 
@@ -2698,7 +2630,7 @@ void interpret(w_frame caller, w_method method) {
     operand_ptr = (w_code) ((w_word)(current + 4) & ~3);
     table = (w_int*) operand_ptr;
     tos -= 1;
-     i = (w_int) tos[0].c;
+     i = (w_int) GET_SLOT_CONTENTS(tos);
     if (i >= table[1] && i <= table[2]) {
       add_to_opcode(table[i - table[1] + 3]);
     }
@@ -2715,7 +2647,7 @@ void interpret(w_frame caller, w_method method) {
     mopair = (w_Mopair *) (table + 2);
 
     tos -= 1;
-    s = (w_int) tos[0].c;
+    s = (w_int) GET_SLOT_CONTENTS(tos);
 
     for (i = 0; i < table[1]; i++) {
       if (mopair[i].m == s) {
@@ -2730,10 +2662,8 @@ void interpret(w_frame caller, w_method method) {
 
   c_lreturn: c_dreturn: {
     caller->jstack_top -= method->exec.arg_i;
-    caller->jstack_top[0].s = stack_notrace;
-    caller->jstack_top[0].c = tos[-2].c;
-    caller->jstack_top[1].s = stack_notrace;
-    caller->jstack_top[1].c = tos[-1].c;
+    COPY_SLOT_TO_FROM(caller->jstack_top, tos-2);
+    COPY_SLOT_TO_FROM(caller->jstack_top+1, tos-1);
     caller->jstack_top += 2;
     frame->jstack_top = tos;
     goto c_common_return;
@@ -2953,7 +2883,7 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     x = getResolvedMethodConstant(cclazz, (w_ushort) short_operand);
 
-    objectref = (w_instance) tos[- x->exec.arg_i].c;
+    objectref = (w_instance) GET_SLOT_CONTENTS(tos- x->exec.arg_i);
     if (! objectref) {
       do_throw_clazz(clazzNullPointerException);
     }
@@ -3025,7 +2955,7 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     x = getResolvedMethodConstant(cclazz, (w_ushort) short_operand);
 
-    if (! tos[- x->exec.arg_i].c) {
+    if (! GET_SLOT_CONTENTS(tos - x->exec.arg_i)) {
       do_throw_clazz(clazzNullPointerException);
     }
 
@@ -3062,7 +2992,7 @@ void interpret(w_frame caller, w_method method) {
       do_AbstractMethodError;
     }
 
-    if (! tos[- x->exec.arg_i].c) {
+    if (! GET_SLOT_CONTENTS(tos - x->exec.arg_i)) {
       do_throw_clazz(clazzNullPointerException);
     }
 
@@ -3159,7 +3089,7 @@ void interpret(w_frame caller, w_method method) {
     frame->jstack_top = tos;
     interf_method = getResolvedIMethodConstant(cclazz, (w_ushort) short_operand);
 
-    objectref = (w_instance) tos[- interf_method->exec.arg_i].c;
+    objectref = (w_instance) GET_SLOT_CONTENTS(tos- interf_method->exec.arg_i);
 
     if (! objectref) {
       do_throw_clazz(clazzNullPointerException);
@@ -3224,7 +3154,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_newarray: {
     w_size bytes;
-    s = tos[-1].c;
+    s = GET_SLOT_CONTENTS(tos-1);
 
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
@@ -3250,8 +3180,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    tos[-1].c = (w_word) a;
-    tos[-1].s = stack_trace;
+    SET_REFERENCE_SLOT(tos-1, a);
     removeLocalReference(thread, a);
     current += 1;
     goto check_async_exception;
@@ -3259,7 +3188,7 @@ void interpret(w_frame caller, w_method method) {
 
   c_anewarray: {
     w_size bytes;
-    s = tos[-1].c;
+    s = GET_SLOT_CONTENTS(tos-1);
     if (s < 0) {
       do_throw_clazz(clazzNegativeArraySizeException);
     }
@@ -3293,15 +3222,14 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    tos[-1].c = (w_word) a;
-    tos[-1].s = stack_trace;
+    SET_REFERENCE_SLOT(tos-1, a);
     removeLocalReference(thread, a);
     current += 2;
     goto check_async_exception;
   }
 
   c_athrow: {
-    woempa(1, "athrow(%e)\n", tos[-1].c);
+    woempa(1, "athrow(%e)\n", GET_SLOT_CONTENTS(tos-1));
 /*
     { // [CG 20071130] Check we don't have any monitors left - see JVMS 8.13
       w_slot base = frame->auxstack_base;
@@ -3313,10 +3241,10 @@ void interpret(w_frame caller, w_method method) {
       }
     }
 */
-    if (tos[-1].c == 0) {
+    if (GET_SLOT_CONTENTS(tos-1) == 0) {
       do_throw_clazz(clazzNullPointerException);
     }
-    thread->exception = (w_instance) tos[-1].c;
+    thread->exception = (w_instance) GET_SLOT_CONTENTS(tos-1);
     frame->jstack_top = tos;
     do_the_exception;
   }
@@ -3329,11 +3257,10 @@ void interpret(w_frame caller, w_method method) {
     if (thread->exception) {
       do_the_exception;
     }
-    tos[-1].s = stack_notrace;
     // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
     enterSafeRegion(thread);
-    o = (w_instance) tos[-1].c;
-    tos[-1].c = (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0);
+    o = (w_instance) GET_SLOT_CONTENTS(tos-1);
+    SET_SCALAR_SLOT(tos-1, (o == NULL) ? 0 : (isAssignmentCompatible(instance2object(o)->clazz, clazz) ? 1 : 0));
     enterUnsafeRegion(thread);
     add_to_opcode(3);
   }
@@ -3347,14 +3274,12 @@ void interpret(w_frame caller, w_method method) {
     switch (s) {
       case iload:  
       case fload: 
-        tos[0].s = stack_notrace;
-        tos[0].c = frame->jstack_base[i].c;
+        COPY_SLOT_TO_FROM(tos, frame->jstack_base+i);
         tos += 1;
         add_to_opcode(3);
 
       case aload: 
-        tos[0].c = frame->jstack_base[i].c;
-        tos[0].s = stack_trace;
+        COPY_SLOT_TO_FROM(tos, frame->jstack_base+i);
 	++tos;
         add_to_opcode(3);
 
@@ -3366,8 +3291,7 @@ void interpret(w_frame caller, w_method method) {
       case istore: 
       case fstore: 
         tos -= 1;
-        frame->jstack_base[i].s = stack_notrace;
-        frame->jstack_base[i].c = tos[0].c;
+        COPY_SLOT_TO_FROM(frame->jstack_base+i, tos);
         add_to_opcode(3);
 
       case astore:
@@ -3380,12 +3304,12 @@ void interpret(w_frame caller, w_method method) {
         add_to_opcode(3);
 
       case ret: 
-        current = (w_code) frame->jstack_base[i].c; 
+        current = (w_code) GET_SLOT_CONTENTS(frame->jstack_base + i); 
         do_this_opcode;
 
       case iinc:
         current += 2;
-        frame->jstack_base[i].c += (w_int) short_operand;
+        SET_SLOT_CONTENTS(frame->jstack_base + i, GET_SLOT_CONTENTS(frame->jstack_base + i) + (w_int) short_operand);
         current += 3;
         do_this_opcode;
     }
@@ -3408,7 +3332,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
     for (i = 0; i < s; i++) {
-      dimensions[i] = tos[-ndims + i].c;
+      dimensions[i] = GET_SLOT_CONTENTS(tos - ndims + i);
       if (dimensions[i] < 0) {
         releaseMem(dimensions);
         do_throw_clazz(clazzNegativeArraySizeException);
@@ -3455,8 +3379,7 @@ void interpret(w_frame caller, w_method method) {
       do_the_exception;
     }
 
-    tos[0].c = (w_word) a;
-    tos[0].s = stack_trace;
+    SET_REFERENCE_SLOT(tos, a);
     tos += 1;
     removeLocalReference(thread, a);
     current += 3;
@@ -3469,8 +3392,7 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_jsr_w: {
-    tos[0].s = stack_notrace;
-    tos[0].c = (w_word) (current + 5);
+    SET_SCALAR_SLOT(tos, (w_word) (current + 5));
     tos += 1;
     add_to_opcode(int_operand);
   }
@@ -3581,6 +3503,8 @@ void interpret(w_frame caller, w_method method) {
   }
 
   c_common_return:
+    // [CG 20230530] suppressing structured locking tests for now
+    /*
     { // [CG 20071114] Check we don't have any monitors left - see JVMS 8.13
       w_slot base = frame->auxstack_base;
       w_slot slot = frame->auxstack_top;
@@ -3590,6 +3514,7 @@ void interpret(w_frame caller, w_method method) {
         }
       }
     }
+    */
     thread->top = caller;
     checkSingleStep2(frame);
     if (from_unsafe) {
@@ -3607,8 +3532,8 @@ void do_frem(w_Slot **tosptr) {
   union {w_float f; w_word w;} float_y;
   union {w_float f; w_word w;} result;
 
-  float_y.w = (*tosptr)[-1].c;
-  float_x.w = (*tosptr)[-2].c;
+  float_y.w = GET_SLOT_CONTENTS((*tosptr) - 1);
+  float_x.w = GET_SLOT_CONTENTS((*tosptr) - 2);
 
   if (wfp_float32_is_NaN(float_x.f) || wfp_float32_is_NaN(float_y.f) || wfp_float32_eq(float_y.f , F_ZERO) || wfp_float32_is_Infinite(float_x.f)) {
     result.f = F_NAN;
@@ -3638,7 +3563,7 @@ void do_frem(w_Slot **tosptr) {
   }
 
   (*tosptr) -= 1;
-  (*tosptr)[-1].c = result.w;
+  SET_SLOT_CONTENTS((*tosptr) - 1, result.w);
 
 }
 
@@ -3830,11 +3755,10 @@ static w_code searchHandler(w_frame frame) {
           if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
             w_printf("Thrown: Catching %e in %M, thread %t\n", pending, frame->method, thread);
           }
-          woempa(7, ">>>> Found a handler for %j at pc = %d <<<<\n", pending, ex->handler_pc);
-          woempa(7, ">>>> in method %M, catchclazz = %k\n", frame->method, cc);
+          woempa(7, ">>>> Found a handler for %j (as %k) at pc = %d in method %M <<<<\n",
+              pending, cc, ex->handler_pc, frame->method);
           frame->jstack_top = frame->jstack_base + frame->method->exec.local_i;
-          frame->jstack_top[0].c = (w_word) pending;
-          frame->jstack_top[0].s = stack_trace;
+          SET_REFERENCE_SLOT(frame->jstack_top, pending);
           frame->jstack_top += 1;
 #ifdef JDWP
           enterSafeRegion(thread);
@@ -3894,6 +3818,7 @@ w_frame pushFrame(w_thread thread, w_method method) {
   woempa(1,"Calling %M from %t using frame at %p (previous at %p)\n", method, thread, frame, thread->top);
 
   if (frame) {
+    frame->label = "frame";
     frame->jstack_base = thread->top->jstack_top; 
     frame->jstack_top = frame->jstack_base;
     frame->auxstack_base = thread->top->auxstack_top; 
@@ -3935,8 +3860,12 @@ w_frame activateFrame(w_thread thread, w_method method, w_word flags, w_int narg
   if (frame) {
     va_start(args, nargs);
     while (i < nargs) {
-      frame->jstack_top[0].c = va_arg(args, w_word);
-      frame->jstack_top[0].s = va_arg(args, w_word);
+      // [CG 20230531] Doing it this way so that the slot-type arguments will be consumed even if they are not used.
+      w_word contents = va_arg(args, w_word);
+      w_word scanning = va_arg(args, w_word);
+      //
+      SET_SLOT_CONTENTS(frame->jstack_top, contents);
+      SET_SLOT_SCANNING(frame->jstack_top, scanning);
       frame->jstack_top += 1;
       i += 1;
     }

@@ -108,8 +108,16 @@ static char ur_thread_stack[SYSTEM_STACK_SIZE];
 #endif
 x_Thread ur_thread_x_Thread;
 
+// #if defined IMSYS_NATIVE_BC
+extern void setupBcEmulation(void);
+// #endif
+
 void initWonka(void) {
   initDebug();
+
+// #if defined IMSYS_NATIVE_BC
+  setupBcEmulation();
+// #endif
 
 #ifdef NATIVE_FP
   F_NAN = strtof("NAN", NULL);
