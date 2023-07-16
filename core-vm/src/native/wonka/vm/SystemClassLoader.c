@@ -76,8 +76,6 @@ w_instance SystemClassLoader_getBootstrapFile(w_thread thread, w_instance theSys
     return arrayInstance;
   }
 
-  releaseMem(filename_utf8);
-
   return NULL;
 }
 

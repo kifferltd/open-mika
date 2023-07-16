@@ -47,46 +47,43 @@ typedef struct w_BAR {
 ** returns 0 if data exhausted
 */
 static inline w_int bar_read(w_bar bar, w_ubyte *bytes, w_int length, w_int *lread) {
+ 
+  if (length == 0) {
+    if (lread) {
+      *lread = 0;
+    }
+    return 1;
+  }
+
+  if (bar->current > bar->length) {
+    woempa(9, "BAR EXHAUSTED !! \n");
+    if (lread) {
+      *lread = 0;
+    }
+    return 0;
+  }
+
   w_int  status = 1;
-  w_ubyte *source,*dest;
-  w_int duffs;
 
-  dest = bytes;
-  source = bar->buffer + bar->current;
+  w_int copied = length;
+  w_ubyte *dest = bytes;
+  w_ubyte *source = bar->buffer + bar->current;
 
-  // almost always runs byte per byte, so I have a special case for single byte
-
-  if (bar->current < bar->length) {
-    if (length == 1) {
-      *dest = *source;
-      bar->current += 1;
-      *lread += 1;
-    }
-    else {
-      if (length > (bar->length - bar->current)) {
-        length = bar->length - bar->current;
-      }
-
-      duffs = (length + 7) / 8;
-      switch (length % 8) {
-        case 0: do { *dest++ = *source++;
-        case 7:      *dest++ = *source++;
-        case 6:      *dest++ = *source++;
-        case 5:      *dest++ = *source++;
-        case 4:      *dest++ = *source++;
-        case 3:      *dest++ = *source++;
-        case 2:      *dest++ = *source++;
-        case 1:      *dest++ = *source++;
-                } while (--duffs > 0);
-      }
-
-      bar->current = source - bar->buffer;
-      *lread = dest - bytes;
-    }
+  // often runs byte per byte, so we have a special case for single byte
+  if (length == 1) {
+    *dest = *source;
+    bar->current += 1;
+    copied = 1;
   }
   else {
-    woempa(9, "BAR EXHAUSTED !! \n");
-    status = 0;
+    if (copied > (bar->length - bar->current)) {
+      copied = bar->length - bar->current;
+    }
+    w_memcpy(dest, source, copied);
+  }
+  bar->current = source - bar->buffer;
+  if (lread) {
+    *lread = copied;
   }
 
   return status;

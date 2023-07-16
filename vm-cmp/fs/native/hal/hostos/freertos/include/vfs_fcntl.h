@@ -26,8 +26,8 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-#ifndef VFS_FCNTL_H
-#define VFS_FCNTL_H
+#ifndef HAVE_VFS_FCNTL_H
+#define HAVE_VFS_FCNTL_H
 
 #define VFS_MOUNT_RO  	    0x00
 #define VFS_O_ACCMODE       0003  
@@ -90,4 +90,4 @@
 #define VFS_O_NOFOLLOW   O_NOFOLLOW
 */
 
-#endif
+#endif // HAVE_VFS_FCNTL_H

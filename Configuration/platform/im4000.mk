@@ -83,9 +83,9 @@ export FSROOT = /
 # be created at build time, and what name it will be given. 
 #
 
-export USE_ROMFS = true
-# BOOTCLASSDIR  = /lib/mika
-# BOOTCLASSFILE = mcl.jar
+# export USE_ROMFS = true
+BOOTCLASSDIR  = /lib/mika
+BOOTCLASSFILE = mcl.jar
 # BOOTCLASSSUBDIR = mcl
 
 # Set this false to create uncompressed jar files (including mcl.jar)

@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2021 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2018, 2020, 2021, 2023 by Chris Gray, KIFFER Ltd.         #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -35,9 +35,11 @@ CFLAGS += $(FS_TOP)/hal/hostos/$(HOSTOS)/include
 mika : libs
 
 libs :
+	make -C $(FS_TOP)/common/src $(MAKECMDGOALS)
 	make -C $(FS_TOP)/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
 
 clean :
+	make -C $(FS_TOP)/common/src $(MAKECMDGOALS)
 	make -C $(FS_TOP)/hal/hostos/$(HOSTOS)/src $(MAKECMDGOALS)
 
 

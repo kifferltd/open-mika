@@ -28,10 +28,12 @@
 ###########################################################################
 
 CFLAGS += -I $(MIKA_TOP)/core-vm/include
-CFLAGS += -I $(fsinc)
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/fs/native/common/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/fs/native/hal//include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/fs/native/hal/hostos/$(HOSTOS)/include
 CFLAGS += -I $(MIKA_TOP)/vm-ext/jpda/jdwp/include
 
 ifeq ($(HOSTOS), linux)
@@ -108,7 +110,7 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-.PHONY : awt filesystem network fp jpda math security core-vm generated jarfile mcldir romfs libs javaclasses
+.PHONY : awt filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
 
 mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
@@ -175,8 +177,6 @@ mcldir :
 	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
 	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
 	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
-
-romfs :
 
 # FIXME: select right security dir(s)
 javaclasses:
