@@ -32,7 +32,7 @@
 
 #include "new_deflate_internals.h"
 #include "ts-mem.h"
-//#include "vfs.h"
+#include "vfs.h"
 #include "wstrings.h"
 #include "zipfile.h"
 
@@ -152,7 +152,6 @@ static void dumpEntry(z_zipEntry entry) {
 static void dumpDir(z_zipFile dir) {
 
   z_zipEntry entry;
-  w_int i = 1;
   
   woempa(7, "============================================= ZIP DIR 0x%08x ======================\n", (w_word)dir);
   woempa(7, "           Current disk number: %d\n", dir->c_disk);
@@ -171,7 +170,6 @@ static void dumpDir(z_zipFile dir) {
 //    woempa(7, "--------------------------------------------- Entry number %3d ------------------------\n", i);
 //    dumpEntry(entry);
     entry = entry->next;
-    i += 1;
   } while (entry != dir->entries);
   woempa(7, "=======================================================================================\n", (w_word)dir);
 
@@ -207,7 +205,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   w_byte *data = start;
   w_byte o_data[4];
   w_byte *other_data = o_data;
-  w_word signature;
+  //w_word signature;
   w_int nameLength;
   w_int extraLength;
   w_int commentLength;
@@ -219,7 +217,7 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
   }
   woempa(1, "Reading %slocal entry at offset %d\n", local ? "" : "non-", offs);
   rc = vfs_lseek(entry->zipFile->fd, offs, SEEK_SET);
-  if (rc != offs) {
+  if (rc != (w_int) offs) {
     wabort(ABORT_WONKA, "Failed to seek to offset %d (rc is %d), can't handle that", offs, rc);
   }
   rc = vfs_read(entry->zipFile->fd, data, ZIPENTRY_BUFSIZ);
@@ -261,9 +259,9 @@ static void readZipEntry(w_boolean local, z_zipEntry entry, w_size *offsetptr) {
     /* 
     ** Throw the information away, it could be 0 anyway...
     */
-    signature = readWord(data);
-    signature = readWord(data);
-    signature = readWord(data);
+    (void) readWord(data);
+    (void) readWord(data);
+    (void) readWord(data);
   }
   // Bytes consumed so far == 22 + 2 * (!local)
 
@@ -555,7 +553,7 @@ z_zipFile parseZipFile(char *path) {
 //  w_int statrc = vfs_stat(path, &statbuf);
 //  woempa(7, "Zipfile %s size is %d 0%o 0x%x\n", statbuf.st_size, statbuf.st_size, statbuf.st_size);
 
-  zipFile->fd = vfs_open(path, O_RDONLY);
+  zipFile->fd = vfs_open(path, O_RDONLY | VFS_O_MIKA_RAMDISK, 0);
   if (zipFile->fd < 0) {
     woempa(9, "Unable to open zip file `%s'\n", path);
     releaseMem(zipFile);

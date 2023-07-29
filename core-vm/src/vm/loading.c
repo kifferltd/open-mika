@@ -27,6 +27,10 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+#ifdef FREERTOS
+#include <ff_stdio.h>
+#endif
+
 #include <stdbool.h>
 #include <string.h>
 

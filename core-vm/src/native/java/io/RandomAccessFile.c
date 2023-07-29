@@ -26,6 +26,10 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
+#ifdef FREERTOS
+#include <ff_stdio.h>
+#endif
+
 #include "core-classes.h"
 #include "exception.h"
 #include "fields.h"
