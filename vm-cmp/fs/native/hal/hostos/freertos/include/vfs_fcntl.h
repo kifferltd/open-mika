@@ -29,24 +29,30 @@
 #ifndef HAVE_VFS_FCNTL_H
 #define HAVE_VFS_FCNTL_H
 
-#define VFS_MOUNT_RO  	    0x00
-#define VFS_O_ACCMODE       0003  
-#define VFS_O_RDONLY          00 
-#define VFS_O_WRONLY          01  
-#define VFS_O_RDWR            02    
-#define VFS_O_CREAT         0100 
-#define VFS_O_EXCL          0200    
-#define VFS_O_NOCTTY        0400    
-#define VFS_O_TRUNC        01000  
-#define VFS_O_APPEND       02000 
-#define VFS_O_NONBLOCK     04000 
-#define VFS_O_NDELAY       04000
-#define VFS_O_SYNC       04010000  
-#define VFS_FASYNC         020000
-#define VFS_O_DIRECT       040000
+// File Flags
 
-#define VFS_O_ACCMODE2TEXT(f) ((f)&VFS_O_ACCMODE)==VFS_O_RDONLY?"RDONLY":((f)&VFS_O_ACCMODE)==VFS_O_WRONLY?"WRONLY":"RDWR"
+#define VFS_MOUNT_RO  	      0x00
+#define VFS_O_ACCMODE         0003  
+#define VFS_O_RDONLY            00 
+#define VFS_O_WRONLY            01  
+#define VFS_O_RDWR              02    
+#define VFS_O_CREAT           0100 
+#define VFS_O_EXCL            0200    
+#define VFS_O_NOCTTY          0400    
+#define VFS_O_TRUNC          01000  
+#define VFS_O_APPEND         02000 
+#define VFS_O_NONBLOCK       04000 
+#define VFS_O_NDELAY         04000
+#define VFS_O_SYNC          010000  // Linux has 04010000
+#define VFS_FASYNC          020000
+#define VFS_O_DIRECT        040000
 
+// Mika-specific flag which causes whole file to be bufered in RAM
+#define VFS_O_MIKA_RAMDISK 0100000
+
+#define VFS_O_ACCMODE2TEXT(f) (((f)&VFS_O_ACCMODE)==VFS_O_RDONLY?"RDONLY":((f)&VFS_O_ACCMODE)==VFS_O_WRONLY?"WRONLY":"RDWR")
+
+// File Mode bits - probably not useful with FreeRTOS+FAT
 #define VFS_S_IRWXU 00700
 #define VFS_S_IRUSR 00400
 #define VFS_S_IWUSR 00200
@@ -62,7 +68,9 @@
 #define VFS_S_IWOTH 00002
 #define VFS_S_IXOTH 00001
 
-#define VFS_S_IFMT  00170000
+// Additonal bits which are used in stat() but not in open()
+
+#define VFS_S_IFMT   0170000
 #define VFS_S_IFREG  0100000
 #define VFS_S_IFDIR  0040000
 

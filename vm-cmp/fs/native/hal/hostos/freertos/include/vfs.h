@@ -35,11 +35,11 @@ ERROR - non-blocking file access is not supported on FreeRTOS
 
 #define _FILE_OFFSET_BITS 32
 
+#include <ff_stdio.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ff_stdio.h>
 #include <utime.h>
  
 #include "file-descriptor.h"
@@ -47,7 +47,8 @@ ERROR - non-blocking file access is not supported on FreeRTOS
 #include "vfs-common.h"
 #include "vfs_fcntl.h"
 
-#define FLASH_CACHE_SIZE (256*1024)
+// Maybe 256Ki was too big?
+#define FLASH_CACHE_SIZE (16*1024)
 
 extern char *current_working_dir;
 extern char *current_root_dir;
