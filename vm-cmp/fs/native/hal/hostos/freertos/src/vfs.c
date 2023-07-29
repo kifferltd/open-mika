@@ -28,12 +28,14 @@
 **************************************************************************/
 
 #include "vfs.h"
+// TODO fix the clash which prevents us from including ff_stdio.h inside vfs.h
+#include <ff_stdio.h>
 
 static x_Mutex fd_table_Mutex;
 static x_mutex fd_table_mutex = &fd_table_Mutex;
 
-static vfs_FileOperations fat_ops;
-static vfs_FileOperations placeholder_ops;
+//static vfs_FileOperations fat_ops;
+//static vfs_FileOperations placeholder_ops;
 
 #ifdef DEBUG
 #include "fifo.h"
@@ -152,9 +154,7 @@ static void dumpFile(const char *path) {
 #define SET_ERRNO(n) { x_int temp = (n); woempa(7, "Set x_errno to %d\n", temp); x_errno = temp; }
 static FF_Disk_t *vfs_flashDisk;
 
-static vfs_FD_Entry placeholder;
-
-static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
+//static vfs_FD_Entry placeholder;
 
 w_int  fat_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
 size_t fat_get_length(vfs_fd_entry fde);
@@ -164,6 +164,20 @@ w_int  fat_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  fat_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  fat_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
 w_int  fat_close  (vfs_fd_entry fde);
+
+static vfs_FileOperations fat_ops = {
+  .dummy = NULL,
+  .open = fat_open,
+  .get_length = fat_get_length,
+  .is_eof = fat_is_eof,
+  .tell = fat_tell,
+  .seek = fat_seek,
+  .read = fat_read,
+  .write = fat_write,
+  .close = fat_close,
+};
+
+static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
 
 void init_fatfs(void) {
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
@@ -219,8 +233,6 @@ w_int fat_open(vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
   FF_FILE *ff_fileptr = ff_fopen(path, how);
   if (ff_fileptr) {
     fde->data = ff_fileptr;
-    fde->flags = flags;
-    fde->ops = &fat_ops;
     woempa(1, "opened %s in mode %s\n", path, how);
 
     x_errno = 0;
@@ -302,28 +314,12 @@ w_int fat_seek(vfs_fd_entry fde, w_int offset, w_int whence) {
   return -1;
 }
 
-/*
-  Looks like there aint't no stat function that works with ff_fileptr, always need a path
-
-w_int vfs_fstat(w_int fd, vfs_STAT *statBuf) {
-  FF_FILE *ff_fileptr = (FF_FILE *)vfs_fd_table[fd]->data;
-  if (!ff_fileptr) {
-    woempa(7, "failed to stat fd %d, fd is not in use\n", fd);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-    return -1;
-  }
-
-  // set errno on error
-  return ff_fstat(ff_fileptr, statBuf )
-}
-*/
-
 w_int fat_close(vfs_fd_entry fde) {
   FF_FILE *ff_fileptr = fde->data;
 
-  woempa(7, "closing %s\n", fde->path);
+  woempa(5, "closing %s\n", fde->path);
   if (ff_fclose(ff_fileptr) == 0) {
-    woempa(7, "successfully closed %s\n", fde->path);
+    woempa(5, "successfully closed %s\n", fde->path);
     return 0;
   }
 
