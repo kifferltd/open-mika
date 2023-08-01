@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 
+import wonka.vm.Etc;
 import wonka.vm.JDWP;
 import wonka.vm.NativeLibrary;
 import wonka.vm.SystemClassLoader;
@@ -208,6 +209,7 @@ public abstract class ClassLoader {
       systemClassLoader.systemDefined = true;
       loader = systemClassLoader;
     }
+    Etc.woempa(7, "Pertinent class loader is " + loader);
 
     return loader;
   }

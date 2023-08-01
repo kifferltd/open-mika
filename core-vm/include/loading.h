@@ -39,6 +39,7 @@
 typedef struct mika_BootClassPathElement *mika_bcpe_t;
 
 typedef struct mika_BootClassPathElement {
+  w_instance (*makeURL)(void *resource, const char *pathname);
   w_bar (*getter)(void *resource, const char *pathname);
   void *resource;
   mika_bcpe_t *next;

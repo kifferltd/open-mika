@@ -52,34 +52,8 @@ import java.util.jar.JarEntry;
 */
 public final class SystemClassLoader extends ClassLoader {
 
-  /**
-   ** Each element of the bootstrap classpath contains one of the following:
-   ** - the String bootstrap_zipfile_path, representing the bootstrap zipfile;
-   ** - a File, which must be a directory; 
-   ** - a JarFile.
-   */
-  private abstract class BootClassPathEntry {
-    Object where;
-
-    BootClassPathEntry(Object o) {
-      where = o;
-    }
-
-    public abstract byte[] getClassBytes(String filename);
-
-    public abstract URL tryResource(String name) throws MalformedURLException;
-
-    public abstract InputStream tryResourceAsStream(String name) throws MalformedURLException;
-
-    public String toString() {
-      return "BootClassPathEntry[" + where + "]";
-    }
-  }
-
-  private class FirstZipBootClassPathEntry  extends BootClassPathEntry {
-    FirstZipBootClassPathEntry() {
-      super(bootstrap_zipfile_path);
-    }
+  private class BootClassPath {
+    BootClassPath() {}
 
     public byte[] getClassBytes(String filename) {
       Etc.woempa(7, "Calling getBootstrapFile(" + filename + ")");
@@ -87,12 +61,8 @@ public final class SystemClassLoader extends ClassLoader {
     }
 
     public URL tryResource(String name) throws MalformedURLException {
-      Etc.woempa(7, "Let's see if getBootstrapFile(" + name + ") returns anything");
-      if (getBootstrapFile(name) != null) {
-        return new URL("jar:file:" + bootstrap_zipfile_path + "!/"+name);
-      }
-
-      return null;
+      Etc.woempa(7, "Calling getBootstrapURL(" + name + ")");
+      return getBootstrapURL(name);
     }
 
     public InputStream tryResourceAsStream(String name) throws MalformedURLException {
@@ -106,134 +76,14 @@ public final class SystemClassLoader extends ClassLoader {
     }
 
     public String toString() {
-      return "FirstZipBootClassPathEntry[" + where + "]";
-    }
-  }
-
-  private class DirectoryBootClassPathEntry  extends BootClassPathEntry {
-    DirectoryBootClassPathEntry(File f) {
-      super(f);
-    }
-
-    public byte[] getClassBytes(String filename) {
-      Etc.woempa(7, "Try looking for a file called " + filename + " in " + this);
-      File f = new File((File)where, filename);
-      byte[] bytes = null;
-      if (f.isFile()) {
-        try {
-          int length = (int)f.length();
-          InputStream in = new FileInputStream(f);
-          Etc.woempa(7, "System Class Loader: found file " + f + ", length = " + length);
-          bytes = new byte[length];
-          length = in.read(bytes);
-        }
-        catch (FileNotFoundException fnfe) {
-          Etc.woempa(7, "System Class Loader: failed top find file " + f);
-        }
-        catch(IOException ioe) {
-          ioe.printStackTrace();
-        }
-      }
-
-      return bytes;
-    }
-
-    public URL tryResource(String name) throws MalformedURLException {
-      File f = new File((File)where, name);
-      Etc.woempa(7, "Try looking for a file called " + name + " in directory " + where);
-      if (f.isFile()) {
-        return new URL("file:" + f);
-      }
-
-      return null;
-    }
-
-    public InputStream tryResourceAsStream(String name) throws MalformedURLException {
-      Etc.woempa(7, "Try looking for a file called " + name + " in directory " + where);
-      File f = new File((File)where, name);
-      if (f.isFile()) {
-        try {
-          return new FileInputStream(f);
-        }
-        catch (FileNotFoundException fnfe) {}
-      }
-
-      return null;
-    }
-
-    public String toString() {
-      return "DirectoryClassPathEntry[" + where + "]";
-    }
-  }
-
-  private class JarFileBootClassPathEntry  extends BootClassPathEntry {
-    JarFileBootClassPathEntry(JarFile jf) {
-      super(jf);
-    }
-
-    public byte[] getClassBytes(String filename) {
-      JarFile jf = (JarFile)where;
-      byte[] bytes = null;
-      Etc.woempa(7, "Try to find entry " + filename + " in " + jf);
-      try {
-        JarEntry je = jf.getJarEntry(filename);
-        if (je != null){
-          int length = (int)je.getSize();
-          InputStream in = jf.getInputStream(je);
-          Etc.woempa(7, "System Class Loader: found " + filename + " in " + jf + ", length = " + length);
-          bytes = new byte[length];
-          length = in.read(bytes);
-        }
-        else {
-          Etc.woempa(7, "System Class Loader: failed to find file " + filename + " in " + jf);
-        }
-      } catch (IOException e){
-        e.printStackTrace();
-      }
-
-      return bytes;
-    }
-
-    public URL tryResource(String name) throws MalformedURLException {
-      JarFile jf = (JarFile)where;
-      Etc.woempa(7, "Calling getJarEntry(" +name + ") on " + jf);
-      JarEntry je = jf.getJarEntry(name);
-      if (je != null) {
-        return new URL("jar:file:" + jf.getName() + "!/"+name);
-      }
-
-      return null;
-    }
-
-    public InputStream tryResourceAsStream(String name) throws MalformedURLException {
-      JarFile jf = (JarFile)where;
-      Etc.woempa(7, "Calling getJarEntry(" +name + ") on " + jf);
-      try {
-        JarEntry je = jf.getJarEntry(name);
-        if (je != null){
-          return jf.getInputStream(je);
-        }
-      }
-      catch (IOException e){}
-
-      return null;
-    }
-
-    public String toString() {
-      return "JarFileBootClassPathEntry[" + where + "]";
+      return "BootClassPath";
     }
   }
 
   /**
    ** The bootstrap classpath.
    */
-  private static List bootclasspath = new ArrayList();
-
-  /**
-   ** The absolute path to the bootstrap zipfile. For this file we don't 
-   ** create a JarFile object, we use the native bootstrap loader instead.
-   */
-  private static String bootstrap_zipfile_path;
+  private static BootClassPath bootclasspath;
 
   /**
    ** The one and only instance of SystemClassLoader.
@@ -265,8 +115,6 @@ public final class SystemClassLoader extends ClassLoader {
    */
   public synchronized static SystemClassLoader getInstance() {
     if (theSystemClassLoader == null) {
-      // just for fun
-      Iterator iter = bootclasspath.iterator();
 
       PermissionCollection theAllPermission;
 
@@ -300,8 +148,8 @@ public final class SystemClassLoader extends ClassLoader {
   */
   private SystemClassLoader() {
     super((ClassLoader)null);
-    String bcp = getBootclasspath();
-    Etc.woempa(9, "bcp = " + bcp);
+    // String bcp = getBootclasspath();
+    // Etc.woempa(9, "bcp = " + bcp);
 
     try {
       // just to prevent a bootstrapping problem
@@ -312,43 +160,7 @@ public final class SystemClassLoader extends ClassLoader {
       e.printStackTrace();
     }
 
-    while (true) {
-      int    colon = bcp.indexOf(':');
-      File f = new File(colon < 0 ? bcp : bcp.substring(0, colon));
-      if (!f.exists()) {
-        Etc.woempa(7, "SystemClassLoader: " + f + " does not exist, ignoring it");
-        continue;
-      }
-
-      if (f.isDirectory()) {
-        Etc.woempa(7, "SystemClassLoader: adding directory " + f + " to bootclasspath");
-        bootclasspath.add(new DirectoryBootClassPathEntry(f));
-      }
-      else {
-        try {
-          if (bootstrap_zipfile_path == null) {
-            bootstrap_zipfile_path = f.getAbsolutePath();
-            Etc.woempa(7, "SystemClassLoader: adding bootstrap file " + f + " to bootclasspath");
-            bootclasspath.add(new FirstZipBootClassPathEntry());
-          }
-          else {
-            JarFile jf = new JarFile(f, false);
-            Etc.woempa(7, "SystemClassLoader: adding jarfile " + f + " to bootclasspath");
-            bootclasspath.add(new JarFileBootClassPathEntry(jf));
-          }
-        }
-        catch (IOException ioe) {
-          Etc.woempa(9, "SystemClassLoader/<init>: unable to create JarFile" + "(" + f + ") : " + ioe);
-        }
-      }
-
-      if (colon < 0) {
-
-        break;
-
-      }
-      bcp = bcp.substring(colon + 1);
-    }
+     bootclasspath = new BootClassPath();
 
   }
 
@@ -356,6 +168,11 @@ public final class SystemClassLoader extends ClassLoader {
    ** Extract one file from the bootstrap zipfile, as an array of bytes.
    */
   protected native byte[] getBootstrapFile(String filename);
+
+  /**
+   ** Extract one file from the bootstrap zipfile, as an array of bytes.
+   */
+  protected native URL getBootstrapURL(String name);
 
   /**
    **Find the class with a given name, by searching bootclasspath.
@@ -367,29 +184,23 @@ public final class SystemClassLoader extends ClassLoader {
     Etc.woempa(7, "System Class Loader: findClass("+dotname+")");
     byte[] bytes = null;
     InputStream in = null;
-    Iterator iter = bootclasspath.iterator();
+    
+    Etc.woempa(7, "findClass(" + filename + "): checking " + bootclasspath);
+    bytes  = bootclasspath.getClassBytes(filename);
 
-    while (iter.hasNext()) {
-      BootClassPathEntry bootclasspath_entry = (BootClassPathEntry)iter.next();
-      Etc.woempa(7, "findClass(" + filename + "): checking " + bootclasspath_entry);
-      bytes  = bootclasspath_entry.getClassBytes(filename);
+    if (bytes == null) {
+      throw new ClassNotFoundException("SystemClassLoader couldn't find "+dotname);
+    }
 
-      if (bytes != null) {
-        int j = filename.lastIndexOf('/');
-        if(j > 0){
-          String packagename = dotname.substring(0,j);
-          if (getPackage(packagename) == null) {
-            definePackage(packagename,"","","","","","",null);
-          }
-        }
-
-        return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
-
+    int j = filename.lastIndexOf('/');
+    if(j > 0){
+      String packagename = dotname.substring(0,j);
+      if (getPackage(packagename) == null) {
+        definePackage(packagename,"","","","","","",null);
       }
     }
 
-    throw new ClassNotFoundException("SystemClassLoader couldn't find "+dotname);
-
+    return defineClass(dotname, bytes, 0, bytes.length, systemProtectionDomain);
   }
 
   /**
@@ -410,17 +221,10 @@ public final class SystemClassLoader extends ClassLoader {
       }
     }
 
-    Iterator iter = bootclasspath.iterator();
-    while (iter.hasNext()) {
-      try {
-        BootClassPathEntry bootclasspath_entry = (BootClassPathEntry)iter.next();
-        url = bootclasspath_entry.tryResource(name);
-        if (url != null) {
-          break;
-        }
-      } catch (MalformedURLException e) {
-        //e.printStackTrace();
-      }
+    try {
+      url = bootclasspath.tryResource(name);
+    } catch (MalformedURLException e) {
+      //e.printStackTrace();
     }
 
     return url;
@@ -429,15 +233,11 @@ public final class SystemClassLoader extends ClassLoader {
   public InputStream getResourceAsStream(String name){
     Etc.woempa(7, "getResourceAsStream(" + name + ")");
 
-    Iterator iter = bootclasspath.iterator();
-    while (iter.hasNext()) {
-      BootClassPathEntry bootclasspath_entry = (BootClassPathEntry)iter.next();
-      Etc.woempa(7, "Checking " + bootclasspath_entry);
-      try {
-        return bootclasspath_entry.tryResourceAsStream(name);
-      } catch (MalformedURLException e) {
-        //e.printStackTrace();
-      }
+    Etc.woempa(7, "Checking " + bootclasspath);
+    try {
+      return bootclasspath.tryResourceAsStream(name);
+    } catch (MalformedURLException e) {
+      //e.printStackTrace();
     }
 
     return null;
@@ -453,13 +253,9 @@ public final class SystemClassLoader extends ClassLoader {
     URL url = null;
     Vector v = new Vector();
 
-    Iterator iter = bootclasspath.iterator();
-    while (iter.hasNext()) {
-      BootClassPathEntry bootclasspath_entry = (BootClassPathEntry)iter.next();
-      url = bootclasspath_entry.tryResource(name);
-      if (url != null) {
-        v.addElement(url);;
-      }
+     url = bootclasspath.tryResource(name);
+    if (url != null) {
+      v.addElement(url);;
     }
 
     return v.elements();

@@ -91,9 +91,13 @@ w_hashtable2k interface_hashtable;
 */
 w_hashtable dispatchers_hashtable;
 
-w_bar getBootstrapFileFromZip(void *resource, char *pathname);
-w_bar getBootstrapFileFromHashtable(void *resource, char *pathname);
-w_bar getBootstrapFileFromDir(void *resource, char *path);
+static w_bar getBootstrapFileFromZip(void *resource, char *pathname);
+static w_instance getBootstrapURLFromZip(void *resource, char *pathname);
+
+static w_bar getBootstrapFileFromHashtable(void *resource, char *pathname);
+
+static w_bar getBootstrapFileFromDir(void *resource, char *path);
+static w_instance getBootstrapURLFromDir(void *resource, char *path);
 
 
 typedef enum {
@@ -332,7 +336,7 @@ void deregisterUnloadedClazz(w_clazz clazz) {
   woempa(1, "Deregistering %k\n", clazz);
   garbage = (w_clazz)ht_deregister(hashtable, (w_word)clazz);
   if (garbage) {
-    woempa(7,"Releasing %K (%p)\n",garbage,garbage);
+    woempa(1,"Releasing %K (%p)\n",garbage,garbage);
     deregisterString(garbage->dotified);
     releaseMem(garbage);
   }
@@ -685,6 +689,7 @@ static mika_bcpe_t analyseBootClassPath(const char *bcp) {
 #endif
     if (strncmp(bcp + j - 4, ".jar", 4) == 0 || strncmp(bcp + j - 4, ".zip", 4) == 0) {
       woempa(7, "Element ends in `%s', so bcp[%d..%d] is an archive\n", bcp + j - 4, i, j - 1);
+      this_bcpe->makeURL = getBootstrapURLFromZip;
       this_bcpe->getter = getBootstrapFileFromZip;
       char *zippath = expandPath(&bcp[i], j - i);
 #ifdef USE_ZLIB
@@ -695,6 +700,7 @@ static mika_bcpe_t analyseBootClassPath(const char *bcp) {
     }
     else {
       woempa(7, "Element is not `ROMFS' and does not end in `jar' or `zip', so bcp[%d..%d] is a directory\n", i, j - 1);
+      this_bcpe->makeURL = getBootstrapURLFromDir;
       this_bcpe->getter = getBootstrapFileFromDir;
       this_bcpe->resource = expandPath(&bcp[i], j - i);
     }
@@ -1771,7 +1777,7 @@ w_clazz loadNonBootstrapClass(w_instance initiating_loader, w_string name) {
   w_instance saved_exception;
 
   method = virtualLookup(loadClass_method, initiating_loader_clazz);
-  woempa(7, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
+  woempa(1, "Trying to load class %w using %m of %j\n", name, method, initiating_loader);
 
   Name = getStringInstance(name);
   if (!Name) {
@@ -1833,13 +1839,98 @@ static void wabort_unzip_problem(char * zipfilename, char *entryname, const char
 #endif
 
 /**
- ** Look for an entry called 'pathname' in bootzipfile; if found, create and return
- ** a w_BAR struct which can be used to read in the contents of the file. Otehrwise return NULL.
+ ** Look for an entry called 'pathname' in 'resource''; if found, create and return
+ ** an instance of java.net.URL which can be used to retreive the file. Otherwise return NULL.
  ** @param resource void* pointer to the unzFile or w_ZipFile which contains the class data.
- ** @param pathname char* relative path to the file as derived from the class name.
- ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
+ ** @param pathname char* relative path to the file.
+ ** @return         w_instance pointer to the instance of java.net.URL.
  */
-w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
+static w_instance getBootstrapURLFromZip(void *resource, char *pathname) {
+  lowMemoryCheck;
+#ifdef USE_ZLIB
+  int      z_rc;
+  char    *buffer;
+  unz_file_info file_info;
+
+  unzFile bootzipfile = (unzFile)resource;
+
+  z_rc = unzLocateFile(bootzipfile, pathname, 1);
+  if (z_rc != UNZ_OK) {
+    woempa(7, "Could not find zip entry '%s'\n", pathname);
+
+    return NULL;
+  }
+#else
+  z_zipFile bootzipfile = (z_zipFile)resource;
+  z_zipEntry ze;
+
+  ze = findZipEntry(bootzipfile, pathname);
+  if (!ze) {
+    woempa(7, "Could not find zip entry '%s'\n", pathname);
+
+    return NULL;
+
+  }
+#endif
+
+  // TODO - make a vfs_ function for this? (Doesn't exist in POSIX)
+  char *zippath = vfs_fd_table[bootzipfile->fd]->path;
+
+  // Construct the file:jar: URL
+  char *url_buffer = allocMem(strlen(zippath) + strlen(pathname) + 11);
+  char *url_end = url_buffer;
+  strcpy(url_end, "file:jar:");
+  url_end += 9;
+  strcpy(url_end, zippath);
+  url_end += strlen(zippath);
+  *url_end++ = '!';
+  if (*pathname != '/') {
+    *url_end++ = '/';
+  }
+  strcpy(url_end, pathname);
+  url_end += strlen(pathname);
+  w_string urlspec = cstring2String(url_buffer, url_end - url_buffer);
+  releaseMem(url_buffer);
+
+  woempa(7, "Creating a java.net.URL with spec '%w'\n", urlspec);
+  w_instance specInstance = newStringInstance(urlspec);
+
+  w_thread  thread = currentWonkaThread;
+  enterUnsafeRegion(thread);
+  w_instance urlInstance = allocInstance(thread, clazzURL);
+  enterSafeRegion(thread);
+  w_method cons = find_method(clazzURL, "<init>","(Ljava/lang/String;)V");
+  if (!cons) {
+    wabort(ABORT_WONKA, "Well I never - class java.net.URL seems not to hava a constructor with signature (Ljava/lang/String;)V");
+  }
+
+  w_frame new_frame = pushFrame(thread, cons);
+  new_frame->flags |= FRAME_NATIVE;
+
+  SET_REFERENCE_SLOT(new_frame->jstack_top, urlInstance);
+  new_frame->jstack_top += 1;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, specInstance);
+  new_frame->jstack_top += 1;
+  woempa(7, "Calling %M with parameters(%j, %j)\n", cons, urlInstance, specInstance);
+  callMethod(new_frame, cons);
+
+  deactivateFrame(new_frame, NULL);
+
+    // TODO set the handler!
+ 
+
+  return urlInstance;
+}
+
+
+/**
+ ** Look for an entry called 'pathname' in bootzipfile; if found, create and return
+ ** a w_BAR struct which can be used to read in the contents of the file. Otherwise return NULL.
+ ** @param resource void* pointer to the unzFile or w_ZipFile which contains the class data.
+ ** @param pathname char* relative path to the file.
+ ** @return         w_bar pointer to a w_BAR struct holding the file data and length.
+ */
+static w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
   lowMemoryCheck;
 #ifdef USE_ZLIB
   int      z_rc;
@@ -1911,10 +2002,77 @@ w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
  ** @param pathname char* path to the file as derived from the class name.
  ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
-w_bar getBootstrapFileFromHashtable(void *resource, char *pathname) {
+static w_bar getBootstrapFileFromHashtable(void *resource, char *pathname) {
   w_hashtable ht = (w_hashtable) resource;
 
   return ht_read(ht, pathname);
+}
+
+/**
+ ** Look for an entry called 'pathname' in directory 'resource''; if found, create and return
+ ** an instance of java.net.URL which can be used to retreive the file. Otherwise return NULL.
+ ** @param resource void* pointer to a C string containing the path to the directory to be searched.
+ ** @param pathname char* relative path to the file.
+ ** @return         w_instance pointer to the instance of java.net.URL.
+ */
+static w_instance getBootstrapURLFromDir(void *resource, char *pathname) {
+  char *dirpath = (char*)resource;
+
+  // Construct the file:// URL
+  char *url_buffer = allocMem(strlen(dirpath) + strlen(pathname) + 12);
+  char *url_end = url_buffer;
+  strcpy(url_end, "file://");
+  url_end += 7;
+  strcpy(url_end, dirpath);
+  url_end += strlen(dirpath);
+   if (url_end[-1] != '/') {
+    *url_end++ = '/';
+  }
+  strcpy(url_end, pathname);
+  url_end += strlen(pathname);
+  w_string urlspec = cstring2String(url_buffer, url_end - url_buffer);
+  woempa(7, "URL would be %s\n", url_buffer);
+
+  // Check for existence of the path without the file:// prefix (first 7 chars)
+  struct vfs_STAT statbuf;
+  if (vfs_stat(url_buffer + 7, &statbuf) < 0)  {
+    // No such file, so return NULL
+    woempa(7, "Could not stat file %s\n", url_buffer + 7);
+    releaseMem(url_buffer);
+
+    return NULL;
+  }
+
+  // The file exists, so construct and return the java.net.URL instance
+  releaseMem(url_buffer);
+  woempa(7, "Creating a java.net.URL with spec '%w'\n", urlspec);
+  w_instance specInstance = newStringInstance(urlspec);
+
+  w_thread  thread = currentWonkaThread;
+  enterUnsafeRegion(thread);
+  w_instance urlInstance = allocInstance(thread, clazzURL);
+  enterSafeRegion(thread);
+  w_method cons = find_method(clazzURL, "<init>","(Ljava/lang/String;)V");
+  if (!cons) {
+    wabort(ABORT_WONKA, "Well I never - class java.net.URL seems not to hava a constructor with signature (Ljava/lang/String;)V");
+  }
+
+  w_frame new_frame = pushFrame(thread, cons);
+  new_frame->flags |= FRAME_NATIVE;
+
+  SET_REFERENCE_SLOT(new_frame->jstack_top, urlInstance);
+  new_frame->jstack_top += 1;
+  SET_REFERENCE_SLOT(new_frame->jstack_top, specInstance);
+  new_frame->jstack_top += 1;
+  woempa(7, "Calling %M with parameters(%j, %j)\n", cons, urlInstance, specInstance);
+  callMethod(new_frame, cons);
+
+  deactivateFrame(new_frame, NULL);
+
+    // TODO set the handler!
+ 
+
+  return urlInstance;
 }
 
 /**
@@ -1924,12 +2082,12 @@ w_bar getBootstrapFileFromHashtable(void *resource, char *pathname) {
  ** @param pathname char* relative path to the file as derived from the class name.
  ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
-w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
+static w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
   lowMemoryCheck;
- char *bootdirpath = (char *)resource;
-  char *fullpath = allocMem(strlen(bootdirpath) + strlen(pathname) + 2);
-  strcpy(fullpath, bootdirpath);
-  char *bdp_end = fullpath + strlen(bootdirpath);
+  char *dirpath = (char *)resource;
+  char *fullpath = allocMem(strlen(dirpath) + strlen(pathname) + 2);
+  strcpy(fullpath, dirpath);
+  char *bdp_end = fullpath + strlen(dirpath);
   if (bdp_end[-1] != '/') {
     *bdp_end++ = '/';
   }
@@ -1974,21 +2132,41 @@ w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
 /**
  ** Look for an entry called 'pathname' in the boot class path; if found, create and return
 ** a w_BAR struct which can be used to read in the contents of the file. Otherwise return NULL.
- ** @param pathname char* relative path to the file as derived from the class name.
+ ** @param pathname char* relative path to the file.
  ** @return         w_bar pointer to a w_BAR struct holding the class data and length, or NULL.
  */
 w_bar getBootstrapFile(char *pathname) {
-  lowMemoryCheck;
   mika_bcpe_t bcpe = bcpe_list;
   w_bar found = NULL;
   while ( !found && bcpe) {
-    found = bcpe->getter(bcpe->resource, pathname);
+    if (bcpe->getter) {
+      found = bcpe->getter(bcpe->resource, pathname);
+    }
     bcpe = bcpe->next;
   }
-  lowMemoryCheck;
   
   return found;
 }
+
+/**
+ ** Look for an entry called 'pathname' in the boot class path; if found, create and return
+** an instance of java.net.URL which can be used to read in the contents of the file. Otherwise return NULL.
+ ** @param pathname char* relative path to the file.
+ ** @return         w_instance instance of java.net.URL which can be used to retrieve the file, or NULL.
+ */
+w_instance getBootstrapURL(char *pathname) {
+  mika_bcpe_t bcpe = bcpe_list;
+  w_instance found = NULL;
+  while ( !found && bcpe) {
+    if (bcpe->makeURL) {
+      found = bcpe->makeURL(bcpe->resource, pathname);
+    }
+    bcpe = bcpe->next;
+  }
+  
+  return found;
+}
+
 
 /**
  ** Remove a file from bootzipfile. 

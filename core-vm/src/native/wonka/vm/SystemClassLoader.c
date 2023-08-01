@@ -79,3 +79,15 @@ w_instance SystemClassLoader_getBootstrapFile(w_thread thread, w_instance theSys
   return NULL;
 }
 
+w_instance SystemClassLoader_getBootstrapURL(w_thread thread, w_instance theSystemClassLoader, w_instance name) {
+  threadMustBeSafe(thread);
+  w_string name_string = String2string(name);
+  woempa(7, "name_string = %w\n", name_string);
+  w_int len;
+  const char *name_utf8 = w_string2UTF8(name_string, &len);
+  woempa(7, "name_utf8 = %s\n", name_utf8);
+  w_instance url = getBootstrapURL(name_utf8);
+  releaseMem(name_utf8);
+
+  return url;
+}

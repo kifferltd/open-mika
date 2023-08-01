@@ -636,6 +636,7 @@ wonka/vm/SystemClassLoader
   getBootclasspath	()Ljava/lang/String;	SystemClassLoader_getBootclasspath
   setSystemClassLoader	(Lwonka/vm/SystemClassLoader;)V	 SystemClassLoader_setSystemClassLoader
   getBootstrapFile	(Ljava/lang/String;)[B	SystemClassLoader_getBootstrapFile
+  getBootstrapURL	(Ljava/lang/String;)Ljava/net/URL;	SystemClassLoader_getBootstrapURL
 # the resource bundle calls this method this way because it cannot reach this method from java
 #
 java/util/ResourceBundle
