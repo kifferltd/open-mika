@@ -33,11 +33,15 @@
 
 typedef struct vfs_FD_Entry *vfs_fd_entry;
 
+typedef struct vfs_FileOperations *vfs_fileops;
+
 typedef struct vfs_FileOperations {
   /**
    * we'll find a use for this later
    */
   void *dummy;
+
+  w_int (*open) (vfs_fd_entry, const char *, w_word, w_word);
 
   /**
    * Obtain the total length of a file-like object.
@@ -85,6 +89,30 @@ typedef struct vfs_FileOperations {
    */
 } vfs_FileOperations;
 
+typedef struct vfs_MountPoint *vfs_mountpoint;
+
+typedef struct vfs_MountPoint {
+  /**
+   * Path to the MountPoint
+   */
+  const char *prefix;
+
+  /**
+   * Pointer to the vfs_FileOperations table of the mounted filesystem
+   */
+  vfs_fileops fileops;
+
+  /**
+   * Next entry in the linked list of MointPoints
+   */
+  vfs_mountpoint next;
+
+  /**
+   * Next entry in the linked list of MointPoints
+   */
+  vfs_mountpoint previous;
+} vfs_MountPoint;
+
 /**
  * Structure of a File Descriptor table entry.
  */
@@ -117,5 +145,7 @@ typedef struct vfs_FD_Entry {
 
 extern vfs_fd_entry vfs_fd_table[];
 
+void registerMountPoint(vfs_mountpoint mp);
+void deregisterMountPoint(vfs_mountpoint mp);
 
 #endif /* _FILE_DESCRIPTOR_H */

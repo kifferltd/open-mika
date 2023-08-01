@@ -644,8 +644,9 @@ static char *expandPath(char *start, int length) {
   return path;
 }
 
-// TODO
+#ifdef USE_ROMFS
 extern w_hashtable romfs_hashtable;
+#endif
 
 /*
 ** Scan colon-separated list bcp and construct a list of mika_bcpe_t entries.
@@ -670,26 +671,16 @@ static mika_bcpe_t analyseBootClassPath(const char *bcp) {
     mika_bcpe_t this_bcpe = allocClearedMem(sizeof(struct mika_BootClassPathElement));
     for (j = i; j < l && bcp[j] != ':'; ++j);
     woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
+#ifdef USE_ROMFS
     if (j == i + 5 && strncmp(bcp + i, "ROMFS", 5) == 0) {
       woempa(7, "Element is `ROMFS', so bcp[%d..%d] is a ROMFS\n", i, j - 1);
       this_bcpe->getter = getBootstrapFileFromHashtable;
       this_bcpe->resource = romfs_hashtable;
     }
-// WAS :    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'j' && bcp[j - 2] == 'a' && bcp[j - 1] == 'r') {
-    else if (strncmp(bcp + j - 4, ".jar", 4) == 0) {
-      woempa(7, "Element ends in `.jar', so bcp[%d..%d] is an archive\n", i, j - 1);
-      this_bcpe->getter = getBootstrapFileFromZip;
-      char *jarpath = expandPath(&bcp[i], j - i);
-#ifdef USE_ZLIB
-      this_bcpe->resource = unzOpen(jarpath);
-#else
-      this_bcpe->resource = parseZipFile(jarpath);
+    else
 #endif
-    }
-// TODO merge with previous block
-// WAS :    else if (j > i + 4 && bcp[j - 4] == '.' && bcp[j - 3] == 'z' && bcp[j - 2] == 'i' && bcp[j - 1] == 'p') {
-    else if (strncmp(bcp + j - 4, ".zip", 4) == 0) {
-      woempa(7, "Element ends in `.zip', so bcp[%d..%d] is an archive\n", i, j - 1);
+    if (strncmp(bcp + j - 4, ".jar", 4) == 0 || strncmp(bcp + j - 4, ".zip", 4) == 0) {
+      woempa(7, "Element ends in `%s', so bcp[%d..%d] is an archive\n", bcp + j - 4, i, j - 1);
       this_bcpe->getter = getBootstrapFileFromZip;
       char *zippath = expandPath(&bcp[i], j - i);
 #ifdef USE_ZLIB
@@ -1845,6 +1836,7 @@ static void wabort_unzip_problem(char * zipfilename, char *entryname, const char
  ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
 w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
+  lowMemoryCheck;
 #ifdef USE_ZLIB
   int      z_rc;
   char    *buffer;
@@ -1884,6 +1876,7 @@ w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
 
   ze = findZipEntry(bootzipfile, pathname);
   if (!ze) {
+    woempa(7, "Could not find zip entry '%s'\n", pathname);
 
     return NULL;
 
@@ -1891,7 +1884,7 @@ w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
 
   woempa(1, "Zip file entry '%s' at %p\n", pathname, ze);
   if (!uncompressZipEntry(ze)) {
-
+    woempa(7, "Could not decompress zip entry '%s'\n", pathname);
     return NULL;
 
   }
@@ -1902,6 +1895,7 @@ w_bar getBootstrapFileFromZip(void *resource, char *pathname) {
   bar->length = ze->u_size;
   bar->current = 0;
 #endif
+  lowMemoryCheck;
 
   return bar;
 }
@@ -1927,7 +1921,8 @@ w_bar getBootstrapFileFromHashtable(void *resource, char *pathname) {
  ** @return         w_bar pointer to a w_BAR struct holding the class data and length.
  */
 w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
-  char *bootdirpath = (char *)resource;
+  lowMemoryCheck;
+ char *bootdirpath = (char *)resource;
   char *fullpath = allocMem(strlen(bootdirpath) + strlen(pathname) + 2);
   strcpy(fullpath, bootdirpath);
   char *bdp_end = fullpath + strlen(bootdirpath);
@@ -1935,6 +1930,7 @@ w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
     *bdp_end++ = '/';
   }
   strcpy(bdp_end, pathname);
+  woempa(7, "Looking for file %s\n", fullpath);
 
   struct vfs_STAT statbuf;
   w_int fd;
@@ -1942,6 +1938,7 @@ w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
 
   if (vfs_stat(fullpath, &statbuf) < 0
    || (fd = vfs_open(fullpath, VFS_O_RDONLY, 0)) < 0)  {
+    woempa(7, "Could not open file %s\n", fullpath);
     return NULL;
   }
 
@@ -1957,6 +1954,7 @@ w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
      wabort(ABORT_WONKA, "Failed to read %d bytes from %s, rc was %d\n", statbuf.st_size, fullpath, rc);
    }
   }
+  woempa(7, "Read %d bytes from %s into buffer %p\n", statbuf.st_size, fullpath, buffer);
 
   w_bar bar = allocMem(sizeof(w_BAR));
   bar->buffer = buffer;
@@ -1964,6 +1962,7 @@ w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
   bar->current = 0;
   vfs_close(fd);
   releaseMem(fullpath);
+  lowMemoryCheck;
 
   return bar;
 }

@@ -1,6 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2021, 2023 by Chris Gray, KIFFER Ltd.         #
-# All rights reserved.                                                    #
+# Copyright (c) 2023 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -28,18 +27,14 @@
 ###########################################################################
 
 
-# LOCATE_TARGET = $(OROOT)/wonka/bin ;
 FS_TOP = $(MIKA_TOP)/vm-cmp/fs/native
 
 CFLAGS += -I $(MIKA_TOP)/core-vm/include
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
-#CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/freertos/include
-CFLAGS += -I $(FS_TOP)/hal/hostos/freertos/include
-# CFLAGS += $(MIKA_TOP)/vm-cmp/fs/native/hal/hostos/$(HOSTOS)/include
 
-sources = vfs.c
+sources = vfs-common.c
 fsobjdir = $(objdir)/vm-cmp/fs
 objects=$(patsubst %.c, $(fsobjdir)/%.o, $(sources))
 
@@ -56,4 +51,5 @@ $(objects) : $(fsobjdir)/%.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
+
 

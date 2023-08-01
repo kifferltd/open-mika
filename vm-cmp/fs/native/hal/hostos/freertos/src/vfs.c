@@ -28,13 +28,7 @@
 **************************************************************************/
 
 #include "vfs.h"
-// TODO get vendors/imsys/im4000/lib/freertos_plus_fat onto the include path
-//#include "ff_flash.h"
 
-char *current_working_dir;
-char *current_root_dir;
-
-vfs_fd_entry vfs_fd_table[MAX_FILE_DESCRIPTORS];
 static x_Mutex fd_table_Mutex;
 static x_mutex fd_table_mutex = &fd_table_Mutex;
 
@@ -160,6 +154,8 @@ static FF_Disk_t *vfs_flashDisk;
 
 static vfs_FD_Entry placeholder;
 
+static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
+
 w_int  fat_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
 size_t fat_get_length(vfs_fd_entry fde);
 w_boolean fat_is_eof(vfs_fd_entry fde);
@@ -169,50 +165,7 @@ w_int  fat_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  fat_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
 w_int  fat_close  (vfs_fd_entry fde);
 
-w_int  placeholder_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
-size_t placeholder_get_length(vfs_fd_entry fde);
-w_boolean placeholder_is_eof(vfs_fd_entry fde);
-w_int  placeholder_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
-w_int  placeholder_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
-w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
-w_int placeholder_close(vfs_fd_entry fde);
-
-w_int  placeholder_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
-  woempa(9, "placeholder : attempt to open a file on an fd where an open is already taking place\n"); 
-}
-
-size_t placeholder_get_length(vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to get the length of an fd where an open is currently taking place\n"); 
-}
-
-w_boolean placeholder_is_eof(vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to check for EOF on an fd where an open is currently taking place\n"); 
-}
-
-w_int  placeholder_tell  (vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to tell in an fd where an open is currently taking place\n"); 
-}
-
-w_int  placeholder_seek  (vfs_fd_entry fde, w_int offset, w_int whence) {
-  woempa(9, "placeholder : attempt to seek in an fd where an open is currently taking place\n"); 
-}
-
-w_int  placeholder_read  (vfs_fd_entry fde, char *bufer, w_size length, w_int *pos) {
-  woempa(9, "placeholder : attempt to read from an fd where an open is currently taking place\n"); 
-}
-
-w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos) {
-  woempa(9, "placeholder : attempt to write to an fd where an open is currently taking place\n"); 
-}
-
-w_int placeholder_close(vfs_fd_entry fde) {
-  woempa(9, "placeholder : attempt to close an fd where an open is currently taking place\n"); 
-}
-
-void init_vfs(void) {
-  memset(vfs_fd_table, 0, sizeof(vfs_fd_table));
-  woempa(7, "init_vfs  -> Using native filesystem (BLOCKING)\n"); 
-  x_mutex_create(fd_table_mutex);
+void init_fatfs(void) {
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
 #ifdef DEBUG
   dumpDir("/");
@@ -220,7 +173,15 @@ void init_vfs(void) {
   dumpFile("/test/workspace/results");
   woempa(7, "\n===========================\n\n");
 #endif
-  cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
+  vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
+#ifdef DEBUG
+  dumpDir("/");
+  woempa(7, "\nDumping results from previous run\n\n");
+  dumpFile("/test/workspace/results");
+  woempa(7, "\n===========================\n\n");
+#endif
+// TODO - virtualise getcwd
+  char *cwdbuffer = allocClearedMem(MAX_CWD_SIZE);
   current_working_dir = ff_getcwd(cwdbuffer, MAX_CWD_SIZE);
   if (!current_working_dir) {
     woempa(7, "ff_getcwd returned NULL, errno = %d\n", stdioGET_ERRNO());
@@ -231,6 +192,7 @@ void init_vfs(void) {
   woempa(7, "current root : %s\n", current_root_dir);
 
   fat_ops.dummy = NULL;
+  fat_ops.open = fat_open;
   fat_ops.get_length = fat_get_length;
   fat_ops.is_eof = fat_is_eof;
   fat_ops.tell = fat_tell;
@@ -239,133 +201,7 @@ void init_vfs(void) {
   fat_ops.write = fat_write;
   fat_ops.close = fat_close;
 
-  placeholder_ops.dummy = NULL;
-  placeholder_ops.get_length = placeholder_get_length;
-  placeholder_ops.is_eof = placeholder_is_eof;
-  placeholder_ops.tell = placeholder_tell;
-  placeholder_ops.seek = placeholder_seek;
-  placeholder_ops.read = placeholder_read;
-  placeholder_ops.write = placeholder_write;
-  placeholder_ops.close = placeholder_close;
-  placeholder.path = "placeholder";
-  placeholder.ops = &placeholder_ops;
-}
-
-w_int vfs_open(const char *path, w_word flags, w_word mode) {
-  w_int fd;
-
-  woempa(7, "Opening file %s as %s\n", path, VFS_O_ACCMODE2TEXT(flags));
-  x_mutex_lock(fd_table_mutex, x_eternal);
-  // TODO - fix it so that fds 0, 1, 2 appear to be occupied
-  for (fd = 3; fd < MAX_FILE_DESCRIPTORS; fd++) {
-    if (!vfs_fd_table[fd]) {
-      vfs_fd_table[fd] = &placeholder;
-      x_mutex_unlock(fd_table_mutex);
-      vfs_fd_entry fde = allocClearedMem(sizeof(vfs_FD_Entry));
-      w_int rc = fat_open(fde, path, flags, mode);
-      if (0 == rc) {
-// WAS:        fde->path = strdup(path);
-// TODO: check for memory leaks
-        fde->path = allocMem(strlen(path) + 1);
-        strcpy(fde->path, path);
-        vfs_fd_table[fd] = fde;
-
-        x_errno = 0;
-        return fd;
-      }
-      else {
-        vfs_fd_table[fd] = NULL;
-
-        return -1;
-      }
-    }
-  }
-
-  // looks we ran out of file descriptors
-  x_mutex_unlock(fd_table_mutex);
-  SET_ERRNO(pdFREERTOS_ERRNO_ENMFILE);
-  
-  return -1;
-}
-
-w_int vfs_ftell(w_int fd) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->tell(fde);
-}
- 
-w_int vfs_get_length(w_int fd) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->get_length(fde);
-}
- 
-w_int vfs_read(w_int fd, void *buf, w_size length) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    woempa(7, "failed to read from fd %d, is not open\n", fde->path);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->read(fde, buf, length, NULL);
-}
-
-w_int vfs_write(w_int fd, void *buf, w_size length) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->write(fde, buf, length, NULL);
-}
-
-w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  if (!fde) {
-    woempa(7, "failed to seek in fd %d (%s), is not open\n", fd, fde->path);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-  return fde->ops->seek(fde, offset, whence);
-}
-
-w_int vfs_close(w_int fd) {
-  x_mutex_lock(fd_table_mutex, x_eternal);
-  vfs_fd_entry fde = vfs_fd_table[fd];
-  vfs_fd_table[fd] = NULL;
-  x_mutex_unlock(fd_table_mutex);
-
-  if (!fde) {
-    woempa(7, "failed to read from fd %d, is not open\n", fde->path);
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
-
-    return -1;
-  }
-
-
-  w_int rc = fde->ops->close(fde);
-
-  // only now is it safe to free the fde memory
-  releaseMem(fde->path);
-  releaseMem(fde);
-
-  return rc;
+  registerMountPoint(&fat_mountpoint);
 }
 
 w_int fat_open(vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {

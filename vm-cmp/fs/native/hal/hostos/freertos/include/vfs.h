@@ -26,8 +26,8 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-#ifndef VFS_INCLUDE
-#define VFS_INCLUDE
+#ifndef HAVE_VFS_H
+#define HAVE_VFS_H
 
 #ifdef FS_NON_BLOCKING
 ERROR - non-blocking file access is not supported on FreeRTOS
@@ -39,17 +39,15 @@ ERROR - non-blocking file access is not supported on FreeRTOS
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <errno.h>
 #include <ff_stdio.h>
 #include <utime.h>
  
 #include "file-descriptor.h"
-#include "vfs_fcntl.h"
 #include "ts-mem.h"
+#include "vfs-common.h"
+#include "vfs_fcntl.h"
 
-#define MAX_CWD_SIZE 1024
 #define FLASH_CACHE_SIZE (256*1024)
-#define MAX_FILE_DESCRIPTORS 256
 
 extern char *current_working_dir;
 extern char *current_root_dir;
@@ -59,8 +57,6 @@ extern char *fsroot;
 #define vfs_mount(...)            woempa(9, "vfs_mount -> Using native filesystem\n", __VA_ARGS__);
 
 extern char *command_line_path;
-
-static char *cwdbuffer;
 
 void init_vfs(void);
 
@@ -139,4 +135,4 @@ extern w_int vfs_close(w_int fd);
 
 void startVFS(void);
 
-#endif
+#endif // HAVE_VFS_H
