@@ -35,7 +35,6 @@ ERROR - non-blocking file access is not supported on FreeRTOS
 
 #define _FILE_OFFSET_BITS 32
 
-#include <ff_stdio.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdlib.h>
