@@ -37,7 +37,7 @@ static x_mutex fd_table_mutex = &fd_table_Mutex;
 //static vfs_FileOperations fat_ops;
 //static vfs_FileOperations placeholder_ops;
 
-#ifdef DEBUG
+#ifdef DEBUG_FLASH
 #include "fifo.h"
 
 static w_fifo fifi;
@@ -183,14 +183,7 @@ static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
 
 void init_fatfs(void) {
   vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
-#ifdef DEBUG
-  dumpDir("/");
-  woempa(7, "\nDumping results from previous run\n\n");
-  dumpFile("/test/workspace/results");
-  woempa(7, "\n===========================\n\n");
-#endif
-  vfs_flashDisk = FFInitFlash("/", FLASH_CACHE_SIZE);
-#ifdef DEBUG
+#ifdef DEBUG_FLASH
   dumpDir("/");
   woempa(7, "\nDumping results from previous run\n\n");
   dumpFile("/test/workspace/results");

@@ -273,7 +273,7 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
   }
 #endif
 
-  woempa(7, "Thread %t: initializing class %k.\n", thread, clazz);
+  woempa(1, "Initializing class %k.\n", clazz);
   setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
 
   if ((isNotSet(clazz->flags, ACC_INTERFACE)) && (clazz->numSuperClasses > 1)) {
@@ -347,7 +347,7 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
     return CLASS_LOADING_FAILED;
   }
 
-  woempa(7, "Initialisation of %k terminated normally. Shouting it out...\n",  clazz);
+  woempa(1, "Initialisation of %k terminated normally. Shouting it out...\n",  clazz);
 
   return CLASS_LOADING_SUCCEEDED;
 }
