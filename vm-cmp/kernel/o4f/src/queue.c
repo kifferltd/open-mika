@@ -28,6 +28,8 @@
 
 #include "oswald.h"
 
+#define QUEUE_MAGIC 0xb5a69788U
+
 /* 
  * Prototype:
  *    x_status x_queue_create(x_queue queue, void *queue_start,
@@ -44,7 +46,7 @@ x_status x_queue_create(x_queue queue, void *messages, w_size capacity) {
     if (!qh) {
         return xs_insufficient_memory;
     }
-    queue->magic = 0xb5a69788;
+    queue->magic = QUEUE_MAGIC;
     return xs_success;
 }
 
@@ -56,7 +58,7 @@ x_status x_queue_create(x_queue queue, void *messages, w_size capacity) {
  */
  
 x_status x_queue_delete(x_queue queue) {
-    if (queue->magic != 0xb5a69788) {
+    if (queue->magic != QUEUE_MAGIC) {
         return xs_deleted;
     }
     if (queue->handle) {
@@ -78,7 +80,7 @@ x_status x_queue_delete(x_queue queue) {
  * Implementation:
  */
 unsigned int x_queue_receive(x_queue queue, void **msg, x_sleep owait) {
-    if (queue->magic != 0xb5a69788 || !queue->handle) {
+    if (queue->magic != QUEUE_MAGIC || !queue->handle) {
         return xs_deleted;
     }
     setFlag(x_thread_current()->flags, TF_RECEIVING);
@@ -99,7 +101,7 @@ unsigned int x_queue_receive(x_queue queue, void **msg, x_sleep owait) {
  */
                                                                                                  
 unsigned int x_queue_send(x_queue queue, void *msg, x_sleep wait) {
-    if (queue->magic != 0xb5a69788 || !queue->handle) {
+    if (queue->magic != QUEUE_MAGIC || !queue->handle) {
         return xs_deleted;
     }
     setFlag(x_thread_current()->flags, TF_SENDING);
@@ -118,7 +120,7 @@ unsigned int x_queue_send(x_queue queue, void *msg, x_sleep wait) {
  */
  
 unsigned int x_queue_flush(x_queue queue, void(*do_this)(void *data)) {
-    if (queue->magic != 0xb5a69788 || !queue->handle) {
+    if (queue->magic != QUEUE_MAGIC || !queue->handle) {
         return xs_deleted;
     }
     setFlag(x_thread_current()->flags, TF_RECEIVING);

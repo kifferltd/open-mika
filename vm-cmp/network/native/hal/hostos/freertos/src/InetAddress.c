@@ -48,7 +48,6 @@ w_boolean InetAddress_static_lookupName(w_thread thread, w_instance thisClass, w
 */
 
 void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_instance Name) {
-printf("Calling InetAddress_createInetAddress(%p, %p, %p)\n", thread, InetAddress, Name);
 
   long ipnumber;
   w_string name = String2string(Name);
@@ -71,8 +70,8 @@ printf("Calling InetAddress_createInetAddress(%p, %p, %p)\n", thread, InetAddres
     // Assuming that only IPv4 is supported
     w_printf("looking up %s\n", hostname);
     host = w_gethostbyname(hostname);
-    w_printf("result = %08x\n", host);
   }
+  w_printf("result = %08x\n", host);
 
   if (! host) {
     woempa(9, "unable to find DNS name for '%s' due to %s", hostname,strerror(errno));
