@@ -48,6 +48,5 @@ public final class Wonka {
 
   native static void loadExtensions();
 
-  native static boolean useCli();
 }
 

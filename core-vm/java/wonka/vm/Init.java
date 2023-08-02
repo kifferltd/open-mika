@@ -441,8 +441,6 @@ final class Init {
       System.setProperty("java.class.path", jar_class_path);
     }
 
-    System.out.println("Will " + (Wonka.useCli() ? "" : "not ") + "use CLI.");
-
     try {
       debug("Init: invoking "+invoke_method+" ...");
       invoke_method.invoke(null,invoke_args);
