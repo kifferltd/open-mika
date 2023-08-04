@@ -380,7 +380,7 @@ void setStaticReferenceField_unsafe(w_clazz clazz, w_int slot, w_instance child,
 /**
  * Allocate memory for a w_Clazz, without initialising it.
  */
-w_clazz allocClazz(void);
+w_clazz allocClazz(u2 numConstants);
 
 w_clazz createClazz(w_thread, w_string name, w_bar source, w_instance loader, w_boolean trusted);
 void startClasses(void);

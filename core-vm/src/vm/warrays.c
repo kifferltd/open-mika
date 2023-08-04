@@ -58,7 +58,7 @@ static w_clazz  Array_supers[1];
 
 w_clazz createClazzArray(void) {
   w_string string_clone = cstring2String("clone",5);
-  w_clazz clazz = allocClazz();
+  w_clazz clazz = allocClazz(clazzObject->numConstants);
   w_method arrayclone = &Array_clone_method;
   w_size   i;
 
@@ -79,15 +79,19 @@ w_clazz createClazzArray(void) {
   }
   x_monitor_create(clazz->resolution_monitor);
   clazz->dotified = cstring2String("array prototype", 15);
+  /*
   clazz->tags = allocMem(clazzObject->numConstants * sizeof(w_ConstantType));
   if (!clazz->tags) {
     wabort(ABORT_WONKA, "Unable to allocate clazz->tags\n");
   }
+  */
   memcpy((char*)clazz->tags, (char*)clazzObject->tags, clazzObject->numConstants * sizeof(w_ConstantType));
+  /*
   clazz->values = allocMem(clazzObject->numConstants * sizeof(w_word));
   if (!clazz->values) {
     wabort(ABORT_WONKA, "Unable to allocate clazz->values\n");
   }
+  */
   memcpy((char*)clazz->values, (char*)clazzObject->values, clazzObject->numConstants * sizeof(w_word));
   clazz->numDeclaredMethods = 1;
   clazz->own_methods = arrayclone;
