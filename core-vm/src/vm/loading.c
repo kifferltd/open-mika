@@ -521,7 +521,7 @@ w_fifo forEachClassLoader(void* (*fun)(w_instance)) {
 ** needed to store it (0, 1, 8, 16, 32, or 64).
 */
 static w_clazz createPrimitive(w_string name, w_ubyte type, w_int bits) {
-  w_clazz clazz = allocClazz();
+  w_clazz clazz = allocClazz(0);
 
   clazz->dotified = registerString(name);
   clazz->flags = CLAZZ_IS_PRIMITIVE | ACC_FINAL | ACC_PUBLIC | (CLAZZ_STATE_LOADED << CLAZZ_STATE_SHIFT);
@@ -1272,7 +1272,7 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   ** all refcounts that are being used in this clazz.
   */
 
-  array_clazz = allocClazz();
+  array_clazz = allocClazz(0);
   temp_name = clazz2desc(base_clazz);
   if (!temp_name) {
     wabort(ABORT_WONKA, "Unable to allocate temp_name\n");
@@ -1471,7 +1471,7 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
       wabort(ABORT_WONKA, "Eh???\n");
   }
 
-  result = allocClazz();
+  result = allocClazz(0);
   if (result == NULL) {
     woempa(9,"Unable to create w_Clazz for %w\n", desc_string);
     return NULL;

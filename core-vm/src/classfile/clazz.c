@@ -477,6 +477,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
   char *tags;
   w_boolean ok = TRUE;
 
+  bar_seek(bar, 8);
   n = get_u2(bar);
   tags = allocMem(n);
 
@@ -804,7 +805,7 @@ static w_boolean check_classname(w_clazz clazz, w_string name, w_thread thread) 
     return FALSE;
   }
   slashed = (w_string)clazz->values[classNameIndex];
-  woempa(7, "Slashed class name: %w\n", slashed);
+  woempa(1, "Slashed class name: %w\n", slashed);
   dotified = slashes2dots(slashed);
   if (!dotified) {
     wabort(ABORT_WONKA, "Unable to dotify name\n");
@@ -982,32 +983,11 @@ static w_boolean post_checks(w_clazz clazz, w_string name, w_thread thread) {
 #endif
 
 /*
-** Extract information from the classfile header.
-*/
-inline static void get_header(w_clazz clazz, w_bar bar) {
-  bar_skip(bar, 4);
-  clazz->cminor = get_u2(bar);
-  clazz->cmajor = get_u2(bar);
-}
-
-/*
 ** Scan through the constant pool and copy the data to clazz->tags[].
 */
 
 inline static void get_constantpool(w_clazz clazz, w_bar bar) {
   w_size i;
-
-  clazz->numConstants = get_u2(bar);
-
-  woempa(1, "Number of constant pool entries is %d, using %d bytes each\n", clazz->numConstants - 1, sizeof(w_ConstantType));
-  clazz->tags = allocMem((clazz->numConstants + 1) * sizeof(w_ConstantType));
-  if (!clazz->tags) {
-    wabort(ABORT_WONKA, "No space for clazz->tags\n");
-  }
-  clazz->values = allocMem((clazz->numConstants + 1) * sizeof(w_word));
-  if (!clazz->values) {
-    wabort(ABORT_WONKA, "No space for clazz->values\n");
-  }
 
   for (i = 1; i < clazz->numConstants; ) {
     woempa(1, "parsing constant pool entry %d of %d\n", i, clazz->numConstants - 1);
@@ -1807,17 +1787,29 @@ static void get_attributes(w_thread thread, w_clazz clazz, w_bar s) {
 
 }
 
-w_clazz allocClazz(void) {
+w_clazz allocClazz(u2 numConstants) {
 
-  w_clazz clazz = allocClearedMem(sizeof(w_Clazz));
+  woempa(2, "Class has %d constants, reserving %d bytes for the w_clazz structure\n", numConstants, sizeof(w_Clazz));
+  woempa(2, "    plus %d bytes for the resolution_monitor\n", sizeof(x_Monitor));
+  w_int numExtraBytes = sizeof(x_Monitor);
+  woempa(2, "    plus %d bytes for the constant values\n", (numConstants +1) * sizeof(w_word));
+  numExtraBytes += (numConstants +1) * sizeof(w_word);
+  woempa(2, "    plus %d bytes for the constant tags\n", (numConstants +1) * sizeof(w_ConstantType));
+  numExtraBytes += (numConstants +1) * sizeof(w_ConstantType);
+  woempa(2, "    -->  %d extra bytes in total\n", numExtraBytes);
+  w_clazz clazz = allocClearedMem(sizeof(w_Clazz) + numExtraBytes);
   if (!clazz) {
     wabort(ABORT_WONKA, "Unable to allocate clazz\n");
   }
   clazz->label = (char *) "clazz";
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "No space for clazz resolution monitor\n");
-  }
+  // TODO it would make more sense to change resolution_monitor from x_monitor to x_Monitor.
+  clazz->resolution_monitor = (x_monitor)((char*)clazz + sizeof(w_Clazz));
+  clazz->values = (w_word*)((char*)clazz->resolution_monitor + sizeof(x_Monitor));
+  clazz->tags = (w_ConstantType*)((char*)clazz->values + (numConstants +1) * sizeof(w_word));
+  woempa(2, "Resolution monitor of clazz %p is at %p\n", clazz, clazz->resolution_monitor);
+  woempa(2, "Constant pool tags of clazz %p are at %p\n", clazz, clazz->tags);
+  woempa(2, "Constant pool values of clazz %p are at %p\n", clazz, clazz->values);
+
   x_monitor_create(clazz->resolution_monitor);
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 #ifndef THREAD_SAFE_FIFOS
@@ -1835,7 +1827,7 @@ w_clazz allocClazz(void) {
 }
 
 void deallocClazz(w_clazz clazz) {
-  woempa(7,"Releasing w_clazz at %p\n", clazz);
+  woempa(1,"Releasing w_clazz at %p\n", clazz);
   releaseMem(clazz);
 }
 
@@ -1855,17 +1847,6 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
     return NULL;
   }
 
-  clazz = allocClazz();
-  // We initialise instanceSize to an impossible value, so any attempt
-  // to allocate an instance of an unresolved clazz will fail.
-  clazz->instanceSize = 32767;  // mugtrap
-  clazz->numReferenceFields = 0;
-  clazz->loader = loader;
-  clazz->type = VM_TYPE_REF + VM_TYPE_OBJECT;
-  clazz->bits = 32;
-  clazz->resolution_thread = thread;
-  setClazzState(clazz, CLAZZ_STATE_LOADING);
-
 #ifndef NO_FORMAT_CHECKS
   if (!trusted) {
     char *header_error = pre_check_header(clazz, bar);
@@ -1878,7 +1859,29 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
   }
 #endif
 
-  get_header(clazz, bar);
+  bar_skip(bar, 4);
+  u2 cminor = get_u2(bar);
+  u2 cmajor = get_u2(bar);
+  u2 numConstants = get_u2(bar);
+
+  clazz = allocClazz(numConstants);
+
+  
+  clazz->cmajor = cmajor;
+  clazz->cminor = cminor;
+  clazz->numConstants = numConstants;
+
+  // We initialise instanceSize to an impossible value, so any attempt
+  // to allocate an instance of an unresolved clazz will fail.
+  clazz->instanceSize = 32767;  // mugtrap
+  clazz->numReferenceFields = 0;
+  clazz->loader = loader;
+  clazz->type = VM_TYPE_REF + VM_TYPE_OBJECT;
+  clazz->bits = 32;
+  clazz->resolution_thread = thread;
+  setClazzState(clazz, CLAZZ_STATE_LOADING);
+
+//  get_header(clazz, bar);
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted && !pre_check_constant_pool(clazz, bar, thread)) {
@@ -2153,7 +2156,6 @@ w_int destroyClazz(w_clazz clazz) {
     if (clazz->resolution_monitor) {
       woempa(7, "Releasing resolution_monitor\n");
       x_monitor_delete(clazz->resolution_monitor);
-      releaseMem(clazz->resolution_monitor);
     }
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
@@ -2182,12 +2184,6 @@ w_int destroyClazz(w_clazz clazz) {
     woempa(7, "Releasing constant pool\n");
     for (i = 1; i < (w_int)clazz->numConstants; i++) {
       dissolveConstant(clazz, i);
-    }
-    if (clazz->tags){
-      releaseMem((void*)clazz->tags);
-    }
-    if (clazz->values){
-      releaseMem((void*)clazz->values);
     }
   }
 
