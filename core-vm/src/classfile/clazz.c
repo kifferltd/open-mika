@@ -2153,6 +2153,11 @@ w_int destroyClazz(w_clazz clazz) {
       releaseMem(clazz->temp.inner_class_info);
     }
 
+    if (clazz->resolution_monitor) {
+      woempa(7, "Deleting resolutionMonitor\n");
+      x_monitor_delete(&clazz->resolutionMonitor);
+    }
+
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 #ifndef THREAD_SAFE_FIFOS
     if (clazz->cache_mutex) {
