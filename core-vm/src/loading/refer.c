@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2010, 2015 by Chris Gray, /k/ Embedded  *
-* Java Solutions and KIFFER Ltd. All rights reserved.                     *
+* Copyright (c) 2010, 2015, 2023 by Chris Gray, KIFFER Ltd.  All rights   *
+* reserved.                                                               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -316,9 +316,9 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
       int class_index;
 
       original_clazz = original->spec.declaring_clazz;
-      x_monitor_eternal(original_clazz->resolution_monitor);
+      x_monitor_eternal(&original_clazz->resolutionMonitor);
       while (original_clazz->tags[original_index] == RESOLVING_CLASS) {
-        x_monitor_wait(original_clazz->resolution_monitor, 3);
+        x_monitor_wait(&original_clazz->resolutionMonitor, 3);
       }
       switch(original_clazz->tags[original_index]) {
       case CONSTANT_CLASS:
@@ -335,7 +335,7 @@ static w_method cloneMethod(w_clazz clazz, w_method original) {
 	class_index = -1; // to suppress a warning
 	wabort(ABORT_WONKA, "Miljaar! Class constant in illegal state 0x%02x while cloning method exceptions\n", original_clazz->tags[original_index]);
       }
-      x_monitor_exit(original_clazz->resolution_monitor);
+      x_monitor_exit(&original_clazz->resolutionMonitor);
 
       copy->throws[i] = class_index;
     }
@@ -863,7 +863,7 @@ w_int mustBeReferenced(w_clazz clazz) {
 
   }
 
-  x_monitor_eternal(clazz->resolution_monitor);
+  x_monitor_eternal(&clazz->resolutionMonitor);
   //clazz->resolution_thread = thread;
   state = getClazzState(clazz);
 
@@ -881,13 +881,13 @@ w_int mustBeReferenced(w_clazz clazz) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Refering %k failed", clazz);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return CLASS_LOADING_FAILED;
     }
 
-    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(&clazz->resolutionMonitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 
@@ -900,7 +900,7 @@ w_int mustBeReferenced(w_clazz clazz) {
     }
 #endif
     clazz->resolution_thread = thread;
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     n = clazz->numSuperClasses;
     woempa(1, "%K has %d superclasses\n", clazz, n);
@@ -918,7 +918,7 @@ w_int mustBeReferenced(w_clazz clazz) {
       result |= referenceClazz(clazz);
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
+    x_monitor_eternal(&clazz->resolutionMonitor);
 #ifdef RUNTIME_CHECKS
     if (clazz->resolution_thread != thread) {
       wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p\n", clazz, thread);
@@ -944,16 +944,16 @@ w_int mustBeReferenced(w_clazz clazz) {
     else {
       setClazzState(clazz, CLAZZ_STATE_REFERENCED);
     }
-    x_monitor_notify_all(clazz->resolution_monitor);
+    x_monitor_notify_all(&clazz->resolutionMonitor);
   }
   else if (state == CLAZZ_STATE_BROKEN) {
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     return CLASS_LOADING_FAILED;
 
   }
 
-  x_monitor_exit(clazz->resolution_monitor);
+  x_monitor_exit(&clazz->resolutionMonitor);
 
   return result;
 }

@@ -1381,7 +1381,7 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
 #endif
 */
 
-  x_monitor_enter(method->spec.declaring_clazz->resolution_monitor, x_eternal);
+  x_monitor_enter(&method->spec.declaring_clazz->resolutionMonitor, x_eternal);
   // Check that another thread didn't beat us to it
   if (method->exec.dispatcher == initialize_dispatcher) {
     prepareBytecode(method);
@@ -1422,7 +1422,7 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
       woempa(1, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, dispatcher_index);
     }
   }
-  x_monitor_exit(method->spec.declaring_clazz->resolution_monitor);
+  x_monitor_exit(&method->spec.declaring_clazz->resolutionMonitor);
   callMethod(caller, method);
 }
 

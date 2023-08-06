@@ -619,13 +619,13 @@ static char *expandPath(char *start, int length) {
   w_int empty_fsroot = 0;
 
   if (fsroot[0] == '/' && fsroot[1] == 0) {
-    woempa(7, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
+    woempa(1, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
     empty_fsroot = 1;
   }
 
   w_int length_change = 0;
   if ((length > 2 ) && (start[0] == '{') && (start[1] == '}') && start[2] == '/') {
-    woempa(7, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
+    woempa(1, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
     if (empty_fsroot) {
       length_change = -2;
     }
@@ -634,7 +634,7 @@ static char *expandPath(char *start, int length) {
     }
   }
 
-  woempa(7, "Allocating %d bytes for expanded path\n", length + length_change + 1);
+  woempa(1, "Allocating %d bytes for expanded path\n", length + length_change + 1);
   char *path = allocClearedMem(length + length_change + 1);
   if (!empty_fsroot) {
     strncpy(path, fsroot, strlen(fsroot));
@@ -678,7 +678,7 @@ static mika_bcpe_t analyseBootClassPath(const char *bcp) {
   while (i < l) {
     mika_bcpe_t this_bcpe = allocClearedMem(sizeof(struct mika_BootClassPathElement));
     for (j = i; j < l && bcp[j] != ':'; ++j);
-    woempa(7, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
+    woempa(1, "Element begins at bcp[%d], ends at bcp[%d]\n", i, j);
 #ifdef USE_ROMFS
     if (j == i + 5 && strncmp(bcp + i, "ROMFS", 5) == 0) {
       woempa(7, "Element is `ROMFS', so bcp[%d..%d] is a ROMFS\n", i, j - 1);
@@ -1309,6 +1309,8 @@ w_clazz createNextDimension(w_clazz base_clazz, w_instance initiating_loader) {
   array_clazz->loader = base_clazz->loader;
   array_clazz->bits = 32;
   array_clazz->package = base_clazz->package;
+  x_monitor_create(&array_clazz->resolutionMonitor);
+
 
   name_buffer[0] = '[';
   w_string2chars(temp_name, name_buffer + 1);
@@ -1482,11 +1484,11 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   result->loader = NULL;
   result->bits = 32;
   result->Class = NULL;
-//  attachClassInstance(result, thread);
   result->dotified = desc_string;
 
   result->previousDimension = primitive2clazz[pi];
   result->dims = 1;
+  x_monitor_create(&result->resolutionMonitor);
 
   setClazzState(result, CLAZZ_STATE_LINKED);
 
