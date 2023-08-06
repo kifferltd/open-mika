@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2010, 2015 by Chris Gray, KIFFER Ltd. All rights reserved.*
+* Copyright (c) 2010, 2015, 2023 by Chris Gray, KIFFER Ltd. All rights    *
+* reserved.                                                               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -97,7 +98,7 @@ w_int mustBeLinked(w_clazz clazz) {
 
   }
 
-  x_monitor_eternal(clazz->resolution_monitor);
+  x_monitor_eternal(&clazz->resolutionMonitor);
   state = getClazzState(clazz);
 
 #ifdef RUNTIME_CHECKS
@@ -114,12 +115,12 @@ w_int mustBeLinked(w_clazz clazz) {
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       throwException(thread, clazzLinkageError, "Linking of %k failed", clazz);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return CLASS_LOADING_FAILED;
     }
-    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(&clazz->resolutionMonitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 
@@ -132,11 +133,11 @@ w_int mustBeLinked(w_clazz clazz) {
     }
 #endif
     clazz->resolution_thread = thread;
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     result = linkClazz(clazz);
 
-    x_monitor_eternal(clazz->resolution_monitor);
+    x_monitor_eternal(&clazz->resolutionMonitor);
 #ifdef RUNTIME_CHECKS
     if (clazz->resolution_thread != thread) {
       wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p\n", clazz, thread);
@@ -149,8 +150,8 @@ w_int mustBeLinked(w_clazz clazz) {
       }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return result;
 
@@ -167,16 +168,16 @@ w_int mustBeLinked(w_clazz clazz) {
     else {
       setClazzState(clazz, CLAZZ_STATE_LINKED);
     }
-    x_monitor_notify_all(clazz->resolution_monitor);
+    x_monitor_notify_all(&clazz->resolutionMonitor);
   }
   else if (state == CLAZZ_STATE_BROKEN) {
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     return CLASS_LOADING_FAILED;
 
   }
 
-  x_monitor_exit(clazz->resolution_monitor);
+  x_monitor_exit(&clazz->resolutionMonitor);
 
   return result;
 }

@@ -77,7 +77,7 @@ typedef struct w_Clazz {
   w_ushort numFields;
   w_ushort numStaticFields;
   w_field own_fields;
-  x_monitor  resolution_monitor; /* used to protect resolution of constants */
+  x_Monitor  resolutionMonitor; /* used to protect resolution of constants */
   w_thread   resolution_thread;  /* thread which is busy with this class    */
                                  /* (unstable class states only)            */
   w_package  package;    /* runtime package of which this class is a member */

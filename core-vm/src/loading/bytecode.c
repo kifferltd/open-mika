@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2011, 2015 by Chris Gray,   *
-* /k/ Embedded Java Solutions and KIFFER Ltd. All rights reserved.        *
+* Copyright (c) 2008, 2011, 2015, 2023 by Chris Gray, KIFFER Ltd.         *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -375,9 +375,9 @@ w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx, w_thread thread)
   w_int dims = 0;
   threadMustBeSafe(currentWonkaThread);
 
-  x_monitor_eternal(declaring_clazz->resolution_monitor);
+  x_monitor_eternal(&declaring_clazz->resolutionMonitor);
   while (declaring_clazz->tags[idx] == RESOLVING_CLASS) {
-    x_monitor_wait(declaring_clazz->resolution_monitor, 2);
+    x_monitor_wait(&declaring_clazz->resolutionMonitor, 2);
   }
 
   if (declaring_clazz->tags[idx] == CONSTANT_CLASS) {
@@ -393,7 +393,7 @@ w_int getClassConstantDims(w_clazz declaring_clazz, w_size idx, w_thread thread)
   else {
     return -1;
   }
-  x_monitor_exit(declaring_clazz->resolution_monitor);
+  x_monitor_exit(&declaring_clazz->resolutionMonitor);
 
   while (string_char(clazzname, dims) == '[') {
     ++dims;

@@ -317,13 +317,9 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
       length = get_u2(s);
 
       if (length > 0) {
-        void *buffer = allocMem(length);
-        if (!buffer) {
-          wabort(ABORT_WONKA, "No space for buffer\n");
-        }
-        barread(s, (w_ubyte*)buffer, length);
-        clazz->values[*idx] = (w_ConstantValue)utf2String((char*)buffer, length);
-        releaseMem(buffer);
+        w_int pos = bar_pos(s);
+        clazz->values[*idx] = (w_ConstantValue)utf2String(bar_peek(s), length);
+        bar_seek(s, pos + length);
       }
       else {
         clazz->values[*idx] = (w_ConstantValue)utf2String("", 0);
@@ -427,6 +423,11 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
 static char* pre_check_header(w_clazz clazz, w_bar bar) {
   u4 cafebabe;
 
+  w_int saved_pos = bar_pos(bar);
+  if (saved_pos != 0) {
+    wabort(ABORT_WONKA, "Idiot! must be at position 0 whan calling pre_check_header()!");
+  }
+
   if (bar_avail(bar) < 24) {
     char *header_error = allocMem(80);
     x_snprintf(header_error, 80, "Class file too short, only %d bytes < 24\n" , bar_avail(bar));
@@ -455,7 +456,7 @@ static char* pre_check_header(w_clazz clazz, w_bar bar) {
 
     return header_error;
   }
-  bar_seek(bar, 0);
+  bar_seek(bar, saved_pos);
 
   return NULL;
 }
@@ -477,8 +478,12 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
   char *tags;
   w_boolean ok = TRUE;
 
-  bar_seek(bar, 8);
-  n = get_u2(bar);
+  w_int saved_pos = bar_pos(bar);
+  if (saved_pos != 10) {
+    wabort(ABORT_WONKA, "Idiot! must be at position 0 whan calling pre_check_constant_pool()!");
+  }
+
+  n = clazz->numConstants;
   tags = allocMem(n);
 
   // We do this in two passes, because in theory forward references are possible.
@@ -542,7 +547,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
     }
   }
 
-  bar_seek(bar, 10);
+  bar_seek(bar, saved_pos);
 
   for (i = 1; ok && i < n; ) {
     tag = get_u1(bar);
@@ -611,7 +616,7 @@ static w_boolean pre_check_constant_pool(w_clazz clazz, w_bar bar, w_thread thre
 
   releaseMem(tags);
 
-  bar_seek(bar, 8);
+  bar_seek(bar, saved_pos);
 
   return ok;
 }
@@ -1790,10 +1795,8 @@ static void get_attributes(w_thread thread, w_clazz clazz, w_bar s) {
 w_clazz allocClazz(u2 numConstants) {
 
   woempa(2, "Class has %d constants, reserving %d bytes for the w_clazz structure\n", numConstants, sizeof(w_Clazz));
-  woempa(2, "    plus %d bytes for the resolution_monitor\n", sizeof(x_Monitor));
-  w_int numExtraBytes = sizeof(x_Monitor);
   woempa(2, "    plus %d bytes for the constant values\n", (numConstants +1) * sizeof(w_word));
-  numExtraBytes += (numConstants +1) * sizeof(w_word);
+  w_int numExtraBytes = (numConstants +1) * sizeof(w_word);
   woempa(2, "    plus %d bytes for the constant tags\n", (numConstants +1) * sizeof(w_ConstantType));
   numExtraBytes += (numConstants +1) * sizeof(w_ConstantType);
   woempa(2, "    -->  %d extra bytes in total\n", numExtraBytes);
@@ -1802,15 +1805,12 @@ w_clazz allocClazz(u2 numConstants) {
     wabort(ABORT_WONKA, "Unable to allocate clazz\n");
   }
   clazz->label = (char *) "clazz";
-  // TODO it would make more sense to change resolution_monitor from x_monitor to x_Monitor.
-  clazz->resolution_monitor = (x_monitor)((char*)clazz + sizeof(w_Clazz));
-  clazz->values = (w_word*)((char*)clazz->resolution_monitor + sizeof(x_Monitor));
+  clazz->values = (w_word*)((char*)clazz + sizeof(w_Clazz));
   clazz->tags = (w_ConstantType*)((char*)clazz->values + (numConstants +1) * sizeof(w_word));
-  woempa(2, "Resolution monitor of clazz %p is at %p\n", clazz, clazz->resolution_monitor);
   woempa(2, "Constant pool tags of clazz %p are at %p\n", clazz, clazz->tags);
   woempa(2, "Constant pool values of clazz %p are at %p\n", clazz, clazz->values);
 
-  x_monitor_create(clazz->resolution_monitor);
+  x_monitor_create(&clazz->resolutionMonitor);
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
 #ifndef THREAD_SAFE_FIFOS
   clazz->cache_mutex = allocClearedMem(sizeof(x_Mutex));
@@ -2151,11 +2151,6 @@ w_int destroyClazz(w_clazz clazz) {
     if (clazz->temp.inner_class_info) {
       woempa(7, "Releasing temp.inner_class_info\n");
       releaseMem(clazz->temp.inner_class_info);
-    }
-
-    if (clazz->resolution_monitor) {
-      woempa(7, "Releasing resolution_monitor\n");
-      x_monitor_delete(clazz->resolution_monitor);
     }
 
 #ifdef CLASSES_HAVE_INSTANCE_CACHE
