@@ -610,7 +610,7 @@ static x_boolean classes_callback(void * mem, void * arg) {
 
   if (clazz == clazzClass) {
     target_clazz = Class2clazz(instance);
-    monitor = target_clazz->resolution_monitor;
+    monitor = &target_clazz->resolutionMonitor;
     if(monitor->owner) {
       w_dump("%K resolution_monitor (0x%08x) locked", target_clazz, monitor);
       if(monitor->owner->xref) {

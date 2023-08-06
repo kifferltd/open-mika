@@ -351,7 +351,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 
   }
 
-  x_monitor_eternal(clazz->resolution_monitor);
+  x_monitor_eternal(&clazz->resolutionMonitor);
   state = getClazzState(clazz);
 
   while(state == CLAZZ_STATE_SUPERS_LOADING) {
@@ -359,14 +359,14 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       throwException(thread, clazzClassCircularityError, "Class %k is its own superclass", clazz);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
       
       return CLASS_LOADING_FAILED;
     }
 
 
-    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(&clazz->resolutionMonitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 
@@ -383,8 +383,8 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       throwException(currentWonkaThread, clazzIncompatibleClassChangeError, "Class %k is both FINAL and ABSTRACT", clazz);
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return CLASS_LOADING_FAILED;
 
@@ -397,7 +397,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
 #endif
     clazz->resolution_thread = thread;
     setClazzState(clazz, CLAZZ_STATE_SUPERS_LOADING);
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     woempa(1, "Class %k super_index is %d\n", clazz, clazz->temp.super_index);
     if (clazz->temp.super_index) {
@@ -411,7 +411,7 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       result = loadSuperInterfaces(clazz, thread);
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
+    x_monitor_eternal(&clazz->resolutionMonitor);
 #ifdef RUNTIME_CHECKS
     if (clazz->resolution_thread != thread) {
       wabort(ABORT_WONKA, "clazz %k resolution_thread should be %p, but is %p\n", clazz, thread, clazz->resolution_thread);
@@ -424,24 +424,24 @@ w_int mustBeSupersLoaded(w_clazz clazz) {
       }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return result;
 
     }
 
     setClazzState(clazz, CLAZZ_STATE_SUPERS_LOADED);
-    x_monitor_notify_all(clazz->resolution_monitor);
+    x_monitor_notify_all(&clazz->resolutionMonitor);
   }
   else if (state == CLAZZ_STATE_BROKEN) {
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     return CLASS_LOADING_FAILED;
 
   }
 
-  x_monitor_exit(clazz->resolution_monitor);
+  x_monitor_exit(&clazz->resolutionMonitor);
 
   return result;
 }

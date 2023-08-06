@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -601,7 +601,7 @@ w_method interfaceLookup(w_method imethod, w_clazz clazz) {
     }
 
     if (result) {
-      x_monitor monitor = result->spec.declaring_clazz->resolution_monitor;
+      x_monitor monitor = &result->spec.declaring_clazz->resolutionMonitor;
       x_monitor_eternal(monitor);
       if (mustBeLoaded(&result->spec.return_type) == CLASS_LOADING_FAILED) {
         woempa(9, "Failed to load return type %K of %M\n", result->spec.return_type, result);

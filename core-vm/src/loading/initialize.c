@@ -1,6 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2010, 2015 by Chris Gray, /k/ Embedded  *
-* Java Solutions and KIFFER Ltd. All rights reserved.                     *
+* Copyright (c) 2010, 2015, 2023 by Chris Gray, KIFFER Ltd. All rights    *
+* reserved.                                                               *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -430,11 +430,11 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   }
 
-  x_monitor_eternal(clazz->resolution_monitor);
+  x_monitor_eternal(&clazz->resolutionMonitor);
   state = getClazzState(clazz);
 
   while(state == CLAZZ_STATE_INITIALIZING) {
-    x_monitor_wait(clazz->resolution_monitor, CLASS_STATE_WAIT_TICKS);
+    x_monitor_wait(&clazz->resolutionMonitor, CLASS_STATE_WAIT_TICKS);
     state = getClazzState(clazz);
   }
 
@@ -442,7 +442,7 @@ w_int mustBeInitialized(w_clazz clazz) {
     woempa(2, "Initializing %K\n", clazz);
     clazz->resolution_thread = thread;
     setClazzState(clazz, CLAZZ_STATE_INITIALIZING);
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     n = clazz->numSuperClasses;
     woempa(1, "%K has %d superclasses\n", clazz, n);
@@ -459,15 +459,15 @@ w_int mustBeInitialized(w_clazz clazz) {
       result = initializeClazz(thread, clazz);
     }
 
-    x_monitor_eternal(clazz->resolution_monitor);
+    x_monitor_eternal(&clazz->resolutionMonitor);
     if (result == CLASS_LOADING_FAILED) {
       if (isSet(verbose_flags, VERBOSE_FLAG_LOAD)) {
         w_printf("Initialize %w: initializeClazz returned CLASS_LOADING_FAILED\n", clazz->dotified);
       }
       setClazzState(clazz, CLAZZ_STATE_BROKEN);
       saveFailureMessage(thread, clazz);
-      x_monitor_notify_all(clazz->resolution_monitor);
-      x_monitor_exit(clazz->resolution_monitor);
+      x_monitor_notify_all(&clazz->resolutionMonitor);
+      x_monitor_exit(&clazz->resolutionMonitor);
 
       return result;
 
@@ -484,16 +484,16 @@ w_int mustBeInitialized(w_clazz clazz) {
     else {
       setClazzState(clazz, CLAZZ_STATE_INITIALIZED);
     }
-    x_monitor_notify_all(clazz->resolution_monitor);
+    x_monitor_notify_all(&clazz->resolutionMonitor);
   }
   else if (state == CLAZZ_STATE_BROKEN) {
-    x_monitor_exit(clazz->resolution_monitor);
+    x_monitor_exit(&clazz->resolutionMonitor);
 
     return CLASS_LOADING_FAILED;
 
   }
 
-  x_monitor_exit(clazz->resolution_monitor);
+  x_monitor_exit(&clazz->resolutionMonitor);
 
   return result;
 }
