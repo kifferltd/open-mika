@@ -90,6 +90,20 @@ static inline w_int bar_read(w_bar bar, w_ubyte *bytes, w_int length, w_int *lre
 }
 
 /**
+ ** Returns a pointer to the current character position in the buffer.
+ */
+static inline w_ubyte * bar_peek(w_bar bar) {
+  return bar->buffer + bar->current;
+}
+
+/**
+ ** Returns the current offset.
+ */
+static inline w_int bar_pos(w_bar bar) {
+  return bar->current;
+}
+
+/**
  ** Returns number of bytes which can still be read.
  */
 static inline w_int bar_avail(w_bar bar) {
