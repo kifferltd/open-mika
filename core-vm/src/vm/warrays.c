@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -58,57 +58,50 @@ static w_clazz  Array_supers[1];
 
 w_clazz createClazzArray(void) {
   w_string string_clone = cstring2String("clone",5);
-  w_clazz clazz = allocClazz(clazzObject->numConstants);
-  w_method arrayclone = &Array_clone_method;
+  w_clazz array_clazz = allocClazz(clazzObject->numConstants);
+  w_method array_clone_method = &Array_clone_method;
   w_size   i;
 
+  w_method object_clone = NULL;
   for (i = 0; i < clazzObject->numDeclaredMethods; i++) {
     if (clazzObject->own_methods[i].spec.name == string_clone) {
-      woempa(7, "Found clone method of clazzObject in slot [%d], using it as basis of array clone\n", i);
-      w_memcpy(arrayclone, &clazzObject->own_methods[i], sizeof(w_Method));
-      arrayclone->exec.function = (w_function)(w_void_fun)Array_clone;
-      unsetFlag(arrayclone->flags, ACC_PROTECTED);
-      setFlag(arrayclone->flags, ACC_PUBLIC);
+      woempa(7, "Found clone() method of clazzObject in slot [%d], using it as basis of array clone()\n", i);
+      object_clone = &clazzObject->own_methods[i];
+      break;
     }
   }
 
-  w_memcpy(clazz, clazzObject, sizeof(w_Clazz));
-  clazz->resolution_monitor = allocMem(sizeof(x_Monitor));
-  if (!clazz->resolution_monitor) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz->resolution_monitor\n");
+  if (!object_clone) {
+    wabort(ABORT_WONKA, "Was ist das fuer schweinerei - es gibt kein clone() in java.lang.Object!");
   }
-  x_monitor_create(clazz->resolution_monitor);
-  clazz->dotified = cstring2String("array prototype", 15);
-  /*
-  clazz->tags = allocMem(clazzObject->numConstants * sizeof(w_ConstantType));
-  if (!clazz->tags) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz->tags\n");
-  }
-  */
-  memcpy((char*)clazz->tags, (char*)clazzObject->tags, clazzObject->numConstants * sizeof(w_ConstantType));
-  /*
-  clazz->values = allocMem(clazzObject->numConstants * sizeof(w_word));
-  if (!clazz->values) {
-    wabort(ABORT_WONKA, "Unable to allocate clazz->values\n");
-  }
-  */
-  memcpy((char*)clazz->values, (char*)clazzObject->values, clazzObject->numConstants * sizeof(w_word));
-  clazz->numDeclaredMethods = 1;
-  clazz->own_methods = arrayclone;
 
-  clazz->numInterfaces = 2;
-  clazz->numDirectInterfaces = 2;
-  clazz->interfaces = Array_interfaces;
-  clazz->interfaces[0] = clazzCloneable;
-  clazz->interfaces[1] = clazzSerializable;
-  clazz->numSuperClasses = 1;
-  clazz->supers = Array_supers;
-  clazz->supers[0] = clazzObject;
-  clazz->numConstants = 0;
+  w_memcpy(array_clone_method, object_clone, sizeof(w_Method));
+  array_clone_method->exec.function = (w_function)(w_void_fun)Array_clone;
+  unsetFlag(array_clone_method->flags, ACC_PROTECTED);
+  setFlag(array_clone_method->flags, ACC_PUBLIC);
+
+  w_memcpy(array_clazz, clazzObject, sizeof(w_Clazz));
+  // [CG 20230806] Note that the above memcpy leaves array_clazz->tags and array_clazz->values pointing into clazzObject
+  // - but that's alright :-)
+  memset(&array_clazz->resolutionMonitor, 0, sizeof(x_Monitor));
+  x_monitor_create(&array_clazz->resolutionMonitor);
+  array_clazz->dotified = cstring2String("array prototype", 15);
+  array_clazz->numDeclaredMethods = 1;
+  array_clazz->own_methods = array_clone_method;
+
+  array_clazz->numInterfaces = 2;
+  array_clazz->numDirectInterfaces = 2;
+  array_clazz->interfaces = Array_interfaces;
+  array_clazz->interfaces[0] = clazzCloneable;
+  array_clazz->interfaces[1] = clazzSerializable;
+  array_clazz->numSuperClasses = 1;
+  array_clazz->supers = Array_supers;
+  array_clazz->supers[0] = clazzObject;
+  array_clazz->numConstants = 0;
   F_Array_length = 0; 
   F_Array_data = 1; 
 
-  return clazz;
+  return array_clazz;
 
 }
 
