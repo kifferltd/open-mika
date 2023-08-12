@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2015, 2022      *
+* Copyright (c) 2005, 2006, 2007, 2008, 2009, 2010, 2015, 2022, 2023      *
 * by Chris Gray, KIFFER Ltd. All rights reserved.                         *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -498,18 +498,50 @@ w_string utf2String(const char *utf8string, w_size utf8length) {
   w_byte z;
   w_size idx = 0;
   w_size i = 0;
-  w_boolean is_latin1 = WONKA_TRUE;
+  w_boolean is_ascii = true;
+  w_boolean is_latin1 = true;
+
+  if (utf8length == 0) {
+    woempa(1, "Creating empty string (%p)\n", string_empty);
+    return registerString(string_empty);
+  }
 
   /*
-  ** Allocate a temporary buffer, we allocate it too be worst case size. This
-  ** could be too large, but it will be copied over later to a buffer of a 
-  ** correct size in the string itself. The worst case is when all UTF8 bytes
-  ** are singlets, so we allocate 1 extra as the length.
-  */
+   * Fast path for the very common case that the string is plain ASCII.
+   * Factoid: we have measured 8696 calls to this function during VM initialisation,
+   * of which 8651 (99.5%) were all-ASCII strings. Two-thirds of these (5819) turned
+   * out to already be present in the string pool, so we should try to optimise
+   * for this case too. TODO: see previous sentence.
+   */
+  for (i = 0; i < utf8length;) {
+    x = (w_byte)utf8string[i++];
+
+    if (is_singlet(x)) {
+      continue;
+    }
+
+    is_ascii = false;
+    break;
+  }
+
+  if (is_ascii) {
+    string = allocString(utf8length, true);
+    if (!string) {
+      woempa(9, "Unable to allocate w_string\n");
+      return NULL;
+    }
+    memcpy(string->contents.bytes, utf8string, utf8length);
+  }
+  else {
+    /*
+    ** Slower path for the more genreal case: allocate a temporary buffer of worst-case size.
+    ** This could be too large, but it will be copied over later to a buffer of a 
+    ** correct size in the string itself. The worst case is when all UTF8 bytes
+    ** are singlets, so we allocate 1 extra as the length.
+    */
   
-  if (utf8length) {
     chars = allocMem((utf8length + 1) * sizeof(w_char));
-    while (i < utf8length) { // [CG 20000410] WAS: <=
+    for (i = 0; i < utf8length;) {
       x = (w_byte)utf8string[i++];
 
       if (is_singlet(x)) {
@@ -517,10 +549,10 @@ w_string utf2String(const char *utf8string, w_size utf8length) {
       }
       else {
 // [CG 20000410] add:
-         if (i >= utf8length) {
-           woempa(9, "Incomplete UTF8 sequence 0x%02x\n", x);
-           break;
-         }
+        if (i >= utf8length) {
+          woempa(9, "Incomplete UTF8 sequence 0x%02x\n", x);
+          break;
+        }
 // [CG 20000410] end
         y = (w_byte)utf8string[i++];
         if (is_duplet(x, y)) {
@@ -530,10 +562,10 @@ w_string utf2String(const char *utf8string, w_size utf8length) {
         }
         else {
 // [CG 20000410] add:
-           if (i >= utf8length) {
-             woempa(9, "Incomplete UTF8 sequence 0x%02x 0x%02x\n", x, y);
-             break;
-           }
+          if (i >= utf8length) {
+            woempa(9, "Incomplete UTF8 sequence 0x%02x 0x%02x\n", x, y);
+            break;
+          }
 // [CG 20000410] end
           z = (w_byte)utf8string[i++];
           if (is_triplet(x, y, z)) {
@@ -556,7 +588,7 @@ w_string utf2String(const char *utf8string, w_size utf8length) {
       w_size j;
       w_char *src = chars;
       w_ubyte *dst = string->contents.bytes;
-      for (j = 0; j < idx; ++j) {
+     for (j = 0; j < idx; ++j) {
         *dst++ = *src++;
       }
     }
@@ -564,22 +596,19 @@ w_string utf2String(const char *utf8string, w_size utf8length) {
       w_memcpy(string->contents.chars, chars, sizeof(w_char) * idx);
     }
     releaseMem(chars);
-    hashString(string);
-  
-    woempa(1, "Created string '%w' (%p).\n", string, string);
-
-    result = registerString(string);  
-    if (result != string) {
-      woempa(1, "String '%w' (%p) already existed in pool\n", result, result);
-    }
   }
-  else {
-    result = registerString(string_empty);
-    woempa(1, "Created empty string (%p)\n", result);
+  
+  hashString(string);
+  
+  woempa(1, "Created %s string '%w' (%p), utf length = %d char length = %d %sLatin1.\n", is_ascii ? "ASCII" : is_latin1 ? "latin-1" : "", string, string, utf8length, idx);
+
+  result = registerString(string);  
+  if (result != string) {
+    woempa(1, "String '%w' (%p) already existed in pool\n", result, result);
   }
 
   return result;
-  
+
 }
 
 w_char* utf2chars(const char *utf8string,  w_int* length) {
