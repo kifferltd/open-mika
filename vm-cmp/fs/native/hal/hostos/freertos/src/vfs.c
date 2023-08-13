@@ -34,9 +34,6 @@
 static x_Mutex fd_table_Mutex;
 static x_mutex fd_table_mutex = &fd_table_Mutex;
 
-//static vfs_FileOperations fat_ops;
-//static vfs_FileOperations placeholder_ops;
-
 #ifdef DEBUG_FLASH
 #include "fifo.h"
 
@@ -153,10 +150,6 @@ static void dumpFile(const char *path) {
 
 #define SET_ERRNO(n) { x_int temp = (n); woempa(7, "Set x_errno to %d\n", temp); x_errno = temp; }
 static FF_Disk_t *vfs_flashDisk;
-
-//static vfs_FD_Entry placeholder;
-
-static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
 
 w_int  fat_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
 size_t fat_get_length(vfs_fd_entry fde);
