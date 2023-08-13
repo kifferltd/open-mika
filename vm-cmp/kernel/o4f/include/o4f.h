@@ -271,13 +271,6 @@ extern x_word xorshift32(x_word state);
  */
 #define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? &x_thread_current()->task_errno : &global_errno))
 
-/**
- * For x_errno we use a location in the OSwald thread control block, and we set a pointer to this in 
- * the FreeRTOS ThreadLocal array so that we can get a pointer without going through x_thread_current().
- * x_error is a macro which looks like a global variable.
- */
-#define x_errno (*(x_int*) (xTaskGetCurrentTaskHandle() ? pvTaskGetThreadLocalStoragePointer(NULL, O4F_LOCAL_STORAGE_OFFSET_X_ERRNO) : &global_errno))
-
 void _o4f_abort(char *file, int line, int type, char *message, x_status rc);
 
 #define o4f_abort(t,m,rc) _o4f_abort(__FILE__, __LINE__, t, m, rc);

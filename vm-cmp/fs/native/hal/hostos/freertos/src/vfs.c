@@ -156,8 +156,6 @@ static FF_Disk_t *vfs_flashDisk;
 
 //static vfs_FD_Entry placeholder;
 
-static vfs_MountPoint fat_mountpoint = {"/", &fat_ops, NULL, NULL};
-
 w_int  fat_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
 size_t fat_get_length(vfs_fd_entry fde);
 w_boolean fat_is_eof(vfs_fd_entry fde);
