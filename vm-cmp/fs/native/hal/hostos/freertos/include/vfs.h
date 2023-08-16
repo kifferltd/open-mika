@@ -39,6 +39,7 @@ ERROR - non-blocking file access is not supported on FreeRTOS
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ff_stdio.h>
 #include <utime.h>
  
 #include "file-descriptor.h"
