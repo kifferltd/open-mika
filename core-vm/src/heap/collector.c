@@ -1537,7 +1537,7 @@ static void prepreparation(w_thread thread) {
   }
   x_monitor_eternal(safe_points_monitor);
   while(isSet(blocking_all_threads, ~BLOCKED_BY_GC) || number_unsafe_threads > 0) {
-    woempa(7, "%d unsafe threads, %s blocking all threads, not possible to run GC yet.\n", number_unsafe_threads, BLOCKED_BY_TEXT);
+    woempa(2, "%d unsafe threads, %s blocking all threads, not possible to run GC yet.\n", number_unsafe_threads, BLOCKED_BY_TEXT);
     x_monitor_wait(safe_points_monitor, x_eternal);
   }
   woempa(2, "preprepare: %t setting blocking_all_threads to BLOCKED_BY_GC\n", thread);
@@ -2437,21 +2437,21 @@ void gc_create(w_thread gc_thread, w_instance theGarbageCollector) {
   dead_lock_fifo = allocFifo(DEAD_LOCK_FIFO_LEAF_SIZE);
   dead_clazz_fifo = allocFifo(DEAD_CLAZZ_FIFO_LEAF_SIZE);
   gc_instance = theGarbageCollector;
-  woempa(7,"         window_fifo at %p\n", window_fifo);
-  woempa(7,"      finalizer_fifo at %p\n", finalizer_fifo);
-  woempa(7,"        enqueue_fifo at %p\n", enqueue_fifo);
-  woempa(7,"      reference_fifo at %p\n", reference_fifo);
-  woempa(7,"      dead_lock_fifo at %p\n", dead_lock_fifo);
-  woempa(7,"     dead_clazz_fifo at %p\n", dead_clazz_fifo);
-  woempa(7, "I_ThreadGroup_system = %j.\n", I_ThreadGroup_system);
-  woempa(7, "     W_Thread_system = %p.\n", W_Thread_system);
+  woempa(2,"         window_fifo at %p\n", window_fifo);
+  woempa(2,"      finalizer_fifo at %p\n", finalizer_fifo);
+  woempa(2,"        enqueue_fifo at %p\n", enqueue_fifo);
+  woempa(2,"      reference_fifo at %p\n", reference_fifo);
+  woempa(2,"      dead_lock_fifo at %p\n", dead_lock_fifo);
+  woempa(2,"     dead_clazz_fifo at %p\n", dead_clazz_fifo);
+  woempa(2, "I_ThreadGroup_system = %j.\n", I_ThreadGroup_system);
+  woempa(2, "     W_Thread_system = %p.\n", W_Thread_system);
   woempa(7, "           gc_thread = %p.\n", gc_thread);
   woempa(7, "   Current instances = %d.\n", instance_use);
 #ifdef USE_OBJECT_HASHTABLE
   woempa(7, "    Object hashtable = %p.\n", object_hashtable);
 #endif
 
-  woempa(7, "Registering internal_reclaim_callback\n");
+  woempa(1, "Registering internal_reclaim_callback\n");
   registerReclaimCallback(internal_reclaim_callback);
 
 }
