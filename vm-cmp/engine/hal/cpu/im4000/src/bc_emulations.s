@@ -59,6 +59,12 @@ e_ldc:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_ldc(clazz, offset)
+
+    ; [CG 20230818] shouldn't the firmware push the constant pool
+    ; index onto the stack, i.e.
+    ; ..., index --> ..., value?
+
 ;===========================================================
 ; e_ldc_w
 ;
@@ -72,6 +78,8 @@ e_ldc:
 e_ldc_w:		
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_ldc(clazz, offset)
 
 ;===========================================================
 ; em_ldc2_w
@@ -89,6 +97,8 @@ e_ldc2_w:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_ldc2_w(clazz, offset)
+
 ;===========================================================
 ; e_jsr
 ;
@@ -102,6 +112,8 @@ e_ldc2_w:
 e_jsr:		
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_jsr(frame, offset) - or do we do everything in assembler?
 
 ;===========================================================
 ; e_jsr_w
@@ -117,6 +129,12 @@ e_jsr_w:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_jsr_w(frame, offset) - or do we do everything in assembler?
+    ; [CG 20230818] shouldn't the firmware push the branch offset onto the
+    ; stack, i.e.
+    ; ..., offset --> ..., address?
+
+
 ;===========================================================
 ; e_ret
 ;
@@ -130,6 +148,8 @@ e_jsr_w:
 e_ret:
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_ret(frame, offset) - or do we do everything in assembler?
 
 ;===========================================================
 ; e_getstatic
@@ -147,6 +167,8 @@ e_getstatic:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_getstatic(clazz, index)
+
 ;===========================================================
 ; e_putstatic
 ;
@@ -163,6 +185,8 @@ e_putstatic:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_putstatic(clazz, index, value)
+
 ;===========================================================
 ; e_getfield
 ;
@@ -177,6 +201,8 @@ e_getfield:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_getfield(clazz, index, objectref)
+
 ;===========================================================
 ; e_putfield
 ;
@@ -190,6 +216,8 @@ e_getfield:
 e_putfield:
 
     errorpoint      ; Not implemented
+
+    ; needs to call putfield(clazz, index, value, objectref)
 
 ;===========================================================
 ; e_new
@@ -206,6 +234,9 @@ e_new:
 
 ; Get index from evaluation stack
     pop.es.w    i#0     ; index
+
+    ; [CG 20230818] needs to also push the pointer to the calling clazz
+    ; i.e. call emul_new(clazz, offset)
 
     move.i.i32  i#1 new_emul
     call        i#1
@@ -230,6 +261,12 @@ e_newarray:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_newarray(atype, count)
+
+    ; [CG 20230818] shouldn't the firmware push the array type onto the
+    ; stack, i.e.
+    ; ..., count, atype --> ..., objectref?
+
 ;===========================================================
 ; e_anewarray
 ;
@@ -244,6 +281,8 @@ e_anewarray:
 
     errorpoint      ; Not implemented
 
+    ; needs to emul_anewarray(clazz, index, count)
+
 ;===========================================================
 ; e_arraylength
 ;
@@ -257,6 +296,9 @@ e_anewarray:
 e_arraylength:
 
     errorpoint      ; Not implemented
+
+    ; see partial implementation in branch bc-optimize-create-and-invoke,
+    ; needs error handling
 
 ;===========================================================
 ; e_athrow
@@ -280,6 +322,12 @@ e_athrow:
 
     errorpoint      ; Not implemented
 
+    ; this is a tricky, one, because the microcide is passing
+    ; information taken from kvm-specific data structures
+    ; -> can we change the microcode?
+    ; Note that this instruction may or may not cause execution
+    ; to leave the current frame 
+
 ;===========================================================
 ; e_checkcast
 ;
@@ -295,6 +343,8 @@ e_athrow:
 e_checkcast:		
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_checkcast(clazz, index, objectref)
 
 ;===========================================================
 ; e_instanceof
@@ -313,6 +363,8 @@ e_instanceof:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_instanceof(clazz, index, objectref)
+
 ;===========================================================
 ; e_monitorenter
 ;
@@ -326,6 +378,8 @@ e_instanceof:
 e_monitorenter:
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_monitorenter(objectref)
 
 ;===========================================================
 ; e_monitorexit
@@ -341,6 +395,8 @@ e_monitorenter:
 e_monitorexit:
 
     errorpoint      ; Not implemented
+
+    ; needs to call emul_monitorexit(objectref)
 
 ;===========================================================
 ; e_multianewarray
@@ -360,6 +416,7 @@ e_multianewarray:
 
     errorpoint      ; Not implemented
 
+    ; needs to call emul_anewarray(clazz, index, dimension, count...)
 ;===========================================================
 ; e_invokevirtual
 ;
@@ -373,6 +430,8 @@ e_multianewarray:
 e_invokevirtual:
 
     errorpoint          ; Not implemented
+
+    ; needs to call emul_invokevirtual(clazz, index, objectref, args ...)
 
 ;===========================================================
 ; e_invokespecial
@@ -388,6 +447,8 @@ e_invokespecial:
 
     errorpoint          ; Not implemented
 
+    ; needs to call emul_invokespecial(clazz, index, objectref, args ...)
+
 ;===========================================================
 ; e_invokestatic
 ;
@@ -401,6 +462,8 @@ e_invokespecial:
 e_invokestatic:
 
     errorpoint          ; Not implemented
+
+    ; needs to call emul_invokesstatic(clazz, index, args ...)
 
 ;===========================================================
 ; e_invokeinterface
@@ -417,6 +480,8 @@ e_invokeinterface:
 
     errorpoint          ; Not implemented
 
+    ; needs to call emul_invokeinterface(clazz, index, objectref, args ...)
+
 ;===========================================================
 ; e_ireturn
 ;
@@ -428,6 +493,8 @@ e_invokeinterface:
 e_ireturn:
 
     errorpoint          ; Not implemented
+
+    ; should be similar to return (v.i.), but leaves 1 word on stack
 
 ;===========================================================
 ; e_freturn
@@ -441,6 +508,8 @@ e_freturn:
 
     errorpoint          ; Not implemented
 
+    ; should be similar to return (v.i.), but leaves 1 word on stack
+
 ;===========================================================
 ; e_areturn
 ;
@@ -452,6 +521,8 @@ e_freturn:
 e_areturn:
 
     errorpoint          ; Not implemented
+
+    ; should be similar to return (v.i.), but leaves 1 word on stack
 
 ;===========================================================
 ; e_lreturn
@@ -465,6 +536,8 @@ e_lreturn:
 
     errorpoint          ; Not implemented
 
+    ; should be similar to return (v.i.), but leaves 2 words on stack
+
 ;===========================================================
 ; e_dreturn
 ;
@@ -476,6 +549,8 @@ e_lreturn:
 e_dreturn:
 
     errorpoint          ; Not implemented
+
+    ; should be similar to return (v.i.), but leaves 2 words on stack
 
 ;===========================================================
 ; e_return
