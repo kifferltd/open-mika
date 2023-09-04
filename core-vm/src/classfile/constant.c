@@ -55,9 +55,95 @@ static void check_constant_index(w_clazz clazz, w_size i) {
 #define check_constant_index(clazz,i)
 #endif
 
+u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
+  int tag;
+  //threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
+  if (type && (clazz->tags[i] & CONSTANT_TYPE_MASK) != type) {
+    woempa(9, "Constant has wrong type\n");
+    return 0;
+  }
+
+  switch (type) {
+    case CONSTANT_INTEGER :
+    case CONSTANT_FLOAT :
+      return clazz->values[i];
+
+    case CONSTANT_UTF8 :
+      return (u4) resolveUtf8Constant(clazz, i);
+
+    default:
+      ; // fall through
+  } 
+
+  while ((tag = clazz->tags[i]) < RESOLVED_CONSTANT) {
+    if (tag == COULD_NOT_RESOLVE) {
+      throwExceptionInstance(thread, (w_instance)clazz->values[i]);
+      return 0;
+    }
+    
+    switch (type) {
+      case CONSTANT_CLASS :
+        resolveClassConstant(clazz, i);
+        break;
+
+      case CONSTANT_STRING :
+        resolveStringConstant(clazz, i);
+        break;
+
+      case CONSTANT_FIELD :
+        resolveFieldConstant(clazz, i);
+        break;
+
+      case CONSTANT_METHOD :
+        resolveMethodConstant(clazz, i);
+        break;
+
+      case CONSTANT_IMETHOD :
+        resolveIMethodConstant(clazz, i);
+        break;
+
+      default:
+        woempa(9, "Constant has wrong type\n");
+        return 0;
+    }
+  }
+
+  // If we get here then either the constant was a trivial one (FLOAT, INTEGER)
+  // or we successfully resolved it.
+
+  return clazz->values[i];
+}
+
+/**
+ * Get the value of any 64-bit constant, resolving it if need be.
+ * The calling thread must be GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @param type the expected type of the constant (0 means any type is OK)
+ * @param thread the current thread
+ * @return the resolved constant value, as a w_u64 (u_int64_t).
+ */
+w_u64 get64BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
+  int tag;
+  w_u64 l;
+  threadMustBeSafe(thread);
+  check_constant_index(clazz, i);
+  if (type && (clazz->tags[i] & CONSTANT_TYPE_MASK) != type) {
+    woempa(9, "Constant has wrong type\n");
+    l.s64 = 0;
+  }
+  else {
+    memcpy(&l, &clazz->values[i], 8);
+  }
+
+  return l;
+}
+
 /*
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must be GC safe!
+ * TODO: re-write to use get32BitConstant()
  */
 w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
   int tag;
@@ -79,6 +165,7 @@ w_clazz getClassConstant(w_clazz clazz, w_int i, w_thread thread) {
 /*
  * Get the value of a FIELD constant, resolving it if need be.
  * The calling thread must GC safe!
+ * TODO: re-write to use get32BitConstant()
  */
 w_field getFieldConstant(w_clazz clazz, w_int i) {
 #ifdef RUNTIME_CHECKS
@@ -104,6 +191,7 @@ w_field getFieldConstant(w_clazz clazz, w_int i) {
 /*
  * Get the value of a METHOD constant, resolving it if need be.
  * The calling thread must GC safe!
+ * TODO: re-write to use get32BitConstant()
  */
 w_method getMethodConstant(w_clazz clazz, w_int i) {
 #ifdef RUNTIME_CHECKS
@@ -129,6 +217,7 @@ w_method getMethodConstant(w_clazz clazz, w_int i) {
 /*
  * Get the value of an IMETHOD constant, resolving it if need be.
  * The calling thread must GC safe!
+ * TODO: re-write to use get32BitConstant()
  */
 w_method getIMethodConstant(w_clazz clazz, w_int i) {
 #ifdef RUNTIME_CHECKS
@@ -235,74 +324,12 @@ w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index) {
     }
   }
     
-/* [CG 20071014] Constants are no longer being deleted
-  for (i = 1; i < clazz->numConstants; ++i) {
-    switch (clazz->tags[i]) {
-    case CONSTANT_DELETED:
-      woempa(1, "    constant[%d] has been deleted, recycling it\n", i);
-      clazz->tags[i] = CONSTANT_CLASS;
-      clazz->values[i] = classname_index;
-      return i;
-    }
-  }
-*/
-
   i = expandConstantPool(clazz);
   clazz->tags[i] = CONSTANT_CLASS;
   clazz->values[i] = classname_index;
   return i;
 }
 
-/*
-** Add a new Name&Type constant to the pool, unless it already exists.
-** Returns the index of the new or existing constant.
-w_int addNatConstantToPool(w_clazz clazz, w_string name, w_string type) {
-  w_int name_index = addUTF8ConstantToPool(clazz, name);
-  w_int descriptor_index = addUTF8ConstantToPool(clazz, type);
-  w_size i;
-  w_Name_and_Type *natptr;
-
-  woempa(1, "Adding the Name & Type `%w %w' to constant pool of %k.\n", name, type, clazz);
-
-  for (i = 1; i < clazz->numConstants; ++i) {
-    switch (clazz->tags[i]) {
-    case CONSTANT_NAME_AND_TYPE:
-      natptr = (w_Name_and_Type*)&clazz->values[i];
-      if (natptr->name_index == name_index && natptr->descriptor_index == descriptor_index) {
-        woempa(1, "Already existed as constant[%d]\n", i);
-        return i;
-      }
-    }
-  }
-    
-/. [CG 20071014] Constants are no longer being deleted
-  for (i = 1; i < clazz->numConstants; ++i) {
-    switch (clazz->tags[i]) {
-    case CONSTANT_DELETED:
-      natptr = (w_Name_and_Type*)&clazz->values[i];
-      woempa(1, "Slot[%d] is free, recycling it\n", i);
-      clazz->tags[i] = CONSTANT_NAME_AND_TYPE;
-      natptr->name_index = name_index;
-      natptr->descriptor_index = descriptor_index;
-      return i;
-    }
-  }
-./
-
-  i = clazz->numConstants++;
-  clazz->tags = reallocMem((void*)clazz->tags, clazz->numConstants);
-  clazz->values = reallocMem((void*)clazz->values, clazz->numConstants * sizeof(void*));
-  if (!clazz->tags || !clazz->values) {
-    wabort(ABORT_WONKA, "Unable to realloc tags & values\n");
-  }
-  natptr = (w_Name_and_Type*)&clazz->values[i];
-  woempa(1, "Adding as slot[%d]\n", i);
-  clazz->tags[i] = CONSTANT_NAME_AND_TYPE;
-  natptr->name_index = name_index;
-  natptr->descriptor_index = descriptor_index;
-  return i;
-}
-*/
 
 /*
 ** Add a new resolved Field constant to the pool, unless it already exists. 
@@ -349,17 +376,6 @@ w_int addPointerConstantToPool(w_clazz clazz, void *ptr) {
     }
   }
     
-/* [CG 20071014] Constants are no longer being deleted
-  for (i = 1; i < clazz->numConstants; ++i) {
-    if (clazz->tags[i] == CONSTANT_DELETED) {
-      woempa(1, "Slot[%d] is free, recycling it\n", i);
-      clazz->tags[i] = DIRECT_POINTER;
-      clazz->values[i] = (w_word)ptr;
-      return i;
-    }
-  }
-*/
-
   i = expandConstantPool(clazz);
   clazz->tags[i] = DIRECT_POINTER;
   clazz->values[i] = (w_word)ptr;

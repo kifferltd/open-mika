@@ -51,11 +51,12 @@
 #define CONSTANT_IMETHOD            0x0B
 #define CONSTANT_NAME_AND_TYPE      0x0C
 #define NO_VALID_ENTRY              0x0E
-#define COULD_NOT_RESOLVE           0x0F
+
+#define CONSTANT_TYPE_MASK          0x1F
 
 #define UNRESOLVED_CONSTANT         0x00
-#define RESOLVING_CONSTANT          0x10
-#define RESOLVED_CONSTANT           0x20
+#define RESOLVING_CONSTANT          0x20
+#define RESOLVED_CONSTANT           0x40
 #define CONSTANT_STATE_MASK         0xf0
 
 #define CONSTANT_STATE(c)           ((c) & CONSTANT_STATE_MASK)
@@ -71,7 +72,8 @@
 #define RESOLVED_METHOD             (CONSTANT_METHOD+RESOLVED_CONSTANT)
 #define RESOLVED_IMETHOD            (CONSTANT_IMETHOD+RESOLVED_CONSTANT)
 
-#define DIRECT_POINTER              0x2d
+#define DIRECT_POINTER              0x2D
+#define COULD_NOT_RESOLVE           0x1F
 
 /* [CG 20071014] Constants are no longer being deleted
 //#define CONSTANT_DELETED            0xff
@@ -210,12 +212,41 @@ void resolveMethodConstant(w_clazz clazz, w_int i);
 */
 void resolveIMethodConstant(w_clazz clazz, w_int i);
 
+/**
+ * Get the value of any 32-bit constant, resolving it if need be.
+ * This can be used for both scalar 32-bit types and reference types.
+ * The calling thread must be GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @param type the expected type of the constant (0 means any type is OK)
+ * @param thread the current thread
+ * @return the resolved constant value, as a u4 (u_int32_t).
+ */
+u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread);
+
+/**
+ * Get the value of any 64-bit constant, resolving it if need be.
+ * The calling thread must be GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @param type the expected type of the constant (0 means any type is OK)
+ * @param thread the current thread
+ * @return the resolved constant value, as a w_u64 (u_int64_t).
+ */
+w_u64 get64BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread);
+
 /*
 ** The functions getXXXXConstant return the value of the i'th constant of `clazz'.
 */
 #define getIntegerConstant(clazz,i) ( (w_int)(clazz)->values[i] )
 #define getFloatConstant(clazz,i) ( (w_float)(clazz)->values[i] )
 
+/**
+ * Get the value of an LONG constant.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the resolved constant value, as a w_u64 (u_int64_t).
+ */
 static inline w_u64 getLongConstant(w_clazz clazz, w_int i) {
   w_u64 l;
 
@@ -224,6 +255,12 @@ static inline w_u64 getLongConstant(w_clazz clazz, w_int i) {
   return l;
 }
 
+/**
+ * Get the value of an DOUBLE constant.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the resolved constant value, as a w_u64 (u_int64_t).
+ */
 static inline w_u64 getDoubleConstant(w_clazz clazz, w_int i) {
   w_u64 d;
 
@@ -232,9 +269,12 @@ static inline w_u64 getDoubleConstant(w_clazz clazz, w_int i) {
   return d;
 }
 
-/*
+/**
 ** Get the value of a STRING constant, resolving it if necessary.
-*/
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the resolved constant value, as a w_u64 (u_int64_t).
+ */
 static inline w_instance getStringConstant(w_clazz clazz, w_int i) {
   if (clazz->tags[i] < RESOLVED_CONSTANT) {
     resolveStringConstant(clazz, i);
@@ -243,52 +283,79 @@ static inline w_instance getStringConstant(w_clazz clazz, w_int i) {
   return (w_instance)clazz->values[i];
 }
 
-/*
+/**
 ** Get the value of a STRING constant which is known to already be resolved.
-*/
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
+ */
 #define getResolvedStringConstant(clazz,i) ( (w_instance)(clazz)->values[i] )
 
-/*
+/**
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
  */
 w_clazz getClassConstant(w_clazz clazz, w_int idx, w_thread thread);
 
-/*
+/**
 ** Get the value of a CLASS constant which is known to already be resolved.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
 */
 #define getResolvedClassConstant(clazz,i) ( (w_clazz)(clazz)->values[i] )
 
-/*
+/**
  * Get the value of a FIELD constant, resolving it if need be.
  * The calling thread must GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
  */
 w_field getFieldConstant(w_clazz clazz, w_int idx);
 
-/*
+/**
 ** Get the value of a FIELD constant which is known to already be resolved.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
 */
 #define getResolvedFieldConstant(clazz,i) ( (w_field)(clazz)->values[i] )
 
-/*
+/**
  * Get the value of a METHOD constant, resolving it if need be.
  * The calling thread must GC safe!
- */
+  * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
+*/
 w_method getMethodConstant(w_clazz clazz, w_int idx);
 
-/*
+/**
 ** Get the value of a METHOD constant which is known to already be resolved.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
 */
 #define getResolvedMethodConstant(clazz,i) ( (w_method)(clazz)->values[i] )
 
-/*
+/**
  * Get the value of an IMETHOD constant, resolving it if need be.
  * The calling thread must GC safe!
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
  */
 w_method getIMethodConstant(w_clazz clazz, w_int idx);
 
-/*
+/**
 ** Get the value of an IMETHOD constant which is known to already be resolved.
+ * @param clazz the clazz whose contant pool is to be used
+ * @param i    the index into the constant pool
+ * @return the constant value.
 */
 #define getResolvedIMethodConstant(clazz,i) ( (w_method)(clazz)->values[i] )
 
@@ -298,21 +365,29 @@ void dumpPools(int fd, w_clazz clazz);
 
 /**
  ** Add a UTF8 constant to the pool (or find an identical existing
- ** one), returning theindex of the result.
+ ** one), returning the index of the result.
+ * @param clazz the clazz to whose contant pool the constant is to be added.
+ * @param the contents of the constant
+ * @return the index of the new entry in the constant pool.
  */
 w_int addUTF8ConstantToPool(w_clazz, w_string);
 
 /**
- ** Add an unresolved class constant to the pool (or find an identical existing
- ** one), returning theindex of the result.
- */
-w_int addUnresolvedClassConstantToPool(w_clazz, w_size);
+** Add a new unresolved Class constant to the pool, unless it already exists. 
+** No attempt will be made to resolve the constant (and hence load the class).
+** @param clazz the clazz to whose contant pool the constant is to be added.
+** @param classname_index the index of an existing UTF8 constant which
+** holds the name of the class (this may previously have been added using
+** addUTF8Constant()).
+** @return the index of the new or existing constant.
+*/
+w_int addUnresolvedClassConstantToPool(w_clazz clazz, w_size classname_index);
 
 /**
  ** Add a name & type constant to the pool (or find an identical existing
  ** one), returning theindex of the result.
  */
-w_int addNatConstantToPool(w_clazz, w_string name, w_string type);
+//w_int addNatConstantToPool(w_clazz, w_string name, w_string type);
 
 /**
  ** Add a resolved field constant to the pool (or find an identical existing
