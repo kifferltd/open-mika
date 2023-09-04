@@ -50,8 +50,8 @@ allocate_loc_20:
 java_method1:
 
     .byte   0xbb            ; new
-    .byte   1               ; indexbyte1
-    .byte   2               ; indexbyte2
+    .byte   0               ; indexbyte1
+    .byte   47              ; indexbyte2
 
     .byte   0xb1            ; return
 
@@ -75,7 +75,7 @@ activate_frame:
 
 ; Start setup a Java stack frame
     c.push.rar              
-    c.push.fmp              
+    c.push.fmp
 
 ; Stack address to activate_frame_return as ERAR
     c.ldi.i     activate_frame_return
@@ -88,7 +88,7 @@ activate_frame:
     push.es.h   s#2         ; es: ..., locals_i
     c.push.es               ; push FRAME_LS_COUNT
 
-    c.ldi.b FRAME_SIZEOF-4  ; Allocate rest of the frame
+    c.ldi.b SIZEOF_FRAME-4  ; Allocate rest of the frame
     c.ams
 
 ; Copy the arguments to the evaluation stack
@@ -105,19 +105,30 @@ activate_frame_5:
 
 ; Push narg onto evaluation stack
 activate_frame_10:
-    push.es.w   i#13    
+    push.es.w   i#13
 
 ; Set FMP to point to the frame
     stack.save  i#1                 ; i#4 = MSP
     set.fmp     i#1                 ; FMP = MSP
 
-; Push locals count onto the evaluation stack
+; store method pointer in the frame
+    push.es.w   i#12
+    c.st.i.fmp  FRAME_METHOD
+
+;; Push locals count onto the evaluation stack
     c.ld.i.fmp  FRAME_LS_COUNT
 
     c.callw     allocate_locals
 
-; Jump to java code
+; Jump to java_method1 - for testing only
     c.ldi.i     java_method1
+    .short      0xf9c2      ; c.jump.java
+
+; jump to method code
+    copy.w      i#3 i#12
+    add.i.i8    i#3 i#3 METHOD_CODE
+    load.w      i#4 i#3
+    push.es.w   i#4         ; es: ..., method_code
     .short      0xf9c2      ; c.jump.java
 
 activate_frame_return:

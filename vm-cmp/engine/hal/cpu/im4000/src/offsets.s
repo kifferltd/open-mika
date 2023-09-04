@@ -33,22 +33,27 @@ METHOD_BASIC_BLOCKS         = METHOD_STATUS_ARRAY + 4
 
 
 ;===========================================================
-; Offsets in the Java stack frame on the memory stack
-;
-FRAME_CONSTANTPOOL	  = 0
-FRAME_METHOD		  = 1
-FRAME_SYNCOBJECT	  = 2
-FRAME_THROWPC		  = 3
-FRAME_LSP		      = 4
-FRAME_ESP		      = 5
-FRAME_LMP		      = 6
+; Offsets in the Java stack frame on the memory stack.
+; Note: accessed via FMP register, offset is in words.
+; For now the C emulation only uses FRAME_METHOD.
+
+FRAME_CONSTANTPOOL = 0
+FRAME_METHOD       = 1
+FRAME_SYNCOBJECT   = 2
+FRAME_THROWPC      = 3
+FRAME_LSP          = 4
+FRAME_ESP          = 5
+FRAME_LMP          = 6
+
 ;
 ; The following offsets order is used by pop/push sequences in the program
 ;
-FRAME_LS_COUNT		  = 7
-FRAME_RETADDRESS	  = 8
-FRAME_FMP		      = 9
-FRAME_RAR		      = 10
+FRAME_LS_COUNT      = 7
+FRAME_RETADDRESS    = 8
+FRAME_FMP           = 9
+FRAME_RAR           = 10
 
-FRAME_SIZEOF          = 11	; Size in cells of a frame 
+
+SIZEOF_FRAME = 11
+
 ;===========================================================

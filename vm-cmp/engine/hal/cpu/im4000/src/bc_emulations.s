@@ -57,13 +57,18 @@
 ;===========================================================
 e_ldc:
 
-    errorpoint      ; Not implemented
+    em.iasl.alloc.lsf
 
-    ; needs to call emul_ldc(clazz, offset)
+; Get index from evaluation stack
+    pop.es.w    i#0     ; index
+    move.i.i32  i#1 emul_ldc
+    call        i#1
+      
+; Push constant value onto the evaluation stack
+    push.es.w    i#0
 
-    ; [CG 20230818] shouldn't the firmware push the constant pool
-    ; index onto the stack, i.e.
-    ; ..., index --> ..., value?
+    em.isal.dealloc.lsf  
+    ret.eh    
 
 ;===========================================================
 ; e_ldc_w
@@ -233,13 +238,11 @@ e_new:
     em.iasl.alloc.lsf
 
 ; Get index from evaluation stack
-    pop.es.w    i#0     ; index
-
-    ; [CG 20230818] needs to also push the pointer to the calling clazz
-    ; i.e. call emul_new(clazz, offset)
-
-    move.i.i32  i#1 new_emul
-    call        i#1
+    pop.es.w    i#1     ; index
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_new
+    call        i#2
       
 ; Push object reference onto the evaluation stack
     push.es.w    i#0
@@ -566,7 +569,7 @@ e_return:
     c.dml
 
 ; Deallocate not needed frame entries
-	c.ldi.b	    FRAME_SIZEOF-4
+	c.ldi.b	    SIZEOF_FRAME-4
 	c.dms
 
 ; Deallocate locals on the locals stack
