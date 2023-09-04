@@ -83,7 +83,7 @@ activate_frame:
 
 ; Get and push number of locals
     copy.w      i#1 i#12
-    add.i.i8    i#1 i#1 METHOD_LOCAL_I
+    add.i.i8    i#1 i#1 METHOD_EXEC_LOCAL_I
     load.h      s#2 i#1
     push.es.h   s#2         ; es: ..., locals_i
     c.push.es               ; push FRAME_LS_COUNT
@@ -121,12 +121,12 @@ activate_frame_10:
     c.callw     allocate_locals
 
 ; Jump to java_method1 - for testing only
-    c.ldi.i     java_method1
-    .short      0xf9c2      ; c.jump.java
+;    c.ldi.i     java_method1
+;    .short      0xf9c2      ; c.jump.java
 
 ; jump to method code
     copy.w      i#3 i#12
-    add.i.i8    i#3 i#3 METHOD_CODE
+    add.i.i8    i#3 i#3 METHOD_EXEC_CODE
     load.w      i#4 i#3
     push.es.w   i#4         ; es: ..., method_code
     .short      0xf9c2      ; c.jump.java

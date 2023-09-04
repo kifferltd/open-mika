@@ -5,6 +5,7 @@
 .macro em.iasl.alloc.lsf
 
 ; Save ERAR
+    irs.off
     c.push.erar
 
 ; Allocate 8 local registers
@@ -27,11 +28,13 @@
     c.dup
     c.st.msp            ; MSP = MSP - 4
     st.rvp              ; RVP = MSP
+    ; irs.on
 .endmacro
 
 ;------------------------------------------------------------
 
 .macro em.isal.dealloc.lsf
+    ; irs.off
     ld.iasp     
     c.addi      16
     c.st.msp
@@ -40,6 +43,7 @@
 
 ; Restore ERAR
     c.pop.erar
+    irs.on
 
 .endmacro
 ;===========================================================
