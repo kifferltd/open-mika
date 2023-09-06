@@ -439,6 +439,8 @@ void * _d_allocMem(w_size rsize, const char * file, const int line) {
   w_chunk chunk;
   w_thread thread = currentWonkaThread;
 
+  lowMemoryCheck;
+
   woempa(1,"%s.%d: Requested %d bytes, allocating %d bytes\n", file, line, rsize, sizeof(w_Chunk) + rsize);
   gc_reclaim(rsize, NULL);
 
