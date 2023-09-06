@@ -2,52 +2,128 @@
 .include "offsets.s"
 
 ;===========================================================
-.macro em.iasl.alloc.lsf
 
-; Save ERAR
-    irs.off
-    c.push.erar
+; BEGIN Anders' old code
+; .macro em.iasl.alloc.lsf
+; 
+; ; Save ERAR
+;     irs.off
+;     c.push.erar
+; 
+; ; Allocate 8 local registers
+;     c.ldi.b     8
+;     c.aml 
+; 
+;     c.ld.msp
+;     c.dup
+;     st.iasp             ; IASP = MSP
+; 
+;     c.ldi.b      8
+;     c.sub
+;     c.dup
+;     c.st.msp            ; MSP = MSP - 8
+;     c.dup
+;     st.oasp             ; OASP = MSP
+; 
+;     c.ldi.b      4
+;     c.sub
+;     c.dup
+;     c.st.msp            ; MSP = MSP - 4
+;     st.rvp              ; RVP = MSP
+;     irs.on
+; .endmacro
+; 
+; ;------------------------------------------------------------
+; 
+; .macro em.isal.dealloc.lsf
+;     irs.off
+;     ld.iasp     
+;     c.addi      16
+;     c.st.msp
+; 
+;     c.dml                   ; Revert c.aml
+; 
+; ; Restore ERAR
+;     c.pop.erar
+;     irs.on
+; 
+; .endmacro
+; ;===========================================================
+; END Anders' old code
 
-; Allocate 8 local registers
-    c.ldi.b     8
-    c.aml 
 
-    c.ld.msp
-    c.dup
-    st.iasp             ; IASP = MSP
+; BEGIN Chris' code
+.macro em.isal.alloc.lsf
+        irs.off          ; disable interrupts
+        c.ldi.b 0       ; push 0 to the evaluation stack as number of 8-byte slots
+; copied from m.alloc.nlih.i4
+        c.ld.lmp        ; push old lmp at evaluation stack
+        c.swap          ; get number of 8-byte slots to top
+        c.ldi.b 1       ; push 1 to the evaluation stack
+        c.shl           ; get number of locals (4-byte slots)
+        c.addi 1        ; add 1 reserved slot
+        c.aml           ; push offset to old lmp,
+                        ; allocate a reserved slot and new locals storage at execution stack,
+                        ; push offset to old msp,
+                        ; and save pointer in lmp
+        c.push.es       ; push old lmp at execution stack
+                        ; Save 0 where RAR is usually saved so the debugger knows that this is the end of the stack
+        c.ldi.b 0       ; push 0 to the evaluation stack
+        c.push.es       ; push 0 from the evaluation stack to the execution stack
+        push.rar        ; push rar at execution stack
+        push.ear        ; push ear at execution stack
+        push.iasp       ; push iasp at execution stack
+        ld.oasp ; load oasp
+        st.iasp ; store it in iasp
+        adrs.i8 16      ; allocate 16 int regs
 
-    c.ldi.b      8
-    c.sub
-    c.dup
-    c.st.msp            ; MSP = MSP - 8
-    c.dup
-    st.oasp             ; OASP = MSP
+; move parameter(s) to i#0... registers from evaluation stack
+; TODO generalise this!
+        pop.es.w i#0
 
-    c.ldi.b      4
-    c.sub
-    c.dup
-    c.st.msp            ; MSP = MSP - 4
-    st.rvp              ; RVP = MSP
-    ; irs.on
+        c.ld.erar       ; Save ERAR to evaluation stack
+        push.es.lrcb ; Hide away evaluation stack
+
+        check.lrcb      ; check precondition for adls.i8
+        adls.i8 4       ; allocate 4 long regs
+        irs.on          ; re-enable interrupts
 .endmacro
 
 ;------------------------------------------------------------
 
 .macro em.isal.dealloc.lsf
-    ; irs.off
-    ld.iasp     
-    c.addi      16
-    c.st.msp
+        irs.off          ; disable interrupts
+; copied from m.dealloc.nlih
+        c.ld.lmp        ; push lmp at evaluation stack
+        c.addi -(6*4) ; offset lmp with 6 int-slots
+                                                                ; this ignores the reserved stack slot
+        c.st.msp        ; restore original msp
+        check.lrcb      ; check precondition for adls.i8
+        adls.i8 -4      ; deallocate 4 long regs
 
-    c.dml                   ; Revert c.aml
+        pop.es.lrcb   ; Reveal evaluation stack
+        c.st.erar        ; Restore ERAR
 
-; Restore ERAR
-    c.pop.erar
-    irs.on
+; move parameter(s) from i#0... registers to evaluation stack
+; TODO generalise this!
+        push.es.w i#0
 
+        adrs.i8 -16     ; deallocate 16 int regs
+        ld.iasp ; load iasp
+        st.oasp ; store it in oasp
+        pop.iasp        ; pop iasp from execution stack
+        pop.ear ; pop ear from execution stack
+        pop.rar ; pop rar from execution stack
+        c.pop.es        ; pop debugger end of stack symbol from execution stack
+        c.pop.es        ; pop old lmp from execution stack
+        c.drop2         ; ignore old lmp and debugger end of stack symbol
+        c.dml           ; revert c.aml
+
+        irs.on          ; re-enable interrupts
 .endmacro
-;===========================================================
 
+
+; END Chris' code
 
 ;===========================================================
 ; e_ldc
@@ -61,7 +137,7 @@
 ;===========================================================
 e_ldc:
 
-    em.iasl.alloc.lsf
+    em.isal.alloc.lsf
 
 ; Get index from evaluation stack
     pop.es.w    i#0     ; index
@@ -239,10 +315,10 @@ e_putfield:
 ;
 ;===========================================================
 e_new:	
-    em.iasl.alloc.lsf
+    em.isal.alloc.lsf
 
-; Get index from evaluation stack
-    pop.es.w    i#1     ; index
+; Get index
+    copy.w  i#1 i#0     ; index
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#2 emul_new
