@@ -432,6 +432,10 @@ void args_read(void) {
 #endif
 }
 
+#define PRINT_METHOD_OFFSET(nm,field) woempa(7,"METHOD_%s = %d\n", #nm, offsetof(w_Method, field) )
+#define PRINT_METHOD_SPEC_OFFSET(nm,field) woempa(7,"METHOD_SPEC_%s = %d\n", #nm, offsetof(w_Method, spec) + offsetof(w_MethodSpec, field) )
+#define PRINT_METHOD_EXEC_OFFSET(nm,field) woempa(7,"METHOD_EXEC_%s = %d\n", #nm, offsetof(w_Method, exec) + offsetof(w_MethodExec, field) )
+
 void startWonka(void* data) {
 
   JavaVM *vm;
@@ -463,6 +467,39 @@ void startWonka(void* data) {
   x_formatter('y', print_descriptor);
 
   lowMemoryCheck;
+
+// temporary hack
+  woempa(7,"w_Method offset definitions:\n");
+  PRINT_METHOD_OFFSET(SPEC,spec);
+  PRINT_METHOD_SPEC_OFFSET(DECLARING_CLAZZ, declaring_clazz);
+  PRINT_METHOD_SPEC_OFFSET(NAME, name);
+  PRINT_METHOD_SPEC_OFFSET(DESC, desc);
+  PRINT_METHOD_SPEC_OFFSET(ARG_TYPES, arg_types);
+  PRINT_METHOD_SPEC_OFFSET(RETURN_TYPE, return_type);
+  PRINT_METHOD_OFFSET(SLOT,slot);
+  PRINT_METHOD_OFFSET(FLAGS,flags);
+  PRINT_METHOD_OFFSET(PARENT,parent);
+  PRINT_METHOD_OFFSET(NUM_THROWS,numThrows);
+  PRINT_METHOD_OFFSET(THROWS,throws);
+  PRINT_METHOD_OFFSET(EXEC,exec);
+  PRINT_METHOD_EXEC_OFFSET(DISPATCHER, dispatcher);
+  PRINT_METHOD_EXEC_OFFSET(ARG_I, arg_i);
+  PRINT_METHOD_EXEC_OFFSET(FUNCTION, function);
+  PRINT_METHOD_EXEC_OFFSET(RETURN_I, return_i);
+  PRINT_METHOD_EXEC_OFFSET(LOCAL_I, local_i);
+  PRINT_METHOD_EXEC_OFFSET(STACK_I, stack_i);
+  PRINT_METHOD_EXEC_OFFSET(NARGS, nargs);
+  PRINT_METHOD_EXEC_OFFSET(CODE_LENGTH, code_length);
+  PRINT_METHOD_EXEC_OFFSET(CODE, code);
+  PRINT_METHOD_EXEC_OFFSET(NUM_EXCEPTIONS, numExceptions);
+  PRINT_METHOD_EXEC_OFFSET(EXCEPTIONS, exceptions);
+ 
+
+//   w_methodDebugInfo debug_info; /* Method debug info if available         */
+// // TODO Following are only used if either bytecode verification or new 
+// // execution engine are used, we should have an ifdef for this.
+//   w_ubyte *status_array;   /* Per-byte flags showing instruction boundaries etc. */
+//   w_wordset basicBlocks;   /* Each entry in the wordset is a v_BasicBlock* */
 
   /*
   ** Here we start routines that require a valid heap (for malloc) to
