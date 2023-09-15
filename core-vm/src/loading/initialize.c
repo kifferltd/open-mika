@@ -326,6 +326,8 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
         if (isSet(verbose_flags, VERBOSE_FLAG_INIT)) {
           w_printf("Initialize %w: executing <clinit>\n", clazz->dotified);
         }
+        lowMemoryCheck;
+
         // WAS : frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         // deactivateFrame(frame, NULL);
         activate_frame(clazz->clinit, 0, NULL);

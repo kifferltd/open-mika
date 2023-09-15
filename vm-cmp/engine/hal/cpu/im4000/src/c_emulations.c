@@ -115,6 +115,7 @@ void emul_putfield(w_clazz clazz, uint16_t index, void *value, w_instance object
  */
 w_instance emul_new(im4000_frame frame, uint16_t cpIndex) 
 {
+    lowMemoryCheck;
     w_thread thread = currentWonkaThread;
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
