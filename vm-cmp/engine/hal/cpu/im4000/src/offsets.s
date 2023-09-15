@@ -52,9 +52,7 @@ FRAME_LMP          = 6
 FRAME_LS_COUNT      = 7
 FRAME_RETADDRESS    = 8
 FRAME_FMP           = 9
-FRAME_RAR           = 10
 
-
-SIZEOF_FRAME = 11
+SIZEOF_FRAME = 10
 
 ;===========================================================

@@ -247,7 +247,7 @@ static void cleanUpClinit(w_method clinit) {
 ** The result returned is CLASS_LOADING_xxxxx.
 */
 
-void activate_frame(w_method, int);
+extern void activate_frame(w_method, int, void*);
 
 w_int initializeClazz(w_thread thread, w_clazz clazz) {
   w_frame    frame;
@@ -328,7 +328,7 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
         }
         // WAS : frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         // deactivateFrame(frame, NULL);
-        activate_frame(clazz->clinit, 0);
+        activate_frame(clazz->clinit, 0, NULL);
         cleanUpClinit(clazz->clinit);
         //clazz->clinit = NULL;
       }
@@ -500,4 +500,3 @@ w_int mustBeInitialized(w_clazz clazz) {
 
   return result;
 }
-

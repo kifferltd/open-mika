@@ -4,7 +4,7 @@
 ;===========================================================
 
 ; BEGIN Anders' old code
-; .macro em.iasl.alloc.lsf
+; .macro em.isal.alloc.nlsf
 ; 
 ; ; Save ERAR
 ;     irs.off
@@ -35,7 +35,7 @@
 ; 
 ; ;------------------------------------------------------------
 ; 
-; .macro em.isal.dealloc.lsf
+; .macro em.isal.dealloc.nlsf
 ;     irs.off
 ;     ld.iasp     
 ;     c.addi      16
@@ -53,7 +53,7 @@
 
 
 ; BEGIN Chris' code
-.macro em.isal.alloc.lsf
+.macro em.isal.alloc.nlsf
         irs.off          ; disable interrupts
         c.ldi.b 0       ; push 0 to the evaluation stack as number of 8-byte slots
 ; copied from m.alloc.nlih.i4
@@ -91,7 +91,7 @@
 
 ;------------------------------------------------------------
 
-.macro em.isal.dealloc.lsf
+.macro em.isal.dealloc.nlsf
         irs.off          ; disable interrupts
 ; copied from m.dealloc.nlih
         c.ld.lmp        ; push lmp at evaluation stack
@@ -137,7 +137,7 @@
 ;===========================================================
 e_ldc:
 
-    em.isal.alloc.lsf
+    em.isal.alloc.nlsf
 
 ; Get index from evaluation stack
     pop.es.w    i#0     ; index
@@ -147,7 +147,7 @@ e_ldc:
 ; Push constant value onto the evaluation stack
     push.es.w    i#0
 
-    em.isal.dealloc.lsf  
+    em.isal.dealloc.nlsf
     ret.eh    
 
 ;===========================================================
@@ -315,7 +315,7 @@ e_putfield:
 ;
 ;===========================================================
 e_new:	
-    em.isal.alloc.lsf
+    em.isal.alloc.nlsf
 
 ; Get index
     copy.w  i#1 i#0     ; index
@@ -327,7 +327,7 @@ e_new:
 ; Push object reference onto the evaluation stack
     push.es.w    i#0
 
-    em.isal.dealloc.lsf  
+    em.isal.dealloc.nlsf
     ret.eh    
 
 ;===========================================================
@@ -644,25 +644,34 @@ e_dreturn:
 ;
 ;===========================================================
 e_return:
+; Not allocating ISAL stack frame as not doing any ISAL stuff here.
+
+; NOTE: Legacy code checked eval stack level, memory stack level, and unlocked synchronized objects here.
 
 ; Deallocate locals on the memory stack
     c.dml
 
 ; Deallocate not needed frame entries
-	c.ldi.b	    SIZEOF_FRAME-4
-	c.dms
+    c.ldi.b	    SIZEOF_FRAME - 4
+    c.dms
 
 ; Deallocate locals on the locals stack
-	c.pop.es		;stack: ..., FRAME_LS_COUNT
-	c.dls
+    c.pop.es        ; stack: ..., FRAME_LS_COUNT
+    c.dls
 
 ; Recover pointers from the rest of the frame and return
-	c.pop.es		;stack: ..., FRAME_RETADDRESS
-	c.st.erar
-	c.pop.fmp
-	c.pop.rar
+; Also disable interrupts while popping out values from the memory one by one
+; That is to ensure 8-byte alignment of MSP
+    irs.off
 
-	c.rete	
+    c.pop.es        ; stack: ..., FRAME_RETADDRESS
+    c.st.erar
+    c.pop.fmp
+
+; Re-enable interrupts, should be always safe to do it here
+    irs.on
+
+    c.rete
 
 ;=====================================================================
 ;
