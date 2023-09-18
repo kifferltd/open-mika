@@ -3,57 +3,19 @@
 
 ;===========================================================
 
-; BEGIN Anders' old code
-; .macro em.isal.alloc.nlsf
-; 
-; ; Save ERAR
-;     irs.off
-;     c.push.erar
-; 
-; ; Allocate 8 local registers
-;     c.ldi.b     8
-;     c.aml 
-; 
-;     c.ld.msp
-;     c.dup
-;     st.iasp             ; IASP = MSP
-; 
-;     c.ldi.b      8
-;     c.sub
-;     c.dup
-;     c.st.msp            ; MSP = MSP - 8
-;     c.dup
-;     st.oasp             ; OASP = MSP
-; 
-;     c.ldi.b      4
-;     c.sub
-;     c.dup
-;     c.st.msp            ; MSP = MSP - 4
-;     st.rvp              ; RVP = MSP
-;     irs.on
-; .endmacro
-; 
-; ;------------------------------------------------------------
-; 
-; .macro em.isal.dealloc.nlsf
-;     irs.off
-;     ld.iasp     
-;     c.addi      16
-;     c.st.msp
-; 
-;     c.dml                   ; Revert c.aml
-; 
-; ; Restore ERAR
-;     c.pop.erar
-;     irs.on
-; 
-; .endmacro
-; ;===========================================================
-; END Anders' old code
+.macro em.isal.alloc.nlsf.pop.es_1
+    pop.es.w i#0
+    em.isal.alloc.nlsf.pop.es_0
+.endmacro
 
+.macro em.isal.alloc.nlsf.pop.es_0
+.endmacro
 
-; BEGIN Chris' code
-.macro em.isal.alloc.nlsf
+; Allocate a complete ISAL frame on top of whatever is in the stacks.
+; Also popping values from the evaluation stack into i#0... registers.
+; NOTE: The topmost value is moved to the register with the highest index
+; and the last popped value to i#0.
+.macro em.isal.alloc.nlsf narg
         irs.off          ; disable interrupts
         c.ldi.b 0       ; push 0 to the evaluation stack as number of 8-byte slots
 ; copied from m.alloc.nlih.i4
@@ -78,8 +40,7 @@
         adrs.i8 16      ; allocate 16 int regs
 
 ; move parameter(s) to i#0... registers from evaluation stack
-; TODO generalise this!
-        pop.es.w i#0
+        em.isal.alloc.nlsf.pop.es_\narg
 
         c.ld.erar       ; Save ERAR to evaluation stack
         push.es.lrcb ; Hide away evaluation stack
@@ -91,7 +52,19 @@
 
 ;------------------------------------------------------------
 
-.macro em.isal.dealloc.nlsf
+.macro em.isal.dealloc.nlsf.push.es_1
+    push.es.w i#0
+    em.isal.dealloc.nlsf.push.es_0
+.endmacro
+
+.macro em.isal.dealloc.nlsf.push.es_0
+.endmacro
+
+; Deallocate a complete ISAL frame and reveal the stacks beneath.
+; Also pushing values from i#0... registers onto the evaluation stack.
+; NOTE: The value from the register with the highest index is pushed first
+; and the value from i#0 is going to be at the top of the evaluation stack.
+.macro em.isal.dealloc.nlsf narg
         irs.off          ; disable interrupts
 ; copied from m.dealloc.nlih
         c.ld.lmp        ; push lmp at evaluation stack
@@ -105,8 +78,7 @@
         c.st.erar        ; Restore ERAR
 
 ; move parameter(s) from i#0... registers to evaluation stack
-; TODO generalise this!
-        push.es.w i#0
+        em.isal.dealloc.nlsf.push.es_\narg
 
         adrs.i8 -16     ; deallocate 16 int regs
         ld.iasp ; load iasp
@@ -123,8 +95,6 @@
 .endmacro
 
 
-; END Chris' code
-
 ;===========================================================
 ; e_ldc
 ;
@@ -137,7 +107,7 @@
 ;===========================================================
 e_ldc:
 
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index from evaluation stack
     pop.es.w    i#0     ; index
@@ -147,7 +117,7 @@ e_ldc:
 ; Push constant value onto the evaluation stack
     push.es.w    i#0
 
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
     ret.eh    
 
 ;===========================================================
@@ -315,7 +285,7 @@ e_putfield:
 ;
 ;===========================================================
 e_new:	
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index
     copy.w  i#1 i#0     ; index
@@ -327,7 +297,7 @@ e_new:
 ; Push object reference onto the evaluation stack
     push.es.w    i#0
 
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
     ret.eh    
 
 ;===========================================================
@@ -527,7 +497,7 @@ e_invokevirtual:
 ;
 ;===========================================================
 e_invokespecial:
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index
     copy.w  i#1 i#0     ; index
@@ -543,7 +513,7 @@ e_invokespecial:
     push.es.w    i#0
 
 ; Reveal evaluation stack and prepare new frame.
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
 ; Stack: ..., objectref, [arg1, [arg2...]], method
     c.dup
     c.addi  METHOD_EXEC_ARG_I
