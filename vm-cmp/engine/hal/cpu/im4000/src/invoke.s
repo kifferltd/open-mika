@@ -10,6 +10,8 @@
 ;
 ;===========================================================
 allocate_locals:
+; !!! Use ISAC only because this function is called from
+; emulation code without an ISAL frame.
 
 ; Check if only embedded locals needed
     c.dup
@@ -94,8 +96,20 @@ activate_frame_5:
 activate_frame_10:
     push.es.w   i#13
 
+; Push method onto the evaluation stack
+    push.es.w   i#12
+
+; Push return address onto the evaluation stack
+    c.ldi.i     activate_frame_return
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Start setup a Java stack frame in the memory stack
+; !!! Use ISAC only as the following code is called from
+; emulation code without an ISAL frame.
+
+.global _emul_allocate_frame
+_emul_allocate_frame:
+; es: ..., [arg0, [arg1...]], narg, method, return_address
 
 ; Disable interrupts while pushing values to the memory
 ; That is to ensure 8-byte alignment of MSP
@@ -104,8 +118,7 @@ activate_frame_10:
 ; Current (caller in Java) FMP. Presumably 0 when invoking a Java method the first time.
     c.push.fmp
 
-; ERAR (for java return) set to activate_frame_return for cleanup
-    c.ldi.i    activate_frame_return
+; ERAR (for java return) set to return_address
     c.push.es
 
 ; Re-enable interrupts, should be always safe to do it here
@@ -126,17 +139,17 @@ activate_frame_10:
     c.st.fmp
 
 ; Store method pointer in the frame
-    push.es.w   i#12
+    c.dup
     c.st.i.fmp  FRAME_METHOD
 
 ; NOTE: CONSTANTPOOL and SYNCOBJECT remain zero in FRAME
 ; but was handled here in legacy code.
 
 ; Push locals count onto the evaluation stack
-    copy.w      i#1 i#12
-    add.i.i8    i#1 i#1 METHOD_EXEC_LOCAL_I
-    load.h      s#2 i#1
-    push.es.h   s#2         ; es: ..., locals_i
+; es: ..., [arg0, [arg1...]], narg, method
+    c.addi METHOD_EXEC_LOCAL_I
+    c.ld.s
+; es: ..., [arg0, [arg1...]], narg, locals_i
 
 ; Allocate locals
     c.callw     allocate_locals
@@ -146,13 +159,13 @@ activate_frame_10:
 ;    .short      0xf9c2      ; c.jump.java
 
 ; Jump to method code
-    copy.w      i#3 i#12
-    add.i.i8    i#3 i#3 METHOD_EXEC_CODE
-    load.w      i#4 i#3
-    push.es.w   i#4         ; es: ..., method_code
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_EXEC_CODE
+    c.ld.i      ; es: ..., method_code
     .short      0xf9c2      ; c.jump.java
 
-; Java code returns here
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Java code returns here when invoked via activate_frame()
 activate_frame_return:
     ; Evaluation stack should be empty here
     check.lrcb

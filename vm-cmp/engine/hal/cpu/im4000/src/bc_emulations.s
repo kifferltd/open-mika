@@ -523,14 +523,37 @@ e_invokevirtual:
 ;
 ; Format: invokespecial, indexbyte1, indexbyte2
 ;
-; Stack: ..., objectref, [arg1, [arg2...]] -> ...
+; Stack: ..., objectref, [arg1, [arg2...]], cpIndex -> ...
 ;
 ;===========================================================
 e_invokespecial:
+    em.isal.alloc.nlsf
 
-    errorpoint          ; Not implemented
+; Get index
+    copy.w  i#1 i#0     ; index
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
 
-    ; needs to call emul_invokespecial(frame, index, objectref, args ...)
+; FIXME: Call method resolution
+    errorpoint
+    ;move.i.i32  i#2 _resolveMethod_
+    ;call        i#2
+
+; Push method reference onto the evaluation stack
+    push.es.w    i#0
+
+; Reveal evaluation stack and prepare new frame.
+    em.isal.dealloc.nlsf
+; Stack: ..., objectref, [arg1, [arg2...]], method
+    c.dup
+    c.addi  METHOD_EXEC_ARG_I
+    c.ld.i
+    c.swap
+; Stack: ..., objectref, [arg1, [arg2...]], narg, method
+    c.ld.erar
+; Stack: ..., objectref, [arg1, [arg2...]], narg, method, return_address
+    c.jumpw _emul_allocate_frame
+
 
 ;===========================================================
 ; e_invokestatic
@@ -539,7 +562,7 @@ e_invokespecial:
 ;
 ; Format: invokestatic, indexbyte1, indexbyte2
 ;
-; Stack: ..., [arg1, [arg2...]] -> ...
+; Stack: ..., [arg1, [arg2...]], cpIndex -> ...
 ;
 ;===========================================================
 e_invokestatic:
@@ -555,7 +578,7 @@ e_invokestatic:
 ;
 ; Format: invokespecial, indexbyte1, indexbyte2, count, 0
 ;
-; Stack: ..., objectref, [arg1, [arg2...]] -> ...
+; Stack: ..., objectref, [arg1, [arg2...]], cpIndex -> ...
 ;
 ;===========================================================
 ;
