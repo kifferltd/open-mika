@@ -164,7 +164,7 @@ e_ldc_w:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_ldc(clazz, offset)
+    ; needs to call emul_ldc(tricky, offset)
 
 ;===========================================================
 ; em_ldc2_w
@@ -182,7 +182,7 @@ e_ldc2_w:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_ldc2_w(clazz, offset)
+    ; needs to call emul_ldc2_w(frame, offset)
 
 ;===========================================================
 ; e_jsr
@@ -252,7 +252,7 @@ e_getstatic:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_getstatic(clazz, index)
+    ; needs to call emul_getstatic(frame, index)
 
 ;===========================================================
 ; e_putstatic
@@ -286,7 +286,7 @@ e_getfield:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_getfield(clazz, index, objectref)
+    ; needs to call emul_getfield(frame, index, objectref)
 
 ;===========================================================
 ; e_putfield
@@ -302,7 +302,7 @@ e_putfield:
 
     errorpoint      ; Not implemented
 
-    ; needs to call putfield(clazz, index, value, objectref)
+    ; needs to call putfield(frame, index, value, objectref)
 
 ;===========================================================
 ; e_new
@@ -427,7 +427,7 @@ e_checkcast:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_checkcast(clazz, index, objectref)
+    ; needs to call emul_checkcast(frame, index, objectref)
 
 ;===========================================================
 ; e_instanceof
@@ -446,7 +446,7 @@ e_instanceof:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_instanceof(clazz, index, objectref)
+    ; needs to call emul_instanceof(frame, index, objectref)
 
 ;===========================================================
 ; e_monitorenter
@@ -499,7 +499,7 @@ e_multianewarray:
 
     errorpoint      ; Not implemented
 
-    ; needs to call emul_anewarray(clazz, index, dimension, count...)
+    ; needs to call emul_anewarray(frame, index, dimension, count...)
 ;===========================================================
 ; e_invokevirtual
 ;
@@ -514,7 +514,7 @@ e_invokevirtual:
 
     errorpoint          ; Not implemented
 
-    ; needs to call emul_invokevirtual(clazz, index, objectref, args ...)
+    ; needs to call emul_invokevirtual(frame, index, objectref, args ...)
 
 ;===========================================================
 ; e_invokespecial
@@ -530,7 +530,7 @@ e_invokespecial:
 
     errorpoint          ; Not implemented
 
-    ; needs to call emul_invokespecial(clazz, index, objectref, args ...)
+    ; needs to call emul_invokespecial(frame, index, objectref, args ...)
 
 ;===========================================================
 ; e_invokestatic
@@ -546,7 +546,7 @@ e_invokestatic:
 
     errorpoint          ; Not implemented
 
-    ; needs to call emul_invokesstatic(clazz, index, args ...)
+    ; needs to call emul_invokesstatic(frame, index, args ...)
 
 ;===========================================================
 ; e_invokeinterface
@@ -563,7 +563,7 @@ e_invokeinterface:
 
     errorpoint          ; Not implemented
 
-    ; needs to call emul_invokeinterface(clazz, index, objectref, args ...)
+    ; needs to call emul_invokeinterface(frame, index, objectref, args ...)
 
 ;===========================================================
 ; e_ireturn
