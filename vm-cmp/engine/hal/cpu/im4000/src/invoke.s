@@ -1,5 +1,10 @@
 
 .include "offsets.s"
+.include "macros.s"
+
+; !!! Use ISAC only by default as parts of this file are called from
+; emulation code without an ISAL frame. The only exception is
+; activate_frame, which is called in ISAL context as a C function.
 
 ;===========================================================
 ;
@@ -10,9 +15,6 @@
 ;
 ;===========================================================
 allocate_locals:
-; !!! Use ISAC only because this function is called from
-; emulation code without an ISAL frame.
-
 ; Check if only embedded locals needed
     c.dup
     c.addi    -8
@@ -64,11 +66,12 @@ java_method1:
 ;===========================================================
 ; activate_frame
 ;
-; C syntax:     void activate_frame(w_method method, int narg, void* args)
+; C syntax: void activate_frame(w_method method, int narg, void* args)
 ;
 ;===========================================================
 .global activate_frame
 activate_frame:
+; Called in ISAL context, can use registers.
     move.i.i32 i#11 0
     alloc.nlsf i#11
 
@@ -102,20 +105,30 @@ activate_frame_10:
 ; Push return address onto the evaluation stack
     c.ldi.i     activate_frame_return
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Start setup a Java stack frame in the memory stack
-; !!! Use ISAC only as the following code is called from
-; emulation code without an ISAL frame.
+; Make sure FMP is 0 when invoking Java method from ISAL
+    c.ldi.b     0
+    c.st.fmp
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; activate_frame() falls through to _emul_allocate_frame.
+; !!! Continue with ISAC as can be called from emulation routines.
+;===========================================================
+;
+; Set up a Java stack frame in the memory stack and continue with
+; Java execution.
+;
+; stack:    ..., [arg0, [arg1...]], narg, method, return_address
+;        => ...,
+;
+;===========================================================
 .global _emul_allocate_frame
 _emul_allocate_frame:
-; es: ..., [arg0, [arg1...]], narg, method, return_address
 
 ; Disable interrupts while pushing values to the memory
 ; That is to ensure 8-byte alignment of MSP
     irs.off
 
-; Current (caller in Java) FMP. Presumably 0 when invoking a Java method the first time.
+; Current (caller) FMP.
     c.push.fmp
 
 ; ERAR (for java return) set to return_address
@@ -164,8 +177,9 @@ _emul_allocate_frame:
     c.ld.i      ; es: ..., method_code
     .short      0xf9c2      ; c.jump.java
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;===========================================================
 ; Java code returns here when invoked via activate_frame()
+; Continue in ISAL context.
 activate_frame_return:
     ; Evaluation stack should be empty here
     check.lrcb
@@ -173,4 +187,118 @@ activate_frame_return:
     ; Cleanup ISAL frame and return
     dealloc.nlsf
     ret
+;===========================================================
+
+;===========================================================
+;
+; Remove top Java stack frame from the memory stack and restore
+; registers. Do not touch the evaluation stack where return
+; values should be already prepared as needed.
+;
+; stack:    ... => ...
+;
+;===========================================================
+.global _emul_return
+_emul_return:
+; NOTE: Legacy code checked eval stack level, memory stack level, and unlocked synchronized objects here.
+
+; Deallocate locals on the memory stack
+    c.dml
+
+; Deallocate not needed frame entries
+    c.ldi.b	    SIZEOF_FRAME - 4
+    c.dms
+
+; Deallocate locals on the locals stack
+    c.pop.es        ; stack: ..., FRAME_LS_COUNT
+    c.dls
+
+; Recover pointers from the rest of the frame and return
+; Also disable interrupts while popping out values from the memory one by one
+; That is to ensure 8-byte alignment of MSP
+    irs.off
+
+    c.pop.es        ; stack: ..., FRAME_RETADDRESS
+    c.st.erar
+    c.pop.fmp
+
+; Re-enable interrupts, should be always safe to do it here
+    irs.on
+
+    c.rete
+;===========================================================
+
+;===========================================================
+;
+; Throw the object from the top of the evaluation stack.
+;
+; stack:    ..., objectref => [empty], objectref
+;
+;===========================================================
+.global _emul_throw
+_emul_throw:
+    ; Get current frame
+    c.ld.fmp
+
+    ; If no Java frame (FMP==0), manage uncaught exception
+    c.addi  0
+    c.br.z  _throw_uncaught
+    ; es: ..., objectref, frame
+
+    ; Keep a copy of objectref for potential future use
+    c.over  ; es: ..., objectref, frame, objectref
+
+    ; Check handler in current frame
+    em.isal.alloc.nlsf 2
+    ; FIXME: Prepare parameters and call Mika function to find handler
+    errorpoint
+    ;move.i.i32  i#2 _findHandler_
+    ;call        i#2
+    em.isal.dealloc.nlsf 1
+    ; es: ..., objectref, handler
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; If no handler, need to remove top frame and check again
+    c.addi  0
+    c.br.z  _throw_unwind
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Matching handler found, execute it.
+    ; FIXME
+    errorpoint
+
+    c.rete
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_throw_unwind:
+; es: ..., objectref, 0 (handler)
+    c.drop
+
+    ; FIXME...
+    errorpoint
+
+    ; Remove top frame
+
+    ; When unwinding, there are only ISAJ frames
+    ; in the execution stack and the evaluation stack is continous.
+    ; That is because emulation routines
+    ; (including those for invoke*) deallocate their ISAL frame
+    ; before continuing with ISAJ execution.
+
+    ; The evaluation stack is supposed to be empty anyway?
+    ; The compiler does not keep any data in it between operations...
+    ; Might add check.lrcb at the appropriate place to check that.
+
+    ; Check frame...
+    ; es: ..., objectref
+    c.jumpw _emul_throw
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+_throw_uncaught:
+; es: ..., objectref, 0 (frame)
+    c.drop
+
+    ; FIXME: Uncaught exception
+    errorpoint
+
 ;===========================================================
