@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2006, 2007, 2010, 2012, 2022  by KIFFER Ltd.              *
+* Copyright (c) 2006, 2007, 2010, 2012, 2022, 2023  by KIFFER Ltd.        *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -109,5 +109,7 @@ static inline void throwIOException(w_thread thread) {
 static inline void throwNullPointerException(w_thread thread) {
   throwException(thread, clazzNullPointerException, NULL);
 }
+
+w_instance createRuntimeException(const char *classname);
 
 #endif /* _EXCEPTION_H */

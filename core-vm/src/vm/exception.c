@@ -406,3 +406,19 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
   }
 }
 
+w_instance createRuntimeException(const char *classname) {
+  w_thread thread = currentWonkaThread;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_string name_string = cstring2String(classname, strlen(classname));
+  enterUnsafeRegion(thread);
+  w_clazz exceptionClazz = seekClazzByName(name_string, NULL);
+  enterSafeRegion(thread);
+  deregisterString(name_string);
+  enterUnsafeRegion(thread);
+  w_instance exc = allocInstance(currentWonkaThread, exceptionClazz);
+  if (!was_unsafe) {
+    enterSafeRegion(thread);
+  }
+  return exc;
+}
+
