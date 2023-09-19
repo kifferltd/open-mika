@@ -20,12 +20,9 @@ e_ldc:
     pop.es.w    i#0     ; index
     move.i.i32  i#1 emul_ldc
     call        i#1
-      
-; Push constant value onto the evaluation stack
-    push.es.w    i#0
 
     em.isal.dealloc.nlsf 1
-    ret.eh    
+    ret.eh
 
 ;===========================================================
 ; e_ldc_w
@@ -402,13 +399,9 @@ e_invokespecial:
     c.ld.i      ; es: ..., calling_clazz
     pop.es.w    i#0     ; clazz
 
-; FIXME: Call method resolution -  class in i#0, index in i#1
-    ;errorpoint
+; Call method resolution -  class in i#0, index in i#1
     move.i.i32  i#2 getMethodConstant
     call        i#2
-
-; Push method reference onto the evaluation stack
-    push.es.w    i#0
 
 ; Reveal evaluation stack and prepare new frame.
     em.isal.dealloc.nlsf 1
