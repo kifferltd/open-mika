@@ -295,7 +295,7 @@ static inline w_instance getStringConstant(w_clazz clazz, w_int i) {
  * Get the value of a CLASS constant, resolving it if need be.
  * The calling thread must GC safe!
  * @param clazz the clazz whose contant pool is to be used
- * @param i    the index into the constant pool
+ * @param idx  the index into the constant pool
  * @return the constant value.
  */
 w_clazz getClassConstant(w_clazz clazz, w_int idx, w_thread thread);
@@ -312,7 +312,7 @@ w_clazz getClassConstant(w_clazz clazz, w_int idx, w_thread thread);
  * Get the value of a FIELD constant, resolving it if need be.
  * The calling thread must GC safe!
  * @param clazz the clazz whose contant pool is to be used
- * @param i    the index into the constant pool
+ * @param idx  the index into the constant pool
  * @return the constant value.
  */
 w_field getFieldConstant(w_clazz clazz, w_int idx);
@@ -329,7 +329,7 @@ w_field getFieldConstant(w_clazz clazz, w_int idx);
  * Get the value of a METHOD constant, resolving it if need be.
  * The calling thread must GC safe!
   * @param clazz the clazz whose contant pool is to be used
- * @param i    the index into the constant pool
+ * @param idx  the index into the constant pool
  * @return the constant value.
 */
 w_method getMethodConstant(w_clazz clazz, w_int idx);
@@ -346,7 +346,7 @@ w_method getMethodConstant(w_clazz clazz, w_int idx);
  * Get the value of an IMETHOD constant, resolving it if need be.
  * The calling thread must GC safe!
  * @param clazz the clazz whose contant pool is to be used
- * @param i    the index into the constant pool
+ * @param idx  the index into the constant pool
  * @return the constant value.
  */
 w_method getIMethodConstant(w_clazz clazz, w_int idx);
@@ -367,10 +367,10 @@ void dumpPools(int fd, w_clazz clazz);
  ** Add a UTF8 constant to the pool (or find an identical existing
  ** one), returning the index of the result.
  * @param clazz the clazz to whose contant pool the constant is to be added.
- * @param the contents of the constant
+ * @param string the contents of the constant
  * @return the index of the new entry in the constant pool.
  */
-w_int addUTF8ConstantToPool(w_clazz, w_string);
+w_int addUTF8ConstantToPool(w_clazz clazz, w_string string);
 
 /**
 ** Add a new unresolved Class constant to the pool, unless it already exists. 
