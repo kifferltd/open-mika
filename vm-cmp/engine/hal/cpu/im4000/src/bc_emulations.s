@@ -324,9 +324,6 @@ e_new:
     move.i.i32  i#2 emul_new
     call        i#2
       
-; Push object reference onto the evaluation stack
-    push.es.w    i#0
-
     em.isal.dealloc.nlsf
     ret.eh    
 
@@ -531,13 +528,15 @@ e_invokespecial:
 
 ; Get index
     copy.w  i#1 i#0     ; index
-    c.ld.fmp
-    pop.es.w    i#0     ; frame
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
 
-; FIXME: Call method resolution
-    errorpoint
-    ;move.i.i32  i#2 _resolveMethod_
-    ;call        i#2
+; FIXME: Call method resolution -  class in i#0, index in i#1
+    ;errorpoint
+    move.i.i32  i#2 getMethodConstant
+    call        i#2
 
 ; Push method reference onto the evaluation stack
     push.es.w    i#0
