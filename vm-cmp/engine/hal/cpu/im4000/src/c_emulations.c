@@ -34,6 +34,10 @@ int32_t seekHandler(im4000_frame frame, int32_t pc) {
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   w_slot auxs;
   w_instance pending;
+
+  if (!thread->exception) {
+    return 0;
+  }
   
   w_boolean was_unsafe = enterUnsafeRegion(thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
@@ -80,7 +84,7 @@ int32_t seekHandler(im4000_frame frame, int32_t pc) {
         if (!was_unsafe) {
           enterSafeRegion(thread);
         }
-        return ex->handler_pc - 1;
+        return ex->handler_pc;
       }
     }
   }
