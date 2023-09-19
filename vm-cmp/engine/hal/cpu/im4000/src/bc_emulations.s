@@ -1,129 +1,6 @@
 
 .include "offsets.s"
-
-;===========================================================
-
-; BEGIN Anders' old code
-; .macro em.isal.alloc.nlsf
-; 
-; ; Save ERAR
-;     irs.off
-;     c.push.erar
-; 
-; ; Allocate 8 local registers
-;     c.ldi.b     8
-;     c.aml 
-; 
-;     c.ld.msp
-;     c.dup
-;     st.iasp             ; IASP = MSP
-; 
-;     c.ldi.b      8
-;     c.sub
-;     c.dup
-;     c.st.msp            ; MSP = MSP - 8
-;     c.dup
-;     st.oasp             ; OASP = MSP
-; 
-;     c.ldi.b      4
-;     c.sub
-;     c.dup
-;     c.st.msp            ; MSP = MSP - 4
-;     st.rvp              ; RVP = MSP
-;     irs.on
-; .endmacro
-; 
-; ;------------------------------------------------------------
-; 
-; .macro em.isal.dealloc.nlsf
-;     irs.off
-;     ld.iasp     
-;     c.addi      16
-;     c.st.msp
-; 
-;     c.dml                   ; Revert c.aml
-; 
-; ; Restore ERAR
-;     c.pop.erar
-;     irs.on
-; 
-; .endmacro
-; ;===========================================================
-; END Anders' old code
-
-
-; BEGIN Chris' code
-.macro em.isal.alloc.nlsf
-        irs.off          ; disable interrupts
-        c.ldi.b 0       ; push 0 to the evaluation stack as number of 8-byte slots
-; copied from m.alloc.nlih.i4
-        c.ld.lmp        ; push old lmp at evaluation stack
-        c.swap          ; get number of 8-byte slots to top
-        c.ldi.b 1       ; push 1 to the evaluation stack
-        c.shl           ; get number of locals (4-byte slots)
-        c.addi 1        ; add 1 reserved slot
-        c.aml           ; push offset to old lmp,
-                        ; allocate a reserved slot and new locals storage at execution stack,
-                        ; push offset to old msp,
-                        ; and save pointer in lmp
-        c.push.es       ; push old lmp at execution stack
-                        ; Save 0 where RAR is usually saved so the debugger knows that this is the end of the stack
-        c.ldi.b 0       ; push 0 to the evaluation stack
-        c.push.es       ; push 0 from the evaluation stack to the execution stack
-        push.rar        ; push rar at execution stack
-        push.ear        ; push ear at execution stack
-        push.iasp       ; push iasp at execution stack
-        ld.oasp ; load oasp
-        st.iasp ; store it in iasp
-        adrs.i8 16      ; allocate 16 int regs
-
-; move parameter(s) to i#0... registers from evaluation stack
-; TODO generalise this!
-        pop.es.w i#0
-
-        c.ld.erar       ; Save ERAR to evaluation stack
-        push.es.lrcb ; Hide away evaluation stack
-
-        check.lrcb      ; check precondition for adls.i8
-        adls.i8 4       ; allocate 4 long regs
-        irs.on          ; re-enable interrupts
-.endmacro
-
-;------------------------------------------------------------
-
-.macro em.isal.dealloc.nlsf
-        irs.off          ; disable interrupts
-; copied from m.dealloc.nlih
-        c.ld.lmp        ; push lmp at evaluation stack
-        c.addi -(6*4) ; offset lmp with 6 int-slots
-                                                                ; this ignores the reserved stack slot
-        c.st.msp        ; restore original msp
-        check.lrcb      ; check precondition for adls.i8
-        adls.i8 -4      ; deallocate 4 long regs
-
-        pop.es.lrcb   ; Reveal evaluation stack
-        c.st.erar        ; Restore ERAR
-
-; move parameter(s) from i#0... registers to evaluation stack
-; TODO generalise this!
-        push.es.w i#0
-
-        adrs.i8 -16     ; deallocate 16 int regs
-        ld.iasp ; load iasp
-        st.oasp ; store it in oasp
-        pop.iasp        ; pop iasp from execution stack
-        pop.ear ; pop ear from execution stack
-        pop.rar ; pop rar from execution stack
-        c.pop.es        ; pop debugger end of stack symbol from execution stack
-        c.pop.es        ; pop old lmp from execution stack
-        c.drop2         ; ignore old lmp and debugger end of stack symbol
-        c.dml           ; revert c.aml
-
-        irs.on          ; re-enable interrupts
-.endmacro
-
-
-; END Chris' code
+.include "macros.s"
 
 ;===========================================================
 ; e_ldc
@@ -137,7 +14,7 @@
 ;===========================================================
 e_ldc:
 
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index from evaluation stack
     pop.es.w    i#0     ; index
@@ -147,7 +24,7 @@ e_ldc:
 ; Push constant value onto the evaluation stack
     push.es.w    i#0
 
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
     ret.eh    
 
 ;===========================================================
@@ -315,7 +192,7 @@ e_putfield:
 ;
 ;===========================================================
 e_new:	
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index
     copy.w  i#1 i#0     ; index
@@ -324,7 +201,7 @@ e_new:
     move.i.i32  i#2 emul_new
     call        i#2
       
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
     ret.eh    
 
 ;===========================================================
@@ -389,24 +266,16 @@ e_arraylength:
 ;
 ; Format: athrow
 ;
-; Stack: ..., objectref -> objectref
-;
-; Local variables:      +0:	program counter
-;		        +1:	program counter relative method start
-;		        +2:	method.java.handlers.length
-;		        +3:	method.java.handlers.handlers[]
-;		        +4:     method.java.code
+; Stack: ..., objectref -> [empty], objectref
 ;
 ;===========================================================
-e_athrow:		
+e_athrow:
 
-    errorpoint      ; Not implemented
+; Check if objectref is null
+    c.addi  0
+    c.brs.z _exception_nullpointer
 
-    ; this is a tricky, one, because the microcide is passing
-    ; information taken from kvm-specific data structures
-    ; -> can we change the microcode?
-    ; Note that this instruction may or may not cause execution
-    ; to leave the current frame 
+    c.jumpw _emul_throw
 
 ;===========================================================
 ; e_checkcast
@@ -524,7 +393,7 @@ e_invokevirtual:
 ;
 ;===========================================================
 e_invokespecial:
-    em.isal.alloc.nlsf
+    em.isal.alloc.nlsf 1
 
 ; Get index
     copy.w  i#1 i#0     ; index
@@ -542,7 +411,7 @@ e_invokespecial:
     push.es.w    i#0
 
 ; Reveal evaluation stack and prepare new frame.
-    em.isal.dealloc.nlsf
+    em.isal.dealloc.nlsf 1
 ; Stack: ..., objectref, [arg1, [arg2...]], method
     c.dup
     c.addi  METHOD_EXEC_ARG_I
@@ -666,34 +535,89 @@ e_dreturn:
 ;
 ;===========================================================
 e_return:
-; Not allocating ISAL stack frame as not doing any ISAL stuff here.
+    c.jumpw _emul_return
 
-; NOTE: Legacy code checked eval stack level, memory stack level, and unlocked synchronized objects here.
+;===========================================================
+; e_exception
+;
+; This function handles exceptions thrown in microcoded
+; bytecodes.
+;
+; Stack: ..., exception code
+;
+; Register ERAR contains the program counters value when
+; the exception was thrown plus 1.
+;
+;===========================================================
 
-; Deallocate locals on the memory stack
-    c.dml
+.pushsection .rodata
+.include "exception_constants.s"
+.popsection
 
-; Deallocate not needed frame entries
-    c.ldi.b	    SIZEOF_FRAME - 4
-    c.dms
+e_exception:
 
-; Deallocate locals on the locals stack
-    c.pop.es        ; stack: ..., FRAME_LS_COUNT
-    c.dls
+; Decode the exception code
+    c.dup
+    c.xori  EC_ARITHMETICEXCEPTION
+    c.drop
+    c.br.z  _exception_arthmetic
 
-; Recover pointers from the rest of the frame and return
-; Also disable interrupts while popping out values from the memory one by one
-; That is to ensure 8-byte alignment of MSP
-    irs.off
+    c.dup
+    c.xori  EC_NULLPOINTEREXCEPTION
+    c.drop
+    c.br.z  _exception_nullpointer
 
-    c.pop.es        ; stack: ..., FRAME_RETADDRESS
-    c.st.erar
-    c.pop.fmp
+    c.dup
+    c.xori  EC_ARRAYINDEXOUTOFBOUNDSEXCEPTION
+    c.drop
+    c.br.z  _exception_arrayindex
 
-; Re-enable interrupts, should be always safe to do it here
-    irs.on
+    c.dup
+    c.xori  EC_STACKOVERFLOWERROR
+    c.drop
+    c.br.z  _exception_stackoverflow
 
-    c.rete
+; Here if unknown exception code
+    errorpoint
+
+; Throw an ArithmeticException
+_exception_arthmetic:
+    c.drop
+    c.ldi.i _exception_ArithmeticException
+    c.jumps _exception_raise
+
+; Throw a NullPointerException
+_exception_nullpointer:
+    c.drop
+    c.ldi.i _exception_NullPointerException
+    c.jumps _exception_raise
+
+; Throw an ArrayIndexOutOfBoundsException
+_exception_arrayindex:
+    c.drop
+    c.ldi.i _exception_ArrayIndexOutOfBoundsException
+    c.jumps _exception_raise
+
+; Throw a StackOverflowError
+_exception_stackoverflow:
+    c.drop
+    c.ldi.i _exception_StackOverflowError
+    c.jumps _exception_raise
+
+; Instatiate and throw exception
+; es: ..., exception_name
+_exception_raise:
+
+; Instantiate class
+    em.isal.alloc.nlsf 1
+; FIXME: Call instantiation
+    errorpoint
+    ;move.i.i32  i#1 _instantiateClass_
+    ;call        i#1
+    em.isal.dealloc.nlsf 1
+
+; Throw the object
+    c.jumpw _emul_throw
 
 ;=====================================================================
 ;
@@ -744,6 +668,7 @@ setupBcEmulation:
     set_bc_emulation lreturn 173
     set_bc_emulation dreturn 175
     set_bc_emulation return 177
+    set_bc_emulation exception 255
 
     ret
 ;=====================================================================
