@@ -106,7 +106,15 @@ ifeq ($(COMPRESS_JAR_FILES),false)
   export JAR_CMD_COMPRESSION_LEVEL=0
 endif
 
-export ENGINE ?= hal/cpu/im4000
+# If there is an 'engine' directory under vm-cmp/engine/hal/*/, use it;
+# otherwise use the generic engine directory.
+# NOTE: we assume there is only one directory which matches the wildcard!
+special_engine = ($wildcard vm-cmp/engine/hal/*/engine)
+ifeq ($(special_engine),)
+  export ENGINE = generic
+else
+  export ENGINE = hal/cpu/im4000
+endif
 export enginedir = $(MIKA_TOP)/vm-cmp/engine/$(ENGINE)
 export enginecomdir = $(MIKA_TOP)/vm-cmp/engine/common
 
@@ -610,6 +618,7 @@ echo : kecho
 	@echo "MIKA_LIB = " $(MIKA_LIB)
 	@echo "OSWALD_LIB = " $(OSWALD_LIB)
 	@echo "AWT_LIB = " $(AWT_LIB)
+	@echo "ENGINE = " $(ENGINE)
 	@echo "networkinc = " $(networkinc)
 	@echo "fsinc = " $(fsinc)
 ifdef USE_ROMFS
