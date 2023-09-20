@@ -206,7 +206,7 @@ _emul_return:
     c.dml
 
 ; Deallocate not needed frame entries
-    c.ldi.b	    SIZEOF_FRAME - 4
+    c.ldi.b	    SIZEOF_FRAME - 3
     c.dms
 
 ; Deallocate locals on the locals stack
