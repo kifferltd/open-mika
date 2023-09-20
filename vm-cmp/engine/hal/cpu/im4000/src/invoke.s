@@ -205,6 +205,10 @@ _emul_return:
 ; Deallocate locals on the memory stack
     c.dml
 
+; Disable interrupts while popping out values from the memory
+; That is to ensure 8-byte alignment of MSP
+    irs.off
+
 ; Deallocate not needed frame entries
     c.ldi.b	    SIZEOF_FRAME - 3
     c.dms
@@ -214,10 +218,6 @@ _emul_return:
     c.dls
 
 ; Recover pointers from the rest of the frame and return
-; Also disable interrupts while popping out values from the memory one by one
-; That is to ensure 8-byte alignment of MSP
-    irs.off
-
     c.pop.es        ; stack: ..., FRAME_RETADDRESS
     c.st.erar
     c.pop.fmp
