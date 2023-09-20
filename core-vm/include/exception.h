@@ -110,6 +110,6 @@ static inline void throwNullPointerException(w_thread thread) {
   throwException(thread, clazzNullPointerException, NULL);
 }
 
-w_instance createRuntimeException(const char *classname);
+w_instance createRuntimeException(w_clazz excClazz);
 
 #endif /* _EXCEPTION_H */

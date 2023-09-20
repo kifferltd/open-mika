@@ -24,36 +24,31 @@ typedef struct IM4000_Frame {
 typedef struct IM4000_Frame *im4000_frame;
 
 /*
-** Seek a handler for an exception which has been thrown in the current thread.
-** @param frame the current execution frame of the thread.
-** @param pc the current bytecode position in that frame
-** @return 0 if no exception is pending, -1 if no handler is found, else the pc of the handler.
+** Seek a handler for an exception.
+** @param frame the current execution frame .
+** @param pc the current bytecode position in that frame.
+** @param objectref the exception object.
+** @return -1 if no handler is found, else the pc of the handler.
 */
-int32_t seekHandler(im4000_frame frame, int32_t pc) {
+int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_slot auxs;
-  w_instance pending;
+  w_slot saved_auxstack_top;
+  int32_t handler_pc = -1;
 
-  if (!thread->exception) {
-    return 0;
+  if (!isSuperClass(clazzThrowable, instance2object(objectref)->clazz)) {
+    wabort(ABORT_WONKA, "Malfeasance detected - %j is not an an instance of Throwable", objectref);
   }
-  
+
   w_boolean was_unsafe = enterUnsafeRegion(thread);
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
     w_printf("Thrown: Seeking handler for %e in %M, thread %t\n", thread->exception, calling_method, thread);
   }
   woempa(7, "Seeking handler for %k in %t, current frame is running %M\n", instance2clazz(thread->exception), thread, frame->method);
-   auxs = (w_slot)thread->top->auxstack_top;
-  /*
-  ** Store the pending exception locally and clear the thread exception, since
-  ** resolving the class constant could result in loading/initializing etc. and
-  ** that will check for pending exceptions. 
-  */
-  pending = thread->exception;
-  pushLocalReference(thread->top, pending);
-  thread->exception = NULL;
+
+  saved_auxstack_top = (w_slot)thread->top->auxstack_top;
+  pushLocalReference(thread->top, objectref);
 
   w_clazz caught_clazz; // the class of exception which is covered by this handler
   for (int32_t i = 0; i <  calling_method->exec.numExceptions; i++) {
@@ -67,45 +62,42 @@ int32_t seekHandler(im4000_frame frame, int32_t pc) {
       caught_clazz = NULL; // means that this is a catch-all handler
     }
     if (pc >= ex->start_pc && pc < ex->end_pc) {
-      if (caught_clazz == NULL || isSuperClass(caught_clazz, instance2object(pending)->clazz)) {
+      if (caught_clazz == NULL || isSuperClass(caught_clazz, instance2object(objectref)->clazz)) {
         if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-          w_printf("Thrown: Catching %e in %M, thread %t\n", pending, calling_method, thread);
+          w_printf("Thrown: Catching %e in %M, thread %t\n", objectref, calling_method, thread);
         }
         woempa(7, ">>>> Found a handler for %j (as %k) at pc = %d in method %M <<<<\n",
-            pending, caught_clazz, ex->handler_pc, calling_method);
+            objectref, caught_clazz, ex->handler_pc, calling_method);
 #ifdef JDWP
         enterSafeRegion(thread);
-        jdwp_event_exception(pending, calling_method, ex->handler_pc);
+        jdwp_event_exception(objectref, calling_method, ex->handler_pc);
         enterUnsafeRegion(thread);
 #endif
+        thread->exception = NULL;
         // TODO is this really needed?
         setReferenceField_unsafe(thread->Thread, NULL, F_Thread_thrown);
-        thread->exception = NULL;
-        thread->top->auxstack_top = auxs;
-        if (!was_unsafe) {
-          enterSafeRegion(thread);
-        }
-        return ex->handler_pc;
+        handler_pc = ex->handler_pc;
+
+        break;
       }
     }
   }
 
-  /* We didn't find a handler, so we put the pending exception back in the thread and
-  ** return -1 so that it will be propagated upward.
-  */
-
-  thread->exception = pending;
-  // TODO is this really needed?
-  setReferenceField_unsafe(thread->Thread, pending, F_Thread_thrown);
-  if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
-    w_printf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, calling_method, thread);
+  if (handler_pc == -1) {
+    woempa(7, ">>>> Found no handler for %j in this frame <<<<\n", objectref);
+    thread->exception = objectref;
+    // TODO is this really needed?
+    setReferenceField_unsafe(thread->Thread, objectref, F_Thread_thrown);
+    if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
+      w_printf("Thrown: Propagating %e in %M, thread %t\n", thread->exception, calling_method, thread);
+    }
   }
-  thread->top->auxstack_top = auxs;
+  thread->top->auxstack_top = saved_auxstack_top; // clean up aux stack
   if (!was_unsafe) {
     enterSafeRegion(thread);
   }
  
-  return -1;
+  return handler_pc;
 }
 
 

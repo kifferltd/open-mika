@@ -20,12 +20,9 @@ e_ldc:
     pop.es.w    i#0     ; index
     move.i.i32  i#1 emul_ldc
     call        i#1
-      
-; Push constant value onto the evaluation stack
-    push.es.w    i#0
 
     em.isal.dealloc.nlsf 1
-    ret.eh    
+    ret.eh
 
 ;===========================================================
 ; e_ldc_w
@@ -414,13 +411,9 @@ e_invokespecial:
     c.ld.i      ; es: ..., calling_clazz
     pop.es.w    i#0     ; clazz
 
-; FIXME: Call method resolution -  class in i#0, index in i#1
-    ;errorpoint
+; Call method resolution -  class in i#0, index in i#1
     move.i.i32  i#2 getMethodConstant
     call        i#2
-
-; Push method reference onto the evaluation stack
-    push.es.w    i#0
 
 ; Reveal evaluation stack and prepare new frame.
     em.isal.dealloc.nlsf 1
@@ -561,10 +554,7 @@ e_return:
 ; the exception was thrown plus 1.
 ;
 ;===========================================================
-
-.pushsection .rodata
 .include "exception_constants.s"
-.popsection
 
 e_exception:
 
@@ -595,37 +585,35 @@ e_exception:
 ; Throw an ArithmeticException
 _exception_arthmetic:
     c.drop
-    c.ldi.i _exception_ArithmeticException
+    c.ldi.i clazzArithmeticException
     c.jumps _exception_raise
 
 ; Throw a NullPointerException
 _exception_nullpointer:
     c.drop
-    c.ldi.i _exception_NullPointerException
+    c.ldi.i clazzNullPointerException
     c.jumps _exception_raise
 
 ; Throw an ArrayIndexOutOfBoundsException
 _exception_arrayindex:
     c.drop
-    c.ldi.i _exception_ArrayIndexOutOfBoundsException
+    c.ldi.i clazzArrayIndexOutOfBoundsException
     c.jumps _exception_raise
 
 ; Throw a StackOverflowError
 _exception_stackoverflow:
     c.drop
-    c.ldi.i _exception_StackOverflowError
+    c.ldi.i clazzStackOverflowError
     c.jumps _exception_raise
 
 ; Instatiate and throw exception
-; es: ..., exception_name
+; es: ..., exception_class
 _exception_raise:
 
 ; Instantiate class
     em.isal.alloc.nlsf 1
-; FIXME: Call instantiation
-    errorpoint
-    ;move.i.i32  i#1 _instantiateClass_
-    ;call        i#1
+    move.i.i32  i#1 createRuntimeException
+    call        i#1
     em.isal.dealloc.nlsf 1
 
 ; Throw the object
