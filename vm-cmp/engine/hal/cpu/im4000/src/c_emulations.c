@@ -5,6 +5,7 @@
 #include "core-classes.h"
 #include "methods.h"
 #include "mika_threads.h"
+#include "mika_stack.h"
 #include "wonka.h"
 
 typedef struct IM4000_Frame {
@@ -204,6 +205,17 @@ uint64_t emul_ldc2(im4000_frame frame, uint16_t index) {
  * Maybe we should pass a frame pointer instead of the clazz?
  */
 void emul_getstatic(im4000_frame frame, uint16_t index) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+
+  if (thread->exception){
+    return;
+  }
+  enterSafeRegion(thread);
+  w_field source_field = getFieldConstant(calling_clazz, index);
+  mustBeInitialized(source_field->declaring_clazz);
+  enterUnsafeRegion(thread);
 
 }
 
@@ -226,7 +238,50 @@ void emul_getstatic(im4000_frame frame, uint16_t index) {
  * @param value pointer to the 32- or 64-bit value to be set.
 */
 void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
+  if (thread->exception){
+    return;
+  }
+  enterSafeRegion(thread);
+  w_field source_field = getFieldConstant(calling_clazz, index);
+  mustBeInitialized(source_field->declaring_clazz);
+  enterUnsafeRegion(thread);
+
+  /*
+  #define in_getstatic_ref		0xd5
+  #define in_getstatic_double		0xd6
+  #define in_getstatic_single		0xd7
+  #define in_putstatic_ref		0xd8
+  #define in_putstatic_double		0xd9
+  #define in_putstatic_single		0xda
+  #define short_operand  ((w_short)(current[1] << 8 | current[2]))
+  w_Slot *tos;
+  w_field field;
+  */
+
+  
+  // Check what is put in
+  /*if (source_field->flags && FIELD_IS_LONG) {
+      calling_method->exec.code[0] = in_putstatic_double;
+    
+      goto i_putstatic_double;
+  }
+  else if (source_field->flags && FIELD_IS_REFERENCE) {
+      calling_method->exec.code[0] = in_putstatic_ref;
+    
+      goto i_putstatic_ref;
+  }
+  else {
+      calling_method->exec.code[0] = in_putstatic_single;
+      field = (w_field)calling_clazz->values[(w_ushort) short_operand];
+      w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[source_field->size_and_slot];
+      *ptr = GET_SLOT_CONTENTS(tos-1);
+      --tos;
+      add_to_opcode(3);
+  }*/
 }
 
 /**

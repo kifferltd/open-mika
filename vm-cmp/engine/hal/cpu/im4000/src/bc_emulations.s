@@ -145,7 +145,19 @@ e_getstatic:
 ;===========================================================
 e_putstatic:
 
-    errorpoint      ; Not implemented
+    em.isal.alloc.nlsf 1
+
+; Get index
+
+    copy.w  i#1 i#0     ; index
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2  emul_putstatic
+    call        i#2
+      
+    em.isal.dealloc.nlsf 1
+    ret
+    ;errorpoint       Not implemented
 
     ; needs to call emul_putstatic(clazz, index, value)
 
