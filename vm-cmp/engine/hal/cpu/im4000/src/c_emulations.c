@@ -27,14 +27,14 @@ typedef struct IM4000_Frame *im4000_frame;
 ** @param frame the current execution frame .
 ** @param pc the current bytecode position in that frame.
 ** @param objectref the exception object.
-** @return -1 if no handler is found, else the pc of the handler.
+** @return 0 if no handler is found, else the pc of the handler.
 */
 int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   w_slot saved_auxstack_top;
-  int32_t handler_pc = -1;
+  int32_t handler_pc = 0;
 
   if (!isSuperClass(clazzThrowable, instance2object(objectref)->clazz)) {
     wabort(ABORT_WONKA, "Malfeasance detected - %j is not an an instance of Throwable", objectref);

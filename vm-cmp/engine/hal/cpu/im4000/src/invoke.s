@@ -198,8 +198,8 @@ activate_frame_return:
 ; stack:    ... => ...
 ;
 ;===========================================================
-.global _emul_return
-_emul_return:
+.global _emul_deallocate_frame
+_emul_deallocate_frame:
 ; NOTE: Legacy code checked eval stack level, memory stack level, and unlocked synchronized objects here.
 
 ; Deallocate locals on the memory stack
@@ -225,7 +225,7 @@ _emul_return:
 ; Re-enable interrupts, should be always safe to do it here
     irs.on
 
-    c.rete
+    c.ret
 ;===========================================================
 
 ;===========================================================
@@ -239,23 +239,46 @@ _emul_return:
 _emul_throw:
     ; Get current frame
     c.ld.fmp
+    ; es: ..., objectref, frame
 
     ; If no Java frame (FMP==0), manage uncaught exception
     c.addi  0
-    c.br.z  _throw_uncaught
+    c.brs.z  _throw_uncaught
     ; es: ..., objectref, frame
 
-    ; Keep a copy of objectref for potential future use
-    c.over  ; es: ..., objectref, frame, objectref
+    ; Get base PC for current method and also save a copy for later use
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_EXEC_CODE
+    c.ld.i
+    c.tuck
+    ; es: ..., objectref, method-pc, frame, method-pc
+
+    ; Get absolute throw-PC.
+    ; The highest bit in ERAR is used to indicate Java mode for the microcode.
+    ; It is to be reset for having the actual PC value.
+    ; Also decrement the addres to point to the last byte of the throwing bytecode
+    ; because the actual return address may be the beginning of a new try statement.
+    c.ld.erar
+    c.ldi.i 0x7fffffff
+    c.and
+    c.addi  -1
+    ; es: ..., objectref, method-pc, frame, method-pc, throw-pc
+
+    ; Calculate bytecode pc
+    c.sub
+    ; es: ..., objectref, method-pc, frame, pc
+
+    ; Get objectref to the top and keep the original for potential future use
+    c.ldi.b 3
+    c.pick      ; es: ..., objectref, method-pc, frame, pc, objectref
 
     ; Check handler in current frame
-    em.isal.alloc.nlsf 2
-    ; FIXME: Prepare parameters and call Mika function to find handler
-    errorpoint
-    ;move.i.i32  i#2 _findHandler_
-    ;call        i#2
+    ; Calling: int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref)
+    em.isal.alloc.nlsf 3
+    move.i.i32  i#3 throwExceptionAt
+    call        i#3
     em.isal.dealloc.nlsf 1
-    ; es: ..., objectref, handler
+    ; es: ..., objectref, method-pc, handler
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; If no handler, need to remove top frame and check again
@@ -264,32 +287,27 @@ _emul_throw:
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Matching handler found, execute it.
-    ; FIXME
-    errorpoint
-
+    ; es: ..., objectref, method-pc, handler (bytecode pc)
+    c.add
+    c.st.erar
+    ; es: ..., objectref
     c.rete
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _throw_unwind:
-; es: ..., objectref, 0 (handler)
-    c.drop
+; es: ..., objectref, method-pc, 0 (handler)
+    c.drop2
 
-    ; FIXME...
-    errorpoint
-
-    ; Remove top frame
-
-    ; When unwinding, there are only ISAJ frames
-    ; in the execution stack and the evaluation stack is continous.
-    ; That is because emulation routines
-    ; (including those for invoke*) deallocate their ISAL frame
+    ; When unwinding, ISAJ frames are continous in the execution stack.
+    ; That is because all emulation routines deallocate their ISAL frame
     ; before continuing with ISAJ execution.
 
-    ; The evaluation stack is supposed to be empty anyway?
-    ; The compiler does not keep any data in it between operations...
-    ; Might add check.lrcb at the appropriate place to check that.
+    ; The evaluation stack is supposed to contain only parameters
+    ; for the immediately following operation. Meaning that there should
+    ; be nothing in the stack under objectref; nothing to do with that stack.
 
-    ; Check frame...
+    ; Remove top frame and check the new top
+    c.callw _emul_deallocate_frame
     ; es: ..., objectref
     c.jumpw _emul_throw
 
@@ -300,5 +318,10 @@ _throw_uncaught:
 
     ; FIXME: Uncaught exception
     errorpoint
+
+    ; Here no Java frame in the execution stack, only objectref in the evaluation stack.
+    ; We returned to activate_frame(). Should deallocate its frame and "return" to a handler function
+    ; taking care of the uncaught exception.
+    ; Also set RAR (and whatever needed) so that the handler is connected to the original callchain of activate_frame().
 
 ;===========================================================
