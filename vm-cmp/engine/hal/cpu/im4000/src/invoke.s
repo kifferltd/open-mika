@@ -316,12 +316,21 @@ _throw_uncaught:
 ; es: ..., objectref, 0 (frame)
     c.drop
 
-    ; FIXME: Uncaught exception
-    errorpoint
-
     ; Here no Java frame in the execution stack, only objectref in the evaluation stack.
-    ; We returned to activate_frame(). Should deallocate its frame and "return" to a handler function
-    ; taking care of the uncaught exception.
-    ; Also set RAR (and whatever needed) so that the handler is connected to the original callchain of activate_frame().
+    ; We returned to activate_frame().
+
+    ; Put objectref into i#12 here, so it becomes i#0 after deallocating the ISAL frame.
+    pop.es.w    i#12
+
+    ; Deallocate ISAL frame for activate_frame(), also restores RAR
+    check.lrcb  ; evaluation stack should be empty now
+    dealloc.nlsf
+
+    ; Go to handler by returning from emulation.
+    ; The handler replaces activate_frame() in the ISAL callchain
+    ; and will get the uncaught object as first argument.
+    c.ldi.i emul_unhandled_exception
+    c.st.erar
+    c.rete
 
 ;===========================================================
