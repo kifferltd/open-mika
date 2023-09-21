@@ -400,8 +400,17 @@ e_invokespecial:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
+; TODO we know the contants is resolved, so we jaut want clazz->values[index]
     move.i.i32  i#2 getMethodConstant
     call        i#2
+
+; Now we have the called method in i#0 - but we need to find the true target
+    copy.w  i#1 i#0     ; called_method
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_special_target
+    call        i#2
+; target method is now in i#0
 
 ; Reveal evaluation stack and prepare new frame.
     em.isal.dealloc.nlsf 1

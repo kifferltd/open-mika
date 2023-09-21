@@ -154,6 +154,66 @@ static void i_callMethod(w_frame caller, w_method method) {
   }
 }
 
+w_method emul_special_target(im4000_frame frame, w_method called_method) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+
+  // TODO
+  // if (isSet(x->flags, ACC_STATIC)) {
+  //   do_throw_clazz(clazzIncompatibleClassChangeError);
+  // }
+
+  /*
+  ** The logic of this opcode is rather complex, see https://docs.oracle.com/javase/specs/jvms/se15/html/jvms-6.html#jvms-6.5.invokespecial .
+  ** In the end there are two main cases:
+  ** - we should invoke exactly the instance method specified, without worrying about possible overrides ("nonvirtual" case)
+  ** - we should invoke the corresponding method in the immediate superclass ("invokesuper" case).
+  */
+    if ((called_method->spec.declaring_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER 
+      || isSet(called_method->flags, ACC_PRIVATE) || isSet(called_method->flags, METHOD_IS_CONSTRUCTOR) 
+      || !isSuperClass(called_method->spec.declaring_clazz, getSuper(frame->method->spec.declaring_clazz)
+    )) {
+      woempa(7, "nonvirtual case - just call %m\n", called_method);
+      // "nonvirtual" case
+      /*
+      if (x->exec.arg_i < 4) {
+        if (x->exec.code && x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
+          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          *current = x->exec.arg_i > 0 ? pop : nop;
+          *(++current) = x->exec.arg_i > 1 ? pop : nop;
+          *(++current) = x->exec.arg_i > 2 ? pop : nop;
+          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
+          tos -= x->exec.arg_i - 1;
+          do_next_opcode;
+          // that's a goto, code below is not executed
+        }
+      }
+      */
+      // TODO
+      // woempa(1, "Replacing invokespecial by invokenonvirtual for %M\n", x);
+      // *current = in_invokenonvirtual;
+
+      return called_method;
+    }
+    else {
+      // TODO
+      // woempa(1, "Replacing invokespecial by invokensuper for %M\n", x);
+      // *current = in_invokesuper;
+
+      w_clazz super = getSuper(frame->method->spec.declaring_clazz);
+      woempa(7, "super case - look up %m in vmlt of superclass %k\n, called_method, super");
+
+      // TODO
+      // if (!super) {
+      //   do_throw_clazz(clazzIncompatibleClassChangeError);
+      // }
+
+      w_method target_method = virtualLookup(called_method, super);
+      woempa(7, "target method is %m\n", target_method);
+      return target_method;
+  }
+}
 
 /**
  * Load the 32-bit value of an item in the constant pool onto the stack.
@@ -420,110 +480,7 @@ void emul_invokevirtual(im4000_frame frame, uint16_t index, w_instance objectref
  * @param ...   arguments to be passed to the method.
  */
 void emul_invokespecial(im4000_frame frame, uint16_t cpIndex, w_instance objectref, ...) {
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-  enterSafeRegion(thread);
-  w_method called_method = getMethodConstant(calling_clazz, cpIndex);
-  enterUnsafeRegion(thread);
-  // TODO
-  // if (thread->exception) {
-  //  do_the_exception;
-  // }
-  // if (isSet(x->flags, ACC_STATIC)) {
-  //   do_throw_clazz(clazzIncompatibleClassChangeError);
-  // }
-
-  /*
-  ** The logic of this opcode is rather complex, see https://docs.oracle.com/javase/specs/jvms/se15/html/jvms-6.html#jvms-6.5.invokespecial .
-  ** In the end there are two main cases:
-  ** - we should invoke exactly the instance method specified, without worrying about possible overrides ("nonvirtual" case)
-  ** - we should invoke the corresponding method in the immediate superclass ("invokesuper" case).
-  */
-    if ((called_method->spec.declaring_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER 
-      || isSet(called_method->flags, ACC_PRIVATE) || isSet(called_method->flags, METHOD_IS_CONSTRUCTOR) 
-      || !isSuperClass(called_method->spec.declaring_clazz, getSuper(frame->method->spec.declaring_clazz)
-    )) {
-      // "nonvirtual" case
-      /*
-      if (x->exec.arg_i < 4) {
-        if (x->exec.code && x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = x->exec.arg_i > 0 ? pop : nop;
-          *(++current) = x->exec.arg_i > 1 ? pop : nop;
-          *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          tos -= x->exec.arg_i - 1;
-          do_next_opcode;
-          // that's a goto, code below is not executed
-        }
-      }
-      */
-      // TODO
-      // woempa(1, "Replacing invokespecial by invokenonvirtual for %M\n", x);
-      // *current = in_invokenonvirtual;
-
-      // TODO - is this separate step really needed?
-      called_method = getResolvedMethodConstant(calling_clazz, cpIndex);
- 
-      // TODO - will the microcode even call us in this case?
-      // if (! GET_SLOT_CONTENTS(tos - x->exec.arg_i)) {
-      //   do_throw_clazz(clazzNullPointerException);
-      // }
-
-      if (isNotSet(called_method->flags, METHOD_UNSAFE_DISPATCH)) {
-        enterSafeRegion(thread);
-        i_callMethod(frame, called_method);
-        enterUnsafeRegion(thread);
-     }
-      else {
-        i_callMethod(frame, called_method);
-      }
-       // TODO
-       // goto check_async_exception;
-    }
-    else {
-      // TODO
-      // woempa(1, "Replacing invokespecial by invokensuper for %M\n", x);
-      // *current = in_invokesuper;
-
-      w_clazz super = getSuper(frame->method->spec.declaring_clazz);
-
-      // TODO
-      // if (!super) {
-      //   do_throw_clazz(clazzIncompatibleClassChangeError);
-      // }
-
-      // TODO - is this separate step really needed?
-      called_method  = getResolvedMethodConstant(calling_clazz, cpIndex);
-      called_method = virtualLookup(called_method, super);
-
-      // TODO
-      // if (!x) {
-      //   do_the_exception;
-      // }
-      // if (isSet(x->flags, ACC_ABSTRACT)) {
-      //   clazz = super;
-      //   do_AbstractMethodError;
-      // }
-
-      // TODO - will the microcode even call us in this case?
-      // if (! GET_SLOT_CONTENTS(tos - x->exec.arg_i)) {
-      //   do_throw_clazz(clazzNullPointerException);
-      // }
-
-      if (isNotSet(called_method->flags, METHOD_UNSAFE_DISPATCH)) {
-       enterSafeRegion(thread);
-       i_callMethod(frame, called_method);
-       enterUnsafeRegion(thread);
-      }
-     else {
-        i_callMethod(frame, called_method);
-      }
-      // TODO
-      // goto check_async_exception;
-  }
 }
 
 /**
