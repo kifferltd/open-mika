@@ -540,7 +540,8 @@ e_dreturn:
 ;
 ;===========================================================
 e_return:
-    c.jumpw _emul_return
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_exception
@@ -611,6 +612,7 @@ _exception_stackoverflow:
 _exception_raise:
 
 ; Instantiate class
+    ; Calling: w_instance createRuntimeException(w_clazz excClazz)
     em.isal.alloc.nlsf 1
     move.i.i32  i#1 createRuntimeException
     call        i#1
