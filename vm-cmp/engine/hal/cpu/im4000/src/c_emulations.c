@@ -233,8 +233,11 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_slot tos;
+  x_mutex mutex64;
 
   if (thread->exception){
+    //do exception
     return;
   }
   enterSafeRegion(thread);
@@ -242,38 +245,20 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
   mustBeInitialized(source_field->declaring_clazz);
   enterUnsafeRegion(thread);
 
-  /*
-  #define in_getstatic_ref		0xd5
-  #define in_getstatic_double		0xd6
-  #define in_getstatic_single		0xd7
-  #define in_putstatic_ref		0xd8
-  #define in_putstatic_double		0xd9
-  #define in_putstatic_single		0xda
-  #define short_operand  ((w_short)(current[1] << 8 | current[2]))
-  w_Slot *tos;
-  w_field field;
-  */
+  if (isSet(source_field->flags, FIELD_IS_LONG)){
+    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+    w_boolean isVolatile = isSet(source_field->flags, ACC_VOLATILE);
 
-  
-  // Check what is put in
-  /*if (source_field->flags && FIELD_IS_LONG) {
-      calling_method->exec.code[0] = in_putstatic_double;
-    
-      goto i_putstatic_double;
+    if (isVolatile) {
+      x_mutex_lock(mutex64, x_eternal);
+    }
+  } else if (isSet(source_field->flags, FIELD_IS_REFERENCE)) {
+    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+    *ptr = value;
+  } else {
+    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+    *ptr = value;
   }
-  else if (source_field->flags && FIELD_IS_REFERENCE) {
-      calling_method->exec.code[0] = in_putstatic_ref;
-    
-      goto i_putstatic_ref;
-  }
-  else {
-      calling_method->exec.code[0] = in_putstatic_single;
-      field = (w_field)calling_clazz->values[(w_ushort) short_operand];
-      w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[source_field->size_and_slot];
-      *ptr = GET_SLOT_CONTENTS(tos-1);
-      --tos;
-      add_to_opcode(3);
-  }*/
 }
 
 /**

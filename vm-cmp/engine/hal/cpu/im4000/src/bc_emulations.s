@@ -144,17 +144,17 @@ e_putstatic:
 
     em.isal.alloc.nlsf 1
 
-; Get index
+    ; Get index
 
     copy.w  i#1 i#0     ; index
     c.ld.fmp
     pop.es.w    i#0     ; frame
-    move.i.i32  i#2  emul_putstatic
-    call        i#2
+    move.i.i32  i#5  emul_putstatic
+    call        i#5
       
     em.isal.dealloc.nlsf 1
-    ret
-    ;errorpoint       Not implemented
+    ret.eh
+    ; errorpoint       Not implemented
 
     ; needs to call emul_putstatic(clazz, index, value)
 
