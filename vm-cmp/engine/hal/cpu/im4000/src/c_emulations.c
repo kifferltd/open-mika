@@ -3,6 +3,7 @@
 #include "clazz.h"
 #include "constant.h"
 #include "core-classes.h"
+#include "loading.h"
 #include "methods.h"
 #include "mika_threads.h"
 #include "mika_stack.h"
@@ -159,6 +160,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_clazz target_clazz = called_method->spec.declaring_clazz;
 
   // TODO
   // if (isSet(x->flags, ACC_STATIC)) {
@@ -171,9 +173,9 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
   ** - we should invoke exactly the instance method specified, without worrying about possible overrides ("nonvirtual" case)
   ** - we should invoke the corresponding method in the immediate superclass ("invokesuper" case).
   */
-    if ((called_method->spec.declaring_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER 
+    if ((target_clazz->flags & (ACC_FINAL | ACC_SUPER)) != ACC_SUPER 
       || isSet(called_method->flags, ACC_PRIVATE) || isSet(called_method->flags, METHOD_IS_CONSTRUCTOR) 
-      || !isSuperClass(called_method->spec.declaring_clazz, getSuper(frame->method->spec.declaring_clazz)
+      || !isSuperClass(target_clazz, getSuper(calling_clazz)
     )) {
       woempa(7, "nonvirtual case - just call %m\n", called_method);
       // "nonvirtual" case
@@ -202,7 +204,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       // woempa(1, "Replacing invokespecial by invokensuper for %M\n", x);
       // *current = in_invokesuper;
 
-      w_clazz super = getSuper(frame->method->spec.declaring_clazz);
+      w_clazz super = getSuper(calling_clazz);
       woempa(7, "super case - look up %m in vmlt of superclass %k\n, called_method, super");
 
       // TODO
@@ -214,6 +216,31 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       woempa(7, "target method is %m\n", target_method);
       return target_method;
   }
+}
+
+w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_clazz target_clazz = called_method->spec.declaring_clazz;
+
+  // TODO
+  // if (isSet(x->flags, ACC_STATIC)) {
+  //   do_throw_clazz(clazzIncompatibleClassChangeError);
+  // }
+
+  if (isSet(called_method->flags, METHOD_NO_OVERRIDE) && called_method->exec.code) {
+    woempa(7, "no override possible - just call %m\n", called_method);
+
+    return called_method;
+  }
+  else {
+    w_method target_method = virtualLookup(called_method, target_clazz);
+    woempa(7, "target method is %m\n", target_method);
+
+    return target_method;
+  }
+
 }
 
 /**
@@ -422,12 +449,54 @@ w_instance emul_newarray(uint8_t atype, int32_t count) {
  * Create a new one-dimensional array of a non-primitive type.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the type of the array elements is defined.
+ * @param cpIndex index into the constant pool of 'clazz' where the type of the array elements is defined.
  * @param count the number of elements in the array.
  * @return      the created array instance.
  */
-w_instance emul_anewarray(im4000_frame frame, uint16_t index, int32_t count) {
+w_instance emul_anewarray(im4000_frame frame, uint16_t cpIndex, int32_t count) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
+  // TODO
+  // if (s < 0) {
+  //   do_throw_clazz(clazzNegativeArraySizeException);
+  // }
+  // TODO - or skip?
+  // if (!enough_free_memory(thread, bytes)) {
+  //   do_OutOfMemoryError(bytes);
+  // }
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_clazz array_clazz = getClassConstant(calling_clazz, cpIndex, thread);
+
+  if (array_clazz) {
+    array_clazz = getNextDimension(array_clazz, clazz2loader(frame->method->spec.declaring_clazz));
+    if (array_clazz) {
+      mustBeInitialized(array_clazz);
+    }
+  }
+  else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+    wrapException(thread, clazzNoClassDefFoundError, F_Throwable_cause);
+  }
+
+  enterUnsafeRegion(thread);
+  // TODO 
+  // if (thread->exception) {
+  //   do_the_exception;
+  // }
+
+  woempa(1, "Allocating array of %d %k\n", count, array_clazz->previousDimension);
+  w_instance a = allocArrayInstance_1d(thread, array_clazz, count);
+  // TODO if (!a) {
+  //   do_the_exception;
+  // }
+
+  // goto check_async_exception;
+  if (!was_unsafe) {
+    enterSafeRegion(thread);
+  }
+
+  return a;
 }
 
 /**

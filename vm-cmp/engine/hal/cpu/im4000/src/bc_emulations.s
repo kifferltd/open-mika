@@ -245,10 +245,20 @@ e_newarray:
 ;
 ;===========================================================
 e_anewarray:
+    em.isal.alloc.nlsf 1
 
-    errorpoint      ; Not implemented
-
-    ; needs to emul_anewarray(clazz, index, count)
+; Get count in i#2
+    copy.w  i#2 i#1     ; count
+; Get index in i#1
+    copy.w  i#1 i#0     ; index
+; Get frame in i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#3 emul_anewarray
+    call        i#3
+      
+    em.isal.dealloc.nlsf 1
+    ret.eh 
 
 ;===========================================================
 ; e_arraylength
@@ -387,10 +397,28 @@ e_multianewarray:
 ;
 ;===========================================================
 e_invokevirtual:
+    em.isal.alloc.nlsf 1
 
-    errorpoint          ; Not implemented
+; Get index
+    copy.w  i#1 i#0     ; index
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
 
-    ; needs to call emul_invokevirtual(frame, index, objectref, args ...)
+; Call method resolution -  class in i#0, index in i#1
+; TODO we know the contants is resolved, so we jaut want clazz->values[index]
+    move.i.i32  i#2 getMethodConstant
+    call        i#2
+
+; Now we have the called method in i#0 - but we need to find the true target
+    copy.w  i#1 i#0     ; called_method
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_virtual_target
+    call        i#2
+; target method is now in i#0
+    c.jumps     _invoke_common
 
 ;===========================================================
 ; e_invokespecial
@@ -424,7 +452,9 @@ e_invokespecial:
     move.i.i32  i#2 emul_special_target
     call        i#2
 ; target method is now in i#0
+; fall through to e_invoke_common
 
+_invoke_common:
 ; Reveal evaluation stack and prepare new frame.
     em.isal.dealloc.nlsf 1
 ; Stack: ..., objectref, [arg1, [arg2...]], method
