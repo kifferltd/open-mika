@@ -289,6 +289,7 @@ e_arraylength:
 ; Stack: ..., objectref -> [empty], objectref
 ;
 ;===========================================================
+.global e_athrow    ; Used to throw in invoke.s
 e_athrow:
 
 ; Check if objectref is null

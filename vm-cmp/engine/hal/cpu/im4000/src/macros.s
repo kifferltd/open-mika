@@ -36,7 +36,7 @@
                         ; push offset to old msp,
                         ; and save pointer in lmp
         c.push.es       ; push old lmp at execution stack
-                        ; Save 0 where RAR is usually saved so the debugger knows that this is the end of the stack
+                        ; Save 0 where RAR is usually saved so the debugger and unwind code knows that this is the end of the stack
         c.ldi.b 0       ; push 0 to the evaluation stack
         c.push.es       ; push 0 from the evaluation stack to the execution stack
         push.rar        ; push rar at execution stack

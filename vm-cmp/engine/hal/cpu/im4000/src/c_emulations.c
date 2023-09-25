@@ -24,6 +24,8 @@ typedef struct IM4000_Frame {
 
 typedef struct IM4000_Frame *im4000_frame;
 
+extern void throw(w_instance objectref) __attribute__((noreturn));
+
 /*
 ** Seek a handler for an exception.
 ** @param frame the current execution frame .

@@ -230,6 +230,39 @@ _emul_deallocate_frame:
 
 ;===========================================================
 ;
+; C syntax: void throw(w_instance objectref) __attribute__((noreturn))
+;
+;===========================================================
+.global throw
+throw:
+; Do not allocate any new ISAL frame here
+; i#0 = objectref
+
+; First unwind all ISAL frames except for the bottom one
+; created in an emulation routine.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+throw_unwind_isal_frame:
+    copy.w i#12 i#0
+    dealloc.nlsf    ; NOTE: activation frame identical for both leaf and non-leaf functions.
+    ; i#0 = objectref
+
+    ; LMP + (-3*4) is non-zero RAR in normal ISAL frames
+    ; but 0 at the bottom of the callchain.
+    c.ld.lmp
+    c.addi -12
+    c.ld.i  ; load value and set zero flag
+    c.drop  ; zero flag unchanged
+    c.br.nz throw_unwind_isal_frame
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ; Deallocate final ISAL frame and push objectref
+    em.isal.dealloc.nlsf    1
+
+    ; Go to athrow to handle if objectref is null
+    c.jumpw e_athrow
+
+;===========================================================
+;
 ; Throw the object from the top of the evaluation stack.
 ;
 ; stack:    ..., objectref => [empty], objectref
