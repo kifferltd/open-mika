@@ -191,6 +191,52 @@ activate_frame_return:
 
 ;===========================================================
 ;
+; Make sure the operend stack of the current frame is empty;
+; remove values if needed. Also check no elements have been
+; removed from the evaluation stack and the locals stack
+; have not been changed with respect to the initial pointers
+; of the current frame.
+;
+; stack:    ... => [empty]
+;
+;===========================================================
+.global _emul_check_frame_stacks
+_emul_check_frame_stacks:
+
+; Check evaluation stack level
+    c.flld.esp
+    c.ld.i.fmp FRAME_ESP
+    c.sub
+    c.drop  ; Flags unchanged
+    c.br.z  _emul_check_frame_stacks_operand_stack_empty
+    c.br.c  _emul_check_frame_error    ; Fewer values than incoming
+
+    ; Unused operand values for the current frame.
+    ; Remove one element from the evaluation stack and check again
+    c.drop
+    c.jumpw    _emul_check_frame_stacks
+
+_emul_check_frame_stacks_operand_stack_empty:
+    c.flld.lsp
+    c.ld.i.fmp  FRAME_LSP
+    c.sub
+    c.drop  ; Flags unchanged
+    c.br.nz _emul_check_frame_error
+    ; LMP intact, good to return
+
+    c.ret
+
+;===========================================================
+_emul_check_frame_error:
+    c.ldi.i clazzError
+    c.jumpw _exception_raise
+    ; Not expecting to come back here
+    ; NOTE: Should we be able to return here and restore
+    ; the register that caused the error?
+    ill
+
+;===========================================================
+;
 ; Remove top Java stack frame from the memory stack and restore
 ; registers. Do not touch the evaluation stack where return
 ; values should be already prepared as needed.
@@ -200,7 +246,17 @@ activate_frame_return:
 ;===========================================================
 .global _emul_deallocate_frame
 _emul_deallocate_frame:
-; NOTE: Legacy code checked eval stack level, memory stack level, and unlocked synchronized objects here.
+
+; Check memory stack level
+    c.ld.msp
+    c.ld.lmp
+    c.addi  -4
+    c.sub
+    c.drop  ; Flags unchanged
+    c.br.nz _emul_check_frame_error
+    ; MSP intact, good to proceed with deallocation
+
+; NOTE: Legacy code unlocked synchronized objects here.
 
 ; Deallocate locals on the memory stack
     c.dml
@@ -240,6 +296,8 @@ throw:
 
 ; First unwind all ISAL frames except for the bottom one
 ; created in an emulation routine.
+; There is at least one ISAL frame from which throw() was called,
+; so it is safe to start with one deallocation.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 throw_unwind_isal_frame:
     copy.w i#12 i#0
@@ -324,6 +382,14 @@ _emul_throw:
     c.add
     c.st.erar
     ; es: ..., objectref
+
+    ; Discard remaining operands in the current frame
+    ; es: ..., objectref
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    ; es: [empty], objectref
+
     c.rete
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -335,11 +401,12 @@ _throw_unwind:
     ; That is because all emulation routines deallocate their ISAL frame
     ; before continuing with ISAJ execution.
 
-    ; The evaluation stack is supposed to contain only parameters
-    ; for the immediately following operation. Meaning that there should
-    ; be nothing in the stack under objectref; nothing to do with that stack.
-
-    ; Remove top frame and check the new top
+    ; Remove top frame including remaining operands and check the new top
+    ; es: ..., objectref
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    ; es: [empty], objectref
     c.callw _emul_deallocate_frame
     ; es: ..., objectref
     c.jumpw _emul_throw

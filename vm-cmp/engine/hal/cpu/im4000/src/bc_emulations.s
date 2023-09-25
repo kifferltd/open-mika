@@ -511,10 +511,11 @@ e_invokeinterface:
 ;
 ;===========================================================
 e_ireturn:
-
-    errorpoint          ; Not implemented
-
-    ; should be similar to return (v.i.), but leaves 1 word on stack
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_freturn
@@ -525,10 +526,11 @@ e_ireturn:
 ;
 ;===========================================================
 e_freturn:
-
-    errorpoint          ; Not implemented
-
-    ; should be similar to return (v.i.), but leaves 1 word on stack
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_areturn
@@ -539,10 +541,11 @@ e_freturn:
 ;
 ;===========================================================
 e_areturn:
-
-    errorpoint          ; Not implemented
-
-    ; should be similar to return (v.i.), but leaves 1 word on stack
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_lreturn
@@ -553,10 +556,13 @@ e_areturn:
 ;
 ;===========================================================
 e_lreturn:
-
-    errorpoint          ; Not implemented
-
-    ; should be similar to return (v.i.), but leaves 2 words on stack
+    c.push.es
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    c.pop.es
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_dreturn
@@ -567,10 +573,13 @@ e_lreturn:
 ;
 ;===========================================================
 e_dreturn:
-
-    errorpoint          ; Not implemented
-
-    ; should be similar to return (v.i.), but leaves 2 words on stack
+    c.push.es
+    c.push.es
+    c.callw _emul_check_frame_stacks
+    c.pop.es
+    c.pop.es
+    c.callw _emul_deallocate_frame
+    c.rete
 
 ;===========================================================
 ; e_return
@@ -581,6 +590,7 @@ e_dreturn:
 ;
 ;===========================================================
 e_return:
+    c.callw _emul_check_frame_stacks
     c.callw _emul_deallocate_frame
     c.rete
 
@@ -622,34 +632,53 @@ e_exception:
     c.br.z  _exception_stackoverflow
 
 ; Here if unknown exception code
+
+    ; Copied from c0start.s:
+    ; ----------------------
+    ; Exception code is at the top of the ISAC evaluation stack,
+    ; that is register ESTR.
+    ; The exception was caused by the assembly instruction right before
+    ; where register ERAR points to. Beware branches and returns, for which
+    ; ERAR might point to somewhere else than after the problematic instruction.
+    ;
+    ; Some possible exception codes:
+    ; 0x13 -- Division with zero up to 4-byte values.
+    ; 0x14 -- Division with zero of 8-byte values.
+    ; 0x20 -- Execution Stack (ISAC Memory Stack) overflow;
+    ;         try to increase the stack size of software task.
+    ; 0x30 -- Invalid service request (check usage of reqfs).
+    ;
+    ; See document IMX-SYS6003 for a complete list and description.
     errorpoint
+    c.rete
 
 ; Throw an ArithmeticException
 _exception_arthmetic:
     c.drop
     c.ldi.i clazzArithmeticException
-    c.jumps _exception_raise
+    c.jumpw _exception_raise
 
 ; Throw a NullPointerException
 _exception_nullpointer:
     c.drop
     c.ldi.i clazzNullPointerException
-    c.jumps _exception_raise
+    c.jumpw _exception_raise
 
 ; Throw an ArrayIndexOutOfBoundsException
 _exception_arrayindex:
     c.drop
     c.ldi.i clazzArrayIndexOutOfBoundsException
-    c.jumps _exception_raise
+    c.jumpw _exception_raise
 
 ; Throw a StackOverflowError
 _exception_stackoverflow:
     c.drop
     c.ldi.i clazzStackOverflowError
-    c.jumps _exception_raise
+    c.jumpw _exception_raise
 
 ; Instatiate and throw exception
 ; es: ..., exception_class
+.global _exception_raise    ; Used to raise exception in invoke.s
 _exception_raise:
 
 ; Instantiate class
