@@ -330,7 +330,11 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
 
         // WAS : frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         // deactivateFrame(frame, NULL);
+        w_boolean was_unsafe = enterUnsafeRegion(thread);
         activate_frame(clazz->clinit, 0, NULL);
+        if (!was_unsafe) {
+           enterSafeRegion(thread);
+        }
         cleanUpClinit(clazz->clinit);
         //clazz->clinit = NULL;
       }
@@ -357,27 +361,13 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
   return CLASS_LOADING_SUCCEEDED;
 }
 
-static w_int mustBeInitialized_safe(w_clazz clazz);
-
 w_int mustBeInitialized(w_clazz clazz) {
-  w_thread thread = currentWonkaThread;
-  w_boolean was_unsafe = enterSafeRegion(thread);
-  w_int result = mustBeInitialized_safe(clazz);
-  if (was_unsafe) {
-    enterUnsafeRegion(thread);
-  }
-
-  return result;
-}
-
-static w_int mustBeInitialized_safe(w_clazz clazz) {
   w_int    i;
   w_int    n;
   w_int    state = getClazzState(clazz);
   w_int    result = CLASS_LOADING_DID_NOTHING;
   w_thread thread = currentWonkaThread;
 
-// only called from mustBeInitialized, so this should never fail
   threadMustBeSafe(thread);
 
   if (exceptionThrown(thread)) {

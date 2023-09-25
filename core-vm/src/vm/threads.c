@@ -396,6 +396,7 @@ void startInitialThreads(void* data) {
   }
 */
   mustBeInitialized(clazzString);
+  enterSafeRegion(currentWonkaThread);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThreadGroup, currentWonkaThread);
   setReferenceField(I_ThreadGroup_system, getStringInstance(string_sysThreadGroup), F_ThreadGroup_name);
   woempa(7, "Getting string instance of '%w', thread is '%t'\n", string_sysThread, currentWonkaThread);
@@ -508,6 +509,7 @@ static x_Mutex Mutex64;
 x_mutex mutex64;
 
 void startKernel() {
+  enterSafeRegion(currentWonkaThread);
   nondaemon_thread_count = 0;
 
   mustBeInitialized(clazzThreadGroup);
