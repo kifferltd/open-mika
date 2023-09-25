@@ -275,14 +275,16 @@ void emul_getstatic(im4000_frame frame, uint16_t index) {
  * Set the value of a static field.
  * 
  * Implementation Notes: 
- * See emul_new for how to extract the callin_clazz from the frame.
+ * See emul_new for how to extract the calling_clazz from the frame.
  * See also label c_putstatic in interpreter.c for the interpreted version.
  * To get the description of the field to be updated, call getFieldConstant().
  * We also need to call mustBeInitialized() on the fields's declaring_clazz.
- * Currently the above needs to be wrapped in enterSafeRegion/enterUndafeRegion.
+ * Currently the above needs to be wrapped in enterSafeRegion/enterUnsafeRegion.
  * The address of the field in memory is field->declaring_clazz->staticFields[field->size_and_slot]
  * Check field->flags to see what kind of a field this is: if it is a LONG field, 
  * you need to copy two words from 'value' to the field address otherwise just 1 word.
+ * For now we can skip the "current[0] = in_putstatic_double;" logic, that will be
+ * for when we implement "fast" opcodes.
  * 
  * field->declaring_clazz->staticFields[field->size_and_slot]
  * @param frame the current stack frame.
