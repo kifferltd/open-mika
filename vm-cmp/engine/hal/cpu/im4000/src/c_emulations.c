@@ -262,7 +262,7 @@ void emul_getstatic(im4000_frame frame, uint16_t index) {
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
   if (thread->exception){
-    return;
+    // do exception
   }
   enterSafeRegion(thread);
   w_field source_field = getFieldConstant(calling_clazz, index);
@@ -293,25 +293,24 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_slot tos;
+  w_field source_field;
   x_mutex mutex64;
-
   if (thread->exception){
     //do exception
-    return;
   }
   enterSafeRegion(thread);
-  w_field source_field = getFieldConstant(calling_clazz, index);
+  source_field = getFieldConstant(calling_clazz, index);
   mustBeInitialized(source_field->declaring_clazz);
   enterUnsafeRegion(thread);
 
   if (isSet(source_field->flags, FIELD_IS_LONG)){
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+    w_dword *ptr = (w_dword *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     w_boolean isVolatile = isSet(source_field->flags, ACC_VOLATILE);
 
     if (isVolatile) {
       x_mutex_lock(mutex64, x_eternal);
     }
+    *ptr = value;
   } else if (isSet(source_field->flags, FIELD_IS_REFERENCE)) {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value;

@@ -142,17 +142,18 @@ e_getstatic:
 ;===========================================================
 e_putstatic:
 
-    em.isal.alloc.nlsf 1
+    em.isal.alloc.nlsf 2
 
     ; Get index
 
-    copy.w  i#1 i#0     ; index
+    copy.w  i#2 i#0     ; value
+    ; copy.w  i#1 i#0      index
     c.ld.fmp
     pop.es.w    i#0     ; frame
-    move.i.i32  i#5  emul_putstatic
-    call        i#5
+    move.i.i32  i#3  emul_putstatic
+    call        i#3
       
-    em.isal.dealloc.nlsf 1
+    em.isal.dealloc.nlsf 0
     ret.eh
     ; errorpoint       Not implemented
 
