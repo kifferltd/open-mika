@@ -221,18 +221,18 @@ e_new:
 ;
 ; Format: newarray, arraytype
 ;
-; Stack: ..., count -> ..., objectref
+; Stack: ..., count, atype -> ..., objectref
 ;
 ;===========================================================
 e_newarray:
+    em.isal.alloc.nlsf 1
+    ; atype is in #0, count in #1
 
-    errorpoint      ; Not implemented
-
-    ; needs to call emul_newarray(atype, count)
-
-    ; [CG 20230818] shouldn't the firmware push the array type onto the
-    ; stack, i.e.
-    ; ..., count, atype --> ..., objectref?
+    move.i.i32  i#3 emul_newarray
+    call        i#3
+      
+    em.isal.dealloc.nlsf 1
+    ret.eh 
 
 ;===========================================================
 ; e_anewarray
@@ -442,7 +442,7 @@ e_invokespecial:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the contants is resolved, so we jaut want clazz->values[index]
+; TODO we know the constant is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant
     call        i#2
 
@@ -453,6 +453,34 @@ e_invokespecial:
     move.i.i32  i#2 emul_special_target
     call        i#2
 ; target method is now in i#0
+    c.jumps     _invoke_common
+
+;===========================================================
+; e_invokestatic
+;
+; Emulates invokestatic (0xB8)
+;
+; Format: invokestatic, indexbyte1, indexbyte2
+;
+; Stack: ..., [arg1, [arg2...]], cpIndex -> ...
+;
+;===========================================================
+e_invokestatic:
+    em.isal.alloc.nlsf 1
+
+; Get index
+    copy.w  i#1 i#0     ; index
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+
+; Now we have the called method in i#0 - but we need to check the target
+    copy.w  i#1 i#0     ; called_method
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_static_target
+    call        i#2
 ; fall through to e_invoke_common
 
 _invoke_common:
@@ -467,23 +495,6 @@ _invoke_common:
     c.ld.erar
 ; Stack: ..., objectref, [arg1, [arg2...]], narg, method, return_address
     c.jumpw _emul_allocate_frame
-
-
-;===========================================================
-; e_invokestatic
-;
-; Emulates invokestatic (0xB8)
-;
-; Format: invokestatic, indexbyte1, indexbyte2
-;
-; Stack: ..., [arg1, [arg2...]], cpIndex -> ...
-;
-;===========================================================
-e_invokestatic:
-
-    errorpoint          ; Not implemented
-
-    ; needs to call emul_invokesstatic(frame, index, args ...)
 
 ;===========================================================
 ; e_invokeinterface
