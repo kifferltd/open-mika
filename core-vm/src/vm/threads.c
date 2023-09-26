@@ -367,6 +367,13 @@ static void invokeInitMain(w_instance arglist) {
 
 extern x_size heap_remaining;
 
+#ifdef PRINT_LOADED_CLASSES
+static void printClassName(w_word key, w_word value) {
+  w_clazz clazz = (w_clazz)value;
+  woempa(7, "%K\n", clazz);
+}
+#endif
+
 void startInitialThreads(void* data) {
 
 #ifdef DEBUG_STACKS
@@ -389,6 +396,10 @@ void startInitialThreads(void* data) {
 #endif
 
   woempa(9, "********* %d instances in use after initial loading; heap remaining = %d. ************\n", instance_use, heap_remaining);
+#ifdef PRINT_LOADED_CLASSES
+  ht_every(system_loaded_class_hashtable, printClassName);
+#endif
+
 
 /* TODO
   if (isSet(verbose_flags, VERBOSE_FLAG_THREAD)) {
