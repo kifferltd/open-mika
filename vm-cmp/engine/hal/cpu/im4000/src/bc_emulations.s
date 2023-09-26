@@ -283,13 +283,21 @@ e_new:
 ;
 ; Format: newarray, arraytype
 ;
-; Stack: ..., count -> ..., objectref
+; Stack: ..., count, -> ..., objectref
+; N.B. need to fetch atype from bytecode qnd step over it!
 ;
 ;===========================================================
 e_newarray:
-    ; David: atype not pushed by microcode, ERAR points to atype
+; Need to read atype from bytecode stream here and skip over the byte by incrementing erar
+    c.ld.erar
+    c.dup
+    c.addi  1
+    c.st.erar
+    c.ld.b
+    c.andi  0xff
+; es: ..., count, atype
 
-    em.isal.alloc.nlsf 1
+    em.isal.alloc.nlsf 2
     ; atype is in #0, count in #1
 
     move.i.i32  i#3 emul_newarray

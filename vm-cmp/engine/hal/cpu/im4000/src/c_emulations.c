@@ -449,12 +449,12 @@ w_instance emul_new(im4000_frame frame, uint16_t cpIndex)
 /**
  * Create a new one-dimensional array of a primitive type.
  * 
+ * @param count the number of elements in the array.
  * @param atype the type of the array elements, encoded as follows:
  * 4 = boolean, 5 = char, 6 = float, 7 = double, 8 = byte, 9 = short, 10 - int, 11 = long.
- * @param count the number of elements in the array.
  * @return      the created array instance.
  */
-w_instance emul_newarray(uint8_t atype, int32_t count) {
+w_instance emul_newarray(int32_t count, uint8_t atype) {
   w_thread thread = currentWonkaThread;
 
   if (count < 0) {
