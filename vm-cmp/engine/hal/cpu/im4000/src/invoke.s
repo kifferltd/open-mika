@@ -228,6 +228,8 @@ _emul_check_frame_stacks_operand_stack_empty:
 
 ;===========================================================
 _emul_check_frame_error:
+    ; TODO: What if we end up here while throwing an exception?
+    ; That starts an infinite loop going through here.
     c.ldi.i clazzError
     c.jumpw _exception_raise
     ; Not expecting to come back here
