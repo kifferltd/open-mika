@@ -14,6 +14,7 @@
 ;===========================================================
 e_ldc:
 
+    ; TODO: ERAR points to indexbyte
     em.isal.alloc.nlsf 1
 
 ; Get index from evaluation stack
@@ -59,6 +60,64 @@ e_ldc2_w:
     ; needs to call emul_ldc2_w(frame, offset)
 
 ;===========================================================
+; em_iload
+;
+; Emulates wide iload (0xC4,0x15)
+;          wide fload (0xC4,0x17)
+;          wide aload (0xC4,0x19)
+;
+; Stack: ... -> ..., value
+;				  
+;===========================================================
+e_iload:
+    errorpoint      ; Not implemented
+    ; David: As far as I can see in the microcode, this emulation is needed.
+    ; ERAR points to indexbyte1
+
+;===========================================================
+; em_lload
+;
+; Emulates wide lload (0xC4,0x16)
+;          wide dload (0xC4,0x18)
+;
+; Stack: ... -> ..., value_ms, value_ls
+;				  
+;===========================================================
+e_lload:
+    errorpoint      ; Not implemented
+    ; David: As far as I can see in the microcode, this emulation is needed.
+    ; ERAR points to indexbyte1
+
+;===========================================================
+; em_istore
+;
+; Emulates wide istore (0xC4,0x36)
+;          wide fstore (0xC4,0x38)
+;          wide astore (0xC4,0x3A)
+;
+; Stack: ..., value -> ...
+;				  
+;===========================================================
+e_istore:
+    errorpoint      ; Not implemented
+    ; David: As far as I can see in the microcode, this emulation is needed.
+    ; ERAR points to indexbyte1
+
+;===========================================================
+; em_lstore
+;
+; Emulates wide lstore (0xC4,0x37)
+;          wide dstore (0xC4,0x39)
+;
+; Stack: ..., value_ms, value_ls -> ...
+;				  
+;===========================================================
+e_lstore:
+    errorpoint      ; Not implemented
+    ; David: As far as I can see in the microcode, this emulation is needed.
+    ; ERAR points to indexbyte1
+
+;===========================================================
 ; e_jsr
 ;
 ; Emulates jsr (0xA8)
@@ -73,6 +132,7 @@ e_jsr:
     errorpoint      ; Not implemented
 
     ; needs to call emul_jsr(frame, offset) - or do we do everything in assembler?
+    ; David: Need to juggle with ERAR, perhaps it better be kept in assembler
 
 ;===========================================================
 ; e_jsr_w
@@ -92,6 +152,7 @@ e_jsr_w:
     ; [CG 20230818] shouldn't the firmware push the branch offset onto the
     ; stack, i.e.
     ; ..., offset --> ..., address?
+    ; David: Offset not pushed by microcode, ERAR points to branchbyte1
 
 
 ;===========================================================
@@ -109,6 +170,7 @@ e_ret:
     errorpoint      ; Not implemented
 
     ; needs to call emul_ret(frame, offset) - or do we do everything in assembler?
+    ; David: ERAR points to index or indexbyte1 if wide. Also check whether it is wide.
 
 ;===========================================================
 ; e_getstatic
@@ -221,10 +283,12 @@ e_new:
 ;
 ; Format: newarray, arraytype
 ;
-; Stack: ..., count, atype -> ..., objectref
+; Stack: ..., count -> ..., objectref
 ;
 ;===========================================================
 e_newarray:
+    ; David: atype not pushed by microcode, ERAR points to atype
+
     em.isal.alloc.nlsf 1
     ; atype is in #0, count in #1
 
@@ -387,6 +451,8 @@ e_multianewarray:
     errorpoint      ; Not implemented
 
     ; needs to call emul_anewarray(frame, index, dimension, count...)
+    ; David: It seems ERAR points to dimensions
+
 ;===========================================================
 ; e_invokevirtual
 ;
@@ -724,6 +790,16 @@ setupBcEmulation:
     set_bc_emulation ldc 18
     set_bc_emulation ldc_w 19
     set_bc_emulation ldc2_w 20
+    set_bc_emulation iload 21
+    set_bc_emulation lload 22
+    set_bc_emulation iload 23
+    set_bc_emulation lload 24
+    set_bc_emulation iload 25
+    set_bc_emulation istore 54
+    set_bc_emulation lstore 55
+    set_bc_emulation istore 56
+    set_bc_emulation lstore 57
+    set_bc_emulation istore 58
     set_bc_emulation jsr 168
     set_bc_emulation jsr_w 201
     set_bc_emulation ret 169
