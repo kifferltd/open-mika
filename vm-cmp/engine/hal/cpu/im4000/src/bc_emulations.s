@@ -217,9 +217,7 @@ e_putstatic:
       
     em.isal.dealloc.nlsf 0
     ret.eh
-    ; errorpoint       Not implemented
 
-    ; needs to call emul_putstatic(clazz, index, value)
 
 ;===========================================================
 ; e_getfield
@@ -248,10 +246,19 @@ e_getfield:
 ;
 ;===========================================================
 e_putfield:
+    em.isal.alloc.nlsf 3
 
-    errorpoint      ; Not implemented
-
-    ; needs to call putfield(frame, index, value, objectref)
+    copy.w  i#4 i#2
+    copy.w  i#3 i#0 ; i#3 = objectref
+    copy.w  i#2 i#1 ; i#2 = value
+    copy.w  i#1 i#4 ; i#1 = cpIndex
+    c.ld.fmp
+    pop.es.w    i#0 ; i#0 = frame
+    move.i.i32  i#4  emul_putfield
+    call        i#4
+      
+    em.isal.dealloc.nlsf 0
+    ret.eh
 
 ;===========================================================
 ; e_new
