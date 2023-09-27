@@ -103,6 +103,16 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   return handler_pc;
 }
 
+w_field getFieldConstant_unsafe(w_clazz c, uint16_t i) {
+  w_thread thread = currentWonkaThread;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_field f = getFieldConstant(c, i);
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return f;
+ }
+
 w_method emul_special_target(im4000_frame frame, w_method called_method) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
@@ -246,27 +256,49 @@ uint64_t emul_ldc2(im4000_frame frame, uint16_t index) {
 // emul_ret()?
 
 /**
- * Fetch the value of a static field.
+ * Fetch the value of a 32-bit static field.
  * 
- * @param frame the current stack frame.
- * @param index index into the constant pool where the target field is defined.
+ * @param field the static field from which the value is to be fetched.
+ * @return the 32-bit value
  * 
- * TODO figure out how we can return a 32- or 64-bit value!!!
- * Maybe we should pass a frame pointer instead of the clazz?
  */
-void emul_getstatic(im4000_frame frame, uint16_t index) {
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+w_word emul_getstatic_single(w_field field) {
+  return field->declaring_clazz->staticFields[field->size_and_slot];
+}
 
-  if (thread->exception){
-    throw(thread->exception);
-  }
-  enterSafeRegion(thread);
-  w_field source_field = getFieldConstant(calling_clazz, index);
-  mustBeInitialized(source_field->declaring_clazz);
-  enterUnsafeRegion(thread);
+/**
+ * Fetch the value of a 64-bit static field.
+ * 
+ * @param field the static field from which the value is to be fetched.
+ * @return the 64-bit value
+ * 
+ */
+w_dword emul_getstatic_double(w_field field) {
+  void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
+  return *(w_dword*)ptr;
+}
 
+/**
+ * Fetch the value of a 32-bit static field.
+ * 
+ * @param field the static field from which the value is to be fetched.
+ * @return the 32-bit value
+ * 
+ */
+w_word emul_getfield_single(w_field field, w_instance objectref) {
+  return field->declaring_clazz->staticFields[field->size_and_slot];
+}
+
+/**
+ * Fetch the value of a 64-bit static field.
+ * 
+ * @param field the static field from which the value is to be fetched.
+ * @return the 64-bit value
+ * 
+ */
+w_dword emul_getfield_double(w_field field, w_instance objectref) {
+  void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
+  return *(w_dword*)ptr;
 }
 
 /**
