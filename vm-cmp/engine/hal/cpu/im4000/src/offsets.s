@@ -1,8 +1,27 @@
 ;===========================================================
+; Offsets in the w_Field struct (See fields.h)
+; Automatically generated
+;
+FIELD_DECLARING_CLAZZ = 0
+FIELD_NAME = 8
+FIELD_VALUE_CLAZZ = 12
+FIELD_FLAGS = 16
+FIELD_SLOT = 20
+FIELD_DESC = 24
+FIELD_INITVAL = 28
+
+; Flags within FIELD_FLAGS word
+FIELD_IS_LONG      = 0x10000
+FIELD_IS_REFERENCE = 0x20000
+FIELD_IS_ARRAY     = 0x40000
+FIELD_IS_WOTSIT    = 0x80000
+
+
+;===========================================================
 ; Offsets in the w_Method struct (See methods.h)
 ; Automatically generated
 ;
-#define METHOD_SPEC = 0
+METHOD_SPEC = 0
 METHOD_SPEC_DECLARING_CLAZZ = 0
 METHOD_SPEC_NAME = 4
 METHOD_SPEC_DESC = 8
