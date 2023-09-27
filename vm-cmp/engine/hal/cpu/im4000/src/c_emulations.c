@@ -311,9 +311,6 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
       x_mutex_lock(mutex64, x_eternal);
     }
     *ptr = value;
-  } else if (isSet(source_field->flags, FIELD_IS_REFERENCE)) {
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
-    *ptr = value;
   } else {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value;
@@ -422,6 +419,7 @@ w_instance emul_newarray(int32_t count, uint8_t atype) {
   if (!a) {
     throw(thread->exception);
   }
+  return a;
 }
 
 /**
