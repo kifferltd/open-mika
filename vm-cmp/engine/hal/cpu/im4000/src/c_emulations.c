@@ -103,62 +103,6 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   return handler_pc;
 }
 
-
-static void i_callMethod(w_frame caller, w_method method) {
-
-#ifdef JAVA_PROFILE
-  w_thread thread = caller->thread;
-  x_long time_start;    
-  x_long time_delta;    
-#endif
-#ifdef DEBUG_STACKS
-  w_int depth = (char*)caller->thread->native_stack_base - (char*)&depth;
-  if (depth > caller->thread->native_stack_max_depth) {
-    if (isSet(verbose_flags, VERBOSE_FLAG_STACK)) {
-      w_printf("%M: thread %t stack base %p, end %p, now at %p, used = %d%%\n", method, caller->thread, caller->thread->native_stack_base, (char*)caller->thread->native_stack_base - caller->thread->ksize, &depth, (depth * 100) / caller->thread->ksize);
-    }
-    caller->thread->native_stack_max_depth = depth;
-  }
-#endif
-
-  woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
-  if (caller->auxstack_top - (caller->jstack_top + method->exec.stack_i) > MIN_FREE_SLOTS
-#ifdef DEBUG_STACKS
-    && caller->thread->ksize - depth > 4096
-#endif
-  ) {
-#ifdef JAVA_PROFILE
-    if(method->exec.dispatcher) {
-      updateProfileCalls(caller->method, method);
-      time_start = x_systime_get();
-      time_delta = caller->thread->kthread->time_delta;
-      // w_dump(" --> %M\n", method);
-   
-      method->exec.dispatcher(caller, method);
-      
-      // w_dump(" <-- %8lld %M\n", x_systime_get() - time_start - (caller->thread->kthread->time_delta - time_delta), method);
-      method->exec.runtime += x_systime_get() - time_start - (caller->thread->kthread->time_delta - time_delta);
-      method->exec.totaltime += x_systime_get() - time_start;
-    }
-    else {
-      method->exec.dispatcher(caller, method);
-    }
-#else
-    method->exec.dispatcher(caller, method);
-#endif
-    woempa(1, "RETURNED from %M\n", method);
-  }
-  else {
-    w_boolean unsafe = enterSafeRegion(caller->thread);
-
-    throwException(caller->thread, clazzStackOverflowError, "unable to call %M: %d on aux stack, %d on java stack, need %d + %d free slots", method, caller->thread->slots + SLOTS_PER_THREAD - caller->auxstack_top, caller->jstack_top - caller->thread->slots, method->exec.stack_i, MIN_FREE_SLOTS);
-    if (unsafe) {
-      enterUnsafeRegion(caller->thread);
-    }
-    throw(caller->thread->exception);
-  }
-}
-
 w_method emul_special_target(im4000_frame frame, w_method called_method) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
@@ -186,28 +130,28 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
     )) {
       woempa(7, "nonvirtual case - just call %m\n", called_method);
       // "nonvirtual" case
-      /*
-      if (x->exec.arg_i < 4) {
-        if (x->exec.code && x->exec.code[0] == aload_0 && x->exec.code[1] == areturn) {
-          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          *current = x->exec.arg_i > 0 ? pop : nop;
-          *(++current) = x->exec.arg_i > 1 ? pop : nop;
-          *(++current) = x->exec.arg_i > 2 ? pop : nop;
-          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", x, current - method->exec.code, method, current[0], current[1], current[2]);
-          tos -= x->exec.arg_i - 1;
+      /* TODO see if we can implement this - requires access to current code position
+      if (called_method->exec.arg_i < 4) {
+        if (called_method->exec.code && called_method->exec.code[0] == aload_0 && called_method->exec.code[1] == areturn) {
+          woempa(1, "zapping invokespecial %M at pc[%d] of %M (was: %d %d %d)\n", called_method, current - method->exec.code, method, current[0], current[1], current[2]);
+          *current = called_method->exec.arg_i > 0 ? pop : nop;
+          *(++current) = called_method->exec.arg_i > 1 ? pop : nop;
+          *(++current) = called_method->exec.arg_i > 2 ? pop : nop;
+          woempa(1, "zapped invokespecial %M at pc[%d] of %M (now: %d %d %d)\n", called_method, current - method->exec.code, method, current[0], current[1], current[2]);
+          tos -= called_method->exec.arg_i - 1;
           do_next_opcode;
           // that's a goto, code below is not executed
         }
       }
       */
-      // TODO
+      // TODO - replace by fastcode
       // woempa(1, "Replacing invokespecial by invokenonvirtual for %M\n", x);
       // *current = in_invokenonvirtual;
 
       return called_method;
     }
     else {
-      // TODO
+      // TODO - replace by fastcode
       // woempa(1, "Replacing invokespecial by invokensuper for %M\n", x);
       // *current = in_invokesuper;
 
