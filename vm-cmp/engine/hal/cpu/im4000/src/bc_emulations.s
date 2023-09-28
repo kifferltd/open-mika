@@ -197,15 +197,13 @@ e_getstatic:
 ; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getFieldConstant_unsafe
     call        i#2
-    c.dup
-    pop.es.w    i#2     ; field
-    c.addi      FIELD_FLAGS
-    c.ld.i      ; es: ..., field->flags
-    pop.es.w    i#3     ; flags
-    c.ldi.i     FIELD_IS_LONG
-    c.and
-    c.drop
-    c.br.z      _e_getstatic_single
+    copy.w      i#1 i#0
+
+    add.i.i8        i#0 i#0 FIELD_FLAGS
+    load.w          i#0 i#0
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#0 i#2
+    br.cmp.i.i8.eq  _e_getstatic_single i#0 0
 
 ; 2-word field
     ; Allocate 8-byte slot for the field value
@@ -289,15 +287,13 @@ e_getfield:
 ; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getFieldConstant_unsafe
     call        i#2
-    c.dup
-    pop.es.w    i#2     ; field
-    c.addi      FIELD_FLAGS
-    c.ld.i      ; es: ..., field->flags
-    pop.es.w    i#3     ; flags
-    c.ldi.i     FIELD_IS_LONG
-    c.and
-    c.drop
-    c.br.z      _e_getfield_single
+    copy.w      i#1 i#0
+
+    add.i.i8        i#0 i#0 FIELD_FLAGS
+    load.w          i#0 i#0
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#0 i#2
+    br.cmp.i.i8.eq  _e_getfield_single i#0 0
 
 ; 2-word field
     ; Allocate 8-byte slot for the field value
