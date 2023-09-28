@@ -294,7 +294,6 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   w_field source_field;
-  x_mutex mutex64;
   if (thread->exception){
     //do exception
   }
@@ -305,11 +304,6 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
 
   if (isSet(source_field->flags, FIELD_IS_LONG)){
     w_dword *ptr = (w_dword *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
-    w_boolean isVolatile = isSet(source_field->flags, ACC_VOLATILE);
-
-    if (isVolatile) {
-      x_mutex_lock(mutex64, x_eternal);
-    }
     *ptr = value;
   } else {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
@@ -328,7 +322,28 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
  * Maybe we should pass a frame pointer instead of the clazz?
  */
 void emul_getfield(im4000_frame frame, uint16_t index, w_instance objectref) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_field source_field;
+  x_mutex mutex64;
+  if (thread->exception){
+    //do exception
+  }
+  enterSafeRegion(thread);
+  source_field = getFieldConstant(calling_clazz, index);
+  mustBeInitialized(source_field->declaring_clazz);
+  enterUnsafeRegion(thread);
 
+  if (objectref == NULL) {
+    throw(clazzNullPointerException);
+  }
+
+  if (isSet(source_field->flags, FIELD_IS_LONG)){
+    // some kiond of return
+  } else {
+    // some kind of return
+  }
 }
 
 /**
@@ -340,7 +355,27 @@ void emul_getfield(im4000_frame frame, uint16_t index, w_instance objectref) {
  * @param value pointer to the 32- or 64-bit value to be set.
  */
 void emul_putfield(im4000_frame frame, uint16_t index, void *value, w_instance objectref) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_field source_field;
+  if (thread->exception){
+    //do exception
+  }
+  enterSafeRegion(thread);
+  source_field = getFieldConstant(calling_clazz, index);
+  mustBeInitialized(source_field->declaring_clazz);
+  enterUnsafeRegion(thread);
 
+  if (objectref == NULL) {
+    throw(clazzNullPointerException);
+  }
+
+  if (isSet(source_field->flags, FIELD_IS_LONG)){
+    (w_dword) *wordFieldPointer(objectref, source_field->size_and_slot) = value;
+  } else {
+    *wordFieldPointer(objectref, source_field->size_and_slot) = value;
+  }
 }
 
 /**

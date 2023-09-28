@@ -231,7 +231,19 @@ e_putstatic:
 ;===========================================================
 e_getfield:
 
-    errorpoint      ; Not implemented
+    ; em.isal.alloc.nlsf 2
+
+    ; Get index
+
+    ; copy.w  i#2 i#0      value
+    ; c.ld.fmp
+    ; pop.es.w    i#0      frame
+    ; move.i.i32  i#3  emul_getfield
+    ; call        i#3
+      
+    ; em.isal.dealloc.nlsf 1
+    ; ret.eh
+    errorpoint       Not implemented
 
     ; needs to call emul_getfield(frame, index, objectref)
 
