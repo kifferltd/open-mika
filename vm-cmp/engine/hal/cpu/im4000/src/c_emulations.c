@@ -103,6 +103,16 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   return handler_pc;
 }
 
+w_field getMethodConstant_unsafe(w_clazz c, uint16_t i) {
+  w_thread thread = currentWonkaThread;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_method m = getMethodConstant(c, i);
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return m;
+ }
+
 w_field getFieldConstant_unsafe(w_clazz c, uint16_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
