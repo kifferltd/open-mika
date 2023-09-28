@@ -59,6 +59,11 @@
 
 ;------------------------------------------------------------
 
+.macro em.isal.dealloc.nlsf.push.es_2
+    push.es.w i#1
+    em.isal.dealloc.nlsf.push.es_1
+.endmacro
+
 .macro em.isal.dealloc.nlsf.push.es_1
     push.es.w i#0
     em.isal.dealloc.nlsf.push.es_0

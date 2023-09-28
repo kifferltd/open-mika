@@ -185,10 +185,54 @@ e_ret:
 ;
 ;===========================================================
 e_getstatic:		
+    em.isal.alloc.nlsf 1
 
-    errorpoint      ; Not implemented
+    copy.w  i#1 i#0     ; index
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+    
+; Call field resolution -  class in i#0, index in i#1
+; TODO we know the contents is resolved, so we just want clazz->values[index]
+    move.i.i32  i#2 getFieldConstant_unsafe
+    call        i#2
+    copy.w      i#1 i#0
 
-    ; needs to call emul_getstatic(frame, index)
+    add.i.i8        i#0 i#0 FIELD_FLAGS
+    load.w          i#0 i#0
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#0 i#2
+    br.cmp.i.i8.eq  _e_getstatic_single i#0 0
+
+; 2-word field
+    ; Allocate 8-byte slot for the field value
+    move.i.i8   i#11 1
+    dynalloc    i#6 i#11  ; not clobbered by call
+
+    ; Call function
+    copy.w  i#0 i#1
+    copy.w  i#1 i#6
+    move.i.i32  i#2  emul_getstatic_double
+    call        i#2
+
+    ; Get the double word value into word registers for popping during deallocation
+    load.w          i#1 i#6
+    add.upd.i.i4    i#6 4
+    load.w          i#0 i#6
+
+    ; Deallocate execution frame including the dynamically allocated area
+    em.isal.dealloc.nlsf 2
+    ; es: ..., high-word, low-word
+    ret.eh
+
+_e_getstatic_single:
+    copy.w  i#0 i#1
+    move.i.i32  i#2  emul_getstatic_single
+    call        i#2
+      
+    em.isal.dealloc.nlsf 1
+    ret.eh
 
 ;===========================================================
 ; e_putstatic
@@ -230,22 +274,56 @@ e_putstatic:
 ;					        
 ;===========================================================
 e_getfield:
+    em.isal.alloc.nlsf 2
 
-    ; em.isal.alloc.nlsf 2
+    copy.w  i#4 i#0
+    copy.w  i#5 i#1
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+    
+; Call field resolution -  class in i#0, index in i#1
+; TODO we know the contents is resolved, so we just want clazz->values[index]
+    move.i.i32  i#2 getFieldConstant_unsafe
+    call        i#2
+    copy.w      i#1 i#0
 
-    ; Get index
+    add.i.i8        i#0 i#0 FIELD_FLAGS
+    load.w          i#0 i#0
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#0 i#2
+    br.cmp.i.i8.eq  _e_getfield_single i#0 0
 
-    ; copy.w  i#2 i#0      value
-    ; c.ld.fmp
-    ; pop.es.w    i#0      frame
-    ; move.i.i32  i#3  emul_getfield
-    ; call        i#3
-      
-    ; em.isal.dealloc.nlsf 1
-    ; ret.eh
-    errorpoint       Not implemented
+; 2-word field
+    ; Allocate 8-byte slot for the field value
+    move.i.i8   i#11 1
+    dynalloc    i#6 i#11  ; not clobbered by call
 
-    ; needs to call emul_getfield(frame, index, objectref)
+    ; Call function
+    copy.w  i#0 i#4
+    copy.w  i#1 i#5
+    copy.w  i#2 i#6
+    move.i.i32  i#3  emul_getfield_double
+    call        i#3
+
+    ; Get the double word value into word registers for popping during deallocation
+    load.w          i#1 i#6
+    add.upd.i.i4    i#6 4
+    load.w          i#0 i#6
+
+    ; Deallocate execution frame including the dynamically allocated area
+    em.isal.dealloc.nlsf 2
+    ; es: ..., high-word, low-word
+    ret.eh
+
+_e_getfield_single:
+    copy.w  i#0 i#4
+    copy.w  i#1 i#5
+    move.i.i32  i#2  emul_getfield_single
+    call        i#2
+    em.isal.dealloc.nlsf 1
+    ret.eh
 
 ;===========================================================
 ; e_putfield
@@ -501,7 +579,7 @@ e_invokevirtual:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the contants is resolved, so we jaut want clazz->values[index]
+; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant
     call        i#2
 
