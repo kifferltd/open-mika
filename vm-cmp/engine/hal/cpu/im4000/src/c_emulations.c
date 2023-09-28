@@ -273,9 +273,9 @@ w_word emul_getstatic_single(w_field field) {
  * @return the 64-bit value
  * 
  */
-w_dword emul_getstatic_double(w_field field) {
+void emul_getstatic_double(w_field field, w_dword *slot) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  return *(w_dword*)ptr;
+  *slot = *(w_dword*)ptr;
 }
 
 /**
@@ -296,9 +296,9 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
  * @return the 64-bit value
  * 
  */
-w_dword emul_getfield_double(w_field field, w_instance objectref) {
+void emul_getfield_double(w_field field, w_instance objectref, w_dword *slot) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  return *(w_dword*)ptr;
+  *slot = *(w_dword*)ptr;
 }
 
 /**

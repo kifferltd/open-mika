@@ -18,18 +18,6 @@
 .macro em.isal.alloc.nlsf.pop.es_0
 .endmacro
 
-.macro em.isal.alloc.nlsf.pop.es_l1
-em.isal.alloc.nlsf.pop.es_2     ; Pop the decomposed value from the evaluation stack
-; i#0=high-word
-; i#1=low-word
-; NOTE: ISAL has `pop.es.d ir ir` but it was never used so I rather avoid relying on it.
-zext.i.l l#0 i#0        ; Move the high significant part to the low half of the long register
-move.b.i8 b#4 32
-shl.l l#0 l#0 b#4       ; Move the high significant part to the high half in the long register
-zext.i.l l#1 i#1        ; Move the low significant part to a temporary long register
-add.upd.l l#0 l#1       ; Move the low significant part to the low half of the long register
-.endmacro
-
 ; Allocate a complete ISAL frame on top of whatever is in the stacks.
 ; Also popping values from the evaluation stack into i#0... registers.
 ; NOTE: The topmost value is moved to the register with the highest index
@@ -82,16 +70,6 @@ add.upd.l l#0 l#1       ; Move the low significant part to the low half of the l
 .endmacro
 
 .macro em.isal.dealloc.nlsf.push.es_0
-.endmacro
-
-.macro em.isal.dealloc.nlsf.push.es_l1
-trunc.l.i i#0 l#0       ; Move the low significant part to the first int register
-move.b.i8 b#4 32
-ashr.l l#0 l#0 b#4      ; Move the high significant part to the low half in the long register
-trunc.l.i i#1 l#0       ; Move the high significant part to the second int register
-em.isal.dealloc.nlsf.push.es_2  ; Push the decomposed value into the evaluation stack
-; es: ..., high-word, low-word
-; NOTE: ISAL has `push.es.d ir ir` but it was never used so I rather avoid relying on it.
 .endmacro
 
 ; Deallocate a complete ISAL frame and reveal the stacks beneath.

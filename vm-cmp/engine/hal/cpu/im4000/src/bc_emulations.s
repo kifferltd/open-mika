@@ -204,15 +204,29 @@ e_getstatic:
     pop.es.w    i#3     ; flags
     c.ldi.i     FIELD_IS_LONG
     c.and
+    c.drop
     c.br.z      _e_getstatic_single
 
 ; 2-word field
+    ; Allocate 8-byte slot for the field value
+    move.i.i8   i#11 1
+    dynalloc    i#6 i#11  ; not clobbered by call
+
+    ; Call function
     copy.w  i#0 i#1
+    copy.w  i#1 i#6
     move.i.i32  i#2  emul_getstatic_double
     call        i#2
-      
-    em.isal.dealloc.nlsf l1
-    ret.eh   
+
+    ; Get the double word value into word registers for popping during deallocation
+    load.w          i#1 i#6
+    add.upd.i.i4    i#6 4
+    load.w          i#0 i#6
+
+    ; Deallocate execution frame including the dynamically allocated area
+    em.isal.dealloc.nlsf 2
+    ; es: ..., high-word, low-word
+    ret.eh
 
 _e_getstatic_single:
     copy.w  i#0 i#1
@@ -221,11 +235,6 @@ _e_getstatic_single:
       
     em.isal.dealloc.nlsf 1
     ret.eh
-
-
-    errorpoint      ; Not implemented
-
-    ; needs to call emul_getstatic(frame, index)
 
 ;===========================================================
 ; e_putstatic
@@ -287,15 +296,30 @@ e_getfield:
     pop.es.w    i#3     ; flags
     c.ldi.i     FIELD_IS_LONG
     c.and
+    c.drop
     c.br.z      _e_getfield_single
 
 ; 2-word field
+    ; Allocate 8-byte slot for the field value
+    move.i.i8   i#11 1
+    dynalloc    i#6 i#11  ; not clobbered by call
+
+    ; Call function
     copy.w  i#0 i#4
     copy.w  i#1 i#5
-    move.i.i32  i#2  emul_getfield_double
-    call        i#2
-    em.isal.dealloc.nlsf l1
-    ret.eh   
+    copy.w  i#2 i#6
+    move.i.i32  i#3  emul_getfield_double
+    call        i#3
+
+    ; Get the double word value into word registers for popping during deallocation
+    load.w          i#1 i#6
+    add.upd.i.i4    i#6 4
+    load.w          i#0 i#6
+
+    ; Deallocate execution frame including the dynamically allocated area
+    em.isal.dealloc.nlsf 2
+    ; es: ..., high-word, low-word
+    ret.eh
 
 _e_getfield_single:
     copy.w  i#0 i#4
