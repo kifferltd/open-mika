@@ -306,9 +306,8 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
  * @return the 64-bit value
  * 
  */
-void emul_getfield_double(w_field field, w_instance objectref, w_dword *slot) {
-  void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  *slot = *(w_dword*)ptr;
+w_dword emul_getfield_double(w_field field, w_instance objectref) {
+  return *(w_dword*) (field->declaring_clazz->staticFields + field->size_and_slot);
 }
 
 /**
@@ -538,9 +537,36 @@ w_int emul_arraylength(w_instance arrayref)
  * @param index index into the constant pool of 'clazz' where the target class is defined.
  * @param objectref the object to be checked.
  */
-void emul_checkcast(im4000_frame frame, uint16_t index, w_instance objectref) {
+w_instance emul_checkcast(im4000_frame frame, uint16_t index, w_instance objectref) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
+  enterSafeRegion(thread);
+  w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) short_operand, thread);
+  if (thread->exception) {
+    throw(thread->exception);
+  }
+    
+  if (objectref) {
+    w_boolean compatible;
 
+    // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+    enterSafeRegion(thread);
+    compatible = isAssignmentCompatible(instance2object(o)->clazz, clazz);
+    enterUnsafeRegion(thread);
+    if (thread->exception) {
+      throw(thread->exception);
+    }
+
+    // TODO can we make use of e_exception for this?
+    if (!compatible)) {
+      throwException(thread, clazzClassCastException, NULL);
+      throw(thread->exception);
+    }
+
+  }
+  return objectref;
 }
 
 /**

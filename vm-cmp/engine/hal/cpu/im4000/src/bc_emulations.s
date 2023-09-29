@@ -414,7 +414,7 @@ e_newarray:
 ;
 ;===========================================================
 e_anewarray:
-    em.isal.alloc.nlsf 1
+    em.isal.alloc.nlsf 2
 
 ; Get count in i#2
     copy.w  i#2 i#1     ; count
@@ -480,10 +480,24 @@ e_athrow:
 ;
 ;===========================================================
 e_checkcast:		
+    em.isal.alloc.nlsf 2
 
-    errorpoint      ; Not implemented
+; TODO currently we are passing objectref to C and getting the
+; same objectref back - maybe better to dup objectref and let
+; the C code return void?
 
-    ; needs to call emul_checkcast(frame, index, objectref)
+; Get objectref in i#2
+    copy.w  i#2 i#1     ; objectref
+; Get index in i#1
+    copy.w  i#1 i#0     ; index
+; Get frame in i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#3 emul_checkcast
+    call        i#3
+      
+    em.isal.dealloc.nlsf 1
+    ret.eh 
 
 ;===========================================================
 ; e_instanceof
