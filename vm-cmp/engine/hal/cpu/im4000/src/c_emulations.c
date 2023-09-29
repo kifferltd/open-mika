@@ -1,5 +1,6 @@
 #include "stdbool.h"
 #include "arrays.h"
+#include "checks.h"
 #include "clazz.h"
 #include "constant.h"
 #include "core-classes.h"
@@ -8,6 +9,8 @@
 #include "mika_threads.h"
 #include "mika_stack.h"
 #include "wonka.h"
+
+extern  x_mutex mutex64;
 
 typedef struct IM4000_Frame {
   int32_t unused0;  // ConstantPool
@@ -103,7 +106,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   return handler_pc;
 }
 
-w_field getMethodConstant_unsafe(w_clazz c, uint16_t i) {
+w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_method m = getMethodConstant(c, i);
@@ -113,7 +116,7 @@ w_field getMethodConstant_unsafe(w_clazz c, uint16_t i) {
   return m;
  }
 
-w_field getFieldConstant_unsafe(w_clazz c, uint16_t i) {
+w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_field f = getFieldConstant(c, i);
@@ -241,7 +244,7 @@ w_method emul_static_target(im4000_frame frame, w_method called_method) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return the 32-bit value.
  */
-uint32_t emul_ldc(im4000_frame frame, uint16_t cpIndex) {
+uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
     w_thread thread = currentWonkaThread;
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
@@ -254,10 +257,10 @@ uint32_t emul_ldc(im4000_frame frame, uint16_t cpIndex) {
  * Load the 32-bit value of an item in the constant pool onto the stack.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool of the value to be loaded.
+ * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc2(im4000_frame frame, uint16_t index) {
+uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
 
     return 0;
 }
@@ -283,9 +286,8 @@ w_word emul_getstatic_single(w_field field) {
  * @return the 64-bit value
  * 
  */
-void emul_getstatic_double(w_field field, w_dword *slot) {
-  void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  *slot = *(w_dword*)ptr;
+w_dword emul_getstatic_double(w_field field, w_dword *slot) {
+  return *(w_dword*) (field->declaring_clazz->staticFields + field->size_and_slot);
 }
 
 /**
@@ -327,20 +329,20 @@ w_dword emul_getfield_double(w_field field, w_instance objectref) {
  * 
  * field->declaring_clazz->staticFields[field->size_and_slot]
  * @param frame the current stack frame.
- * @param index index into the constant pool where the target field is defined.
+ * @param cpIndex index into the constant pool where the target field is defined.
  * @param value pointer to the 32- or 64-bit value to be set.
 */
-void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
+void emul_putstatic(im4000_frame frame, uint32_t cpIndex, void *value) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   w_field source_field;
-  x_mutex mutex64;
+ 
   if (thread->exception){
     //do exception
   }
   enterSafeRegion(thread);
-  source_field = getFieldConstant(calling_clazz, index);
+  source_field = getFieldConstant(calling_clazz, cpIndex);
   mustBeInitialized(source_field->declaring_clazz);
   enterUnsafeRegion(thread);
 
@@ -352,6 +354,9 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
       x_mutex_lock(mutex64, x_eternal);
     }
     *ptr = value;
+    if (isVolatile) {
+      x_mutex_unlock(mutex64);
+    }
   } else {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value;
@@ -362,13 +367,13 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
  * Fetch the value of an instance field.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool where the target field is defined.
+ * @param cpIndex index into the constant pool where the target field is defined.
  * @param objectref the instance from which the value should be fetched.
  * 
  * TODO figure out how we can return a 32- or 64-bit value!!!
  * Maybe we should pass a frame pointer instead of the clazz?
  */
-void emul_getfield(im4000_frame frame, uint16_t index, w_instance objectref) {
+void emul_getfield(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
 
 }
 
@@ -376,11 +381,11 @@ void emul_getfield(im4000_frame frame, uint16_t index, w_instance objectref) {
  * Set the value of an instance field.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool where the target field is defined.
+ * @param cpIndex index into the constant pool where the target field is defined.
  * @param objectref the instance in which the value should be set.
  * @param value pointer to the 32- or 64-bit value to be set.
  */
-void emul_putfield(im4000_frame frame, uint16_t index, void *value, w_instance objectref) {
+void emul_putfield(im4000_frame frame, uint32_t cpIndex, void *value, w_instance objectref) {
 
 }
 
@@ -393,7 +398,7 @@ void emul_putfield(im4000_frame frame, uint16_t index, void *value, w_instance o
  * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  * @return the created instance.
  */
-w_instance emul_new(im4000_frame frame, uint16_t cpIndex) 
+w_instance emul_new(im4000_frame frame, uint32_t cpIndex) 
 {
     w_thread thread = currentWonkaThread;
     w_method calling_method = frame->method;
@@ -446,8 +451,6 @@ w_instance emul_newarray(int32_t count, uint8_t atype) {
   }
 
   w_clazz array_clazz = atype2clazz[atype];
-  void *bytes = (F_Array_data + roundBitsToWords(array_clazz->previousDimension->bits * count)) * sizeof(w_word);
-
   enterSafeRegion(thread);
   mustBeInitialized(array_clazz);
   enterUnsafeRegion(thread);
@@ -471,7 +474,7 @@ w_instance emul_newarray(int32_t count, uint8_t atype) {
  * @param count the number of elements in the array.
  * @return      the created array instance.
  */
-w_instance emul_anewarray(im4000_frame frame, uint16_t cpIndex, int32_t count) {
+w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
@@ -534,16 +537,16 @@ w_int emul_arraylength(w_instance arrayref)
  * Note: no exception will be thrown if 'objectref' is null.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the target class is defined.
+ * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  * @param objectref the object to be checked.
  */
-w_instance emul_checkcast(im4000_frame frame, uint16_t index, w_instance objectref) {
+w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
   enterSafeRegion(thread);
-  w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) short_operand, thread);
+  w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) cpIndex, thread);
   if (thread->exception) {
     throw(thread->exception);
   }
@@ -553,14 +556,14 @@ w_instance emul_checkcast(im4000_frame frame, uint16_t index, w_instance objectr
 
     // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
     enterSafeRegion(thread);
-    compatible = isAssignmentCompatible(instance2object(o)->clazz, clazz);
+    compatible = isAssignmentCompatible(instance2object(objectref)->clazz, subject_clazz);
     enterUnsafeRegion(thread);
     if (thread->exception) {
       throw(thread->exception);
     }
 
     // TODO can we make use of e_exception for this?
-    if (!compatible)) {
+    if (!compatible) {
       throwException(thread, clazzClassCastException, NULL);
       throw(thread->exception);
     }
@@ -574,11 +577,11 @@ w_instance emul_checkcast(im4000_frame frame, uint16_t index, w_instance objectr
  * Note: returns true if 'objectref' is null.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the target class is defined.
+ * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  * @param objectref the object to be checked.
  * @return      true if 'objectref' is an instance of the class, false otherwise.
  */
-bool emul_instanceof(im4000_frame frame, uint16_t index, w_instance objectref) {
+bool emul_instanceof(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
 
 }
 
@@ -604,12 +607,12 @@ void emul_monitorexit(w_instance objectref) {
  * Create a new multi-dimensional array of a non-primitive type.
  * 
  * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the type of the array elements is defined.
+ * @param cpIndex index into the constant pool of 'clazz' where the type of the array elements is defined.
  * @param dimensions the number of dimensions.
  * @param ...   the number of elements in each dimension of the array.
  * @return      the created array instance.
  */
-w_instance emul_multianewarray(im4000_frame frame, uint16_t index, uint8_t dimensions, ...) {
+w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint8_t dimensions, ...) {
 
 }
 
@@ -619,10 +622,10 @@ w_instance emul_multianewarray(im4000_frame frame, uint16_t index, uint8_t dimen
  * TODO figure out how we can return a 32- or 64-bit value, or no value at all!!!
  * Maybe we should pass a frame pointer instead of the clazz?
  * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the method to be executed is defined.
+ * @param cpIndex index into the constant pool of 'clazz' where the method to be executed is defined.
  * @param ...   arguments to be passed to the method.
  */
-void emul_invokevirtual(im4000_frame frame, uint16_t index, w_instance objectref, ...) {
+void emul_invokevirtual(im4000_frame frame, uint32_t cpIndex, w_instance objectref, ...) {
 
 }
 
@@ -632,7 +635,7 @@ void emul_invokevirtual(im4000_frame frame, uint16_t index, w_instance objectref
  * @param cpIndex index into the constant pool of 'clazz' where the method to be executed is defined.
  * @param ...   arguments to be passed to the method.
  */
-void emul_invokespecial(im4000_frame frame, uint16_t cpIndex, w_instance objectref, ...) {
+void emul_invokespecial(im4000_frame frame, uint32_t cpIndex, w_instance objectref, ...) {
 
 }
 
@@ -645,7 +648,7 @@ void emul_invokespecial(im4000_frame frame, uint16_t cpIndex, w_instance objectr
  * @param index index into the constant pool of 'clazz' where the method to be executed is defined.
  * @param ...   arguments to be passed to the method.
  */
-void  emul_invokestatic(im4000_frame frame, uint16_t index, ...) {
+void  emul_invokestatic(im4000_frame frame, uint32_t index, ...) {
 
 }
 
@@ -658,7 +661,7 @@ void  emul_invokestatic(im4000_frame frame, uint16_t index, ...) {
  * @param index index into the constant pool of 'clazz' where the method to be executed is defined.
  * @param ...   arguments to be passed to the method.
 */
-void emul_invokeinterface(im4000_frame frame, uint16_t index, w_instance objectref, ...) {
+void emul_invokeinterface(im4000_frame frame, uint32_t index, w_instance objectref, ...) {
 
 }
 
