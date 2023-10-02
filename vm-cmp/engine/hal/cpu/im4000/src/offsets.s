@@ -1,4 +1,10 @@
 ;===========================================================
+; Offsets in the w_Clazz struct (See clazz.h)
+; Automatically generated
+;
+CLAZZ_VALUES = 36
+
+;===========================================================
 ; Offsets in the w_Field struct (See fields.h)
 ; Automatically generated
 ;
