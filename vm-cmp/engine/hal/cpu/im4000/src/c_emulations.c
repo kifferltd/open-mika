@@ -273,9 +273,9 @@ w_word emul_getstatic_single(w_field field) {
  * @return the 64-bit value
  * 
  */
-void emul_getstatic_double(w_field field, w_dword *slot) {
+w_dword emul_getstatic_double(w_field field) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  *slot = *(w_dword*)ptr;
+  return *(w_dword*)ptr;
 }
 
 /**
@@ -296,51 +296,41 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
  * @return the 64-bit value
  * 
  */
-void emul_getfield_double(w_field field, w_instance objectref, w_dword *slot) {
+w_dword emul_getfield_double(w_field field, w_instance objectref) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
-  *slot = *(w_dword*)ptr;
+  return *(w_dword*)ptr;
 }
 
 /**
  * Set the value of a static field.
- * 
- * Implementation Notes: 
- * See emul_new for how to extract the calling_clazz from the frame.
- * See also label c_putstatic in interpreter.c for the interpreted version.
- * To get the description of the field to be updated, call getFieldConstant().
- * We also need to call mustBeInitialized() on the fields's declaring_clazz.
- * Currently the above needs to be wrapped in enterSafeRegion/enterUnsafeRegion.
- * The address of the field in memory is field->declaring_clazz->staticFields[field->size_and_slot]
- * Check field->flags to see what kind of a field this is: if it is a LONG field, 
- * you need to copy two words from 'value' to the field address otherwise just 1 word.
- * For now we can skip the "current[0] = in_putstatic_double;" logic, that will be
- * for when we implement "fast" opcodes.
  * 
  * field->declaring_clazz->staticFields[field->size_and_slot]
  * @param frame the current stack frame.
  * @param index index into the constant pool where the target field is defined.
  * @param value pointer to the 32- or 64-bit value to be set.
 */
-void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_field source_field;
-  if (thread->exception){
-    //do exception
-  }
-  enterSafeRegion(thread);
-  source_field = getFieldConstant(calling_clazz, index);
-  mustBeInitialized(source_field->declaring_clazz);
-  enterUnsafeRegion(thread);
-
-  if (isSet(source_field->flags, FIELD_IS_LONG)){
-    w_dword *ptr = (w_dword *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
-    *ptr = value;
-  } else {
+void emul_putstatic_single(w_word value, w_field source_field) {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value;
-  }
+}
+void emul_putstatic_double(w_word value_high, w_word value_low, w_field source_field) {
+    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+    *ptr = value_high;
+    *(ptr+1) = value_low;
+}
+
+/**
+ * Fetch the value of an instance field.
+ *
+ * @param frame the current stack frame.
+ * @param index index into the constant pool where the target field is defined.
+ * @param objectref the instance from which the value should be fetched.
+ *
+ * TODO figure out how we can return a 32- or 64-bit value!!!
+ * Maybe we should pass a frame pointer instead of the clazz?
+ */
+void emul_getfield(im4000_frame frame, uint16_t index, w_instance objectref) {
+
 }
 
 /**
@@ -351,28 +341,13 @@ void emul_putstatic(im4000_frame frame, uint16_t index, void *value) {
  * @param objectref the instance in which the value should be set.
  * @param value pointer to the 32- or 64-bit value to be set.
  */
-void emul_putfield(im4000_frame frame, uint16_t index, void *value, w_instance objectref) {
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_field source_field;
-  if (thread->exception){
-    //do exception
-  }
-  enterSafeRegion(thread);
-  source_field = getFieldConstant(calling_clazz, index);
-  mustBeInitialized(source_field->declaring_clazz);
-  enterUnsafeRegion(thread);
+void emul_putfield_single( w_instance objectref, w_word value, w_field source_field) {
+  *wordFieldPointer(objectref, source_field->size_and_slot) = value;
+}
 
-  if (objectref == NULL) {
-    throw(clazzNullPointerException);
-  }
-
-  if (isSet(source_field->flags, FIELD_IS_LONG)){
-    (w_dword) *wordFieldPointer(objectref, source_field->size_and_slot) = value;
-  } else {
-    *wordFieldPointer(objectref, source_field->size_and_slot) = value;
-  }
+void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field source_field) {
+  wordFieldPointer(objectref, source_field->size_and_slot)[0] = value_high;
+  wordFieldPointer(objectref, source_field->size_and_slot)[1] = value_low;
 }
 
 /**

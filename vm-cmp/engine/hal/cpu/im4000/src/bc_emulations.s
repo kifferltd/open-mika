@@ -206,9 +206,6 @@ e_getstatic:
     br.cmp.i.i8.eq  _e_getstatic_single i#0 0
 
 ; 2-word field
-    ; Allocate 8-byte slot for the field value
-    move.i.i8   i#11 1
-    dynalloc    i#6 i#11  ; not clobbered by call
 
     ; Call function
     copy.w  i#0 i#1
@@ -216,10 +213,10 @@ e_getstatic:
     move.i.i32  i#2  emul_getstatic_double
     call        i#2
 
-    ; Get the double word value into word registers for popping during deallocation
-    load.w          i#1 i#6
-    add.upd.i.i4    i#6 4
-    load.w          i#0 i#6
+    trunc.l.i i#0 l#0
+    move.b.i8 b#4 32
+    shl.l l#0 l#0 b#4
+    trunc.l.i i#1 l#0 
 
     ; Deallocate execution frame including the dynamically allocated area
     em.isal.dealloc.nlsf 2
@@ -248,16 +245,35 @@ _e_getstatic_single:
 ;===========================================================
 e_putstatic:
 
+    em.isal.alloc.nlsf 1
+    copy.w      i#1 i#0
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+    move.i.i32  i#2 getFieldConstant_unsafe
+    call        i#2
+    copy.w      i#1 i#0
+    
+    add.i.i8        i#1 i#1 FIELD_FLAGS
+    load.w          i#1 i#1
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#1 i#2
+    cmp.i.i8.eq     b#8 i#1 0
+    br.c.i16        b#8 _e_putstatic_single
+
+    em.isal.dealloc.nlsf 1
+    em.isal.alloc.nlsf 3
+    move.i.i32      i#3 emul_putstatic_double
+    call            i#3
+    em.isal.dealloc.nlsf 0
+    ret.eh
+
+_e_putstatic_single:
+    em.isal.dealloc.nlsf 1
     em.isal.alloc.nlsf 2
-
-    ; Get index
-
-    copy.w  i#2 i#0     ; value
-    ; copy.w  i#1 i#0      index
-    c.ld.fmp
-    pop.es.w    i#0     ; frame
-    move.i.i32  i#3  emul_putstatic
-    call        i#3
+    move.i.i32      i#2 emul_putstatic_single
+    call            i#2
       
     em.isal.dealloc.nlsf 0
     ret.eh
@@ -296,21 +312,16 @@ e_getfield:
     br.cmp.i.i8.eq  _e_getfield_single i#0 0
 
 ; 2-word field
-    ; Allocate 8-byte slot for the field value
-    move.i.i8   i#11 1
-    dynalloc    i#6 i#11  ; not clobbered by call
-
     ; Call function
     copy.w  i#0 i#4
     copy.w  i#1 i#5
-    copy.w  i#2 i#6
     move.i.i32  i#3  emul_getfield_double
     call        i#3
 
-    ; Get the double word value into word registers for popping during deallocation
-    load.w          i#1 i#6
-    add.upd.i.i4    i#6 4
-    load.w          i#0 i#6
+    trunc.l.i i#0 l#0
+    move.b.i8 b#4 32
+    shl.l l#0 l#0 b#4
+    trunc.l.i i#1 l#0 
 
     ; Deallocate execution frame including the dynamically allocated area
     em.isal.dealloc.nlsf 2
@@ -336,17 +347,35 @@ _e_getfield_single:
 ;
 ;===========================================================
 e_putfield:
-    em.isal.alloc.nlsf 3
+    em.isal.alloc.nlsf 1
+    copy.w      i#1 i#0
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+    move.i.i32  i#2 getFieldConstant_unsafe
+    call        i#2
+    copy.w      i#1 i#0
+    
+    add.i.i8        i#1 i#1 FIELD_FLAGS
+    load.w          i#1 i#1
+    move.i.i32      i#2 FIELD_IS_LONG
+    and.upd.i       i#1 i#2
+    cmp.i.i8.eq     b#8 i#1 0
+    br.c.i16        b#8 _e_putfield_single
 
-    copy.w  i#4 i#2
-    copy.w  i#3 i#0 ; i#3 = objectref
-    copy.w  i#2 i#1 ; i#2 = value
-    copy.w  i#1 i#4 ; i#1 = cpIndex
-    c.ld.fmp
-    pop.es.w    i#0 ; i#0 = frame
-    move.i.i32  i#4  emul_putfield
-    call        i#4
-      
+    em.isal.dealloc.nlsf 1
+    em.isal.alloc.nlsf 4
+    move.i.i32      i#4 emul_putfield_double
+    call            i#4
+    em.isal.dealloc.nlsf 0
+    ret.eh
+
+_e_putfield_single:
+    em.isal.dealloc.nlsf 1
+    em.isal.alloc.nlsf 3
+    move.i.i32      i#3 emul_putfield_single
+    call            i#3
     em.isal.dealloc.nlsf 0
     ret.eh
 

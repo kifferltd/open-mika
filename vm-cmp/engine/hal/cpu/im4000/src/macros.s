@@ -1,5 +1,10 @@
 ;===========================================================
 
+.macro em.isal.alloc.nlsf.pop.es_4
+    pop.es.w i#3
+    em.isal.alloc.nlsf.pop.es_3
+.endmacro
+
 .macro em.isal.alloc.nlsf.pop.es_3
     pop.es.w i#2
     em.isal.alloc.nlsf.pop.es_2
