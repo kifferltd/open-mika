@@ -5,6 +5,7 @@
 #include "constant.h"
 #include "core-classes.h"
 #include "loading.h"
+#include "locks.h"
 #include "methods.h"
 #include "mika_threads.h"
 #include "mika_stack.h"
@@ -115,6 +116,16 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   }
   return m;
  }
+w_field getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
+  w_thread thread = currentWonkaThread;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_method m = getIMethodConstant(c, i);
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return m;
+ }
+
 
 w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
@@ -222,6 +233,34 @@ w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
 
 }
 
+w_method emul_interface_target(im4000_frame frame, w_method called_method) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_clazz target_clazz = called_method->spec.declaring_clazz;
+
+  if (thread->exception){
+    throw(thread->exception);
+  }
+
+  w_method target_method = interfaceLookup(called_method, target_clazz);
+  woempa(7, "target method is %m\n", target_method);
+
+  // TODO null result should be treated as abstract, see below
+  // TODO check method is not abstract, else throw AbstractMethodError
+  // TODO can we make use of e_exception for thses?
+ if (isSet(target_method->flags, ACC_STATIC)) {
+    throwException(thread, clazzIncompatibleClassChangeError, NULL);
+    throw(thread->exception);
+  }
+  if (isNotSet(target_method->flags, ACC_PUBLIC)) {
+    throwException(thread, clazzIllegalAccessError, NULL);
+    throw(thread->exception);
+  }
+
+  return target_method;
+}
+
 w_method emul_static_target(im4000_frame frame, w_method called_method) {
   w_thread thread = currentWonkaThread;
 
@@ -250,7 +289,7 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
     // enterSafeRegion(thread);
-    return getClassConstant(calling_clazz, cpIndex, thread);
+    return get32BitConstant(calling_clazz, cpIndex, 0, thread);
 }
 
 /**
@@ -261,11 +300,16 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
  * @return      the 64-bit value.
 */
 uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
+    w_thread thread = currentWonkaThread;
+    w_method calling_method = frame->method;
+    w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    return 0;
+    // enterSafeRegion(thread);
+    return get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
 }
 
-// emul_jsr(offset)?
+
+/// emul_jsr(offset)?
 // emul_ret()?
 
 /**
@@ -283,12 +327,17 @@ w_word emul_getstatic_single(w_field field) {
  * Fetch the value of a 64-bit static field.
  * 
  * @param field the static field from which the value is to be fetched.
- * @return the 64-bit value
+ * @param result where to put the 64-bit value.
  * 
  */
+<<<<<<< HEAD
 w_dword emul_getstatic_double(w_field field) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
   return *(w_dword*)ptr;
+=======
+void emul_getstatic_double(w_field field, w_dword *result) {
+  *result = *(w_dword*) (field->declaring_clazz->staticFields + field->size_and_slot);
+>>>>>>> 60fe827 (dd implementations of invokeinterface, monitorenter, monitorexit.)
 }
 
 /**
@@ -565,7 +614,9 @@ bool emul_instanceof(im4000_frame frame, uint32_t cpIndex, w_instance objectref)
  * @param objectref the object whose monitor is to be entered.
  */
 void emul_monitorenter(w_instance objectref) {
-
+  // TODO who checks for null instance?
+  x_monitor m = getMonitor(objectref);
+  x_monitor_eternal(m);
 }
 
 /**
@@ -574,7 +625,11 @@ void emul_monitorenter(w_instance objectref) {
  * @param objectref the object whose monitor is to be left.
  */
 void emul_monitorexit(w_instance objectref) {
-
+   x_monitor m = getMonitor(objectref);
+  // TODO can we make use of e_exception for this?
+   if (x_monitor_exit(m) == xs_not_owner) {
+    throwException(currentWonkaThread, clazzIllegalMonitorStateException, NULL);
+  }
 }
 
 /**
