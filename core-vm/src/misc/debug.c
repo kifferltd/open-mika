@@ -362,6 +362,7 @@ void _wabort(const char *function, int line, int scope, const char *fmt, ... ) {
 #endif
   kthread = x_thread_current();
   thread = (w_thread)kthread->xref;
+  enterSafeRegion(thread);
 
   w_dump_info();
 
