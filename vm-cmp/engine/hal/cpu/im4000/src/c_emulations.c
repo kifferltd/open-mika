@@ -204,11 +204,8 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
   }
 }
 
-w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
+w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_clazz target_clazz = called_method->spec.declaring_clazz;
 
   if (thread->exception){
     throw(thread->exception);
@@ -225,6 +222,7 @@ w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
     return called_method;
   }
   else {
+    w_clazz target_clazz = instance2clazz(objectref);
     w_method target_method = virtualLookup(called_method, target_clazz);
     woempa(7, "target method is %m\n", target_method);
 
@@ -327,23 +325,19 @@ w_word emul_getstatic_single(w_field field) {
  * Fetch the value of a 64-bit static field.
  * 
  * @param field the static field from which the value is to be fetched.
- * @param result where to put the 64-bit value.
+ * @return the 64-bit value
  * 
  */
-<<<<<<< HEAD
 w_dword emul_getstatic_double(w_field field) {
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
   return *(w_dword*)ptr;
-=======
-void emul_getstatic_double(w_field field, w_dword *result) {
-  *result = *(w_dword*) (field->declaring_clazz->staticFields + field->size_and_slot);
->>>>>>> 60fe827 (dd implementations of invokeinterface, monitorenter, monitorexit.)
 }
 
 /**
- * Fetch the value of a 32-bit static field.
+ * Fetch the value of a 32-bit field of an object.
  * 
- * @param field the static field from which the value is to be fetched.
+ * @param field the field description.
+ * @param objectref the object from which the value is to be fetched.
  * @return the 32-bit value
  * 
  */
@@ -352,9 +346,10 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
 }
 
 /**
- * Fetch the value of a 64-bit static field.
+ * Fetch the value of a 64-bit field of an object.
  * 
- * @param field the static field from which the value is to be fetched.
+ * @param field the field description.
+ * @param objectref the object from which the value is to be fetched.
  * @return the 64-bit value
  * 
  */
@@ -364,52 +359,51 @@ w_dword emul_getfield_double(w_field field, w_instance objectref) {
 }
 
 /**
- * Set the value of a static field.
+ * Set the value of a 32-bitstatic field.
  * 
- * field->declaring_clazz->staticFields[field->size_and_slot]
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
- * @param value pointer to the 32- or 64-bit value to be set.
+ * @param value the 32-bit value to be set.
+ * @param field he field description.
 */
 void emul_putstatic_single(w_word value, w_field source_field) {
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value;
 }
-void emul_putstatic_double(w_word value_high, w_word value_low, w_field source_field) {
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+
+/**
+ * Set the value of a 64-bitstatic field.
+ * 
+ * @param value_high the high half of the 64-bit value to be set.
+ * @param value_low the low half of the 64-bit value to be set.
+ * @param field he field description.
+*/
+void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
     *ptr = value_high;
     *(ptr+1) = value_low;
 }
 
 /**
- * Fetch the value of an instance field.
- *
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
- * @param objectref the instance from which the value should be fetched.
- *
- * TODO figure out how we can return a 32- or 64-bit value!!!
- * Maybe we should pass a frame pointer instead of the clazz?
+ * Set the value of a 32-bit instance field.
+ * 
+ * @param objectref the instance in which the value should be set.
+ * @param value the 32-bit value to be set.
+ * @param field the field description.
  */
-void emul_getfield(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
-
+void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
+  *wordFieldPointer(objectref, field->size_and_slot) = value;
 }
 
 /**
- * Set the value of an instance field.
+ * Set the value of a 64-bit instance field.
  * 
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
  * @param objectref the instance in which the value should be set.
- * @param value pointer to the 32- or 64-bit value to be set.
+ * @param value_high high half of the 64-bit value to be set.
+ * @param value_low low half of the 64-bit value to be set.
+ * @param field the field description.
  */
-void emul_putfield_single( w_instance objectref, w_word value, w_field source_field) {
-  *wordFieldPointer(objectref, source_field->size_and_slot) = value;
-}
-
-void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field source_field) {
-  wordFieldPointer(objectref, source_field->size_and_slot)[0] = value_high;
-  wordFieldPointer(objectref, source_field->size_and_slot)[1] = value_low;
+void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field field) {
+  wordFieldPointer(objectref, field->size_and_slot)[0] = value_high;
+  wordFieldPointer(objectref, field->size_and_slot)[1] = value_low;
 }
 
 /**

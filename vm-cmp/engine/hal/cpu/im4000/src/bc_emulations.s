@@ -197,13 +197,7 @@ e_getstatic:
 ; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getFieldConstant_unsafe
     call        i#2
-; PRPOSED REPLACEMENT:
-;    add.i.i8    i#0 i#0  CLAZZ_VALUES
-;    load.w      i#0 i#0 ; calling_clazz->values
-;    add.upd.i   i#0 i#1
-;    c.ld.i      ; es: ..., calling_clazz->values[index]
-;    pop.es.w    i#0     ; clazz->values[index] = field
-    ; END
+    copy.w      i#1 i#0
 
     add.i.i8        i#0 i#0 FIELD_FLAGS
     load.w          i#0 i#0
@@ -628,6 +622,19 @@ e_multianewarray:
 ;
 ;===========================================================
 e_invokevirtual:
+
+    ; DEBUG
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    ; GUBED
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -638,14 +645,23 @@ e_invokevirtual:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant_unsafe
     call        i#2
+    ; called method is in i#0
 
-; Now we have the called method in i#0 - but we need to find the true target
-    copy.w  i#1 i#0     ; called_method
-    c.ld.fmp
-    pop.es.w    i#0     ; frame
+    em.isal.dealloc.nlsf 1
+
+    ;      Stack: ..., objectref, [arg1, [arg2...]], cld_method
+    c.dup       ; ..., objectref, [arg1, [arg2...]], cld_method, cld_method
+    c.addi  METHOD_EXEC_ARG_I
+    c.ld.i      ; ..., objectref, [arg1, [arg2...]], cld_method, arg_i
+;    c.addi 1
+    c.pick      ; ..., objectref, [arg1, [arg2...]], cld_method, objectref
+;    c.swap      ; ..., objectref, [arg1, [arg2...]], objectref, cld_method
+
+    em.isal.alloc.nlsf 2
+; Now we have the called method in i#0 and the objectref in i#1
+; Call emul_virtual_target to get the real target method
     move.i.i32  i#2 emul_virtual_target
     call        i#2
 ; target method is now in i#0
@@ -672,7 +688,6 @@ e_invokespecial:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the constant is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant_unsafe
     call        i#2
 
