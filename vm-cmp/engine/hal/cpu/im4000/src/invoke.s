@@ -197,12 +197,15 @@ activate_frame_native:
     ; FIXME
     errorpoint
 
-    ; Allocate ISAL frame for caller
-    ; Put arguments into position according to ISAL calling convention
-    ; Call native method
-; Native method returns
-;  - Check if exception is left in the thread; go to throw if so
-;  - Do something with the return value...
+    ; Adapt native dispatchers to handle arguments from the evaluation stack, maybe also take im4000_frame instead of w_Frame
+    ; Allocate ISAL frame
+    ; Prepare whatever is needed for the dispatcher
+    ; Call native method via dispatcher: method->exec.dispatcher(caller, method);
+    ; Native method returns
+    ;  - Check if exception is left in the thread; go to throw if so
+    ;  - Do something with the return value and clean up
+    ; Deallocate ISAL frame
+    ; Return somewhere appropriate...
 
 ;===========================================================
 ; Method returns here when invoked via activate_frame()
