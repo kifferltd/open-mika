@@ -61,7 +61,7 @@ e_ldc2_w:
     c.ld.fmp
     pop.es.w    i#0     ; frame
 
-    move.i.i32  i#2  emul_ldc2_w
+    move.i.i32  i#2  emul_ldc2
     call        i#2
 
     em.isal.dealloc.nlsf 2
