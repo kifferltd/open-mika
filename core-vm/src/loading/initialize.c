@@ -247,7 +247,7 @@ static void cleanUpClinit(w_method clinit) {
 ** The result returned is CLASS_LOADING_xxxxx.
 */
 
-extern void activate_frame(w_method, int, void*);
+extern void activate_frame(w_method, int, void*, void*);
 
 w_int initializeClazz(w_thread thread, w_clazz clazz) {
   w_frame    frame;
@@ -331,7 +331,7 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
         // WAS : frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
         // deactivateFrame(frame, NULL);
         w_boolean was_unsafe = enterUnsafeRegion(thread);
-        activate_frame(clazz->clinit, 0, NULL);
+        activate_frame(clazz->clinit, 0, NULL, NULL);
         if (!was_unsafe) {
            enterSafeRegion(thread);
         }
