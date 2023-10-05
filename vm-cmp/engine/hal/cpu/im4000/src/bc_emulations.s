@@ -10,17 +10,25 @@
 ; Format: ldc, indexbyte
 ;
 ; Stack: ... -> ..., value
-;				  
+;
 ;===========================================================
 e_ldc:
+    ; ERAR points to indexbyte. Adjust ERAR and load indexbyte.
+    c.ld.erar
+    c.dup
+    c.addi  1
+    c.st.erar
+    c.ld.b          ; Loads sign-extended byte into the top word
+    c.andi    0xff  ; Clear potential sign extension
+    ; es: ..., indexbyte
 
-    ; TODO: ERAR points to indexbyte
     em.isal.alloc.nlsf 1
-
-; Get index from evaluation stack
-    pop.es.w    i#0     ; index
-    move.i.i32  i#1 emul_ldc
-    call        i#1
+    ; i#0 = indexbyte
+    copy.w  i#1 i#0     ; index
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_ldc
+    call        i#2
 
     em.isal.dealloc.nlsf 1
     ret.eh
