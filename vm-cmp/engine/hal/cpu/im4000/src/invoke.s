@@ -114,8 +114,7 @@ activate_frame_10:
 ; !!! Continue with ISAC as can be called from emulation routines.
 ;===========================================================
 ;
-; Set up a Java stack frame in the memory stack and continue with
-; Java execution.
+; Prepare a stack frame and execute method.
 ;
 ; stack:    ..., [arg0, [arg1...]], narg, method, return_address
 ;        => ...,
@@ -123,6 +122,21 @@ activate_frame_10:
 ;===========================================================
 .global _emul_allocate_frame
 _emul_allocate_frame:
+
+; Check whether native method
+    c.over
+    c.addi  METHOD_FLAGS
+    c.ld.i
+    ; TODO: Take flag value from a proper definition
+    c.ldi.i 0x00000100  ; ACC_NATIVE
+    c.and
+    c.drop
+    c.br.nz activate_frame_native
+
+; Non-native methods fall through
+;===========================================================
+; Set up a Java stack frame in the memory stack and continue with
+; Java execution.
 
 ; Disable interrupts while pushing values to the memory
 ; That is to ensure 8-byte alignment of MSP
@@ -178,9 +192,28 @@ _emul_allocate_frame:
     .short      0xf9c2      ; c.jump.java
 
 ;===========================================================
-; Java code returns here when invoked via activate_frame()
-; Continue in ISAL context.
+; Call a native method
+activate_frame_native:
+    ; FIXME
+    errorpoint
+
+    ; Allocate ISAL frame for caller
+    ; Put arguments into position according to ISAL calling convention
+    ; Call native method
+; Native method returns
+;  - Check if exception is left in the thread; go to throw if so
+;  - Do something with the return value...
+
+;===========================================================
+; Method returns here when invoked via activate_frame()
+; Continue in ISAL context and take care of return value in
+; the ISAC evaluation stack if any.
 activate_frame_return:
+    ; FIXME: Handle return value here!
+    ; If active exception is left in the thread
+    ; (that is when _throw_uncaught is removed below),
+    ; ignore the return value.
+
     ; Evaluation stack should be empty here
     check.lrcb
 
@@ -334,6 +367,8 @@ _emul_throw:
     c.ld.fmp
     ; es: ..., objectref, frame
 
+    ; FIXME: Can we just return to the ISAL caller in case of
+    ; no more Java frames?
     ; If no Java frame (FMP==0), manage uncaught exception
     c.addi  0
     c.brs.z  _throw_uncaught
