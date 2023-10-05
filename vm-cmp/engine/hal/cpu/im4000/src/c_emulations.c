@@ -131,6 +131,10 @@ w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_field f = getFieldConstant(c, i);
+  if (isSet(f->flags, ACC_STATIC)) {
+    // needed for getstatic, putstatic
+    mustBeInitialized(f->declaring_clazz);
+  }
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -364,8 +368,8 @@ w_dword emul_getfield_double(w_field field, w_instance objectref) {
  * @param value the 32-bit value to be set.
  * @param field he field description.
 */
-void emul_putstatic_single(w_word value, w_field source_field) {
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+void emul_putstatic_single(w_word value, w_field field) {
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
     *ptr = value;
 }
 
