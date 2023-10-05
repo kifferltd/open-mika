@@ -5,6 +5,7 @@
 #include "constant.h"
 #include "core-classes.h"
 #include "loading.h"
+#include "locks.h"
 #include "methods.h"
 #include "mika_threads.h"
 #include "mika_stack.h"
@@ -115,11 +116,25 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   }
   return m;
  }
+w_field getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
+  w_thread thread = currentWonkaThread;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_method m = getIMethodConstant(c, i);
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+  return m;
+ }
+
 
 w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_field f = getFieldConstant(c, i);
+  if (isSet(f->flags, ACC_STATIC)) {
+    // needed for getstatic, putstatic
+    mustBeInitialized(f->declaring_clazz);
+  }
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -193,11 +208,8 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
   }
 }
 
-w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
+w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_clazz target_clazz = called_method->spec.declaring_clazz;
 
   if (thread->exception){
     throw(thread->exception);
@@ -214,12 +226,41 @@ w_method emul_virtual_target(im4000_frame frame, w_method called_method) {
     return called_method;
   }
   else {
+    w_clazz target_clazz = instance2clazz(objectref);
     w_method target_method = virtualLookup(called_method, target_clazz);
     woempa(7, "target method is %m\n", target_method);
 
     return target_method;
   }
 
+}
+
+w_method emul_interface_target(im4000_frame frame, w_method called_method) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_clazz target_clazz = called_method->spec.declaring_clazz;
+
+  if (thread->exception){
+    throw(thread->exception);
+  }
+
+  w_method target_method = interfaceLookup(called_method, target_clazz);
+  woempa(7, "target method is %m\n", target_method);
+
+  // TODO null result should be treated as abstract, see below
+  // TODO check method is not abstract, else throw AbstractMethodError
+  // TODO can we make use of e_exception for thses?
+ if (isSet(target_method->flags, ACC_STATIC)) {
+    throwException(thread, clazzIncompatibleClassChangeError, NULL);
+    throw(thread->exception);
+  }
+  if (isNotSet(target_method->flags, ACC_PUBLIC)) {
+    throwException(thread, clazzIllegalAccessError, NULL);
+    throw(thread->exception);
+  }
+
+  return target_method;
 }
 
 w_method emul_static_target(im4000_frame frame, w_method called_method) {
@@ -250,7 +291,7 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
     // enterSafeRegion(thread);
-    return getClassConstant(calling_clazz, cpIndex, thread);
+    return get32BitConstant(calling_clazz, cpIndex, 0, thread);
 }
 
 /**
@@ -260,18 +301,17 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
+uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
     w_thread thread = currentWonkaThread;
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    enterSafeRegion(thread);
-    w_u64 value = get64BitConstant(calling_clazz, cpIndex, thread);
-    enterUnsafeRegion(thread);
-    return (uint64_t) value.u64;
+    // enterSafeRegion(thread);
+    return get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
 }
 
-// emul_jsr(offset)?
+
+/// emul_jsr(offset)?
 // emul_ret()?
 
 /**
@@ -298,9 +338,10 @@ w_dword emul_getstatic_double(w_field field) {
 }
 
 /**
- * Fetch the value of a 32-bit static field.
+ * Fetch the value of a 32-bit field of an object.
  * 
- * @param field the static field from which the value is to be fetched.
+ * @param field the field description.
+ * @param objectref the object from which the value is to be fetched.
  * @return the 32-bit value
  * 
  */
@@ -309,9 +350,10 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
 }
 
 /**
- * Fetch the value of a 64-bit static field.
+ * Fetch the value of a 64-bit field of an object.
  * 
- * @param field the static field from which the value is to be fetched.
+ * @param field the field description.
+ * @param objectref the object from which the value is to be fetched.
  * @return the 64-bit value
  * 
  */
@@ -321,38 +363,51 @@ w_dword emul_getfield_double(w_field field, w_instance objectref) {
 }
 
 /**
- * Set the value of a static field.
+ * Set the value of a 32-bitstatic field.
  * 
- * field->declaring_clazz->staticFields[field->size_and_slot]
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
- * @param value pointer to the 32- or 64-bit value to be set.
+ * @param value the 32-bit value to be set.
+ * @param field he field description.
 */
-void emul_putstatic_single(w_word value, w_field source_field) {
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+void emul_putstatic_single(w_word value, w_field field) {
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
     *ptr = value;
 }
-void emul_putstatic_double(w_word value_high, w_word value_low, w_field source_field) {
-    w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
+
+/**
+ * Set the value of a 64-bitstatic field.
+ * 
+ * @param value_high the high half of the 64-bit value to be set.
+ * @param value_low the low half of the 64-bit value to be set.
+ * @param field he field description.
+*/
+void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
     *ptr = value_high;
     *(ptr+1) = value_low;
 }
 
 /**
- * Set the value of an instance field.
+ * Set the value of a 32-bit instance field.
  * 
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
  * @param objectref the instance in which the value should be set.
- * @param value pointer to the 32- or 64-bit value to be set.
+ * @param value the 32-bit value to be set.
+ * @param field the field description.
  */
-void emul_putfield_single( w_instance objectref, w_word value, w_field source_field) {
-  *wordFieldPointer(objectref, source_field->size_and_slot) = value;
+void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
+  *wordFieldPointer(objectref, field->size_and_slot) = value;
 }
 
-void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field source_field) {
-  wordFieldPointer(objectref, source_field->size_and_slot)[0] = value_high;
-  wordFieldPointer(objectref, source_field->size_and_slot)[1] = value_low;
+/**
+ * Set the value of a 64-bit instance field.
+ * 
+ * @param objectref the instance in which the value should be set.
+ * @param value_high high half of the 64-bit value to be set.
+ * @param value_low low half of the 64-bit value to be set.
+ * @param field the field description.
+ */
+void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field field) {
+  wordFieldPointer(objectref, field->size_and_slot)[0] = value_high;
+  wordFieldPointer(objectref, field->size_and_slot)[1] = value_low;
 }
 
 /**
@@ -573,7 +628,9 @@ bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex
  * @param objectref the object whose monitor is to be entered.
  */
 void emul_monitorenter(w_instance objectref) {
-
+  // TODO who checks for null instance?
+  x_monitor m = getMonitor(objectref);
+  x_monitor_eternal(m);
 }
 
 /**
@@ -582,7 +639,11 @@ void emul_monitorenter(w_instance objectref) {
  * @param objectref the object whose monitor is to be left.
  */
 void emul_monitorexit(w_instance objectref) {
-
+   x_monitor m = getMonitor(objectref);
+  // TODO can we make use of e_exception for this?
+   if (x_monitor_exit(m) == xs_not_owner) {
+    throwException(currentWonkaThread, clazzIllegalMonitorStateException, NULL);
+  }
 }
 
 /**

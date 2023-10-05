@@ -432,6 +432,7 @@ void args_read(void) {
 #endif
 }
 
+#define PRINT_CLAZZ_OFFSET(nm,field) woempa(7,"CLAZZ_%s = %d\n", #nm, offsetof(w_Clazz, field) )
 #define PRINT_FIELD_OFFSET(nm,field) woempa(7,"FIELD_%s = %d\n", #nm, offsetof(w_Field, field) )
 #define PRINT_METHOD_OFFSET(nm,field) woempa(7,"METHOD_%s = %d\n", #nm, offsetof(w_Method, field) )
 #define PRINT_METHOD_SPEC_OFFSET(nm,field) woempa(7,"METHOD_SPEC_%s = %d\n", #nm, offsetof(w_Method, spec) + offsetof(w_MethodSpec, field) )
@@ -470,7 +471,9 @@ void startWonka(void* data) {
   lowMemoryCheck;
 
 // temporary hack
-  woempa(7,"w_Fieldd offset definitions:\n");
+  woempa(7,"w_Clazz offset definitions:\n");
+  PRINT_CLAZZ_OFFSET(VALUES,values);
+  woempa(7,"w_Field offset definitions:\n");
   PRINT_FIELD_OFFSET(DECLARING_CLAZZ,declaring_clazz);
   PRINT_FIELD_OFFSET(NAME,name);
   PRINT_FIELD_OFFSET(VALUE_CLAZZ,value_clazz);

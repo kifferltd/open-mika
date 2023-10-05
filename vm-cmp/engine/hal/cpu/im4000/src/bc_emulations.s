@@ -576,6 +576,14 @@ e_instanceof:
 ;
 ;===========================================================
 e_monitorenter:
+    em.isal.alloc.nlsf 1
+
+    move.i.i32  i#1 emul_monitorenter
+    call        i#1
+
+    em.isal.dealloc.nlsf 0
+    ret.eh 
+
 
     errorpoint      ; Not implemented
 
@@ -593,10 +601,12 @@ e_monitorenter:
 ;===========================================================
 ;
 e_monitorexit:
+    em.isal.alloc.nlsf 1
 
-    errorpoint      ; Not implemented
+    move.i.i32  i#1 emul_monitorexit
+    call        i#1
 
-    ; needs to call emul_monitorexit(objectref)
+    em.isal.dealloc.nlsf 0
 
 ;===========================================================
 ; e_multianewarray
@@ -630,6 +640,19 @@ e_multianewarray:
 ;
 ;===========================================================
 e_invokevirtual:
+
+    ; DEBUG
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    c.rot
+    c.dup
+    pop.es.w    i#4
+    ; GUBED
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -640,14 +663,23 @@ e_invokevirtual:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant_unsafe
     call        i#2
+    ; called method is in i#0
 
-; Now we have the called method in i#0 - but we need to find the true target
-    copy.w  i#1 i#0     ; called_method
-    c.ld.fmp
-    pop.es.w    i#0     ; frame
+    em.isal.dealloc.nlsf 1
+
+    ;      Stack: ..., objectref, [arg1, [arg2...]], cld_method
+    c.dup       ; ..., objectref, [arg1, [arg2...]], cld_method, cld_method
+    c.addi  METHOD_EXEC_ARG_I
+    c.ld.i      ; ..., objectref, [arg1, [arg2...]], cld_method, arg_i
+;    c.addi 1
+    c.pick      ; ..., objectref, [arg1, [arg2...]], cld_method, objectref
+;    c.swap      ; ..., objectref, [arg1, [arg2...]], objectref, cld_method
+
+    em.isal.alloc.nlsf 2
+; Now we have the called method in i#0 and the objectref in i#1
+; Call emul_virtual_target to get the real target method
     move.i.i32  i#2 emul_virtual_target
     call        i#2
 ; target method is now in i#0
@@ -674,7 +706,6 @@ e_invokespecial:
     pop.es.w    i#0     ; clazz
 
 ; Call method resolution -  class in i#0, index in i#1
-; TODO we know the constant is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getMethodConstant_unsafe
     call        i#2
 
@@ -718,6 +749,41 @@ e_invokestatic:
     pop.es.w    i#0     ; frame
     move.i.i32  i#2 emul_static_target
     call        i#2
+    c.jumps     _invoke_common
+
+;===========================================================
+; e_invokeinterface
+;
+; Emulates invokeinterface (0xB9)
+;
+; Format: invokespecial, indexbyte1, indexbyte2, count, 0
+;
+; Stack: ..., objectref, [arg1, [arg2...]], cpIndex -> ...
+;
+;===========================================================
+;
+e_invokeinterface:
+    em.isal.alloc.nlsf 1
+
+; Get index
+    copy.w  i#1 i#0     ; index
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_SPEC_DECLARING_CLAZZ
+    c.ld.i      ; es: ..., calling_clazz
+    pop.es.w    i#0     ; clazz
+
+; Call method resolution -  class in i#0, index in i#1
+; TODO we know the contents is resolved, so we just want clazz->values[index]
+    move.i.i32  i#2 getIMethodConstant_unsafe
+    call        i#2
+
+; Now we have the called method in i#0 - but we need to find the true target
+    copy.w  i#1 i#0     ; called_method
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_interface_target
+    call        i#2
+; target method is now in i#0
 ; fall through to e_invoke_common
 
 _invoke_common:
@@ -732,23 +798,6 @@ _invoke_common:
     c.ld.erar
 ; Stack: ..., objectref, [arg1, [arg2...]], narg, method, return_address
     c.jumpw _emul_allocate_frame
-
-;===========================================================
-; e_invokeinterface
-;
-; Emulates invokeinterface (0xB9)
-;
-; Format: invokespecial, indexbyte1, indexbyte2, count, 0
-;
-; Stack: ..., objectref, [arg1, [arg2...]], cpIndex -> ...
-;
-;===========================================================
-;
-e_invokeinterface:
-
-    errorpoint          ; Not implemented
-
-    ; needs to call emul_invokeinterface(frame, index, objectref, args ...)
 
 ;===========================================================
 ; e_ireturn
