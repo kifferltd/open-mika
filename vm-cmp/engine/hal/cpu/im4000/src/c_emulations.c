@@ -260,9 +260,15 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
+uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
+    w_thread thread = currentWonkaThread;
+    w_method calling_method = frame->method;
+    w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    return 0;
+    enterSafeRegion(thread);
+    w_u64 value = get64BitConstant(calling_clazz, cpIndex, thread);
+    enterUnsafeRegion(thread);
+    return (uint64_t) value.u64;
 }
 
 // emul_jsr(offset)?
@@ -330,20 +336,6 @@ void emul_putstatic_double(w_word value_high, w_word value_low, w_field source_f
     w_word *ptr = (w_word *)&source_field->declaring_clazz->staticFields[source_field->size_and_slot];
     *ptr = value_high;
     *(ptr+1) = value_low;
-}
-
-/**
- * Fetch the value of an instance field.
- *
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool where the target field is defined.
- * @param objectref the instance from which the value should be fetched.
- *
- * TODO figure out how we can return a 32- or 64-bit value!!!
- * Maybe we should pass a frame pointer instead of the clazz?
- */
-void emul_getfield(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
-
 }
 
 /**
@@ -555,8 +547,24 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
  * @param objectref the object to be checked.
  * @return      true if 'objectref' is an instance of the class, false otherwise.
  */
-bool emul_instanceof(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
+bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
+  if (thread->exception) {
+    throw(thread->exception);
+  }
+    
+  if(objectref == NULL){
+    return true;
+  }
+
+  if(instance2object(objectref)->clazz->dotified == calling_clazz->dotified){
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**

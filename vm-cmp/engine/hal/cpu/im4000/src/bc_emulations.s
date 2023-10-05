@@ -55,7 +55,19 @@ e_ldc_w:
 ;===========================================================
 e_ldc2_w:		
 
-    errorpoint      ; Not implemented
+    em.isal.alloc.nlsf 1
+
+    copy.w  i#1 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+
+    move.i.i32  i#2  emul_ldc2_w
+    call        i#2
+
+    em.isal.dealloc.nlsf 2
+    ret.eh
+
+    ; errorpoint       Not implemented
 
     ; needs to call emul_ldc2_w(frame, offset)
 
@@ -543,9 +555,15 @@ e_checkcast:
 ;
 e_instanceof:
 
-    errorpoint      ; Not implemented
+    em.isal.alloc.nlsf 2
+    copy.w  i#2 i#1
+    copy.w  i#1 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#3 emul_instanceof
+    call        i#3
 
-    ; needs to call emul_instanceof(frame, index, objectref)
+    ; needs to call emul_instanceof(frame, objectref, index)
 
 ;===========================================================
 ; e_monitorenter
