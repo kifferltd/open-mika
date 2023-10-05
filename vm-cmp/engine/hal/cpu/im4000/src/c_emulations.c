@@ -286,28 +286,38 @@ w_method emul_static_target(im4000_frame frame, w_method called_method) {
  * @return the 32-bit value.
  */
 uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
-    w_thread thread = currentWonkaThread;
-    w_method calling_method = frame->method;
-    w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    // enterSafeRegion(thread);
-    return get32BitConstant(calling_clazz, cpIndex, 0, thread);
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  uint32_t constant = get32BitConstant(calling_clazz, cpIndex, 0, thread);
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+
+  return constant;
 }
 
 /**
- * Load the 32-bit value of an item in the constant pool onto the stack.
+ * Load the 64-bit value of an item in the constant pool onto the stack.
  * 
  * @param frame the current stack frame.
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
 uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
-    w_thread thread = currentWonkaThread;
-    w_method calling_method = frame->method;
-    w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    // enterSafeRegion(thread);
-    return get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  uint64_t constant = get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+
+  return constant;
 }
 
 

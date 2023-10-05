@@ -57,7 +57,7 @@ static void check_constant_index(w_clazz clazz, w_size i) {
 
 u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
   int tag;
-  //threadMustBeSafe(thread);
+  threadMustBeSafe(thread);
   check_constant_index(clazz, i);
   if (type && (clazz->tags[i] & CONSTANT_TYPE_MASK) != type) {
     woempa(9, "Constant has wrong type\n");
@@ -82,7 +82,7 @@ u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
       return 0;
     }
     
-    switch (type) {
+    switch ((clazz->tags[i] & CONSTANT_TYPE_MASK)) {
       case CONSTANT_CLASS :
         resolveClassConstant(clazz, i);
         break;
@@ -104,7 +104,7 @@ u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
         break;
 
       default:
-        woempa(9, "Constant has wrong type\n");
+        woempa(9, "Constant is not one of CLASS, STRING, FIELD, METHOD, IMETHOD\n");
         return 0;
     }
   }
