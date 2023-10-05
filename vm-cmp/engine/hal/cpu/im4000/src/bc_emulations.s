@@ -798,10 +798,10 @@ _invoke_common:
 ;
 ;===========================================================
 e_ireturn:
-    c.push.es
-    c.callw _emul_check_frame_stacks
-    c.pop.es
-    c.callw _emul_deallocate_frame
+    em.push.es  1
+    c.callw     _emul_check_frame_stacks
+    em.pop.es   1
+    c.callw     _emul_deallocate_frame
     c.rete
 
 ;===========================================================
@@ -813,10 +813,10 @@ e_ireturn:
 ;
 ;===========================================================
 e_freturn:
-    c.push.es
-    c.callw _emul_check_frame_stacks
-    c.pop.es
-    c.callw _emul_deallocate_frame
+    em.push.es  1
+    c.callw     _emul_check_frame_stacks
+    em.pop.es   1
+    c.callw     _emul_deallocate_frame
     c.rete
 
 ;===========================================================
@@ -828,10 +828,10 @@ e_freturn:
 ;
 ;===========================================================
 e_areturn:
-    c.push.es
-    c.callw _emul_check_frame_stacks
-    c.pop.es
-    c.callw _emul_deallocate_frame
+    em.push.es  1
+    c.callw     _emul_check_frame_stacks
+    em.pop.es   1
+    c.callw     _emul_deallocate_frame
     c.rete
 
 ;===========================================================
@@ -843,12 +843,10 @@ e_areturn:
 ;
 ;===========================================================
 e_lreturn:
-    c.push.es
-    c.push.es
-    c.callw _emul_check_frame_stacks
-    c.pop.es
-    c.pop.es
-    c.callw _emul_deallocate_frame
+    em.push.es  2
+    c.callw     _emul_check_frame_stacks
+    em.pop.es   2
+    c.callw     _emul_deallocate_frame
     c.rete
 
 ;===========================================================
@@ -860,12 +858,10 @@ e_lreturn:
 ;
 ;===========================================================
 e_dreturn:
-    c.push.es
-    c.push.es
-    c.callw _emul_check_frame_stacks
-    c.pop.es
-    c.pop.es
-    c.callw _emul_deallocate_frame
+    em.push.es  2
+    c.callw     _emul_check_frame_stacks
+    em.pop.es   2
+    c.callw     _emul_deallocate_frame
     c.rete
 
 ;===========================================================

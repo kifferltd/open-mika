@@ -112,3 +112,44 @@
 .endmacro
 
 ;===========================================================
+
+.macro em.push.es_2
+    irs.off
+    c.push.es
+    c.push.es
+    irs.on
+.endmacro
+
+.macro em.push.es_1
+    c.ldi.b 0
+    em.push.es_2
+.endmacro
+
+; Push a number of words to the memory stack from the ISAC evaluation stack.
+; Since MSP needs to be 8-aligned, words are pushed in a critical section.
+; In case of an odd number of words, a leading padding word is pushed to memory.
+.macro em.push.es nword
+    em.push.es_\nword
+.endmacro
+
+;===========================================================
+
+.macro em.pop.es_2
+    irs.off
+    c.pop.es
+    c.pop.es
+    irs.on
+.endmacro
+
+.macro em.pop.es_1
+    em.pop.es_2
+    c.drop
+.endmacro
+
+; Pop a number of words from the memory stack and push them to the ISAC evaluation stack.
+; Since MSP needs to be 8-aligned, words are popped in a critical section.
+; In case of an odd number of words, a trailing padding word is popped from memory
+; (also dropped from the evaluation stack).
+.macro em.pop.es nword
+    em.pop.es_\nword
+.endmacro
