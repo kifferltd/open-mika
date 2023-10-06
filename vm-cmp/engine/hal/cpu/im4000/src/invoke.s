@@ -106,6 +106,20 @@ activate_frame_10:
 ; Push return address onto the evaluation stack
     c.ldi.i     activate_frame_return
 
+; Disable interrupts while pushing values to the memory
+; That is to ensure 8-byte alignment of MSP
+    irs.off
+
+; Save current FMP, which is valid in the case of nested activation.
+    c.push.fmp
+
+; Push dummy word for alignment
+    c.ldi.b     0
+    c.push.es
+
+; Re-enable interrupts, should be always safe to do it here
+    irs.on
+
 ; Make sure FMP is 0 when invoking Java method from ISAL
     c.ldi.b     0
     c.st.fmp
@@ -252,6 +266,20 @@ activate_frame_return_single:
 activate_frame_return_done:
     ; Evaluation stack should be empty here
     check.lrcb
+
+    ; Disable interrupts while popping out values from the memory
+    ; That is to ensure 8-byte alignment of MSP
+    irs.off
+
+    ; Remove dummy word
+    c.pop.es        ; es: 0
+    c.drop
+
+    ; Restore original FMP
+    c.pop.fmp
+
+    ; Re-enable interrupts, should be always safe to do it here
+    irs.on
 
     ; Cleanup ISAL frame and return
     dealloc.nlsf
@@ -404,7 +432,8 @@ _emul_throw:
     ; es: ..., objectref, frame
 
     ; FIXME: Can we just return to the ISAL caller in case of
-    ; no more Java frames?
+    ; no more Java frames? Anyhow, make sure original FMP is
+    ; restored from the memory stack
     ; If no Java frame (FMP==0), manage uncaught exception
     c.addi  0
     c.brs.z  _throw_uncaught
