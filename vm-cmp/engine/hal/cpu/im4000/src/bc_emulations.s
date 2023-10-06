@@ -471,11 +471,12 @@ e_newarray:
 ;===========================================================
 e_anewarray:
     em.isal.alloc.nlsf 2
+    ; i#0 = count
+    ; i#1 = cpIndex
 
 ; Get count in i#2
-    copy.w  i#2 i#1     ; count
-; Get index in i#1
-    copy.w  i#1 i#0     ; index
+    copy.w  i#2 i#0     ; count
+; Leave index in i#1
 ; Get frame in i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
@@ -483,7 +484,7 @@ e_anewarray:
     call        i#3
       
     em.isal.dealloc.nlsf 1
-    ret.eh 
+    ret.eh
 
 ;===========================================================
 ; e_arraylength
