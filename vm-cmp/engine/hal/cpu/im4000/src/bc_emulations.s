@@ -307,6 +307,12 @@ _e_putstatic_single:
 ;					        
 ;===========================================================
 e_getfield:
+; Check if objectref is null
+    c.over
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
+
     em.isal.alloc.nlsf 2
 
     copy.w  i#4 i#0
@@ -361,6 +367,13 @@ _e_getfield_single:
 ;
 ;===========================================================
 e_putfield:
+; Check if objectref is null
+    c.ldi.i 2
+    c.pick
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
+
     em.isal.alloc.nlsf 1
     copy.w      i#1 i#0
     c.ld.i.fmp  FRAME_METHOD
@@ -578,6 +591,12 @@ e_instanceof:
 ;
 ;===========================================================
 e_monitorenter:
+; Check if objectref is null
+    c.dup
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
+
     em.isal.alloc.nlsf 1
 
     move.i.i32  i#1 emul_monitorenter
@@ -603,6 +622,12 @@ e_monitorenter:
 ;===========================================================
 ;
 e_monitorexit:
+; Check if objectref is null
+    c.dup
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
+
     em.isal.alloc.nlsf 1
 
     move.i.i32  i#1 emul_monitorexit
@@ -642,19 +667,6 @@ e_multianewarray:
 ;
 ;===========================================================
 e_invokevirtual:
-
-    ; DEBUG
-    c.rot
-    c.dup
-    pop.es.w    i#4
-    c.rot
-    c.dup
-    pop.es.w    i#4
-    c.rot
-    c.dup
-    pop.es.w    i#4
-    ; GUBED
-
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -675,9 +687,12 @@ e_invokevirtual:
     c.dup       ; ..., objectref, [arg1, [arg2...]], cld_method, cld_method
     c.addi  METHOD_EXEC_ARG_I
     c.ld.i      ; ..., objectref, [arg1, [arg2...]], cld_method, arg_i
-;    c.addi 1
     c.pick      ; ..., objectref, [arg1, [arg2...]], cld_method, objectref
-;    c.swap      ; ..., objectref, [arg1, [arg2...]], objectref, cld_method
+; Check if objectref is null
+    c.dup
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
 
     em.isal.alloc.nlsf 2
 ; Now we have the called method in i#0 and the objectref in i#1
@@ -712,6 +727,7 @@ e_invokespecial:
     call        i#2
 
 ; Now we have the called method in i#0 - but we need to find the true target
+; TODO we should probably check for null objectref here
     copy.w  i#1 i#0     ; called_method
     c.ld.fmp
     pop.es.w    i#0     ; frame
@@ -777,15 +793,28 @@ e_invokeinterface:
 ; Call method resolution -  class in i#0, index in i#1
 ; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getIMethodConstant_unsafe
-    call        i#2
+    call        i#2     ; leaves cld_method in i#0
 
-; Now we have the called method in i#0 - but we need to find the true target
-    copy.w  i#1 i#0     ; called_method
-    c.ld.fmp
-    pop.es.w    i#0     ; frame
+    em.isal.dealloc.nlsf 1
+
+    ;      Stack: ..., objectref, [arg1, [arg2...]], cld_method
+    c.dup       ; ..., objectref, [arg1, [arg2...]], cld_method, cld_method
+    c.addi  METHOD_EXEC_ARG_I
+    c.ld.i      ; ..., objectref, [arg1, [arg2...]], cld_method, arg_i
+    c.pick      ; ..., objectref, [arg1, [arg2...]], cld_method, objectref
+; Check if objectref is null
+    c.dup
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
+
+    em.isal.alloc.nlsf 2
+; Now we have the called method in i#0 and the objectref in i#1
+; Call emul_interface_target to get the real target method
     move.i.i32  i#2 emul_interface_target
     call        i#2
 ; target method is now in i#0
+
 ; fall through to e_invoke_common
 
 _invoke_common:
