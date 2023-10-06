@@ -66,7 +66,7 @@ java_method1:
 ;===========================================================
 ; activate_frame
 ;
-; C syntax: void activate_frame(w_method method, int narg, void* args)
+; C syntax: void activate_frame(w_method method, int narg, void* args, void* ret)
 ;
 ;===========================================================
 .global activate_frame
@@ -78,6 +78,7 @@ activate_frame:
 ; i#12 contains parameter 'method'
 ; i#13 contains parameter 'narg'
 ; i#14 contains parameter 'args'
+; i#15 contains parameter 'ret'
 
     ; Evaluation stack should be empty here
     check.lrcb
@@ -197,23 +198,58 @@ activate_frame_native:
     ; FIXME
     errorpoint
 
-    ; Allocate ISAL frame for caller
-    ; Put arguments into position according to ISAL calling convention
-    ; Call native method
-; Native method returns
-;  - Check if exception is left in the thread; go to throw if so
-;  - Do something with the return value...
+    ; Adapt native dispatchers to handle arguments from the evaluation stack, maybe also take im4000_frame instead of w_Frame
+    ; Allocate ISAL frame
+    ; Prepare whatever is needed for the dispatcher
+    ; Call native method via dispatcher: method->exec.dispatcher(caller, method);
+    ; Native method returns
+    ;  - Check if exception is left in the thread; go to throw if so
+    ;  - Do something with the return value and clean up
+    ; Deallocate ISAL frame
+    ; Return somewhere appropriate...
 
 ;===========================================================
 ; Method returns here when invoked via activate_frame()
 ; Continue in ISAL context and take care of return value in
 ; the ISAC evaluation stack if any.
 activate_frame_return:
-    ; FIXME: Handle return value here!
-    ; If active exception is left in the thread
-    ; (that is when _throw_uncaught is removed below),
-    ; ignore the return value.
+    ; Parameters of activate_frame() are still in place:
+    ; i#12 = method
+    ; i#15 = ret
 
+    move.i.i8       i#11 METHOD_EXEC_RETURN_I
+    add.upd.i       i#12 i#11
+    load.h          s#0 i#12
+    br.cmp.s.i8.eq  activate_frame_return_done s#0 0
+
+    move.s.i8       s#1 -1
+    add.upd.s       s#0 s#1
+    br.cmp.s.i8.eq  activate_frame_return_single s#0 0
+
+    ; A double-word value is returned
+    pop.es.w    i#1 ; low-significant half
+    pop.es.w    i#0 ; high-significant half
+
+    ; Ignore the value if no ret pointer is provided
+    br.cmp.i.i8.eq  activate_frame_return_done i#15 0
+
+    em.comp_i0_i1_to_l0_xl1
+    store.d     i#15 l#0
+
+    br.i8   activate_frame_return_done
+
+activate_frame_return_single:
+    ; A single-word value is returned
+    pop.es.w    i#0
+
+    ; Ignore the value if no ret pointer is provided
+    br.cmp.i.i8.eq  activate_frame_return_done i#15 0
+
+    ; Store the value
+    store.w     i#15 i#0
+    ; Falling through to epilogue...
+
+activate_frame_return_done:
     ; Evaluation stack should be empty here
     check.lrcb
 

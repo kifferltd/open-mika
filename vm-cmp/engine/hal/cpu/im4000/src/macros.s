@@ -153,3 +153,28 @@
 .macro em.pop.es nword
     em.pop.es_\nword
 .endmacro
+
+;===========================================================
+
+; Decomposes the double word value from l#0 into i#1 and i#0.
+; i#1 will hold the high-significant half and i#0 the low one.
+.macro em.decomp_l0_to_i1_i0
+    trunc.l.i i#0 l#0
+    move.b.i8 b#4 32
+    lshr.l l#0 l#0 b#4
+    trunc.l.i i#1 l#0
+.endmacro
+
+;===========================================================
+
+; Composes a double word value from i#1 and i#0 into l#0.
+; i#0 should have the high-signifcant hald and i#1 the low one.
+; NOTE: The operation clobbers l#1.
+; NOTE: Asymmetry with em.decomp_l0_to_i1_i0 is intentional.
+.macro em.comp_i0_i1_to_l0_xl1
+    zext.i.l    l#0 i#0
+    zext.i.l    l#1 i#1
+    move.b.i8   b#4 32
+    shl.l       l#0 l#0 b#4
+    add.l       l#0 l#0 l#1
+.endmacro

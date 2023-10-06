@@ -233,10 +233,7 @@ e_getstatic:
     move.i.i32  i#2  emul_getstatic_double
     call        i#2
 
-    trunc.l.i i#0 l#0
-    move.b.i8 b#4 32
-    shl.l l#0 l#0 b#4
-    trunc.l.i i#1 l#0 
+    em.decomp_l0_to_i1_i0
 
     ; Deallocate execution frame including the dynamically allocated area
     em.isal.dealloc.nlsf 2
@@ -338,10 +335,7 @@ e_getfield:
     move.i.i32  i#3  emul_getfield_double
     call        i#3
 
-    trunc.l.i i#0 l#0
-    move.b.i8 b#4 32
-    shl.l l#0 l#0 b#4
-    trunc.l.i i#1 l#0 
+    em.decomp_l0_to_i1_i0
 
     ; Deallocate execution frame including the dynamically allocated area
     em.isal.dealloc.nlsf 2
