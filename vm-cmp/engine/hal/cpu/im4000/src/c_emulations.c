@@ -111,6 +111,10 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_method m = getMethodConstant(c, i);
+  if (isSet(m->flags, ACC_STATIC)) {
+    // needed for invokespecial, invokevirtual
+    mustBeInitialized(m->spec.declaring_clazz);
+  }
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -214,37 +218,33 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   if (thread->exception){
     throw(thread->exception);
   }
-  // TODO can we make use of e_exception for this?
-  if (isSet(called_method->flags, ACC_STATIC)) {
-    throwException(thread, clazzIncompatibleClassChangeError, NULL);
-    throw(thread->exception);
-  }
-
   if (isSet(called_method->flags, METHOD_NO_OVERRIDE) && called_method->exec.code) {
     woempa(7, "no override possible - just call %m\n", called_method);
 
     return called_method;
   }
-  else {
-    w_clazz target_clazz = instance2clazz(objectref);
-    w_method target_method = virtualLookup(called_method, target_clazz);
-    woempa(7, "target method is %m\n", target_method);
 
-    return target_method;
+  w_clazz target_clazz = instance2clazz(objectref);
+  w_method target_method = virtualLookup(called_method, target_clazz);
+  woempa(7, "target method is %m\n", target_method);
+
+  // TODO can we make use of e_exception for this?
+  if (isSet(target_method->flags, ACC_STATIC)) {
+    throwException(thread, clazzIncompatibleClassChangeError, NULL);
+    throw(thread->exception);
   }
 
+  return target_method;
 }
 
-w_method emul_interface_target(im4000_frame frame, w_method called_method) {
+w_method emul_interface_target(w_method called_method, w_instance objectref) {
   w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  w_clazz target_clazz = called_method->spec.declaring_clazz;
 
   if (thread->exception){
     throw(thread->exception);
   }
 
+  w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = interfaceLookup(called_method, target_clazz);
   woempa(7, "target method is %m\n", target_method);
 
