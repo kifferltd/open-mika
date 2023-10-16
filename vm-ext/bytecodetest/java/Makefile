@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2020 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2022, 2023 by Chris Gray, KIFFER Ltd. All rights reserved.#
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,34 +26,14 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-builddir = $(MIKA_TOP)/build/$(PLATFORM)
-objdir = $(builddir)/obj
 
-CFLAGS += -I $(MIKA_TOP)/core-vm/include
-CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
-CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/o4f/include
+.PHONY : classes
 
-LDFLAGS += $(OSWALD_LIB)
-LDFLAGS += $(MIKA_TOP)/../sw-isal-system/build/lib/libisal-system.a
-#LDFLAGS += -loswald -lcommon
-LDFLAGS += -L $(libdir)
+# Note to self: this is how to get the output of a comand into a make variable ...
+$(eval SOURCES=$(shell find . -name \*\.java))
+#    echo Git branch is $(GIT_BRANCH)
 
-sources  = main_test.c monitor_test.c
-
-objects=$(patsubst %.c, $(objdir)/kernel/o4f/%.o, $(sources))
-
-outputfile = $(OROOT)/kernel/o4f/tests/oswaldtests
-
-test : $(objects)
-	$(CC) -o test $(objects) $(CFLAGS) $(LDFLAGS)
-
-$(objects) : $(objdir)/kernel/o4f/%.o : %.c
-	@echo "objectdir =" $(objdir)/kernel/o4f
-	@echo "sources =" $(sources)
-	@echo "objects =" $(objects)
-	@echo "outputfile =" $(outputfile)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-clean:
-
+classes:
+	echo Compiling ${SOURCES}
+	${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} ${SOURCES}
 

@@ -254,7 +254,9 @@ const char *running_thread_report(x_thread x) {
 
 }
 
+#ifndef INIT_CLASS 
 #define INIT_CLASS "wonka.vm.Init"
+#endif
 
 static w_string string_sysThread;
 static w_string string_sysThreadGroup;

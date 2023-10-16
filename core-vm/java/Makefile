@@ -32,6 +32,11 @@
 #    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
 #    echo Git branch is $(GIT_BRANCH)
 
-classes:
+bytecodetest :
+ifeq ($(BYTECODETEST), true)
+	make -C ../../vm-ext/bytecodetest/java
+endif
+
+classes: bytecodetest
 	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
 
