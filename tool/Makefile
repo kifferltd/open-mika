@@ -33,7 +33,7 @@ ifeq ($(TESTS), true)
 ifeq ($(AWT), rudolph)
 	make -C visualtest $(MAKECMDGOALS)
 endif
-# TODO map our targets to jembench mqkefile targets
+# TODO map our targets to jembench makefile targets
 ifeq ($(HOSTOS), freertos)
 	make -C jembench/src 
 endif
