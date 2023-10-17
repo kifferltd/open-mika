@@ -31,7 +31,7 @@
 
 // If TRACE_CLASSLOADERS is defined, we keep track of the nearest enclosing
 // user-defined class loader in each frame.
-#if (defined(DEBUG) || defined(RESMON))
+#ifdef RESMON
 #ifndef TRACE_CLASSLOADERS
 #define TRACE_CLASSLOADERS
 #endif
