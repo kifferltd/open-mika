@@ -17,7 +17,7 @@ typedef struct IM4000_Frame {
   int32_t unused0;  // ConstantPool
   w_method method;
   w_instance unused2; // SyncObject
-  int32_t unused3;  // ThrowPC
+  u_int8_t *current;  // ThrowPC
   int32_t unused4;  // LSP
   int32_t unused5;  // ESP
   int32_t unused6;  // LMP
@@ -219,14 +219,14 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
     throw(thread->exception);
   }
   if (isSet(called_method->flags, METHOD_NO_OVERRIDE) && called_method->exec.code) {
-    woempa(7, "no override possible - just call %m\n", called_method);
+    woempa(7, "no override possible - just call %M\n", called_method);
 
     return called_method;
   }
 
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = virtualLookup(called_method, target_clazz);
-  woempa(7, "target method is %m\n", target_method);
+  woempa(7, "target method is %M\n", target_method);
 
   // TODO can we make use of e_exception for this?
   if (isSet(target_method->flags, ACC_STATIC)) {
@@ -461,20 +461,30 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     w_clazz target_clazz = getClassConstant(calling_clazz, cpIndex, thread);
     woempa(7, "target clazz is %k\n", target_clazz);
     if (target_clazz) {
+      woempa(7, "need to initialise %k\n", target_clazz);
       mustBeInitialized(target_clazz);
-      if(!thread->exception && isSet(target_clazz->flags, ACC_ABSTRACT | ACC_INTERFACE)) {
-        throwException(thread, clazzInstantiationError, "%k", target_clazz);
-        throw(thread->exception);
-      }
     }
 
     enterUnsafeRegion(thread);
+    if(thread->exception) {
+      woempa(7, "exception %e\n", thread->exception);
+      throw(thread->exception);
+    }
+
+    if(isSet(target_clazz->flags, ACC_ABSTRACT | ACC_INTERFACE)) {
+      throwException(thread, clazzInstantiationError, "%k", target_clazz);
+      woempa(7, "exception %e\n", thread->exception);
+     throw(thread->exception);
+    }
+
     if (thread->exception){
+      woempa(7, "exception %e\n", thread->exception);
       throw(thread->exception);
     }
     w_instance o = allocInstance(thread, target_clazz);
     woempa(7, "created object %j\n", o);
     if (thread->exception){
+      woempa(7, "exception %e\n", thread->exception);
       throw(thread->exception);
     }
  

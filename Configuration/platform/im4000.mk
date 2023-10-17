@@ -89,7 +89,7 @@ BOOTCLASSFILE = mcl.jar
 # BOOTCLASSSUBDIR = mcl
 
 # Set this false to create uncompressed jar files (including mcl.jar)
-COMPRESS_JAR_FILES = false
+COMPRESS_JAR_FILES = true
 
 # FreeRTOS-specific stuff which is defined here because choices may depend on the platform-specific
 # configuration of FreeRTOS.
@@ -102,4 +102,6 @@ COMPRESS_JAR_FILES = false
 
 CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE 
 
+# Enable this line if you want to run bytecode tests instead of an application
+export BYTECODETEST = true
 

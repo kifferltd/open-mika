@@ -110,6 +110,10 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
+ifeq ($(BYTECODETEST), true)
+  CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
+endif
+
 .PHONY : awt engine filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
 
 mika : main.o libs
