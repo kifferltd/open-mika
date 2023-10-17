@@ -332,8 +332,8 @@ static void invokeInitMain(w_instance arglist) {
   w_string main_desc_string = utf2String("([Ljava/lang/String;)V", strlen("([Ljava/lang/String;)V"));
 
   w_method main_method = NULL;
-  for (i = 0; i < clazzInit->numDeclaredMethods; ++i) {
-    candidate = &clazzInit->own_methods[i];
+  for (i = 0; i < initClazz->numDeclaredMethods; ++i) {
+    candidate = &initClazz->own_methods[i];
 
     if (candidate->spec.name == main_name_string && candidate->spec.desc == main_desc_string) {
       main_method = candidate;
