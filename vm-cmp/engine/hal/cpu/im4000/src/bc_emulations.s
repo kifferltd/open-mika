@@ -14,12 +14,7 @@
 ;===========================================================
 e_ldc:
     ; ERAR points to indexbyte. Adjust ERAR and load indexbyte.
-    c.ld.erar
-    c.dup
-    c.addi  1
-    c.st.erar
-    c.ld.b          ; Loads sign-extended byte into the top word
-    c.andi    0xff  ; Clear potential sign extension
+    em.load_byte_from_erar
     ; es: ..., indexbyte
 
     em.isal.alloc.nlsf 1
@@ -45,7 +40,19 @@ e_ldc:
 ;===========================================================
 e_ldc_w:		
 
-    errorpoint      ; Not implemented
+    em.isal.alloc.nlsf 2
+
+    copy.w  i#1 i#2
+    copy.w  i#1 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+
+    move.i.i32  i#2  emul_ldc_w
+    call        i#2
+
+    em.isal.dealloc.nlsf 2
+    ret.eh
+    ; errorpoint       Not implemented
 
     ; needs to call emul_ldc(tricky, offset)
 
@@ -63,13 +70,14 @@ e_ldc_w:
 ;===========================================================
 e_ldc2_w:		
 
-    em.isal.alloc.nlsf 1
+    em.isal.alloc.nlsf 2
 
+    copy.w  i#1 i#2
     copy.w  i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
 
-    move.i.i32  i#2  emul_ldc2
+    move.i.i32  i#2  emul_ldc2_w
     call        i#2
 
     em.isal.dealloc.nlsf 2
@@ -498,7 +506,12 @@ e_anewarray:
 ;===========================================================
 e_arraylength:
 
-    errorpoint      ; Not implemented
+    em.isal.alloc.nlsf 1 
+    move.i.i32  i#1 emul_arraylength
+    call        i#1
+
+    em.isal.dealloc.nlsf  1
+    ret.eh  
 
     ; see partial implementation in branch bc-optimize-create-and-invoke,
     ; needs error handling
@@ -645,14 +658,45 @@ e_monitorexit:
 ;
 ; Stack: ..., count1, [count2, ...], cpIndex -> arrayref
 ;
-; Local stack usage:	
-;	0:	dimensions
-;	1:	counter
-;
 ;===========================================================
 e_multianewarray:
 
-    errorpoint      ; Not implemented
+    em.load_byte_from_erar
+    c.als.3
+    c.dup
+    c.rot
+    c.st.v0    ;cpIndex
+    c.st.v1    ;nbrDimension
+    
+    c.ld.msp
+    c.st.v2
+    c.addi 0
+_e_multianewarray_0:
+    c.if.z _e_multianewarray_10
+    c.swap
+    c.push.es
+    c.addi -1
+    c.jumps _e_multianewarray_0
+
+_e_multianewarray_10:
+    c.drop
+    c.ld.v2
+    c.ld.fmp
+    c.ld.v0
+    c.ld.v1
+    c.dls.3
+    c.ld.msp
+    em.isal.alloc.nlsf 4
+    ;i#3 : dimensions
+    ;i#2 : nbrDimensions
+    ;i#1 : cpIndex
+    ;i#0 : frame
+    move.i.i32  i#4 emul_multianewarray
+    call        i#4
+    em.isal.dealloc.nlsf 1
+    c.swap
+    c.st.msp
+    c.rete
 
     ; needs to call emul_anewarray(frame, index, dimension, count...)
     ; David: It seems ERAR points to dimensions

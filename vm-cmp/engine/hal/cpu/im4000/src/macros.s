@@ -178,3 +178,15 @@
     shl.l       l#0 l#0 b#4
     add.l       l#0 l#0 l#1
 .endmacro
+
+;=============================================================
+; Loads one byte from memory into the evaluation stack via
+; ERAR and also steps ERAR 
+.macro em.load_byte_from_erar
+    c.ld.erar
+    c.dup
+    c.addi  1
+    c.st.erar
+    c.ld.b          ; Loads sign-extended byte into the top word
+    c.andi    0xff  ; Clear potential sign extension
+.endmacro

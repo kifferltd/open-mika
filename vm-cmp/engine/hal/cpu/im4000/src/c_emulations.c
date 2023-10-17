@@ -119,7 +119,8 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
     enterUnsafeRegion(thread);
   }
   return m;
- }
+}
+
 w_field getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
@@ -129,7 +130,6 @@ w_field getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
   }
   return m;
  }
-
 
 w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   w_thread thread = currentWonkaThread;
@@ -306,13 +306,14 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
+uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex1, uint32_t cpIndex2) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  uint64_t cpIndex = (uint64_t)cpIndex1<<8 | cpIndex2;
 
   w_boolean was_unsafe = enterSafeRegion(thread);
-  uint64_t constant = get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
+  uint64_t constant = get64BitConstant(calling_clazz, cpIndex1, 0, thread).u64;
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -320,6 +321,27 @@ uint64_t emul_ldc2(im4000_frame frame, uint32_t cpIndex) {
   return constant;
 }
 
+/**
+ * Load the 64-bit value of an item in the constant pool onto the stack.
+ * 
+ * @param frame the current stack frame.
+ * @param cpIndex index into the constant pool of the value to be loaded.
+ * @return      the 64-bit value.
+*/
+uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex1, uint32_t cpIndex2) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  uint64_t cpIndex = (uint64_t)cpIndex1<<8 | cpIndex2;
+
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  uint64_t constant = get64BitConstant(calling_clazz, cpIndex1, 0, thread).u64;
+  if (was_unsafe) {
+    enterUnsafeRegion(thread);
+  }
+
+  return constant;
+}
 
 /// emul_jsr(offset)?
 // emul_ret()?
@@ -665,8 +687,40 @@ void emul_monitorexit(w_instance objectref) {
  * @param ...   the number of elements in each dimension of the array.
  * @return      the created array instance.
  */
-w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint8_t dimensions, ...) {
+w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint32_t nbrDimensions, uint32_t* dimensions) {
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_clazz array_clazz = getClassConstant(calling_clazz, cpIndex, thread);
+
+if (array_clazz) {
+    array_clazz = getNextDimension(array_clazz, clazz2loader(frame->method->spec.declaring_clazz));
+    if (array_clazz) {
+      mustBeInitialized(array_clazz);
+    }
+  }
+  else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+    wrapException(thread, clazzNoClassDefFoundError, F_Throwable_cause);
+  }
+
+  enterUnsafeRegion(thread);
+
+  if (thread->exception) {
+    throw(thread->exception);
+  }
+
+  w_instance a = allocArrayInstance(thread, array_clazz, nbrDimensions, dimensions);
+  if (thread->exception) {
+    throw(thread->exception);
+  }
+
+  if (!was_unsafe) {
+    enterSafeRegion(thread);
+  }
+
+  return a;  
 }
 
 /**
