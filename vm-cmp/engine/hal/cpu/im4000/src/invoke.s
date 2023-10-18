@@ -213,7 +213,7 @@ activate_frame_native:
 
     ; Store original MSP and top two values in local variables,
     ; keep nargs as counter in the stack
-    c.als   3   ; Alloate temporary local variables
+    c.als.3     ; Alloate temporary local variables
     c.ld.msp
     c.st.i.v0
     c.st.i.v1
@@ -226,7 +226,7 @@ activate_frame_native_move_next_arg:
     c.swap
     c.push.es
     c.addi  -1
-    c.jump  activate_frame_native_move_next_arg
+    c.jumps activate_frame_native_move_next_arg
 
 activate_frame_native_args_moved:
     c.drop  ; Drop counter that is 0
@@ -235,7 +235,7 @@ activate_frame_native_args_moved:
     c.ld.v0     ; original_msp
     c.ld.v1     ; return_address
     c.ld.v2     ; method
-    c.dls   3   ; Deallocate local variables
+    c.dls.3     ; Deallocate local variables
     c.dup
     c.addi  METHOD_EXEC_RETURN_I
     c.ld.s      ; Number of return words
@@ -273,7 +273,7 @@ activate_frame_return_push_word:
     c.if.z  activate_frame_native_return_pushed
     c.pop.es
     c.addi  -1
-    c.jump  activate_frame_return_push_word
+    c.jumps  activate_frame_return_push_word
 
 activate_frame_native_return_pushed:
     c.drop  ; Drop counter that is 0
