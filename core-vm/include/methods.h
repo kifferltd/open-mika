@@ -109,8 +109,8 @@ typedef struct w_MethodExec {
   volatile w_callfun dispatcher;
   w_size       arg_i;      /* The number of argument words. !! DONT move !! Assembly depends on it.    */
   w_function   function;   /* if native, the function pointer. !! DONT move !! Assembly depends on it. */
-  w_ushort return_i;       /* Number of words returned as result (0, 1, or 2) */
-  w_ushort local_i;        /* Number local vars, from class file */
+  w_ushort return_i;       /* Number of words returned as result (0, 1, or 2) !! DONT move !! Assembly depends on it. */
+  w_ushort local_i;        /* Number local vars, from class file !! DONT move !! Assembly depends on it. */
   w_ushort stack_i;        /* Number of temporary locations used on stack */
   w_ushort nargs;          /* Number of arguments (of whatever size)      */
 #ifdef USE_LIBFFI
