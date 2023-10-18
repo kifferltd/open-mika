@@ -306,14 +306,13 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex1, uint32_t cpIndex2) {
+uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  uint64_t cpIndex = (uint64_t)cpIndex1<<8 | cpIndex2;
 
   w_boolean was_unsafe = enterSafeRegion(thread);
-  uint64_t constant = get64BitConstant(calling_clazz, cpIndex1, 0, thread).u64;
+  uint64_t constant = get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -328,14 +327,13 @@ uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex1, uint32_t cpIndex2) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex1, uint32_t cpIndex2) {
+uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  uint64_t cpIndex = (uint64_t)cpIndex1<<8 | cpIndex2;
 
   w_boolean was_unsafe = enterSafeRegion(thread);
-  uint64_t constant = get64BitConstant(calling_clazz, cpIndex1, 0, thread).u64;
+  uint64_t constant = get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -731,6 +729,44 @@ if (array_clazz) {
   }
 
   return a;  
+}
+
+/**
+ * istore
+ * Store int value into variable
+ * @param frame
+ * @param value
+ * @param cpIndex
+ * 
+*/
+
+void emul_istore(im4000_frame frame, uint32_t value, uint32_t cpIndex){
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  
+  enterSafeRegion(thread);
+  setIntegerField(calling_clazz, cpIndex, value);
+  enterUnsafeRegion(thread);
+}
+
+/**
+ * lstore
+ * Store long value into variable
+ * @param frame
+ * @param value1
+ * @param value2
+ * @param cpIndex
+*/
+void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t cpIndex){
+  w_thread thread = currentWonkaThread;
+  w_method calling_method = frame->method;
+  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
+  uint64_t longvalue = value1 << 32 | value2;
+
+  enterSafeRegion(thread);
+  setLongField(calling_clazz, cpIndex, longvalue);
+  enterUnsafeRegion(thread);
 }
 
 /**
