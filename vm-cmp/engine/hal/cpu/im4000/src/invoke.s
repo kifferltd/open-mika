@@ -76,7 +76,7 @@ activate_frame:
     alloc.nlsf i#11
 
 ; i#12 contains parameter 'method'
-; i#13 contains parameter 'narg'
+; i#13 contains parameter 'narg', i.e. number of argument words
 ; i#14 contains parameter 'args'
 ; i#15 contains parameter 'ret'
 
@@ -209,18 +209,84 @@ _emul_allocate_frame:
 ;===========================================================
 ; Call a native method
 activate_frame_native:
-    ; FIXME
-    errorpoint
+; es: ..., [arg0, [arg1...]], narg, method, return_address
 
-    ; Adapt native dispatchers to handle arguments from the evaluation stack, maybe also take im4000_frame instead of w_Frame
-    ; Allocate ISAL frame
-    ; Prepare whatever is needed for the dispatcher
-    ; Call native method via dispatcher: method->exec.dispatcher(caller, method);
-    ; Native method returns
-    ;  - Check if exception is left in the thread; go to throw if so
-    ;  - Do something with the return value and clean up
+    ; Store original MSP and top two values in local variables,
+    ; keep nargs as counter in the stack
+    c.als.3     ; Alloate temporary local variables
+    c.ld.msp
+    c.st.i.v0
+    c.st.i.v1
+    c.st.i.v2
+
+    ; Move arg words to memory
+    c.addi  0
+activate_frame_native_move_next_arg:
+    c.if.z  activate_frame_native_args_moved
+    c.swap
+    c.push.es
+    c.addi  -1
+    c.jumps activate_frame_native_move_next_arg
+
+activate_frame_native_args_moved:
+    c.drop  ; Drop counter that is 0
+
+    ; Push values to the evaluation stack
+    c.ld.v0     ; original_msp
+    c.ld.v1     ; return_address
+    c.ld.v2     ; method
+    c.dls.3     ; Deallocate local variables
+    c.dup
+    c.addi  METHOD_EXEC_RETURN_I
+    c.ld.s      ; Number of return words
+    c.swap
+    c.ld.fmp    ; Caller frame pointer
+    c.swap
+    c.ld.msp    ; Base address of args
+    c.ld.2
+    c.ams       ; Allocate two more entries for potential return value
+    c.ld.msp    ; Address for return buffer
+; es: ..., original_msp, return_address, return_i, frame, method, args, return_buf
+
+    ; Initialize ISAL frame, take only parameters for emul_invoke_native
+    em.isal.alloc.nlsf  4
+    ; i#0 = frame
+    ; i#1 = method
+    ; i#2 = args
+    ; i#3 = return_buf
+
+    ; Perform invocation
+    move.i.i32  i#4 emul_invoke_native
+    call        i#4
+    ; Exception, if any, thrown from C
+    ; Here on normal return
+
     ; Deallocate ISAL frame
-    ; Return somewhere appropriate...
+    em.isal.dealloc.nlsf    0
+
+; es: ..., original_msp, return_address, return_i
+; Return buffer at MSP
+
+    ; Push return words to the evaluation stack
+    c.addi  0
+activate_frame_return_push_word:
+    c.if.z  activate_frame_native_return_pushed
+    c.pop.es
+    c.addi  -1
+    c.jumps  activate_frame_return_push_word
+
+activate_frame_native_return_pushed:
+    c.drop  ; Drop counter that is 0
+
+; es: ..., original_msp, return_address
+    ; Restore original MSP
+    c.swap
+    c.st.msp
+
+    ; Return to caller
+    c.st.erar
+    c.rete
+;===========================================================
 
 ;===========================================================
 ; Method returns here when invoked via activate_frame()
@@ -431,9 +497,6 @@ _emul_throw:
     c.ld.fmp
     ; es: ..., objectref, frame
 
-    ; FIXME: Can we just return to the ISAL caller in case of
-    ; no more Java frames? Anyhow, make sure original FMP is
-    ; restored from the memory stack
     ; If no Java frame (FMP==0), manage uncaught exception
     c.addi  0
     c.brs.z  _throw_uncaught
@@ -515,24 +578,17 @@ _throw_unwind:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _throw_uncaught:
-; es: ..., objectref, 0 (frame)
+; es: objectref, 0 (frame)
     c.drop
 
     ; Here no Java frame in the execution stack, only objectref in the evaluation stack.
     ; We returned to activate_frame().
 
-    ; Put objectref into i#12 here, so it becomes i#0 after deallocating the ISAL frame.
-    pop.es.w    i#12
+    ; Drop exception from the evaluation stack, C code has it in the current thread.
+    c.drop
+    ; es: <empty>
 
-    ; Deallocate ISAL frame for activate_frame(), also restores RAR
-    check.lrcb  ; evaluation stack should be empty now
-    dealloc.nlsf
-
-    ; Go to handler by returning from emulation.
-    ; The handler replaces activate_frame() in the ISAL callchain
-    ; and will get the uncaught object as first argument.
-    c.ldi.i emul_unhandled_exception
-    c.st.erar
-    c.rete
+    ; Let activate_frame return
+    c.jumpw activate_frame_return_done
 
 ;===========================================================

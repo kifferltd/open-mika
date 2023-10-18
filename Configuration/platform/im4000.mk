@@ -103,5 +103,5 @@ COMPRESS_JAR_FILES = true
 CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE 
 
 # Enable this line if you want to run bytecode tests instead of an application
-export BYTECODETEST = true
+# export BYTECODETEST = true
 

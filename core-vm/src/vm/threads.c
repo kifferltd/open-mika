@@ -308,6 +308,7 @@ static void invokeInitMain(w_instance arglist) {
 
   // TODO check exceptionThrown(W_Thread_sysInit) is null after each method call?
 
+  woempa(7, "Invoking %M on %j with parameter (%j)\n", register_method, I_ThreadGroup_system, I_Thread_sysInit);
   frame = pushFrame(W_Thread_sysInit, register_method);
   frame->flags |= FRAME_NATIVE;
 
@@ -341,7 +342,8 @@ static void invokeInitMain(w_instance arglist) {
     }
   }
 
-  printf("calling Init.main\n");
+  printf("calling " INIT_CLASS ".main\n");
+  woempa(7, "Invoking %M with parameter (%j)\n", main_method, arglist);
   frame = pushFrame(W_Thread_sysInit, main_method);
   frame->flags |= FRAME_NATIVE;
 
@@ -352,6 +354,7 @@ static void invokeInitMain(w_instance arglist) {
   
   deactivateFrame(frame, NULL);
 
+  woempa(7, "Invoking %M on %j with parameter (%j)\n", deregister_method, I_ThreadGroup_system, I_Thread_sysInit);
   frame = pushFrame(W_Thread_sysInit, deregister_method);
   frame->flags |= FRAME_NATIVE;
 
@@ -459,11 +462,6 @@ void startInitialThreads(void* data) {
 
   addThreadCount(W_Thread_sysInit);
   system_init_thread_started = TRUE;
-
-/*
-** Now we call Init.main() with arglist as its parameter.
-*/
-  woempa(7, "Invoking main([Ljava.lang.String;) of %s ...\n", INIT_CLASS);
 
 #ifdef JNI
   method = (*env)->GetMethodID(env, class_ThreadGroup, "registerThread", "(Ljava/lang/Thread;)V");

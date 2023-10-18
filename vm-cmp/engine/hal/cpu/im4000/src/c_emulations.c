@@ -770,60 +770,22 @@ void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t 
 }
 
 /**
- * Invoke a virtual method.
- * 
- * TODO figure out how we can return a 32- or 64-bit value, or no value at all!!!
- * Maybe we should pass a frame pointer instead of the clazz?
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool of 'clazz' where the method to be executed is defined.
- * @param ...   arguments to be passed to the method.
- */
-void emul_invokevirtual(im4000_frame frame, uint32_t cpIndex, w_instance objectref, ...) {
-
-}
-
-/**
-// TODO figure out how we can return a 32- or 64-bit value, or no value at all!!!
- * @param frame the current stack frame.
- * @param cpIndex index into the constant pool of 'clazz' where the method to be executed is defined.
- * @param ...   arguments to be passed to the method.
- */
-void emul_invokespecial(im4000_frame frame, uint32_t cpIndex, w_instance objectref, ...) {
-
-}
-
-/**
- * Invoke a special method, such as a constructor.
- * 
- * TODO figure out how we can return a 32- or 64-bit value, or no value at all!!!
- * Maybe we should pass a frame pointer instead of the clazz?
- * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the method to be executed is defined.
- * @param ...   arguments to be passed to the method.
- */
-void  emul_invokestatic(im4000_frame frame, uint32_t index, ...) {
-
-}
-
-/**
- * Invoke an interface method.
- * 
- * TODO figure out how we can return a 32- or 64-bit value, or no value at all!!!
- * Maybe we should pass a frame pointer instead of the clazz?
- * @param frame the current stack frame.
- * @param index index into the constant pool of 'clazz' where the method to be executed is defined.
- * @param ...   arguments to be passed to the method.
+ * Complete invocation of a native method and throw exception if any left in the thread
+ *
+ * @param frame the caller stack frame.
+ * @param method the method the invoke, which has a native implementation
+ * @param args base address of array containing arguments for method
+ * @param return_buf buffer for return value if any
 */
-void emul_invokeinterface(im4000_frame frame, uint32_t index, w_instance objectref, ...) {
+void emul_invoke_native(im4000_frame frame, w_method method, const uint8_t *args, uint64_t *return_buf) {
+  w_thread thread = currentWonkaThread;
 
-}
+  // TODO
 
-/**
- * Convenience function to report an exection an abort the VM.
- * Use e.g. if an exception is thrown before we have entered wonka.Vvm.Init.main()
- * (which provides a catch-all exception handler).
- * @param objectref the exception to be reported
-*/
-void emul_unhandled_exception(w_instance objectref) {
-  wabort(ABORT_WONKA, "Unhandled exception %e - game over!", objectref);
+  // NOTE: Put whatever return value AT return_buf, that is for single-word return like
+  // *(uint32_t*)return_buf = value;
+
+  if (thread->exception) {
+    throw(thread->exception);
+  }
 }

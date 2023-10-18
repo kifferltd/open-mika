@@ -35,7 +35,7 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(ENGINE_TOP)/include
 
-sources = call.c c_emulations.c bc_emulations.s invoke.s
+sources = call.c dispatcher.c c_emulations.c bc_emulations.s invoke.s
 cobjects=$(patsubst %.c, $(engineobjdir)/%.o, $(sources))
 sobjects=$(patsubst %.s, $(engineobjdir)/%.o, $(sources))
 
