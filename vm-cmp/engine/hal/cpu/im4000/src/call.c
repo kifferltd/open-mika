@@ -35,41 +35,7 @@ void callMethod(w_frame caller, w_method method) {
   woempa(1, "CALLING %M, dispatcher is %p\n", method, method->exec.dispatcher);
   // TODO check for stack overflow?
 
-  // TODO we need to distinguish between native and Java, synchronized and not, etc.
-  // method->exec.dispatcher(caller, method);
-
-  w_thread thread = currentWonkaThread;
-  w_u64 result;
-  w_word *args = allocMem(method->exec.arg_i * sizeof(w_word));
-  w_Slot *tos = (w_Slot*)caller->jstack_top;
-  for (w_size i = 0; i < method->exec.arg_i; ++i) {
-    args[i] = GET_SLOT_CONTENTS(--tos);
-  }
-  activate_frame(method, method->exec.arg_i, args, &result);
-  releaseMem(args);
-
-  caller->jstack_top -= method->exec.arg_i;
-  // TODO assuming that we do not come here if an exception was thrown
-  int n = 0;
-  switch(method->exec.return_i) {
-    case 2:
-      SET_SLOT_CONTENTS(caller->jstack_top++, result.words[n++]);
-      // fall through
-
-    case 1:
-      SET_SLOT_CONTENTS(caller->jstack_top++, result.words[n++]);
-      // fall through
-
-    case 0:
-      caller->jstack_top = tos + n;
-      break;
-
-    default:
-      wabort(ABORT_WONKA, "Impossible exec.return_i value : %d\n", method->exec.return_i);
-  }
-  thread->top = caller;
-
-  woempa(1, "RETURNED from %M\n", method);
+  method->exec.dispatcher(caller, method);
 }
 
 // referenced by loading.c:1909 (/home/chris/Imsys/env-isal/sw-open-mika/core-vm/src/vm/loading.c:1909)
