@@ -699,13 +699,3 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint8_t *args
     throw(thread->exception);
   }
 }
-
-/**
- * Convenience function to report an exection an abort the VM.
- * Use e.g. if an exception is thrown before we have entered wonka.Vvm.Init.main()
- * (which provides a catch-all exception handler).
- * @param objectref the exception to be reported
-*/
-void emul_unhandled_exception(w_instance objectref) {
-  wabort(ABORT_WONKA, "Unhandled exception %e - game over!", objectref);
-}

@@ -497,9 +497,6 @@ _emul_throw:
     c.ld.fmp
     ; es: ..., objectref, frame
 
-    ; FIXME: Can we just return to the ISAL caller in case of
-    ; no more Java frames? Anyhow, make sure original FMP is
-    ; restored from the memory stack
     ; If no Java frame (FMP==0), manage uncaught exception
     c.addi  0
     c.brs.z  _throw_uncaught
@@ -581,24 +578,17 @@ _throw_unwind:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _throw_uncaught:
-; es: ..., objectref, 0 (frame)
+; es: objectref, 0 (frame)
     c.drop
 
     ; Here no Java frame in the execution stack, only objectref in the evaluation stack.
     ; We returned to activate_frame().
 
-    ; Put objectref into i#12 here, so it becomes i#0 after deallocating the ISAL frame.
-    pop.es.w    i#12
+    ; Drop exception from the evaluation stack, C code has it in the current thread.
+    c.drop
+    ; es: <empty>
 
-    ; Deallocate ISAL frame for activate_frame(), also restores RAR
-    check.lrcb  ; evaluation stack should be empty now
-    dealloc.nlsf
-
-    ; Go to handler by returning from emulation.
-    ; The handler replaces activate_frame() in the ISAL callchain
-    ; and will get the uncaught object as first argument.
-    c.ldi.i emul_unhandled_exception
-    c.st.erar
-    c.rete
+    ; Let activate_frame return
+    c.jumpw activate_frame_return_done
 
 ;===========================================================
