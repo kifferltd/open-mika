@@ -777,7 +777,7 @@ void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t 
  * @param args base address of array containing arguments for method
  * @param return_buf buffer for return value if any
 */
-void emul_invoke_native(im4000_frame frame, w_method method, const uint8_t *args, uint64_t *return_buf) {
+void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *args, w_u64 *return_buf) {
   w_thread thread = currentWonkaThread;
 
   // TODO
