@@ -266,9 +266,22 @@ void registerNatives(w_clazz clazz, const JNINativeMethod *methods, w_int mcount
 ** Look up the implementation of a given (non-interface) method in a subclass.
 ** If clazz does not inherit method, result is undefined(!).  May be called if
 ** clazz ==  method->declaring_clazz.
+** @param method the method which is referenced in the call.
+** @param clazz the clazz of the objecft on which the method is being invoked.
+** @return the method which should actually be called (may be an override).
 */
 static inline w_method virtualLookup(w_method method, w_clazz clazz) {
 #ifdef RUNTIME_CHECKS
+  if (clazz->label != "clazz") {
+    wabort(ABORT_WONKA, "%p is not a valid w_clazz pointer!\n", clazz);
+  }
+  if (method->spec.declaring_clazz->label != "clazz") {
+    wabort(ABORT_WONKA, "%p is not a valid w_method pointer!\n", method);
+  }
+
+  if (!isSuperClass(method->spec.declaring_clazz, clazz)) {
+    wabort(ABORT_WONKA, "%k is not a subclass of %k (where %m is declared)!\n", clazz, method->spec.declaring_clazz, method);
+  }
   if (isSet(method->flags, METHOD_IS_INTERFACE)) {
     wabort(ABORT_WONKA, "%M is an interface method, must use interfaceLookup instead\n", method);
   }
