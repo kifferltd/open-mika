@@ -347,6 +347,14 @@ w_dword emul_getstatic_double(w_field field) {
   return *(w_dword*)ptr;
 }
 
+static inline w_word* field_address(w_instance objectref, w_field field) {
+  w_int offset = (w_int)FIELD_OFFSET(field->size_and_slot);
+  if (offset < 0) {
+    offset += instance2clazz(objectref)->instanceSize;
+  }
+  return objectref + offset;
+}
+
 /**
  * Fetch the value of a 32-bit field of an object.
  * 
@@ -355,8 +363,8 @@ w_dword emul_getstatic_double(w_field field) {
  * @return the 32-bit value
  * 
  */
-w_word emul_getfield_single(w_field field, w_instance objectref) {
-  return objectref[FIELD_OFFSET(field->size_and_slot)];
+w_word emul_getfield_single(w_instance objectref, w_field field) {
+  return *field_address(objectref, field);
 }
 
 /**
@@ -367,8 +375,8 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
  * @return the 64-bit value
  * 
  */
-w_dword emul_getfield_double(w_field field, w_instance objectref) {
-  void *ptr = &objectref[FIELD_OFFSET(field->size_and_slot)];
+w_dword emul_getfield_double(w_instance objectref, w_field field) {
+  void *ptr = field_address(objectref, field);
   return *(w_dword*)ptr;
 }
 
@@ -392,8 +400,8 @@ void emul_putstatic_single(w_word value, w_field field) {
 */
 void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
     w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[FIELD_OFFSET(field->size_and_slot)];
-    *ptr = value_high;
-    *(ptr+1) = value_low;
+    ptr[0] = value_high;
+    ptr[1] = value_low;
 }
 
 /**
@@ -404,7 +412,7 @@ void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
  * @param field the field description.
  */
 void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
-  *wordFieldPointer(objectref, field->size_and_slot) = value;
+  *field_address(objectref, field) = value;
 }
 
 /**
@@ -416,8 +424,8 @@ void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
  * @param field the field description.
  */
 void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field field) {
-  wordFieldPointer(objectref, field->size_and_slot)[0] = value_high;
-  wordFieldPointer(objectref, field->size_and_slot)[1] = value_low;
+  field_address(objectref, field)[0] = value_high;
+  field_address(objectref, field)[1] = value_low;
 }
 
 /**
