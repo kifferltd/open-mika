@@ -328,13 +328,8 @@ w_int initializeClazz(w_thread thread, w_clazz clazz) {
         }
         lowMemoryCheck;
 
-        // WAS : frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
-        // deactivateFrame(frame, NULL);
-        w_boolean was_unsafe = enterUnsafeRegion(thread);
-        activate_frame(clazz->clinit, 0, NULL, NULL);
-        if (!was_unsafe) {
-           enterSafeRegion(thread);
-        }
+        frame = activateFrame(thread, clazz->clinit, FRAME_CLINIT, 0);
+        deactivateFrame(frame, NULL);
         cleanUpClinit(clazz->clinit);
         //clazz->clinit = NULL;
       }

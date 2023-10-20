@@ -780,7 +780,49 @@ void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t 
 void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *args, w_u64 *return_buf) {
   w_thread thread = currentWonkaThread;
 
-  // TODO
+  // The following code is basically activateFrame(), adapted to use an array of contents instead of a
+  // varargs list of contents/scanning pairs.
+
+  w_frame mika_frame = pushFrame(thread, method);
+  w_int i = 0;
+  w_instance protected = NULL;
+
+  threadMustBeSafe(thread);
+  if (!mika_frame) {
+    // TODO - raise stack overflow error
+  }
+
+  while (i < method->exec.arg_i) {
+    // [CG 20230531] Doing it this way so that the slot-type arguments will be consumed even if they are not used.
+    w_word contents = args[i];
+    SET_SLOT_CONTENTS(mika_frame->jstack_top++, contents);
+    i += 1;
+  }
+
+  mika_frame->flags |= FRAME_NATIVE;
+  callMethod(mika_frame, method);
+
+  switch(method->exec.return_i) {
+  case 2:
+    return_buf->words[1] = GET_SLOT_CONTENTS(--mika_frame->jstack_top);
+    // fall through
+
+    case 1:
+      return_buf->words[0] = GET_SLOT_CONTENTS(--mika_frame->jstack_top);
+      if (isNotSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
+        protected = return_buf->words[0];
+      }
+       // fall through
+
+    case 0:
+      break;
+
+    default:
+      wabort(ABORT_WONKA, "Impossible exec.return_i value : %d\n", method->exec.return_i);
+  }
+
+
+  deactivateFrame(mika_frame, protected);
 
   // NOTE: Put whatever return value AT return_buf, that is for single-word return like
   // *(uint32_t*)return_buf = value;
