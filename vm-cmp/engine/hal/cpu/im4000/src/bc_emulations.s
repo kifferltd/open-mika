@@ -40,9 +40,8 @@ e_ldc:
 ;===========================================================
 e_ldc_w:		
 
-    em.isal.alloc.nlsf 2
+    em.isal.alloc.nlsf 1
 
-    copy.w  i#1 i#2
     copy.w  i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
@@ -70,9 +69,8 @@ e_ldc_w:
 ;===========================================================
 e_ldc2_w:		
 
-    em.isal.alloc.nlsf 2
+    em.isal.alloc.nlsf 1
 
-    copy.w  i#1 i#2
     copy.w  i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
@@ -127,7 +125,14 @@ e_lload:
 ;				  
 ;===========================================================
 e_istore:
-    errorpoint      ; Not implemented
+    em.load_byte_from_erar
+    em.isal.alloc.nlsf 2
+    copy.w      i#2 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#3 emul_istore
+    call        i#3
+    ;errorpoint       Not implemented
     ; David: As far as I can see in the microcode, this emulation is needed.
     ; ERAR points to indexbyte1
 
@@ -141,7 +146,14 @@ e_istore:
 ;				  
 ;===========================================================
 e_lstore:
-    errorpoint      ; Not implemented
+    em.load_byte_from_erar
+    em.isal.alloc.nlsf 3
+    copy.w      i#3 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#4 emul_lstore
+    call        i#5
+    ; errorpoint      ; Not implemented
     ; David: As far as I can see in the microcode, this emulation is needed.
     ; ERAR points to indexbyte1
 
