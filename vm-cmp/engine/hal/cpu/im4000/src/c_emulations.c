@@ -376,7 +376,7 @@ w_dword emul_getstatic_double(w_field field) {
  * 
  */
 w_word emul_getfield_single(w_field field, w_instance objectref) {
-  return field->declaring_clazz->staticFields[field->size_and_slot];
+  return objectref[FIELD_OFFSET(field->size_and_slot)];
 }
 
 /**
@@ -388,7 +388,7 @@ w_word emul_getfield_single(w_field field, w_instance objectref) {
  * 
  */
 w_dword emul_getfield_double(w_field field, w_instance objectref) {
-  void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
+  void *ptr = &objectref[FIELD_OFFSET(field->size_and_slot)];
   return *(w_dword*)ptr;
 }
 
@@ -399,7 +399,7 @@ w_dword emul_getfield_double(w_field field, w_instance objectref) {
  * @param field he field description.
 */
 void emul_putstatic_single(w_word value, w_field field) {
-    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[FIELD_OFFSET(field->size_and_slot)];
     *ptr = value;
 }
 
@@ -411,7 +411,7 @@ void emul_putstatic_single(w_word value, w_field field) {
  * @param field he field description.
 */
 void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
-    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[field->size_and_slot];
+    w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[FIELD_OFFSET(field->size_and_slot)];
     *ptr = value_high;
     *(ptr+1) = value_low;
 }
