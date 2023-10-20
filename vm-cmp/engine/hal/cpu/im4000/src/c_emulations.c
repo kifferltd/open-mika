@@ -226,13 +226,13 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
 
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = virtualLookup(called_method, target_clazz);
-  woempa(7, "target method is %M\n", target_method);
 
   // TODO can we make use of e_exception for this?
   if (isSet(target_method->flags, ACC_STATIC)) {
     throwException(thread, clazzIncompatibleClassChangeError, NULL);
     throw(thread->exception);
   }
+  woempa(7, "target method is %M\n", target_method);
 
   return target_method;
 }
