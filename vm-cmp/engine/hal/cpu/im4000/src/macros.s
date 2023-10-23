@@ -1,4 +1,82 @@
 ;===========================================================
+; Unwind info for different situations
+
+; Directive to create section holding function unwind information
+.cfi_sections .debug_frame
+
+; Use at the very beginning of a function to emit an entry in .eh_frame
+; Function here means any consecutive part of the code where unwind info
+; can be reasonably defined.
+; Do not forget to close the function with em.cfi_end.
+.macro em.cfi_start
+    .cfi_startproc
+.endmacro
+
+; Use at the very end of a function to close the entry in .eh_frame
+.macro em.cfi_end
+    .cfi_endproc
+.endmacro
+
+; Use at the beginning of C functions before
+; allocating the ISAL stack frame
+.macro em.isal.cfi_init
+    .cfi_def_cfa    2, 0    ; Dummy CFA, MSP+0
+    .cfi_register   1, 5    ; Caller PC in RAR
+    .cfi_same_value 2       ; Caller MSP is in place
+    .cfi_same_value 8       ; Caller LMP is in place
+.endmacro
+
+; Use after allocating the ISAL stack frame
+.macro em.isal.cfi_alloc_done
+    .cfi_def_cfa    8, 0        ; CFA, LMP+0
+    .cfi_offset     1, -3 * 4   ; Caller PC at CFA + (-3 * ptrSize)
+    .cfi_offset     8, -2 * 4   ; Caller LMP at CFA + (-2 * ptrSize)
+    .cfi_undefined  2           ; Caller MSP undefined
+.endmacro
+
+; Use after deallocating the ISAL stack frame
+.macro em.isal.cfi_dealloc_done
+    .cfi_def_cfa        2, 0    ; Dummy CFA, MSP+0
+    .cfi_restore        1       ; Caller PC restored
+    .cfi_restore        2       ; Caller MSP restored
+    .cfi_restore        8       ; Caller LMP restored
+    .cfi_return_column  5       ; Return address in RAR
+.endmacro
+
+; Use in ISAC context, where cannot unwind
+.macro em.isac.cfi
+    .cfi_def_cfa    2, 0    ; Dummy CFA, MSP+0
+    .cfi_undefined  1       ; Caller PC undefined
+    .cfi_undefined  2       ; Caller MSP undefined
+    .cfi_undefined  8       ; Caller LMP undefined
+.endmacro
+
+; Use in ISAC context, where return address is in RAR
+.macro em.isac.cfi_return_rar
+    .cfi_def_cfa        2, 0    ; Dummy CFA, MSP+0
+    .cfi_register       1, 5    ; Caller PC in RAR
+    .cfi_undefined      2       ; Caller MSP undefined
+    .cfi_undefined      8       ; Caller LMP undefined
+    .cfi_return_column  5       ; Return address in RAR
+.endmacro
+
+; Use in emulation routines when return address is in ERAR
+; NOTE: The microcoded uses the first bit in ERAR as a flag
+; indicating Java execution mode. The ISAL debugger sees a
+; high address in ERAR during bytecode emulation. The debugger
+; needs to recognize the flag bit and simply unwind the Java frame.
+; When a non-Java frame, for which the flag in ERAR is not set,
+; is reached, CFI should be available and used from the ELF
+; executable.
+.macro em.emul.cfi
+    .cfi_def_cfa        2, 0    ; Dummy CFA, MSP+0
+    .cfi_register       1, 7    ; Caller PC in ERAR
+    .cfi_undefined      2       ; Caller MSP in undefined
+    .cfi_undefined      8       ; Caller LMP is undefined
+    .cfi_return_column  7       ; Return address in ERAR
+.endmacro
+
+;===========================================================
 
 .macro em.isal.alloc.nlsf.pop.es_4
     pop.es.w i#3
@@ -27,6 +105,8 @@
 ; Also popping values from the evaluation stack into i#0... registers.
 ; NOTE: The topmost value is moved to the register with the highest index
 ; and the last popped value to i#0.
+; NOTE: Standard ISAL unwinding stops at this frame as the allocation sets
+; the normal return address slot to 0 in the frame.
 .macro em.isal.alloc.nlsf narg
         irs.off          ; disable interrupts
         c.ldi.b 0       ; push 0 to the evaluation stack as number of 8-byte slots

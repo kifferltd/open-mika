@@ -15,6 +15,9 @@
 ;
 ;===========================================================
 allocate_locals:
+    em.cfi_start
+    em.isac.cfi_return_rar
+
 ; Check if only embedded locals needed
     c.dup
     c.addi    -8
@@ -53,6 +56,7 @@ allocate_loc_20:
     c.st.i.fmp  FRAME_LMP
 
     c.ret
+    em.cfi_end
 
 ;===========================================================
 java_method1:
@@ -71,9 +75,12 @@ java_method1:
 ;===========================================================
 .global activate_frame
 activate_frame:
+    em.cfi_start
 ; Called in ISAL context, can use registers.
+    em.isal.cfi_init
     move.i.i32 i#11 0
     alloc.nlsf i#11
+    em.isal.cfi_alloc_done
 
 ; i#12 contains parameter 'method'
 ; i#13 contains parameter 'narg', i.e. number of argument words
@@ -124,6 +131,10 @@ activate_frame_10:
     c.ldi.b     0
     c.st.fmp
 
+; Close the ISAL unwind entry for activate_frame() here
+; because the following instructions might be executed in ISAC context.
+    em.cfi_end
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; activate_frame() falls through to _emul_allocate_frame.
 ; !!! Continue with ISAC as can be called from emulation routines.
@@ -137,6 +148,8 @@ activate_frame_10:
 ;===========================================================
 .global _emul_allocate_frame
 _emul_allocate_frame:
+    em.cfi_start
+    em.isac.cfi
 
 ; Check whether native method
     c.over
@@ -211,6 +224,10 @@ _emul_allocate_frame:
 activate_frame_native:
 ; es: ..., [arg0, [arg1...]], narg, method, return_address
 
+    ; FIXME: This part of the code assumes native method is invoked
+    ; via bytecode emulation. Should it be able to handle going from
+    ; activate_frame()?
+
     ; Store original MSP and top two values in local variables,
     ; keep nargs as counter in the stack
     c.als.3     ; Alloate temporary local variables
@@ -250,6 +267,7 @@ activate_frame_native_args_moved:
 
     ; Initialize ISAL frame, take only parameters for emul_invoke_native
     em.isal.alloc.nlsf  4
+    em.isal.cfi_alloc_done
     ; i#0 = frame
     ; i#1 = method
     ; i#2 = args
@@ -263,6 +281,7 @@ activate_frame_native_args_moved:
 
     ; Deallocate ISAL frame
     em.isal.dealloc.nlsf    0
+    em.isal.cfi_dealloc_done
 
 ; es: ..., original_msp, return_address, return_i
 ; Return buffer at MSP
@@ -286,6 +305,7 @@ activate_frame_native_return_pushed:
     ; Return to caller
     c.st.erar
     c.rete
+    em.cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -293,6 +313,11 @@ activate_frame_native_return_pushed:
 ; Continue in ISAL context and take care of return value in
 ; the ISAC evaluation stack if any.
 activate_frame_return:
+    ; Start a new unwind entry for this part of activate_frame()
+    em.cfi_start
+    em.isal.cfi_init        ; Set initial info to apply after dealloc
+    em.isal.cfi_alloc_done  ; Update info immediately as already in ISAL frame
+
     ; Parameters of activate_frame() are still in place:
     ; i#12 = method
     ; i#15 = ret
@@ -349,7 +374,9 @@ activate_frame_return_done:
 
     ; Cleanup ISAL frame and return
     dealloc.nlsf
+    em.isal.cfi_dealloc_done
     ret
+    em.cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -365,6 +392,8 @@ activate_frame_return_done:
 ;===========================================================
 .global _emul_check_frame_stacks
 _emul_check_frame_stacks:
+    em.cfi_start
+    em.isac.cfi
 
 ; Check evaluation stack level
     c.flld.esp
@@ -400,6 +429,8 @@ _emul_check_frame_error:
     ; the register that caused the error?
     ill
 
+    em.cfi_end
+
 ;===========================================================
 ;
 ; Remove top Java stack frame from the memory stack and restore
@@ -411,6 +442,8 @@ _emul_check_frame_error:
 ;===========================================================
 .global _emul_deallocate_frame
 _emul_deallocate_frame:
+    em.cfi_start
+    em.isac.cfi
 
 ; Check memory stack level
     c.ld.msp
@@ -447,6 +480,7 @@ _emul_deallocate_frame:
     irs.on
 
     c.ret
+    em.cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -456,6 +490,9 @@ _emul_deallocate_frame:
 ;===========================================================
 .global throw
 throw:
+    em.cfi_start
+    em.isal.cfi_init
+
 ; Do not allocate any new ISAL frame here
 ; i#0 = objectref
 
@@ -467,6 +504,8 @@ throw:
 throw_unwind_isal_frame:
     copy.w i#12 i#0
     dealloc.nlsf    ; NOTE: activation frame identical for both leaf and non-leaf functions.
+    ; Do not change unwind info, keep seeing a caller if any left.
+
     ; i#0 = objectref
 
     ; LMP + (-3*4) is non-zero RAR in normal ISAL frames
@@ -480,9 +519,11 @@ throw_unwind_isal_frame:
 
     ; Deallocate final ISAL frame and push objectref
     em.isal.dealloc.nlsf    1
+    em.isac.cfi                 ; No more ISAL frame, switch to ISAC context
 
     ; Go to athrow to handle if objectref is null
     c.jumpw e_athrow
+    em.cfi_end
 
 ;===========================================================
 ;
@@ -493,6 +534,9 @@ throw_unwind_isal_frame:
 ;===========================================================
 .global _emul_throw
 _emul_throw:
+    em.cfi_start
+    em.isac.cfi
+
     ; Get current frame
     c.ld.fmp
     ; es: ..., objectref, frame
@@ -590,5 +634,7 @@ _throw_uncaught:
 
     ; Let activate_frame return
     c.jumpw activate_frame_return_done
+
+    em.cfi_end
 
 ;===========================================================
