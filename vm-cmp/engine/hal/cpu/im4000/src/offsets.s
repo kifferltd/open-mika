@@ -57,6 +57,10 @@ METHOD_EXEC_EXCEPTIONS = 72
 ; Offsets in the w_Clazz struct
 ;
 
+;===========================================================
+; Offsets in an a, in words (See arrays.h).
+ARRAY_LENGTH = 0
+ARRAY_DATA = 1
 
 ;===========================================================
 ; Offsets in the Java stack frame on the memory stack.

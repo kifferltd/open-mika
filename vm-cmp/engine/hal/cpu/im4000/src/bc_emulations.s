@@ -53,7 +53,7 @@ e_ldc_w:
     ret.eh
     ; errorpoint       Not implemented
 
-    ; needs to call emul_ldc(tricky, offset)
+    ; same as e_lds but reads 2 bytes from code stream instead of 1
 
 ;===========================================================
 ; em_ldc2_w
@@ -517,16 +517,16 @@ e_anewarray:
 ;
 ;===========================================================
 e_arraylength:
+; Check if arrayref is null
+    c.dup
+    c.addi  0
+    c.brs.z _exception_nullpointer
+    c.drop
 
-    em.isal.alloc.nlsf 1 
-    move.i.i32  i#1 emul_arraylength
-    call        i#1
-
-    em.isal.dealloc.nlsf  1
-    ret.eh  
-
-    ; see partial implementation in branch bc-optimize-create-and-invoke,
-    ; needs error handling
+    ; next instruction not needed so long as ARRAY_LENGTH is 0
+    ; c.addi  ARRAY_LENGTH
+    c.ld.i      ; ..., arraylength
+    ret.eh
 
 ;===========================================================
 ; e_athrow
