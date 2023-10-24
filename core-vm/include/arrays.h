@@ -33,17 +33,38 @@
 #include "wonka.h"
 
 /** Wonka Arrays
-** An array instance looks like an instance of an object with two fields:
-** - the length, stored in one w_word (just like a normal field), and
-** - the array elements, stored in as many w_word's as are needed (a
-**   "fat" field).  Array elements are packed down to byte level.
-** The information needed to determine the data type and size of each
-** array element is stored in the in the w_clazz structure pointed to
-** by instance2clazz(arrayinstance).
-**
-** F_Array_length and F_Array_data are initialised to the offsets of
-** these two "fields". 
-*/
+ **
+ **         arrayref ---+
+ **                     |
+ **                     v
+ ** +-------+-------+--------+--- - - - - - - - ---+
+ ** | clazz | flags | length | data                |
+ ** +-------+-------+--------+--- - - - - - - - ---+
+ **     -2      -1      0       1 ...
+ **
+ ** An array instance looks like an instance of an object with two fields:
+ ** - the length, stored in one w_word (just like a normal field), and
+ ** - the array elements, stored in as many w_word's as are needed (a
+ **   "fat" field).
+ **
+ ** F_Array_length and F_Array_data are initialised to the offsets of
+ ** these two pseudo-fields, i.e. to 0 and 1 respectively. 
+ ** 
+ ** Array elements are packed down to bit level:
+ ** - boolean: 1 bit/entry, starting with the least significant bit of  each byte.
+ ** - byte: 1 byte/entry.
+ ** - char, short: 2 bytes/entry, in host order.
+ ** - int, float: 4 bytes/entry, in host order.
+ ** - long, double: 8 bytes/entry, in host order.
+ ** See also the accessor functions below.
+ ** 
+ ** The information needed to determine the data type and size of each
+ ** array element is stored in the in the w_clazz structure pointed to
+ ** by instance2clazz(arrayinstance). The baload/bastore opcodes need to 
+ ** check this pointer to see if it is equal to clazz_boolean (1 bit/entry)
+ ** or clazz_byte (8 bits/entry).
+ 
+ */
 
 extern w_int                  F_Array_length;
 extern w_int                  F_Array_data;
