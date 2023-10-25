@@ -254,7 +254,18 @@ const char *running_thread_report(x_thread x) {
 
 }
 
-#ifndef INIT_CLASS 
+// [CG 20231025]
+// If INIT_CLASS is defined then we invoke the main() method of that class rather than invoking
+// wonka.vm.Init.main() which reads in the command line parameters and launches the application.
+// Since the main purpose of this feature is to be able to run bytecode tests, we also disable
+// the addition of the system init Thread to the system ThreadGroup in this case - otherwise the
+// bytecode of ThreadGroup.registerThread() gets executed before the bytecode tests, which is a
+// bit of a nuisance to say the least.
+// This all a bit of a hack, my apologies for that.
+
+#ifdef INIT_CLASS 
+#define USING_INIT_CLASS
+#else
 #define INIT_CLASS "wonka.vm.Init"
 #endif
 
@@ -306,6 +317,7 @@ static void invokeInitMain(w_instance arglist) {
     wabort(ABORT_WONKA,"Uh oh: class java.lang.ThreadGroup doesn't have a method deregisterThread(java.lang.Thread).  Game over.\n");
   }
 
+#ifndef USING_INIT_CLASS 
   // TODO check exceptionThrown(W_Thread_sysInit) is null after each method call?
 
   woempa(7, "Invoking %M on %j with parameter (%j)\n", register_method, I_ThreadGroup_system, I_Thread_sysInit);
@@ -320,6 +332,7 @@ static void invokeInitMain(w_instance arglist) {
   callMethod(frame, register_method);
   
   deactivateFrame(frame, NULL);
+#endif // ndef USING_INIT_CLASS
 
   w_string initClassName = cstring2String(INIT_CLASS, strlen(INIT_CLASS));
   w_string dotified = undescriptifyClassName(initClassName);
@@ -354,6 +367,7 @@ static void invokeInitMain(w_instance arglist) {
   
   deactivateFrame(frame, NULL);
 
+#ifndef USING_INIT_CLASS 
   woempa(7, "Invoking %M on %j with parameter (%j)\n", deregister_method, I_ThreadGroup_system, I_Thread_sysInit);
   frame = pushFrame(W_Thread_sysInit, deregister_method);
   frame->flags |= FRAME_NATIVE;
@@ -366,7 +380,7 @@ static void invokeInitMain(w_instance arglist) {
   callMethod(frame, register_method);
   
   deactivateFrame(frame, NULL);
-
+#endif // ndef USING_INIT_CLASS
 }
 #endif
 
