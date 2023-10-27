@@ -366,8 +366,11 @@ static void invokeInitMain(w_instance arglist) {
   callMethod(frame, main_method);
   
   deactivateFrame(frame, NULL);
+  printf("returned from " INIT_CLASS ".main\n");
 
-#ifndef USING_INIT_CLASS 
+#ifdef USING_INIT_CLASS 
+  exit(0);
+#else
   woempa(7, "Invoking %M on %j with parameter (%j)\n", deregister_method, I_ThreadGroup_system, I_Thread_sysInit);
   frame = pushFrame(W_Thread_sysInit, deregister_method);
   frame->flags |= FRAME_NATIVE;
