@@ -99,7 +99,3 @@ ifeq ($(JAVAX_COMM), false)
     WONKA_INFO += no javax.comm\;
 endif
 
-ifneq ($(UPTIME_LIMIT), none)
-  WONKA_INFO += will exit automatically after $(UPTIME_LIMIT) seconds\;
-endif
-
