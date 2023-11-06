@@ -14,16 +14,16 @@
 extern  x_mutex mutex64;
 
 typedef struct IM4000_Frame {
-  int32_t unused0;  // ConstantPool
+  int32_t unused0;    // ConstantPool
   w_method method;
   w_instance unused2; // SyncObject
   u_int8_t *current;  // ThrowPC
-  int32_t unused4;  // LSP
-  int32_t unused5;  // ESP
-  int32_t unused6;  // LMP
-  int32_t unused7;  // LocalsCount
-  int32_t unused8;  // RetAddress
-  int32_t unused9;  // FMP
+  w_word *locals;     // LSP
+  int32_t unused5;    // ESP
+  int32_t unused6;    // LMP
+  int32_t unused7;    // LocalsCount
+  int32_t unused8;    // RetAddress
+  int32_t unused9;    // FMP
 } IM4000_Frame;
 
 typedef struct IM4000_Frame *im4000_frame;
@@ -495,7 +495,7 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-    enterSafeRegion(thread);
+    w_boolean was_unsafe = enterSafeRegion(thread);
     w_clazz target_clazz = getClassConstant(calling_clazz, cpIndex, thread);
     woempa(7, "target clazz is %k\n", target_clazz);
     if (target_clazz) {
@@ -529,7 +529,9 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     if (o) {
       removeLocalReference(thread, o);
     }
-    enterSafeRegion(thread);
+    if (!was_unsafe) {
+      enterSafeRegion(thread);
+    }
 
   lowMemoryCheck;
     return o;
@@ -652,7 +654,7 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-  enterSafeRegion(thread);
+  w_boolean was_unsafe = enterSafeRegion(thread);
   w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) cpIndex, thread);
   if (thread->exception) {
     throw(thread->exception);
@@ -662,9 +664,8 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
     w_boolean compatible;
 
     // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
-    enterSafeRegion(thread);
-    compatible = isAssignmentCompatible(instance2object(objectref)->clazz, subject_clazz);
     enterUnsafeRegion(thread);
+    compatible = isAssignmentCompatible(instance2object(objectref)->clazz, subject_clazz);
     if (thread->exception) {
       throw(thread->exception);
     }
@@ -675,6 +676,10 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
       throw(thread->exception);
     }
 
+  }
+
+  if (!was_unsafe) {
+    enterSafeRegion(thread);
   }
   lowMemoryCheck;
   return objectref;
@@ -746,8 +751,8 @@ void emul_monitorexit(w_instance objectref) {
  * 
  * @param frame the current stack frame.
  * @param cpIndex index into the constant pool of 'clazz' where the type of the array elements is defined.
- * @param dimensions the number of dimensions.
- * @param ...   the number of elements in each dimension of the array.
+ * @param nbrDimensions the number of dimensions.
+ * @param dimensions the number of elements in each dimension of the array.
  * @return      the created array instance.
  */
 w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint32_t nbrDimensions, uint32_t* dimensions) {
@@ -789,44 +794,37 @@ if (array_clazz) {
 }
 
 /**
- * istore
- * Store int value into variable
- * @param frame
- * @param value
- * @param cpIndex
+ * Store an int or float value into a local variable.
+ * @param frame the current stack frame.
+ * @param value the value to be stored.
+ * @param idx   index of the variable within the stack frame.
  * 
 */
-
-void emul_istore(im4000_frame frame, uint32_t value, uint32_t cpIndex){
+void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   
-  enterSafeRegion(thread);
-  setIntegerField(calling_clazz, cpIndex, value);
-  enterUnsafeRegion(thread);
+  frame->locals[idx] = value;
   lowMemoryCheck;
 }
 
 /**
- * lstore
- * Store long value into variable
- * @param frame
- * @param value1
- * @param value2
- * @param cpIndex
+ * Store a long or double value into a local variable.
+ * @param frame the current stack frame.
+ * @param value1 the first word of the value to be stored.
+ * @param value2 the second word of the the value to be stored.
+ * @param idx   index of the variable within the stack frame.
 */
-void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t cpIndex){
+void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t idx){
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  uint64_t longvalue = value1 << 32 | value2;
 
-  enterSafeRegion(thread);
-  setLongField(calling_clazz, cpIndex, longvalue);
-  enterUnsafeRegion(thread);
+  frame->locals[idx] = value1;
+  frame->locals[idx + 1] = value2;
   lowMemoryCheck;
 }
 
@@ -846,7 +844,7 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *arg
   // varargs list of contents/scanning pairs.
 
   w_frame mika_frame = pushFrame(thread, method);
-  w_int i = 0;
+  w_size i = 0;
   w_instance protected = NULL;
 
   threadMustBeSafe(thread);
