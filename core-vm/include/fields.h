@@ -208,7 +208,7 @@ static inline void setIntegerField(w_instance parent, w_int slot, w_int value) {
   *((w_int*)wordFieldPointer(parent, slot)) = value;
 }
 
-static inline void setFloatField(w_instance parent, w_int slot, w_int value) {
+static inline void setFloatField(w_instance parent, w_int slot, w_float value) {
   *((w_float*)wordFieldPointer(parent, slot)) = value;
 }
 
