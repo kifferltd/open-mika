@@ -5,31 +5,46 @@ import java.lang.Math;
 
 public class Main {
   static String s;
-  static double d;
+  static long l;
+
+  String myString;
+
+  Main() {}
+
+  Main(String str) {
+    this();
+    myString = str;
+  }
 
   public static void main(String[] args) {
+
+    // Tests which do not require any method calls - except that if they fail they will
+    // call System.exit(1), which could crash if static method calls don't work ...
     s = "foo";
     if (s != "foo") System.exit(1);
-    d = Math.PI;
-    if (d != Math.PI) System.exit(1);
+    l = Long.MAX_VALUE;
+    if (l != Long.MAX_VALUE) System.exit(1);
     int dummy = BigDecimal.ROUND_UP;
     test_invokestatic();
-    test_putfield(s);
-    test_putfield_long(d);
     if (s != "bar") System.exit(1);
+
+    test_object_creation();
+    // This too assumes that static method calls work, and it triggers initialisation if class System.
+    // In case of doubt, comment it out
+    // System.out.println("all tests ran ok");
   }
 
   private static void test_invokestatic() {
     s = "bar";
   }
 
-  private static void test_putfield(String s) {
-    s = "bar";
-    s = 1;
-  }
+  private static void test_object_creation() {
+    // Here we test opcodes new and invokespecial.
 
-  private static void test_putfield_long(long l){
-    long hello = l;
-    hello = hello + 5;
+    Main m = new Main();
+    if (!(m instanceof Main)) System.exit(1);
+
+    m = new Main("quux");
+    if (m.myString != "quux") System.exit(1);
   }
 }
