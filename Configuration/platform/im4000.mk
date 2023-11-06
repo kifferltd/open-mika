@@ -33,7 +33,7 @@ export USE_NATIVE_MALLOC = true
 export USE_LIBFFI = false
 
 export AWT = none
-export FLOATING_POINT = hauser
+export FLOATING_POINT = native
 export MATH = java
 export SHARED_OBJECTS = false
 
@@ -43,7 +43,6 @@ export TOOLCHAIN = clang
 export TOOLCHAIN_PREFIX = $(IMSYS_TOOLDIR)/
 export SCHEDULER = o4f
 
-CFLAGS += --target=imsys -mcpu=im4000 -D__imsysisal__ -misal-internals -misac -misab
 ifeq ($(ISALFEATURE),0)
   CFLAGS += -misal
 else ifeq ($(ISALFEATURE),1)

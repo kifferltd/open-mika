@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2023 by Chris Gray, KIFFER Ltd.               #
+# Copyright (c) 2023 by Chris Gray, KIFFER Ltd.                           #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -27,21 +27,9 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-CFLAGS += -Wnofloat-equal
-
-sources = wmath.c
-fpobjdir = $(objdir)/vm-cmp/fp
-objects=$(patsubst %.c, $(fpobjdir)/%.o, $(sources))
-
 .PHONY : mika libs
 mika : libs
 
-libs : $(fpobjdir) $(objects)
-
-$(fpobjdir) :
-	@echo Creating $(fpobjdir)
-	@mkdir -p $(fpobjdir)
-
-$(objects) : $(fpobjdir)/%.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+libs :
+	make -C $(MIKA_TOP)/vm-cmp/fp/native/src $(MAKECMDGOALS)
 

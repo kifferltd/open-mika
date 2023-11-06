@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
+CFLAGS += --target=imsys -mcpu=im4000 -D__imsysisal__ -misal-internals -misac -misab
 CFLAGS += -DIM4000 -fno-inline-functions
 
 

@@ -1,19 +1,47 @@
+/**************************************************************************
+* Copyright (c) 2013, 2023 by Chris Gray, KIFFER Ltd. All rights reserved.*
+*                                                                         *
+* Redistribution and use in source and binary forms, with or without      *
+* modification, are permitted provided that the following conditions      *
+* are met:                                                                *
+* 1. Redistributions of source code must retain the above copyright       *
+*    notice, this list of conditions and the following disclaimer.        *
+* 2. Redistributions in binary form must reproduce the above copyright    *
+*    notice, this list of conditions and the following disclaimer in the  *
+*    documentation and/or other materials provided with the distribution. *
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
+*                                                                         *
+* THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
+* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
+**************************************************************************/
+
 #ifndef _WMATH_H
 #define _WMATH_H
-
-/****************************************************************************
-* Copyright (c) 2005, 2013 by Chris Gray, /k/ Embedded Java Solutions.      *
-****************************************************************************/
-
-/*
-** $Id: wmath.h,v 1.1 2005/04/18 17:31:29 cvs Exp $
-*/
 
 #include <float.h>
 #include <math.h>
 
 #ifndef NULL
 #define NULL ((void*)0)
+#endif
+
+#ifndef __STDC_IEC_559__
+#warning "CG: __STDC_IEC_559__ is not defined!"
+#endif
+
+#ifdef __FAST_MATH
+#error "__FAST_MATH__ is defined (i.e. gcc --fast-math is used), but Java specifies IEEE 754 compliance!"
 #endif
 
 /*
@@ -29,17 +57,22 @@
  * 
  */
 #ifndef isnanf
-#warning "Stephane: isnanf does not exist!"
+#ifdef __isnanf
+#warning "Stephane: isnanf(x) does not exist, falling back to __isnanf(x)"
 #define isnanf(x) __isnanf(x)
+#else
+#warning "CG 20231106: neither isnanf(x) nor __isnanf(x) exist, using x!=x"
+#define isnanf(x) (x)!=(x)
+#endif
 #endif
 
 #ifndef nan
-#warning "Stephane: nan does not exist!"
+#warning "Stephane: nan(x) does not exist, falling back to FP_NAN"
 #define nan(x) FP_NAN
 #endif
 
 #ifndef nanf
-#warning "Stephane: nanf does not exist!"
+#warning "Stephane: nanf(x) does not exist, falling back to FP_NAN"
 #define nanf(x) FP_NAN
 #endif
 
@@ -310,7 +343,7 @@ wfp_float32 wfp_int64_to_float32( wfp_int64 );
 wfp_float64 wfp_int64_to_float64( wfp_int64 );
 
 static inline wfp_int64 wfp_float64_signBit( wfp_float64 val ) {
-  return val < 0.0f ? 0x8000000000000000LL : 0LL ;
+  return val < 0.0 ? 0x8000000000000000LL : 0LL ;
 }
 
 static inline wfp_flag wfp_float32_is_NaN(wfp_float32 a) {
