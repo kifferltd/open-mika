@@ -18,13 +18,18 @@ typedef struct IM4000_Frame {
   w_method method;
   w_instance unused2; // SyncObject
   u_int8_t *current;  // ThrowPC
-  w_word *locals;     // LSP
+  int32_t unused4;    // LSP
   int32_t unused5;    // ESP
-  int32_t unused6;    // LMP
+  int32_t *locals;    // LMP
   int32_t unused7;    // LocalsCount
   int32_t unused8;    // RetAddress
   int32_t unused9;    // FMP
 } IM4000_Frame;
+
+/**
+ * The 'locals' pointer in the IM4000_Frame actually points to local variable #8.
+*/
+#define LOCAL_VARIABLE_ARRAY(frame) ((frame)->locals-8)
 
 typedef struct IM4000_Frame *im4000_frame;
 
@@ -802,11 +807,7 @@ if (array_clazz) {
 */
 void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
   lowMemoryCheck;
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-  
-  frame->locals[idx] = value;
+  LOCAL_VARIABLE_ARRAY(frame)[idx] = value;
   lowMemoryCheck;
 }
 
@@ -819,12 +820,8 @@ void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
 */
 void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t idx){
   lowMemoryCheck;
-  w_thread thread = currentWonkaThread;
-  w_method calling_method = frame->method;
-  w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-
-  frame->locals[idx] = value1;
-  frame->locals[idx + 1] = value2;
+  LOCAL_VARIABLE_ARRAY(frame)[idx] = value1;
+  LOCAL_VARIABLE_ARRAY(frame)[idx + 1] = value2;
   lowMemoryCheck;
 }
 
