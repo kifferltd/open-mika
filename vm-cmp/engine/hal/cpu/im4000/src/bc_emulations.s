@@ -96,9 +96,24 @@ e_ldc2_w:
 ;				  
 ;===========================================================
 e_iload:
-    errorpoint      ; Not implemented
-    ; David: As far as I can see in the microcode, this emulation is needed.
-    ; ERAR points to indexbyte1
+    em.load_short_from_erar
+    ; Stack: ..., index
+    c.addi    -8
+    c.br.nc   e_iload_10       ; variable is in scratchpad?
+
+    errorpoint                  ; Case idx <=8 not yet implemented
+
+ e_iload_10:                   ; not in scratchpad
+    c.addi      8               ; restore index
+
+    em.isal.alloc.nlsf 1
+    copy.w      i#1 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#2 emul_iload
+    call        i#2
+    em.isal.dealloc.nlsf 1
+    ret.eh
 
 ;===========================================================
 ; em_lload
@@ -110,9 +125,29 @@ e_iload:
 ;				  
 ;===========================================================
 e_lload:
-    errorpoint      ; Not implemented
-    ; David: As far as I can see in the microcode, this emulation is needed.
-    ; ERAR points to indexbyte1
+    em.load_short_from_erar
+    ; Stack: ..., value, index
+    c.addi    -8
+    c.br.nc   e_lload_10       ; variable is in scratchpad?
+
+    errorpoint                 ; Case idx <=8 not yet implemented
+
+ e_lload_10:                   ; not in scratchpad
+    c.addi      8              ; restore index
+
+    em.isal.alloc.nlsf 2
+    copy.w      i#2 i#1
+    copy.w      i#1 i#0
+    c.ld.fmp
+    pop.es.w    i#0     ; frame
+    move.i.i32  i#3 emul_lload
+    call        i#3
+    em.isal.dealloc.nlsf 1
+
+    em.decomp_l0_to_i1_i0
+
+    ret.eh
+
 
 ;===========================================================
 ; em_istore
@@ -125,7 +160,8 @@ e_lload:
 ;				  
 ;===========================================================
 e_istore:
-    em.load_short_from_erar
+    em.load_short_from_erar     
+    ; Stack: ..., value, index
     c.addi    -8
     c.br.nc   e_istore_10       ; variable is in scratchpad?
 
@@ -135,7 +171,8 @@ e_istore:
     c.addi      8               ; restore index
 
     em.isal.alloc.nlsf 2
-    copy.w      i#2 i#0
+    copy.w      i#2 i#1
+    copy.w      i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#3 emul_istore
@@ -155,6 +192,7 @@ e_istore:
 ;===========================================================
 e_lstore:
     em.load_short_from_erar
+    ; Stack: ..., value_ms, value_ls, index
     c.addi    -8
     c.br.nc   e_lstore_10       ; variable is in scratchpad?
 
@@ -164,7 +202,9 @@ e_lstore:
     c.addi      8               ; restore index
 
     em.isal.alloc.nlsf 3
-    copy.w      i#3 i#0
+    copy.w      i#3 i#2
+    copy.w      i#2 i#1
+    copy.w      i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#4 emul_lstore
@@ -249,7 +289,6 @@ e_getstatic:
     pop.es.w    i#0     ; clazz
     
 ; Call field resolution -  class in i#0, index in i#1
-; TODO we know the contents is resolved, so we just want clazz->values[index]
     move.i.i32  i#2 getFieldConstant_unsafe
     call        i#2
     copy.w      i#1 i#0
