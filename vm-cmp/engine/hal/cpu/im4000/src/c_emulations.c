@@ -799,7 +799,7 @@ if (array_clazz) {
 }
 
 /**
- * Store an int or float value into a local variable.
+ * Store a reference, int or float value into a local variable.
  * @param frame the current stack frame.
  * @param value the value to be stored.
  * @param idx   index of the variable within the stack frame.
@@ -823,6 +823,34 @@ void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t 
   LOCAL_VARIABLE_ARRAY(frame)[idx] = value1;
   LOCAL_VARIABLE_ARRAY(frame)[idx + 1] = value2;
   lowMemoryCheck;
+}
+
+/**
+ * Load a reference, int or float value from a local variable.
+ * @param frame the current stack frame.
+ * @param idx   index of the variable within the stack frame.
+ * @return the value of the variable.
+* 
+*/
+w_word emul_iload(im4000_frame frame, uint32_t idx){
+  lowMemoryCheck;
+  w_word value = LOCAL_VARIABLE_ARRAY(frame)[idx];
+  lowMemoryCheck;
+  return value;
+}
+
+/**
+ * Load a long or double value from a local variable.
+ * @param frame the current stack frame.
+ * @param idx   index of the variable within the stack frame.
+ * @return the value of the variable.
+* 
+*/
+w_word emul_lload(im4000_frame frame, uint32_t idx){
+  lowMemoryCheck;
+  void *ptr = LOCAL_VARIABLE_ARRAY(frame) + idx;
+  lowMemoryCheck;
+  return *(w_dword*)ptr;
 }
 
 /**
