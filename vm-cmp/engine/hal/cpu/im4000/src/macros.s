@@ -270,3 +270,15 @@
     c.ld.b          ; Loads sign-extended byte into the top word
     c.andi    0xff  ; Clear potential sign extension
 .endmacro
+
+;=============================================================
+; Loads two bytecode from memory into the evaluation stack via
+; ERAR and also steps ERAR by 2
+.macro em.load_short_from_erar
+    c.ld.erar
+    c.dup
+    c.addi  2
+    c.st.erar
+    c.ld.s          ; Loads sign-extended short into the top word
+    c.i2c           ; Clear potential sign extension
+.endmacro

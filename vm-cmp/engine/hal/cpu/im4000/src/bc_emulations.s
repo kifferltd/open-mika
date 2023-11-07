@@ -125,16 +125,24 @@ e_lload:
 ;				  
 ;===========================================================
 e_istore:
-    em.load_byte_from_erar
+    em.load_short_from_erar
+    c.addi    -8
+    c.br.nc   e_istore_10       ; variable is in scratchpad?
+
+    errorpoint                  ; Case idx <=8 not yet implemented
+
+ e_istore_10:                   ; not in scratchpad
+    c.addi      8               ; restore index
+
     em.isal.alloc.nlsf 2
     copy.w      i#2 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#3 emul_istore
     call        i#3
-    ;errorpoint       Not implemented
-    ; David: As far as I can see in the microcode, this emulation is needed.
-    ; ERAR points to indexbyte1
+    em.isal.dealloc.nlsf 0
+    ret.eh
+
 
 ;===========================================================
 ; em_lstore
@@ -146,16 +154,23 @@ e_istore:
 ;				  
 ;===========================================================
 e_lstore:
-    em.load_byte_from_erar
+    em.load_short_from_erar
+    c.addi    -8
+    c.br.nc   e_lstore_10       ; variable is in scratchpad?
+
+    errorpoint                  ; Case idx <=8 not yet implemented
+
+ e_lstore_10:                   ; not in scratchpad
+    c.addi      8               ; restore index
+
     em.isal.alloc.nlsf 3
     copy.w      i#3 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#4 emul_lstore
-    call        i#5
-    ; errorpoint      ; Not implemented
-    ; David: As far as I can see in the microcode, this emulation is needed.
-    ; ERAR points to indexbyte1
+    call        i#4
+    em.isal.dealloc.nlsf 0
+    ret.eh
 
 ;===========================================================
 ; e_jsr
