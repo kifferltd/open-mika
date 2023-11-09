@@ -126,7 +126,7 @@ e_iload:
 ;===========================================================
 e_lload:
     em.load_short_from_erar
-    ; Stack: ..., value, index
+    ; Stack: ..., index
     c.addi    -8
     c.br.nc   e_lload_10       ; variable is in scratchpad?
 
@@ -135,17 +135,17 @@ e_lload:
  e_lload_10:                   ; not in scratchpad
     c.addi      8              ; restore index
 
-    em.isal.alloc.nlsf 2
+    em.isal.alloc.nlsf 1
     copy.w      i#2 i#1
     copy.w      i#1 i#0
     c.ld.fmp
     pop.es.w    i#0     ; frame
     move.i.i32  i#3 emul_lload
     call        i#3
-    em.isal.dealloc.nlsf 1
 
     em.decomp_l0_to_i1_i0
-
+    em.isal.dealloc.nlsf 2
+ 
     ret.eh
 
 
