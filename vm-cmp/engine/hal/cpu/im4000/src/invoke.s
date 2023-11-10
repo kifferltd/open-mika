@@ -306,7 +306,7 @@ _activate_frame_native_return:
 ; Return buffer at MSP
 
     ; Store away original_msp, return_address
-    c.rot
+    c.nrot
     c.als.2
     c.st.v0 ; return_address
     c.st.v1 ; original_msp
