@@ -726,43 +726,71 @@ e_monitorexit:
 ;
 ;===========================================================
 e_multianewarray:
-    ; FIXME: Make sure MSP is 8-aligned at the end of pushing values to the memory stack
-    ; and critical section when MSP alignment is not ensured is protected.
+    ; ERAR points to the dimensions byte, which is the number of counts
     em.load_byte_from_erar
+    ; es: ..., count1, [count2, ...], cpIndex, ncounts
     c.als.3
     c.dup
     c.rot
-    c.st.v0    ;cpIndex
-    c.st.v1    ;nbrDimension
+    c.st.v0 ; cpIndex
+    c.st.v1 ; ncounts
 
     c.ld.msp
-    c.st.v2
-    c.addi 0
-_e_multianewarray_0:
-    c.if.z _e_multianewarray_10
+    c.st.v2 ; original_msp
+    ; es: ..., count1, [count2, ...], ncounts
+
+    ; Move counts to memory
+    ; FIXME: Is ncounts==0 is a possible case? If no, just delete the following 3 lines.
+    ; First, skip over this if no counts.
+    c.addi  0
+    c.br.z  _e_multianewarray_counts_moved
+
+    ; Need to add an extra slot for alignment if ncounts is odd
+    c.dis   ; Protect critical section while MSP might be not 8-aligned
+    c.dup
+    c.andi  1
+    c.if.z  _e_multianewarray_move_counts ; consume the value from es
+    c.ld.0      ; Load the alignment value
+    c.push.es   ; Push it to the memory stack
+
+_e_multianewarray_move_counts:
+    c.addi  0
+
+_e_multianewarray_move_next_count:
+    c.br.z  _e_multianewarray_counts_moved
     c.swap
     c.push.es
-    c.addi -1
-    c.jumps _e_multianewarray_0
+    c.addi  -1
+    c.jumps _e_multianewarray_move_next_count
 
-_e_multianewarray_10:
-    c.drop
-    c.ld.v2
+_e_multianewarray_counts_moved:
+    c.enb   ; End of critical section -- this is fine to do even if jumped over c.dis above
+    c.drop  ; Drop counter that is 0
+
+    ; Push values to the evaluation stack
+    c.ld.v2 ; original_msp
     c.ld.fmp
-    c.ld.v0
-    c.ld.v1
+    c.ld.v0 ; cpIndex
+    c.ld.v1 ; ncounts
     c.dls.3
-    c.ld.msp
+    c.ld.msp ; base address of counts
+; es: ..., original_msp, frame, cpIndex, ncounts, counts
+
     em.isal.alloc.nlsf 4
-    ;i#3 : dimensions
-    ;i#2 : nbrDimensions
-    ;i#1 : cpIndex
-    ;i#0 : frame
+    ; i#3 : dimensions
+    ; i#2 : nbrDimensions
+    ; i#1 : cpIndex
+    ; i#0 : frame
     move.i.i32  i#4 emul_multianewarray
     call        i#4
     em.isal.dealloc.nlsf 1
+
+    ; es: ..., original_msp, arrayref
+    ; Restore original MSP, that is deallocating counts
     c.swap
     c.st.msp
+
+    ; es: ..., arrayref
     c.rete
 
 
