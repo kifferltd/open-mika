@@ -726,14 +726,15 @@ e_monitorexit:
 ;
 ;===========================================================
 e_multianewarray:
-
+    ; FIXME: Make sure MSP is 8-aligned at the end of pushing values to the memory stack
+    ; and critical section when MSP alignment is not ensured is protected.
     em.load_byte_from_erar
     c.als.3
     c.dup
     c.rot
     c.st.v0    ;cpIndex
     c.st.v1    ;nbrDimension
-    
+
     c.ld.msp
     c.st.v2
     c.addi 0
@@ -764,8 +765,6 @@ _e_multianewarray_10:
     c.st.msp
     c.rete
 
-    ; needs to call emul_anewarray(frame, index, dimension, count...)
-    ; David: It seems ERAR points to dimensions
 
 ;===========================================================
 ; e_invokevirtual
