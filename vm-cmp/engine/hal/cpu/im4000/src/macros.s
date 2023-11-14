@@ -4,7 +4,8 @@
 ; Directive to create section holding function unwind information
 .cfi_sections .debug_frame
 
-; Use at the very beginning of a function to emit an entry in .eh_frame
+; Use at the very beginning of a function, right after a label, to emit
+; an entry in .debug_frame.
 ; Function here means any consecutive part of the code where unwind info
 ; can be reasonably defined.
 ; Do not forget to close the function with em.cfi_end.
@@ -12,7 +13,7 @@
     .cfi_startproc
 .endmacro
 
-; Use at the very end of a function to close the entry in .eh_frame
+; Use at the very end of a function to close the entry in .debug_frame.
 .macro em.cfi_end
     .cfi_endproc
 .endmacro

@@ -232,20 +232,36 @@ activate_frame_native:
     ; keep nargs as counter in the stack
     c.als.3     ; Alloate temporary local variables
     c.ld.msp
-    c.st.i.v0
-    c.st.i.v1
-    c.st.i.v2
+    c.st.v0
+    c.st.v1
+    c.st.v2
 
     ; Move arg words to memory
+    ; FIXME: Is narg==0 is a possible case? If no, just delete the following 3 lines.
+    ; First, skip over this if no args at all.
     c.addi  0
+    c.br.z  activate_frame_native_args_moved
+
+    ; Need to add an extra slot for alignment if narg is odd
+    c.dis   ; Protect critical section while MSP might be not 8-aligned
+    c.dup
+    c.andi  1
+    c.if.z  activate_frame_native_move_args ; consume the value from es
+    c.ld.0      ; Load the alignment value
+    c.push.es   ; Push it to the memory stack
+
+activate_frame_native_move_args:
+    c.addi  0
+
 activate_frame_native_move_next_arg:
-    c.if.z  activate_frame_native_args_moved
+    c.br.z  activate_frame_native_args_moved
     c.swap
     c.push.es
     c.addi  -1
     c.jumps activate_frame_native_move_next_arg
 
 activate_frame_native_args_moved:
+    c.enb   ; End of critical section -- this is fine to do even if jumped over c.dis above
     c.drop  ; Drop counter that is 0
 
     ; Push values to the evaluation stack
@@ -253,15 +269,17 @@ activate_frame_native_args_moved:
     c.ld.v1     ; return_address
     c.ld.v2     ; method
     c.dls.3     ; Deallocate local variables
+    ; es: ..., original_msp, return_address, method
     c.dup
     c.addi  METHOD_EXEC_RETURN_I
-    c.ld.s      ; Number of return words
+    c.ld.s      ; Number of return words; possible values: 0, 1, 2
     c.swap
+    ; es: ..., original_msp, return_address, return_i, method
     c.ld.fmp    ; Caller frame pointer
     c.swap
     c.ld.msp    ; Base address of args
     c.ld.2
-    c.ams       ; Allocate two more entries for potential return value
+    c.ams       ; Allocate two more entries for potential return value -- MSP alignment maintained
     c.ld.msp    ; Address for return buffer
 ; es: ..., original_msp, return_address, return_i, frame, method, args, return_buf
 
@@ -283,27 +301,53 @@ activate_frame_native_args_moved:
     em.isal.dealloc.nlsf    0
     em.isal.cfi_dealloc_done
 
+_activate_frame_native_return:
 ; es: ..., original_msp, return_address, return_i
 ; Return buffer at MSP
 
-    ; Push return words to the evaluation stack
-    c.addi  0
-activate_frame_return_push_word:
-    c.if.z  activate_frame_native_return_pushed
-    c.pop.es
+    ; Store away original_msp, return_address
+    c.nrot
+    c.als.2
+    c.st.v0 ; return_address
+    c.st.v1 ; original_msp
+    ; es: ..., return_i
+
+    ; Push return words to the evaluation stack. Possible values: 0, 1, 2
+    ; Do not pop out words from the memory stack because that would constitute a critical section for MSP alignment
+    c.dup
+    c.if.z  activate_frame_native_return_nothing    ; consume value from es
     c.addi  -1
-    c.jumps  activate_frame_return_push_word
+    c.if.z  activate_frame_native_return_single_word    ; consume value from es
+    ; fall through to the double-word case
+
+_activate_frame_native_return_double_word:
+    c.ld.i.msp  0
+    c.ld.i.msp  1
+    c.jumps activate_frame_native_return_pushed
+
+activate_frame_native_return_single_word:
+    c.ld.i.msp  0
+    c.jumps activate_frame_native_return_pushed
+
+activate_frame_native_return_nothing:
+    c.drop  ; Drop counter that is 0
+    ; fall through...
 
 activate_frame_native_return_pushed:
-    c.drop  ; Drop counter that is 0
+    ; es: ..., [retval1,[ retval2,]]
 
-; es: ..., original_msp, return_address
-    ; Restore original MSP
-    c.swap
+    ; Restore original_msp, return_address
+    c.ld.v0 ; return_address
+    c.ld.v1 ; original_msp
+    c.dls.2
+    ; es: ..., [retval1,[ retval2,]] return_address, original_msp
+
+    ; Restore original MSP, that is deallocate return_buf and args
     c.st.msp
 
     ; Return to caller
     c.st.erar
+    ; es: ..., [retval1,[ retval2,]]
     c.rete
     em.cfi_end
 ;===========================================================
