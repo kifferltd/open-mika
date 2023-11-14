@@ -180,7 +180,7 @@ _emul_allocate_frame:
     irs.on
 
 ; Allocate the rest of FRAME
-    c.ldi.b SIZEOF_FRAME - 2
+    c.ldi.b SIZEOF_FRAME - 2    ; Even number maintains MSP alignment
     c.ams
 
 ; Zero the allocated area
@@ -638,9 +638,12 @@ _emul_throw:
 
     ; Discard remaining operands in the current frame
     ; es: ..., objectref
-    c.push.es
+    ; Store away objectref in a temporary local
+    c.als.1
+    c.st.v0 ; objectref
     c.callw _emul_check_frame_stacks
-    c.pop.es
+    c.ld.v0 ; objectref
+    c.dls.1
     ; es: [empty], objectref
 
     c.rete
@@ -656,9 +659,12 @@ _throw_unwind:
 
     ; Remove top frame including remaining operands and check the new top
     ; es: ..., objectref
-    c.push.es
+    ; Store away objectref in a temporary local
+    c.als.1
+    c.st.v0 ; objectref
     c.callw _emul_check_frame_stacks
-    c.pop.es
+    c.ld.v0 ; objectref
+    c.dls.1
     ; es: [empty], objectref
     c.callw _emul_deallocate_frame
     ; es: ..., objectref

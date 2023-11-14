@@ -82,6 +82,7 @@ FRAME_LS_COUNT      = 7
 FRAME_RETADDRESS    = 8
 FRAME_FMP           = 9
 
+; NOTE! Keep this an even number for ensuring proper MSP alignment in _emul_allocate_frame.
 SIZEOF_FRAME = 10
 
 ;===========================================================
