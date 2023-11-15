@@ -1142,6 +1142,8 @@ _exception_stackoverflow:
 ; es: ..., exception_class
 .global _exception_raise    ; Used to raise exception in invoke.s
 _exception_raise:
+; fetch the address of the class descriptor
+    c.ld.i
 
 ; Instantiate class
     ; Calling: w_instance createRuntimeException(w_clazz excClazz)
