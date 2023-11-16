@@ -608,7 +608,8 @@ _emul_throw:
     c.addi  -1
     ; es: ..., objectref, method-pc, frame, method-pc, throw-pc
 
-    ; Calculate bytecode pc
+    ; Calculate bytecode pc as (throw-pc - method-pc)
+    c.swap
     c.sub
     ; es: ..., objectref, method-pc, frame, pc
 
