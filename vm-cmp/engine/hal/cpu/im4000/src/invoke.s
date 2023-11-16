@@ -467,14 +467,18 @@ _emul_check_frame_stacks_operand_stack_empty:
 
 ;===========================================================
 _emul_check_frame_error:
-    ; TODO: What if we end up here while throwing an exception?
-    ; That starts an infinite loop going through here.
-    c.ldi.i clazzError
-    c.jumpw _exception_raise
-    ; Not expecting to come back here
-    ; NOTE: Should we be able to return here and restore
-    ; the register that caused the error?
-    ill
+    ; Here when stack corruption is detected in the current Java frame.
+    ; There is not much to do for recovery.
+    ; NOTE: do NOT throw an exception here because that is to be handled
+    ; in the current (corrupted) Java frame, which will induce an infinite
+    ; loop going through here.
+
+    ; Terminating the system with an errorpoint now.
+    errorpoint
+    ; FIXME: Instead of stopping the system, it might be better to terminate the
+    ; current FreeRTOS task. Note, however, that blindly terminating a task and
+    ; so the current Java thread might cause other problems in the system (e.g., deadlock).
+    ; A well-designed application should detect and handle such a situation.
 
     em.cfi_end
 
