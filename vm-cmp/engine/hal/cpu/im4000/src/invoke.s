@@ -200,6 +200,9 @@ _emul_allocate_frame:
 ; NOTE: CONSTANTPOOL and SYNCOBJECT remain zero in FRAME
 ; but was handled here in legacy code.
 
+; THROWPC is initialized 0 here and shall be updated whenever
+; entering bytecode emulation.
+
 ; Push locals count onto the evaluation stack
 ; es: ..., [arg0, [arg1...]], narg, method
     c.addi METHOD_EXEC_LOCAL_I
@@ -590,32 +593,13 @@ _emul_throw:
     c.brs.z  _throw_uncaught
     ; es: ..., objectref, frame
 
-    ; Get base PC for current method and also save a copy for later use
-    c.ld.i.fmp  FRAME_METHOD
-    c.addi      METHOD_EXEC_CODE
-    c.ld.i
-    c.tuck
-    ; es: ..., objectref, method-pc, frame, method-pc
-
-    ; Get absolute throw-PC.
-    ; The highest bit in ERAR is used to indicate Java mode for the microcode.
-    ; It is to be reset for having the actual PC value.
-    ; Also decrement the addres to point to the last byte of the throwing bytecode
-    ; because the actual return address may be the beginning of a new try statement.
-    c.ld.erar
-    c.ldi.i 0x7fffffff
-    c.and
-    c.addi  -1
-    ; es: ..., objectref, method-pc, frame, method-pc, throw-pc
-
-    ; Calculate bytecode pc as (throw-pc - method-pc)
-    c.swap
-    c.sub
-    ; es: ..., objectref, method-pc, frame, pc
+    ; Get bytecode pc
+    c.ld.i.fmp  FRAME_THROWPC
+    ; es: ..., objectref, frame, pc
 
     ; Get objectref to the top and keep the original for potential future use
-    c.ldi.b 3
-    c.pick      ; es: ..., objectref, method-pc, frame, pc, objectref
+    c.ldi.b 2
+    c.pick      ; es: ..., objectref, frame, pc, objectref
 
     ; Check handler in current frame
     ; Calling: int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref)
@@ -623,7 +607,7 @@ _emul_throw:
     move.i.i32  i#3 throwExceptionAt
     call        i#3
     em.isal.dealloc.nlsf 1
-    ; es: ..., objectref, method-pc, handler
+    ; es: ..., objectref, handler-pc
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; If no handler, need to remove top frame and check again
@@ -632,27 +616,35 @@ _emul_throw:
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Matching handler found, execute it.
-    ; es: ..., objectref, method-pc, handler (bytecode pc)
+    ; es: ..., objectref, handler-pc
+
+    ; Get base PC for current method
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_EXEC_CODE
+    c.ld.i
+    ; es: ..., objectref, handler-pc, method-pc
+
+    ; Set ERAR to the absolute PC for handler in the method
     c.add
     c.st.erar
     ; es: ..., objectref
 
     ; Discard remaining operands in the current frame
     ; es: ..., objectref
-    ; Store away objectref in a temporary local
-    c.als.1
-    c.st.v0 ; objectref
+    ; Store away objectref in the memory stack
+    ; NOTE: The called check would break if the value is left in the evaluation stack
+    ; as well as if the value is stored in a temporary local.
+    em.push.es  1
     c.callw _emul_check_frame_stacks
-    c.ld.v0 ; objectref
-    c.dls.1
+    em.pop.es  1
     ; es: [empty], objectref
 
     c.rete
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 _throw_unwind:
-; es: ..., objectref, method-pc, 0 (handler)
-    c.drop2
+; es: ..., objectref, 0 (handler-pc)
+    c.drop
 
     ; When unwinding, ISAJ frames are continous in the execution stack.
     ; That is because all emulation routines deallocate their ISAL frame
@@ -660,12 +652,12 @@ _throw_unwind:
 
     ; Remove top frame including remaining operands and check the new top
     ; es: ..., objectref
-    ; Store away objectref in a temporary local
-    c.als.1
-    c.st.v0 ; objectref
+    ; Store away objectref in the memory stack
+    ; NOTE: The called check would break if the value is left in the evaluation stack
+    ; as well as if the value is stored in a temporary local.
+    em.push.es  1
     c.callw _emul_check_frame_stacks
-    c.ld.v0 ; objectref
-    c.dls.1
+    em.pop.es   1
     ; es: [empty], objectref
     c.callw _emul_deallocate_frame
     ; es: ..., objectref

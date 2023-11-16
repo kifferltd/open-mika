@@ -79,6 +79,43 @@
 
 ;===========================================================
 
+; Save the current bytecode pc at (fmp + FRAME_THROWPC).
+; Use this macro at the beginning of each emulation routine
+; after reading in all immediate arguments from the bytecode
+; stream. Meaning that ERAR points to the beginning of the
+; subsequent bytecode. This macro will store bytecode pc for the
+; last byte position of the current emulated bytecode.
+.macro em.update.pc
+    ;es: ...
+
+    ; Get absolute throw-PC.
+    ; The highest bit in ERAR is used to indicate Java mode for the microcode.
+    ; It is to be reset for having the actual PC value.
+    ; Also decrement the addres to point to the last byte of the throwing bytecode
+    ; because the actual return address may be the beginning of a new try statement.
+    c.ld.erar
+    c.ldi.i 0x7fffffff
+    c.and
+    c.addi  -1
+    ; es: ..., throw-pc
+
+    ; Get base PC for current method
+    c.ld.i.fmp  FRAME_METHOD
+    c.addi      METHOD_EXEC_CODE
+    c.ld.i
+    ; es: ..., throw-pc, method-pc
+
+    ; Calculate bytecode pc as (throw-pc - method-pc)
+    c.sub
+    ; es: ..., pc
+
+    c.st.i.fmp  FRAME_THROWPC
+    ; es: ...
+.endmacro
+
+
+;===========================================================
+
 .macro em.isal.alloc.nlsf.pop.es_4
     pop.es.w i#3
     em.isal.alloc.nlsf.pop.es_3
