@@ -631,12 +631,12 @@ _emul_throw:
 
     ; Discard remaining operands in the current frame
     ; es: ..., objectref
-    ; Store away objectref in a temporary local
-    c.als.1
-    c.st.v0 ; objectref
+    ; Store away objectref in the memory stack
+    ; NOTE: The called check would break if the value is left in the evaluation stack
+    ; as well as if the value is stored in a temporary local.
+    em.push.es  1
     c.callw _emul_check_frame_stacks
-    c.ld.v0 ; objectref
-    c.dls.1
+    em.pop.es  1
     ; es: [empty], objectref
 
     c.rete
@@ -652,12 +652,12 @@ _throw_unwind:
 
     ; Remove top frame including remaining operands and check the new top
     ; es: ..., objectref
-    ; Store away objectref in a temporary local
-    c.als.1
-    c.st.v0 ; objectref
+    ; Store away objectref in the memory stack
+    ; NOTE: The called check would break if the value is left in the evaluation stack
+    ; as well as if the value is stored in a temporary local.
+    em.push.es  1
     c.callw _emul_check_frame_stacks
-    c.ld.v0 ; objectref
-    c.dls.1
+    em.pop.es   1
     ; es: [empty], objectref
     c.callw _emul_deallocate_frame
     ; es: ..., objectref
