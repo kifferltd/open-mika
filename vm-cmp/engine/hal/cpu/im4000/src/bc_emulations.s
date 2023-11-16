@@ -16,6 +16,7 @@ e_ldc:
     ; ERAR points to indexbyte. Adjust ERAR and load indexbyte.
     em.load_byte_from_erar
     ; es: ..., indexbyte
+    em.update.pc
 
     em.isal.alloc.nlsf 1
     ; i#0 = indexbyte
@@ -38,7 +39,8 @@ e_ldc:
 ; Stack: ..., cpIndex --> ..., value
 ;				  
 ;===========================================================
-e_ldc_w:		
+e_ldc_w:
+    em.update.pc
 
     em.isal.alloc.nlsf 1
 
@@ -67,7 +69,8 @@ e_ldc_w:
 ; Stack: ..., cpIndex -> ..., value
 ;				  
 ;===========================================================
-e_ldc2_w:		
+e_ldc2_w:
+    em.update.pc
 
     em.isal.alloc.nlsf 1
 
@@ -98,6 +101,8 @@ e_ldc2_w:
 e_iload:
     em.load_short_from_erar
     ; Stack: ..., index
+    em.update.pc
+
     c.addi    -8
     c.br.nc   e_iload_10       ; variable is in scratchpad?
 
@@ -127,6 +132,8 @@ e_iload:
 e_lload:
     em.load_short_from_erar
     ; Stack: ..., index
+    em.update.pc
+
     c.addi    -8
     c.br.nc   e_lload_10       ; variable is in scratchpad?
 
@@ -162,6 +169,8 @@ e_lload:
 e_istore:
     em.load_short_from_erar     
     ; Stack: ..., value, index
+    em.update.pc
+
     c.addi    -8
     c.br.nc   e_istore_10       ; variable is in scratchpad?
 
@@ -193,6 +202,8 @@ e_istore:
 e_lstore:
     em.load_short_from_erar
     ; Stack: ..., value_ms, value_ls, index
+    em.update.pc
+
     c.addi    -8
     c.br.nc   e_lstore_10       ; variable is in scratchpad?
 
@@ -222,8 +233,8 @@ e_lstore:
 ; Stack: ..., offset -> ..., address
 ;
 ;===========================================================
-e_jsr:		
-
+e_jsr:
+    em.update.pc
     errorpoint      ; Not implemented
 
     ; needs to call emul_jsr(frame, offset) - or do we do everything in assembler?
@@ -240,7 +251,7 @@ e_jsr:
 ;
 ;===========================================================
 e_jsr_w:
-
+    em.update.pc
     errorpoint      ; Not implemented
 
     ; needs to call emul_jsr_w(frame, offset) - or do we do everything in assembler?
@@ -261,7 +272,7 @@ e_jsr_w:
 ;
 ;===========================================================
 e_ret:
-
+    em.update.pc
     errorpoint      ; Not implemented
 
     ; needs to call emul_ret(frame, offset) - or do we do everything in assembler?
@@ -279,7 +290,9 @@ e_ret:
 ; Stack: ..., cpIndex -> ..., value
 ;
 ;===========================================================
-e_getstatic:		
+e_getstatic:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
     copy.w  i#1 i#0     ; index
@@ -335,6 +348,7 @@ _e_getstatic_single:
 ;
 ;===========================================================
 e_putstatic:
+    em.update.pc
 
     em.isal.alloc.nlsf 1
     copy.w      i#1 i#0
@@ -381,6 +395,8 @@ _e_putstatic_single:
 ;					        
 ;===========================================================
 e_getfield:
+    em.update.pc
+
 ; Check if objectref is null
     c.over
     c.addi  0
@@ -441,8 +457,10 @@ _e_getfield_single:
 ;
 ;===========================================================
 e_putfield:
+    em.update.pc
+
 ; Check if objectref is null
-    c.ldi.i 2
+    c.ldi.b 2
     c.pick
     c.addi  0
     c.brs.z _exception_nullpointer
@@ -490,7 +508,9 @@ _e_putfield_single:
 ; Stack: ..., index -> ..., objectref
 ;
 ;===========================================================
-e_new:	
+e_new:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -515,14 +535,10 @@ e_new:
 ;
 ;===========================================================
 e_newarray:
-; Need to read atype from bytecode stream here and skip over the byte by incrementing erar
-    c.ld.erar
-    c.dup
-    c.addi  1
-    c.st.erar
-    c.ld.b
-    c.andi  0xff
-; es: ..., count, atype
+; Need to read atype from bytecode stream
+    em.load_byte_from_erar
+    ; es: ..., count, atype
+    em.update.pc
 
     em.isal.alloc.nlsf 2
     ; atype is in #0, count in #1
@@ -544,6 +560,8 @@ e_newarray:
 ;
 ;===========================================================
 e_anewarray:
+    em.update.pc
+
     em.isal.alloc.nlsf 2
     ; i#0 = count
     ; i#1 = cpIndex
@@ -571,6 +589,8 @@ e_anewarray:
 ;
 ;===========================================================
 e_arraylength:
+    em.update.pc
+
 ; Check if arrayref is null
     c.dup
     c.addi  0
@@ -596,6 +616,7 @@ e_arraylength:
 ;===========================================================
 .global e_athrow    ; Used to throw in invoke.s
 e_athrow:
+    em.update.pc
 
 ; Check if objectref is null
     c.addi  0
@@ -615,7 +636,9 @@ e_athrow:
 ; Stack: ..., objectref, cpIndex -> ..., objectref
 ;
 ;===========================================================
-e_checkcast:		
+e_checkcast:
+    em.update.pc
+
     em.isal.alloc.nlsf 2
 
 ; TODO currently we are passing objectref to C and getting the
@@ -647,8 +670,8 @@ e_checkcast:
 ; Stack: ..., objectref, cpIndex -> ..., result
 ;
 ;===========================================================
-;
 e_instanceof:
+    em.update.pc
 
     em.isal.alloc.nlsf 2
     copy.w  i#2 i#1
@@ -671,6 +694,8 @@ e_instanceof:
 ;
 ;===========================================================
 e_monitorenter:
+    em.update.pc
+
 ; Check if objectref is null
     c.dup
     c.addi  0
@@ -700,8 +725,9 @@ e_monitorenter:
 ; Stack: ..., objectref -> ...
 ;
 ;===========================================================
-;
 e_monitorexit:
+    em.update.pc
+
 ; Check if objectref is null
     c.dup
     c.addi  0
@@ -729,6 +755,8 @@ e_multianewarray:
     ; ERAR points to the dimensions byte, which is the number of counts
     em.load_byte_from_erar
     ; es: ..., count1, [count2, ...], cpIndex, ncounts
+    em.update.pc
+
     c.als.3
     c.dup
     c.rot
@@ -805,6 +833,8 @@ _e_multianewarray_counts_moved:
 ;
 ;===========================================================
 e_invokevirtual:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -851,6 +881,8 @@ e_invokevirtual:
 ;
 ;===========================================================
 e_invokespecial:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -885,6 +917,8 @@ e_invokespecial:
 ;
 ;===========================================================
 e_invokestatic:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -917,8 +951,9 @@ e_invokestatic:
 ; Stack: ..., objectref, [arg1, [arg2...]], cpIndex -> ...
 ;
 ;===========================================================
-;
 e_invokeinterface:
+    em.update.pc
+
     em.isal.alloc.nlsf 1
 
 ; Get index
@@ -977,6 +1012,7 @@ _invoke_common:
 ;
 ;===========================================================
 e_ireturn:
+    em.update.pc
     em.push.es  1
     c.callw     _emul_check_frame_stacks
     em.pop.es   1
@@ -992,6 +1028,7 @@ e_ireturn:
 ;
 ;===========================================================
 e_freturn:
+    em.update.pc
     em.push.es  1
     c.callw     _emul_check_frame_stacks
     em.pop.es   1
@@ -1007,6 +1044,7 @@ e_freturn:
 ;
 ;===========================================================
 e_areturn:
+    em.update.pc
     em.push.es  1
     c.callw     _emul_check_frame_stacks
     em.pop.es   1
@@ -1022,6 +1060,7 @@ e_areturn:
 ;
 ;===========================================================
 e_lreturn:
+    em.update.pc
     em.push.es  2
     c.callw     _emul_check_frame_stacks
     em.pop.es   2
@@ -1037,6 +1076,7 @@ e_lreturn:
 ;
 ;===========================================================
 e_dreturn:
+    em.update.pc
     em.push.es  2
     c.callw     _emul_check_frame_stacks
     em.pop.es   2
@@ -1052,6 +1092,7 @@ e_dreturn:
 ;
 ;===========================================================
 e_return:
+    em.update.pc
     c.callw _emul_check_frame_stacks
     c.callw _emul_deallocate_frame
     c.rete
@@ -1071,7 +1112,18 @@ e_return:
 .include "exception_constants.s"
 
 e_exception:
+    ; es: ..., exception_code
+    ; NOTE: exception emulation might be activated both in ISAJ and in non-ISAJ contexts.
+    ; Update bytecode pc only when activated from ISAJ.
+    c.ld.erar
+    c.ldi.b 31
+    c.ushr
+    ; es: ..., exception_code, isaj_mode_bit
+    c.if.z  _exception_cases    ; Check and drop the top value
+    em.update.pc
 
+    ; es: ..., exception_code
+_exception_cases:
 ; Decode the exception code
     c.dup
     c.xori  EC_ARITHMETICEXCEPTION
