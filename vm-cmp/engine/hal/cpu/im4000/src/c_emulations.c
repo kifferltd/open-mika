@@ -35,6 +35,18 @@ typedef struct IM4000_Frame *im4000_frame;
 
 extern void throw(w_instance objectref) __attribute__((noreturn));
 
+#define CHECK_FOR_PENDING_EXCEPTION \
+  { \
+    w_instance exception = exceptionThrown(thread); \
+    if (exception) { \
+      woempa(7, "Throwing pending exception %e\n", exception); \
+      throw(exception); \
+    } \
+  }
+
+#define THROW_EXCEPTION(exclazz,...) throwException(thread, exclazz, __VA_ARGS__); throw(exceptionThrown(thread))
+
+
 /*
 ** Seek a handler for an exception.
 ** @param frame the current execution frame .
@@ -86,7 +98,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
         jdwp_event_exception(objectref, calling_method, ex->handler_pc);
         enterUnsafeRegion(thread);
 #endif
-        thread->exception = NULL;
+        exceptionThrown(thread) = NULL;
         // TODO is this really needed?
         setReferenceField_unsafe(thread->Thread, NULL, F_Thread_thrown);
 
@@ -97,7 +109,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
 
   if (handler_pc == 0) {
     woempa(7, ">>>> Found no handler for %j in this frame <<<<\n", objectref);
-    thread->exception = objectref;
+    exceptionThrown(thread) = objectref;
     // TODO is this really needed?
     setReferenceField_unsafe(thread->Thread, objectref, F_Thread_thrown);
     if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
@@ -118,7 +130,6 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_method m = getMethodConstant(c, i);
   if (isSet(m->flags, ACC_STATIC)) {
-    // needed for invokespecial, invokevirtual
     mustBeInitialized(m->spec.declaring_clazz);
   }
   if (was_unsafe) {
@@ -160,13 +171,8 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
   w_clazz target_clazz = called_method->spec.declaring_clazz;
 
-  if (thread->exception){
-    throw(thread->exception);
-  }
-  // TODO can we make use of e_exception for this?
   if (isSet(called_method->flags, ACC_STATIC)) {
-    throwException(thread, clazzIncompatibleClassChangeError, NULL);
-    throw(thread->exception);
+    THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
   }
 
   /*
@@ -210,13 +216,16 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       w_clazz super = getSuper(calling_clazz);
       woempa(7, "super case - look up %m in vmlt of superclass %k\n, called_method, super");
 
-      // TODO can we make use of e_exception for this?
       if (!super) {
-        throwException(thread, clazzIncompatibleClassChangeError, NULL);
-        throw(thread->exception);
+        THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
       }
 
       w_method target_method = virtualLookup(called_method, super);
+
+      if (isSet(target_method->flags, ACC_ABSTRACT)) {
+        THROW_EXCEPTION(clazzAbstractMethodError, NULL);
+      }
+
       woempa(7, "target method is %m\n", target_method);
       lowMemoryCheck;
       return target_method;
@@ -227,9 +236,6 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
 
-  if (thread->exception){
-    throw(thread->exception);
-  }
   if (isSet(called_method->flags, METHOD_NO_OVERRIDE) && called_method->exec.code) {
     woempa(7, "no override possible - just call %M\n", called_method);
 
@@ -240,11 +246,10 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = virtualLookup(called_method, target_clazz);
 
-  // TODO can we make use of e_exception for this?
-  if (isSet(target_method->flags, ACC_STATIC)) {
-    throwException(thread, clazzIncompatibleClassChangeError, NULL);
-    throw(thread->exception);
+  if (isSet(target_method->flags, ACC_STATIC | ACC_ABSTRACT)) {
+   THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
   }
+
   woempa(7, "target method is %M\n", target_method);
 
   lowMemoryCheck;
@@ -255,25 +260,22 @@ w_method emul_interface_target(w_method called_method, w_instance objectref) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
 
-  if (thread->exception){
-    throw(thread->exception);
-  }
-
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = interfaceLookup(called_method, target_clazz);
   woempa(7, "target method is %m\n", target_method);
 
-  // TODO null result should be treated as abstract, see below
-  // TODO check method is not abstract, else throw AbstractMethodError
-  // TODO can we make use of e_exception for thses?
+  if (!target_method || isSet(target_method->flags, ACC_ABSTRACT)) {
+    THROW_EXCEPTION(clazzAbstractMethodError, NULL);
+  }
+
  if (isSet(target_method->flags, ACC_STATIC)) {
-    throwException(thread, clazzIncompatibleClassChangeError, NULL);
-    throw(thread->exception);
-  }
+    THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
+ }
+
   if (isNotSet(target_method->flags, ACC_PUBLIC)) {
-    throwException(thread, clazzIllegalAccessError, NULL);
-    throw(thread->exception);
+    THROW_EXCEPTION(clazzIllegalAccessError, NULL);
   }
+ 
   lowMemoryCheck;
 
   return target_method;
@@ -283,13 +285,8 @@ w_method emul_static_target(im4000_frame frame, w_method called_method) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
 
-  if (thread->exception){
-    throw(thread->exception);
-  }
-  // TODO can we make use of e_exception for this?
   if (!(isSet(called_method->flags, ACC_STATIC) && isNotSet(called_method->flags, METHOD_IS_CLINIT))) {
-    throwException(thread, clazzIncompatibleClassChangeError, NULL);
-    throw(thread->exception);
+    THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
   }
 
   lowMemoryCheck;
@@ -314,6 +311,7 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
 
   lowMemoryCheck;
   return constant;
@@ -337,6 +335,7 @@ uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
 
   lowMemoryCheck;
   return constant;
@@ -360,6 +359,7 @@ uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
 
   lowMemoryCheck;
   return constant;
@@ -499,7 +499,6 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     w_thread thread = currentWonkaThread;
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
-
     w_boolean was_unsafe = enterSafeRegion(thread);
     w_clazz target_clazz = getClassConstant(calling_clazz, cpIndex, thread);
     woempa(7, "target clazz is %k\n", target_clazz);
@@ -509,27 +508,15 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     }
 
     enterUnsafeRegion(thread);
-    if(thread->exception) {
-      woempa(7, "exception %e\n", thread->exception);
-      throw(thread->exception);
-    }
+    CHECK_FOR_PENDING_EXCEPTION
 
     if(isSet(target_clazz->flags, ACC_ABSTRACT | ACC_INTERFACE)) {
-      throwException(thread, clazzInstantiationError, "%k", target_clazz);
-      woempa(7, "exception %e\n", thread->exception);
-     throw(thread->exception);
+      THROW_EXCEPTION(clazzInstantiationError, "%k", target_clazz);
     }
 
-    if (thread->exception){
-      woempa(7, "exception %e\n", thread->exception);
-      throw(thread->exception);
-    }
     w_instance o = allocInstance(thread, target_clazz);
-    woempa(7, "created object %j\n", o);
-    if (thread->exception){
-      woempa(7, "exception %e\n", thread->exception);
-      throw(thread->exception);
-    }
+    CHECK_FOR_PENDING_EXCEPTION
+    woempa(7, "created object %j\n", o); 
  
     if (o) {
       removeLocalReference(thread, o);
@@ -555,23 +542,21 @@ w_instance emul_newarray(int32_t count, uint8_t atype) {
   w_thread thread = currentWonkaThread;
 
   if (count < 0) {
-    // TODO  can we make use of e_exception for this?
-    throwException(thread, clazzNegativeArraySizeException, NULL);
-    throw(thread->exception);
+    THROW_EXCEPTION(clazzNegativeArraySizeException, NULL);
   }
 
   w_clazz array_clazz = atype2clazz[atype];
   enterSafeRegion(thread);
   mustBeInitialized(array_clazz);
   enterUnsafeRegion(thread);
-  if (thread->exception) {
-    throw(thread->exception);
-  }
+  CHECK_FOR_PENDING_EXCEPTION
+
   woempa(1, "Allocating array of %d %k\n", count, array_clazz->previousDimension);
   w_instance a = allocArrayInstance_1d(thread, array_clazz, (w_int)count);
 
+  CHECK_FOR_PENDING_EXCEPTION
   if (!a) {
-    throw(thread->exception);
+    wabort(ABORT_WONKA, "Tonnerre et mille sabots! allocArrayInstance returned NULL but did not set exceptionThrown");
   }
   lowMemoryCheck;
   return a;
@@ -591,10 +576,8 @@ w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-  // TODO can we make use of e_exception for this?
-  if (count < 0) {
-    throwException(thread, clazzNegativeArraySizeException, NULL);
-    throw(thread->exception);
+   if (count < 0) {
+    THROW_EXCEPTION(clazzNegativeArraySizeException, NULL);
   }
 
   w_boolean was_unsafe = enterSafeRegion(thread);
@@ -606,25 +589,23 @@ w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
       mustBeInitialized(array_clazz);
     }
   }
-  else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+  else if (isAssignmentCompatible(instance2clazz(exceptionThrown(thread)), clazzException)) {
     wrapException(thread, clazzNoClassDefFoundError, F_Throwable_cause);
   }
 
   enterUnsafeRegion(thread);
 
-  if (thread->exception) {
-    throw(thread->exception);
-  }
-
-  woempa(1, "Allocating array of %d %k\n", count, array_clazz->previousDimension);
-  w_instance a = allocArrayInstance_1d(thread, array_clazz, count);
-  if (thread->exception) {
-    throw(thread->exception);
+  w_instance a = NULL;
+  if (!exceptionThrown(thread)) {
+    woempa(1, "Allocating array of %d %k\n", count, array_clazz->previousDimension);
+    a = allocArrayInstance_1d(thread, array_clazz, count);
   }
 
   if (!was_unsafe) {
     enterSafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
+
 
   lowMemoryCheck;
   return a;
@@ -638,12 +619,9 @@ w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
  */
 w_int emul_arraylength(w_instance arrayref) 
 {
-  // TODO who checks for null instance?
   w_int len = instance2Array_length(arrayref);
   return len;
 }
-
-// emul_athrow(???)
 
 /**
  * Check whether an object is of given type, and if it is not then throw a ClassCastException.
@@ -661,24 +639,16 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
 
   w_boolean was_unsafe = enterSafeRegion(thread);
   w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) cpIndex, thread);
-  if (thread->exception) {
-    throw(thread->exception);
-  }
     
-  if (objectref) {
+  if (!exceptionThrown(thread) && objectref) {
     w_boolean compatible;
 
     // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
     enterUnsafeRegion(thread);
     compatible = isAssignmentCompatible(instance2object(objectref)->clazz, subject_clazz);
-    if (thread->exception) {
-      throw(thread->exception);
-    }
 
-    // TODO can we make use of e_exception for this?
     if (!compatible) {
-      throwException(thread, clazzClassCastException, NULL);
-      throw(thread->exception);
+      THROW_EXCEPTION(clazzClassCastException, NULL);
     }
 
   }
@@ -686,6 +656,7 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
   if (!was_unsafe) {
     enterSafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
   return objectref;
 }
@@ -705,10 +676,6 @@ bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-  if (thread->exception) {
-    throw(thread->exception);
-  }
-    
   if(objectref == NULL){
     lowMemoryCheck;
     return true;
@@ -729,7 +696,6 @@ bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex
  * @param objectref the object whose monitor is to be entered.
  */
 void emul_monitorenter(w_instance objectref) {
-  // TODO who checks for null instance?
   lowMemoryCheck;
   x_monitor m = getMonitor(objectref);
   x_monitor_eternal(m);
@@ -743,10 +709,11 @@ void emul_monitorenter(w_instance objectref) {
  */
 void emul_monitorexit(w_instance objectref) {
   lowMemoryCheck;
-   x_monitor m = getMonitor(objectref);
-  // TODO can we make use of e_exception for this?
-   if (x_monitor_exit(m) == xs_not_owner) {
-    throwException(currentWonkaThread, clazzIllegalMonitorStateException, NULL);
+  x_monitor m = getMonitor(objectref);
+  w_thread thread = currentWonkaThread;
+
+  if (x_monitor_exit(m) != xs_success) {
+    THROW_EXCEPTION(clazzIllegalMonitorStateException, NULL);
   }
   lowMemoryCheck;
 }
@@ -771,29 +738,25 @@ w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint32_t nb
 
 if (array_clazz) {
     array_clazz = getNextDimension(array_clazz, clazz2loader(frame->method->spec.declaring_clazz));
-    if (array_clazz) {
+    if (!exceptionThrown(thread) && array_clazz) {
       mustBeInitialized(array_clazz);
     }
   }
-  else if (isAssignmentCompatible(instance2clazz(thread->exception), clazzException)) {
+  else if (isAssignmentCompatible(instance2clazz(exceptionThrown(thread)), clazzException)) {
     wrapException(thread, clazzNoClassDefFoundError, F_Throwable_cause);
   }
 
   enterUnsafeRegion(thread);
 
-  if (thread->exception) {
-    throw(thread->exception);
-  }
-
-  w_instance a = allocArrayInstance(thread, array_clazz, nbrDimensions, dimensions);
-  if (thread->exception) {
-    throw(thread->exception);
+  w_instance a = NULL;
+  if (!exceptionThrown(thread)) {
+    allocArrayInstance(thread, array_clazz, nbrDimensions, dimensions);
   }
 
   if (!was_unsafe) {
     enterSafeRegion(thread);
   }
-
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
   return a;  
 }
@@ -807,7 +770,7 @@ if (array_clazz) {
 */
 void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
   lowMemoryCheck;
-  LOCAL_VARIABLE_ARRAY(frame)[idx] = value;
+   LOCAL_VARIABLE_ARRAY(frame)[idx] = value;
   lowMemoryCheck;
 }
 
@@ -886,6 +849,7 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *arg
 
   mika_frame->flags |= FRAME_NATIVE;
   callMethod(mika_frame, method);
+  CHECK_FOR_PENDING_EXCEPTION
 
   switch(method->exec.return_i) {
   case 2:
@@ -912,8 +876,6 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *arg
   // NOTE: Put whatever return value AT return_buf, that is for single-word return like
   // *(uint32_t*)return_buf = value;
 
-  if (thread->exception) {
-    throw(thread->exception);
-  }
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
 }
