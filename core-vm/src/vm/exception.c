@@ -276,7 +276,7 @@ void fillThrowable(w_thread thread, w_instance Throwable) {
 
     records = allocClearedMem(sizeof(w_Exr) * n);
     if (records) {
-      woempa(7, "Filling in stack trace for %p\n", Throwable);
+      woempa(7, "Filling in stack trace for %e\n", Throwable);
       setWotsitField(Throwable, F_Throwable_records,  records);
       for (i = 0, frame = thread->top; frame; frame = frame->previous) {
         if (frame->method) {
