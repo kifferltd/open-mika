@@ -381,10 +381,12 @@ static void jdwp_vm_disconnect(jdwp_command_packet cmd) {
     jdwp_internal_resume_all();
   }
 
+#ifdef PARALLEL_GC
   x_monitor_eternal(safe_points_monitor);
   unsetFlag(blocking_all_threads, BLOCKED_BY_JDWP);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
+#endif
 
   jdwp_state = jdwp_state_initialised;
   jdwp_events_enabled = 0;
