@@ -43,6 +43,8 @@ export TOOLCHAIN = clang
 export TOOLCHAIN_PREFIX = $(IMSYS_TOOLDIR)/
 export SCHEDULER = o4f
 
+export PARALLEL_GC = false
+
 ifeq ($(ISALFEATURE),0)
   CFLAGS += -misal
 else ifeq ($(ISALFEATURE),1)

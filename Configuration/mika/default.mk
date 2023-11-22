@@ -78,6 +78,18 @@ ifndef GC
 endif
 
 #
+# By default GC runs in parallel with bytecode excution so long as the bytecode does not
+# mutate the reachability graph; functions enterSafeRegion() and enterUnsafeRegion() are
+# used to ensure this. However on platforms which implement bytecode execution in hardware
+# this may not be possible: for these platforms PARALLEL_GC should be set false, and GC
+# will then execute in "stop the world" mode.
+#
+
+ifndef PARALLEL_GC
+  export PARALLEL_GC = true
+endif
+
+#
 # FILESYSTEM can take the values `native' (meaning use the filesystem of
 # the host os) or `vfs' (meaning use Mika's own built-in implementation
 # of e2fs).
