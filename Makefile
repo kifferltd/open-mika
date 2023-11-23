@@ -291,6 +291,10 @@ else
   endif
 endif
 
+ifeq ($(USE_LIBFFI), true)
+  CFLAGS += -DPARALLEL_GC
+endif
+
 ifdef CPU_MIPS
   CFLAGS += -DCPU_MIPS=$(CPU_MIPS)
 endif

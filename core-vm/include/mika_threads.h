@@ -27,8 +27,8 @@
 * POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
-#ifndef _THREADS_H
-#define _THREADS_H
+#ifndef HAVE_MIKA_THREADS_H
+#define HAVE_MIKA_THREADS_H
 
 #include "jni.h"
 #include "oswald.h"
@@ -245,6 +245,9 @@ w_thread  _currentWonkaThread(const char *f, int l);
 
 /******************************************************************************
 
+  [CG 20231120] The following only applies if PARALLEL_GC is true.
+  If this is not so, please to ignore this notice.
+
   GC SAFE POINTS
 
   The GC safe-point mechanism associates a GC Status with each thread:
@@ -336,14 +339,19 @@ extern const char* blocked_by_text[];
 extern volatile w_thread marking_thread;
 extern volatile w_thread jitting_thread;
 
+#ifdef PARALLEL_GC
 extern w_boolean enterUnsafeRegion(const w_thread thread);
 extern w_boolean enterSafeRegion(const w_thread thread);
+#else
+#define enterSafeRegion(t) false
+#define enterUnsafeRegion(t) false
+#endif
 
 #define threadIsSafe(t) ((t) && isNotSet((t)->flags, WT_THREAD_NOT_GC_SAFE))
 
 #define threadIsUnsafe(t) ((t) && isSet((t)->flags, WT_THREAD_NOT_GC_SAFE))
 
-#ifdef RUNTIME_CHECKS
+#if defined(RUNTIME_CHECKS) && defined(PARALLEL_GC)
 void _gcSafePoint(w_thread thread, char *file, int line);
 
 inline static void gcSafePoint(w_thread thread) {
@@ -378,10 +386,14 @@ static void _threadMustBeUnsafe(w_thread thread, char *file, int line, const cha
 #define threadMustBeSafe(t) _threadMustBeSafe((t), __FILE__, __LINE__, __FUNCTION__)
 #define threadMustBeUnsafe(t) _threadMustBeUnsafe((t), __FILE__, __LINE__, __FUNCTION__)
 #else
-void _gcSafePoint(w_thread thread);
-#define gcSafePoint(t) if (blocking_all_threads) _gcSafePoint(t)
 #define threadMustBeSafe(t)
 #define threadMustBeUnsafe(t)
+#ifdef PARALLEL_GC
+void _gcSafePoint(w_thread thread);
+#define gcSafePoint(t) if (blocking_all_threads) _gcSafePoint(t)
+#else
+#define gcSafePoint(t)
+#endif
 #endif
 
 /// Check that a w_thread pointer really does point to a w_Thread
@@ -469,4 +481,4 @@ extern w_fifo xthread_fifo;
 extern x_monitor xthreads_monitor;
 #endif // ENABLE_THREAD_RECYCLING
 
-#endif /* _THREADS_H */
+#endif /* HAVE_MIKA_THREADS_H */

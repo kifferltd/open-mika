@@ -98,7 +98,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
         jdwp_event_exception(objectref, calling_method, ex->handler_pc);
         enterUnsafeRegion(thread);
 #endif
-        exceptionThrown(thread) = NULL;
+        thread->exception = NULL;
         // TODO is this really needed?
         setReferenceField_unsafe(thread->Thread, NULL, F_Thread_thrown);
 
@@ -109,7 +109,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
 
   if (handler_pc == 0) {
     woempa(7, ">>>> Found no handler for %j in this frame <<<<\n", objectref);
-    exceptionThrown(thread) = objectref;
+    thread->exception = objectref;
     // TODO is this really needed?
     setReferenceField_unsafe(thread->Thread, objectref, F_Thread_thrown);
     if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {

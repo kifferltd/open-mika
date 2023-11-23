@@ -215,11 +215,13 @@ w_int jdwp_decrement_object_id_refcount(w_word objectID, w_int amount) {
   }
   ht_unlock(object_id_hashtable);
 
+#ifdef PARALLEL_GC
   if (do_notify) {
     x_monitor_eternal(safe_points_monitor);
     x_monitor_notify_all(safe_points_monitor);
     x_monitor_exit(safe_points_monitor);
   }
+#endif
 
   return newcount;
 }

@@ -133,8 +133,10 @@ void deactivateFrame(w_frame frame, w_instance protect) {
   thread->protected = protect;
   thread->top = newtop;
 
-//  releaseMem(frame->jstack_base);
   releaseMem(frame);
+
+// WARNING - this may be a hack
+  enterSafeRegion(frame->thread);
 }
 
 

@@ -133,9 +133,11 @@ static void reportInstanceStat(void) {
 }
 #endif
 
+#ifdef PARALLEL_GC
 x_Monitor safe_points_Monitor;
 x_monitor safe_points_monitor = &safe_points_Monitor;
 volatile w_int number_unsafe_threads;
+#endif
 
 /*
 ** Enable this if you really want classes and class loaders to be subject
@@ -1531,6 +1533,7 @@ extern  int trace_count;
 #endif
 
 static void prepreparation(w_thread thread) {
+#ifdef PARALLEL_GC
   woempa(7, "%t: start locking other threads\n", thread);
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
@@ -1545,6 +1548,11 @@ static void prepreparation(w_thread thread) {
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
   woempa(7, "%t: finished locking other threads\n", marking_thread);
+  x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
+#else
+  x_thread_priority_set(thread->kthread, priority_j2k(15, 1));
+#endif
+
 // replace this by TRACE_MEM_ALLOC to enable the check in DEBUG mode
 #ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
   if (++trace_count > 3500) {
@@ -1554,14 +1562,11 @@ static void prepreparation(w_thread thread) {
 #ifdef FREERTOS
   lowMemoryCheck;
 #endif
-// [CG 20221129] suppress this for now
-//  x_thread_priority_set(thread->kthread, priority_j2k(10, 1));
 }
 
 static void postmark(w_thread thread) {
-// [CG 20221129] suppress this for now
-//  x_thread_priority_set(thread->kthread, thread->kpriority);
 
+#ifdef PARALLEL_GC
   woempa(7, "%t: start unlocking other threads\n", marking_thread);
   x_monitor_eternal(safe_points_monitor);
   unsetFlag(blocking_all_threads, BLOCKED_BY_GC);
@@ -1569,8 +1574,9 @@ static void postmark(w_thread thread) {
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
   woempa(7, "%t: finished unlocking other threads\n", marking_thread);
-// [CG 20221129] suppress this for now
-//  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
+#endif
+  // unstop the world
+  x_thread_priority_set(thread->kthread, priority_j2k(thread->jpriority, 0));
 }
 
 w_int preparationPhase(void) {
