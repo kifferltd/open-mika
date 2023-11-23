@@ -185,7 +185,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       || isSet(called_method->flags, ACC_PRIVATE) || isSet(called_method->flags, METHOD_IS_CONSTRUCTOR) 
       || !isSuperClass(target_clazz, getSuper(calling_clazz)
     )) {
-      woempa(7, "nonvirtual case - just call %m\n", called_method);
+      woempa(7, "nonvirtual case - just call %M\n", called_method);
       // "nonvirtual" case
       /* TODO see if we can implement this - requires access to current code position
       if (called_method->exec.arg_i < 4) {
@@ -226,7 +226,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
         THROW_EXCEPTION(clazzAbstractMethodError, NULL);
       }
 
-      woempa(7, "target method is %m\n", target_method);
+      woempa(7, "target method is %M\n", target_method);
       lowMemoryCheck;
       return target_method;
   }
@@ -262,7 +262,7 @@ w_method emul_interface_target(w_method called_method, w_instance objectref) {
 
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = interfaceLookup(called_method, target_clazz);
-  woempa(7, "target method is %m\n", target_method);
+  woempa(7, "target method is %M\n", target_method);
 
   if (!target_method || isSet(target_method->flags, ACC_ABSTRACT)) {
     THROW_EXCEPTION(clazzAbstractMethodError, NULL);
