@@ -57,7 +57,7 @@
 #define UNRESOLVED_CONSTANT         0x00
 #define RESOLVING_CONSTANT          0x20
 #define RESOLVED_CONSTANT           0x40
-#define CONSTANT_STATE_MASK         0xf0
+#define CONSTANT_STATE_MASK         0xe0
 
 #define CONSTANT_STATE(c)           ((c) & CONSTANT_STATE_MASK)
 #define RESOLVING_CLASS             (CONSTANT_CLASS+RESOLVING_CONSTANT)
@@ -79,19 +79,19 @@
 //#define CONSTANT_DELETED            0xff
 */
 
-#define isUtf8Constant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_UTF8)
-#define isUnicodeConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_UNICODE)
-#define isIntegerConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_INTEGER)
-#define isFloatConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_FLOAT)
-#define isLongConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_LONG)
-#define isDoubleConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_DOUBLE)
-#define isClassConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_CLASS)
-#define isStringConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_STRING)
-#define isFieldConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_FIELD)
-#define isMethodConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_METHOD)
-#define isIMethodConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_IMETHOD)
-#define isNatConstant(c,i) (((c)->tags[i] & 0x0f) == CONSTANT_NAME_AND_TYPE)
-#define is2ndHalfConstant(c,i) (((c)->tags[i] & 0x0f) == NO_VALID_ENTRY)
+#define isUtf8Constant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_UTF8)
+#define isUnicodeConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_UNICODE)
+#define isIntegerConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_INTEGER)
+#define isFloatConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_FLOAT)
+#define isLongConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_LONG)
+#define isDoubleConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_DOUBLE)
+#define isClassConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_CLASS)
+#define isStringConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_STRING)
+#define isFieldConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_FIELD)
+#define isMethodConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_METHOD)
+#define isIMethodConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_IMETHOD)
+#define isNatConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == CONSTANT_NAME_AND_TYPE)
+#define is2ndHalfConstant(c,i) (((c)->tags[i] & CONSTANT_TYPE_MASK) == NO_VALID_ENTRY)
 
 /*
  * A Member (Field/Method/IMethod) constant consists of two 16-bit unsigned 
