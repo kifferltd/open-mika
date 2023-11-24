@@ -236,7 +236,7 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
 
-  if (isSet(called_method->flags, METHOD_NO_OVERRIDE) && called_method->exec.code) {
+  if ((isSet(called_method->spec.declaring_clazz->flags, ACC_FINAL) || isSet(called_method->flags, METHOD_NO_OVERRIDE)) && called_method->exec.code) {
     woempa(7, "no override possible - just call %M\n", called_method);
 
     lowMemoryCheck;
