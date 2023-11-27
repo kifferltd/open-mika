@@ -67,11 +67,8 @@ u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
   switch (clazz->tags[i] & CONSTANT_TYPE_MASK) {
     case CONSTANT_INTEGER :
     case CONSTANT_FLOAT :
-      return clazz->values[i];
-
     case CONSTANT_UTF8 :
       return clazz->values[i];
-      // return (u4) resolveUtf8Constant(clazz, i);
 
     default:
       ; // fall through
@@ -110,8 +107,7 @@ u4 get32BitConstant(w_clazz clazz, w_int i, w_int type, w_thread thread) {
     }
   }
 
-  // If we get here then either the constant was a trivial one (FLOAT, INTEGER)
-  // or we successfully resolved it.
+  // If we get here then either the constant was already resolved or we have successfully resolved it.
 
   return clazz->values[i];
 }
