@@ -680,8 +680,9 @@ e_instanceof:
     pop.es.w    i#0     ; frame
     move.i.i32  i#3 emul_instanceof
     call        i#3
-
-    ; needs to call emul_instanceof(frame, objectref, index)
+      
+    em.isal.dealloc.nlsf 1
+    ret.eh 
 
 ;===========================================================
 ; e_monitorenter

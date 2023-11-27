@@ -676,18 +676,21 @@ bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
-  if(objectref == NULL){
-    lowMemoryCheck;
-    return true;
-  }
+  w_boolean was_unsafe = enterSafeRegion(thread);
+  w_clazz subject_clazz = getClassConstant(calling_clazz, (w_ushort) cpIndex, thread);
 
-  if(instance2object(objectref)->clazz->dotified == calling_clazz->dotified){
-    lowMemoryCheck;
-    return true;
-  } else {
-    lowMemoryCheck;
-    return false;
+  CHECK_FOR_PENDING_EXCEPTION
+    
+  // TODO: make isAssignmentCompatible() GC-safe (means using constraints)
+  enterUnsafeRegion(thread);
+  w_boolean compatible = objectref && isAssignmentCompatible(instance2object(objectref)->clazz, subject_clazz);
+  
+  if (!was_unsafe) {
+    enterSafeRegion(thread);
   }
+  
+  lowMemoryCheck;
+  return compatible;
 }
 
 /**
