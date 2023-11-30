@@ -135,6 +135,7 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  lowMemoryCheck;
   return m;
 }
 
@@ -146,8 +147,9 @@ w_method getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  lowMemoryCheck;
   return m;
- }
+}
 
 w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   lowMemoryCheck;
@@ -161,6 +163,7 @@ w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  lowMemoryCheck;
   return f;
  }
 
