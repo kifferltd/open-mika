@@ -8,6 +8,27 @@
 
 ;===========================================================
 ;
+; Check whether a Java method is native
+;
+; stack:  ..., method
+;    ==>  ..., is_native (non-zero)
+;
+;===========================================================
+is_native_method:
+    em.cfi_start
+    em.isac.cfi_return_rar
+
+    c.addi  METHOD_FLAGS
+    c.ld.i
+    ; TODO: Take flag value from a proper definition
+    c.ldi.i 0x00000100  ; ACC_NATIVE
+    c.and
+
+    c.ret
+    em.cfi_end
+
+;===========================================================
+;
 ; Allocate locals and move args from evaluation stack to locals
 ;
 ; stack:  ..., arg0, [arg1, ... argn-1,] narg, maxLocals
@@ -151,20 +172,8 @@ _emul_allocate_frame:
     em.cfi_start
     em.isac.cfi
 
-; Check whether native method
-    c.over
-    c.addi  METHOD_FLAGS
-    c.ld.i
-    ; TODO: Take flag value from a proper definition
-    c.ldi.i 0x00000100  ; ACC_NATIVE
-    c.and
-    c.drop
-    c.br.nz activate_frame_native
-
-; Non-native methods fall through
-;===========================================================
-; Set up a Java stack frame in the memory stack and continue with
-; Java execution.
+; Set up a Java stack frame in the memory stack.
+; Even native methods get such a frame for Mika to be able to walk the stack.
 
 ; Disable interrupts while pushing values to the memory
 ; That is to ensure 8-byte alignment of MSP
@@ -203,6 +212,29 @@ _emul_allocate_frame:
 ; THROWPC is initialized 0 here and shall be updated whenever
 ; entering bytecode emulation.
 
+; Register the new frame with Mika
+; Calling: void framePushed(im4000_frame)
+; NOTE: The new ISAL context is needed when _emul_allocate_frame is called
+; from emulation, but it is redundant when getting here in activate_frame().
+    c.ld.fmp
+    em.isal.alloc.nlsf  1
+    em.isal.cfi_alloc_done
+    move.i.i32  i#1 framePushed
+    call        i#1
+    em.isal.dealloc.nlsf    0
+    em.isal.cfi_dealloc_done
+
+; es: ..., [arg0, [arg1...]], narg, method
+
+; Check whether native method
+    c.dup
+    c.callw is_native_method
+    c.if.nz activate_frame_native   ; consume a value from es
+
+; Non-native methods fall through
+;===========================================================
+; Prepare Java locals and continue with Java execution.
+
 ; Push locals count onto the evaluation stack
 ; es: ..., [arg0, [arg1...]], narg, method
     c.addi METHOD_EXEC_LOCAL_I
@@ -225,19 +257,19 @@ _emul_allocate_frame:
 ;===========================================================
 ; Call a native method
 activate_frame_native:
-; es: ..., [arg0, [arg1...]], narg, method, return_address
+; es: ..., [arg0, [arg1...]], narg, method
+; return_address (for Java return) is in FRAME
 
     ; FIXME: This part of the code assumes native method is invoked
     ; via bytecode emulation. Should it be able to handle going from
     ; activate_frame()?
 
-    ; Store original MSP and top two values in local variables,
+    ; Store original MSP and the top value in local variables,
     ; keep nargs as counter in the stack
-    c.als.3     ; Alloate temporary local variables
+    c.als.2     ; Alloate temporary local variables
     c.ld.msp
     c.st.v0
     c.st.v1
-    c.st.v2
 
     ; Move arg words to memory
     ; FIXME: Is narg==0 is a possible case? If no, just delete the following 3 lines.
@@ -269,22 +301,21 @@ activate_frame_native_args_moved:
 
     ; Push values to the evaluation stack
     c.ld.v0     ; original_msp
-    c.ld.v1     ; return_address
-    c.ld.v2     ; method
-    c.dls.3     ; Deallocate local variables
-    ; es: ..., original_msp, return_address, method
+    c.ld.v1     ; method
+    c.dls.2     ; Deallocate local variables
+    ; es: ..., original_msp, method
     c.dup
     c.addi  METHOD_EXEC_RETURN_I
     c.ld.s      ; Number of return words; possible values: 0, 1, 2
     c.swap
-    ; es: ..., original_msp, return_address, return_i, method
+    ; es: ..., original_msp, return_i, method
     c.ld.fmp    ; Caller frame pointer
     c.swap
     c.ld.msp    ; Base address of args
     c.ld.2
     c.ams       ; Allocate two more entries for potential return value -- MSP alignment maintained
     c.ld.msp    ; Address for return buffer
-; es: ..., original_msp, return_address, return_i, frame, method, args, return_buf
+; es: ..., original_msp, return_i, frame, method, args, return_buf
 
     ; Initialize ISAL frame, take only parameters for emul_invoke_native
     em.isal.alloc.nlsf  4
@@ -305,14 +336,13 @@ activate_frame_native_args_moved:
     em.isal.cfi_dealloc_done
 
 _activate_frame_native_return:
-; es: ..., original_msp, return_address, return_i
+; es: ..., original_msp, return_i
 ; Return buffer at MSP
 
-    ; Store away original_msp, return_address
-    c.nrot
-    c.als.2
-    c.st.v0 ; return_address
-    c.st.v1 ; original_msp
+    ; Store away original_msp
+    c.swap
+    c.als.1
+    c.st.v0 ; original_msp
     ; es: ..., return_i
 
     ; Push return words to the evaluation stack. Possible values: 0, 1, 2
@@ -339,17 +369,18 @@ activate_frame_native_return_nothing:
 activate_frame_native_return_pushed:
     ; es: ..., [retval1,[ retval2,]]
 
-    ; Restore original_msp, return_address
-    c.ld.v0 ; return_address
-    c.ld.v1 ; original_msp
-    c.dls.2
-    ; es: ..., [retval1,[ retval2,]] return_address, original_msp
+    ; Restore original_msp
+    c.ld.v0 ; original_msp
+    c.dls.1
+    ; es: ..., [retval1,[ retval2,]] original_msp
 
     ; Restore original MSP, that is deallocate return_buf and args
     c.st.msp
 
-    ; Return to caller
-    c.st.erar
+    ; Deallocate the Java stack frame from the memory stack
+    c.callw _emul_deallocate_im4000_frame
+
+    ; Return to Java caller
     ; es: ..., [retval1,[ retval2,]]
     c.rete
     em.cfi_end
@@ -510,6 +541,22 @@ _emul_deallocate_frame:
 ; Deallocate locals on the memory stack
     c.dml
 
+; _emul_deallocate_frame falls through...
+;===========================================================
+; Deallocate the Java stack frame in the memory stack
+; including de-registration first.
+;===========================================================
+_emul_deallocate_im4000_frame:
+
+; De-register frame with Mika
+; Calling: void framePopped()
+    em.isal.alloc.nlsf  0
+    em.isal.cfi_alloc_done
+    move.i.i32  i#0 framePopped
+    call        i#0
+    em.isal.dealloc.nlsf    0
+    em.isal.cfi_dealloc_done
+
 ; Disable interrupts while popping out values from the memory
 ; That is to ensure 8-byte alignment of MSP
     irs.off
@@ -572,6 +619,17 @@ throw_unwind_isal_frame:
     em.isal.dealloc.nlsf    1
     em.isac.cfi                 ; No more ISAL frame, switch to ISAC context
 
+    ; Here at the top Java frame, which might belong to a native method.
+    ; Native methods do not have exception handlers so they can be dropped without
+    ; affecting the exception behavior. More importantly, they do not have local
+    ; and evaluation stacks either, wich makes them incompatible with the normal
+    ; Java unwind. Therefore, drop the top frame if it belongs to a native method.
+    c.ld.i.fmp  FRAME_METHOD
+    c.callw is_native_method
+    c.if.z  throw_unwind_done   ; consume a value from es
+    c.callw _emul_deallocate_im4000_frame
+
+throw_unwind_done:
     ; Go to athrow to handle if objectref is null
     c.jumpw e_athrow
     em.cfi_end
