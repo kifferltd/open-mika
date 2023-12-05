@@ -12,7 +12,10 @@
 #include "mika_stack.h"
 #include "wonka.h"
 
+// TODO  re-organise header files so that we can include these external functions.
 extern  x_mutex mutex64;
+extern void deactivateFrame(w_frame frame, w_instance protect);
+extern void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset);
 
 typedef struct IM4000_Frame {
   int32_t unused0;    // ConstantPool
@@ -76,7 +79,7 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   w_boolean was_unsafe = enterUnsafeRegion(thread);
 
   // Ensure that the pc in the first stack trace record is set correctly
-  w_Exr *trace = getWotsitField(Throwable, F_Throwable_records);
+  w_Exr *trace = getWotsitField(objectref, F_Throwable_records);
   trace[0].pc = pc;
 
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
@@ -873,23 +876,25 @@ w_word emul_lload(im4000_frame frame, uint32_t idx){
 /**
  * A new IM4000_Frame has been created and pushed onto the stack, so we should create and
  * push a w_Frame to go with it.
- * @param iframe pointer to the IM4000_Frame.
+ * @param frame pointer to the IM4000_Frame.
 */
-void framePushed(im4000_frame iframe) {
+void framePushed(im4000_frame frame) {
   lowMemoryCheck;
+  woempa(7, "New IM4000_Frame %p for %M\n", frame, frame->method);
   w_thread thread = currentWonkaThread;
-  w_frame mika_frame = pushFrame(thread, iframe->method);
-  mika_frame->impl_data = iframe;
+  w_frame mika_frame = pushFrame(thread, frame->method);
+  mika_frame->impl_data = frame;
+  woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
   lowMemoryCheck;
 }
 
 /**
  * An IM4000_Frame has been popped from the stack, so we should pop the corresponding w_Frame.
- * @param iframe pointer to the IM4000_Frame.
 */
 void framePopped() {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  woempa(7, "An IM4000_Frame has been popped, presumably %p - popping w_Frame %p (%M)\n", thread->top->impl_data, thread->top, thread->top->method);
   deactivateFrame(thread->top, NULL);
   lowMemoryCheck;
 }
@@ -905,30 +910,29 @@ void framePopped() {
 void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *args, w_u64 *return_buf) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
-  updatePC(thread->top);
-
+  
   // The following code is basically activateFrame(), adapted to use an array of contents instead of a
   // varargs list of contents/scanning pairs.
 
   w_frame mika_frame = thread->top;
-  w_size i = 0;
-  w_instance protected = NULL;
+  updatePC(mika_frame);
 
   threadMustBeSafe(thread);
   if (!mika_frame) {
     // TODO - raise stack overflow error
   }
 
-  while (i < method->exec.arg_i) {
-    // [CG 20230531] Doing it this way so that the slot-type arguments will be consumed even if they are not used.
-    w_word contents = args[i];
-    SET_SLOT_CONTENTS(mika_frame->jstack_top++, contents);
-    i += 1;
+  w_size i;
+  uint32_t *arg_cursor = args;
+  for (i = 0; i < method->exec.arg_i; ++i) {
+    SET_SLOT_CONTENTS(mika_frame->jstack_top++, *arg_cursor++);
   }
 
   mika_frame->flags |= FRAME_NATIVE;
   callMethod(mika_frame, method);
   CHECK_FOR_PENDING_EXCEPTION
+
+  w_instance protected = NULL;
 
   switch(method->exec.return_i) {
   case 2:
@@ -948,12 +952,7 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *arg
     default:
       wabort(ABORT_WONKA, "Impossible exec.return_i value : %d\n", method->exec.return_i);
   }
-
-
-  deactivateFrame(mika_frame, protected);
-
-  // NOTE: Put whatever return value AT return_buf, that is for single-word return like
-  // *(uint32_t*)return_buf = value;
+  thread->protected = protected;
 
   CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;

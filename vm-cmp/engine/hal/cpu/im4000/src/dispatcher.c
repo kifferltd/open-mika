@@ -400,12 +400,11 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
 #ifdef JNI
     woempa(9, "Oh deary me: method %M has no code -> Trying to look it up\n", method);
     searchNativeMethod(method);
+#else
+    woempa(9, "Oh deary me: method %M has no code...\n", method);
+    throwException(caller->thread, clazzLinkageError, "native method %M has no code...\n", method);
+    return;
 #endif
-    if (method->exec.function.void_fun == NULL) {
-      woempa(9, "Oh deary me: method %M has no code...\n", method);
-      throwException(caller->thread, clazzLinkageError, "native method %M has no code...\n", method);
-      return;
-    }
   }
 
   woempa(1, "Looking up descriptor %w in dispatchers_hashtable\n", method->spec.desc);
