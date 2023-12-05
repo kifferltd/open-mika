@@ -259,7 +259,7 @@ void removeLocalReference(w_thread thread, w_instance instance) {
 
   woempa(1, "Removing %j from auxs of %t\n", instance, thread);
   for (slot = (w_slot)frame->auxstack_top + 1; slot <= frame->auxstack_base; ++slot) {
-    if (GET_SLOT_CONTENTS(slot) == (w_word) instance && SLOT_IS_REFERENCE(slot)) {
+    if (GET_SLOT_CONTENTS(slot) == (w_word) instance) {
       woempa(1, "  - is aux[%d]\n", last_slot(thread) - slot);
       SET_SLOT_SCANNING(slot, stack_notrace);
       break;
