@@ -759,6 +759,14 @@ public final class Class implements java.io.Serializable {
    ** Mainly for use by the VM itself, cannot reliably be used by applications.
    */
   public boolean desiredAssertionStatus() {
+    // HACK [CG 20231206] - disable assertions if the class was loaded by the bootstrap class loader,
+    // unless it is in package "wonka.bytecodetests".
+    // TODO - figure out how to control assertions in classes which are loaded by the bootstrap class loader.
+    // (currently the only bootstrap-loaded classes which use assertions are the ones in wonka.bytecodetests.)
+    if (loader == null) {
+      return "wonka.bytecodetests".equals(getPackageName());
+    }
+
     Boolean status = loader.assertionStatus.getClassStatus(getName());
 
     if (status == null) {
@@ -799,3 +807,4 @@ public final class Class implements java.io.Serializable {
   }
   
 }
+
