@@ -85,7 +85,7 @@ void fillInStackTrace(w_instance thisThrowable);
 #define ThrowLocalException(t, e, m, a...) throwLocalException((t), (e), __FILE__, __FUNCTION__, __LINE__, m, ##a)
 #endif
 
-#define exceptionThrown(thread) ( (thread) ? (thread)->exception : bootstrap_exception )
+#define exceptionThrown(thread) *( (thread) ? &(thread)->exception : &bootstrap_exception )
 
 char * print_exception(char * buffer, int * remain, void * data, int w, int p, unsigned int f);
 
