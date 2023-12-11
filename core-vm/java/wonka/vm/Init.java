@@ -170,7 +170,7 @@ final class Init {
    * -enable[system]assertions, -disable[system]assertions, optionally
    * followed by a colon and some more stuff (not yet checked).
    */
-  private static void processAssertions(ClassLoader l) {
+  private static void processAssertions(final ClassLoader l) {
     String flag = getNextAssertionFlag();
     while (flag != null) {
       boolean enabled = flag.startsWith("-e");
@@ -191,22 +191,21 @@ final class Init {
         int n = flag.indexOf("system");
         system = n >= 0 && (global || n < colon);  
       }
-      if (system) {
-        // ignore for now, we don't have any assertions is system code
+
+      ClassLoader relevantLoader = system ? SystemClassLoader.getInstance() : l;
+
+      if (global) {
+        relevantLoader.setDefaultAssertionStatus(enabled);
+      }
+      else if (pkg) {
+        String name = flag.substring(colon + 1, flag.length() - 3);
+        relevantLoader.setPackageAssertionStatus(name, enabled);
       }
       else {
-        if (global) {
-          l.setDefaultAssertionStatus(enabled);
-        }
-        else if (pkg) {
-          String name = flag.substring(colon + 1, flag.length() - 3);
-          l.setPackageAssertionStatus(name, enabled);
-        }
-        else {
-          String name = flag.substring(colon + 1);
-          l.setClassAssertionStatus(name, enabled);
-        }
+        String name = flag.substring(colon + 1);
+        relevantLoader.setClassAssertionStatus(name, enabled);
       }
+
       flag = getNextAssertionFlag();
     }
   }
