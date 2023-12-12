@@ -60,6 +60,14 @@ Etc_static_woempa
   woempa(triggerLevel, "%w\n", String2string ( theString));
 }
 
+void
+Etc_static_wabort
+( w_thread thread, w_instance classSystem,
+  w_instance theString
+) {
+  wabort(ABORT_WONKA, "%w\n", String2string ( theString));
+}
+
 void 
 Etc_static_memoryCheck ( w_thread thread, w_instance classSystem) {
 // change this to TRACE_MEM_ALLOC to enable the check in DEBUG mode

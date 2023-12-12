@@ -60,4 +60,8 @@ void Etc_static_woempa ( JNIEnv *env, w_instance classSystem, w_int triggerLevel
   woempa(triggerLevel,"%w\n", getWotsitField(theString, F_String_wotsit));
 }
 
+void Etc_static_wabort ( w_thread thread, w_instance classSystem, w_instance theString) {
+  wabort(ABORT_WONKA, "%w\n", getWotsitField(theString, F_String_wotsit));
+}
+
 

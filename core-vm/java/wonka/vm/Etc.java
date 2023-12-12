@@ -35,6 +35,15 @@ import java.util.*;
 
 public class Etc {
 
+  /// wassert() action to just print the message and the stack trace, but continue execution
+  public static final int WASSERT_PRINT = 0;
+
+  /// wassert() action to  throw an exception containing the message
+  public static final int WASSERT_THROW = 1;
+
+  /// wassert() action to abort Mika with the message
+  public static final int WASSERT_ABORT = 2;
+
   public static native void setTriggerLevel(String sourcefile, int triggerLevel);
 
   public static native void setAllTriggerLevel(int triggerLevel);
@@ -43,11 +52,43 @@ public class Etc {
 
   public static native void memoryCheck();
 
+  private static native void _wabort(String msg);
+
+  public static void wassert(boolean condition, String message) {
+    wassert(condition, message, WASSERT_PRINT);
+  }
+
+  public static void wassert(boolean condition, String message, int action) {
+    if (!condition) {
+      WassertionFailed throwable = new WassertionFailed(message);
+      switch (action) {
+        case WASSERT_PRINT:
+          woempa(7, "ASSERTION FAILED: " + message);
+          StackTraceElement[] trace = throwable.getStackTrace();
+          for (int i = 0; i < trace.length; ++i) {
+            woempa(7,"at " + trace[i]);
+          }
+          break;
+
+        case WASSERT_THROW: 
+          throw(throwable);
+
+        case WASSERT_ABORT:
+          _wabort("ASSERTION FAILED: " + message);
+      }
+    }
+  }
+
   public static void memoryCheck(String message){
     System.out.println("Performing memory check " + message);
     memoryCheck();
   }
 
+  static class WassertionFailed extends RuntimeException {
+    public WassertionFailed(String message) {
+      super("ASSERTION FAILED: " + message);
+    }
+  }
 
 
 }

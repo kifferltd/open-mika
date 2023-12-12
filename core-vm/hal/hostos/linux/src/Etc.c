@@ -88,6 +88,14 @@ Etc_static_woempa
   woempa(triggerLevel, "%w\n", String2string ( theString));
 }
 
+void
+Etc_static_wabort
+( w_thread thread, w_instance classSystem,
+  w_instance theString
+) {
+  wabort(ABORT_WONKA, "%w\n", String2string ( theString));
+}
+
 void Etc_static_heapCheck(JNIEnv *env, w_instance classSystem){
 #ifdef DEBUG
   woempa(9, "calling heapCheck for Etc\n");
