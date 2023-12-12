@@ -313,6 +313,7 @@ java/lang/StringBuffer
 	count			I
         createFromString        (Ljava/lang/String;)V                           StringBuffer_createFromString
         append                  (Ljava/lang/String;)Ljava/lang/StringBuffer;    StringBuffer_append_String
+        append                  (C)Ljava/lang/StringBuffer;    			StringBuffer_append_char
         substring               (II)Ljava/lang/String;                          StringBuffer_substring
         ensureCapacity          (I)V                                            StringBuffer_ensureCapacity
 	toString		()Ljava/lang/String;				StringBuffer_toString
@@ -626,6 +627,7 @@ wonka/vm/Etc
 	setTriggerLevel (Ljava/lang/String;I)V	Etc_static_setTriggerLevel
 	setAllTriggerLevel (I)V			Etc_static_setAllTriggerLevel
         woempa		(ILjava/lang/String;)V	Etc_static_woempa
+	_wabort		(Ljava/lang/String;)V	Etc_static_wabort
         memoryCheck	()V			Etc_static_memoryCheck
 # TODO turn these off if JNI is not enabled
 # wonka/vm/NativeThread
