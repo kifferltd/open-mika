@@ -249,6 +249,14 @@ w_instance StringBuffer_append_String(w_thread thread, w_instance thisStringBuff
   }
 }
 
+w_instance StringBuffer_append_char(w_thread thread, w_instance thisStringBuffer, w_char c) {
+  w_int curr_length = getIntegerField(thisStringBuffer, F_StringBuffer_count);
+
+  i_ensureCapacity(thread, thisStringBuffer, curr_length + 1);
+
+  return i_StringBuffer_append_char(thread, thisStringBuffer, c);
+}
+
 void fast_StringBuffer_append_char(w_frame frame) {
   w_instance objectref = (w_instance) GET_SLOT_CONTENTS(frame->jstack_top - 2);
   w_thread thread = frame->thread;
