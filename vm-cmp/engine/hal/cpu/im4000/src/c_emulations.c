@@ -631,10 +631,10 @@ w_int emul_arraylength(w_instance arrayref)
  * Note: no exception will be thrown if 'objectref' is null.
  * 
  * @param frame the current stack frame.
- * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  * @param objectref the object to be checked.
+ * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  */
-w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
+w_instance emul_checkcast(im4000_frame frame, w_instance objectref, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_method calling_method = frame->method;
