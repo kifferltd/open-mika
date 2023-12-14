@@ -10,7 +10,7 @@ import wonka.bytecodetest.TestClass;
 public class Main {
   static String s = " ";
   static int nbr = 0;
-  static double dbl = 0;
+  //static double dbl = Math.PI;
   static long l = 0;
   static long[] ll = {1,2};
 
@@ -20,39 +20,22 @@ public class Main {
     // call System.exit(1), which could crash if static method calls don't work ...
 
     wonka.vm.Etc.woempa(7,"Starting tests");
+    double dbl = Math.PI;
     s = "foo";
-    wonka.vm.Etc.woempa(7,s);
     l = Long.MAX_VALUE;
-    wonka.vm.Etc.woempa(7,"VAR2");
     double testdbl = 1.2;
-    wonka.vm.Etc.woempa(7,"VAR3");
     nbr = 1;
-    wonka.vm.Etc.woempa(7,"VAR4");
     int dummy = BigDecimal.ROUND_UP;
-    wonka.vm.Etc.woempa(7,"VAR5");
     int[] array  = {1,2,3};
-    wonka.vm.Etc.woempa(7,"VAR6");
     nbr = array.length;
     
-    wonka.vm.Etc.woempa(7,"Obj");
-    //
     TestClass testThings;
-    testThings = new TestClass("qwe",1,1.1d,0.1f);
-
-    if(testThings != null && testThings instanceof TestClass){
-      wonka.vm.Etc.woempa(7, "created obj");
-    }
-
-    wonka.vm.Etc.woempa(7,"Done initializing variables");
-    wonka.vm.Etc.woempa(7,"Testing array");
-    int[] nbr2 = testThings.testArray(array);
+    testThings = new TestClass("qwe",1, dbl,0.1f);
 
     wonka.vm.Etc.woempa(7,"Testing invokestatic");
     test_invokestatic();
     wonka.vm.Etc.woempa(7,"Testing wide");
     testWide(l);
-
-    nbr = testStuff(s);
 
     wonka.vm.Etc.woempa(7,"Testing interface");
     testThings.testInterface();
@@ -64,17 +47,29 @@ public class Main {
     float flo = testThings.testFloat(0.1f);
 
     wonka.vm.Etc.woempa(7,"Testing loop");
-    int times = testThings.testLoop(5);
-
+    int times = testThings.testLoop(150);
+    
+    wonka.vm.Etc.woempa(7,"Testing array");
+    int[] nbr2 = testThings.testArray(array);
+    
     wonka.vm.Etc.woempa(7,"Testing long array");
     long[] larr = testThings.testLongArray(ll);
 
     wonka.vm.Etc.woempa(7,"Testing anewarray");
     int[][] anewarray = testThings.testMultiANewArray();
 
+    if(testThings != null && testThings instanceof TestClass){
+      wonka.vm.Etc.woempa(7, "Testing instanceof");
+    }
+
     synchronized(testThings){
       testThings.testMonitor(5);
     }
+
+    testInvInterface();
+
+    testThings.testStoreAndLoad();
+    testThings.testCast();
 
     // This too assumes that static method calls work, and it triggers initialisation if class System.
     // In case of doubt, comment it out
@@ -86,17 +81,20 @@ public class Main {
     s = "bar";
   }
 
-  private static int testStuff(String inp) {
-
-    if (inp == "bar"){
-      return 54;
-    }
-    
-    return 0;
-  }
 
   private static long testWide(long nbr){
     return nbr;
   }
 
+  private static void testInvInterface(){
+    TestInterface testInterfaceClass;
+    if(l < 1){
+      testInterfaceClass = new TestInterfaceClass(s, nbr, 1.1, 0.1f);
+    } else {
+      testInterfaceClass = new TestClass(s, nbr, 1.1, 0.1f);
+    }
+    testInterfaceClass.testInterface();
+  }
+
 }
+

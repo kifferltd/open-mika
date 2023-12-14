@@ -3,6 +3,10 @@ package wonka.bytecodetest;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.lang.Math;
 import java.io.*;
 
@@ -14,8 +18,8 @@ interface TestInterface {
 
 public class TestClass implements TestInterface{
 
-  static int testNbr = 0;
-  static double testPi = 1.1;
+  private int testNbr = 0;
+  private double testPi = 1.1;
   static String testMsg = "asdasdas";
   static float testFl = 0.123123123123123f;
 
@@ -32,8 +36,9 @@ public class TestClass implements TestInterface{
   
   public int[] testArray(int[] arr){
     int[] newArr = arr;
+    String[] strArr = {"hello","hi"};
     if(newArr != null){
-      if(newArr[1] != 1){
+      if(newArr[1] != strArr.length){
         return newArr;
       }
     }
@@ -89,14 +94,63 @@ public class TestClass implements TestInterface{
   }
 
   public int testMonitor(int mon){
+    if(mon == testNbr){
+      return 2;
+    }
     return 1;
   }
 
-  /*public int testCast(Array<String> arr){
-    if(arr != null){
-      return 1;
+  public int testStoreAndLoad(){
+    int a = 0;
+    int b = 1;
+    int c = 2;
+    int d = 3;
+    long e = 4;
+    if(d == 3){
+      if(e == 4){
+        return a;
+      }
+    }
+    return 1;
+  }
+
+  public int testCast(){
+    Object o = null;
+    String message = "";
+    String s;
+    try {
+      message = "casting null to Thread should not throw ClassCastException";
+      Thread t = (Thread) o; // OK, can cast null to any ref type
+      o = "foo";
+      message = "casting a String to String should not throw ClassCastException";
+      s = (String) o; // OK
+    }
+    catch (ClassCastException cce) {
+      wonka.vm.Etc.wassert(false, message);
+    }
+    try {
+      message = "casting a String to Thread should throw ClassCastException";
+      Thread t = (Thread) o; // ClassCastException
+      wonka.vm.Etc.wassert(false, message);
+    }
+    catch (ClassCastException cce) {
     }
     return 0;
-  }*/
+  }
+
+}
+
+class TestInterfaceClass extends TestClass {
+
+  public TestInterfaceClass(String msg, int number, double pi, float fl) {
+    super(msg, number, pi, fl);
+    //TODO Auto-generated constructor stub
+  }
+
+  public void testInterface(){
+    if(true){
+      return;
+    }
+  }
 
 }
