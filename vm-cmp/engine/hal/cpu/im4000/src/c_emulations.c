@@ -4,6 +4,7 @@
 #include "clazz.h"
 #include "constant.h"
 #include "core-classes.h"
+#include "fields.h"
 #include "loading.h"
 #include "locks.h"
 #include "methods.h"
@@ -11,13 +12,16 @@
 #include "mika_stack.h"
 #include "wonka.h"
 
+// TODO  re-organise header files so that we can include these external functions.
 extern  x_mutex mutex64;
+extern void deactivateFrame(w_frame frame, w_instance protect);
+extern void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset);
 
 typedef struct IM4000_Frame {
   int32_t unused0;    // ConstantPool
   w_method method;
   w_instance unused2; // SyncObject
-  u_int8_t *current;  // ThrowPC
+  int32_t pc;         // ThrowPC
   int32_t unused4;    // LSP
   int32_t unused5;    // ESP
   int32_t *locals;    // LMP
@@ -46,6 +50,13 @@ extern void throw(w_instance objectref) __attribute__((noreturn));
 
 #define THROW_EXCEPTION(exclazz,...) throwException(thread, exclazz, __VA_ARGS__); throw(exceptionThrown(thread))
 
+/**
+ * Update the PC in a w_Frame to match that in the linked IM4000_Frame.
+*/
+static inline void updatePC(w_frame mika_frame) {
+  im4000_frame iframe = mika_frame->impl_data;
+  mika_frame->current = iframe->method->exec.code + iframe->pc;
+}
 
 /*
 ** Seek a handler for an exception.
@@ -66,6 +77,11 @@ int32_t throwExceptionAt(im4000_frame frame, int32_t pc, w_instance objectref) {
   }
 
   w_boolean was_unsafe = enterUnsafeRegion(thread);
+
+  // Ensure that the pc in the first stack trace record is set correctly
+  w_Exr *trace = getWotsitField(objectref, F_Throwable_records);
+  trace[0].pc = pc;
+
   if (isSet(verbose_flags, VERBOSE_FLAG_THROW)) {
     w_printf("Thrown: Seeking handler for %e at %M:%d in thread %t\n", objectref, calling_method, pc, thread);
   }
@@ -238,6 +254,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
 w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
 
   if ((isSet(called_method->spec.declaring_clazz->flags, ACC_FINAL) || isSet(called_method->flags, METHOD_NO_OVERRIDE)) && called_method->exec.code) {
     woempa(7, "no override possible - just call %M\n", called_method);
@@ -262,6 +279,7 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
 w_method emul_interface_target(w_method called_method, w_instance objectref) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
 
   w_clazz target_clazz = instance2clazz(objectref);
   w_method target_method = interfaceLookup(called_method, target_clazz);
@@ -287,6 +305,7 @@ w_method emul_interface_target(w_method called_method, w_instance objectref) {
 w_method emul_static_target(im4000_frame frame, w_method called_method) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
 
   if (!(isSet(called_method->flags, ACC_STATIC) && isNotSet(called_method->flags, METHOD_IS_CLINIT))) {
     THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
@@ -306,6 +325,8 @@ w_method emul_static_target(im4000_frame frame, w_method called_method) {
 uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -330,6 +351,8 @@ uint32_t emul_ldc(im4000_frame frame, uint32_t cpIndex) {
 uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -354,6 +377,8 @@ uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
 uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -380,6 +405,7 @@ uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
  */
 w_word emul_getstatic_single(w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   return field->declaring_clazz->staticFields[field->size_and_slot];
 }
 
@@ -392,6 +418,7 @@ w_word emul_getstatic_single(w_field field) {
  */
 w_dword emul_getstatic_double(w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   void *ptr = field->declaring_clazz->staticFields + field->size_and_slot;
   return *(w_dword*)ptr;
 }
@@ -414,6 +441,7 @@ static inline w_word* field_address(w_instance objectref, w_field field) {
  */
 w_word emul_getfield_single(w_instance objectref, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   return *field_address(objectref, field);
 }
 
@@ -427,6 +455,7 @@ w_word emul_getfield_single(w_instance objectref, w_field field) {
  */
 w_dword emul_getfield_double(w_instance objectref, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   void *ptr = field_address(objectref, field);
   return *(w_dword*)ptr;
 }
@@ -439,6 +468,7 @@ w_dword emul_getfield_double(w_instance objectref, w_field field) {
 */
 void emul_putstatic_single(w_word value, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[FIELD_OFFSET(field->size_and_slot)];
   *ptr = value;
   lowMemoryCheck;
@@ -453,6 +483,7 @@ void emul_putstatic_single(w_word value, w_field field) {
 */
 void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   w_word *ptr = (w_word *)&field->declaring_clazz->staticFields[FIELD_OFFSET(field->size_and_slot)];
   ptr[0] = value_high;
   ptr[1] = value_low;
@@ -468,6 +499,7 @@ void emul_putstatic_double(w_word value_high, w_word value_low, w_field field) {
  */
 void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   *field_address(objectref, field) = value;
   lowMemoryCheck;
 }
@@ -482,6 +514,7 @@ void emul_putfield_single( w_instance objectref, w_word value, w_field field) {
  */
 void emul_putfield_double( w_instance objectref, w_word value_high, w_word value_low, w_field field) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   field_address(objectref, field)[0] = value_high;
   field_address(objectref, field)[1] = value_low;
   lowMemoryCheck;
@@ -499,7 +532,9 @@ void emul_putfield_double( w_instance objectref, w_word value_high, w_word value
 w_instance emul_new(im4000_frame frame, uint32_t cpIndex) 
 {
   lowMemoryCheck;
-    w_thread thread = currentWonkaThread;
+  w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
     w_method calling_method = frame->method;
     w_clazz calling_clazz = calling_method->spec.declaring_clazz;
     w_boolean was_unsafe = enterSafeRegion(thread);
@@ -529,7 +564,7 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
     }
 
   lowMemoryCheck;
-    return o;
+  return o;
 }
 
 /**
@@ -543,6 +578,7 @@ w_instance emul_new(im4000_frame frame, uint32_t cpIndex)
 w_instance emul_newarray(int32_t count, uint8_t atype) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
 
   if (count < 0) {
     THROW_EXCEPTION(clazzNegativeArraySizeException, NULL);
@@ -576,6 +612,8 @@ w_instance emul_newarray(int32_t count, uint8_t atype) {
 w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -622,6 +660,7 @@ w_instance emul_anewarray(im4000_frame frame, uint32_t cpIndex, int32_t count) {
  */
 w_int emul_arraylength(w_instance arrayref) 
 {
+  updatePC(currentWonkaThread->top);
   w_int len = instance2Array_length(arrayref);
   return len;
 }
@@ -631,12 +670,14 @@ w_int emul_arraylength(w_instance arrayref)
  * Note: no exception will be thrown if 'objectref' is null.
  * 
  * @param frame the current stack frame.
- * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  * @param objectref the object to be checked.
+ * @param cpIndex index into the constant pool of 'clazz' where the target class is defined.
  */
-w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objectref) {
+w_instance emul_checkcast(im4000_frame frame, w_instance objectref, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -676,6 +717,8 @@ w_instance emul_checkcast(im4000_frame frame, uint32_t cpIndex, w_instance objec
 bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -703,6 +746,7 @@ bool emul_instanceof(im4000_frame frame, w_instance objectref , uint32_t cpIndex
  */
 void emul_monitorenter(w_instance objectref) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   x_monitor m = getMonitor(objectref);
   x_monitor_eternal(m);
   lowMemoryCheck;
@@ -715,6 +759,7 @@ void emul_monitorenter(w_instance objectref) {
  */
 void emul_monitorexit(w_instance objectref) {
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   x_monitor m = getMonitor(objectref);
   w_thread thread = currentWonkaThread;
 
@@ -736,6 +781,8 @@ void emul_monitorexit(w_instance objectref) {
 w_instance emul_multianewarray(im4000_frame frame, uint32_t cpIndex, uint32_t nbrDimensions, uint32_t* dimensions) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
+  updatePC(thread->top);
+
   w_method calling_method = frame->method;
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
@@ -776,7 +823,8 @@ if (array_clazz) {
 */
 void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
   lowMemoryCheck;
-   LOCAL_VARIABLE_ARRAY(frame)[idx] = value;
+  updatePC(currentWonkaThread->top);
+  LOCAL_VARIABLE_ARRAY(frame)[idx] = value;
   lowMemoryCheck;
 }
 
@@ -789,6 +837,7 @@ void emul_istore(im4000_frame frame, uint32_t value, uint32_t idx){
 */
 void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t idx){
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   LOCAL_VARIABLE_ARRAY(frame)[idx] = value1;
   LOCAL_VARIABLE_ARRAY(frame)[idx + 1] = value2;
   lowMemoryCheck;
@@ -803,6 +852,7 @@ void emul_lstore(im4000_frame frame, uint32_t value1, uint32_t value2, uint32_t 
 */
 w_word emul_iload(im4000_frame frame, uint32_t idx){
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   w_word value = LOCAL_VARIABLE_ARRAY(frame)[idx];
   lowMemoryCheck;
   return value;
@@ -817,9 +867,36 @@ w_word emul_iload(im4000_frame frame, uint32_t idx){
 */
 w_word emul_lload(im4000_frame frame, uint32_t idx){
   lowMemoryCheck;
+  updatePC(currentWonkaThread->top);
   void *ptr = LOCAL_VARIABLE_ARRAY(frame) + idx;
   lowMemoryCheck;
   return *(w_dword*)ptr;
+}
+
+/**
+ * A new IM4000_Frame has been created and pushed onto the stack, so we should create and
+ * push a w_Frame to go with it.
+ * @param frame pointer to the IM4000_Frame.
+*/
+void framePushed(im4000_frame frame) {
+  lowMemoryCheck;
+  woempa(7, "New IM4000_Frame %p for %M\n", frame, frame->method);
+  w_thread thread = currentWonkaThread;
+  w_frame mika_frame = pushFrame(thread, frame->method);
+  mika_frame->impl_data = frame;
+  woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
+  lowMemoryCheck;
+}
+
+/**
+ * An IM4000_Frame has been popped from the stack, so we should pop the corresponding w_Frame.
+*/
+void framePopped() {
+  lowMemoryCheck;
+  w_thread thread = currentWonkaThread;
+  woempa(7, "An IM4000_Frame has been popped, presumably %p - popping w_Frame %p (%M)\n", thread->top->impl_data, thread->top, thread->top->method);
+  deactivateFrame(thread->top, NULL);
+  lowMemoryCheck;
 }
 
 /**
@@ -833,29 +910,29 @@ w_word emul_lload(im4000_frame frame, uint32_t idx){
 void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *args, w_u64 *return_buf) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
-
+  
   // The following code is basically activateFrame(), adapted to use an array of contents instead of a
   // varargs list of contents/scanning pairs.
 
-  w_frame mika_frame = pushFrame(thread, method);
-  w_size i = 0;
-  w_instance protected = NULL;
+  w_frame mika_frame = thread->top;
+  updatePC(mika_frame);
 
   threadMustBeSafe(thread);
   if (!mika_frame) {
     // TODO - raise stack overflow error
   }
 
-  while (i < method->exec.arg_i) {
-    // [CG 20230531] Doing it this way so that the slot-type arguments will be consumed even if they are not used.
-    w_word contents = args[i];
-    SET_SLOT_CONTENTS(mika_frame->jstack_top++, contents);
-    i += 1;
+  w_size i;
+  uint32_t *arg_cursor = args;
+  for (i = 0; i < method->exec.arg_i; ++i) {
+    SET_SLOT_CONTENTS(mika_frame->jstack_top++, *arg_cursor++);
   }
 
   mika_frame->flags |= FRAME_NATIVE;
   callMethod(mika_frame, method);
   CHECK_FOR_PENDING_EXCEPTION
+
+  w_instance protected = NULL;
 
   switch(method->exec.return_i) {
   case 2:
@@ -875,12 +952,7 @@ void emul_invoke_native(im4000_frame frame, w_method method, const uint32_t *arg
     default:
       wabort(ABORT_WONKA, "Impossible exec.return_i value : %d\n", method->exec.return_i);
   }
-
-
-  deactivateFrame(mika_frame, protected);
-
-  // NOTE: Put whatever return value AT return_buf, that is for single-word return like
-  // *(uint32_t*)return_buf = value;
+  thread->protected = protected;
 
   CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
