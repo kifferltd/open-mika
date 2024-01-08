@@ -1,7 +1,5 @@
 # Bytecode Emulation Test Plan
 
-
-
 ## Opcodes to be tested
 
 - Certainly:
@@ -23,8 +21,7 @@
   - athrow
   
   - "wide" version of some or all of the following opcodes:  
-    iload, fload, aload, lload, dload, istore, fstore, astore, lstore, dstore,
-    iinc.
+    iload, fload, aload, lload, dload, istore, fstore, astore, lstore, dstore.
 
 - Possibly:
   
@@ -43,6 +40,12 @@
   Unfortunately we also cannot use the Java assert keyword until we have tested at least ldc_w, invokevirtual, putstatic, getstatic, new, invokespecial, and athrow. (These instructions are used in the bytecode which the Java compiler generates for an `assert` statement).
 - The test suite will need to be launched from the `main() `method of some class, e.g. `wonka.bytecodetest.Main`. This `main()` method should not expect any parameters.
 
+### Main flow vs. Exceptional flows
+
+For each opcode we need to test both the normal behaviour and the "corner cases", most of which should result in an exception being thrown. However we only need to test those cases which _could_ occur as a result of executing valid Java bytecode, i.e. code which could be produced by a correct Java compiler processing Java code. We do not need to test for example how an opcode which expects an "objectref" on the stack behaves if the value on the stack is neither a valid reference to an object nor `null` - valid Java bytecode will never create such a situation. We _do_ need to test what happens if the objectref is `null`, because this is something that can and does occur during execution of valid bytecode.
+
+The definitive specification of bytecode behaviours is _The Java Virtual Machine Specification_ (JVMS), specifically _Chapter 6. The Java Virtual Machine Instruction Set_. The version for Java 1.6 can be found at <https://docs.oracle.com/javase/specs/jvms/se15/html/jvms-6.html>. As this version covers Java 1.6, it includes descriptions of features such as generics or "dynamic" method indication which were not present in Java 1.4 (the JVMS for 1.4 is not available online, only in second-hand bookshops). The descriptions below are derived from the JVMS by removing references to these features.
+
 ## Plan
 
 ### Non-instance opcodes : ldc\*, putstatic, getstatic, invokestatic
@@ -59,7 +62,7 @@ Should be tested for int, float, and String constants.
 
 ###### ldc_w
 
-Same as ****ldc**** but the constant must be at least no. 256 in the constant pool of the class. This will probably require us to develop a special "monster" class with many declarations.
+Same as **ldc** but the constant must be at least no. 256 in the constant pool of the class. This will probably require us to develop a special "monster" class with many declarations.
 
 Should be tested for int, float, and String constants.
 
@@ -96,43 +99,43 @@ public class Main {**
     s = "bar";
   }
 }
-
-
 ```
+
 ######Compiled bytecode
+
 ```
  public static void main(java.lang.String[]);
   Code:
-    0:	ldc	#2; //String foo
-    2:	putstatic	#3; //Field s:Ljava/lang/String;
-    5:	getstatic	#3; //Field s:Ljava/lang/String;
-    8:	ldc	#2; //String foo
-   10:	if_acmpeq	17
-   13:	iconst_1
-   14:	invokestatic	#4; //Method java/lang/System.exit:(I)V
-   17:	ldc2_w	#5; //double 3.141592653589793d
-   20:	putstatic	#7; //Field d:D
-   23:	getstatic	#7; //Field d:D
-   26:	ldc2_w	#5; //double 3.141592653589793d
-   29:	dcmpl
-   30:	ifeq	37
-   33:	iconst_1
-   34:	invokestatic	#4; //Method java/lang/System.exit:(I)V
-   37:	iconst_0
-   38:	istore_1
-   39:	invokestatic	#8; //Method test_invokestatic:()V
-   42:	getstatic	#3; //Field s:Ljava/lang/String;
-   45:	ldc	#9; //String bar
-   47:	if_acmpeq	54
-   50:	iconst_1
-   51:	invokestatic	#4; //Method java/lang/System.exit:(I)V
-   54:	return
+    0:    ldc    #2; //String foo
+    2:    putstatic    #3; //Field s:Ljava/lang/String;
+    5:    getstatic    #3; //Field s:Ljava/lang/String;
+    8:    ldc    #2; //String foo
+   10:    if_acmpeq    17
+   13:    iconst_1
+   14:    invokestatic    #4; //Method java/lang/System.exit:(I)V
+   17:    ldc2_w    #5; //double 3.141592653589793d
+   20:    putstatic    #7; //Field d:D
+   23:    getstatic    #7; //Field d:D
+   26:    ldc2_w    #5; //double 3.141592653589793d
+   29:    dcmpl
+   30:    ifeq    37
+   33:    iconst_1
+   34:    invokestatic    #4; //Method java/lang/System.exit:(I)V
+   37:    iconst_0
+   38:    istore_1
+   39:    invokestatic    #8; //Method test_invokestatic:()V
+   42:    getstatic    #3; //Field s:Ljava/lang/String;
+   45:    ldc    #9; //String bar
+   47:    if_acmpeq    54
+   50:    iconst_1
+   51:    invokestatic    #4; //Method java/lang/System.exit:(I)V
+   54:    return
 
 private static void test_invokestatic();
   Code:
-   0:	ldc	#9; //String bar
-   2:	putstatic	#3; //Field s:Ljava/lang/String;
-   5:	return
+   0:    ldc    #9; //String bar
+   2:    putstatic    #3; //Field s:Ljava/lang/String;
+   5:    return
 ```
 
 #### Exceptional flows
@@ -246,7 +249,7 @@ This instruction is used for multi-dimensional arrays of both primitive and refe
 
 ##### newarray
 
-If count is less than zero, $NegativeArraySizeException$ is thrown.
+If count is less than zero, `NegativeArraySizeException` is thrown.
 
 ### Array creation -- instance array (anewarray)
 
@@ -262,7 +265,7 @@ This instruction is used for 1-dimensional arrays of reference types.
 
 Resolving the class constant may result in a `LinkageError`, `NoClassDefFoundError`, or `IllegalAccessError`, as described for **new**.
 
-If count is less than zero, $NegativeArraySizeException$ is thrown.
+If count is less than zero, `NegativeArraySizeException` is thrown.
 
 ### Array creation -- multi-dimensional array (multianewarray)
 
@@ -280,7 +283,7 @@ Resolving the class constant may result in a `LinkageError`, `NoClassDefFoundErr
 
 If the size specified for any dimension is less than zero, `NegativeArraySizeException` is thrown.
 
-If the size specified for any dimension is **equal to zero, none of the subsequent dimensions will be created.
+If the size specified for any dimension is equal to zero, none of the subsequent dimensions will be created.
 
 ### Instance opcodes -- field access (putfield, getfield)
 
@@ -343,7 +346,7 @@ a no-op. Otherwise:
 - If objectref is of scalar (non-array) type _S_ and the cast is to a class type _T_, then _T_ must be _S_ or a superclass of _S_.
 - If objectref is of scalar (non-array) type _S_ and the cast is to a interface type _I_, then _S_ must implement _I_ (directly, or indirectly via a superclass or superinterface).
 - If objectref is of array type _S\[\]_ and the cast is to a class type _T_, then _T_ must be java.lang.Object.
-- If objectref is of array type _S\[\]_ and the cast is to a interface type _I_, then _T_ must be `java.lang.Cloneable` or `java.io.Serializable`.
+- If objectref is of array type _S\[\]_ and the cast is to a interface type _I_, then _I_ must be `java.lang.Cloneable` or `java.io.Serializable`.
 - If objectref is of array type _S\[\]_ and the cast is to an array type _T\[\]_, then _T_ must be the same as _S_ or else these rules must be applied recursively to _S_ and _T_.
 
 If applying these rules results in failure then ClassCastException is
@@ -357,7 +360,8 @@ the stack. Otherwise:
 - If objectref is of scalar (non-array) type _S_ and the cast is to a class type _T_, then 1 (true) is pushed onto the stack if _T_ is _S_ or a superclass of _S_, otherwise 0 (false) is pushed.
 - If objectref is of scalar (non-array) type _S_ and the cast is to a interface type _I_, then 1 (true) is pushed onto the stack if _S_ implements _I_ (directly or indirectly), otherwise 0 (false) is pushed.
 - If objectref is of array type _S\[\]_ and the cast is to a class type _T_, then 1 (true) is pushed onto the stack if T is `java.lang.Object`, otherwise 0 (false) is pushed.
-- If objectref is of array type _S\[\]_ and the cast is to a interface type _I_, then 1 (true) is pushed onto the stack if _T_ is `java.lang.Cloneable` or `java.io.Serializable`, otherwise 0 (false) is pushed.
+- If objectref is of array type _S\[\]_ and the cast is to a interface type _I_, then 1 (true) is pushed onto the stack if _T
+  I_ is `java.lang.Cloneable` or `java.io.Serializable`, otherwise 0 (false) is pushed.
 - If objectref is of array type _S\[\]_ and the cast is to the same array type _S\[\]_, then 1 (true) is pushed onto the stack.
 - If objectref is of array type _S\[\]_ and the cast is to a different array type _T\[\]_, then these rules must be applied recursively to _S_ and _T_.
 
@@ -450,8 +454,16 @@ Used to implement a throw statement.
 
 #### Exceptional flows
 
-If the objectref at the top of the stack is null, `NullPointerException`
-is thrown.
+If the objectref at the top of the stack is null, `NullPointerException` is thrown.
 
-In theory `IllegalMonitorStateException` can be thrown, but there is no
-way to produce this situation by compiling Java code.
+In theory `IllegalMonitorStateException` can be thrown, but there is no way to produce this situation by compiling Java code.
+
+### Wide load/store opcodes
+
+#### Main flow
+
+We need to emulate the "wide" versions of **iload**, **fload**, **aload**, **lload**, **dload**, **istore**, **fstore**, **astore**, **lstore**, and **dstore**. These opcodes are used to copy values from the local variables of a method to the evaluation stack (**load**) and vice versa (**store**). (Note that the parameters of a method are trated as its first _n_ local variables for this purpose). The "wide" versions are only used for local variables starting from the 256th, so we will need to create a method with an insane number of local variables to test these opcodes. (By the way, a method cannot have more than 255 parameters - see <https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.3.3>).
+
+#### Exceptional flows
+
+**n/a**
