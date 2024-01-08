@@ -67,6 +67,8 @@ CFLAGS += -isystem/home/chris/Imsys/env-isal/sw-imsys-freertos/libraries/freerto
 CFLAGS += -isystem$(FREERTOS_APP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_IO_INCLUDE_DIR) 
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
+# Following is needed for building .s files. Should rather have a separate ASMFLAGS.
+CFLAGS += -I$(ISAL_SYSTEM_INCLUDE_DIR)
 
 export JDWP = true
 export JNI = false

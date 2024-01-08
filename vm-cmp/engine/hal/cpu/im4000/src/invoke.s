@@ -1,4 +1,5 @@
 
+.include "common/cfi.s"
 .include "offsets.s"
 .include "macros.s"
 
@@ -15,8 +16,8 @@
 ;
 ;===========================================================
 is_native_method:
-    em.cfi_start
-    em.isac.cfi_return_rar
+    cfi_start
+    cfi_ret.rar
 
     c.addi  METHOD_FLAGS
     c.ld.i
@@ -25,7 +26,7 @@ is_native_method:
     c.and
 
     c.ret
-    em.cfi_end
+    cfi_end
 
 ;===========================================================
 ;
@@ -36,8 +37,8 @@ is_native_method:
 ;
 ;===========================================================
 allocate_locals:
-    em.cfi_start
-    em.isac.cfi_return_rar
+    cfi_start
+    cfi_ret.rar
 
 ; Check if only embedded locals needed
     c.dup
@@ -77,7 +78,7 @@ allocate_loc_20:
     c.st.i.fmp  FRAME_LMP
 
     c.ret
-    em.cfi_end
+    cfi_end
 
 ;===========================================================
 java_method1:
@@ -96,12 +97,12 @@ java_method1:
 ;===========================================================
 .global activate_frame
 activate_frame:
-    em.cfi_start
+    cfi_start
 ; Called in ISAL context, can use registers.
-    em.isal.cfi_init
+    cfi_init.isal
     move.i.i32 i#11 0
     alloc.nlsf i#11
-    em.isal.cfi_alloc_done
+    cfi_alloc.isal
 
 ; i#12 contains parameter 'method'
 ; i#13 contains parameter 'narg', i.e. number of argument words
@@ -154,7 +155,7 @@ activate_frame_10:
 
 ; Close the ISAL unwind entry for activate_frame() here
 ; because the following instructions might be executed in ISAC context.
-    em.cfi_end
+    cfi_end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; activate_frame() falls through to _emul_allocate_frame.
@@ -169,8 +170,8 @@ activate_frame_10:
 ;===========================================================
 .global _emul_allocate_frame
 _emul_allocate_frame:
-    em.cfi_start
-    em.isac.cfi
+    cfi_start
+    cfi_unknown
 
 ; Set up a Java stack frame in the memory stack.
 ; Even native methods get such a frame for Mika to be able to walk the stack.
@@ -218,11 +219,11 @@ _emul_allocate_frame:
 ; from emulation, but it is redundant when getting here in activate_frame().
     c.ld.fmp
     em.isal.alloc.nlsf  1
-    em.isal.cfi_alloc_done
+    cfi_alloc.isal
     move.i.i32  i#1 framePushed
     call        i#1
     em.isal.dealloc.nlsf    0
-    em.isal.cfi_dealloc_done
+    cfi_dealloc.isal
 
 ; es: ..., [arg0, [arg1...]], narg, method
 
@@ -319,7 +320,7 @@ activate_frame_native_args_moved:
 
     ; Initialize ISAL frame, take only parameters for emul_invoke_native
     em.isal.alloc.nlsf  4
-    em.isal.cfi_alloc_done
+    cfi_alloc.isal
     ; i#0 = frame
     ; i#1 = method
     ; i#2 = args
@@ -333,7 +334,7 @@ activate_frame_native_args_moved:
 
     ; Deallocate ISAL frame
     em.isal.dealloc.nlsf    0
-    em.isal.cfi_dealloc_done
+    cfi_dealloc.isal
 
 _activate_frame_native_return:
 ; es: ..., original_msp, return_i
@@ -383,7 +384,7 @@ activate_frame_native_return_pushed:
     ; Return to Java caller
     ; es: ..., [retval1,[ retval2,]]
     c.rete
-    em.cfi_end
+    cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -392,9 +393,9 @@ activate_frame_native_return_pushed:
 ; the ISAC evaluation stack if any.
 activate_frame_return:
     ; Start a new unwind entry for this part of activate_frame()
-    em.cfi_start
-    em.isal.cfi_init        ; Set initial info to apply after dealloc
-    em.isal.cfi_alloc_done  ; Update info immediately as already in ISAL frame
+    cfi_start
+    cfi_init.isal   ; Set initial info to apply after dealloc
+    cfi_alloc.isal  ; Update info immediately as already in ISAL frame
 
     ; Parameters of activate_frame() are still in place:
     ; i#12 = method
@@ -452,9 +453,9 @@ activate_frame_return_done:
 
     ; Cleanup ISAL frame and return
     dealloc.nlsf
-    em.isal.cfi_dealloc_done
+    cfi_dealloc.isal
     ret
-    em.cfi_end
+    cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -470,8 +471,8 @@ activate_frame_return_done:
 ;===========================================================
 .global _emul_check_frame_stacks
 _emul_check_frame_stacks:
-    em.cfi_start
-    em.isac.cfi
+    cfi_start
+    cfi_unknown
 
 ; Check evaluation stack level
     c.flld.esp
@@ -511,7 +512,7 @@ _emul_check_frame_error:
     ; so the current Java thread might cause other problems in the system (e.g., deadlock).
     ; A well-designed application should detect and handle such a situation.
 
-    em.cfi_end
+    cfi_end
 
 ;===========================================================
 ;
@@ -524,8 +525,8 @@ _emul_check_frame_error:
 ;===========================================================
 .global _emul_deallocate_frame
 _emul_deallocate_frame:
-    em.cfi_start
-    em.isac.cfi
+    cfi_start
+    cfi_unknown
 
 ; Check memory stack level
     c.ld.msp
@@ -551,11 +552,11 @@ _emul_deallocate_im4000_frame:
 ; De-register frame with Mika
 ; Calling: void framePopped()
     em.isal.alloc.nlsf  0
-    em.isal.cfi_alloc_done
+    cfi_alloc.isal
     move.i.i32  i#0 framePopped
     call        i#0
     em.isal.dealloc.nlsf    0
-    em.isal.cfi_dealloc_done
+    cfi_dealloc.isal
 
 ; Disable interrupts while popping out values from the memory
 ; That is to ensure 8-byte alignment of MSP
@@ -578,7 +579,7 @@ _emul_deallocate_im4000_frame:
     irs.on
 
     c.ret
-    em.cfi_end
+    cfi_end
 ;===========================================================
 
 ;===========================================================
@@ -588,8 +589,8 @@ _emul_deallocate_im4000_frame:
 ;===========================================================
 .global throw
 throw:
-    em.cfi_start
-    em.isal.cfi_init
+    cfi_start
+    cfi_init.isal
 
 ; Do not allocate any new ISAL frame here
 ; i#0 = objectref
@@ -617,7 +618,7 @@ throw_unwind_isal_frame:
 
     ; Deallocate final ISAL frame and push objectref
     em.isal.dealloc.nlsf    1
-    em.isac.cfi                 ; No more ISAL frame, switch to ISAC context
+    cfi_unknown                 ; No more ISAL frame, switch to ISAC context
 
     ; Here at the top Java frame, which might belong to a native method.
     ; Native methods do not have exception handlers so they can be dropped without
@@ -632,7 +633,7 @@ throw_unwind_isal_frame:
 throw_unwind_done:
     ; Go to athrow to handle if objectref is null
     c.jumpw e_athrow
-    em.cfi_end
+    cfi_end
 
 ;===========================================================
 ;
@@ -643,8 +644,8 @@ throw_unwind_done:
 ;===========================================================
 .global _emul_throw
 _emul_throw:
-    em.cfi_start
-    em.isac.cfi
+    cfi_start
+    cfi_unknown
 
     ; Get current frame
     c.ld.fmp
@@ -740,6 +741,6 @@ _throw_uncaught:
     ; Let activate_frame return
     c.jumpw activate_frame_return_done
 
-    em.cfi_end
+    cfi_end
 
 ;===========================================================
