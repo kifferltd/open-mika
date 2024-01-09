@@ -179,9 +179,11 @@ void jdwp_thr_resume(jdwp_command_packet cmd) {
     jdwp_send_invalid_object(cmd->id);
   }
 
+#ifdef PARALLEL_GC
   x_monitor_eternal(safe_points_monitor);
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
+#endif
 }
 
 

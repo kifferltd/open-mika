@@ -759,6 +759,8 @@ public final class Class implements java.io.Serializable {
    ** Mainly for use by the VM itself, cannot reliably be used by applications.
    */
   public boolean desiredAssertionStatus() {
+    ClassLoader relevantLoader = loader == null ? SystemClassLoader.getInstance() : loader;
+
     Boolean status = loader.assertionStatus.getClassStatus(getName());
 
     if (status == null) {
@@ -799,3 +801,4 @@ public final class Class implements java.io.Serializable {
   }
   
 }
+

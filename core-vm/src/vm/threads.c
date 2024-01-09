@@ -582,7 +582,9 @@ void startKernel() {
   mustBeInitialized(clazzExceptionInInitializerError);
   mustBeInitialized(clazzAbstractMethodError);
   class_ThreadGroup = clazz2Class(clazzThreadGroup);
+#ifdef PARALLEL_GC
   x_monitor_create(safe_points_monitor);
+#endif
 
 /* [CG 20050601]
  * For O4P and O4F we let the system supply the stack, since LinuxThreads ignores the
@@ -724,6 +726,7 @@ char * threadDescription(w_thread t) {
 #define checkOswaldStatus(s)
 #endif
 
+#ifdef PARALLEL_GC
 w_boolean enterUnsafeRegion(const w_thread thread) {
   x_status status;
 
@@ -770,6 +773,7 @@ w_boolean enterSafeRegion(const w_thread thread) {
   }
 #endif
 
+#ifdef PARALLEL_GC
   status = x_monitor_eternal(safe_points_monitor);
   checkOswaldStatus(status);
   -- number_unsafe_threads;
@@ -782,6 +786,7 @@ w_boolean enterSafeRegion(const w_thread thread) {
 //  }
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
+#endif
 
   if (isSet(thread->flags, WT_THREAD_GC_PENDING)) {
     unsetFlag(thread->flags, WT_THREAD_GC_PENDING);
@@ -831,4 +836,5 @@ void _gcSafePoint(w_thread thread
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 }
+#endif // PARLLEL_GC
 

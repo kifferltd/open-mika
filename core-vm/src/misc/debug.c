@@ -513,8 +513,10 @@ void w_dump_locks(void) {
 #ifdef ENABLE_THREAD_RECYCLING
   x_dump_monitor("     Thread pool monitor : ", xthreads_monitor);
 #endif
+#ifdef PARALLEL_GC
   x_dump_monitor("       GC status monitor : ", safe_points_monitor);
   w_dump("      GC number unsafe threads : %d\n", number_unsafe_threads);
+#endif
   w_dump("                 GC phase : %s\n", gc_phase_names[gc_phase > 4 ? 5 : gc_phase]);
   if (marking_thread) {
     w_dump("        GC marking thread : %t\n", marking_thread);

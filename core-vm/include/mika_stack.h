@@ -145,6 +145,7 @@ typedef struct w_Frame {
   w_thread        thread;              // points to current wonka thread
   volatile w_code current;             // The opcode pointer at method call or exception; pc = frame->current - frame->method_.exec.code
   volatile w_instance * map;           // A pointer to an array of references (stack map)
+  void           *impl_data;
 #ifdef TRACE_CLASSLOADERS
   w_instance      udcl;                // Nearest user-defined class loader or NULL
 #endif

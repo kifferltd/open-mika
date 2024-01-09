@@ -681,7 +681,8 @@ e_instanceof:
     move.i.i32  i#3 emul_instanceof
     call        i#3
 
-    ; needs to call emul_instanceof(frame, objectref, index)
+    em.isal.dealloc.nlsf 1
+    ret.eh 
 
 ;===========================================================
 ; e_monitorenter
@@ -710,11 +711,6 @@ e_monitorenter:
     em.isal.dealloc.nlsf 0
     ret.eh 
 
-
-    errorpoint      ; Not implemented
-
-    ; needs to call emul_monitorenter(objectref)
-
 ;===========================================================
 ; e_monitorexit
 ;
@@ -740,6 +736,7 @@ e_monitorexit:
     call        i#1
 
     em.isal.dealloc.nlsf 0
+    ret.eh
 
 ;===========================================================
 ; e_multianewarray

@@ -43,6 +43,8 @@ export TOOLCHAIN = clang
 export TOOLCHAIN_PREFIX = $(IMSYS_TOOLDIR)/
 export SCHEDULER = o4f
 
+export PARALLEL_GC = false
+
 ifeq ($(ISALFEATURE),0)
   CFLAGS += -misal
 else ifeq ($(ISALFEATURE),1)
@@ -65,6 +67,8 @@ CFLAGS += -isystem/home/chris/Imsys/env-isal/sw-imsys-freertos/libraries/freerto
 CFLAGS += -isystem$(FREERTOS_APP_INCLUDE_DIR) 
 CFLAGS += -isystem$(FREERTOS_IO_INCLUDE_DIR) 
 CFLAGS += -DSTORE_METHOD_DEBUG_INFO
+# Following is needed for building .s files. Should rather have a separate ASMFLAGS.
+CFLAGS += -I$(ISAL_SYSTEM_INCLUDE_DIR)
 
 export JDWP = true
 export JNI = false
@@ -103,4 +107,3 @@ CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE
 
 # Enable this line if you want to run bytecode tests instead of an application
 # export BYTECODETEST = true
-

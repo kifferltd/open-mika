@@ -1283,30 +1283,22 @@ void jdwp_internal_suspend_all(void) {
   }
 
   woempa(7, "JDWP: start locking other threads\n");
+#ifdef PARALLEL_GC
   if (number_unsafe_threads < 0) {
     wabort(ABORT_WONKA, "number_unsafe_threads = %d!", number_unsafe_threads);
   }
   x_monitor_eternal(safe_points_monitor);
-/* WAS:
-  while(isSet(blocking_all_threads, ~BLOCKED_BY_JDWP)) {
-    woempa(7, "GC/JITC is blocking all threads, not possible to suspend VM yet.\n");
-    status = x_monitor_wait(safe_points_monitor, x_eternal);
-  }
-  (void)status;
-  woempa(2, "JDWP: setting blocking_all_threads to BLOCKED_BY_JDWP\n");
-  setFlag(blocking_all_threads, BLOCKED_BY_JDWP);
-
-// no point after setting a blocking flag
-//  x_monitor_notify_all(safe_points_monitor);
-*/
   while(isSet(blocking_all_threads, ~BLOCKED_BY_JDWP) || number_unsafe_threads > 0) {
     woempa(7, "%d unsafe threads, %s blocking all threads, not possible to suspend VM yet.\n", number_unsafe_threads, BLOCKED_BY_TEXT);
     x_monitor_wait(safe_points_monitor, x_eternal);
   }
+#endif
   woempa(2, "JDWP: setting blocking_all_threads to BLOCKED_BY_JDWP\n");
   setFlag(blocking_all_threads, BLOCKED_BY_JDWP);
+#ifdef PARALLEL_GC
   x_monitor_notify_all(safe_points_monitor);
   x_monitor_exit(safe_points_monitor);
+#endif
   woempa(7, "JDWP: finished locking other threads\n");
 }
 
@@ -1326,10 +1318,14 @@ void jdwp_internal_resume_all(void) {
   }
   else {
     woempa(7, "JDWP: count = %d, start unlocking other threads\n", jdwp_global_suspend_count);
+#ifdef PARALLEL_GC
     x_monitor_eternal(safe_points_monitor);
+#endif
     unsetFlag(blocking_all_threads, BLOCKED_BY_JDWP);
+#ifdef PARALLEL_GC
     x_monitor_notify_all(safe_points_monitor);
     x_monitor_exit(safe_points_monitor);
+#endif
     woempa(7, "JDWP: finished unlocking other threads\n");
   }
 }
