@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2022 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2023 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,20 +26,5 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-.PHONY : classes
-
-# Note to self: this is how to get the output of a comand into a make variable ...
-#    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
-#    echo Git branch is $(GIT_BRANCH)
-
-# WAS:
-# bytecodetest :
-# ifeq ($(BYTECODETEST), true)
-# 	make -C ../../vm-ext/bytecodetest/java
-# endif
-
-# WAS: classes: bytecodetest
-
-classes : 
-	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
-
+mika:
+	make -C java

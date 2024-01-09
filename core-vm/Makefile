@@ -110,7 +110,12 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-ifeq ($(BYTECODETEST), true)
+# WAS:
+# ifeq ($(BYTECODETEST), true)
+#   CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
+# endif
+
+ifneq ($$(filter $(EXTENSIONS),bytecodetest),)
   CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
 endif
 
@@ -194,8 +199,19 @@ javaclasses:
 	make -C ${javajardir} classes
 	make -C $(JAVAX) classes
 
+# TODO figure out how to handle all of these with a foreach, something like
+# 	$(foreach ext, $(EXTENSIONS), $(eval make -C ../vm-ext/$(ext)))
+
+bytecodetest :
+	@echo Building extension bytecodetest
+	make -C ../vm-ext/bytecodetest
+
+imsys :
+	@echo Building extension imsys
+	make -C ../vm-ext/imsys
+
 # TODO we probably don't need the JNI=$(JNI) bit
-core-vm : javaclasses
+core-vm : javaclasses $(EXTENSIONS)
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)
