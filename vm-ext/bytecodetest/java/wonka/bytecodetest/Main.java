@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.lang.Math;
 import java.io.*;
 import wonka.bytecodetest.TestClass;
+import wonka.bytecodetest.TestWideClass;
+import wonka.bytecodetest.TestInterface;
 
 public class Main {
   static String s = " ";
@@ -34,11 +36,6 @@ public class Main {
 
     wonka.vm.Etc.woempa(7,"Testing invokestatic");
     test_invokestatic();
-    wonka.vm.Etc.woempa(7,"Testing wide");
-    testWide(l);
-
-    wonka.vm.Etc.woempa(7,"Testing interface");
-    testThings.testInterface();
 
     wonka.vm.Etc.woempa(7,"Testing double");
     double pi = testThings.testDouble(testdbl);
@@ -62,15 +59,30 @@ public class Main {
       wonka.vm.Etc.woempa(7, "Testing instanceof");
     }
 
+    wonka.vm.Etc.woempa(7,"Testing monitor");
     synchronized(testThings){
       testThings.testMonitor(5);
     }
 
+    wonka.vm.Etc.woempa(7,"Testing interface");
+    testThings.testInterface();
     testInvInterface();
 
+    wonka.vm.Etc.woempa(7,"Testing store and load");
     testThings.testStoreAndLoad();
-    testThings.testCast();
-
+    wonka.vm.Etc.woempa(7,"Testing cast");
+    //testThings.testCast();
+    wonka.vm.Etc.woempa(7,"Testing wide");
+    TestWideClass wideTest = new TestWideClass();
+    wideTest.testWideInt();
+    wonka.vm.Etc.woempa(7,"Testing wide float");
+    //wideTest.testWideFloat();
+    wonka.vm.Etc.woempa(7,"Testing wide double");
+    wideTest.testWideDouble();
+    wonka.vm.Etc.woempa(7,"Testing wide long");
+    //wideTest.testWideLong();
+    wonka.vm.Etc.woempa(7,"Testing wide ldc");
+    wideTest.test_ldc_w();
     // This too assumes that static method calls work, and it triggers initialisation if class System.
     // In case of doubt, comment it out
     wonka.vm.Etc.woempa(7,"all tests ran ok");
@@ -79,11 +91,6 @@ public class Main {
 
   private static void test_invokestatic() {
     s = "bar";
-  }
-
-
-  private static long testWide(long nbr){
-    return nbr;
   }
 
   private static void testInvInterface(){

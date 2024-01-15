@@ -104,7 +104,7 @@ e_iload:
     em.update.pc
 
     c.addi    -8
-    c.br.nc   e_iload_10       ; variable is in scratchpad?
+    c.br.p   e_iload_10       ; variable is in scratchpad?
 
     errorpoint                  ; Case idx <=8 not yet implemented
 
@@ -135,7 +135,7 @@ e_lload:
     em.update.pc
 
     c.addi    -8
-    c.br.nc   e_lload_10       ; variable is in scratchpad?
+    c.br.p   e_lload_10       ; variable is in scratchpad?
 
     errorpoint                 ; Case idx <=8 not yet implemented
 
@@ -172,7 +172,7 @@ e_istore:
     em.update.pc
 
     c.addi    -8
-    c.br.nc   e_istore_10       ; variable is in scratchpad?
+    c.br.p   e_istore_10       ; variable is in scratchpad?
 
     errorpoint                  ; Case idx <=8 not yet implemented
 
@@ -205,7 +205,7 @@ e_lstore:
     em.update.pc
 
     c.addi    -8
-    c.br.nc   e_lstore_10       ; variable is in scratchpad?
+    c.br.p   e_lstore_10       ; variable is in scratchpad?
 
     errorpoint                  ; Case idx <=8 not yet implemented
 

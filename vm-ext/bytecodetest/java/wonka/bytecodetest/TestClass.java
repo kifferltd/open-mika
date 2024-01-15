@@ -9,12 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.lang.Math;
 import java.io.*;
-
-interface TestInterface {
-
-    void testInterface();
-    
-}
+import wonka.bytecodetest.TestInterface;
 
 public class TestClass implements TestInterface{
 
@@ -89,10 +84,6 @@ public class TestClass implements TestInterface{
     return multiArr;
   }
 
-  public void testInterface(){
-    testNbr = 5;
-  }
-
   public int testMonitor(int mon){
     if(mon == testNbr){
       return 2;
@@ -138,6 +129,9 @@ public class TestClass implements TestInterface{
     return 0;
   }
 
+  public void testInterface(){
+    
+  }
 }
 
 class TestInterfaceClass extends TestClass {
