@@ -884,7 +884,7 @@ void framePushed(im4000_frame frame) {
   w_thread thread = currentWonkaThread;
   w_frame mika_frame = pushFrame(thread, frame->method);
   mika_frame->impl_data = frame;
-  //woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
+  woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
   lowMemoryCheck;
 }
 
