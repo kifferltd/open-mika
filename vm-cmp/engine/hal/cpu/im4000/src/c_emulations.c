@@ -374,7 +374,7 @@ uint64_t emul_ldc2_w(im4000_frame frame, uint32_t cpIndex) {
  * @param cpIndex index into the constant pool of the value to be loaded.
  * @return      the 64-bit value.
 */
-uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
+uint32_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   updatePC(thread->top);
@@ -383,7 +383,7 @@ uint64_t emul_ldc_w(im4000_frame frame, uint32_t cpIndex) {
   w_clazz calling_clazz = calling_method->spec.declaring_clazz;
 
   w_boolean was_unsafe = enterSafeRegion(thread);
-  uint64_t constant = get64BitConstant(calling_clazz, cpIndex, 0, thread).u64;
+  uint32_t constant = get32BitConstant(calling_clazz, cpIndex, 0, thread);
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
@@ -884,7 +884,7 @@ void framePushed(im4000_frame frame) {
   w_thread thread = currentWonkaThread;
   w_frame mika_frame = pushFrame(thread, frame->method);
   mika_frame->impl_data = frame;
-  woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
+  //woempa(7, "Linked IM4000_Frame %p to w_Frame %p (%M)\n", frame, mika_frame, frame->method);
   lowMemoryCheck;
 }
 
