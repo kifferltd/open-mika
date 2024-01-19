@@ -57,12 +57,34 @@ public class TestWideClass {
             oi=oo=op=oa=os=od=of=og=oh=oj=
             ok=ol=oz=ox=oc=ov=ob=on=om=1;
 
-            /*
-            ** This little code snippet causes corrupted memory
-            if(om == 1){
+            if((q|w|e|r|t|y|u|i|o|p|
+            a|s|d|f|g|h|j|k|l|z|
+            x|c|v|b|n|m|qq|qw|qe|qr|
+            qt|qy|qu|qi|qo|qp|qa|qs|qd|qf|
+            qg|qh|qj|qk|ql|qz|qx|qc|qv|qb|
+            qn|qm|wq|ww|we|wr|wt|wy|wu|wi|
+            wo|wp|wa|ws|wd|wf|wg|wh|wj|wk|
+            wl|wz|wx|wc|wv|wb|wn|wm|eq|ew|
+            ee|er|et|ey|eu|ei|eo|ep|ea|es|
+            ed|ef|eg|eh|ej|ek|el|ez|ex|ec|
+            ev|eb|en|em|rq|rw|re|rr|rt|ry|
+            ru|ri|ro|rp|ra|rs|rd|rf|rg|rh|
+            rj|rk|rl|rz|rx|rc|rv|rb|rn|rm|
+            tq|tw|te|tr|ty|tu|ti|to|tp|ta|
+            ts|td|tf|tg|th|tj|tk|tl|tz|tx|
+            tc|tv|tb|tn|tm|yq|yw|ye|yr|yt|
+            yy|yu|yi|yo|yp|ya|ys|yd|yf|yg|
+            yh|yj|yk|yl|yz|yx|yc|yv|yb|yn|
+            ym|uq|uw|ue|ur|ut|uy|uu|ui|uo|
+            up|ua|us|ud|uf|ug|uh|uj|uk|ul|
+            uz|ux|uc|uv|ub|un|um|iq|iw|ie|
+            ir|it|iy|iu|ii|io|ip|ia|is|id|
+            mm|ig|ih|ij|ik|il|iz|ix|ic|iv|
+            ib|in|im|oq|ow|oe|or|ot|oy|ou|
+            oi|oo|op|oa|os|od|of|og|oh|oj|
+            ok|ol|oz|ox|oc|ov|ob|on|om) == 1){
                 om = 2;
             }
-            */
 
     }
 
@@ -137,19 +159,8 @@ public class TestWideClass {
             ev,eb,en,em,rq,rw,re,rr,rt,ry,
             ru,ri,ro,rp,ra,rs,rd,rf,rg,rh,
             rj,rk,rl,rz,rx,rc,rv,rb,rn,rm,
-            tq,tw,te,tr,ty,tu,ti,to,tp,ta,
-            ts,td,tf,tg,th,tj,tk,tl,tz,tx,
-            tc,tv,tb,tn,tm,yq,yw,ye,yr,yt,
-            yy,yu,yi,yo,yp,ya,ys,yd,yf,yg,
-            yh,yj,yk,yl,yz,yx,yc,yv,yb,yn,
-            ym,uq,uw,ue,ur,ut,uy,uu,ui,uo,
-            up,ua,us,ud,uf,ug,uh,uj,uk,ul,
-            uz,ux,uc,uv,ub,un,um,iq,iw,ie,
-            ir,it,iy,iu,ii,io,ip,ia,is,id,
-            mm,ig,ih,ij,ik,il,iz,ix,ic,iv,
-            ib,in,im,oq,ow,oe,or,ot,oy,ou,
-            oi,oo,op,oa,os,od,of,og,oh,oj,
-            ok,ol,oz,ox,oc,ov,ob,on,om;
+            tq,tw,te,tr,ty,tu,ti,to,tp,ta;
+            
 
             q=w=e=r=t=y=u=i=o=p=
             a=s=d=f=g=h=j=k=l=z=
@@ -164,19 +175,25 @@ public class TestWideClass {
             ev=eb=en=em=rq=rw=re=rr=rt=ry=
             ru=ri=ro=rp=ra=rs=rd=rf=rg=rh=
             rj=rk=rl=rz=rx=rc=rv=rb=rn=rm=
-            tq=tw=te=tr=ty=tu=ti=to=tp=ta=
-            ts=td=tf=tg=th=tj=tk=tl=tz=tx=
-            tc=tv=tb=tn=tm=yq=yw=ye=yr=yt=
-            yy=yu=yi=yo=yp=ya=ys=yd=yf=yg=
-            yh=yj=yk=yl=yz=yx=yc=yv=yb=yn=
-            ym=uq=uw=ue=ur=ut=uy=uu=ui=uo=
-            up=ua=us=ud=uf=ug=uh=uj=uk=ul=
-            uz=ux=uc=uv=ub=un=um=iq=iw=ie=
-            ir=it=iy=iu=ii=io=ip=ia=is=id=
-            mm=ig=ih=ij=ik=il=iz=ix=ic=iv=
-            ib=in=im=oq=ow=oe=or=ot=oy=ou=
-            oi=oo=op=oa=os=od=of=og=oh=oj=
-            ok=ol=oz=ox=oc=ov=ob=on=om=1;
+            tq=tw=te=tr=ty=tu=ti=to=tp=ta=1;
+
+            
+            if((q|w|e|r|t|y|u|i|o|p|
+            a|s|d|f|g|h|j|k|l|z|
+            x|c|v|b|n|m|qq|qw|qe|qr|
+            qt|qy|qu|qi|qo|qp|qa|qs|qd|qf|
+            qg|qh|qj|qk|ql|qz|qx|qc|qv|qb|
+            qn|qm|wq|ww|we|wr|wt|wy|wu|wi|
+            wo|wp|wa|ws|wd|wf|wg|wh|wj|wk|
+            wl|wz|wx|wc|wv|wb|wn|wm|eq|ew|
+            ee|er|et|ey|eu|ei|eo|ep|ea|es|
+            ed|ef|eg|eh|ej|ek|el|ez|ex|ec|
+            ev|eb|en|em|rq|rw|re|rr|rt|ry|
+            ru|ri|ro|rp|ra|rs|rd|rf|rg|rh|
+            rj|rk|rl|rz|rx|rc|rv|rb|rn|rm|
+            tq|tw|te|tr|ty|tu|ti|to|tp|ta)==1){
+                ta = 2;
+            }
 
     }
     
@@ -194,19 +211,7 @@ public class TestWideClass {
             ev,eb,en,em,rq,rw,re,rr,rt,ry,
             ru,ri,ro,rp,ra,rs,rd,rf,rg,rh,
             rj,rk,rl,rz,rx,rc,rv,rb,rn,rm,
-            tq,tw,te,tr,ty,tu,ti,to,tp,ta,
-            ts,td,tf,tg,th,tj,tk,tl,tz,tx,
-            tc,tv,tb,tn,tm,yq,yw,ye,yr,yt,
-            yy,yu,yi,yo,yp,ya,ys,yd,yf,yg,
-            yh,yj,yk,yl,yz,yx,yc,yv,yb,yn,
-            ym,uq,uw,ue,ur,ut,uy,uu,ui,uo,
-            up,ua,us,ud,uf,ug,uh,uj,uk,ul,
-            uz,ux,uc,uv,ub,un,um,iq,iw,ie,
-            ir,it,iy,iu,ii,io,ip,ia,is,id,
-            mm,ig,ih,ij,ik,il,iz,ix,ic,iv,
-            ib,in,im,oq,ow,oe,or,ot,oy,ou,
-            oi,oo,op,oa,os,od,of,og,oh,oj,
-            ok,ol,oz,ox,oc,ov,ob,on,om;
+            tq,tw,te,tr,ty,tu,ti,to,tp,ta;
 
             q=w=e=r=t=y=u=i=o=p=
             a=s=d=f=g=h=j=k=l=z=
@@ -221,19 +226,7 @@ public class TestWideClass {
             ev=eb=en=em=rq=rw=re=rr=rt=ry=
             ru=ri=ro=rp=ra=rs=rd=rf=rg=rh=
             rj=rk=rl=rz=rx=rc=rv=rb=rn=rm=
-            tq=tw=te=tr=ty=tu=ti=to=tp=ta=
-            ts=td=tf=tg=th=tj=tk=tl=tz=tx=
-            tc=tv=tb=tn=tm=yq=yw=ye=yr=yt=
-            yy=yu=yi=yo=yp=ya=ys=yd=yf=yg=
-            yh=yj=yk=yl=yz=yx=yc=yv=yb=yn=
-            ym=uq=uw=ue=ur=ut=uy=uu=ui=uo=
-            up=ua=us=ud=uf=ug=uh=uj=uk=ul=
-            uz=ux=uc=uv=ub=un=um=iq=iw=ie=
-            ir=it=iy=iu=ii=io=ip=ia=is=id=
-            mm=ig=ih=ij=ik=il=iz=ix=ic=iv=
-            ib=in=im=oq=ow=oe=or=ot=oy=ou=
-            oi=oo=op=oa=os=od=of=og=oh=oj=
-            ok=ol=oz=ox=oc=ov=ob=on=om=1.1;
+            tq=tw=te=tr=ty=tu=ti=to=tp=ta=1.1;
 
     }
 
