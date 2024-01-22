@@ -243,7 +243,7 @@ public class SPI {
 	 * Sets SPI communication speed. Set the <code>delay</code> parameter to 0
 	 * for the fastest communication, SCK cycle time will then be 700 ns.
 	 * <code>delay</code> > 0 results in a SCK cycle time of approximately
-	 * (2.8 + <code>delay</code>*1.0) µs.	 * 
+	 * (2.8 + <code>delay</code>*1.0) Âµs.	 * 
      *
      * @param freq Desired bitrate in kHz. This will be the maximum bitrate at any time.
      * @throws IllegalArgumentException This exception will never be thrown.
@@ -259,7 +259,7 @@ public class SPI {
 	 * Sets SPI communication speed. Set the <code>delay</code> parameter to 0
 	 * for the fastest communication, SCK cycle time will then be 700 ns.
 	 * <code>delay</code> > 0 results in a SCK cycle time of approximately
-	 * (2.8 + <code>delay</code>*1.0) µs.
+	 * (2.8 + <code>delay</code>*1.0) Âµs.
      *
      * @param delay clock delay value between 0 and <code>MAX_CLOCK_DELAY</code>, inclusive
      * @throws IllegalArgumentException if <code>delay</code> is negative
