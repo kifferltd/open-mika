@@ -103,9 +103,6 @@ ifeq ($(MAPFILE), true)
   LDFLAGS += -Wl,--cref,-Map,$(OROOT)/map
 endif
 
-ifeq ($(JAVAX_COMM), true)
-   CFLAGS += -lcomm
-endif
 ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
@@ -117,6 +114,15 @@ endif
 
 ifneq ($$(filter $(EXTENSIONS),bytecodetest),)
   CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
+endif
+
+# WAS:
+# ifeq ($(JAVAX_COMM), true)
+#    CFLAGS += -lcomm
+# endif
+
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+  CFLAGS += -lcomm
 endif
 
 .PHONY : awt engine filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
@@ -206,7 +212,8 @@ bytecodetest :
 	@echo Building extension bytecodetest
 	make -C ../vm-ext/bytecodetest
 
-imsys :
+# TODO only depend on javax_comm if flag is set
+imsys : javax_comm
 	@echo Building extension imsys
 	make -C ../vm-ext/imsys
 

@@ -320,7 +320,12 @@ ifeq ($(ENABLE_THREAD_RECYCLING), true)
   CFLAGS += -DENABLE_THREAD_RECYCLING
 endif
 
-ifeq ($(JAVAX_COMM), true)
+# WAS:
+# ifeq ($(JAVAX_COMM), true)
+#   CFLAGS += -DJAVAX_COMM
+# endif
+
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
   CFLAGS += -DJAVAX_COMM
 endif
 
@@ -665,7 +670,11 @@ kcommon : echo builddir
 	make -C vm-cmp/kernel/common 
 
 comm :
-ifeq ($(JAVAX_COMM), true)
+# WAS:
+# ifeq ($(JAVAX_COMM), true)
+# 	make -C vm-ext/comm 
+# endif
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
 	make -C vm-ext/comm 
 endif
 
