@@ -760,17 +760,22 @@ public final class Class implements java.io.Serializable {
    */
   public boolean desiredAssertionStatus() {
     ClassLoader relevantLoader = loader == null ? SystemClassLoader.getInstance() : loader;
+    wonka.vm.Etc.woempa(7, "relevantLoader = " + relevantLoader);
 
-    Boolean status = loader.assertionStatus.getClassStatus(getName());
+    Boolean status = relevantLoader.assertionStatus.getClassStatus(getName());
+    wonka.vm.Etc.woempa(7, "class status = " + status);
 
     if (status == null) {
-      status = loader.assertionStatus.getPackageStatus(getPackageName());
+      status = relevantLoader.assertionStatus.getPackageStatus(getPackageName());
+      wonka.vm.Etc.woempa(7, "package status = " + status);
 
       if (status == null) {
-        status = loader.assertionStatus.getDefaultStatus();    
+        status = relevantLoader.assertionStatus.getDefaultStatus();    
+        wonka.vm.Etc.woempa(7, "default status = " + status);
       }
     }
 
+    wonka.vm.Etc.woempa(7, "status = " + status);
     return status.booleanValue();
 
   } 
