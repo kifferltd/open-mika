@@ -51,11 +51,8 @@ e_ldc_w:
     move.i.i32  i#2  emul_ldc_w
     call        i#2
 
-    em.isal.dealloc.nlsf 2
+    em.isal.dealloc.nlsf 1
     ret.eh
-    ; errorpoint       Not implemented
-
-    ; same as e_lds but reads 2 bytes from code stream instead of 1
 
 ;===========================================================
 ; em_ldc2_w
@@ -81,12 +78,9 @@ e_ldc2_w:
     move.i.i32  i#2  emul_ldc2_w
     call        i#2
 
+    em.decomp_l0_to_i1_i0
     em.isal.dealloc.nlsf 2
     ret.eh
-
-    ; errorpoint       Not implemented
-
-    ; needs to call emul_ldc2_w(frame, offset)
 
 ;===========================================================
 ; em_iload
