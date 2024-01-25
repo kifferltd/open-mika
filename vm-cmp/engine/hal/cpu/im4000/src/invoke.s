@@ -687,8 +687,11 @@ _emul_throw:
     c.ld.i
     ; es: ..., objectref, handler-pc, method-pc
 
-    ; Set ERAR to the absolute PC for handler in the method
+    ; Set ERAR to the absolute PC for handler in the method and
+    ; mark it ISAJ by setting the highest bit of the word
     c.add
+    c.ldi.i =0x8000000
+    c.or
     c.st.erar
     ; es: ..., objectref
 
