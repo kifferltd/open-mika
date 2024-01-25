@@ -6,12 +6,6 @@ import java.util.ArrayList;
 import java.lang.Math;
 import java.io.*;
 
-interface TestInterface {
-
-    void testInterface();
-    
-}
-
 public class TestClass implements TestInterface{
 
   static int testNbr = 0;
