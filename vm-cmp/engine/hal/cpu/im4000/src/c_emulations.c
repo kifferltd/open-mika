@@ -18,16 +18,16 @@ extern void deactivateFrame(w_frame frame, w_instance protect);
 extern void wrapException(w_thread thread, w_clazz wrapper_clazz, w_size field_offset);
 
 typedef struct IM4000_Frame {
-  int32_t unused0;    // ConstantPool
+  int32_t unused0;    // WAS: ConstantPool
   w_method method;
-  w_instance unused2; // SyncObject
+  w_instance unused2; // WAS: SyncObject
   int32_t pc;         // ThrowPC
-  int32_t unused4;    // LSP
-  int32_t unused5;    // ESP
-  int32_t *locals;    // LMP
-  int32_t unused7;    // LocalsCount
-  int32_t unused8;    // RetAddress
-  int32_t unused9;    // FMP
+  int32_t _base_lsp;
+  int32_t _base_esp;
+  int32_t *locals;
+  int32_t _ls_count;
+  int32_t _retaddress;
+  int32_t _caller_fmp;
 } IM4000_Frame;
 
 /**
