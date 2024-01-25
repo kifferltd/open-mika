@@ -690,7 +690,12 @@ _emul_throw:
     ; Set ERAR to the absolute PC for handler in the method and
     ; mark it ISAJ by setting the highest bit of the word
     c.add
-    c.ldi.i =0x8000000
+    ; Cannot load 0x80000000 directly, check the assembler with:
+    ; c.ldi.i =0x80000000
+    c.ld.1
+    c.ldi.b 31
+    c.shl
+    ;;;;;;
     c.or
     c.st.erar
     ; es: ..., objectref
