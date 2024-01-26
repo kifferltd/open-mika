@@ -80,14 +80,6 @@ allocate_loc_20:
     c.ret
     cfi_end
 
-;===========================================================
-java_method1:
-
-    .byte   0xbb            ; new
-    .byte   0               ; indexbyte1
-    .byte   47              ; indexbyte2
-
-    .byte   0xb1            ; return
 
 ;===========================================================
 ; activate_frame
@@ -244,10 +236,6 @@ _emul_allocate_frame:
 
 ; Allocate locals
     c.callw     allocate_locals
-
-;; Jump to java_method1 - for testing only
-;    c.ldi.i     java_method1
-;    .short      0xf9c2      ; c.jump.java
 
 ; Jump to method code
     c.ld.i.fmp  FRAME_METHOD
