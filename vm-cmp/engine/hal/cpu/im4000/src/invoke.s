@@ -54,7 +54,11 @@ allocate_locals:
 allocate_loc_10:
     ; Allocate even number of slots to ensure 8-byte alignment of MSP
     c.addi 1
-    c.andi 0xFE
+    ; Cannot load 0xFFFE as short, check the assembler with:
+    ; c.ldi.s =0xFFFE
+    c.ldi.i 0x0000FFFE
+    ;;;;;;
+    c.and
     c.aml                           ; allocate memory stack
     c.ldi.b 8
 
