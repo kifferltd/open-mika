@@ -233,7 +233,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       // *current = in_invokesuper;
 
       w_clazz super = getSuper(calling_clazz);
-      woempa(7, "super case - look up %m in vmlt of superclass %k\n, called_method, super");
+      woempa(7, "super case - look up %m in vmlt of superclass %k\n", called_method, super);
 
       if (!super) {
         THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
