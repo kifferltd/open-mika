@@ -76,7 +76,7 @@ Call a static method which updates the value of a static variable, and check tha
 
 ######Java code
 
-```
+```java
 package wonka.bytecodetest;
 import java.math.BigDecimal;
 import java.lang.Math;
@@ -462,7 +462,7 @@ In theory `IllegalMonitorStateException` can be thrown, but there is no way to p
 
 #### Main flow
 
-We need to emulate the "wide" versions of **iload**, **fload**, **aload**, **lload**, **dload**, **istore**, **fstore**, **astore**, **lstore**, and **dstore**. These opcodes are used to copy values from the local variables of a method to the evaluation stack (**load**) and vice versa (**store**). (Note that the parameters of a method are trated as its first _n_ local variables for this purpose). The "wide" versions are only used for local variables starting from the 256th, so we will need to create a method with an insane number of local variables to test these opcodes. (By the way, a method cannot have more than 255 parameters - see <https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.3.3>).
+We need to emulate the "wide" versions of **iload**, **fload**, **aload**, **lload**, **dload**, **istore**, **fstore**, **astore**, **lstore**, and **dstore**. These opcodes are used to copy values from the local variables of a method to the evaluation stack (**load**) and vice versa (**store**). (Note that the parameters of a method are treated as its first _n_ local variables for this purpose). The "wide" versions are only used for local variables starting from the 256th, so we will need to create a method with an insane number of local variables to test these opcodes. (By the way, a method cannot have more than 255 parameters - see <https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.3.3>).
 
 #### Exceptional flows
 
