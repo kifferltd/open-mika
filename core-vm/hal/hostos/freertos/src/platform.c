@@ -70,6 +70,9 @@ void grab_low_memory() {
 
 void _lowMemoryCheck(const char *fun, int line) {
   for (int row = 0; row < NO_OF_ROWS; ++row) {
+    // HACK HACK HACK - we use 0x00000070/74 for debug purposes
+    if (row == 7) continue;
+    //
     uint8_t* saved_row = &saved_low_memory[row][0];
     uint8_t *found_row = (uint8_t*)(row*ROW_WIDTH);
     if (memcmp(found_row, saved_row, ROW_WIDTH)) {
