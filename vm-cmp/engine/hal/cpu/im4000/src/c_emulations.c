@@ -235,7 +235,9 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
       w_clazz super = getSuper(calling_clazz);
       woempa(7, "super case - look up %m in vmlt of superclass %k\n", called_method, super);
 
-      if (!super) {
+      if (!super
+       || !isSuperClass(called_method->spec.declaring_clazz, super)
+       || isSet(called_method->flags, METHOD_IS_INTERFACE)) {
         THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
       }
 
