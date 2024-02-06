@@ -104,6 +104,7 @@ public abstract class ClassLoader {
         prefix = prefix.substring(0, lastDot);
         status = pkg.get(prefix);
       }
+      Etc.woempa(7, "Package " + packageName + " assertion status = " + status);
       return (Boolean) status;
     }
 
@@ -112,7 +113,9 @@ public abstract class ClassLoader {
     }
 
     Boolean getClassStatus(String className) {
-      return (Boolean) clazz.get(className);
+      Object status = clazz.get(className);
+      Etc.woempa(7, "Class " + className + " assertion status = " + status);
+      return (Boolean) status;
     }
 
     void setForClass(String className, boolean enabled) {
