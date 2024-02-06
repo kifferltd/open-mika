@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-CFLAGS += -Wnofloat-equal
+CFLAGS += -Wno-float-equal
 
 sources = wmath.c
 fpobjdir = $(objdir)/vm-cmp/fp

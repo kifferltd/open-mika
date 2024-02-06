@@ -29,6 +29,8 @@
 #ifndef _WMATH_H
 #define _WMATH_H
 
+#pragma clang diagnostic ignored "-Wfloat-equal"
+
 #include <float.h>
 #include <math.h>
 
@@ -62,7 +64,7 @@
 #define isnanf(x) __isnanf(x)
 #else
 #warning "CG 20231106: neither isnanf(x) nor __isnanf(x) exist, using x!=x"
-#define isnanf(x) (x)!=(x)
+#define isnanf(x) ((x)!=(x))
 #endif
 #endif
 
