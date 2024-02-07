@@ -61,7 +61,8 @@ extern void  x_symtab_kernel(void);
 w_hashtable object_hashtable;
 #endif
 
-char *bootclasspath =
+char *bootclasspath = BOOTCLASSPATH;
+/* WAS:
 #ifdef USE_ROMFS
     "ROMFS"
 #else
@@ -73,6 +74,7 @@ char *bootclasspath =
     ":" BOOTCLASSDIR "/"
 #endif
 ;
+*/
 
 char *fsroot = NULL;
 

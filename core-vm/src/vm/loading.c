@@ -2094,7 +2094,7 @@ static w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
     *bdp_end++ = '/';
   }
   strcpy(bdp_end, pathname);
-  woempa(7, "Looking for file %s\n", fullpath);
+  woempa(1, "Looking for file %s\n", fullpath);
 
   struct vfs_STAT statbuf;
   w_int fd;
@@ -2102,7 +2102,7 @@ static w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
 
   if (vfs_stat(fullpath, &statbuf) < 0
    || (fd = vfs_open(fullpath, VFS_O_RDONLY, 0)) < 0)  {
-    woempa(7, "Could not open file %s\n", fullpath);
+    woempa(1, "Could not open file %s\n", fullpath);
     return NULL;
   }
 
@@ -2118,7 +2118,7 @@ static w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
      wabort(ABORT_WONKA, "Failed to read %d bytes from %s, rc was %d\n", statbuf.st_size, fullpath, rc);
    }
   }
-  woempa(7, "Read %d bytes from %s into buffer %p\n", statbuf.st_size, fullpath, buffer);
+  woempa(1, "Read %d bytes from %s into buffer %p\n", statbuf.st_size, fullpath, buffer);
 
   w_bar bar = allocMem(sizeof(w_BAR));
   bar->buffer = buffer;
