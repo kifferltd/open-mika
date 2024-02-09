@@ -183,6 +183,21 @@ w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   return f;
  }
 
+void performInheritanceChecks(w_thread thread, w_method called_method, w_clazz target_clazz) {
+  const char *message = 
+  (!target_clazz) ?
+    "no target class could be identified for %M" :
+  (!isSuperClass(called_method->spec.declaring_clazz, target_clazz)) ?
+    "declaring class of %M is not a superclass of target class %k" :
+  (isSet(called_method->flags, METHOD_IS_INTERFACE)) ?
+    "%M was not an interface when %k was compiled" :
+    NULL;
+
+  if (message) {
+    THROW_EXCEPTION(clazzIncompatibleClassChangeError, message, called_method, target_clazz);
+  }
+}
+
 w_method emul_special_target(im4000_frame frame, w_method called_method) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
@@ -234,12 +249,7 @@ w_method emul_special_target(im4000_frame frame, w_method called_method) {
 
       w_clazz super = getSuper(calling_clazz);
       woempa(7, "super case - look up %m in vmlt of superclass %k\n", called_method, super);
-
-      if (!super
-       || !isSuperClass(called_method->spec.declaring_clazz, super)
-       || isSet(called_method->flags, METHOD_IS_INTERFACE)) {
-        THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
-      }
+      performInheritanceChecks(thread, called_method, super);
 
       w_method target_method = virtualLookup(called_method, super);
 
@@ -266,6 +276,7 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   }
 
   w_clazz target_clazz = instance2clazz(objectref);
+  performInheritanceChecks(thread, called_method, target_clazz);
   w_method target_method = virtualLookup(called_method, target_clazz);
 
   if (isSet(target_method->flags, ACC_STATIC | ACC_ABSTRACT)) {
