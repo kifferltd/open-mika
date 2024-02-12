@@ -34,9 +34,7 @@ package java.lang;
 
 final public class Void {
 
-  public static final Class TYPE = Void.getWrappedClass();
-
-  private native static Class getWrappedClass();
+  public static final Class TYPE = void.class;
 
   //private constructor to make Void uninstantiatable ...
   private Void(){}

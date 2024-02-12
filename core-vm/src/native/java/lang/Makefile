@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2024 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = Boolean.c Byte.c Character.c Class.c ClassLoader.c Double.c Float.c Integer.c Long.c Math.c NativeProperties.c Object.c Runtime.c StringBuffer.c String.c System.c SecurityManager.c Short.c Thread.c ThreadGroup.c Throwable.c Void.c
+sources = Character.c Class.c ClassLoader.c Double.c Float.c Math.c NativeProperties.c Object.c Runtime.c StringBuffer.c String.c System.c SecurityManager.c Thread.c ThreadGroup.c Throwable.c
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
 

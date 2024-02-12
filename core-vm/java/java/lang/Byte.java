@@ -37,7 +37,7 @@ public final class Byte extends Number implements Comparable {
 
   public static final byte MAX_VALUE = +127;
   public static final byte MIN_VALUE = -128;
-  public static final Class TYPE = Byte.getWrappedClass();
+  public static final Class TYPE = byte.class;
 
   private final byte value;
 
@@ -172,8 +172,6 @@ public final class Byte extends Number implements Comparable {
   {
     return ByteCache.byteFactory(parseByte(str,radix));
   }
-
-  private native static Class getWrappedClass();
 
   /**
   * We cache a Byte instance for every possible value of byte.

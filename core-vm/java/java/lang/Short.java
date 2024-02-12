@@ -41,7 +41,7 @@ public final class Short extends Number implements Comparable {
 
   public static final short MIN_VALUE = (short)0x8000;
   public static final short MAX_VALUE = (short)0x7fff;
-  public static final Class TYPE = Short.getWrappedClass();
+  public static final Class TYPE = short.class;
 
   public Short(short value) {
     this.value = value;
@@ -171,7 +171,5 @@ public final class Short extends Number implements Comparable {
   public static String toString(short i) {
     return String.valueOf(i);
   }
-
-  private native static Class getWrappedClass();
 
 }

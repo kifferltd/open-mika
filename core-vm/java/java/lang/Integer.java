@@ -39,7 +39,7 @@ public final class Integer extends Number implements Comparable {
 
   public static final int MIN_VALUE = 0x80000000;
   public static final int MAX_VALUE = 0x7fffffff;
-  public static final Class TYPE = Integer.getWrappedClass();
+  public static final Class TYPE = int.class;
 
   public Integer(int value) {
     this.value = value;
@@ -220,7 +220,5 @@ public final class Integer extends Number implements Comparable {
     }
 
   }
-
-  private native static Class getWrappedClass();
 
 }

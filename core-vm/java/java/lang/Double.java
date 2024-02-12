@@ -43,7 +43,7 @@ public final class Double extends Number implements Comparable {
   public static final double NEGATIVE_INFINITY = -1.0/0.0;
   public static final double POSITIVE_INFINITY = +1.0/0.0;
   public static final double NaN = 0.0/0.0;
-  public static final Class TYPE = Double.getWrappedClass();
+  public static final Class TYPE = double.class;
 
   public Double(double value) {
     this.value = value;
@@ -166,7 +166,5 @@ public final class Double extends Number implements Comparable {
   public int compareTo(Object obj) throws ClassCastException {
     return compareTo((Double)obj);
   }
-
-  private native static Class getWrappedClass();
 
 }

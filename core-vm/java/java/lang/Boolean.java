@@ -39,7 +39,7 @@ public final class Boolean implements java.io.Serializable {
 
   public static final Boolean TRUE = new Boolean(true);
   public static final Boolean FALSE = new Boolean(false);
-  public static final Class TYPE = Boolean.getWrappedClass();
+  public static final Class TYPE = boolean.class;
 
   public Boolean(boolean value) {
     this.value = value;
@@ -89,8 +89,6 @@ public final class Boolean implements java.io.Serializable {
 
     return property.equalsIgnoreCase("true");
   }
-
-  private native static Class getWrappedClass();
 
   public static Boolean valueOf(boolean b) {
     return b ? TRUE : FALSE;

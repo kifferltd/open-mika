@@ -43,7 +43,7 @@ public final class Float extends Number implements Comparable {
   public static final float NEGATIVE_INFINITY = (float)(-1.0/0.0);
   public static final float POSITIVE_INFINITY = (float)(+1.0/0.0);
   public static final float NaN = (float)(0.0/0.0);
-  public static final Class TYPE = Float.getWrappedClass();
+  public static final Class TYPE = float.class;
 
   public Float(float value) {
     this.value = value;
@@ -164,7 +164,5 @@ public final class Float extends Number implements Comparable {
   public static native int floatToRawIntBits(float value);
 
   public static native float intBitsToFloat(int bits);
-
-  private native static Class getWrappedClass();
 
 }

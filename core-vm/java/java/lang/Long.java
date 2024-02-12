@@ -41,7 +41,7 @@ public final class Long extends Number implements Comparable{
 
   public static final long MIN_VALUE = 0x8000000000000000L;
   public static final long MAX_VALUE = 0x7fffffffffffffffL;
-  public static final Class TYPE = Long.getWrappedClass();
+  public static final Class TYPE = long.class;
 
   public Long(long value) {
     this.value = value;
@@ -290,7 +290,5 @@ public final class Long extends Number implements Comparable{
   public static Long valueOf(String s) throws NumberFormatException {
     return new Long(parseLong(s, 10));
   }
-
-  private native static Class getWrappedClass();
 
 }

@@ -56,7 +56,3 @@ w_boolean Float_static_isInfinite(w_thread thread, w_instance class, w_float f) 
 w_boolean Float_static_isNaN(w_thread thread, w_instance class, w_float f) {
   return wfp_float32_is_NaN(f);
 }
-
-w_instance Float_getWrappedClass(w_thread thread, w_instance thisClass) {
-  return clazz2Class(clazz_float);
-}
