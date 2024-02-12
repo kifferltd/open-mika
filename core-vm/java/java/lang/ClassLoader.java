@@ -78,12 +78,12 @@ public abstract class ClassLoader {
     /** The assertion status which has been specified for various packages. 
      ** Maps String(package name) -> Boolean (assertion status).
      */
-    private Map pkg = new HashMap();
+    private Map packageMap = new HashMap();
 
     /** The assertion status which has been specified for various classes. 
      ** Maps String(fq class name) -> Boolean (assertion status).
      */
-    private Map clazz = new HashMap();
+    private Map classMap = new HashMap();
 
     void setDefault(boolean enabled) {
       dflt = enabled;
@@ -95,37 +95,37 @@ public abstract class ClassLoader {
 
     Boolean getPackageStatus(String packageName) {
       String prefix = packageName;
-      Object status = pkg.get(packageName);
+      Object status = packageMap.get(packageName);
       while (status == null) {
         int lastDot = prefix.lastIndexOf('.');
         if (lastDot < 0) {
           break;
         }
         prefix = prefix.substring(0, lastDot);
-        status = pkg.get(prefix);
+        status = packageMap.get(prefix);
       }
       Etc.woempa(7, "Package " + packageName + " assertion status = " + status);
       return (Boolean) status;
     }
 
     void setForPackage(String packageName, boolean enabled) {
-      pkg.put(packageName, new Boolean(enabled));
+      packageMap.put(packageName, new Boolean(enabled));
     }
 
     Boolean getClassStatus(String className) {
-      Object status = clazz.get(className);
+      Object status = classMap.get(className);
       Etc.woempa(7, "Class " + className + " assertion status = " + status);
       return (Boolean) status;
     }
 
     void setForClass(String className, boolean enabled) {
-      clazz.put(className, new Boolean(enabled));
+      classMap.put(className, new Boolean(enabled));
     }
 
     void clear() {
       dflt = false;
-      pkg = new HashMap();
-      clazz = new HashMap();
+      packageMap = new HashMap();
+      classMap = new HashMap();
     }
   }
 
