@@ -144,13 +144,15 @@ w_field getMethodConstant_unsafe(w_clazz c, uint32_t i) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
+  // getMethodConstant will return NULL iff it sets a pending exception
   w_method m = getMethodConstant(c, i);
-  if (isSet(m->flags, ACC_STATIC)) {
+  if (m && isSet(m->flags, ACC_STATIC)) {
     mustBeInitialized(m->spec.declaring_clazz);
   }
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
   return m;
 }
@@ -159,10 +161,12 @@ w_method getIMethodConstant_unsafe(w_clazz c, uint32_t i) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
+  // getIMethodConstant will return NULL iff it sets a pending exception
   w_method m = getIMethodConstant(c, i);
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
   return m;
 }
@@ -171,14 +175,16 @@ w_field getFieldConstant_unsafe(w_clazz c, uint32_t i) {
   lowMemoryCheck;
   w_thread thread = currentWonkaThread;
   w_boolean was_unsafe = enterSafeRegion(thread);
+  // getFieldConstant will return NULL iff it sets a pending exception
   w_field f = getFieldConstant(c, i);
-  if (isSet(f->flags, ACC_STATIC)) {
+  if (f && isSet(f->flags, ACC_STATIC)) {
     // needed for getstatic, putstatic
     mustBeInitialized(f->declaring_clazz);
   }
   if (was_unsafe) {
     enterUnsafeRegion(thread);
   }
+  CHECK_FOR_PENDING_EXCEPTION
   lowMemoryCheck;
   return f;
  }
