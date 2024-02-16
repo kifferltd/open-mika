@@ -47,7 +47,7 @@ BEGIN {
   print "#include \"locks.h\""
   print "#include \"methods.h\""
   print "#include \"ts-mem.h\""
-  print "#include \"threads.h\""
+  print "#include \"mika_threads.h\""
   print "#include \"loading.h\""
   print "#include \"uart-classes.h\""
   print " "
