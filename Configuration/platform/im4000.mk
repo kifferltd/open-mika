@@ -107,4 +107,12 @@ CFLAGS += -DJAVA_THREAD_YIELD_IS_FREERTOS_DELAY -DUSE_OBJECT_HASHTABLE
 
 # Enable this line if you want to run bytecode tests instead of an application
 # WAS: export BYTECODETEST = true
-export EXTENSIONS = bytecodetest imsys javax_comm
+# EXTENSIONS += bytecodetest
+
+# Enable this line to enable javax.comm
+EXTENSIONS += javax_comm
+
+# Enable this line to enable Imsys proprietary API
+EXTENSIONS += imsys
+
+export EXTENSIONS

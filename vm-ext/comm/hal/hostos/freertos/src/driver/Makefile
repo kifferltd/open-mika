@@ -1,6 +1,6 @@
 ###########################################################################
-# Copyright (c) 2022, 2024 by Chris Gray, KIFFER Ltd.                     #
-# All rights reserved.                                                    #
+# Copyright (c) 2024 by Chris Gray, theGrayZone CommV.                    #
+#  All rights reserved.                                                   #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -10,9 +10,9 @@
 # 2. Redistributions in binary form must reproduce the above copyright    #
 #    notice, this list of conditions and the following disclaimer in the  #
 #    documentation and/or other materials provided with the distribution. #
-# 3. Neither the name of KIFFER Ltd nor the names of other contributors   #
-#    may be used to endorse or promote products derived from this         #
-#    software without specific prior written permission.                  #
+# 3. Neither the name of theGrayZone CommV nor the names of other         #
+#    contributors may be used to endorse or promote products derived from #
+# this software without specific prior written permission.                #
 #                                                                         #
 # THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          #
 # WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    #
@@ -27,12 +27,22 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-.PHONY : classes
+.PHONY : mika libs
+mika : libs
 
-# Note to self: this is how to get the output of a comand into a make variable ...
-#    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
-#    echo Git branch is $(GIT_BRANCH)
+sources = comms.c
+objects=$(patsubst %.c, $(commobjdir)/%.o, $(sources))
 
-classes : 
-	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
+.PHONY : mika
+mika : libs
+
+libs : $(objects)
+
+$(objects) : $(commobjdir)/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+
+
+
 

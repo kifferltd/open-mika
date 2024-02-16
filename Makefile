@@ -136,6 +136,8 @@ export javamathdir = $(MIKA_TOP)/vm-cmp/math/${MATH}/$(JAVAX)
 export JAR = none
 export javajardir = $(MIKA_TOP)/vm-cmp/jar/$(JAR)
 
+export javacommdir = $(MIKA_TOP)/vm-ext/comm/$(JAVAX)
+
 export classpath = $(javadir):$(javamathdir):$(securitydir):$(secprovdir):$(javajardir)
 
 export tooldir = $(MIKA_TOP)/tool
@@ -154,6 +156,7 @@ export fpobjdir = $(objdir)/fp/$(FLOATING_POINT)
 export mathobjdir = $(objdir)/math/$(MATH)
 export networkobjdir = $(objdir)/network/$(NETWORK)
 export schedulerobjdir = $(objdir)/kernel/$(SCHEDULER)
+export commobjdir = $(objdir)/vm-ext/javax_comm
 
 export imagedir = $(MIKA_TOP)/image/$(PLATFORM)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
@@ -216,6 +219,7 @@ FS_LIB    = libfs
 export OSWALD_LIB = $(libdir)/liboswald.a
 export AWT_LIB = $(libdir)/libawt.a
 export MIKA_LIB = $(libdir)/libmika.a
+export COMM_LIB = $(libdir)/libcomm.a
 
 ifdef UNIX
   BUILD_HOST = `uname`
@@ -572,21 +576,19 @@ export gendir = $(builddir)/generated
 
 CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 
-# TODO objdirlist not used anywhere?
-# objdirlist += $(objdir)/awt/$(AWT)
-# objdirlist += $(objdir)/filesystem/$(FILESYSTEM)
-# objdirlist += $(objdir)/fp/$(FLOATING_POINT)
-# objdirlist += $(objdir)/math/$(MATH)
-# objdirlist += $(objdir)/network/$(NETWORK)
+liblist = $(MIKA_LIB)
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+  liblist += $(COMM_LIB)
+endif
 
 export CFLAGS
 export JFLAGS
 export LDFLAGS
 export JNI
 
-.PHONY : mika core-vm echo builddir install clean test common-test scheduler-test deployable binary jarfile mcldir romfs resource app image
+.PHONY : mika libs core-vm kernel kcommon kecho echo builddir comm install clean test common-test scheduler-test deployable binary jarfile mcldir romfs resource app image
 
-mika : echo builddir deployable kernel core-vm test
+mika : echo builddir deployable kernel core-vm test $(EXTENSIONS)
 
 # TODO : only depends on $(mcltarget) when this is romfs
 $(MIKA_LIB) : $(mcltarget)
@@ -594,7 +596,10 @@ $(MIKA_LIB) : $(mcltarget)
 	@echo "CFLAGS =" $(CFLAGS)
 	make -C core-vm libs
 
-libs: kernel $(MIKA_LIB)
+$(COMM_LIB) :
+	make -C vm-ext/comm libs
+
+libs: kernel $(liblist)
 
 kecho :
 	@echo "Building $(SCHEDULER) kernel for platform '$(PLATFORM)'"
@@ -618,6 +623,7 @@ echo : kecho
 	@echo "ENGINE = " $(ENGINE)
 	@echo "networkinc = " $(networkinc)
 	@echo "fsinc = " $(fsinc)
+	@echo "liblist = " $(liblist)
 ifdef USE_ROMFS
 	@echo "using ROMFS"
 endif
@@ -652,6 +658,8 @@ builddir :
 	@mkdir -p $(networkobjdir)
 	@echo "Creating " $(schedulerobjdir)
 	@mkdir -p $(schedulerobjdir)
+	@echo "Creating " $(commobjdir)
+	@mkdir -p $(commobjdir)
 	@echo "Creating " $(objdir)/generated
 	@mkdir -p $(objdir)/generated
 	@echo "Creating " $(libdir)
@@ -669,14 +677,12 @@ kernel : kecho builddir kcommon
 kcommon : echo builddir
 	make -C vm-cmp/kernel/common 
 
-comm :
+javax_comm :
 # WAS:
 # ifeq ($(JAVAX_COMM), true)
 # 	make -C vm-ext/comm 
 # endif
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
 	make -C vm-ext/comm 
-endif
 
 max :
 ifeq ($(MIKA_MAX), true)

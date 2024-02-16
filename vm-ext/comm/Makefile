@@ -1,6 +1,5 @@
 ###########################################################################
-# Copyright (c) 2022, 2024 by Chris Gray, KIFFER Ltd.                     #
-# All rights reserved.                                                    #
+# Copyright (c) 2024 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -27,12 +26,40 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-.PHONY : classes
+export COMM_TOP  = $(MIKA_TOP)/vm-ext/comm
 
-# Note to self: this is how to get the output of a comand into a make variable ...
-#    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
-#    echo Git branch is $(GIT_BRANCH)
+# no local include directory yet
+# CFLAGS += $(COMM_TOP)/common/include
 
-classes : 
-	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
+# note: see core-vm/Makefile for other possible includes we may need
+CFLAGS += -I $(MIKA_TOP)/core-vm/include
+CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
+CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/$(HOSTOS)/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
+CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
+CFLAGS += -I $(gendir)
+ifeq ($(HOSTOS), freertos)
+# to be honest these are really more about clang linker than freertos
+  LDFLAGS += $(libdir)/libmika.a $(libdir)/liboswald.a 
+  LDFLAGS += -fuse-ld=lld 
+  LDFLAGS += -ferror-limit=0
+else
+  CFLAGS += -L $(libdir)
+  LDFLAGS += -lmika -loswald 
+endif
+
+.PHONY : mika libs classes clean
+mika : libs classes
+
+libs :
+	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-h.awk -f $(scriptdir)/common-classes-h.awk uart-classes.in > $(gendir)/uart-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-c.awk -f $(scriptdir)/common-classes-c.awk uart-classes.in > $(gendir)/uart-classes.c
+	make -C common/src/native $(MAKECMDGOALS)
+	make -C hal/hostos/$(HOSTOS)/src/driver $(MAKECMDGOALS)
+
+classes :
+	make -C $(JAVAX) classes
+
+clean :
+	make -C common/src/native $(MAKECMDGOALS)
 
