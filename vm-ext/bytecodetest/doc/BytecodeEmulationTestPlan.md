@@ -46,6 +46,18 @@ For each opcode we need to test both the normal behaviour and the "corner cases"
 
 The definitive specification of bytecode behaviours is _The Java Virtual Machine Specification_ (JVMS), specifically _Chapter 6. The Java Virtual Machine Instruction Set_. The version for Java 1.6 can be found at <https://docs.oracle.com/javase/specs/jvms/se15/html/jvms-6.html>. As this version covers Java 1.6, it includes descriptions of features such as generics or "dynamic" method indication which were not present in Java 1.4 (the JVMS for 1.4 is not available online, only in second-hand bookshops). The descriptions below are derived from the JVMS by removing references to these features.
 
+## Note on "first active use"
+
+The first active use of a class will cause the class to be initialized, causing its static initializer (`<clinit>`) to be run if it has one. If the static initializer throws an uncaught exception, this will be wrapped in a `java.lang.ExceptionInInitializerError` which will be thrown wherever the first active use occurred. The original exception can be obtained and examined by calling `getCause()` on the ExceptionInInitializerError.
+
+The following operations constitute an "active use":
+- creating an instance of the class (new)
+- invoking a static method of the class (invokestatic)
+- reading or writing a static field which is not afinal field initialized to a compile-time constant (getstatic, puststatic)
+- certain reflective operations
+- initializing a subclass of the class
+- running the class's `main()` method from the command line.
+
 ## Plan
 
 ### Non-instance opcodes : ldc\*, putstatic, getstatic, invokestatic
@@ -140,6 +152,7 @@ private static void test_invokestatic();
 
 #### Exceptional flows
 
+
 ##### ldc, ldc\_w, ldc2\_w
 
 **n/a**
@@ -155,6 +168,8 @@ If the matching field is not accessible to the caller, `IllegalAccessError` is t
 
 If the matching field is not a static field, `IncompatibleClassChangeError` is thrown.
 
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
+ 
 ##### getstatic
 
 The search for a matching field is performed in the class or interface referenced by the method constant and in all its superclasses and superinterfaces. as described for **putstatic**. This should be tested for various cases: immediate and more distant superclasses and superinterfaces, interfaces inherited via a superclass, etc..
@@ -164,6 +179,14 @@ If no matching field is found, `NoSuchFieldError` will be thrown.
 If the matching field is not accessible to the caller, `IllegalAccessError` will be thrown.
 
 If the matching field is not a static field, `IncompatibleClassChangeError` will be thrown.
+
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
+
+##### invokestatic
+
+The search for the method is performed in the class referenced by the method constant and in all its superclasses. 
+
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
 
 ### Instance opcodes -- object creation (new, invokespecial)
 
@@ -199,6 +222,8 @@ If the class file referenced by the constant cannot be found then `NoClassDefFou
 If the class referenced by the constant is not accessible from the test class (e.g. it is a private class, or package-protected in another package) then `IllegalAccessException` is thrown. (Testing this requires that the accessibility of the class is different at compilation time to runtime).
 
 Theoretically a `LinkageError` can be thrown when resolving the class constant, but this is not easy to provoke.
+
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
 
 ##### invokespecial
 
@@ -267,6 +292,8 @@ Resolving the class constant may result in a `LinkageError`, `NoClassDefFoundErr
 
 If count is less than zero, `NegativeArraySizeException` is thrown.
 
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
+
 ### Array creation -- multi-dimensional array (multianewarray)
 
 #### Main flow
@@ -284,6 +311,8 @@ Resolving the class constant may result in a `LinkageError`, `NoClassDefFoundErr
 If the size specified for any dimension is less than zero, `NegativeArraySizeException` is thrown.
 
 If the size specified for any dimension is equal to zero, none of the subsequent dimensions will be created.
+
+This opcode may cause the referenced class to be initialized if it is the first active use of that class, leading to an ExceptionInInitializerError if the class has a static initializer and this static initializer throws an uncaught exception.
 
 ### Instance opcodes -- field access (putfield, getfield)
 
