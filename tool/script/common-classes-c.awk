@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2021, 2022, 2023 by KIFFER Ltd. All rights reserved.      #
+# Copyright (c) 2021, 2022, 2023, 2024 by KIFFER Ltd. All rights reserved.#
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -29,6 +29,12 @@
 # Function to parse a method descriptor.
 
 BEGIN {
+  gendir = ENVIRON["gendir"]
+  dispdir = gendir "/dispatchers"
+  system("mkdir -p " dispdir "/idmap")
+  system("mkdir -p " dispdir "/plist")
+  system("mkdir -p " dispdir "/rtype")
+  system("mkdir -p " dispdir "/proto")
 
   d2id["B"] = "b"
   d2id["C"] = "c"
@@ -104,7 +110,7 @@ function count64bitparams(id) {
   return k
 }
 
-function id2iplist(id) {
+function id2plist(id) {
   cursor = 1
   nparams = length(id)-2
   depth = length(id)-2
@@ -248,14 +254,20 @@ function id2rtype(id) {
     descr=$2
     if($3) methods[thisclazz,method,descr] = $3
     id=descr2id(descr)
-    idmap[descr] = id
-    if(!protos[id]) {
-# WAS      static_plists[id]=id2splist(id)
-# WAS      instance_plists[id]=id2iplist(id)
-      plists[id]=id2iplist(id)
-      rtypes[id]=id2rtype(id)
-      protos[id]=id2proto(id)
-    }
+# OLD
+#    idmap[descr] = id
+#    if(!protos[id]) {
+#      plists[id]=id2plist(id)
+#      rtypes[id]=id2rtype(id)
+#      protos[id]=id2proto(id)
+#    }
+# NEW
+    dotted = descr;  gsub(/\//,".",dotted)
+    print id > dispdir "/idmap/" dotted 
+    print id2plist(id) > dispdir "/plist/" id
+    print id2rtype(id) > dispdir "/rtype/" id
+    print id2proto(id) > dispdir "/proto/" id
+# END
   }
 }
 
@@ -352,143 +364,6 @@ END {
       printf "}\n\n"
     }
   }
-
-  printf "static void prepareNativeFrame(w_frame frame, w_thread thread, w_frame caller, w_method method) {\n"
-  print "  frame->flags = FRAME_NATIVE;\n  frame->label = \"frame\";\n  frame->previous = caller;\n  frame->thread = thread; frame->method = method;\n"
-  print "  frame->jstack_top = frame->jstack_base;\n  SET_SLOT_SCANNING(frame->jstack_base, stack_notrace);\n "
-  printf "  frame->auxstack_base = caller->auxstack_top;\n  frame->auxstack_top = caller->auxstack_top;\n\n"
-  printf "#ifdef TRACE_CLASSLOADERS\n"
-  printf "  {\n    w_instance loader = isSet(method->flags, ACC_STATIC)\n        ? method->spec.declaring_clazz->loader\n        : instance2clazz((w_instance) GET_SLOT_CONTENTS(frame->jstack_base - method->exec.arg_i))->loader;\n"
-  printf "    if (loader && !getBooleanField(loader, F_ClassLoader_systemDefined)) {\n      frame->udcl = loader;\n    }\n"
-  printf "    else {\n      frame->udcl = caller->udcl;\n    }\n  }\n"
-  printf "#endif\n"
-  printf "}\n\n"
-
-  printf "/* dispatchers */\n"
-  printf ""
-
-  printf "/* code to return a void result */\n"
-  printf ""
-
-  printf "static void return_void(w_frame caller, w_int depth);\n\n"
-  printf "static void return_void(w_frame caller, w_int depth) {\n"
-  printf "  caller->jstack_top += -depth;\n"
-  printf "}\n\n"
-
-  printf "/* code to return a reference result */\n"
-  printf ""
-
-  printf "static void return_reference(w_frame caller, w_int depth, w_word result);\n\n"
-  printf "static void return_reference(w_frame caller, w_int depth, w_word result) {\n"
-  printf "  SET_REFERENCE_SLOT(caller->jstack_top - depth, result);\n"
-  printf "  caller->jstack_top += -depth + 1;\n"
-  printf "}\n\n"
-
-  printf "/* code to return a non-reference, single-slot result */\n"
-  printf ""
-
-  printf "static void return_oneslot(w_frame caller, w_int depth, w_word result);\n\n"
-  printf "static void return_oneslot(w_frame caller, w_int depth, w_word result) {\n"
-  printf "  SET_SCALAR_SLOT(caller->jstack_top - depth, result);\n"
-  printf "  caller->jstack_top += -depth + 1;\n"
-  printf "}\n\n"
-
-  printf "/* code to return a w_double result */\n"
-  printf ""
-
-  printf "static void return_w_long(w_frame caller, w_int depth, w_long result);\n\n"
-  printf "static void return_w_long(w_frame caller, w_int depth, w_long result) {\n"
-  printf "  w_long2slots(result, caller->jstack_top-depth);\n"
-  printf "  caller->jstack_top += -depth + 2;\n"
-  printf "}\n\n"
-
-  printf "/* code to return a w_double result */\n"
-  printf ""
-
-  printf "static void return_w_double(w_frame caller, w_int depth, w_double result);\n\n"
-  printf "static void return_w_double(w_frame caller, w_int depth, w_double result) {\n"
-  printf "  w_long2slots(result, caller->jstack_top-depth);\n"
-  printf "  caller->jstack_top += -depth + 2;\n"
-  printf "}\n\n"
-
-  for (id in protos) {
-    printf "void native_dispatcher_%s(w_frame caller, w_method method);\n\n", id
-    printf "void native_dispatcher_%s(w_frame caller, w_method method) {\n", id
-    printf "  volatile w_thread thread = caller->thread;\n"
-    printf "  w_Frame theFrame;\n"
-    printf "  w_frame frame = &theFrame;\n"
-    printf "  w_int depth = method->exec.arg_i;\n"
-    printf "  w_instance target = isSet(method->flags, ACC_STATIC) ? clazz2Class(method->spec.declaring_clazz) : (w_instance) GET_SLOT_CONTENTS(caller->jstack_top - depth);\n"
-    printf "  x_monitor m = isSet(method->flags, ACC_SYNCHRONIZED) ? getMonitor(target) : NULL;\n"
-    nonvoid = rtypes[id] != "void"
-    reference = rtypes[id] == "w_instance"
-    twoslots = rtypes[id] == "w_long" || rtypes[id] == "w_double"
-    if (nonvoid) printf "  %s result;\n\n",id2rtype(id)
-    printf "  woempa(1, \"Calling %%M using native_dispatcher_%s\\n\", method);\n", id
-    printf "  frame->jstack_base = caller->jstack_top;\n"
-    printf "  prepareNativeFrame(frame, thread, caller, method);\n\n"
-    printf "  threadMustBeSafe(thread);\n\n"
-    printf "  if (m) {\n"
-    printf "    x_monitor_eternal(m);\n"
-    printf "  }\n\n"
-    printf "  thread->top = frame;\n\n"
-    printf "  w_slot top = caller->jstack_top;\n"
-
-    printf "  typedef %s (_fun_%s) (w_thread, w_instance%s);\n",rtypes[id],id,protos[id]
-    printf "  _fun_%s *_f%s = (_fun_%s*)method->exec.function.%s_fun;\n  ",id,id,id,nonvoid ? (reference ? "ref" : twoslots ? "long" : "word") : "void"
-    if (nonvoid) printf "result = "
-    printf "_f%s(%s);\n",id,plists[id]
-    
-    printf "  if (m) {\n"
-    printf "    x_monitor_exit(m);\n"
-    printf "  }\n\n";
-    if (nonvoid) {
-      printf "  if (thread->exception) {\n"
-      printf "    thread->top = caller;\n"
-      printf "  }\n"
-      printf "  else {\n"
-      if (reference) printf "    enterUnsafeRegion(thread);\n"
-      if (twoslots) {
-        printf "    woempa(1, \"%%m result = %%016x\\n\", method, result);\n"
-        printf "    return_%s(caller, depth, result);\n", id2rtype(id)
-      }
-      else {
-        printf "    woempa(1, \"%%m result = %%%s\\n\", method, result);\n", nonvoid ? "08x" : "p"
-        printf "    return_%s(caller, depth, result);\n", reference ? "reference" : "oneslot"
-      }
-      if (reference) printf "    if (result) {\n      setFlag(instance2flags(result), O_BLACK);\n    }\n"
-      printf "    thread->top = caller;\n"
-      if (reference) printf "    enterSafeRegion(thread);\n"
-      printf "  }\n"
-    }
-    else {
-      printf "  return_void(caller, depth);\n"
-      printf "  thread->top = caller;\n"
-    }
-    printf "}\n\n"
-
-  }
-
-
-  printf "static struct {\n"
-  printf "  const char *descr;\n"
-  printf "  w_callfun dispatcher;\n"
-  printf "} %s_native_dispatchers[] = {\n", Module
-  for (descr in idmap) {
-    printf "  { \"%s\", native_dispatcher_%s", descr, idmap[descr]
-    printf " },\n"
-  }
-  printf "  { NULL, NULL }\n};\n\n"
-
-  printf "void collect%sDispatchers(w_hashtable hashtable, w_hashtable instance_hashtable) {\n", Module
-  printf "  w_string descr_string;\n\n"
-  printf "  for (int i = 0; %s_native_dispatchers[i].descr; ++i) {\n", Module
-  printf "    descr_string = cstring2String(%s_native_dispatchers[i].descr, strlen(%s_native_dispatchers[i].descr));\n", Module, Module
-  printf "    woempa(1, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
-  printf "    ht_write_no_lock(hashtable, (w_word)descr_string, (w_word)%s_native_dispatchers[i].dispatcher);\n", Module
-  printf "    woempa(1, \"added (%%w, 0x%%08x) to descriptors hashtable, now holds %%d items\\n\", descr_string, (w_word)%s_native_dispatchers[i].dispatcher, hashtable->occupancy);\n", Module
-  printf "  }\n"
-  printf "}\n\n"
 
   print "static struct {"
   print "  w_clazz *clazzptr;"

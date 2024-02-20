@@ -1177,8 +1177,8 @@ void startLoading(void) {
 
   woempa(7, "Forced class loading complete, loaded %d classes; heap remaining = %d.\n",system_loaded_class_hashtable->occupancy, heap_remaining);
 
-  dispatchers_hashtable = ht_create("hashtable: static dispatchers", 97, NULL, NULL, 0, 0);
-  collectCoreDispatchers(dispatchers_hashtable);
+  dispatchers_hashtable = ht_create("hashtable: dispatchers", 97, NULL, NULL, 0, 0);
+  collectDispatchers(dispatchers_hashtable);
 }
 
 /*

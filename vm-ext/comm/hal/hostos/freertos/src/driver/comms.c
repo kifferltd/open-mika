@@ -29,6 +29,7 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.            *
 **************************************************************************/
 
+/* linuxisms
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -42,6 +43,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <unistd.h>
+*/
 #include "comms.h"
 #include "sio.h"
 #include "ts-mem.h"
@@ -60,7 +62,7 @@
 ** a w_Device, for each wonkaterm we have a w_Wt structure 
 ** and a w_Device.
 */
-
+/* linuxisms
 static struct termios sio0_oldtermios;
 static struct termios sio0_newtermios;
 static struct termios sio1_oldtermios;
@@ -78,7 +80,6 @@ static struct termios sio6_newtermios;
 static struct termios sio7_oldtermios;
 static struct termios sio7_newtermios;
 
-/* linuxisms
 #define SIO0_DEFAULT_BITRATE B115200
 #define SIO1_DEFAULT_BITRATE B115200
 #define SIO2_DEFAULT_BITRATE B115200
@@ -137,8 +138,10 @@ typedef struct w_Control_Sio {
 ** Pointers to the termios structure as it was before we grabbed the sio,
 ** and as it is now
 */
+/* posixism
   w_termios  oldtermios;
   w_termios  newtermios;
+*/
 /*
 ** The name of the actual device e.g. '/dev/ttyS0'
 */
@@ -241,9 +244,11 @@ w_void sio_initDevice(w_device device) {
 w_void sio_termDevice(w_device device) {
   w_control_sio sio = device->control;
   
+/* linuxisms
   if (sio->pollfd.fd>=0) {
     tcsetattr(sio->pollfd.fd, TCSAFLUSH, sio->oldtermios);
   }
+*/
   sio_close(device);
 
   releaseMem(device->control);
@@ -257,8 +262,10 @@ w_device sio_open(w_device device, w_driver_perm mode) {
 
     sio->miscflags = mode = wdp_read|wdp_write;
   
+/* linuxisms
     sio->pollfd.fd = open(sio->devicename,O_RDWR);
     sio->pollfd.events = POLLIN|POLLOUT;
+*/
 
     if(x_async_register(sio->pollfd.fd)) {
       return NULL;
@@ -268,14 +275,15 @@ w_device sio_open(w_device device, w_driver_perm mode) {
     ** If a tty, save current (pre-wonka) settings in oldtermios.  (If not a tty,
     ** this call returns nonzero and we skip the rest of the tty-related stuff).
     */
+/* linuxisms
     if (tcgetattr(sio->pollfd.fd,sio->oldtermios)==0) {
-      /*
-      ** Copy oldtermios to newtermios and make some changes:
-      ** echo off, canonical mode off, extended i/p proc off, signal chars off
-      ** no SIGINT on BREAK, CR>NL off, i/p parity off, strip8 off, CTS/RTS off
-      ** size 8 bits, no parity check, no output processing
-      ** read is blocking with no timeout
-      */
+      /.
+      .. Copy oldtermios to newtermios and make some changes:
+      .. echo off, canonical mode off, extended i/p proc off, signal chars off
+      .. no SIGINT on BREAK, CR>NL off, i/p parity off, strip8 off, CTS/RTS off
+      .. size 8 bits, no parity check, no output processing
+      .. read is blocking with no timeout
+      ./
       w_memcpy(sio->newtermios,sio->oldtermios,sizeof(struct termios));
       sio->newtermios->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
       sio->newtermios->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
@@ -286,6 +294,7 @@ w_device sio_open(w_device device, w_driver_perm mode) {
       sio->newtermios->c_cc[VTIME] = 0;
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
     }
+*/
 
     sio->oldflags = 0;
     sio->newflags = 0;
@@ -322,9 +331,11 @@ w_driver_status sio_read(w_device device, w_ubyte *bytes, w_int length, w_int *l
   w_int result = read(sio->pollfd.fd, bytes, (w_word)length);
 
   while(result == -1) {
+/* linuxism
     if(errno != EAGAIN){
       return wds_internal_error;
     }
+*/
     x_async_block(sio->pollfd.fd, timeout);
     result = read(sio->pollfd.fd, bytes, (w_word)length);
   }
@@ -340,9 +351,11 @@ w_driver_status sio_write(w_device device, w_ubyte *bytes, w_int length, w_int *
   w_int result = write(sio->pollfd.fd, bytes, (w_word)length);
 
   while(result == -1) {
+/* linuxism
     if(errno != EAGAIN) {
       return wds_internal_error;
     }
+*/
     x_async_block(sio->pollfd.fd, timeout);
     result = write(sio->pollfd.fd, bytes, (w_word)length);
   }
@@ -473,11 +486,9 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
     
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-*/
 
       return wds_success;
 
-/* linuxisms
     case(wdi_set_databits):
       switch (param) {
         case 5:
@@ -505,11 +516,9 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
     
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-*/
 
       return wds_success;
 
-/* linuxisms
     case(wdi_set_stopbits):
       switch (param) {
         case 1:
@@ -525,11 +534,9 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
     
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-*/
 
       return wds_success;
 
-/* linuxisms
     case(wdi_set_flowcontrol):
       switch (param) {
 // looks like Linux doesn't support separate flow control for i/p & o/p
@@ -548,12 +555,10 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
     
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-*/
 
       return wds_success;
 
     case(wdi_set_parity):
-/* linuxisms
       switch (param) {
         case PARITY_NONE:
           sio->newtermios->c_cflag &= ~PARENB; // do not generate/check parity
@@ -581,7 +586,6 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
     
       tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-*/
 
       return wds_success;
 
@@ -611,9 +615,7 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
       }
 
     case(wdi_send_break):
-/* linuxisms
       tcsendbreak(sio->pollfd.fd, (w_int)param/250);
-*/
       return wds_success;
 
     case(wdi_set_rx_bufsize):
@@ -627,6 +629,7 @@ w_driver_status sio_set(w_device device, w_driver_ioctl command, w_word param, x
     default:
       return wds_no_such_command;
   }
+*/
 }
 
 static const w_word oldbitrates[] = { 0, 50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800, 9600, 19200, 38400 };

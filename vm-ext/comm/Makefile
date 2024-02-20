@@ -28,8 +28,7 @@
 
 export COMM_TOP  = $(MIKA_TOP)/vm-ext/comm
 
-# no local include directory yet
-# CFLAGS += $(COMM_TOP)/common/include
+CFLAGS += -I $(COMM_TOP)/hal/hostos/freertos/include
 
 # note: see core-vm/Makefile for other possible includes we may need
 CFLAGS += -I $(MIKA_TOP)/core-vm/include

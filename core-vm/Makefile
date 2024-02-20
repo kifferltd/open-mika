@@ -135,7 +135,7 @@ libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
 
 main.o : main.c
 
-$(MIKA_LIB) : awt engine filesystem network fp jpda math security core-vm generated 
+$(MIKA_LIB) : awt engine filesystem network fp jpda math security core-vm dispatchers generated 
 	@echo "Archiving object files from directories $(wildcard $(objdir)/core-vm/*) $(wildcard $(objdir)/vm-cmp/*) $(wildcard $(objdir)/vm-ext/*) $(objdir)/generated"
 	$(AR) $@ $(foreach dir, $(wildcard $(objdir)/core-vm/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-cmp/*), $(wildcard $(dir)/*.o)) $(foreach dir, $(wildcard $(objdir)/vm-ext/*), $(wildcard $(dir)/*.o)) $(wildcard $(objdir)/generated/*.o)
 	$(RANLIB) $@
@@ -172,8 +172,12 @@ ifeq ($(MATH), native)
 	make -C ../vm-cmp/math/native $(MAKECMDGOALS)
 endif
 
-generated :
+dispatchers :
+	awk -f $(scriptdir)/dispatchers.awk > $(gendir)/dispatchers.c
+
+generated : core-vm dispatchers
 	$(CC) -c -o $(objdir)/generated/core-classes.o $(CFLAGS) $(gendir)/core-classes.c
+	$(CC) -c -o $(objdir)/generated/dispatchers.o $(CFLAGS) $(gendir)/dispatchers.c
 	$(CC) -c -o $(objdir)/generated/unicode.o $(CFLAGS) $(gendir)/unicode.c
 ifeq ($(JNI), true)
 	$(CC) -c -o $(objdir)/generated/jni-classes.o $(CFLAGS) $(gendir)/jni-classes.c
