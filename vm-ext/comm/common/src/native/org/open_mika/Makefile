@@ -30,16 +30,8 @@
 .PHONY : mika libs generated
 mika : libs
 
-libs : $(COMM_LIB)
-
-$(COMM_LIB) : generated
-	make -C device/uart $(MAKECMDGOALS)
-	@echo "Archiving object files from directories $(wildcard $(commobjdir)/*)"
-	$(AR) $@ $(foreach dir, $(wildcard $(commobjdir)/*), $(wildcard $(dir)/*.o)) 
-	$(RANLIB) $@
-
-generated : $(gendir)/uart-classes.c
-	$(CC) -c -o $(commobjdir)/uart-classes.o $(CFLAGS) $(gendir)/uart-classes.c
+libs : generated
+	make -C device/uart libs
 
 
 

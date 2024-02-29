@@ -30,8 +30,8 @@
 
 $(eval CLASSES=$(shell find . -name \*\.java))
 
-classpath += $(javacommdir)
+classpath := ${classpath}:$(javacommdir)
 
 classes : 
-	xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} $(CLASSES)
+	${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} $(CLASSES)
 

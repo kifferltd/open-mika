@@ -39,7 +39,7 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(gendir)
 ifeq ($(HOSTOS), freertos)
 # to be honest these are really more about clang linker than freertos
-  LDFLAGS += $(libdir)/libmika.a $(libdir)/liboswald.a 
+  LDFLAGS += $(libdir)/libmika.a $(libdir)/liboswald.a $(libdir)/libcomm.a
   LDFLAGS += -fuse-ld=lld 
   LDFLAGS += -ferror-limit=0
 else
@@ -47,14 +47,29 @@ else
   LDFLAGS += -lmika -loswald 
 endif
 
-.PHONY : mika libs classes clean
+OBJECTS = $(wildcard $(commobjdir)/*.o)
+
+.PHONY : mika libs generated natives classes clean
+
 mika : libs classes
 
-libs :
-	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-h.awk -f $(scriptdir)/common-classes-h.awk uart-classes.in > $(gendir)/uart-classes.h
-	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-c.awk -f $(scriptdir)/common-classes-c.awk uart-classes.in > $(gendir)/uart-classes.c
+libs : $(COMM_LIB)
 	make -C common/src/native $(MAKECMDGOALS)
 	make -C hal/hostos/$(HOSTOS)/src/driver $(MAKECMDGOALS)
+
+$(COMM_LIB) : generated natives
+	@echo "Archiving object files from directory $(commobjdir)"
+	$(AR) $@ $(wildcard $(commobjdir)/*.o) 
+	$(RANLIB) $@
+
+generated :
+	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-h.awk -f $(scriptdir)/common-classes-h.awk uart-classes.in > $(gendir)/uart-classes.h
+	awk -v JNI=$(JNI) -f $(scriptdir)/uart-classes-c.awk -f $(scriptdir)/common-classes-c.awk uart-classes.in > $(gendir)/uart-classes.c
+	$(CC) -c -o $(commobjdir)/uart-classes.o $(CFLAGS) $(gendir)/uart-classes.c
+
+natives :
+	make -C common/src/native $(MAKECMDGOALS)
+	make -C hal/hostos/freertos/src/driver $(MAKECMDGOALS)
 
 classes :
 	make -C $(JAVAX) classes

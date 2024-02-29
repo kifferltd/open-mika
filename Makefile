@@ -138,7 +138,7 @@ export javajardir = $(MIKA_TOP)/vm-cmp/jar/$(JAR)
 
 export javacommdir = $(MIKA_TOP)/vm-ext/comm/$(JAVAX)
 
-export classpath = $(javadir):$(javamathdir):$(securitydir):$(secprovdir):$(javajardir)
+export classpath := $(javadir):$(javamathdir):$(securitydir):$(secprovdir):$(javajardir)
 
 export tooldir = $(MIKA_TOP)/tool
 export scriptdir = $(tooldir)/script
@@ -162,6 +162,7 @@ export imagedir = $(MIKA_TOP)/image/$(PLATFORM)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
 export mikadeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
+export extdeploydir = $(deploydir)/lib/mika/ext
 export testdeploydir = $(deploydir)/test
 export tooldeploydir = $(MIKA_TOP)/deploy/tool
 
@@ -220,6 +221,9 @@ export OSWALD_LIB = $(libdir)/liboswald.a
 export AWT_LIB = $(libdir)/libawt.a
 export MIKA_LIB = $(libdir)/libmika.a
 export COMM_LIB = $(libdir)/libcomm.a
+
+export MIKA_JAR = ${mikadeploydir}/mcl.jar
+export COMM_JAR = ${extdeploydir}/comm.jar
 
 ifdef UNIX
   BUILD_HOST = `uname`
@@ -581,6 +585,11 @@ ifneq ($$(filter $(EXTENSIONS),javax_comm),)
   liblist += $(COMM_LIB)
 endif
 
+jarlist = $(MCL_JAR)
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+  jarlist += $(COMM_JAR)
+endif
+
 export CFLAGS
 export JFLAGS
 export LDFLAGS
@@ -640,6 +649,8 @@ builddir :
 	@mkdir -p $(mikadeploydir)
 	@echo "Creating " $(appdeploydir)
 	@mkdir -p $(appdeploydir)
+	@echo "Creating " $(extdeploydir)
+	@mkdir -p $(extdeploydir)
 	@echo "Creating " $(testdeploydir)
 	@mkdir -p $(testdeploydir)
 	@echo "Creating " $(objdir)
@@ -696,25 +707,35 @@ binary :
 	@echo "TODO: here we would copy the open-mika binary to ${mikadeploydir}"
 
 # FIXME: select right security dir(s)
-jarfile : 
+jarfile : $(jarlist)
+
+$(MIKA_JAR) :
 	# make -C ${secanyprovdir} classes
 	make -C ${secprovdir} classes
 	make -C ${securitydir} classes
 	make -C ${javajardir} classes
 	make -C core-vm/$(JAVAX) classes
-	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
-	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
+	@echo "Building $(MIKA_JAR) from core-vm/resource/mcl.mf and classes in ${classdir}"
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf $(MIKA_JAR) -C ${classdir} .
+
+$(COMM_JAR) :
+	make -C vm-ext/comm classes
+	@echo "Building $(COMM_JAR) from core-vm/resource/mcl.mf and classes in ${classdir}"
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) vm-ext/comm/resource/comm.mf ${COMM_JAR} -C ${classdir} javax/comm -C ${classdir} org/open_mika
 
 resource :
 	@echo "Copying resources to ${mikadeploydir}"
 	cp -r core-vm/resource/system/* ${mikadeploydir}	
 
-app :
+app : 
 ifneq ($(APP_DIR),"none")
 	make -C $(APP_DIR) classes
 endif
 
 deployable : binary $(mcltarget) resource app test
+ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+	make -C vm-ext/comm classes
+endif
 
 # note: image target was here
 install : mika

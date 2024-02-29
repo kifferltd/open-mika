@@ -27,7 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = UARTControlStream.c  UARTDriver.c  UARTInputStream.c  UARTOutputStream.c
+sources := $(wildcard *.c)
+# = UARTControlStream.c  UARTDriver.c  UARTInputStream.c  UARTOutputStream.c
 objects=$(patsubst %.c, $(commobjdir)/%.o, $(sources))
 
 .PHONY : mika

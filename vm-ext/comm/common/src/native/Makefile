@@ -28,7 +28,8 @@
 ###########################################################################
 
 .PHONY : mika libs clean
-mika libs  clean:
+
+mika libs clean:
 	make -C org/open_mika $(MAKECMDGOALS)
 
 
