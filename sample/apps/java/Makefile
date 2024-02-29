@@ -28,9 +28,13 @@
 
 .PHONY : classes
 
-# Note to self: this is how to get the output of a comand into a make variable ...
-#    $(eval GIT_BRANCH=$(shell git rev-parse --abbrev-ref HEAD))
-#    echo Git branch is $(GIT_BRANCH)
+$(eval CLASSES=$(shell find . -name \*\.java))
 
-classes:
-	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${classdir} -Xlint:deprecation -classpath . -source 1.4 -target 1.4 -d ${appdeploydir} 
+classpath := .:${classpath}:$(javacommdir)
+
+classes : 
+	${JAVAC} ${JFLAGS} -bootclasspath ${classdir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${appdeploydir} $(CLASSES)
+
+# WAS :
+# classes:
+#	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${classdir} -Xlint:deprecation -classpath . -source 1.4 -target 1.4 -d ${appdeploydir} 
