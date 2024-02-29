@@ -37,7 +37,7 @@ import java.io.FileDescriptor;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
-import com.acunia.device.uart.UARTDriver;
+import org.open_mika.device.uart.UARTDriver;
 
 public class CommPortIdentifier {
 

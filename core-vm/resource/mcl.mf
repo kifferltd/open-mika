@@ -1,4 +1,4 @@
-Vendor: /K/ Embedded Java Solutions
+Vendor: open-mika.org
 Specification-Title: Java Platform API Specification
 Implementation-Title: Java Runtime Environment
 Specification-Version: 1.3
