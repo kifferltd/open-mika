@@ -1,0 +1,8 @@
+Vendor: open-mika.org
+Specification-Title: Java Communications API
+Implementation-Title: Java Communications API
+Specification-Version: 1.1
+Implementation-Version: 1.1
+Implementation-Vendor: open-mika.org
+
+
