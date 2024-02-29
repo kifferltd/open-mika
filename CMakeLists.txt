@@ -30,6 +30,7 @@ set (IMSYS_MIKA_INCLUDE_DIR ${IMSYS_MIKA_SOURCE_DIR}/core-vm/include)
 set (IMSYS_MIKA_LIB_DIR ${IMSYS_MIKA_BUILD_DIR}/im4000/lib)
 set (IMSYS_MIKA_LIBOSWALD_FILE ${IMSYS_MIKA_LIB_DIR}/liboswald.a)
 set (IMSYS_MIKA_LIBMIKA_FILE ${IMSYS_MIKA_LIB_DIR}/libmika.a)
+set (IMSYS_MIKA_LIBCOMM_FILE ${IMSYS_MIKA_LIB_DIR}/libcomm.a)
 set (IMSYS_MIKA_LIBAWT_FILE ${IMSYS_MIKA_LIB_DIR}/libawt.a)
 
 if (${IMSYS_MIKA_REBUILD} STREQUAL ALWAYS)
@@ -88,6 +89,14 @@ if (hasParent)
     )
     add_dependencies (imsys-mika-libmika imsys-mika-build)
 
+    add_library (imsys-mika-libcomm STATIC IMPORTED GLOBAL)
+    target_include_directories (imsys-mika-libcomm INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
+    set_target_properties (imsys-mika-libcomm
+        PROPERTIES
+        IMPORTED_LOCATION ${IMSYS_MIKA_LIBCOMM_FILE}
+    )
+    add_dependencies (imsys-mika-libcomm imsys-mika-build)
+
     add_library (imsys-mika-libawt STATIC IMPORTED GLOBAL)
     target_include_directories (imsys-mika-libawt INTERFACE ${IMSYS_MIKA_INCLUDE_DIR})
     set_target_properties (imsys-mika-libawt
@@ -96,6 +105,6 @@ if (hasParent)
     )
     add_dependencies (imsys-mika-libawt imsys-mika-build)
 
-    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libawt PARENT_SCOPE)
+    set (imsys-mika imsys-mika-liboswald imsys-mika-libmika imsys-mika-libcomm imsys-mika-libawt PARENT_SCOPE)
 
 endif()
