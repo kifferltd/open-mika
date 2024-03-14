@@ -285,9 +285,18 @@ w_method emul_virtual_target(w_method called_method, w_instance objectref) {
   performInheritanceChecks(thread, called_method, target_clazz);
   w_method target_method = virtualLookup(called_method, target_clazz);
 
-  if (isSet(target_method->flags, ACC_STATIC | ACC_ABSTRACT)) {
-   THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
+  if (!target_method) {
+    THROW_EXCEPTION(clazzNoSuchMethodError, NULL);
   }
+
+  if (!target_method || isSet(target_method->flags, ACC_ABSTRACT)) {
+    THROW_EXCEPTION(clazzAbstractMethodError, NULL);
+  }
+
+ if (isSet(target_method->flags, ACC_STATIC)) {
+    THROW_EXCEPTION(clazzIncompatibleClassChangeError, NULL);
+ }
+
 
   woempa(7, "target method is %M\n", target_method);
 
@@ -304,7 +313,11 @@ w_method emul_interface_target(w_method called_method, w_instance objectref) {
   w_method target_method = interfaceLookup(called_method, target_clazz);
   woempa(7, "target method is %M\n", target_method);
 
-  if (!target_method || isSet(target_method->flags, ACC_ABSTRACT)) {
+  if (!target_method) {
+    THROW_EXCEPTION(clazzNoSuchMethodError, NULL);
+  }
+
+ if (isSet(target_method->flags, ACC_ABSTRACT)) {
     THROW_EXCEPTION(clazzAbstractMethodError, NULL);
   }
 
