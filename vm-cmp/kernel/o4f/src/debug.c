@@ -32,17 +32,17 @@
 #define ABORT_BUFSIZE 256
 #define LOEMPA_BUFSIZE 1024
 static char loempa_buf[LOEMPA_BUFSIZE];
-static im4000_com_t debug_uart = -1;
+static im4000_com_t debug_uart = 0xdeadbeef;
 
 static void initDebugUart(void) {
-    debug_uart = x_init_uart_by_name("COM3");
+    debug_uart = x_uart_init_by_name("COM3");
 }
 
 static bool ensureDebugUartIsInitialised() {
   if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
     return false;
   }
-  if (debug_uart < 0) {
+  if (debug_uart == 0xdeadbeef) {
     initDebugUart();
   }
   return true;
@@ -57,8 +57,13 @@ w_int x_debug_read(const void *buf, size_t count) {
   return bytes_read;
 }
 
+void x_debug_write(const void *buf, size_t count) {
+  if (ensureDebugUartIsInitialised()) {
+    x_uart_write(debug_uart, buf, count);
+  }
+}
 
-void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
+void _o4f_abort(char *file, int line, int type, char *message, x_status rc) {
   char strerror_buf[ABORT_BUFSIZE];
 
   x_thread kthread;
