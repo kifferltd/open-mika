@@ -42,6 +42,8 @@
 #define IOFLAG_CD           0x0400
 #define IOFLAG_RI           0x0800
 
+#define IOFLAG_REAL_FLAGS (IOFLAG_DTR|IOFLAG_RTS|IOFLAG_DSR|IOFLAG_CTS|IOFLAG_CD|IOFLAG_RI)
+
 /**
 ** Synthetic flags used to turn software-detected conditions into events
 */

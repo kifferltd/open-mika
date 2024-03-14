@@ -27,54 +27,22 @@
 **************************************************************************/
 
 #include "oswald.h"
-#include "iot_uart.h"
 #include "im4000uart.h"
-
-#define UART_TYPEAHEAD_BUFFER_SIZE 64;
-
-static IotUARTHandle_t uart_handle = NULL;
-static SemaphoreHandle_t uart_read_mutex;
-static SemaphoreHandle_t uart_write_mutex;
-static StaticSemaphore_t uart_read_mutex_storage;
-static StaticSemaphore_t uart_write_mutex_storage;
 
 #define ABORT_BUFSIZE 256
 #define LOEMPA_BUFSIZE 1024
 static char loempa_buf[LOEMPA_BUFSIZE];
-static char uart_rx_buf[1];
+static im4000_com_t debug_uart = -1;
 
 static void initDebugUart(void) {
-  w_int lUartInstance = IM4000_COM3;
-  w_int iResult = IOT_UART_INVALID_VALUE;
-  const size_t uNumBytesToRead = 10u;
-  w_ubyte puRxBuffer[16] = { 0 };
-  w_ubyte puTxBuffer[ sizeof( puRxBuffer ) + 2 ] = { 0 };
-  IotUARTConfig_t xUARTConfig;
-  w_int iNumBytesRead = 0;
-  uart_read_mutex = xSemaphoreCreateMutexStatic(&uart_read_mutex_storage);
-  configASSERT( NULL != uart_read_mutex );
-  uart_write_mutex = xSemaphoreCreateMutexStatic(&uart_write_mutex_storage);
-  configASSERT( NULL != uart_write_mutex );
-
-  uart_handle = iot_uart_open( lUartInstance );
-  configASSERT( NULL != uart_handle );
-
-   /* Set UART configuration */
-    xUARTConfig.ulBaudrate = 115200u;
-    xUARTConfig.ucWordlength = 8u;
-    xUARTConfig.xParity = eUartParityNone;
-    xUARTConfig.xStopbits = eUartStopBitsOne;
-    xUARTConfig.ucFlowControl = 1u; /* Enable flow control. */
-    iResult = iot_uart_ioctl(uart_handle, eUartSetConfig, &xUARTConfig);
-    configASSERT( IOT_UART_SUCCESS == iResult );
+    debug_uart = x_init_uart_by_name("COM3");
 }
 
-static bool ensureUartIsInitialised() {
+static bool ensureDebugUartIsInitialised() {
   if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
     return false;
   }
-  if (!uart_handle) {
-    printf("\nInitialising UART\n");
+  if (debug_uart < 0) {
     initDebugUart();
   }
   return true;
@@ -82,88 +50,13 @@ static bool ensureUartIsInitialised() {
 
 w_int x_debug_read(const void *buf, size_t count) {
   w_int bytes_read = -1;
-  if (ensureUartIsInitialised()) {
-    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
-    if (isSchedulerRunning) { 
-      xSemaphoreTake(uart_read_mutex, portMAX_DELAY);
-    }
-
-    w_int rc = iot_uart_read_sync(uart_handle, buf, count);
-    if (IOT_UART_SUCCESS == rc ) {
-      rc = iot_uart_ioctl(uart_handle, eGetRxNoOfbytes, &bytes_read);
-    }
-    if (IOT_UART_SUCCESS != rc ) {
-      printf("iot_uart_ioctl(eGetRxNoOfbytes) returned %d\r\n", rc);
-      bytes_read = -rc;
-    }
-
-    if (isSchedulerRunning) { 
-      xSemaphoreGive(uart_read_mutex);
-    }
+  if (ensureDebugUartIsInitialised()) {
+    bytes_read = x_uart_read(debug_uart, buf, count);
   }
 
   return bytes_read;
 }
 
-// TODO turn this into a type-ahead buffer
-static w_byte poll_buf[1];
-static w_int poll_available;
-
-static void x_debug_poll_callback( IotUARTOperationStatus_t xStatus, void * pvUserContext ) {
-  w_int bytes_read = 0;
-  
-  if (IOT_UART_SUCCESS == xStatus ) {
-    iot_uart_ioctl(uart_handle, eGetRxNoOfbytes, &bytes_read);
-    poll_available |= bytes_read;
-  }
-}
-
-w_int x_debug_poll() {
-  w_int result = -1;
-  if (ensureUartIsInitialised()) {
-    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
-    if (isSchedulerRunning) { 
-      xSemaphoreTake(uart_read_mutex, portMAX_DELAY);
-    }
-
-    if (poll_available) {
-      result = poll_buf[0];
-      poll_available = 0;
-    }
-
-    switch (result) {
-    case 3:
-      printf("CONTROL_C_EVENT\n");
-
-    case 28:
-      printf("CONTROL_BREAK_EVENT\n");
-
-    default:
-      ;
-    }
-
-    if (isSchedulerRunning) { 
-      xSemaphoreGive(uart_read_mutex);
-    }
-  }
-
-  return result;
-}
-
-void x_debug_write(const void *buf, size_t count) {
-  if (ensureUartIsInitialised()) {
-    w_boolean isSchedulerRunning = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
-    if (isSchedulerRunning) { 
-      xSemaphoreTake(uart_write_mutex, portMAX_DELAY);
-    }
-    iot_uart_write_sync(uart_handle, buf, count);
-    if (isSchedulerRunning) { 
-      xSemaphoreGive(uart_write_mutex);
-// HACK to avoid buffer over-runs
-      x_thread_sleep(count/7 + 1);
-    }
-  }
-}
 
 void _o4f_abort(char *file, int line, int type, char *message, x_status rc){
   char strerror_buf[ABORT_BUFSIZE];

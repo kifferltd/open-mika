@@ -31,7 +31,7 @@ CFLAGS += -I $(MIKA_TOP)/core-vm/include
 CFLAGS += -I $(MIKA_TOP)/core-vm/hal/cpu/$(CPU)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 
-sources = o4f.c debug.c dump.c mem.c monitor.c mutex.c queue.c thread.c time.c
+sources = o4f.c debug.c dump.c mem.c monitor.c mutex.c queue.c thread.c time.c uart.c
 
 objects=$(patsubst %.c, $(kernobjdir)/%.o, $(sources))
 

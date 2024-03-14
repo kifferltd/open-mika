@@ -103,6 +103,16 @@ static struct termios sio7_newtermios;
 */
 char * pathname[8];
 
+/*
+** The default bitrates for the eight serial ports
+*/
+w_int default_bitrate[] = {115200, 115200, 115200, 115200, 115200, 115200, 115200, 115200};
+
+/*
+** The valid IO flags for the eight serial ports
+*/
+w_word valid_io_flags[] = {IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS, IOFLAG_REAL_FLAGS};
+
 typedef struct w_Control_Sio {
   struct pollfd pollfd;
 /*
@@ -189,66 +199,11 @@ w_void sio_initDevice(w_device device) {
   device->control = allocClearedMem(sizeof(w_Control_Sio));
   c = device->control;
 
-
-  c->validflags = IOFLAG_DTR|IOFLAG_RTS|IOFLAG_DSR|IOFLAG_CTS|IOFLAG_CD|IOFLAG_RI;
-/* linuxisms
-  switch(device->familyMember) {
-    case 0: c->bitrate = SIO0_DEFAULT_BITRATE;
-            c->devicename = pathname[0];
-            c->oldtermios = &sio0_oldtermios;
-            c->newtermios = &sio0_newtermios;
-            break;
-    case 1: c->bitrate = SIO1_DEFAULT_BITRATE;
-            c->devicename = pathname[1];
-            c->oldtermios = &sio1_oldtermios;
-            c->newtermios = &sio1_newtermios;
-            break;
-    case 2: c->bitrate = SIO2_DEFAULT_BITRATE;
-            c->devicename = pathname[2];
-            c->oldtermios = &sio2_oldtermios;
-            c->newtermios = &sio2_newtermios;
-            break;
-    case 3: c->bitrate = SIO3_DEFAULT_BITRATE;
-            c->devicename = pathname[3];
-            c->oldtermios = &sio3_oldtermios;
-            c->newtermios = &sio3_newtermios;
-            break;
-    case 4: c->bitrate = SIO4_DEFAULT_BITRATE;
-            c->devicename = pathname[4];
-            c->oldtermios = &sio4_oldtermios;
-            c->newtermios = &sio4_newtermios;
-            break;
-    case 5: c->bitrate = SIO5_DEFAULT_BITRATE;
-            c->devicename = pathname[5];
-            c->oldtermios = &sio5_oldtermios;
-            c->newtermios = &sio5_newtermios;
-            break;
-    case 6: c->bitrate = SIO6_DEFAULT_BITRATE;
-            c->devicename = pathname[6];
-            c->oldtermios = &sio6_oldtermios;
-            c->newtermios = &sio6_newtermios;
-            break;
-    case 7: c->bitrate = SIO7_DEFAULT_BITRATE;
-            c->devicename = pathname[7];
-            c->oldtermios = &sio7_oldtermios;
-            c->newtermios = &sio7_newtermios;
-            break;
-    default:
-            break;
-  }
-*/
-            
-  // atexit(sio_term);
+  c->bitrate = default_bitrate[device->familyMember];
+  c->validflags = valid_io_flags[device->familyMember];
 }
 
 w_void sio_termDevice(w_device device) {
-  w_control_sio sio = device->control;
-  
-/* linuxisms
-  if (sio->pollfd.fd>=0) {
-    tcsetattr(sio->pollfd.fd, TCSAFLUSH, sio->oldtermios);
-  }
-*/
   sio_close(device);
 
   releaseMem(device->control);
@@ -271,31 +226,6 @@ w_device sio_open(w_device device, w_driver_perm mode) {
       return NULL;
     }
       
-    /*
-    ** If a tty, save current (pre-wonka) settings in oldtermios.  (If not a tty,
-    ** this call returns nonzero and we skip the rest of the tty-related stuff).
-    */
-/* linuxisms
-    if (tcgetattr(sio->pollfd.fd,sio->oldtermios)==0) {
-      /.
-      .. Copy oldtermios to newtermios and make some changes:
-      .. echo off, canonical mode off, extended i/p proc off, signal chars off
-      .. no SIGINT on BREAK, CR>NL off, i/p parity off, strip8 off, CTS/RTS off
-      .. size 8 bits, no parity check, no output processing
-      .. read is blocking with no timeout
-      ./
-      w_memcpy(sio->newtermios,sio->oldtermios,sizeof(struct termios));
-      sio->newtermios->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-      sio->newtermios->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-      sio->newtermios->c_cflag &= ~(CSIZE | PARENB);
-      sio->newtermios->c_cflag |= CREAD | CS8 | CLOCAL;
-      sio->newtermios->c_oflag &= ~(OPOST);
-      sio->newtermios->c_cc[VMIN] = 1;
-      sio->newtermios->c_cc[VTIME] = 0;
-      tcsetattr(sio->pollfd.fd,TCSAFLUSH,sio->newtermios);
-    }
-*/
-
     sio->oldflags = 0;
     sio->newflags = 0;
   }
