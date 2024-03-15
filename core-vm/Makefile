@@ -107,30 +107,21 @@ ifeq ($(SCHEDULER), "o4e")
   CFLAGS += -L $(MIKA_TOP)/vm-cmp/fs/vfs/src/image.a
 endif
 
-# WAS:
-# ifeq ($(BYTECODETEST), true)
-#   CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
-# endif
-
-ifneq ($$(filter $(EXTENSIONS),bytecodetest),)
+ifneq ($(filter $(EXTENSIONS),bytecodetest),)
   CFLAGS += -DINIT_CLASS=\"wonka.bytecodetest.Main\"
 endif
 
-# WAS:
-# ifeq ($(JAVAX_COMM), true)
-#    CFLAGS += -lcomm
-# endif
-
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+ifneq ($(filter $(EXTENSIONS),javax_comm),)
   CFLAGS += -lcomm
 endif
 
-.PHONY : awt engine filesystem network fp jpda math security core-vm generated jarfile mcldir libs javaclasses
+.PHONY : mika awt engine filesystem network fp jpda math security core-vm dispatchers generated jarfile mcldir libs javaclasses
 
 mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
 	$(CC) -o mika main.o $(LDFLAGS)
 
+# TODO do we really need OSWALD_LIB and AWT_LIB here?
 libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
 
 main.o : main.c
@@ -217,12 +208,19 @@ bytecodetest :
 	make -C ../vm-ext/bytecodetest
 
 # TODO only depend on javax_comm if flag is set
-imsys : $$(filter $(EXTENSIONS),javax_comm)
+imsys : $(filter $(EXTENSIONS),javax_comm)
 	@echo Building extension imsys
 	make -C ../vm-ext/imsys
 
 # TODO we probably don't need the JNI=$(JNI) bit
 core-vm : javaclasses 
+	@echo "***********************************"
+	@echo "***********************************"
+	@echo "***********************************"
+	@echo Enabled extensions are $(EXTENSIONS)
+	@echo "***********************************"
+	@echo "***********************************"
+	@echo "***********************************"
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)

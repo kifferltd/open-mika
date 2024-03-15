@@ -222,7 +222,7 @@ export AWT_LIB = $(libdir)/libawt.a
 export MIKA_LIB = $(libdir)/libmika.a
 export COMM_LIB = $(libdir)/libcomm.a
 
-export MIKA_JAR = ${mikadeploydir}/mcl.jar
+export MCL_JAR = ${mikadeploydir}/mcl.jar
 export COMM_JAR = ${extdeploydir}/comm.jar
 
 ifdef UNIX
@@ -333,7 +333,7 @@ endif
 #   CFLAGS += -DJAVAX_COMM
 # endif
 
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+ifneq ($(filter $(EXTENSIONS),javax_comm),)
   CFLAGS += -DJAVAX_COMM
 endif
 
@@ -581,14 +581,16 @@ export gendir = $(builddir)/generated
 CFLAGS += -DBUILD_HOST=\"" $(BUILD_HOST) "\"
 
 liblist = $(MIKA_LIB)
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+ifneq ($(filter $(EXTENSIONS),javax_comm),)
   liblist += $(COMM_LIB)
 endif
+export liblist
 
 jarlist = $(MCL_JAR)
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+ifneq ($(filter $(EXTENSIONS),javax_comm),)
   jarlist += $(COMM_JAR)
 endif
+export jarlist
 
 export CFLAGS
 export JFLAGS
@@ -633,6 +635,7 @@ echo : kecho
 	@echo "networkinc = " $(networkinc)
 	@echo "fsinc = " $(fsinc)
 	@echo "liblist = " $(liblist)
+	@echo "jarlist = " $(jarlist)
 ifdef USE_ROMFS
 	@echo "using ROMFS"
 endif
@@ -709,14 +712,14 @@ binary :
 # FIXME: select right security dir(s)
 jarfile : $(jarlist)
 
-$(MIKA_JAR) :
+$(MCL_JAR) :
 	# make -C ${secanyprovdir} classes
 	make -C ${secprovdir} classes
 	make -C ${securitydir} classes
 	make -C ${javajardir} classes
 	make -C core-vm/$(JAVAX) classes
-	@echo "Building $(MIKA_JAR) from core-vm/resource/mcl.mf and classes in ${classdir}"
-	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf $(MIKA_JAR) -C ${classdir} .
+	@echo "Building $(MCL_JAR) from core-vm/resource/mcl.mf and classes in ${classdir}"
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf $(MCL_JAR) -C ${classdir} .
 
 $(COMM_JAR) :
 	make -C vm-ext/comm classes
@@ -733,7 +736,7 @@ ifneq ($(APP_DIR),"none")
 endif
 
 deployable : binary $(mcltarget) resource app test
-ifneq ($$(filter $(EXTENSIONS),javax_comm),)
+ifneq ($(filter $(EXTENSIONS),javax_comm),)
 	make -C vm-ext/comm classes
 endif
 
