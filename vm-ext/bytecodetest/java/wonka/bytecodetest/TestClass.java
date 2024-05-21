@@ -81,34 +81,4 @@ public class TestClass implements TestInterface{
   public void testInterface(){
     testNbr = 5;
   }
-
-  public int testMonitor(int mon){
-    return 1;
-  }
-
-  public int testCast(){
-    Object o = null;
-    String message = "";
-    String s;
-    try {
-      message = "casting null to Thread should not throw ClassCastException";
-      Thread t = (Thread) o; // OK, can cast null to any ref type
-      o = "foo";
-      message = "casting a String to String should not throw ClassCastException";
-      s = (String) o; // OK
-    }
-    catch (ClassCastException cce) {
-      wonka.vm.Etc.wassert(false, message);
-    }
-    /*try {
-      message = "casting a String to Thread should throw ClassCastException";
-      Thread t = (Thread) o;
-      wonka.vm.Etc.wassert(false, message);
-    }
-    catch (ClassCastException cce) {
-      return 0;
-    }*/
-    return 0;
-  }*/
-
 }

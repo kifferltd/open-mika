@@ -98,7 +98,6 @@ public class Main {
   }
 
   private static int testStuff(String inp) {
-
     if (inp == "bar"){
       return 54;
     }
