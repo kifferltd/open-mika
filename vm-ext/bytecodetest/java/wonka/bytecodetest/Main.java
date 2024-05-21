@@ -97,14 +97,6 @@ public class Main {
     s = "bar";
   }
 
-  private static int testStuff(String inp) {
-    if (inp == "bar"){
-      return 54;
-    }
-    
-    return 0;
-  }
-
   private static long testWide(long nbr){
     return nbr;
   }
