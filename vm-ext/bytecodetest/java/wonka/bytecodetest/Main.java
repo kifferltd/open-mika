@@ -5,25 +5,19 @@ import java.sql.Array;
 import java.util.ArrayList;
 import java.lang.Math;
 import java.io.*;
-import wonka.bytecodetest.DefinetlyNotTakenClassName;
+import wonka.bytecodetest.TestClass;
 
 public class Main {
   static String s = " ";
-  //static int[][] intarr;
   static int nbr = 0;
   static double dbl = 0;
   static long l = 0;
   static long[] ll = {1,2};
-  //static TestClass testThings = new TestClass("qweqw", 5, Math.PI, 0.1f);
 
   public static void main(String[] args) {
 
     // Tests which do not require any method calls - except that if they fail they will
     // call System.exit(1), which could crash if static method calls don't work ...
-    
-    /*if (true) {
-     throw new IOException("What"); 
-    }*/
 
     wonka.vm.Etc.woempa(7,"Starting tests");
     s = "foo";
@@ -42,13 +36,16 @@ public class Main {
     
     wonka.vm.Etc.woempa(7,"Obj");
     //
-    DefinetlyNotTakenClassName testThings;
-    wonka.vm.Etc.woempa(7, "created at least");
-    testThings = new DefinetlyNotTakenClassName("qwe",1,1.1d,0.1f);
+    TestClass testThings;
+    testThings = new TestClass("qwe",1,1.1d,0.1f);
+
+    if(testThings != null && testThings instanceof TestClass){
+      wonka.vm.Etc.woempa(7, "created obj");
+    }
 
     wonka.vm.Etc.woempa(7,"Done initializing variables");
     wonka.vm.Etc.woempa(7,"Testing array");
-    int nbr2 = testThings.testArray(array);
+    int[] nbr2 = testThings.testArray(array);
 
     test_invokestatic();
     wonka.vm.Etc.woempa(7,"Testing wide");
@@ -56,8 +53,8 @@ public class Main {
 
     nbr = testStuff(s);
 
-    wonka.vm.Etc.woempa(7,"Testing long array");
-    long nbr3 = testThings.testLongArr(ll);
+    wonka.vm.Etc.woempa(7,"Testing interface");
+    testThings.testInterface();
 
     double pi = testThings.testDouble(testdbl);
 
@@ -101,7 +98,6 @@ public class Main {
   }
 
   private static int testStuff(String inp) {
-    System.out.println("in testStuff");
 
     if (inp == "bar"){
       return 54;
@@ -111,7 +107,6 @@ public class Main {
   }
 
   private static long testWide(long nbr){
-    if (nbr != Long.MAX_VALUE) System.exit(1);
     return nbr;
   }
 

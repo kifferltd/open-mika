@@ -3,18 +3,19 @@ package wonka.bytecodetest;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.lang.Math;
 import java.io.*;
-import wonka.bytecodetest.TestInterface;
+
+interface TestInterface {
+
+    void testInterface();
+    
+}
 
 public class TestClass implements TestInterface{
 
-  private int testNbr = 0;
-  private double testPi = 1.1;
+  static int testNbr = 0;
+  static double testPi = 1.1;
   static String testMsg = "asdasdas";
   static float testFl = 0.123123123123123f;
 
@@ -31,9 +32,8 @@ public class TestClass implements TestInterface{
   
   public int[] testArray(int[] arr){
     int[] newArr = arr;
-    String[] strArr = {"hello","hi"};
     if(newArr != null){
-      if(newArr[1] != strArr.length){
+      if(newArr[1] != 1){
         return newArr;
       }
     }
@@ -84,24 +84,11 @@ public class TestClass implements TestInterface{
     return multiArr;
   }
 
-  public int testMonitor(int mon){
-    if(mon == testNbr){
-      return 2;
-    }
-    return 1;
+  public void testInterface(){
+    testNbr = 5;
   }
 
-  public int testStoreAndLoad(){
-    int a = 0;
-    int b = 1;
-    int c = 2;
-    int d = 3;
-    long e = 4;
-    if(d == 3){
-      if(e == 4){
-        return a;
-      }
-    }
+  public int testMonitor(int mon){
     return 1;
   }
 
@@ -128,24 +115,6 @@ public class TestClass implements TestInterface{
       return 0;
     }*/
     return 0;
-  }
-
-  public void testInterface(){
-    
-  }
-}
-
-class TestInterfaceClass extends TestClass {
-
-  public TestInterfaceClass(String msg, int number, double pi, float fl) {
-    super(msg, number, pi, fl);
-    //TODO Auto-generated constructor stub
-  }
-
-  public void testInterface(){
-    if(true){
-      return;
-    }
-  }
+  }*/
 
 }
