@@ -49,7 +49,7 @@ w_int StandardInputStream_read(w_thread thread, w_instance theStandardInputStrea
     return -1;
   }
   else if(result < 0) {
-    throwException(w_thread, clazzIOException, "stdin: read: %s", strerror(errno));
+    throwException(thread, clazzIOException, "stdin: read: %s", strerror(errno));
   }
 
   return result;
@@ -83,7 +83,7 @@ w_int StandardInputStream_available(w_thread thread, w_instance theStandardInput
   w_int result;
 
   if (ioctl(0, FIONREAD, &result) < 0) {
-    throwException(w_thread, clazzIOException, "stdin: ioctl(0, FIONREAD, &result) failed");
+    throwException(thread, clazzIOException, "stdin: ioctl(0, FIONREAD, &result) failed");
 
     return 0;
 

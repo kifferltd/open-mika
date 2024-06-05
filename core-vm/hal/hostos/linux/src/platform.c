@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2001, 2003 by Punch Telematix. All rights reserved.       *
+* Copyright (c) 2021, 2023 by KIFFER Ltd. All rights reserved.            *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,26 +9,23 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE       *
+* GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS           *
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER    *
+* IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR         *
+* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  *
+* ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
 #include "oswald.h"
 #include "wonka.h"
-#include <stdio.h> /* For printf */
+#include <stdbool.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
@@ -72,8 +69,8 @@ static void quit_handler(int signum) {
 
 #ifdef O4P
 static void segv_handler(int signum, siginfo_t * sis, void * arg) {
-  printf("\n\r\n*** SEGMENTATION FAULT ***\n\r\n");
-  printf("signo = %d code = %d%s addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_code == SEGV_MAPERR ? " (SEGV_MAPERR)" : sis->si_code == SEGV_ACCERR ? " (SEGV_ACCERR)" : "", sis->si_addr);
+  w_printf("\n\r\n*** SEGMENTATION FAULT ***\n\r\n");
+  w_printf("signo = %d code = %d%s addr = %p\n\r\n", sis->si_signo, sis->si_code, sis->si_code == SEGV_MAPERR ? " (SEGV_MAPERR)" : sis->si_code == SEGV_ACCERR ? " (SEGV_ACCERR)" : "", sis->si_addr);
   w_dump_info();
   abort();
 }
@@ -126,7 +123,7 @@ void install_term_handler(void) {
   quit_action.sa_flags = 0;
   result = sigaction(SIGQUIT, &quit_action, &quit_oldaction);
   if (result == -1) {
-    printf("Registering the quit handler failed, return code = %d.\n", result);
+    w_printf("Registering the quit handler failed, return code = %d.\n", result);
     abort();
   }
   if (quit_oldaction.sa_handler == SIG_DFL) {
@@ -145,7 +142,7 @@ void install_term_handler(void) {
   usr1_action.sa_flags = 0;
   result = sigaction(SIGUSR1, &usr1_action, &usr1_oldaction);
   if (result == -1) {
-    printf("Registering the usr1 handler failed, return code = %d.\n", result);
+    w_printf("Registering the usr1 handler failed, return code = %d.\n", result);
     abort();
   }
 

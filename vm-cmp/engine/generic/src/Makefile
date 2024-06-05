@@ -35,7 +35,7 @@ CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/$(SCHEDULER)/include
 CFLAGS += -I $(MIKA_TOP)/vm-cmp/kernel/common/include
 CFLAGS += -I $(ENGINE_TOP)/include
 
-sources = didpatcher.c interpreter.c
+sources = dispatcher.c interpreter.c
 objects=$(patsubst %.c, $(engineobjdir)/%.o, $(sources))
 
 .PHONY : mika libs
