@@ -106,15 +106,9 @@ ifeq ($(COMPRESS_JAR_FILES),false)
   export JAR_CMD_COMPRESSION_LEVEL=0
 endif
 
-# If there is an 'engine' directory under vm-cmp/engine/hal/*/, use it;
-# otherwise use the generic engine directory.
-# NOTE: we assume there is only one directory which matches the wildcard!
-special_engine = ($wildcard vm-cmp/engine/hal/*/engine)
-ifeq ($(special_engine),)
-  export ENGINE = generic
-else
-  export ENGINE = hal/cpu/im4000
-endif
+# TODO : define ENGINE based on the EXTENSIONS variable, defaulting to "generic".
+export ENGINE = generic
+
 export enginedir = $(MIKA_TOP)/vm-cmp/engine/$(ENGINE)
 export enginecomdir = $(MIKA_TOP)/vm-cmp/engine/common
 

@@ -1,5 +1,5 @@
 ###########################################################################
-# Copyright (c) 2018, 2020, 2022, 2023 by Chris Gray, KIFFER Ltd.         #
+# Copyright (c) 2018, 2020, 2022, 2023, 2024 by Chris Gray, KIFFER Ltd.   #
 # All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
@@ -208,20 +208,9 @@ bytecodetest :
 	@echo Building extension bytecodetest
 	make -C ../vm-ext/bytecodetest
 
-# TODO only depend on javax_comm if flag is set
-imsys : $(filter $(EXTENSIONS),javax_comm)
-	@echo Building extension imsys
-	make -C ../vm-ext/imsys
-
 # TODO we probably don't need the JNI=$(JNI) bit
 core-vm : javaclasses 
-	@echo "***********************************"
-	@echo "***********************************"
-	@echo "***********************************"
-	@echo Enabled extensions are $(EXTENSIONS)
-	@echo "***********************************"
-	@echo "***********************************"
-	@echo "***********************************"
+	@echo Enabled extensions : $(EXTENSIONS)
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)

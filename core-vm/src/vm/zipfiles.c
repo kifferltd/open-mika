@@ -557,7 +557,12 @@ z_zipFile parseZipFile(char *path) {
 //  w_int statrc = vfs_stat(path, &statbuf);
 //  woempa(7, "Zipfile %s size is %d 0%o 0x%x\n", statbuf.st_size, statbuf.st_size, statbuf.st_size);
 
+// FIXME?
+#ifdef VFS_O_MIKA_RAMDISK
   zipFile->fd = vfs_open(path, O_RDONLY | VFS_O_MIKA_RAMDISK, 0);
+#else
+  zipFile->fd = vfs_open(path, O_RDONLY, 0);
+#endif
   if (zipFile->fd < 0) {
     woempa(9, "Unable to open zip file `%s'\n", path);
     releaseMem(zipFile);

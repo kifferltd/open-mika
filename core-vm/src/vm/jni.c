@@ -324,14 +324,14 @@ static void jvalues2items(w_method method, jvalue arguments[], w_frame frame) {
             case VM_TYPE_LONG: 
               SET_SLOT_CONTENTS(frame->jstack_top, ((w_word*)&arguments[i])[0]);
               SET_SLOT_CONTENTS(frame->jstack_top+1, ((w_word*)&arguments[i])[1]);
-              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace;
+              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace);
               frame->jstack_top += 1;
               break;
 
             case VM_TYPE_DOUBLE:
               SET_SLOT_CONTENTS(frame->jstack_top, ((w_word*)&arguments[i])[0]);
               SET_SLOT_CONTENTS(frame->jstack_top+1, ((w_word*)&arguments[i])[1]);
-              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace;
+              SET_SLOT_SCANNING(frame->jstack_top+1, stack_notrace);
               frame->jstack_top += 1;
               break;
 
@@ -534,7 +534,8 @@ jboolean ExceptionCheck(JNIEnv *env) {
 
 jthrowable ExceptionOccurred(JNIEnv *env) {
 
-  return exceptionThrown(JNIEnv2w_thread(env));
+  w_thread thread = JNIEnv2w_thread(env);
+  return exceptionThrown(thread);
   
 }
 

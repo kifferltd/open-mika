@@ -30,6 +30,8 @@
 #ifndef _CLAZZ_H
 #define _CLAZZ_H
 
+#include <stdbool.h>
+
 #include "package.h"
 #include "wonka.h"
 #include "hashtable.h"

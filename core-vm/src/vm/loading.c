@@ -40,6 +40,7 @@
 #include "checks.h"
 #include "descriptor.h"
 #include "exception.h"
+#include "file-descriptor.h"
 #include "interpreter.h"
 #include "loading.h"
 #include "locks.h"

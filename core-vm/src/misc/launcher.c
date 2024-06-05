@@ -50,6 +50,15 @@ void loadExtensions(void) {
 }
 #endif
 
+// TODO clean this up together with the mess in wonk_threads.h
+#ifdef FREERTOS
+#define DEFAULT_STACK_SIZE configMINIMAL_STACK_SIZE
+#else
+#define DEFAULT_STACK_SIZE 16384
+#endif
+
+#define DEFAULT_HEAP_SIZE (32*1024*1024)
+
 static int max_heap_size;
 static int tick_millis;
 static char *command_line_path;
@@ -226,9 +235,9 @@ static w_int getInitialHeapSize(int *argument_count_ptr, char *arguments[]) {
   }
   else {
 #ifdef DEBUG
-    // printf("Using -Xms%l\n", configMINIMAL_STACK_SIZE);
+    // printf("Using -Xms%l\n", DEFAULTSTACK_SIZE);
 #endif
-    return configMINIMAL_STACK_SIZE;
+    return DEFAULT_STACK_SIZE;
   }
 
 #ifdef DEBUG
@@ -306,9 +315,9 @@ static w_int getJavaStackSize(int *argument_count_ptr, char *arguments[]) {
   }
   else {
 #ifdef DEBUG
-    // printf("Max stack size = %d\n", configMINIMAL_STACK_SIZE);
+    // printf("Max stack size = %d\n", DEFAULT_HEAPSIZE);
 #endif
-    return configMINIMAL_STACK_SIZE;
+    return DEFAULT_HEAP_SIZE;
   }
 
 #ifdef DEBUG
