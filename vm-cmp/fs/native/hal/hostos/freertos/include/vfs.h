@@ -133,6 +133,10 @@ extern w_int vfs_close(w_int fd);
 #define vfs_DIR                    FF_FindData_t
 #define vfs_fpos_t                 w_int
 
+#define VFS_ERRNO_ENOENT           pdFREERTOS_ERRNO_ENOENT
+#define VFS_ERRNO_ENMFILE          pdFREERTOS_ERRNO_ENMFILE
+#define VFS_ERRNO_EBADF            pdFREERTOS_ERRNO_EBADF
+
 void startVFS(void);
 
 #endif // HAVE_VFS_H

@@ -31,8 +31,7 @@
 #include "file-descriptor.h"
 #include "oswald.h"
 #include "ts-mem.h"
-#include "vfs-common.h"
-#include "vfs_fcntl.h"
+#include "vfs.h"
 
 char *current_working_dir;
 char *current_root_dir;
@@ -207,8 +206,7 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
 
   if (!mountpoint) {
     woempa(7, "Unable to open %s, no filesystem is mounted here\n", path);
-    // TODO virtualise errno values
-    SET_ERRNO(pdFREERTOS_ERRNO_ENOENT);
+    SET_ERRNO(VFS_ERRNO_ENOENT);
 
     return -1;
   }
@@ -244,8 +242,7 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
 
   // looks we ran out of file descriptors
   x_mutex_unlock(fd_table_mutex);
-   // TODO virtualise errno values
-   SET_ERRNO(pdFREERTOS_ERRNO_ENMFILE);
+  SET_ERRNO(VFS_ERRNO_EBADF);
   
   return -1;
 }
@@ -253,8 +250,7 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
 w_int vfs_ftell(w_int fd) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
-   // TODO virtualise errno values
-     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -265,8 +261,7 @@ w_int vfs_ftell(w_int fd) {
 w_int vfs_get_length(w_int fd) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
-   // TODO virtualise errno values
-     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -278,8 +273,7 @@ w_int vfs_read(w_int fd, void *buf, w_size length) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
     woempa(7, "failed to read from fd %d, is not open\n", fde->path);
-    // TODO virtualise errno values
-    SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -290,8 +284,7 @@ w_int vfs_read(w_int fd, void *buf, w_size length) {
 w_int vfs_write(w_int fd, void *buf, w_size length) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
-   // TODO virtualise errno values
-     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -303,8 +296,7 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   vfs_fd_entry fde = vfs_fd_table[fd];
   if (!fde) {
     woempa(7, "failed to seek in fd %d (%s), is not open\n", fd, fde->path);
-   // TODO virtualise errno values
-     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -319,8 +311,7 @@ w_int vfs_close(w_int fd) {
   x_mutex_unlock(fd_table_mutex);
 
   if (!fde) {
-   // TODO virtualise errno values
-     SET_ERRNO(pdFREERTOS_ERRNO_EBADF);
+    SET_ERRNO(VFS_ERRNO_EBADF);
 
     return -1;
   }
@@ -371,7 +362,7 @@ w_int  ram_seek  (vfs_fd_entry fde, w_int offset, w_int whence) {
       break;
 
     default:
-      SET_ERRNO(pdFREERTOS_ERRNO_EINVAL);
+      SET_ERRNO(VFS_ERRNO_EINVAL);
       return -1;
   }
 
