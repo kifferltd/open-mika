@@ -55,103 +55,15 @@ extern char *fsroot;
 
 /* Macros to map the vfs_* functions to their normal C equivalents */
 
-/* NOT NEEDED (?)
-#define close_vfs()                woempa(9, "close_vfs -> Using native filesystem\n")
-#define vfs_mount(...)            woempa(9, "vfs_mount -> Using native filesystem\n", __VA_ARGS__);
-
-extern char *command_line_path;
-
-static char *cwdbuffer;
-
-#define MAX_CWD_SIZE 1024
-*/
-
-#ifndef FS_NON_BLOCKING
-
-/*
-** However, there's a problem with the following functions when using Oswald. Since Oswald is multithreading in a single 
-** process, a function that blocks the process blocks every single thread. Therefore it's needed to make all calls 
-** non-blocking.
-*/
-
-/* NOT NEEDED (?)
-#define vfs_open(path, ...)       open(path, __VA_ARGS__)
-#define vfs_creat(path, ...)      creat(path, __VA_ARGS__)
-#define vfs_read(...)             read(__VA_ARGS__)
-#define vfs_write(...)            write(__VA_ARGS__)
-
-#define vfs_fopen(path, ...)      fopen(path, __VA_ARGS__)
-#define vfs_fdopen(...)           fdopen(__VA_ARGS__)
-#define vfs_fclose(...)           fclose(__VA_ARGS__)
-
-#define vfs_fseek(...)            fseek(__VA_ARGS__)
-#define vfs_ftell(...)            ftell(__VA_ARGS__)
-#define vfs_rewind(...)           rewind(__VA_ARGS__)
-#define vfs_fgetpos(...)          fgetpos(__VA_ARGS__)
-#define vfs_fsetpos(...)          fsetpos(__VA_ARGS__)
-
-#define vfs_fread(...)            fread(__VA_ARGS__)
-#define vfs_fwrite(...)           fwrite(__VA_ARGS__)
-
-#define vfs_fopen(path, ...)      fopen(path, __VA_ARGS__)
-#define vfs_fdopen(...)           fdopen(__VA_ARGS__)
-#define vfs_fclose(...)           fclose(__VA_ARGS__)
-
-#define vfs_feof(...)             feof(__VA_ARGS__)
-#define vfs_ferror(...)           ferror(__VA_ARGS__)
-#define vfs_clearerr(...)         clearerr(__VA_ARGS__)
-
-#define vfs_fgetc(...)            fgetc(__VA_ARGS__)
-#define vfs_getc(...)             getc(__VA_ARGS__)
-#define vfs_fgets(...)            fgets(__VA_ARGS__)
-#define vfs_fputc(...)            fputc(__VA_ARGS__)
-#define vfs_fputs(...)            fputs(__VA_ARGS__)
-#define vfs_putc(...)             putc(__VA_ARGS__)
-
-#define vfs_fflush(...)           fflush(__VA_ARGS__)
-
-#define vfs_FILE                   FILE
-*/
-
-#define VFS_FILEOPS_DEFINED
-
-#endif /* !FS_NON_BLOCKING */
+//#define vfs_FILE                   FILE
 
 /*
 ** The following functions have no blocking issues
 */
 
-/* NOT NEEDED (?)
-#define vfs_close(a)               close(a)
-#define vfs_lseek(a,b,c)           lseek(a,b,c)
-
-#define vfs_utime(a,b)             utime(a,b)
-
-#define vfs_opendir(path)          opendir(path)
-#define vfs_closedir(a)            closedir(a)
-#define vfs_readdir(a)             readdir(a)
-#define vfs_rewinddir(a)           rewinddir(a)
-#define vfs_telldir(...)          telldir(__VA_ARGS__)
-#define vfs_seekdir(...)          seekdir(__VA_ARGS__)
-#define vfs_alphasort(...)        alphasort(__VA_ARGS__)
-
-#define vfs_fstat(...)            fstat(__VA_ARGS__)
-#define vfs_stat(path, ...)       stat(path, __VA_ARGS__)
-#define vfs_truncate(path,len)    truncate(path, len)
-
-#define vfs_mkdir(path, ...)      mkdir(path, __VA_ARGS__)
-#define vfs_rmdir(path)            rmdir(path)
-#define vfs_unlink(path)           unlink(path)
-#define vfs_chmod(path, ...)      chmod(path, __VA_ARGS__)
-#define vfs_fchmod(...)           fchmod(__VA_ARGS__)
-
-#define vfs_rename(a, b)           rename(a, b)
-
-#define vfs_STAT                   stat
 #define vfs_dirent                 struct dirent
 #define vfs_DIR                    DIR
-#define vfs_fpos_t                 w_int
-*/
+#define vfs_STAT                   stat
 
 #define VFS_S_IFMT                 S_IFMT
 #define VFS_S_IFDIR                S_IFDIR
