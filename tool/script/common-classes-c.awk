@@ -420,7 +420,7 @@ END {
   print  "  dotified = slashes2dots(cstring2String(name, strlen(name)));"
   print  "  clazz = seekClazzByName(dotified, NULL);"
   print  "  if (clazz == NULL) {"
-  print  "    clazz = loadBootstrapClass(dotified);"
+  printf "    clazz = load%sBootstrapClass(%sdotified);\n", extension ? "Non" : "", extension ? "extensionClassLoader, " : ""
   print  "    if (clazz == NULL) {"
   printf "      woempa(9,\"Unable to find WNI class %%s:\\n\",name);\n"
   print  "    }"
