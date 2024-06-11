@@ -78,9 +78,8 @@ static inline int w_switchPortBytes(int port){
 #define w_socket(x,y,z)		socket(x,y,z)
 #define w_socketclose(s)   	close((int)s)
 #define w_send(s,b,l,f)    	send(s,b,l,f)
-/* [CG 20040329] Replaced by inline function (v.i.)
-#define w_recv(T,s,b,l,f, timeout)    	recv(s,b,l,f)
-*/
+#define w_sockaddr              sockaddr
+#define w_sockaddr_in           sockaddr_in
 
 /*
  * If a timeout is specified then we have to do a lot of fancy stuff
@@ -103,7 +102,7 @@ static inline int w_connect(int s, void *a, size_t l, int t) {
     }
 
     // Now connect to it
-    int rc = connect(s, (struct sockaddr *)a, l);
+    int rc = connect(s, (struct w_sockaddr *)a, l);
     if (rc < 0 && errno != EINPROGRESS) {
       return -1;
     }
@@ -185,7 +184,7 @@ static inline int w_recv(int s, void *b, size_t l, int f, int *timeoutp) {
   return retval;
 }
 
-static inline int w_accept(int s, struct sockaddr *a, socklen_t *l, int timeout) {
+static inline int w_accept(int s, struct w_sockaddr *a, socklen_t *l, int timeout) {
   int retval = accept(s,a,l);
 
   while (retval == -1 && errno == EINTR) {
@@ -200,7 +199,7 @@ static inline int w_accept(int s, struct sockaddr *a, socklen_t *l, int timeout)
 
 
 //#define w_recvfrom(s, b, blen, f, sa, size_sa, timeout, T) recvfrom(s, b, blen, f, sa, size_sa)
-static inline w_int w_recvfrom(int s, void *b, size_t blen, int f, struct sockaddr *sa, socklen_t *size_sa, int timeout, w_instance This) {
+static inline w_int w_recvfrom(int s, void *b, size_t blen, int f, struct w_sockaddr *sa, socklen_t *size_sa, int timeout, w_instance This) {
 
   int retval =  recvfrom(s, b, blen, f, sa, size_sa);
 
@@ -253,14 +252,14 @@ static inline int w_errno(int s) {
 */
 
 extern int (*x_socket)(int domain, int type, int protocol);
-extern int (*x_connect)(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+extern int (*x_connect)(int sockfd, const struct w_sockaddr *serv_addr, socklen_t addrlen);
 extern int (*x_send)(int s, const void *msg, size_t len, int flags);
-extern int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+extern int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct w_sockaddr *to, socklen_t tolen);
 extern int (*x_sendmsg)(int s, const struct msghdr *msg, int flags);
 extern int (*x_recv)(int s, void *buf, size_t len, int flags);
-extern int (*x_recvfrom)(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
+extern int (*x_recvfrom)(int s, void *buf, size_t len, int flags, struct w_sockaddr *from, socklen_t *fromlen);
 extern int (*x_recvmsg)(int s, struct msghdr *msg, int flags);
-extern int (*x_accept)(int s, struct sockaddr *addr, socklen_t *addrlen);
+extern int (*x_accept)(int s, struct w_sockaddr *addr, socklen_t *addrlen);
 
 /*
 ** Create a socket in the given domain (PF_UNIX, PF_INET, etc.) and of the
@@ -302,7 +301,7 @@ static inline int w_socket(int domain, int type, int protocol)	{
 ** by 'a' (which has length 'l'). This is allowed to take "forever",
 ** TODO: see if it make sense within the java.net API to apply a timeout here.
 */
-static inline int w_connect(int s, const struct sockaddr *a, socklen_t l, int timeout){
+static inline int w_connect(int s, const struct w_sockaddr *a, socklen_t l, int timeout){
 	int retval = x_connect(s,a,l);
   if(retval == -1 && errno == EINPROGRESS){
     woempa(7,"connecting in progress\n");
@@ -396,7 +395,7 @@ static inline int w_send(int s, const void *b, size_t l,int f){
 ** TODO: see whether the timeout here (and the yucky method used to report
 ** timeout back to the caller, namely *l=0) really works.
 */
-static inline int w_accept(int s, struct sockaddr *a, socklen_t *l, int timeout){
+static inline int w_accept(int s, struct w_sockaddr *a, socklen_t *l, int timeout){
   int retval = x_accept(s,a,l);
 
   while (retval == -1 && (errno == EAGAIN || errno == EINTR)){
@@ -429,7 +428,7 @@ static inline int w_accept(int s, struct sockaddr *a, socklen_t *l, int timeout)
 ** Caveat: this API is used in various contexts (OSwald/o4p, hostsos...).
 ** BTW: 'This' is not used, get rid?
 */
-static inline w_int w_recvfrom(int sock, void *b, size_t blen, int f, struct sockaddr *a, socklen_t *l, int timeout, w_instance This) {
+static inline w_int w_recvfrom(int sock, void *b, size_t blen, int f, struct w_sockaddr *a, socklen_t *l, int timeout, w_instance This) {
   int retval;
   x_time now = x_time_get();
   x_time expire = timeout ? now + x_usecs2ticks(timeout * 1000) : x_eternal;
@@ -457,7 +456,7 @@ static inline w_int w_recvfrom(int sock, void *b, size_t blen, int f, struct soc
 ** 'a' (length '*l').
 ** BTW: 'This' is not used, get rid?
 */
-static inline w_int w_sendto(int sock, const void *b, size_t blen, int f, const struct sockaddr *a, socklen_t l, w_instance This) {
+static inline w_int w_sendto(int sock, const void *b, size_t blen, int f, const struct w_sockaddr *a, socklen_t l, w_instance This) {
   int retval;
 
   retval = x_sendto(sock,b,blen,f,a,l);
@@ -649,14 +648,14 @@ static inline void w_comparePorts(unsigned int p, int port){
 void startNetwork(void);
 
 extern int (*x_socket)(int domain, int type, int protocol);
-extern int (*x_connect)(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+extern int (*x_connect)(int sockfd, const struct w_sockaddr *serv_addr, socklen_t addrlen);
 extern int (*x_send)(int s, const void *msg, size_t len, int flags);
-extern int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct sockaddr *to, socklen_t tolen);
+extern int (*x_sendto)(int s, const void *msg, size_t len, int flags, const struct w_sockaddr *to, socklen_t tolen);
 extern int (*x_sendmsg)(int s, const struct msghdr *msg, int flags);
 extern int (*x_recv)(int s, void *buf, size_t len, int flags);
-extern int (*x_recvfrom)(int s, void *buf, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
+extern int (*x_recvfrom)(int s, void *buf, size_t len, int flags, struct w_sockaddr *from, socklen_t *fromlen);
 extern int (*x_recvmsg)(int s, struct msghdr *msg, int flags);
-extern int (*x_accept)(int s, struct sockaddr *addr, socklen_t *addrlen);
+extern int (*x_accept)(int s, struct w_sockaddr *addr, socklen_t *addrlen);
 extern ssize_t (*x_read)(int fd, void *buf, size_t count);
 extern ssize_t (*x_write)(int fd, const void *buf, size_t count);
 
