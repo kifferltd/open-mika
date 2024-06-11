@@ -21,7 +21,7 @@ export CFLAGS += -DSTORE_METHOD_DEBUG_INFO
 export JDWP = true
 export ENABLE_THREAD_RECYCLING = true
 
-TOOLCHAIN_PREFIX = /usr/bin/
+export TOOLCHAIN_PREFIX = /usr/bin/
 
 
 
