@@ -212,6 +212,7 @@ bytecodetest :
 core-vm : javaclasses 
 	@echo Enabled extensions : $(EXTENSIONS)
 	awk -v JNI=$(JNI) -f $(scriptdir)/unicode.awk src/vm/UnicodeData-Latest.txt > $(gendir)/unicode.c
+	awk -v EXTENSIONS="$(EXTENSIONS)" -f $(scriptdir)/extensions.awk > $(gendir)/extensions.c
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-h.awk -f $(scriptdir)/common-classes-h.awk src/vm/core-classes.in > $(gendir)/core-classes.h
 ifeq ($(JAVA5_SUPPORT), true)
 	awk -v JNI=$(JNI) -f $(scriptdir)/core-classes-c.awk -f $(scriptdir)/common-classes-c.awk src/vm/core-classes5.in > $(gendir)/core-classes.c
