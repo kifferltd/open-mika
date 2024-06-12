@@ -1,5 +1,6 @@
 ###########################################################################
-# Copyright (c) 2018 by Chris Gray, KIFFER Ltd.  All rights reserved.     #
+# Copyright (c) 2018, 2024 by Chris Gray, KIFFER Ltd.                     #
+# All rights reserved.                                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -26,8 +27,10 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-# HACK sources = debug.c inits.c misc.c modules.c
 sources = debug.c inits.c misc.c launcher.c
+ifneq ($(JNI),false)
+  sources += modules.c
+endif
 miscobjdir = $(objdir)/core-vm/misc
 objects=$(patsubst %.c, $(miscobjdir)/%.o, $(sources))
 

@@ -43,7 +43,7 @@ BEGIN {
   print "#include \"ts-mem.h\""
   print "#include \"mika_threads.h\""
   print "#include \"loading.h\""
-  print "#include \"core-classes.h\""
+  print "#include \"jni-classes.h\""
   print " "
 
   module = "jni"

@@ -62,6 +62,10 @@ extern void init_awt(void);
 #endif
 #endif
 
+static inline w_thread JNIEnv2w_thread(JNIEnv *env) {
+  return checkThreadPointer((w_thread)(void*)env);
+}
+
 struct Wonka_InitArgs *system_vm_args;
 
 typedef union JNITypes {
@@ -1761,7 +1765,7 @@ JNITypes GetGeneric8Field(JNIEnv *env, jobject obj, jfieldID fieldID) {
   w_clazz clazz = instance2clazz((w_instance)obj);
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    JNITypes j;
+    JNITypes j = { .w = {0} };
     return j;
   }
   return (JNITypes)(jbyte)*byteFieldPointer(((w_instance)obj), FIELD_OFFSET(fieldID->size_and_slot));
@@ -1778,7 +1782,7 @@ JNITypes GetGeneric32Field(JNIEnv *env, jobject obj, jfieldID fieldID) {
   w_clazz clazz = instance2clazz((w_instance)obj);
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    JNITypes j;
+    JNITypes j = { .w = {0} };
     return j;
   }
   return (JNITypes)((w_instance)obj)[FIELD_OFFSET(fieldID->size_and_slot)];
@@ -1789,7 +1793,7 @@ JNITypes GetGeneric64Field(JNIEnv *env, jobject obj, jfieldID fieldID) {
   w_long result;
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    JNITypes j;
+    JNITypes j = { .w = {0} };
 
     return j;
 
@@ -2388,7 +2392,7 @@ JNITypes GetStatic32Field(JNIEnv *env, jclass class, jfieldID fieldID) {
   w_clazz  clazz  = Class2clazz(class);
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    JNITypes j;
+    JNITypes j = { .w = {0} };
 
     return j;
 
@@ -2406,7 +2410,7 @@ JNITypes GetStatic64Field(JNIEnv *env, jclass class, jfieldID fieldID) {
   w_long result;
 
   if (mustBeInitialized(clazz) == CLASS_LOADING_FAILED) {
-    JNITypes j;
+    JNITypes j = { .w = {0} };
 
     return j;
 
@@ -3198,12 +3202,10 @@ jint DestroyJavaVM(JavaVM *vm) {
   return -1;
 }
 
+// TODO move this to somewhere in hal/hostos/linux
+#ifdef O4P
 extern pthread_key_t x_thread_key;
-
-/*
-** In order to visit the Wonka Factory, you must be in possesion of valid
-** "pieces of identity".  This function will furnish you with them.
-*/
+#endif
 
 jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 #ifdef O4P
@@ -3263,7 +3265,10 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   thread->isDaemon = WONKA_FALSE;
   thread->flags = WT_THREAD_IS_NATIVE;
   thread->kthread = kthread;
+// TODO move this to somewhere in hal/hostos/linux
+#ifdef O4P
   pthread_setspecific(x_thread_key, kthread);
+#endif
   thread->kthread->xref = thread;
   thread->kpriority = x_thread_priority_get(thread->kthread);
   thread->ksize = 65536; // BOGUS - TODO: what to put here?
@@ -3309,9 +3314,6 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
 }
 
 /*
-** Thankyou for visiting the Wonka factory.  Don't forget to give your
-** badge to the security squirrel on the way out.
-**
 ** TODO: figure out how to release all monitors held by a thread which
 ** is dumb enough to call this function from inside a monitor. 8-0
 ** TODO: merge as much code as possible with Thread_destructor, i.e.
@@ -3339,7 +3341,10 @@ jint DetachCurrentThread(JavaVM *vm) {
   ht_erase(thread_hashtable,(w_word)thread->kthread);
 
   if (thread->kthread) {
+// TODO move this to somewhere in hal/hostos/linux
+#ifdef O4P
     pthread_setspecific(x_thread_key, 0);
+#endif
     x_thread_detach(thread->kthread);
     releaseMem(thread->kthread);
   }  

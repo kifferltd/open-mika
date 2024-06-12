@@ -38,6 +38,8 @@ CFLAGS += -I $(MIKA_TOP)/vm-ext/jpda/jdwp/include
 
 ifeq ($(HOSTOS), linux)
   CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/posix/include
+  CFLAGS += -pthread
+  LDFLAGS += -pthread
 endif
 ifeq ($(HOSTOS), android)
   CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/posix/include
@@ -50,17 +52,15 @@ ifeq ($(HOSTOS), freertos)
   CFLAGS += -I $(MIKA_TOP)/core-vm/hal/hostos/freertos/include
   CFLAGS += -nostdlib
   CFLAGS += -DFREERTOS
-else
-  CFLAGS += -lpthread
 endif
 
 CFLAGS += -I $(gendir)
-ifeq ($(HOSTOS), freertos)
-# to be honest these are really more about clang linker than freertos
+ifeq ($(TOOLCHAIN), clang)
   LDFLAGS += $(libdir)/libmika.a $(libdir)/liboswald.a $(libdir)/libawt.a
   LDFLAGS += -fuse-ld=lld 
   LDFLAGS += -ferror-limit=0
 else
+# assuming gcc
   CFLAGS += -L $(libdir)
   LDFLAGS += -lmika -loswald -lawt
 endif

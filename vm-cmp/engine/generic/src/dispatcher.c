@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2008, 2011, 2012, 2021, 2022, 2023 by KIFFER Ltd.         *
+* Copyright (c) 2008, 2011, 2012, 2021, 2022, 2023, 2024 by KIFFER Ltd.   *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
