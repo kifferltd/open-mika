@@ -461,7 +461,7 @@ w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
   }
   else { 	
     w_int arg = 0;
-    w_int res = FreeRTOS_rx_size(sock);
+    w_int res = w_rx_size(sock);
 
     if (res == -1) {
       //woempa(9, "Error in Available 'ioctl' failed: %s\n", w_strerror((int)w_errno(sock)));

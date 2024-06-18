@@ -75,11 +75,23 @@ static inline int w_switchPortBytes(int port){
 
 /* ---- BLOCKING VERSION ...     ---- */
 
+#define w_htons                 htons
+#define w_ntohs                 ntohs
+#define w_htonl                 htonl
+#define w_ntohl                 ntohl
+
 #define w_socket(x,y,z)		socket(x,y,z)
+#define w_shutdown(x,y)         shutdown(x,y)
 #define w_socketclose(s)   	close((int)s)
 #define w_send(s,b,l,f)    	send(s,b,l,f)
 #define w_sockaddr              sockaddr
 #define w_sockaddr_in           sockaddr_in
+
+static inline int w_rx_size(w_sock s) {
+  int avail;
+  ioctl(s, FIONREAD, &avail);
+  return avail;
+}
 
 /*
  * If a timeout is specified then we have to do a lot of fancy stuff

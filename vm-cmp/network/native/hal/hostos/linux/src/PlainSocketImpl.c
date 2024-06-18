@@ -455,10 +455,10 @@ w_int PlainSocketImpl_accept(w_thread thread , w_instance ThisImpl, w_instance n
     // step 2. set the fields of newImpl.
     setBooleanField(newImpl, F_PlainSocketImpl_open, WONKA_TRUE);
     setIntegerField(newImpl, F_SocketImpl_port, w_ntohs(sa.sin_port));
-    bytelen = sizeof(sa);
+    //bytelen = sizeof(sa);
     get_local_address(sock, &sa);
     setIntegerField(newImpl, F_SocketImpl_localport, w_ntohs(sa.sin_port));
-    return w_ntohl(sa.sin_addr);  	
+    return w_ntohl(sa.sin_addr.s_addr);  	
   }
 }
 
@@ -472,7 +472,7 @@ w_int PlainSocketImpl_available(w_thread thread , w_instance ThisImpl) {
   }
   else { 	
     w_int arg = 0;
-    w_int res = rx_size(sock);
+    w_int res = w_rx_size(sock);
 
     if (res == -1) {
       //woempa(9, "Error in Available 'ioctl' failed: %s\n", w_strerror((int)w_errno(sock)));
@@ -495,7 +495,7 @@ void PlainSocketImpl_shutdown(w_thread thread , w_instance ThisImpl, w_boolean i
     throwException(thread, clazzIOException, "socket closed or uninitialized");
   }
   else { 	
-    if(w_shutdown(sock, (in == WONKA_TRUE ? 0 : 1)) == -1){
+    if(w_shutdown(sock, (in == WONKA_TRUE ? SHUT_WR : SHUT_RDWR)) == -1){
       if (isSet(verbose_flags, VERBOSE_FLAG_SOCKET)) {
         printf("Socket: id = %d shutdown(%d) failed: %s\n", sock, in, strerror(errno));
       }

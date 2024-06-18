@@ -110,6 +110,8 @@ int w_sethostname(const char *name, size_t len);
 #define w_setsockopt(s,lev,n,v,l) FreeRTOS_setsockopt((s),(lev),(n),(v),(l))
 #define w_getsockname(s,n,l) FreeRTOS_getsockname((s),(n),(l))
 
+#define w_rx_size FreeRTOS_rx_size
+
 // TODO FreeRTOS+TCP doesn't have an errno ...
 /*
 static inline w_int w_errno(int s) {
