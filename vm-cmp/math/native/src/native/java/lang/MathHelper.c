@@ -161,7 +161,7 @@ w_instance MathHelper_static_doubleToString(w_thread thread, w_instance myClazz,
     strncpy(chars, trial, l + 1);
   }
 
-  return getStringInstance(cstring2String(chars, strlen(chars)));
+  return getStringInstance(ascii2String(chars, strlen(chars)));
 }
 
 w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, w_float value) {
@@ -202,7 +202,7 @@ w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, 
     strncpy(chars, trial, l + 1);
   }
 
-  return getStringInstance(cstring2String(chars, strlen(chars)));
+  return getStringInstance(ascii2String(chars, strlen(chars)));
 }
 
 void init_math(void) {

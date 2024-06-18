@@ -552,7 +552,7 @@ void FatalError(JNIEnv *env, const char *message) {
 jclass FindClass(JNIEnv *env, const char *Name) {
 
   w_thread thread = JNIEnv2w_thread(env);
-  w_string name = cstring2String(Name, strlen(Name));
+  w_string name = ascii2String(Name, strlen(Name));
   w_method caller = thread->top->method;
   w_string dotified;
   w_instance loader;
@@ -680,7 +680,7 @@ jint ThrowNew(JNIEnv *env, jclass class, const char *message) {
 
   w_thread thread = JNIEnv2w_thread(env);
   w_clazz  clazz  = Class2clazz(class);
-  w_string string = cstring2String(message, strlen(message));
+  w_string string = ascii2String(message, strlen(message));
   w_instance Throwable;
   w_instance Message;
 
@@ -1731,8 +1731,8 @@ w_void CallNonvirtualVoidMethodA(JNIEnv *env, jobject obj, jclass class, jmethod
 
 jfieldID GetFieldID(JNIEnv *env, jclass class, const char *name, const char *sig) {
 
-  w_string name_string = cstring2String((char *)name, strlen(name));
-  w_string desc_string = cstring2String((char *)sig, strlen(sig));
+  w_string name_string = ascii2String((char *)name, strlen(name));
+  w_string desc_string = ascii2String((char *)sig, strlen(sig));
   w_field result;
 
   if (!name_string || !desc_string) {
@@ -2359,8 +2359,8 @@ w_void CallStaticVoidMethodA(JNIEnv *env, jclass class, jmethodID methodID, jval
 jfieldID GetStaticFieldID(JNIEnv *env, jclass class, const char *name, const char *sig) {
 
   w_clazz  clazz  = Class2clazz(class);
-  w_string name_string = cstring2String((char *)name, strlen(name));
-  w_string desc_string = cstring2String((char *)sig, strlen(sig));
+  w_string name_string = ascii2String((char *)name, strlen(name));
+  w_string desc_string = ascii2String((char *)sig, strlen(sig));
   w_field result;
   
   if (!name_string || !desc_string) {
@@ -3259,7 +3259,7 @@ jint AttachCurrentThread(JavaVM *vm, JNIEnv **p_env, void *thr_args) {
   setUpRootFrame(thread);
   thread->natenv = &w_JNINativeInterface;
   thread->label = (char *)"thread:native";
-  thread->name = cstring2String(cname,strlen(cname));
+  thread->name = ascii2String(cname,strlen(cname));
   thread->state = wt_ready;
   thread->jpriority = 5; 
   thread->isDaemon = WONKA_FALSE;

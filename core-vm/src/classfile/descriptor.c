@@ -283,39 +283,39 @@ w_string clazz2desc(w_clazz clazz) {
   if (isSet(clazz->flags, CLAZZ_IS_PRIMITIVE)) {
     if (clazz == clazz_boolean) {
       woempa(1, "Descriptor is '%c'\n", 'Z');
-      return cstring2String("Z", 1);
+      return ascii2String("Z", 1);
     }
     else if (clazz == clazz_char) {
       woempa(1, "Descriptor is '%c'\n", 'C');
-      return cstring2String("C", 1);
+      return ascii2String("C", 1);
     }
     else if (clazz == clazz_float) {
       woempa(1, "Descriptor is '%c'\n", 'F');
-      return cstring2String("F", 1);
+      return ascii2String("F", 1);
     }
     else if (clazz == clazz_double) {
       woempa(1, "Descriptor is '%c'\n", 'D');
-      return cstring2String("D", 1);
+      return ascii2String("D", 1);
     }
     else if (clazz == clazz_byte) {
       woempa(1, "Descriptor is '%c'\n", 'B');
-      return cstring2String("B", 1);
+      return ascii2String("B", 1);
     }
     else if (clazz == clazz_short) {
       woempa(1, "Descriptor is '%c'\n", 'S');
-      return cstring2String("S", 1);
+      return ascii2String("S", 1);
     }
     else if (clazz == clazz_int) {
       woempa(1, "Descriptor is '%c'\n", 'I');
-      return cstring2String("I", 1);
+      return ascii2String("I", 1);
     }
     else if (clazz == clazz_long) {
       woempa(1, "Descriptor is '%c'\n", 'J');
-      return cstring2String("J", 1);
+      return ascii2String("J", 1);
     }
     else {
       woempa(1, "Descriptor is '%c'\n", 'V');
-      return cstring2String("V", 1);
+      return ascii2String("V", 1);
     }
   }
   else if (string_char(clazz->dotified, 0) == '[') {

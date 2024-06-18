@@ -315,7 +315,7 @@ w_instance ClassLoader_getCallingCallingClassLoader(w_thread thread, w_instance 
 w_instance ClassLoader_getCommandLineClasspath(w_thread thread, w_instance class) {
   w_instance Result;
   w_string result;
-  result = cstring2String(system_vm_args->classpath, strlen(system_vm_args->classpath));
+  result = ascii2String(system_vm_args->classpath, strlen(system_vm_args->classpath));
   Result = getStringInstance(result);
   deregisterString(result);
 

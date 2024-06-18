@@ -55,7 +55,7 @@ void throwInvalidClassException(w_thread thread, w_instance Class, char * messag
   threadMustBeSafe(thread);
 
   mustBeInitialized(clazzInvalidClassException);
-  w_instance messageString =  getStringInstance(cstring2String(message, l)); 
+  w_instance messageString =  getStringInstance(ascii2String(message, l)); 
   w_instance classnameString = getStringInstance(Class2clazz(Class)->dotified);
 
   enterUnsafeRegion(thread);

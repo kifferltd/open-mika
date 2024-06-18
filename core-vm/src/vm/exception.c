@@ -107,7 +107,7 @@ void addDetailMessageToOOME(w_thread thread, w_instance oome, w_int size) {
   threadMustBeSafe(thread);
   x_snprintf(buffer, remain, "unable to allocate %d bytes", size);
   setReferenceField(thread->Thread, oome, F_Thread_thrown);
-  message = cstring2String(buffer, strlen(buffer));
+  message = ascii2String(buffer, strlen(buffer));
   if (message) {
     w_instance messageString = getStringInstance(message);
     if (messageString) {
@@ -367,7 +367,7 @@ void throwException(w_thread thread, w_clazz exception, char * format, ...) {
       va_start (ap, format);
       length = x_vsnprintf(buffer, bufsize, format , ap);
       va_end (ap);
-      message = cstring2String(buffer, length);
+      message = ascii2String(buffer, length);
       if (!message) {
         wabort(ABORT_WONKA, "Unable to create message\n");
       }

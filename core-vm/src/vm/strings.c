@@ -704,12 +704,12 @@ w_string unicode2String(w_char *chars, w_size length) {
 }
 
 /*
-** Create a Wonka string from a C string. The length should NOT take into
-** account the '\0' character of the C string. I.e. one can use strlen()
+** Create a Wonka string from an ASCII string. The length should NOT take into
+** account the '\0' character of the C string, i.e. one can use strlen()
 ** to calculate the length when calling this function.
 */
 
-w_string cstring2String(const char *cstring, w_size length) {
+w_string ascii2String(const char *cstring, w_size length) {
 
   w_string string;
   w_string result;
@@ -1023,10 +1023,10 @@ void startStrings() {
   ** Set up the special strings
   */
 
-  string_empty = cstring2String("",0);
-  string_NULL = cstring2String("<NULL>",6);
-  string_EMPTY = cstring2String("<EMPTY>",7);
-  string_BOGUS = cstring2String("<BOGUS>",7);
+  string_empty = ascii2String("",0);
+  string_NULL = ascii2String("<NULL>",6);
+  string_EMPTY = ascii2String("<EMPTY>",7);
+  string_BOGUS = ascii2String("<BOGUS>",7);
 
   woempa(7, "Initialised string tables and static strings.\n");
   woempa(7, " string_empty = %p '%w'\n", string_empty, string_empty);

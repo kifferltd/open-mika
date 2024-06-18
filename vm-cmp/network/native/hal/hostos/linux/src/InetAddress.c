@@ -87,7 +87,7 @@ w_boolean InetAddress_static_lookupName(w_thread thread, w_instance thisClass, w
   host = w_gethostbyname(hostname);
   if (host) {
     woempa(7, "canonical name = '%s'\n", host->h_name);
-    setReferenceField(InetAddress, c_string2String(host->h_name), F_InetAddress_hostName);
+    setReferenceField(InetAddress, utf2String(host->h_name, strlen(host->h_name)), F_InetAddress_hostName);
     result = TRUE;
   }
   else {
@@ -152,7 +152,7 @@ void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_i
   */
 
   //w_printf("canonical name = %s (%d)\n", h_name, host->h_addrtype);
-  h_name = cstring2String(host->h_name, strlen(host->h_name));
+  h_name = ascii2String(host->h_name, strlen(host->h_name));
   setReferenceField(InetAddress, getStringInstance(h_name), F_InetAddress_hostName);
   deregisterString(h_name);
   //setReferenceField(InetAddress, Name, F_InetAddress_hostName);
@@ -194,7 +194,7 @@ w_instance InetAddress_getLocalName(w_thread thread, w_instance clazz) {
   w_instance Name = NULL;
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
-    Name = c_string2String(ownhostname);
+    Name = ascii2String(ownhostname, strlen(ownhostname));
   } 
 
   return Name;

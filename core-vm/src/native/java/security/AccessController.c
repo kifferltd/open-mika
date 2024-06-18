@@ -68,7 +68,7 @@ static w_clazz    clazzArrayOf_ProtectionDomain;
 
 void AccessController_static_initialize(w_thread thread, w_instance classAccessController) {
 
-  w_string string_ArrayOf_ProtectionDomain  = cstring2String("[java.security.ProtectionDomain", 31);
+  w_string string_ArrayOf_ProtectionDomain  = ascii2String("[java.security.ProtectionDomain", 31);
 
   clazzArrayOf_ProtectionDomain = namedArrayClassMustBeLoaded(NULL, string_ArrayOf_ProtectionDomain);
   // TODO: handle exception

@@ -56,7 +56,7 @@ static w_fifo namelist;
  If the given device is a byte serial device, add its name to namelist.
 */
 static void scanport(w_device device) {
-  w_string nameString = cstring2String(device->name, strlen(device->name));
+  w_string nameString = ascii2String(device->name, strlen(device->name));
   woempa(7,"Adding %w to namelist\n", nameString);
   putFifo(nameString,namelist);
 }

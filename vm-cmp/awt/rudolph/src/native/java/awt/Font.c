@@ -324,9 +324,9 @@ w_void Font_initialize(w_thread thread, jclass thisClass, jstring name, jstring 
       defaultFont = (w_instance)allocInstance(thread, clazzFont);
       enterSafeRegion(thread);
       setWotsitField(defaultFont, F_Font_wotsit, fonts[0]);
-      String = newStringInstance(cstring2String(fonts[0]->name, strlen(fonts[0]->name)));
+      String = newStringInstance(ascii2String(fonts[0]->name, strlen(fonts[0]->name)));
       setReferenceField(defaultFont, String, F_Font_name);
-      String = newStringInstance(cstring2String(fonts[0]->family, strlen(fonts[0]->family)));
+      String = newStringInstance(ascii2String(fonts[0]->family, strlen(fonts[0]->family)));
       setReferenceField(defaultFont, String, F_Font_family);
       setIntegerField(defaultFont, F_Font_size, fonts[0]->size);
       setIntegerField(defaultFont, F_Font_style, fonts[0]->style);
@@ -359,7 +359,7 @@ w_void Font_create(w_thread thread, jobject thisFont, jobject name, jint style, 
   if (name!=NULL)
     wString = getWotsitField(name, F_String_wotsit);
   else
-    wString = cstring2String("Default", strlen("Default"));
+    wString = ascii2String("Default", strlen("Default"));
 
   cString = allocMem((string_length(wString) + 1) * sizeof(char));
   if (!cString) {
@@ -386,7 +386,7 @@ w_void Font_create(w_thread thread, jobject thisFont, jobject name, jint style, 
   setReferenceField(thisFont, stringInstanceName, F_Font_name);
 
   // set thisFont's family name (reuse 'wString')
-  wString = cstring2String((char*)font->family, strlen(font->family));
+  wString = ascii2String((char*)font->family, strlen(font->family));
   stringInstanceFamily = newStringInstance(wString);
   setReferenceField(thisFont, stringInstanceFamily, F_Font_family);
 

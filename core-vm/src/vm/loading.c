@@ -873,60 +873,60 @@ static char *getFirstDirectoryPath(char *bcp) {
 extern x_size heap_remaining;
 
 void startLoading(void) {
-  w_string string_java_lang_Object = cstring2String("java.lang.Object", 16);
-  w_string string_java_lang_Cloneable = cstring2String("java.lang.Cloneable", 19);
-  w_string string_java_io_Serializable = cstring2String("java.io.Serializable", 20);
-  w_string string_java_lang_Throwable = cstring2String("java.lang.Throwable", 19);
-  w_string string_java_lang_Class = cstring2String("java.lang.Class", 15);
-  w_string string_java_lang_ClassLoader = cstring2String("java.lang.ClassLoader", 21);
-  w_string string_java_lang_Thread = cstring2String("java.lang.Thread", 16);
-  w_string string_java_lang_ThreadGroup = cstring2String("java.lang.ThreadGroup", 21);
-  w_string string_java_lang_ref_Reference = cstring2String("java.lang.ref.Reference", 23);
-  w_string string_java_lang_reflect_Constructor = cstring2String("java.lang.reflect.Constructor", 29);
+  w_string string_java_lang_Object = ascii2String("java.lang.Object", 16);
+  w_string string_java_lang_Cloneable = ascii2String("java.lang.Cloneable", 19);
+  w_string string_java_io_Serializable = ascii2String("java.io.Serializable", 20);
+  w_string string_java_lang_Throwable = ascii2String("java.lang.Throwable", 19);
+  w_string string_java_lang_Class = ascii2String("java.lang.Class", 15);
+  w_string string_java_lang_ClassLoader = ascii2String("java.lang.ClassLoader", 21);
+  w_string string_java_lang_Thread = ascii2String("java.lang.Thread", 16);
+  w_string string_java_lang_ThreadGroup = ascii2String("java.lang.ThreadGroup", 21);
+  w_string string_java_lang_ref_Reference = ascii2String("java.lang.ref.Reference", 23);
+  w_string string_java_lang_reflect_Constructor = ascii2String("java.lang.reflect.Constructor", 29);
 
-  string_boolean = cstring2String("boolean", 7);
-  string_byte = cstring2String("byte", 4);
-  string_c_h_a_r = cstring2String("char", 4);
-  string_double = cstring2String("double", 6);
-  string_float = cstring2String("float", 5);
-  string_int = cstring2String("int", 3);
-  string_long = cstring2String("long", 4);
-  string_short = cstring2String("short", 5);
-  string_void = cstring2String("void", 4);
+  string_boolean = ascii2String("boolean", 7);
+  string_byte = ascii2String("byte", 4);
+  string_c_h_a_r = ascii2String("char", 4);
+  string_double = ascii2String("double", 6);
+  string_float = ascii2String("float", 5);
+  string_int = ascii2String("int", 3);
+  string_long = ascii2String("long", 4);
+  string_short = ascii2String("short", 5);
+  string_void = ascii2String("void", 4);
 
-  string_ConstantValue = cstring2String("ConstantValue", 13);
-  string_Code = cstring2String("Code", 4);
-  string_serialVersionUID = cstring2String("serialVersionUID", 16);
-  string_InnerClasses = cstring2String("InnerClasses", 12);
-  string_Deprecated = cstring2String("Deprecated", 10);
-  string_Exceptions = cstring2String("Exceptions", 10);
-  string_Exceptions = cstring2String("EnclosingMethod", 15);
-  string_LineNumberTable = cstring2String("LineNumberTable", 15);
-  string_LocalVariableTable = cstring2String("LocalVariableTable", 18);
-  string_LocalVariableTypeTable = cstring2String("LocalVariableTypeTable", 22);
-  string_Reference = cstring2String("java/lang/ref/Reference", 23);
-  string_RuntimeVisibleAnnotations = cstring2String("RuntimeVisibleAnnotations", 25);
-  string_RuntimeVisibleParameterAnnotations = cstring2String("RuntimeVisibleParameterAnnotations", 34);
-  string_Signature = cstring2String("Signature", 9);
-  string_SourceFile = cstring2String("SourceFile", 10);
-  string_Synthetic = cstring2String("Synthetic", 9);
+  string_ConstantValue = ascii2String("ConstantValue", 13);
+  string_Code = ascii2String("Code", 4);
+  string_serialVersionUID = ascii2String("serialVersionUID", 16);
+  string_InnerClasses = ascii2String("InnerClasses", 12);
+  string_Deprecated = ascii2String("Deprecated", 10);
+  string_Exceptions = ascii2String("Exceptions", 10);
+  string_Exceptions = ascii2String("EnclosingMethod", 15);
+  string_LineNumberTable = ascii2String("LineNumberTable", 15);
+  string_LocalVariableTable = ascii2String("LocalVariableTable", 18);
+  string_LocalVariableTypeTable = ascii2String("LocalVariableTypeTable", 22);
+  string_Reference = ascii2String("java/lang/ref/Reference", 23);
+  string_RuntimeVisibleAnnotations = ascii2String("RuntimeVisibleAnnotations", 25);
+  string_RuntimeVisibleParameterAnnotations = ascii2String("RuntimeVisibleParameterAnnotations", 34);
+  string_Signature = ascii2String("Signature", 9);
+  string_SourceFile = ascii2String("SourceFile", 10);
+  string_Synthetic = ascii2String("Synthetic", 9);
 
 #ifdef SUPPORT_BYTECODE_SCRAMBLING
-  string_be_kiffer_Scrambled = cstring2String("be.kiffer.Scrambled", 19);
+  string_be_kiffer_Scrambled = ascii2String("be.kiffer.Scrambled", 19);
 #endif
-  string_run = cstring2String("run", 3);
-  string_finalize = cstring2String("finalize", 8);
-  string_angle_brackets_init = cstring2String("<init>", 6);
-  string_angle_brackets_clinit = cstring2String("<clinit>", 8);
-  string_loadClass = cstring2String("loadClass", 9);
-  string_no_params = cstring2String("()", 2);
-  string_no_params_V = cstring2String("()V", 3);
-  string_params_String_return_Class = cstring2String("(Ljava/lang/String;)Ljava/lang/Class;", 37);
-  string_L_java_lang_String = cstring2String("Ljava/lang/String;", 18);
+  string_run = ascii2String("run", 3);
+  string_finalize = ascii2String("finalize", 8);
+  string_angle_brackets_init = ascii2String("<init>", 6);
+  string_angle_brackets_clinit = ascii2String("<clinit>", 8);
+  string_loadClass = ascii2String("loadClass", 9);
+  string_no_params = ascii2String("()", 2);
+  string_no_params_V = ascii2String("()V", 3);
+  string_params_String_return_Class = ascii2String("(Ljava/lang/String;)Ljava/lang/Class;", 37);
+  string_L_java_lang_String = ascii2String("Ljava/lang/String;", 18);
 
   fastcall_init_tables();
 
-  string_bootstrap = cstring2String("bootstrap class loader", 22);
+  string_bootstrap = ascii2String("bootstrap class loader", 22);
 
   clazz_boolean = createPrimitive(string_boolean, VM_TYPE_BOOLEAN, 1);
   clazz_char    = createPrimitive(string_c_h_a_r, VM_TYPE_CHAR, 16);
@@ -1432,42 +1432,42 @@ w_clazz createPrimitiveArrayClazz(w_int pi) {
   switch(pi) {
     case P_boolean:
       element_clazz = clazz_boolean;
-      desc_string = cstring2String("[Z",2);
+      desc_string = ascii2String("[Z",2);
       break;
 
     case P_byte:
       element_clazz = clazz_byte;
-      desc_string = cstring2String("[B",2);
+      desc_string = ascii2String("[B",2);
       break;
 
     case P_char:
       element_clazz = clazz_char;
-      desc_string = cstring2String("[C",2);
+      desc_string = ascii2String("[C",2);
       break;
 
     case P_short:
       element_clazz = clazz_short;
-      desc_string = cstring2String("[S",2);
+      desc_string = ascii2String("[S",2);
       break;
 
     case P_int:
       element_clazz = clazz_int;
-      desc_string = cstring2String("[I",2);
+      desc_string = ascii2String("[I",2);
       break;
 
     case P_float:
       element_clazz = clazz_float;
-      desc_string = cstring2String("[F",2);
+      desc_string = ascii2String("[F",2);
       break;
 
     case P_long:
       element_clazz = clazz_long;
-      desc_string = cstring2String("[J",2);
+      desc_string = ascii2String("[J",2);
       break;
 
     case P_double:
       element_clazz = clazz_double;
-      desc_string = cstring2String("[D",2);
+      desc_string = ascii2String("[D",2);
       break;
 
     default:
@@ -1892,7 +1892,7 @@ static w_instance getBootstrapURLFromZip(void *resource, char *pathname) {
   }
   strcpy(url_end, pathname);
   url_end += strlen(pathname);
-  w_string urlspec = cstring2String(url_buffer, url_end - url_buffer);
+  w_string urlspec = ascii2String(url_buffer, url_end - url_buffer);
   releaseMem(url_buffer);
 
   woempa(7, "Creating a java.net.URL with spec '%w'\n", urlspec);
@@ -2033,7 +2033,7 @@ static w_instance getBootstrapURLFromDir(void *resource, char *pathname) {
   }
   strcpy(url_end, pathname);
   url_end += strlen(pathname);
-  w_string urlspec = cstring2String(url_buffer, url_end - url_buffer);
+  w_string urlspec = ascii2String(url_buffer, url_end - url_buffer);
   woempa(7, "URL would be %s\n", url_buffer);
 
   // Check for existence of the path without the file:// prefix (first 7 chars)

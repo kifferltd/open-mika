@@ -168,11 +168,11 @@ w_boolean ht_stringCompare(w_word string1_word, w_word string2_word);
 w_word ht_stringHash(w_word string_word);
 
 /*
-** cstring2String converts a C (ASCII) string into a registered w_string.
+** ascii2String converts a C (ASCII) string into a registered w_string.
 ** The terminating null byte need not be present, and is not included
 ** in the length.
 */
-w_string cstring2String(const char *cstring, w_size length);
+w_string ascii2String(const char *cstring, w_size length);
 
 /*
 ** unicode2String converts a sequence of unicode characters into a registered w_string.

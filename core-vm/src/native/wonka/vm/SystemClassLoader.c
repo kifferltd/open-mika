@@ -44,7 +44,7 @@
 extern Wonka_InitArgs *system_vm_args;
 
 w_instance SystemClassLoader_getBootclasspath(w_thread thread, w_instance class) {
-  return getStringInstance(cstring2String(bootclasspath, strlen(bootclasspath)));
+  return getStringInstance(ascii2String(bootclasspath, strlen(bootclasspath)));
 }
 
 void SystemClassLoader_setSystemClassLoader(w_thread thread, w_instance class, w_instance this) {

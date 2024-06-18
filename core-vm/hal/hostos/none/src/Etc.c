@@ -40,7 +40,7 @@ Etc_getPlatform (w_thread thread, w_instance classEtc) {
 
   result = allocStringInstance(thread);
   if (result) {
-    string = cstring2String("UNKNOWN", 7);
+    string = ascii2String("UNKNOWN", 7);
     setWotsitField(result, F_String_wotsit, string);
   }
 

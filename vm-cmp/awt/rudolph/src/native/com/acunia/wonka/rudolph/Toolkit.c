@@ -28,7 +28,7 @@
 
 #include "arrays.h"        // instance2Array_*
 #include "hashtable.h"     // ht_register
-#include "wstrings.h"      // cstring2String()
+#include "wstrings.h"      // ascii2String()
 #include "mika_threads.h"       // currentWonkaThread
 
 #include "awt-classes.h"

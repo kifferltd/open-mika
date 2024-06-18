@@ -57,7 +57,7 @@ static w_clazz  Array_interfaces[2];
 static w_clazz  Array_supers[1];
 
 w_clazz createClazzArray(void) {
-  w_string string_clone = cstring2String("clone",5);
+  w_string string_clone = ascii2String("clone",5);
   w_clazz array_clazz = allocClazz(clazzObject->numConstants);
   w_method array_clone_method = &Array_clone_method;
   w_size   i;
@@ -85,7 +85,7 @@ w_clazz createClazzArray(void) {
   // - but that's alright :-)
   memset(&array_clazz->resolutionMonitor, 0, sizeof(x_Monitor));
   x_monitor_create(&array_clazz->resolutionMonitor);
-  array_clazz->dotified = cstring2String("array prototype", 15);
+  array_clazz->dotified = ascii2String("array prototype", 15);
   array_clazz->numDeclaredMethods = 1;
   array_clazz->own_methods = array_clone_method;
 

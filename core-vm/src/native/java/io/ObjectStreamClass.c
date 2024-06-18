@@ -145,8 +145,8 @@ w_instance ObjectStreamClass_createObjectStreamClass(w_thread thread, w_instance
     //Setup suid ...
     {
       w_long* suid = (w_long*)wordFieldPointer(newOSC, F_ObjectStreamClass_suid);
-      w_string name = cstring2String("serialVersionUID", 16);
-      w_string desc = cstring2String("J", 16);
+      w_string name = ascii2String("serialVersionUID", 16);
+      w_string desc = ascii2String("J", 16);
       w_field suid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
       deregisterString(desc);
       deregisterString(name);
@@ -234,8 +234,8 @@ void ObjectStreamClass_verifyInput(w_thread thread, w_instance thisOSC) {
     w_long* suid = (w_long*)wordFieldPointer(thisOSC, F_ObjectStreamClass_suid);
     w_long realsuid;
     w_word i;
-    w_string name = cstring2String("serialVersionUID", 16);
-    w_string desc = cstring2String("J", 1);
+    w_string name = ascii2String("serialVersionUID", 16);
+    w_string desc = ascii2String("J", 1);
     w_field realsuid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
     deregisterString(desc);
     deregisterString(name);
@@ -419,8 +419,8 @@ w_instance ObjectStreamClass_createFields(w_thread thread, w_instance thisOSC) {
     w_word stop = clazz->numStaticFields;
     // w_word i;
     w_field spf_field = NULL;
-    w_string name = cstring2String("serialPersistentFields", strlen("serialPersistentFields"));
-    w_string desc = cstring2String("[Ljava/io/ObjectStreamClass", 16);
+    w_string name = ascii2String("serialPersistentFields", strlen("serialPersistentFields"));
+    w_string desc = ascii2String("[Ljava/io/ObjectStreamClass", 16);
     w_field suid_field = searchClazzOnlyForField(clazz, name, desc, 1, -1);
     deregisterString(desc);
     deregisterString(name);

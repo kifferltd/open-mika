@@ -115,11 +115,11 @@ printf("Calling InetAddress_getLocalName(%p, %p)\n", thread, theClass);
   w_string ownhostname_string;
 
   if (w_gethostname(ownhostname, 32) == 0) {
-    ownhostname_string = cstring2String(ownhostname, strlen(ownhostname));
+    ownhostname_string = ascii2String(ownhostname, strlen(ownhostname));
     woempa(7, "Own host name is '%w'\n", ownhostname_string);
   }
   else {
-    ownhostname_string = cstring2String("IM4000", 6);
+    ownhostname_string = ascii2String("IM4000", 6);
   }
   
 printf("InetAddress_getLocalName(%p, %p) returned %w\n", thread, theClass, ownhostname_string);

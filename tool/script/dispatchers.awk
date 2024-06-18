@@ -369,7 +369,7 @@ BEGIN {
   printf "void collectDispatchers(w_hashtable hashtable) {\n"
   printf "  w_string descr_string;\n\n"
   printf "  for (int i = 0; native_dispatchers[i].descr; ++i) {\n"
-  printf "    descr_string = cstring2String(native_dispatchers[i].descr, strlen(native_dispatchers[i].descr));\n"
+  printf "    descr_string = ascii2String(native_dispatchers[i].descr, strlen(native_dispatchers[i].descr));\n"
   printf "    woempa(1, \"adding  dispatchers for descriptor %%w\\n\", descr_string);\n"
   printf "    ht_write_no_lock(hashtable, (w_word)descr_string, (w_word)native_dispatchers[i].dispatcher);\n"
   printf "    woempa(1, \"added (%%w, 0x%%08x) to descriptors hashtable, now holds %%d items\\n\", descr_string, (w_word)native_dispatchers[i].dispatcher, hashtable->occupancy);\n"

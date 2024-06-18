@@ -231,7 +231,7 @@ void Thread_create(w_thread currentthread, w_instance thisThread, w_instance par
     }
 
     x_snprintf(buffer, THREAD_NAME_BUFFER_SIZE, "Thread-%d", ++seqnum);
-    name = cstring2String(buffer, strlen(buffer));
+    name = ascii2String(buffer, strlen(buffer));
     releaseMem(buffer);
   } 
   else {

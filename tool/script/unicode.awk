@@ -1916,16 +1916,16 @@ END{
 
   print  "void createDecompositionTables() {"
   for (cname in compatnames) {
-    print "  string_" cname " = cstring2String(\"" cname "\", " length(cname) ");"
+    print "  string_" cname " = ascii2String(\"" cname "\", " length(cname) ");"
   }
   print  compatlist
   print  ""
   print  "}"
   print  ""
   print  "void createCharacterTables() {"
-  print "  category_name[0] = cstring2String(\"--\", 2);"
+  print "  category_name[0] = ascii2String(\"--\", 2);"
   for (category in catindex) {
-    print "  category_name[CATEGORY_" category "] = cstring2String(\"" category "\", " length(category) ");"
+    print "  category_name[CATEGORY_" category "] = ascii2String(\"" category "\", " length(category) ");"
   }
   print  "  category_name[NUMBER_OF_CATEGORIES] = NULL;"
   print  "}"

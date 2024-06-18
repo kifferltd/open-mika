@@ -334,7 +334,7 @@ static void invokeInitMain(w_instance arglist) {
   deactivateFrame(frame, NULL);
 #endif // ndef USING_INIT_CLASS
 
-  w_string initClassName = cstring2String(INIT_CLASS, strlen(INIT_CLASS));
+  w_string initClassName = ascii2String(INIT_CLASS, strlen(INIT_CLASS));
   w_string dotified = undescriptifyClassName(initClassName);
   w_clazz initClazz = namedClassMustBeLoaded(systemClassLoader, dotified);
   deregisterString(dotified);
@@ -462,7 +462,7 @@ void startInitialThreads(void* data) {
     enterSafeRegion(W_Thread_sysInit);
     for (i = 0; i < command_line_argument_count; i++) {
       woempa(7, "Getting string instance of '%s', thread is '%t'\n", command_line_arguments[i], currentWonkaThread);
-      String = getStringInstance(cstring2String(command_line_arguments[i], strlen(command_line_arguments[i])));
+      String = getStringInstance(ascii2String(command_line_arguments[i], strlen(command_line_arguments[i])));
       setArrayReferenceField(arglist, String, i);
       woempa(9,"args[%d] = \"%w\"\n",i,String2string(instance2Array_instance(arglist)[i]));
     }
@@ -553,9 +553,9 @@ void startKernel() {
   woempa(7, "Created thread_hashtable at %p\n",thread_hashtable);
   I_ThreadGroup_system = allocInstance(NULL, clazzThreadGroup);
   woempa(1,"created I_ThreadGroup_system at %p\n",I_ThreadGroup_system);
-  string_sysThreadGroup = cstring2String("SystemThreadGroup", 17);
+  string_sysThreadGroup = ascii2String("SystemThreadGroup", 17);
   I_Thread_sysInit = allocInstance(NULL, clazzThread);
-  string_sysThread = cstring2String(INIT_THREAD_NAME, strlen(INIT_THREAD_NAME));
+  string_sysThread = ascii2String(INIT_THREAD_NAME, strlen(INIT_THREAD_NAME));
 
   W_Thread_sysInit = allocClearedMem(sizeof(w_Thread) + java_stack_size);
 

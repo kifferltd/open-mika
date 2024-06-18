@@ -102,10 +102,10 @@ static void stackCheck(w_frame frame) {
   static w_string skip_4 = NULL;
   
   if (skip_1 == NULL) {
-    skip_1 = cstring2String("toString_internal", strlen("toString_internal"));
-    skip_2 = cstring2String("test_remainder", strlen("test_remainder"));
-    skip_3 = cstring2String("check_remainder", strlen("check_remainder"));
-    skip_4 = cstring2String("test_random", strlen("test_random"));
+    skip_1 = ascii2String("toString_internal", strlen("toString_internal"));
+    skip_2 = ascii2String("test_remainder", strlen("test_remainder"));
+    skip_3 = ascii2String("check_remainder", strlen("check_remainder"));
+    skip_4 = ascii2String("test_random", strlen("test_random"));
   }
 
   checks += 1;

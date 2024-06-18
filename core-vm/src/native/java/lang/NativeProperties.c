@@ -43,8 +43,8 @@ w_instance NativeProperties_init(w_thread thread, w_instance classSystem) {
 
   prop_hashtable = ht_create("hashtable:native system properties", 17, ht_stringHash, ht_stringCompare, 0, 0);
   woempa(7, "Created prop_hashtable\n");
-  s = cstring2String(UNICODE_SUBSETS, strlen(UNICODE_SUBSETS));
-  ht_write(prop_hashtable, (w_word)cstring2String("mika.unicode.subsets", 20), (w_word)s);
+  s = ascii2String(UNICODE_SUBSETS, strlen(UNICODE_SUBSETS));
+  ht_write(prop_hashtable, (w_word)ascii2String("mika.unicode.subsets", 20), (w_word)s);
   woempa(7, "Set %s -> %w\n", "mika.unicode.subsets", s);
 
   utf8 = getInstallationDir();

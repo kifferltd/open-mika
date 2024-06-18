@@ -570,7 +570,7 @@ w_instance System_getCmdLineProperties(w_thread thread, w_instance this) {
         String = allocInstance(thread, clazzString);
         if (String) {
           enterSafeRegion(thread);
-          string = cstring2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
+          string = ascii2String(system_vm_args->properties[i], strlen(system_vm_args->properties[i]));
           enterUnsafeRegion(thread);
           setWotsitField(String, F_String_wotsit, string);
         } 

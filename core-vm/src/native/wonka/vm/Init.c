@@ -36,7 +36,7 @@ w_instance Init_static_getNextAssertionFlag(w_thread thread, w_instance thisClas
   char *assertion = getFifo(assertions_fifo);
   if (assertion) {
     woempa(7, "assertion flag : %s\n", assertion);
-    return getStringInstance(cstring2String(assertion, strlen(assertion)));
+    return getStringInstance(ascii2String(assertion, strlen(assertion)));
   }
 
 #ifdef DEBUG
