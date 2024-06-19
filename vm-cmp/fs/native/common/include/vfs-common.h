@@ -39,6 +39,7 @@ w_int vfs_open(const char *pathname, w_word flags, w_word mode);
 w_int vfs_read(w_int fd, void *buf, w_size count);
 w_int vfs_write(w_int fd, void *buf, w_size count);
 w_int vfs_lseek(w_int fd, w_int offset, w_int whence);
+w_int vfs_flush(w_int fd);
 w_int vfs_close(w_int fd);
 
 w_int  placeholder_open  (vfs_fd_entry fde, const char *path, w_word flags, w_word mode);
@@ -47,6 +48,7 @@ w_boolean placeholder_is_eof(vfs_fd_entry fde);
 w_int  placeholder_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  placeholder_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
+w_int placeholder_flush(vfs_fd_entry fde);
 w_int placeholder_close(vfs_fd_entry fde);
 
 #endif // HAVE_VFS_COMMON_H

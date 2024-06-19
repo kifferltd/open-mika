@@ -40,6 +40,7 @@ w_int  ufs_tell  (vfs_fd_entry fde);
 w_int  ufs_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  ufs_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  ufs_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
+w_int  ufs_flush  (vfs_fd_entry fde);
 w_int  ufs_close  (vfs_fd_entry fde);
 
 static vfs_FileOperations ufs_ops = {
@@ -51,6 +52,7 @@ static vfs_FileOperations ufs_ops = {
   .seek = ufs_seek,
   .read = ufs_read,
   .write = ufs_write,
+  .flush = ufs_flush,
   .close = ufs_close,
 };
 
@@ -67,16 +69,6 @@ void init_ufsfs(void) {
   current_root_dir = fsroot;
   woempa(7, "current dir  : %s\n", current_working_dir);
   woempa(7, "current root : %s\n", current_root_dir);
-
-  ufs_ops.dummy = NULL;
-  ufs_ops.open = ufs_open;
-  ufs_ops.get_length = ufs_get_length;
-  ufs_ops.is_eof = ufs_is_eof;
-  ufs_ops.tell = ufs_tell;
-  ufs_ops.seek = ufs_seek;
-  ufs_ops.read = ufs_read;
-  ufs_ops.write = ufs_write;
-  ufs_ops.close = ufs_close;
 
   registerMountPoint(&ufs_mountpoint);
 }
@@ -153,6 +145,25 @@ w_int ufs_seek(vfs_fd_entry fde, w_int offset, w_int whence) {
   }
 
   woempa(7, "failed to seek %d bytes from %s\n", offset, fde->path);
+
+  return -1;
+}
+
+w_int ufs_flush(vfs_fd_entry fde) {
+  int *fdptr = fde->data;
+  if (*fdptr < 0) {
+    woempa(7, "cannot flush, fd is not in use\n", offset);
+    SET_ERRNO(EBADF);
+    return -1;
+  }
+
+  woempa(5, "flushing %s\n", fde->path);
+  if (fflush(*fdptr) == 0) {
+    *fdptr = -1;
+    woempa(5, "successfully flushed %s\n", fde->path);
+    return 0;
+  }
+
 
   return -1;
 }

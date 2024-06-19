@@ -53,17 +53,37 @@ extern char *current_working_dir;
 extern char *current_root_dir;
 extern char *fsroot;
 
+/* Dummy definitions, for things we don't need */
+#define close_vfs()                woempa(9, "close_vfs -> Using native filesystem\n")
+#define vfs_mount(...)            woempa(9, "vfs_mount -> Using native filesystem\n", __VA_ARGS__);
+
 /* Macros to map the vfs_* functions to their normal C equivalents */
 
-//#define vfs_FILE                   FILE
+// TODO - virtualise directory operations
+#define vfs_opendir(path)          opendir(path)
+#define vfs_closedir(a)            closedir(a)
+#define vfs_readdir(a)             readdir(a)
+#define vfs_rewinddir(a)           rewinddir(a)
+#define vfs_telldir(...)          telldir(__VA_ARGS__)
+#define vfs_seekdir(...)          seekdir(__VA_ARGS__)
+#define vfs_alphasort(...)        alphasort(__VA_ARGS__)
 
-/*
-** The following functions have no blocking issues
-*/
+// TODO - virtualise these too
+#define vfs_dirent                 struct dirent
+#define vfs_dir_t                  DIR
+#define vfs_stat(path, buf)        stat(path,buf)
+#define vfs_stat_t                 stat
+#define vfs_utime(path, time)      utime(path, time)
+
+// TODO - and these
+#define vfs_mkdir(path, mode)      mkdir(path, mode)
+#define vfs_rmdir(path)            rmdir(path)
+#define vfs_unlink(path)           unlink(path)
+#define vfs_chmod(path, ...)       chmod(path, __VA_ARGS__)
+#define vfs_fchmod(...)            fchmod(__VA_ARGS__)
+#define vfs_rename(a, b)           rename(a, b)
 
 #define vfs_dirent                 struct dirent
-#define vfs_DIR                    DIR
-#define vfs_STAT                   stat
 
 #define VFS_S_IFMT                 S_IFMT
 #define VFS_S_IFDIR                S_IFDIR
@@ -91,6 +111,7 @@ extern char *fsroot;
 #define VFS_ERRNO_EBADF           EBADF
 #define VFS_ERRNO_EINVAL          EINVAL
 
+#define vfs_getcwd getcwd
 void startVFS(void);
 
 #endif

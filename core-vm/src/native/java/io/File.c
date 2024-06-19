@@ -51,7 +51,7 @@ char *getFileName(w_instance thisFile) {
   return w_string2UTF8(path, NULL);	  
 }
 
-w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
+w_boolean statFile(w_instance thisFile, struct vfs_stat_t *statbufptr) {
   char *pathname;
   w_boolean result;
   
@@ -65,7 +65,7 @@ w_boolean statFile(w_instance thisFile, struct vfs_STAT *statbufptr) {
 }
 
 w_boolean File_createNew (w_thread thread, w_instance thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   struct vfs_FILE *file;
   char *pathname;
   w_boolean result;
@@ -73,7 +73,7 @@ w_boolean File_createNew (w_thread thread, w_instance thisFile) {
   pathname = getFileName(thisFile);	  
   result = !!vfs_stat(pathname, &statbuf);
   if (result) {
-    file = vfs_fopen(pathname, "w+");
+    file = vfs_open(pathname, VFS_O_CREAT, VFS_S_IRWXU | VFS_S_IRGRP | VFS_S_IROTH);
     if (file) {
       vfs_close(file);
     }
@@ -88,7 +88,7 @@ w_boolean File_createNew (w_thread thread, w_instance thisFile) {
 }
 
 w_boolean File_exists (w_thread thread, w_instance thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
 
   return statFile(thisFile, &statbuf);
 }
@@ -132,7 +132,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   w_wordset ws = NULL;
   w_wordset *temp = &ws;
   w_size numberOfFiles = 0;
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   FF_FindData_t finddata_buffer;
 
   threadMustBeSafe(thread);
@@ -193,7 +193,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
   char *entryname;
   w_string entry_string;
   w_instance entry;
-  vfs_DIR         *dir;
+  vfs_dir_t       *dir;
   vfs_dirent      *dirent;
   
   threadMustBeSafe(thread);
@@ -247,7 +247,7 @@ w_instance File_list (w_thread thread, w_instance thisFile) {
 
 w_boolean File_setReadOnly (w_thread thread, w_instance thisFile) {
   char *pathname;
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   w_boolean result;
   const int WRITABLE = VFS_S_IWUSR | VFS_S_IWGRP | VFS_S_IWOTH;
   
@@ -261,31 +261,31 @@ w_boolean File_setReadOnly (w_thread thread, w_instance thisFile) {
 }
 
 w_boolean File_canRead (w_thread thread, w_instance thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IRUSR) == VFS_S_IRUSR);
 }
 
 w_boolean File_canWrite (w_thread thread, w_instance thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   
   return statFile(thisFile, &statbuf) && (((statbuf.st_mode & VFS_S_IRWXU) & VFS_S_IWUSR) == VFS_S_IWUSR);
 }
 
 w_boolean File_isFile (w_thread thread, w_instance thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISREG(statbuf.st_mode);
 }
 
 w_boolean File_isDirectory (w_thread thread, jobject thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   
   return statFile(thisFile, &statbuf) && VFS_S_ISDIR(statbuf.st_mode);
 }
 
 w_long File_lastModified (w_thread thread, jobject thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
 
 /*
 TODO sort out why  ffconfigTIME_SUPPORT == 1 and yet no st_mtime in statbuf
@@ -298,7 +298,7 @@ TODO sort out why  ffconfigTIME_SUPPORT == 1 and yet no st_mtime in statbuf
 }
 
 w_long File_length (w_thread thread, jobject thisFile) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   
   if (statFile(thisFile, &statbuf)) {
     return statbuf.st_size;
@@ -310,7 +310,7 @@ w_long File_length (w_thread thread, jobject thisFile) {
 
 w_boolean File_delete (w_thread thread, w_instance thisFile) {
   char      *pathname;
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   w_boolean result;
   
   pathname = getFileName(thisFile);	  

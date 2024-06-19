@@ -2037,7 +2037,7 @@ static w_instance getBootstrapURLFromDir(void *resource, char *pathname) {
   woempa(7, "URL would be %s\n", url_buffer);
 
   // Check for existence of the path without the file:// prefix (first 7 chars)
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   if (vfs_stat(url_buffer + 7, &statbuf) < 0)  {
     // No such file, so return NULL
     woempa(7, "Could not stat file %s\n", url_buffer + 7);
@@ -2097,7 +2097,7 @@ static w_bar getBootstrapFileFromDir(void *resource, char *pathname) {
   strcpy(bdp_end, pathname);
   woempa(1, "Looking for file %s\n", fullpath);
 
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   w_int fd;
   w_int rc;
 

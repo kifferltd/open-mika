@@ -75,6 +75,11 @@ typedef struct vfs_FileOperations {
   w_int (*write) (vfs_fd_entry, const char *, w_size, w_int *);
 
   /**
+   * universal 'flush' operation
+   */
+  w_int (*flush) (vfs_fd_entry);
+
+  /**
    * universal 'close' operation
    */
   w_int (*close) (vfs_fd_entry);

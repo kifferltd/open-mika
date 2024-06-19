@@ -104,6 +104,10 @@ w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w
   woempa(9, "placeholder : attempt to write to an fd where an open is currently taking place\n"); 
 }
 
+w_int placeholder_flush(vfs_fd_entry fde) {
+  woempa(9, "placeholder : attempt to flush an fd where an open is currently taking place\n"); 
+}
+
 w_int placeholder_close(vfs_fd_entry fde) {
   woempa(9, "placeholder : attempt to close an fd where an open is currently taking place\n"); 
 }
@@ -122,6 +126,7 @@ w_int  ram_tell  (vfs_fd_entry fde);
 w_int  ram_seek  (vfs_fd_entry fde, w_int offset, w_int whence);
 w_int  ram_read  (vfs_fd_entry fde, char *buffer, w_size length, w_int *pos);
 w_int  ram_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos);
+w_int  ram_flush  (vfs_fd_entry fde);
 w_int  ram_close  (vfs_fd_entry fde);
 
 static vfs_FileOperations ram_ops = {
@@ -133,6 +138,7 @@ static vfs_FileOperations ram_ops = {
   .seek = ram_seek,
   .read = ram_read,
   .write = ram_write,
+  .flush = ram_flush,
   .close = ram_close,
 };
 
@@ -179,12 +185,15 @@ void init_vfs(void) {
   placeholder_ops.seek = placeholder_seek;
   placeholder_ops.read = placeholder_read;
   placeholder_ops.write = placeholder_write;
+  placeholder_ops.flush = placeholder_flush;
   placeholder_ops.close = placeholder_close;
   placeholder.path = "placeholder";
   placeholder.ops = &placeholder_ops;
 
-// TODO - put an ifdef here
+// TODO - come up with a decent way to define the supported filesystems
+#ifdef FREERTOS
   init_fatfs();
+#endif
 }
 
 w_int vfs_open(const char *path, w_word flags, w_word mode) {
@@ -304,6 +313,18 @@ w_int vfs_lseek(w_int fd, w_int offset, w_int whence) {
   return fde->ops->seek(fde, offset, whence);
 }
 
+w_int vfs_flush(w_int fd) {
+  vfs_fd_entry fde = vfs_fd_table[fd];
+  if (!fde) {
+    woempa(7, "failed to flush fd %d (%s), is not open\n", fd, fde->path);
+    SET_ERRNO(VFS_ERRNO_EBADF);
+
+    return -1;
+  }
+
+  return fde->ops->flush(fde);
+}
+
 w_int vfs_close(w_int fd) {
   x_mutex_lock(fd_table_mutex, x_eternal);
   vfs_fd_entry fde = vfs_fd_table[fd];
@@ -383,6 +404,12 @@ w_int  ram_write (vfs_fd_entry fde, const char *buffer, w_size length, w_int *po
   return -1;
 }
 
+w_int  ram_flush  (vfs_fd_entry fde) {
+  woempa(5, "Flushing %s (is no-op)\n", fde->path);
+
+  return 0;
+}
+
 w_int  ram_close  (vfs_fd_entry fde) {
   woempa(5, "Closing %s\n", fde->path);
   vfs_RamFileData *ram_fde_data = (vfs_RamFileData*)fde->data;
@@ -390,4 +417,5 @@ w_int  ram_close  (vfs_fd_entry fde) {
 
   return 0;
 }
+
 

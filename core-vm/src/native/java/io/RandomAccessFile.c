@@ -50,7 +50,7 @@ w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_
   int         fdesc;
   w_int fd;
   w_instance  fd_obj;
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   int rc;
 
   if (mustBeInitialized(clazzFileDescriptor) == CLASS_LOADING_FAILED) {
@@ -169,7 +169,7 @@ w_int RandomAccessFile_skipBytes (w_thread thread, w_instance thisRAF, w_int n) 
   if (fd < 0) {
     throwIOException(thread);
   } else {
-    struct vfs_STAT statbuf;
+    struct vfs_stat_t statbuf;
     w_long size = (w_long)vfs_get_length(fd);
 
     prev_pos = vfs_ftell(fd);
@@ -208,7 +208,7 @@ void RandomAccessFile_write (w_thread thread, w_instance thisRAF, w_int oneByte)
   } else {
      vfs_lseek(fd, vfs_ftell(fd), SEEK_SET);
     vfs_write(fd, &minibuf, 1);
-// TODO    vfs_fflush(fd);
+    vfs_flush(fd);
   }
 }
 
@@ -266,7 +266,7 @@ void RandomAccessFile_seek (w_thread thread, w_instance thisRAF, w_long pos) {
 }
 
 w_long RandomAccessFile_length (w_thread thread, w_instance thisRAF) {
-  struct vfs_STAT statbuf;
+  struct vfs_stat_t statbuf;
   w_long result = 0;
 
     // FIXME this should use the vfs_ abstraction

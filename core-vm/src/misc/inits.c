@@ -110,16 +110,11 @@ static char ur_thread_stack[SYSTEM_STACK_SIZE];
 #endif
 x_Thread ur_thread_x_Thread;
 
-// #if defined IMSYS_NATIVE_BC
-extern void setupBcEmulation(void);
-// #endif
-
 void initWonka(void) {
   initDebug();
 
-// #if defined IMSYS_NATIVE_BC
-  setupBcEmulation();
-// #endif
+// platform-sepecific code (such as an execution engine) could be initialised here
+// TODO define a hook API for this
 
 #ifdef NATIVE_FP
   F_NAN = strtof("NAN", NULL);
@@ -157,19 +152,9 @@ w_int testWonka(void);
 
 void startVFS(void) {
   init_vfs();
-#ifdef FSENABLE
-#ifdef ECOS
-    vfs_mount((char *)"hdb", (char *)"/", (char *)"e2fs", VFS_MOUNT_RW);
-#elif defined(LINUX)
-    vfs_mount((char *)"hda4", (char *)"/", (char *)"e2fs", VFS_MOUNT_RW);
-#elif defined(NETBSD)
-#error "Bzzzt. Not implemented."
-#else
-#error "Bzzzt. Not implemented."
-#endif 
-#else
+
+// create the filesystem root
   vfs_mount(0, (char *)"/", (char *)"wromfs", VFS_MOUNT_RO); 
-#endif
 
   /*
   ** Note the working directory in which we were launched.

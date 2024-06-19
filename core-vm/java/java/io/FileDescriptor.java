@@ -47,7 +47,7 @@ public final class FileDescriptor {
   public static final FileDescriptor out = null;
   public static final FileDescriptor err = null;
 
-  // The real file descriptor - this should be an open file
+  // The Mika file descriptor - index to the vfs_fd_entry table
   int fd;
 
   /**

@@ -102,7 +102,7 @@ void FileOutputStream_close
   (w_thread thread, w_instance thisFileOutputStream) {
 
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
 
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
@@ -112,13 +112,13 @@ void FileOutputStream_close
 
     woempa(1, "Still have a filedescriptor\n");
     
-    file = getWotsitField(fdObj, F_FileDescriptor_fd);
+    fd = getIntegerField(fdObj, F_FileDescriptor_fd);
 
-    if(file == NULL) {
+    if(fd < 0) {
       woempa(1, "Filedescriptor is empty\n");
     } else {
       woempa(1, "Calling vfs_close\n");
-      vfs_close(file);
+      vfs_close(fd);
       setReferenceField(thisFileOutputStream, NULL, F_FileOutputStream_fd);
     }
   }
@@ -128,15 +128,15 @@ void FileOutputStream_flush
   (w_thread thread, w_instance thisFileOutputStream) {
 
   w_instance     fdObj;
-  vfs_FILE    *file;
+  w_int fd;
 
   fdObj = getReferenceField(thisFileOutputStream, F_FileOutputStream_fd);
 
   if (fdObj) {
-    file = getWotsitField(fdObj, F_FileDescriptor_fd);
+    fd = getIntegerField(fdObj, F_FileDescriptor_fd);
   
-    if(file) {
-      vfs_fflush(file);
+    if(fd >= 0) {
+      vfs_flush(fd);
     }
   } 
 }

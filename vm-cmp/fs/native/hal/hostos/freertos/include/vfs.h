@@ -53,6 +53,7 @@ extern char *current_working_dir;
 extern char *current_root_dir;
 extern char *fsroot;
 
+/* Dummy definitions, for things we don't need */
 #define close_vfs()                woempa(9, "close_vfs -> Using native filesystem\n")
 #define vfs_mount(...)            woempa(9, "vfs_mount -> Using native filesystem\n", __VA_ARGS__);
 
@@ -60,7 +61,7 @@ extern char *command_line_path;
 
 void init_vfs(void);
 
-#define vfs_STAT                   FF_Stat_t
+#define vfs_stat_t                   FF_Stat_t
 
 extern w_int vfs_open(const char *pathname, w_word flags, w_word mode);
 extern w_int vfs_read(w_int fd, void *buf, w_size count);
@@ -106,6 +107,7 @@ extern w_int vfs_close(w_int fd);
 // FIXME - FreeRTOS FAT must have a way to set access time
 #define vfs_utime(a,b)             (-1)
 
+// TODO - virtualise directory operations
 #define vfs_opendir(path)          opendir(path)
 #define vfs_closedir(a)            closedir(a)
 #define vfs_readdir(a)             readdir(a)
@@ -114,11 +116,12 @@ extern w_int vfs_close(w_int fd);
 #define vfs_seekdir(...)          seekdir(__VA_ARGS__)
 #define vfs_alphasort(...)        alphasort(__VA_ARGS__)
 
+// TODO - virtualise these too
 #define vfs_stat_struct           ff_stat_struct
-//#define vfs_fstat(...)            fstat(__VA_ARGS__)
 #define vfs_stat(path, statbufptr)       ff_stat(path,statbufptr)
 #define vfs_truncate(path,len)    ff_truncate(path, len)
 
+// TODO - and these
 #define vfs_mkdir(path, ...)      ff_mkdir(path)
 #define vfs_rmdir(path)           ff_rmdir(path)
 #define vfs_unlink(path)           unlink(path)
@@ -127,10 +130,8 @@ extern w_int vfs_close(w_int fd);
 
 #define vfs_rename(a, b)           rename(a, b)
 
-#define vfs_STAT                   FF_STAT
-
 #define vfs_dirent                 struct dirent
-#define vfs_DIR                    FF_FindData_t
+#define vfs_dir_t                  FF_FindData_t
 #define vfs_fpos_t                 w_int
 
 #define VFS_ERRNO_ENOENT           pdFREERTOS_ERRNO_ENOENT
