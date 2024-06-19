@@ -94,11 +94,10 @@ void *getactual(w_slot *slotloc, w_clazz c, jvalue **jvalptrloc) {
   }
 }
 
-w_long _call_static(w_thread thread, w_instance theClass, w_slot top, w_method m) {
+static void _call_static(w_thread thread, w_instance theClass, w_slot top, w_method m, w_u64 *u64ptr) {
   ffi_cif *cifptr;
   void *actuals[m->exec.nargs + 2];
   jvalue jvalues[m->exec.nargs + 2];
-  w_long retval;
   w_slot nextparm;
   jvalue *nextjvalue;
   int i;
@@ -114,17 +113,14 @@ w_long _call_static(w_thread thread, w_instance theClass, w_slot top, w_method m
     actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
-//printf("fun = %p retval ptr = %p acuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, &retval, actuals, actuals[0], actuals[1]);
-  ffi_call(cifptr, m->exec.function.void_fun, &retval, actuals);
-
-  return retval;
+//printf("fun = %p u64 ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, u64ptr, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.void_fun, u64ptr, actuals);
 }
 
-w_long _call_instance(w_thread thread, w_slot top, w_method m) {
+static void _call_instance(w_thread thread, w_slot top, w_method m, w_u64 *u64ptr) {
   ffi_cif *cifptr;
   void *actuals[m->exec.nargs + 2];
   jvalue jvalues[m->exec.nargs + 2];
-  w_long retval;
   w_slot nextparm;
   jvalue *nextjvalue;
   int i;
@@ -144,11 +140,56 @@ w_long _call_instance(w_thread thread, w_slot top, w_method m) {
     actuals[i + 2] = getactual(&nextparm, c, &nextjvalue);
   }
 
-//printf("fun = %p retval ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, &retval, actuals, actuals[0], actuals[1]);
-  ffi_call(cifptr, m->exec.function.void_fun, &retval, actuals);
-
-  return retval;
+//printf("fun = %p u64 ptr = %p actuals = %p -> [%p, %p, ...]\n", m->exec.function.void_fun, u64ptr, actuals, actuals[0], actuals[1]);
+  ffi_call(cifptr, m->exec.function.void_fun, u64ptr, actuals);
 }
 
+w_word _call_static_32bits(w_thread thread, w_instance theClass, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_static(thread, theClass, top, m, &retval);
+
+  return retval.words[0];
+}
+
+w_long _call_static_64bits(w_thread thread, w_instance theClass, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_static(thread, theClass, top, m, &retval);
+
+  return retval.u64;
+}
+
+w_instance _call_static_reference(w_thread thread, w_instance theClass, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_static(thread, theClass, top, m, &retval);
+
+  return (w_instance)retval.words[0];
+}
+
+w_word _call_instance_32bits(w_thread thread, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_instance(thread, top, m, &retval);
+
+  return retval.words[0];
+}
+
+w_long _call_instance_64bits(w_thread thread, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_instance(thread, top, m, &retval);
+
+  return retval.u64;
+}
+
+w_instance _call_instance_reference(w_thread thread, w_slot top, w_method m) {
+  w_u64 retval;
+
+  _call_instance(thread, top, m, &retval);
+
+  return (w_instance)retval.words[0];
+}
 
 

@@ -26,8 +26,6 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-// TODO - use a HAL to abstract over OS
-
 #include "core-classes.h"
 #include "jni-classes.h"
 #include "fields.h"
@@ -35,9 +33,7 @@
 #include "misc.h"
 
 void NativeLibrary_finalize(w_thread thread, w_instance thisNativeLibrary) {
-#ifndef FREERTOS
   void *handle = getWotsitField(thisNativeLibrary, F_NativeLibrary_handle);
   unloadModule(handle);
-#endif
 }
 

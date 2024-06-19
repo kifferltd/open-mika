@@ -610,6 +610,7 @@ w_callfun dispatchers[] = {
 #ifdef USE_LIBFFI
 static w_hashtable desclet_hashtable;
 
+// [CG 20240613] modified desclet codes to match the one used by common-classes-c.awk
 static w_string desc2desclet(w_string desc) {
   w_int i;
   w_int j;
@@ -634,7 +635,7 @@ static w_string desc2desclet(w_string desc) {
       while (string_char(desc, ++i) != ';');
       // fall through
     default:
-      buff[j++] = dims ? 'L' : ch;
+      buff[j++] = dims ? 'a' : (ch & 0xffdf);
     }
     dims = 0;
   }
@@ -643,50 +644,50 @@ static w_string desc2desclet(w_string desc) {
 }
 
 /**
- * Convert a descriptor char (one of V, S, I, J, B, C, F, D, Z, L) to an ffi_type.
+ * Convert a descriptor char (one of v, s, i, j, b, c, f, d, z, l, a) to an ffi_type.
  * It is important that the resulting type exactly match the type used inside 
  * Mika: e.g. jboolean = w_boolean = int32_t, so Z must translate to ffi_type_sint32.
  * (Whether this is really a good representation for booleans is another matter,
  * the point is that it must be consistent.)
  */
+// [CG 20240613] modified desclet codes to match the one used by common-classes-c.awk
 ffi_type *char2ffi_type(w_char ch) {
   switch (ch) {
-  case 'V':
+  case 'v':
     return &ffi_type_void;
 
-  case 'S':
+  case 's':
     return &ffi_type_sint16;
 
-  case 'I':
+  case 'i':
+  case 'z':
     return &ffi_type_sint32;
 
-  case 'J':
+  case 'j':
     return &ffi_type_sint64;
 
-  case 'B':
+  case 'b':
     return &ffi_type_sint8;
 
-  case 'C':
+  case 'c':
     return &ffi_type_uint32;
 
-  case 'F':
+  case 'f':
 #ifdef HAUSER_FP
     return &ffi_type_uint32;
 #else
     return &ffi_type_float;
 #endif
 
-  case 'D':
+  case 'd':
 #ifdef HAUSER_FP
     return &ffi_type_uint64;
 #else
     return &ffi_type_double;
 #endif
 
-  case 'Z':
-    return &ffi_type_sint32;
-
-  case 'L':
+  case 'a':
+  case 'l':
     return &ffi_type_pointer;
 
   default:
@@ -739,7 +740,7 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
 
   if (method->exec.function.void_fun == NULL) {
 #ifdef JNI
-    woempa(9, "Oh deary me: method %M has no code -> Trying to look it up\n", method);
+    woempa(9, "Method %M has no code, trying to look it up\n", method);
     searchNativeMethod(method);
 #endif
     if (method->exec.function.void_fun == NULL) {
@@ -761,37 +762,74 @@ void initialize_native_dispatcher(w_frame caller, w_method method) {
   }
 
 #ifndef JNI
-  wabort(ABORT_WONKA, "No dispatcher found for descriptor %w", method->spec.desc);
-#endif
-
-  // remaining code is dead so long as we do not use brute-force call sequences
-
   if (isSet(method->flags, ACC_STATIC)) {
-    i = 13;
+    if (isSet(method->flags, ACC_SYNCHRONIZED)) {
+      if (method->spec.return_type == clazz_void) {
+        method->exec.dispatcher = native_static_synchronized_void;
+      }
+      else if (method->exec.return_i == 2) {
+        method->exec.dispatcher = native_static_synchronized_64bits;
+      }
+      else if (isSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
+        method->exec.dispatcher = native_static_synchronized_32bits;
+      }
+      else {
+        method->exec.dispatcher = native_static_synchronized_reference;
+      }
+    }
+    else {
+      if (method->spec.return_type == clazz_void) {
+        method->exec.dispatcher = native_static_unsynchronized_void;
+      }
+      else if (method->exec.return_i == 2) {
+        method->exec.dispatcher = native_static_unsynchronized_64bits;
+      }
+      else if (isSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
+        method->exec.dispatcher = native_static_unsynchronized_32bits;
+      }
+      else {
+        method->exec.dispatcher = native_static_unsynchronized_reference;
+      }
+    }
   }
   else {
-    i = 5;
+    if (isSet(method->flags, ACC_SYNCHRONIZED)) {
+      if (method->spec.return_type == clazz_void) {
+        method->exec.dispatcher = native_instance_synchronized_void;
+      }
+      else if (method->exec.return_i == 2) {
+        method->exec.dispatcher = native_instance_synchronized_64bits;
+      }
+      else if (isSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
+        method->exec.dispatcher = native_instance_synchronized_32bits;
+      }
+      else {
+        method->exec.dispatcher = native_instance_synchronized_reference;
+      }
+    }
+    else {
+      if (method->spec.return_type == clazz_void) {
+        method->exec.dispatcher = native_instance_unsynchronized_void;
+      }
+      else if (method->exec.return_i == 2) {
+        method->exec.dispatcher = native_instance_unsynchronized_64bits;
+      }
+      else if (isSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
+        method->exec.dispatcher = native_instance_unsynchronized_32bits;
+      }
+      else {
+        method->exec.dispatcher = native_instance_unsynchronized_reference;
+      }
+    }
   }
 
-  if (isNotSet(method->flags, ACC_SYNCHRONIZED)) {
-    i += 4;
-  }
-
-  if (method->spec.return_type == clazz_void) {
-    i += 3;
-  }
-  else if (method->exec.return_i == 2) {
-    i += 2;
-  }
-  else if (isSet(method->spec.return_type->flags, CLAZZ_IS_PRIMITIVE)) {
-    i += 1;
-  }
-
-  woempa(1, "Will call native code at %p using dispatcher[%d]\n", method->exec.function.void_fun, i);
-  method->exec.dispatcher = dispatchers[i];
 #ifdef USE_LIBFFI
   method->exec.cif = desc2cif(method->spec.desc);
 #endif
+
+#else // JNI is not enabled
+  wabort(ABORT_WONKA, "No dispatcher found for descriptor %w", method->spec.desc);
+#endif // JNI
 
   callMethod(caller, method);
 }
@@ -1333,17 +1371,16 @@ static void prepareBytecode(w_method method);
 w_boolean verifyMethod(w_method method);
 
 void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
-  w_int dispatcher_index;
- 
   threadMustBeSafe(caller->thread);
-  dispatcher_index = 1;   // interprete
   
+  method->exec.dispatcher = interpret_unsynchronized;
+
   if (isSet(method->flags, ACC_SYNCHRONIZED)) {
     if (isSet(method->flags, ACC_STATIC)) {
-      dispatcher_index += 2;
+      method->exec.dispatcher = interpret_static_synchronized;
     }
     else {
-      dispatcher_index += 1;
+      method->exec.dispatcher = interpret_instance_synchronized;
     }
   }
 /*
@@ -1351,31 +1388,22 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 1 && method->exec.code_length == 5 && method->exec.code[0] == aload_0 && method->exec.code[1] == getfield && method->exec.code[4] >= ireturn && method->exec.code[4] <= areturn) {
     woempa(7, "Identified a GETTER %M %d %d %d %d %d\n", method, opcode_names[method->exec.code[0]], opcode_names[method->exec.code[1]], method->exec.code[2], method->exec.code[3], opcode_names[method->exec.code[4]]); 
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[2] << 8) | method->exec.code[3]);
-    if (caller->thread->exception) {
-      dispatcher_index = 1;
-    }
-    else {
-      dispatcher_index = 28;
+    if (!caller->thread->exception) {
+      method->exec.dispatcher = interpret_getter;
     }
   }
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 2 && method->exec.code_length == 6 && method->exec.code[0] == aload_0 && method->exec.code[1] == aload_1 && method->exec.code[2] == putfield && method->exec.code[5] == vreturn) {
     woempa(7, "Identified a PUTTER %M %d %d %d %d %d\n", method, method->exec.code[0], method->exec.code[1], method->exec.code[2], method->exec.code[3], method->exec.code[4], method->exec.code[5]); 
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[3] << 8) | method->exec.code[4]);
-    if (caller->thread->exception) {
-      dispatcher_index = 1;
-    }
-    else {
-      dispatcher_index = 29;
+    if (!caller->thread->exception) {
+      method->exec.dispatcher = interpret_setter;
     }
   }
   else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 0 && method->exec.code_length == 4 && method->exec.code[0] == getstatic && method->exec.code[3] >= ireturn && method->exec.code[3] <= areturn) {
     woempa(7, "Identified a GETSTATIC %M %d %d %d\n", method, method->exec.code[1], method->exec.code[2], method->exec.code[3]);
     getFieldConstant(method->spec.declaring_clazz, (method->exec.code[1] << 8) | method->exec.code[2]);
-    if (caller->thread->exception) {
-      dispatcher_index = 1;
-    }
-    else {
-      dispatcher_index = 30;
+    if (!caller->thread->exception) {
+      method->exec.dispatcher = interpret_staticker;
     }
   }
 #endif
@@ -1386,26 +1414,26 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   if (method->exec.dispatcher == initialize_dispatcher) {
     prepareBytecode(method);
 #ifdef USE_SPECIAL_CASE_DISPATCHERS
-    if (dispatcher_index < 2) {
+    if (method->exec.dispatcher == interpret_unsynchronized) {
       switch(method->flags & METHOD_TRIVIAL_CASES) {
       case METHOD_IS_VRETURN: 
         woempa(7, "Setting dispatcher of %M to 'void_return_only'\n", method);
-        dispatcher_index = 24;
+        method->exec.dispatcher = void_return_only;
         break;
 
       case METHOD_IS_RETURN_THIS:
         woempa(7, "Setting dispatcher of %M to 'return_this'\n", method);
-        dispatcher_index = 25;
+        method->exec.dispatcher = return_this;
         break;
 
       case METHOD_IS_RETURN_NULL:
         woempa(7, "Setting dispatcher of %M to 'return_null'\n", method);
-        dispatcher_index = 26;
+        method->exec.dispatcher = return_null; 
         break;
 
       case METHOD_IS_RETURN_ICONST:
         woempa(7, "Setting dispatcher of %M to 'return_iconst'\n", method);
-        dispatcher_index = 27;
+        method->exec.dispatcher = return_iconst;
         break;
     
       default:
@@ -1413,7 +1441,9 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
       }
     }
 #endif
-    method->exec.dispatcher = dispatchers[dispatcher_index];
+
+    // [CG 20240613] this doesn't look as if it is necessary?
+    /*
     if (dispatcher_index == 1 || dispatcher_index >= 24) {
       setFlag(method->flags, METHOD_UNSAFE_DISPATCH);
       woempa(1, "Will call bytecode of %m using dispatcher[%d] in UNSAFE mode\n", method, dispatcher_index);
@@ -1421,6 +1451,7 @@ void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
     else {
       woempa(1, "Will call bytecode of %m using dispatcher[%d] in SAFE mode\n", method, dispatcher_index);
     }
+    */
   }
   x_monitor_exit(&method->spec.declaring_clazz->resolutionMonitor);
   callMethod(caller, method);

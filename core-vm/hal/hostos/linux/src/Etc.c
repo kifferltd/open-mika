@@ -74,3 +74,14 @@ void Etc_static_heapCheck(w_thread thread, w_instance classEtc){
 
 }
 
+void 
+Etc_static_memoryCheck ( w_thread thread, w_instance classSystem) {
+// change this to TRACE_MEM_ALLOC to enable the check in DEBUG mode
+#ifdef TRACE_MEM_ALLOC_BUT_NOT_TODAY
+  woempa(7, "calling heapCheck via Etc\n");
+  heapCheck;
+  woempa(7, "calling lowMemoryCheck via Etc\n");
+  lowMemoryCheck;
+#endif //DEBUG
+}
+

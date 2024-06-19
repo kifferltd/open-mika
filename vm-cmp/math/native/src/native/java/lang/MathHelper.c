@@ -208,5 +208,6 @@ w_instance MathHelper_static_floatToString(w_thread thread, w_instance myClazz, 
 void init_math(void) {
   collectMathFixups();
   loadMathClasses();
-  collectMathDispatchers(dispatchers_hashtable);
+  // OBSOLETE?
+  // collectMathDispatchers(dispatchers_hashtable);
 }
