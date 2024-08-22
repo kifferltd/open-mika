@@ -48,7 +48,8 @@
 #define VFS_O_DIRECT        040000
 
 // Mika-specific flag which causes whole file to be bufered in RAM
-#define VFS_O_MIKA_RAMDISK 0100000
+// [CG 20240712] suppressing this behaviour for now, it requires a re-design.
+// #define VFS_O_MIKA_RAMDISK 0100000
 
 #define VFS_O_ACCMODE2TEXT(f) (((f)&VFS_O_ACCMODE)==VFS_O_RDONLY?"RDONLY":((f)&VFS_O_ACCMODE)==VFS_O_WRONLY?"WRONLY":"RDWR")
 

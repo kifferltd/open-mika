@@ -47,7 +47,8 @@
 #define VFS_FASYNC       FASYNC
 
 // Mika-specific flag which causes whole file to be bufered in RAM
-#define VFS_O_MIKA_RAMDISK 0100000
+// [CG 20240712] suppressing this behaviour for now, it requires a re-design.
+// #define VFS_O_MIKA_RAMDISK 0100000
 
 //IT seems O_DIRECT doesn't exist in all linuxes ...
 #ifdef O_DIRECT

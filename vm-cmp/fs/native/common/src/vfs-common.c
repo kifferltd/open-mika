@@ -194,6 +194,9 @@ void init_vfs(void) {
 #ifdef FREERTOS
   init_fatfs();
 #endif
+#ifdef LINUX
+  init_ufsfs();
+#endif
 }
 
 w_int vfs_open(const char *path, w_word flags, w_word mode) {
@@ -234,9 +237,12 @@ w_int vfs_open(const char *path, w_word flags, w_word mode) {
       fde->ops = mountpoint->fileops;
       w_int rc = mountpoint->fileops->open(fde, path, flags, mode);
       if (0 == rc) {
+// [CG 20240712] suppressing this behaviour for now, it requires a re-design.
+#ifdef VFS_O_MIKA_RAMDISK
         if (isSet(flags, VFS_O_MIKA_RAMDISK)) {
           fde = convertToRamDisk(fde, mode & ~VFS_O_MIKA_RAMDISK);
         }
+#endif
         vfs_fd_table[fd] = fde;
 
         return fd;

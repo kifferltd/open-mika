@@ -51,4 +51,6 @@ w_int  placeholder_write (vfs_fd_entry fde, const char *buffer, w_size length, w
 w_int placeholder_flush(vfs_fd_entry fde);
 w_int placeholder_close(vfs_fd_entry fde);
 
+#define whence2text(n) ((n)==SEEK_SET?"SEEK_SET":(n)==SEEK_CUR:"SEEK_CUR":(n)==SEEK_END?"SEEK_END":"SEEK_???")
+
 #endif // HAVE_VFS_COMMON_H
