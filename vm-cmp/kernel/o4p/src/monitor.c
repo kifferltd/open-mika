@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2007, 2008, 2018 by Chris Gray, KIFFER Ltd.               *
+* Copyright (c) 2007, 2008, 2018, 2024 by Chris Gray, KIFFER Ltd.         *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -42,7 +42,7 @@ x_status x_monitor_create(x_monitor monitor) {
 
   memset(monitor, 0, sizeof(x_Monitor));
   monitor->magic = 0xf1e2d3c4;
-  pthread_mutex_init(&monitor->mon_mutex, NULL);
+  pthread_mutex_init(&monitor->mon_mutex, &o4pe->mutexattr);
   pthread_cond_init(&monitor->mon_cond, NULL);
 
   loempa(2, "Monitor at %p has mutex %p, cond %p\n", monitor, &monitor->mon_mutex, &monitor->mon_cond);

@@ -1,5 +1,6 @@
 /**************************************************************************
-* Copyright (c) 2001, 2002, 2003 by Punch Telematix. All rights reserved. *
+* Copyright (c) 2009, 2023, 2024 by Chris Gray, KIFFER Ltd.               *
+* All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -9,21 +10,21 @@
 * 2. Redistributions in binary form must reproduce the above copyright    *
 *    notice, this list of conditions and the following disclaimer in the  *
 *    documentation and/or other materials provided with the distribution. *
-* 3. Neither the name of Punch Telematix nor the names of                 *
-*    other contributors may be used to endorse or promote products        *
-*    derived from this software without specific prior written permission.*
+* 3. Neither the name of KIFFER Ltd nor the names of other contributors   *
+*    may be used to endorse or promote products derived from this         *
+*    software without specific prior written permission.                  *
 *                                                                         *
 * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED          *
 * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF    *
 * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.    *
-* IN NO EVENT SHALL PUNCH TELEMATIX OR OTHER CONTRIBUTORS BE LIABLE       *
-* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR            *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF    *
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         *
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,   *
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE    *
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN  *
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           *
+* IN NO EVENT SHALL KIFFER LTD OR OTHER CONTRIBUTORS BE LIABLE FOR ANY    *
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL      *
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS *
+* OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)   *
+* HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,     *
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   *
+* IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE      *
+* POSSIBILITY OF SUCH DAMAGE.                                             *
 **************************************************************************/
 
 #include "oswald.h"
@@ -52,11 +53,11 @@ void *start_routine(void *thread_ptr);
 ** linked list of timers and threads. If not called explicitly, the default
 ** policy is used (which is the best for the OS), so only call this when you
 ** know what you are doing.
-*/
 
 void setScheduler(int scheduler) {
   o4pe->scheduler = scheduler;
 }
+*/
 
 /*
 ** Initialize the emulation environment.
@@ -77,33 +78,20 @@ static void oswaldEnvInit(void) {
   else {
     o4pe->scheduler = DEFAULT_SCHEDULER_ROOT;
   }
-  pthread_mutex_init(&o4pe->timer_lock, NULL);
 
-  pthread_mutex_init(&o4pe->threadsLock, NULL);
-
+  pthread_mutexattr_init(&o4pe->mutexattr);
+  pthread_mutexattr_settype(&o4pe->mutexattr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&o4pe->timer_lock, &o4pe->mutexattr);
+  pthread_mutex_init(&o4pe->threadsLock, &o4pe->mutexattr);
 }
-
-static pthread_mutex_t Scheduler_Mutex;
 
 void x_scheduler_disable(void) {
   int ret;
 
   wabort(ABORT_WONKA, "Don't use x_scheduler_disable, it doesn't work!\n");
-  ret = pthread_mutex_lock(&Scheduler_Mutex);
-  loempa(2, "Thread %p locked scheduler\n", x_thread_current());
-  if (ret != 0) {
-    loempa(9, "We failed scheduler lock with %d!\n", ret);
-  }
 }
 
 void x_scheduler_enable(void) {
-  int ret;
-
-  ret = pthread_mutex_unlock(&Scheduler_Mutex);
-  loempa(2, "Thread %p released scheduler\n", x_thread_current());
-  if (ret != 0) {
-    loempa(9, "We failed scheduler lock with %d!\n", ret);
-  }
 }
 
 extern x_size heap_size; 
@@ -112,8 +100,6 @@ extern x_size heap_remaining;
 static void x_setup_kernel(x_size millis) {
 
   x_thread thread;
-
-  pthread_mutex_init(&Scheduler_Mutex, NULL);
 
   oswaldEnvInit();
 
@@ -167,6 +153,12 @@ x_status x_oswald_init(x_size max_heap, x_size millis) {
   heap_size = max_heap;
   max_heap_bytes = max_heap;
   x_setup_kernel(millis);
+
+  // x_oswald_init is not expected to return to its caller.
+  // TODO can we not do something more useful here?
+  while (1) {
+    sleep(1);
+  }
 
   return xs_success;
 }

@@ -53,9 +53,9 @@
  */
                                                                                                          
 x_status x_queue_create(x_queue queue, void *messages, w_size capacity) {
-  pthread_mutex_init(&queue->queue_mutex, NULL);
-  pthread_cond_init(&queue->queue_not_empty, NULL);
-  pthread_cond_init(&queue->queue_not_full, NULL);
+  pthread_mutex_init(&queue->queue_mutex, &o4pe->mutexattr);
+  pthread_mutex_init(&queue->queue_not_empty, &o4pe->mutexattr);
+  pthread_mutex_init(&queue->queue_not_full, &o4pe->mutexattr);
 
   queue->magic = 0xb5a69788;
 

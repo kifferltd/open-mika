@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2009, 2023 by Chris Gray, KIFFER Ltd.                     *
+* Copyright (c) 2009, 2023, 2024 by Chris Gray, KIFFER Ltd.               *
 * All rights reserved.                                                    *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
@@ -244,6 +244,7 @@ typedef struct O4pEnv {
   int scheduler;
   int status;
   x_thread threads;                      /* pointer to first element in linked list of threads */
+  pthread_mutexattr_t mutexattr;
   pthread_mutex_t threadsLock;           
   pthread_mutex_t timer_lock;           
   volatile w_size timer_ticks; /* the number of ticks passed since we 'booted' */
