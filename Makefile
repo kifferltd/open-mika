@@ -154,7 +154,8 @@ export commobjdir = $(objdir)/vm-ext/javax_comm
 
 export imagedir = $(MIKA_TOP)/image/$(PLATFORM)
 export deploydir = $(MIKA_TOP)/deploy/$(PLATFORM)
-export mikadeploydir = $(deploydir)/lib/mika
+export bindeploydir = $(deploydir)/bin
+export libdeploydir = $(deploydir)/lib/mika
 export appdeploydir = $(deploydir)/app
 export extdeploydir = $(deploydir)/lib/mika/ext
 export testdeploydir = $(deploydir)/test
@@ -216,7 +217,7 @@ export AWT_LIB = $(libdir)/libawt.a
 export MIKA_LIB = $(libdir)/libmika.a
 export COMM_LIB = $(libdir)/libcomm.a
 
-export MCL_JAR = ${mikadeploydir}/mcl.jar
+export MCL_JAR = ${libdeploydir}/mcl.jar
 export COMM_JAR = ${extdeploydir}/comm.jar
 
 ifdef UNIX
@@ -642,8 +643,10 @@ builddir :
 	@mkdir -p $(imagedir)
 	@echo "Creating " $(deploydir)
 	@mkdir -p $(deploydir)
-	@echo "Creating " $(mikadeploydir)
-	@mkdir -p $(mikadeploydir)
+	@echo "Creating " $(bindeploydir)
+	@mkdir -p $(bindeploydir)
+	@echo "Creating " $(libdeploydir)
+	@mkdir -p $(libdeploydir)
 	@echo "Creating " $(appdeploydir)
 	@mkdir -p $(appdeploydir)
 	@echo "Creating " $(extdeploydir)
@@ -701,7 +704,7 @@ core-vm : builddir comm max
 	make -C core-vm 
 
 binary : 
-	@echo "TODO: here we would copy the open-mika binary to ${mikadeploydir}"
+	@echo "TODO: here we would copy the open-mika binary to ${libdeploydir}"
 
 # FIXME: select right security dir(s)
 jarfile : $(jarlist)
@@ -721,8 +724,8 @@ $(COMM_JAR) :
 	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) vm-ext/comm/resource/comm.mf ${COMM_JAR} -C ${classdir} javax/comm -C ${classdir} org/open_mika
 
 resource :
-	@echo "Copying resources to ${mikadeploydir}"
-	cp -r core-vm/resource/system/* ${mikadeploydir}	
+	@echo "Copying resources to ${libdeploydir}"
+	cp -r core-vm/resource/system/* ${libdeploydir}	
 
 app : 
 ifneq ($(APP_DIR),"none")
@@ -736,7 +739,8 @@ endif
 
 # note: image target was here
 install : mika
-	@echo "Installing mika binary in ${INSTALL_DIR}"
+	@echo "obsolete target!"
+	exit 1
 	cp core-vm/mika ${INSTALL_DIR}
 
 clean :

@@ -119,7 +119,7 @@ endif
 
 mika : main.o libs
 	@echo "LDFLAGS = $(LDFLAGS)"
-	$(CC) -o mika main.o $(LDFLAGS)
+	$(CC) -o ${bindeploydir}/mika main.o $(LDFLAGS)
 
 # TODO do we really need OSWALD_LIB and AWT_LIB here?
 libs: $(MIKA_LIB) $(OSWALD_LIB) $(AWT_LIB)
@@ -183,15 +183,15 @@ endif
 
 # FIXME: select right security dir(s)
 jarfile : 
-	@echo "Building ${mikadeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
-	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${mikadeploydir}/mcl.jar -C ${classdir} .
+	@echo "Building ${libdeploydir}/mcl.jar from core-vm/resource/mcl.mf and classes in ${classdir}"
+	${JAVA6_HOME}/bin/jar cmf$(JAR_CMD_COMPRESSION_LEVEL) core-vm/resource/mcl.mf ${libdeploydir}/mcl.jar -C ${classdir} .
 
 # FIXME: select right security dir(s)
 mcldir :
-	@echo "Building ${mikadeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
-	rm -rf ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
-	mkdir ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
-	cp -rv ${classdir}/* ${mikadeploydir}/$(BOOTCLASSSUBDIR)/
+	@echo "Building ${libdeploydir}/$(BOOTCLASSSUBDIR)/ from classes in ${classdir}"
+	rm -rf ${libdeploydir}/$(BOOTCLASSSUBDIR)/
+	mkdir ${libdeploydir}/$(BOOTCLASSSUBDIR)/
+	cp -rv ${classdir}/* ${libdeploydir}/$(BOOTCLASSSUBDIR)/
 
 # FIXME: select right security dir(s)
 javaclasses:
