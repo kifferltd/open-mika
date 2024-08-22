@@ -728,6 +728,14 @@ char * threadDescription(w_thread t) {
 
 #ifdef PARALLEL_GC
 w_boolean enterUnsafeRegion(const w_thread thread) {
+  if (!thread) {
+    // we were (probably) called before any mika thread is defined, ignore.
+    // TODO 't would be better to catch this before we call enterUnsafeRegion.
+
+    return FALSE;
+
+  }
+
   x_status status;
 
   if (isSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
@@ -758,6 +766,14 @@ w_boolean enterUnsafeRegion(const w_thread thread) {
 }
 
 w_boolean enterSafeRegion(const w_thread thread) {
+  if (!thread) {
+    // we were (probably) called before any mika thread is defined, ignore.
+    // TODO 't would be better to catch this before we call enterUnsafeRegion.
+
+    return FALSE;
+
+  }
+
   x_status status;
 
   if (isNotSet(thread->flags, WT_THREAD_NOT_GC_SAFE)) {
@@ -802,6 +818,14 @@ void _gcSafePoint(w_thread thread
 , char *file, int line
 #endif
 ) {
+  if (!thread) {
+    // we were (probably) called before any mika thread is defined, ignore.
+    // TODO 't would be better to catch this before we call enterUnsafeRegion.
+
+    return;
+
+  }
+
   x_status status = x_monitor_eternal(safe_points_monitor);
   checkOswaldStatus(status);
 #ifdef RUNTIME_CHECKS
@@ -836,5 +860,5 @@ void _gcSafePoint(w_thread thread
   status = x_monitor_exit(safe_points_monitor);
   checkOswaldStatus(status);
 }
-#endif // PARLLEL_GC
+#endif // PARALLEL_GC
 
