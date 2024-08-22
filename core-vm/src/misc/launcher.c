@@ -59,8 +59,8 @@ void loadExtensions(void) {
 
 #define DEFAULT_HEAP_SIZE (32*1024*1024)
 
-static int max_heap_size;
-static int tick_millis;
+static w_int max_heap_size;
+static w_int tick_millis;
 static char *command_line_path;
 
 Wonka_InitArgs  system_InitArgs;
@@ -212,6 +212,57 @@ static w_int getSize(char *str) {
   return n;
 }
 
+#define INITIAL_HEAP_SIZE_PARAM_NAME    "-Xms"
+#define MAX_HEAP_SIZE_PARAM_NAME        "-Xmx"
+#define INITIAL_STACK_SIZE_PARAM_NAME   "-Xiss"
+#define STACK_SIZE_INCREMENT_PARAM_NAME "-Xss"
+#define MAX_STACK_SIZE_PARAM_NAME       "-Xssi"
+
+/*
+** Search the command line for a particular size, and if it is found then remove it from the argument list
+** and return its value.
+**
+** @param argument_count_ptr pointer to the number of command-line arguments
+** @param arguments pointer to the beginning of the argument list
+** @param paramName name of the parameter to be sought, e.g. "-Xmx" for maximum heap size
+** @param defaultValue value to be returned if the parameter is not found in the argument list
+** @return the value of the parameter, or defaultValue if not found.
+*/
+static w_int getSizeParameter(int *argument_count_ptr, char *arguments[], const char *paramName, w_int defaultValue) {
+
+  if (strcmp(paramName, INITIAL_HEAP_SIZE_PARAM_NAME) & strcmp(paramName, MAX_HEAP_SIZE_PARAM_NAME)
+    & strcmp(paramName, INITIAL_STACK_SIZE_PARAM_NAME) & strcmp(paramName, MAX_STACK_SIZE_PARAM_NAME)
+    & strcmp(paramName, STACK_SIZE_INCREMENT_PARAM_NAME)
+  ) {
+    wabort(ABORT_WONKA, "paramName must be one of \"" INITIAL_HEAP_SIZE_PARAM_NAME);
+  }
+
+  w_int i;
+  char *ms = NULL;
+  w_int result;
+
+  for (i = 1; i < *argument_count_ptr; ++i) {
+    if (strncmp(arguments[i], paramName, strlen(paramName)) == 0) {
+      ms = arguments[i];
+    }
+    else if (ms) {
+      arguments[i - 1] = arguments[i];
+    }
+  }
+
+  if (ms) {
+    --*argument_count_ptr;
+    result = getSize(ms + strlen(paramName));
+    woempa(7, "Found command-line parameter %s, value is %d\n", paramName, result);
+  }
+  else {
+    result = defaultValue;
+    woempa(7, "Did not find command-line parameter %s, using default value %d\n", paramName, result);
+  }
+
+  return result;
+}
+
 /*
 ** Search the command line for an initial heap size, and if one is found
 ** just remove it.
@@ -232,19 +283,11 @@ static w_int getInitialHeapSize(int *argument_count_ptr, char *arguments[]) {
 
   if (ms) {
     --*argument_count_ptr;
+    initsize = getSize(ms + 4);
   }
   else {
-#ifdef DEBUG
-    // printf("Using -Xms%l\n", DEFAULTSTACK_SIZE);
-#endif
-    return DEFAULT_STACK_SIZE;
+    initsize = DEFAULT_HEAP_SIZE;
   }
-
-#ifdef DEBUG
-  // printf("Using -Xms%s\n", ms + 4);
-#endif
-
-  initsize = getSize(ms + 4);
 
 #ifdef DEBUG
   printf("Initial heap size = %d\n", initsize);
@@ -432,16 +475,13 @@ void launchMika(int argc, char *argv[]){
   getLogFile(&argc, argv);
 
   // We accept the -Xms parameter, but currently we do nothing with it
-  getInitialHeapSize(&argc, argv);
-  max_heap_size = getMaxHeapSize(&argc, argv);
-  if (max_heap_size == 0) {
-#ifdef RUDOLPH
-    max_heap_size = 32 * 1024 * 1024;
-#else
-    max_heap_size = 16 * 1024 * 1024;
-#endif
-  }
-  java_stack_size = getJavaStackSize(&argc, argv);
+  getSizeParameter(&argc, argv, INITIAL_HEAP_SIZE_PARAM_NAME, DEFAULT_HEAP_SIZE);
+  max_heap_size = getSizeParameter(&argc, argv, MAX_HEAP_SIZE_PARAM_NAME, DEFAULT_HEAP_SIZE);
+
+  // Parameters -Xiss and -Xssi are also accepted but not used (stack size is static)
+  getSizeParameter(&argc, argv, INITIAL_STACK_SIZE_PARAM_NAME, DEFAULT_STACK_SIZE);
+  getSizeParameter(&argc, argv, STACK_SIZE_INCREMENT_PARAM_NAME, DEFAULT_STACK_SIZE);
+  java_stack_size = getSizeParameter(&argc, argv, MAX_STACK_SIZE_PARAM_NAME, DEFAULT_STACK_SIZE);
 
 #if defined(O4F) || defined(O4P)
   tick_millis = host_timer_granularity_millis;
