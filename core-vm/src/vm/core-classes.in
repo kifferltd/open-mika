@@ -1,6 +1,6 @@
 ###########################################################################
-# Copyright (c) 2008, 2009, 2010, 2011, 2013, 2018, 2023 by KIFFER Ltd.   #
-# All rights reserved.                                                    #
+# Copyright (c) 2008, 2009, 2010, 2011, 2013, 2018, 2023, 2024            #
+# by KIFFER Ltd.  All rights reserved.                                    #
 #                                                                         #
 # Redistribution and use in source and binary forms, with or without      #
 # modification, are permitted provided that the following conditions      #
@@ -336,6 +336,7 @@ java/lang/ClassLoader
 	installApplicationClassLoader (Ljava/lang/ClassLoader;)V	ClassLoader_static_installApplicationClassLoader
 java/lang/Boolean
         value                   Z
+	getWrappedClass		()Ljava/lang/Class;	Boolean_getWrappedClass
 java/lang/Character
 	value			C
 	isDefined		(C)Z		Character_static_isDefined
@@ -357,26 +358,33 @@ java/lang/Character
 	getDirectionality	(C)B		Character_static_getDirectionality
 	isMirrored		(C)Z		Character_static_isMirrored
 	toUnicodeBlock		(C)I		Character_static_toUnicodeBlock
+	getWrappedClass		()Ljava/lang/Class;	Character_getWrappedClass
 java/lang/Float
 	value			F
 	floatToRawIntBits	(F)I		Float_static_floatToRawIntBits
 	intBitsToFloat		(I)F		Float_static_intToFloatBits
         isNaN                   (F)Z            Float_static_isNaN
         isInfinite              (F)Z            Float_static_isInfinite
+	getWrappedClass		()Ljava/lang/Class;	Float_getWrappedClass
 java/lang/Double
 	value			D
 	doubleToRawLongBits	(D)J		Double_static_doubleToRawLongBits
 	longBitsToDouble	(J)D		Double_static_longToDoubleBits
         isNaN                   (D)Z            Double_static_isNaN
         isInfinite              (D)Z            Double_static_isInfinite
+	getWrappedClass		()Ljava/lang/Class;	Double_getWrappedClass
 java/lang/Long
 	value			J
+	getWrappedClass		()Ljava/lang/Class;	Long_getWrappedClass
 java/lang/Integer
 	value			I
+	getWrappedClass		()Ljava/lang/Class;	Integer_getWrappedClass
 java/lang/Short
 	value			S
+	getWrappedClass		()Ljava/lang/Class;	Short_getWrappedClass
 java/lang/Byte
 	value			B
+	getWrappedClass		()Ljava/lang/Class;	Byte_getWrappedClass
 java/lang/Error
 java/lang/VirtualMachineError
 java/lang/ThreadDeath

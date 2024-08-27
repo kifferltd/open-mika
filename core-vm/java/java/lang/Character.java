@@ -38,7 +38,7 @@ public final class Character implements java.io.Serializable,Comparable {
   public static final char MAX_VALUE = '\uffff';
   public static final int MIN_RADIX = 2;
   public static final int MAX_RADIX = 36;
-  public static final Class TYPE = char.class;
+  public static final Class TYPE = getWrappedClass();
   public static final byte SPACE_SEPARATOR = 12;
   public static final byte LINE_SEPARATOR = 13;
   public static final byte PARAGRAPH_SEPARATOR = 14;
@@ -653,4 +653,6 @@ public final class Character implements java.io.Serializable,Comparable {
       return value < 128 ? cache[value] : new Character(value);
     }
   }
+
+  private static native Class getWrappedClass();
 }

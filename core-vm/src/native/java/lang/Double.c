@@ -62,3 +62,7 @@ w_boolean Double_static_isInfinite(w_thread thread, w_instance class, w_double j
 
 }
 
+w_instance Double_getWrappedClass(w_thread thread, w_instance Class) {
+  return clazz_double->Class;
+}
+

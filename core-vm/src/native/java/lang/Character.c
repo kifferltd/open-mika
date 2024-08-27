@@ -346,3 +346,7 @@ Character_static_isMirrored
   return charIsMirrored(ch);
 }
 
+w_instance Character_getWrappedClass(w_thread thread, w_instance Class) {
+  return clazz_char->Class;
+}
+

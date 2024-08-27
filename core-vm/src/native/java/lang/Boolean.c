@@ -1,5 +1,5 @@
 /**************************************************************************
-* Copyright (c) 2021 by KIFFER Ltd. All rights reserved.                  *
+* Copyright (c) 2024 by KIFFER Ltd. All rights reserved.                  *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -26,38 +26,10 @@
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                              *
 **************************************************************************/
 
-#ifdef NATIVE_FP
-#include <math.h>
-#endif
 #include "clazz.h"
-#include "descriptor.h"
-#include "mikaMath.h"
 
-w_int Float_static_floatToRawIntBits(w_thread thread, w_instance class, w_float f) {
-  union {w_float f; w_int i;} foo;
-
-  foo.f = f;
-
-  return foo.i;
+w_instance Boolean_getWrappedClass(w_thread thread, w_instance Class) {
+  return clazz_boolean->Class;
 }
 
-w_float Float_static_intToFloatBits(w_thread thread, w_instance class, w_int i) {
-  union {w_float f; w_int i;} foo;
-
-  foo.i = i;
-
-  return foo.f;
-}
-
-w_boolean Float_static_isInfinite(w_thread thread, w_instance class, w_float f) {
-  return wfp_float32_is_Infinite(f);
-}
-
-w_boolean Float_static_isNaN(w_thread thread, w_instance class, w_float f) {
-  return wfp_float32_is_NaN(f);
-}
-
-w_instance Float_getWrappedClass(w_thread thread, w_instance Class) {
-  return clazz_float->Class;
-}
 

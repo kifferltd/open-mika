@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.                                             #
 ###########################################################################
 
-sources = Character.c Class.c ClassLoader.c Double.c Float.c Math.c NativeProperties.c Object.c Runtime.c StringBuffer.c String.c System.c SecurityManager.c Thread.c ThreadGroup.c Throwable.c
+sources = Boolean.c Byte.c Character.c Class.c ClassLoader.c Double.c Float.c Integer.c Long.c Math.c NativeProperties.c Object.c Runtime.c Short.c StringBuffer.c String.c System.c SecurityManager.c Thread.c ThreadGroup.c Throwable.c
 nativeobjdir = $(objdir)/core-vm/native
 objects=$(patsubst %.c, $(nativeobjdir)/%.o, $(sources))
 
