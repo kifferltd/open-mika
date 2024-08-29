@@ -34,5 +34,5 @@
 #    echo Git branch is $(GIT_BRANCH)
 
 classes : 
-	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${emptydir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
+	find . -name \*\.java | xargs ${JAVAC} ${JFLAGS} -bootclasspath ${classdir} -Xlint:deprecation -classpath ${classpath} -source 1.4 -target 1.4 -d ${classdir} 
 

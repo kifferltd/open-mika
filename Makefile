@@ -341,7 +341,7 @@ endif
 USE_APP_DIR ?= true
 
 ifeq ($(USE_APP_DIR), true)
-  CCLASSPATH := /app:$(CCLASSPATH)
+  CCLASSPATH := {}/app:$(CCLASSPATH)
 endif
 
 ifdef CCLASSPATH
