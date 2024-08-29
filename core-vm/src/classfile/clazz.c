@@ -1,6 +1,6 @@
 /**************************************************************************
 * Copyright (c) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2016,     *
-* 2018, 2023 by KIFFER Ltd.  All rights reserved.                         *
+* 2018, 2023, 2024 by KIFFER Ltd.  All rights reserved.                   *
 *                                                                         *
 * Redistribution and use in source and binary forms, with or without      *
 * modification, are permitted provided that the following conditions      *
@@ -420,9 +420,7 @@ static void parseConstant(w_clazz clazz, w_bar s, w_size *idx) {
  ** Returns NULL for success, an error string for failure.
  ** Caller is responsible for deallocating the error string after use.
  */ 
-static char* pre_check_header(w_clazz clazz, w_bar bar) {
-  u4 cafebabe;
-
+static char* pre_check_header(w_bar bar) {
   w_int saved_pos = bar_pos(bar);
   if (saved_pos != 0) {
     wabort(ABORT_WONKA, "Idiot! must be at position 0 whan calling pre_check_header()!");
@@ -436,7 +434,7 @@ static char* pre_check_header(w_clazz clazz, w_bar bar) {
     return header_error;
   }
 
-  cafebabe = get_u4(bar);
+  uint32_t cafebabe = get_u4(bar);
 
   if (cafebabe != 0xcafebabe) {
     char *header_error = allocMem(80);
@@ -446,9 +444,9 @@ static char* pre_check_header(w_clazz clazz, w_bar bar) {
     return header_error;
   }
 
-  clazz->cminor = get_u2(bar);
-  clazz->cmajor = get_u2(bar);
-  w_word version = (clazz->cmajor << 16) | clazz->cminor;
+  uint16_t cminor = get_u2(bar);
+  uint16_t cmajor = get_u2(bar);
+  w_word version = (cmajor << 16) | cminor;
   if (version < MIN_VERSION || version > MAX_VERSION) {
     char *header_error = allocMem(80);
     x_snprintf(header_error, 80, "Bad class file version %08x, should be between %08x and %08x\n" , version, MIN_VERSION, MAX_VERSION);
@@ -1849,7 +1847,7 @@ w_clazz createClazz(w_thread thread, w_string name, w_bar bar, w_instance loader
 
 #ifndef NO_FORMAT_CHECKS
   if (!trusted) {
-    char *header_error = pre_check_header(clazz, bar);
+    char *header_error = pre_check_header(bar);
     if (header_error) {
       throwException(thread, clazzClassFormatError, "Error in header of class file `%w': %s", name, header_error);
       destroyClazz(clazz);
