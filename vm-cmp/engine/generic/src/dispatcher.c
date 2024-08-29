@@ -1373,45 +1373,45 @@ w_boolean verifyMethod(w_method method);
 void initialize_bytecode_dispatcher(w_frame caller, w_method method) {
   threadMustBeSafe(caller->thread);
   
-  method->exec.dispatcher = interpret_unsynchronized;
+  x_monitor_enter(&method->spec.declaring_clazz->resolutionMonitor, x_eternal);
+  // Check that another thread didn't beat us to it
+    if (method->exec.dispatcher == initialize_dispatcher) {
+    method->exec.dispatcher = interpret_unsynchronized;
 
-  if (isSet(method->flags, ACC_SYNCHRONIZED)) {
-    if (isSet(method->flags, ACC_STATIC)) {
-      method->exec.dispatcher = interpret_static_synchronized;
+    if (isSet(method->flags, ACC_SYNCHRONIZED)) {
+      if (isSet(method->flags, ACC_STATIC)) {
+        method->exec.dispatcher = interpret_static_synchronized;
+      }
+      else {
+        method->exec.dispatcher = interpret_instance_synchronized;
+      }
     }
-    else {
-      method->exec.dispatcher = interpret_instance_synchronized;
-    }
-  }
 /*
 #ifdef USE_SPECIAL_CASE_DISPATCHERS
-  else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 1 && method->exec.code_length == 5 && method->exec.code[0] == aload_0 && method->exec.code[1] == getfield && method->exec.code[4] >= ireturn && method->exec.code[4] <= areturn) {
-    woempa(7, "Identified a GETTER %M %d %d %d %d %d\n", method, opcode_names[method->exec.code[0]], opcode_names[method->exec.code[1]], method->exec.code[2], method->exec.code[3], opcode_names[method->exec.code[4]]); 
-    getFieldConstant(method->spec.declaring_clazz, (method->exec.code[2] << 8) | method->exec.code[3]);
-    if (!caller->thread->exception) {
-      method->exec.dispatcher = interpret_getter;
+    else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 1 && method->exec.code_length == 5 && method->exec.code[0] == aload_0 && method->exec.code[1] == getfield && method->exec.code[4] >= ireturn && method->exec.code[4] <= areturn) {
+      woempa(7, "Identified a GETTER %M %d %d %d %d %d\n", method, opcode_names[method->exec.code[0]], opcode_names[method->exec.code[1]], method->exec.code[2], method->exec.code[3], opcode_names[method->exec.code[4]]); 
+      getFieldConstant(method->spec.declaring_clazz, (method->exec.code[2] << 8) | method->exec.code[3]);
+      if (!caller->thread->exception) {
+        method->exec.dispatcher = interpret_getter;
+      }
     }
-  }
-  else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 2 && method->exec.code_length == 6 && method->exec.code[0] == aload_0 && method->exec.code[1] == aload_1 && method->exec.code[2] == putfield && method->exec.code[5] == vreturn) {
-    woempa(7, "Identified a PUTTER %M %d %d %d %d %d\n", method, method->exec.code[0], method->exec.code[1], method->exec.code[2], method->exec.code[3], method->exec.code[4], method->exec.code[5]); 
-    getFieldConstant(method->spec.declaring_clazz, (method->exec.code[3] << 8) | method->exec.code[4]);
-    if (!caller->thread->exception) {
-      method->exec.dispatcher = interpret_setter;
+    else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 2 && method->exec.code_length == 6 && method->exec.code[0] == aload_0 && method->exec.code[1] == aload_1 && method->exec.code[2] == putfield && method->exec.code[5] == vreturn) {
+      woempa(7, "Identified a PUTTER %M %d %d %d %d %d\n", method, method->exec.code[0], method->exec.code[1], method->exec.code[2], method->exec.code[3], method->exec.code[4], method->exec.code[5]); 
+      getFieldConstant(method->spec.declaring_clazz, (method->exec.code[3] << 8) | method->exec.code[4]);
+      if (!caller->thread->exception) {
+        method->exec.dispatcher = interpret_setter;
+      }
     }
-  }
-  else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 0 && method->exec.code_length == 4 && method->exec.code[0] == getstatic && method->exec.code[3] >= ireturn && method->exec.code[3] <= areturn) {
-    woempa(7, "Identified a GETSTATIC %M %d %d %d\n", method, method->exec.code[1], method->exec.code[2], method->exec.code[3]);
-    getFieldConstant(method->spec.declaring_clazz, (method->exec.code[1] << 8) | method->exec.code[2]);
-    if (!caller->thread->exception) {
-      method->exec.dispatcher = interpret_staticker;
+    else if (isSet(method->flags, METHOD_NO_OVERRIDE | ACC_STATIC) && method->exec.arg_i == 0 && method->exec.code_length == 4 && method->exec.code[0] == getstatic && method->exec.code[3] >= ireturn && method->exec.code[3] <= areturn) {
+      woempa(7, "Identified a GETSTATIC %M %d %d %d\n", method, method->exec.code[1], method->exec.code[2], method->exec.code[3]);
+      getFieldConstant(method->spec.declaring_clazz, (method->exec.code[1] << 8) | method->exec.code[2]);
+      if (!caller->thread->exception) {
+        method->exec.dispatcher = interpret_staticker;
+      }
     }
-  }
 #endif
 */
 
-  x_monitor_enter(&method->spec.declaring_clazz->resolutionMonitor, x_eternal);
-  // Check that another thread didn't beat us to it
-  if (method->exec.dispatcher == initialize_dispatcher) {
     prepareBytecode(method);
 #ifdef USE_SPECIAL_CASE_DISPATCHERS
     if (method->exec.dispatcher == interpret_unsynchronized) {
