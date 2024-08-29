@@ -260,11 +260,13 @@ void _woempa(const char *file, const char *function, int line, int level, const 
     w_frame  jframe  = jthread ? jthread->top : NULL;
     w_method jmeth   = jframe  ? jframe->method : NULL;
     
-    while (jmeth->spec.declaring_clazz == clazzEtc
-        && strncmp(jmeth->spec.name->contents.bytes, "woempa",6) ==0
-          ) {
-      jframe = jframe->previous;
-      jmeth = jframe  ? jframe->method : NULL;
+    if (jmeth) {
+      while (jmeth->spec.declaring_clazz == clazzEtc
+          && strncmp(jmeth->spec.name->contents.bytes, "woempa",6) ==0
+            ) {
+        jframe = jframe->previous;
+        jmeth = jframe  ? jframe->method : NULL;
+      }
     }
 
     x_snprintf(woempa_buffer, bufsize, 
