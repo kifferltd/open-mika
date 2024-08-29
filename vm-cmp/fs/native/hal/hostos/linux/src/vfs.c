@@ -74,6 +74,8 @@ void init_ufsfs(void) {
 }
 
 w_int ufs_open(vfs_fd_entry fde, const char *path, w_word flags, w_word mode) {
+  woempa(1, "trying to open %s : current dir is %s\n", path, current_working_dir);
+
   w_int rc = open(path, flags, mode);
   if (rc < 0) {
     return -1;
@@ -112,13 +114,12 @@ w_int ufs_read(vfs_fd_entry fde, char *buffer, w_size length, w_int *pos) {
     rc = read(*fdptr, buffer + did_read, length);
     if (rc < 0) {
       const char *msg = strerror(errno);
-      woempa(7, "attempt to read %d bytes from %p failed : %s\n", did_read, msg);
+      woempa(7, "attempt to read from %s failed after %d bytes: %s\n", fde->path, did_read, msg);
+      break;
     }
-    if (rc <= 0) {
-      woempa(7, "only read %d bytes from %s, write() returned %d\n", did_read, fde->path, rc);
-      //[CG 20240603] The spec is unclear, but Java seems to return the bytes read in this case
-      // TODO move this logic to FileInputStream.c?
-      return did_read;
+    if (rc == 0) {
+      woempa(7, "only read %d bytes from %s, read() returned %d\n", did_read, fde->path, rc);
+      break;
     }
     did_read += rc;
   }
@@ -133,7 +134,7 @@ w_int ufs_read(vfs_fd_entry fde, char *buffer, w_size length, w_int *pos) {
 w_int ufs_seek(vfs_fd_entry fde, w_int offset, w_int whence) {
   int *fdptr = fde->data;
   if (*fdptr < 0) {
-    woempa(7, "failed to %s %d bytes, fde is not open)\n", whence2text(whence), offset);
+    woempa(7, "failed to %s %d bytes, fde is not open\n", whence2text(whence), offset);
     SET_ERRNO(EBADF);
     return -1;
   }
@@ -157,7 +158,7 @@ w_int ufs_seek(vfs_fd_entry fde, w_int offset, w_int whence) {
 w_int ufs_flush(vfs_fd_entry fde) {
   int *fdptr = fde->data;
   if (*fdptr < 0) {
-    woempa(7, "cannot flush, fd is not in use\n", offset);
+    woempa(7, "cannot flush, fd is not in use\n");
     SET_ERRNO(EBADF);
     return -1;
   }
@@ -198,13 +199,17 @@ size_t ufs_get_length(vfs_fd_entry fde) {
     SET_ERRNO(EBADF);
     return -1;
   }
-  return lseek(*fdptr, 0, SEEK_CUR);
+  off_t pos = lseek(*fdptr, 0, SEEK_CUR);
+  off_t length = lseek(*fdptr, 0, SEEK_END);
+  lseek(*fdptr, pos, SEEK_SET);
+
+  return (size_t) length;
 }
 
 w_boolean ufs_is_eof(vfs_fd_entry fde) {
   int *fdptr = fde->data;
   if (*fdptr < 0) {
-    woempa(7, "failed to check %s for EOF, fd is not in use\n", fde->pathffset);
+    woempa(7, "failed to check for EOF, fd is not in use\n");
     SET_ERRNO(EBADF);
     return -1;
   }
@@ -215,7 +220,7 @@ w_boolean ufs_is_eof(vfs_fd_entry fde) {
 w_int ufs_write(vfs_fd_entry fde, const char *buffer, w_size length, w_int *pos) {
   int *fdptr = fde->data;
   if (*fdptr < 0) {
-    woempa(7, "failed to write %d bytes, fd is not in use\n", offset);
+    woempa(7, "failed to write %d bytes, fd is not in use\n", length);
     SET_ERRNO(EBADF);
     return -1;
   }
