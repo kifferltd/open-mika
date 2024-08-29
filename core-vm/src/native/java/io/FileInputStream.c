@@ -169,7 +169,7 @@ void FileInputStream_close
       vfs_close(fd);
       setIntegerField(fdObj, F_FileDescriptor_fd, -1);
     }
-    setReferenceField(thisFileInputStream, F_FileInputStream_fd, NULL);
+    setReferenceField(thisFileInputStream, NULL, F_FileInputStream_fd);
   }
 }
 
