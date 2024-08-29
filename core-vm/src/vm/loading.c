@@ -617,37 +617,37 @@ static void attach_class_instances(void) {
 }
 
 static char *expandPath(char *start, int length) {
-  w_int empty_fsroot = 0;
-
-  if (fsroot[0] == '/' && fsroot[1] == 0) {
-    woempa(1, "Special case: fsroot consists of '/', treat as '' to avoid creating a leading '//'\n");
-    empty_fsroot = 1;
-  }
+  w_boolean use_fsroot = ((length > 2 ) && (start[0] == '{') && (start[1] == '}') && start[2] == '/');
+  w_boolean empty_fsroot = (fsroot[0] == '/' && fsroot[1] == 0);
 
   w_int length_change = 0;
-  if ((length > 2 ) && (start[0] == '{') && (start[1] == '}') && start[2] == '/') {
-    woempa(1, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
-    if (empty_fsroot) {
-      length_change = -2;
-    }
-    else {
-      length_change = strlen(fsroot) - 2;
+  if (use_fsroot) {
+    if ((length > 2 ) && (start[0] == '{') && (start[1] == '}') && start[2] == '/') {
+      woempa(1, "Element starts with '{}/', replace by '%s/'\n", empty_fsroot ? "" : fsroot);
+      if (empty_fsroot) {
+        length_change = -2;
+      }
+      else {
+        length_change = strlen(fsroot) - 2;
+      }
     }
   }
 
   woempa(1, "Allocating %d bytes for expanded path\n", length + length_change + 1);
   char *path = allocClearedMem(length + length_change + 1);
-  if (!empty_fsroot) {
+  if (use_fsroot && !empty_fsroot) {
     strncpy(path, fsroot, strlen(fsroot));
   }
+
   if (length_change > 0) {
     strncpy(path + length_change + 2 - empty_fsroot, start + 2, length - 2);
     path[length + length_change - empty_fsroot] = 0;
   }
   else {
-    // negative length_change -> strip chars from start of path! Sorry for the double negatives ...
+    // zero length_change -> just copy the path.
+    // negative length_change -> strip chars from start of path. Sorry for the double negatives ...
     strncpy(path, start - length_change, length + length_change);
-    path[length] = 0;
+    path[length + length_change] = 0;
   }
 
   return path;
@@ -698,6 +698,16 @@ static mika_bcpe_t analyseBootClassPath(const char *bcp) {
 #else
       this_bcpe->resource = parseZipFile(zippath);
 #endif
+      if (!this_bcpe->resource) {
+        // We failed to parse the zip file (or maybe no such file exists).
+        wabort(ABORT_WONKA, "Unable to open bootclasspath archive %s\n", zippath);
+        // alternative, less drastic course of action would be to
+        // Ignore this item and continue analysing the colon-separated list
+        releaseMem(zippath);
+        releaseMem(this_bcpe);
+
+        continue;
+      }
     }
     else {
       woempa(7, "Element is not `ROMFS' and does not end in `jar' or `zip', so bcp[%d..%d] is a directory\n", i, j - 1);
