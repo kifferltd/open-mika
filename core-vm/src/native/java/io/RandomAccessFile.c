@@ -84,7 +84,7 @@ w_int RandomAccessFile_createFromString (w_thread thread, w_instance thisRAF, w_
     return 1;
   }
 
-  if (statbuf.st_mode != VFS_S_IFREG) {
+  if (!VFS_S_ISREG(statbuf.st_mode)) {
     woempa(9, "vfs_stat(%s, %p) did not report a regular file\n", pathname, &statbuf);
     return 1;
   }
