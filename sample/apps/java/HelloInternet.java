@@ -45,14 +45,18 @@ public class HelloInternet {
         // Read the response
         String name = r.readLine();
         w.println("Nice to meet you, " + name + ".");
-        w.println("I will now echo back everything you type (use ^C to exit);");
+        w.println("I will now echo back everything you type until you send a blank line");
+        w.println("to terminate this connection, or HALT to terminate the server.");
         while (true) {
           String line = r.readLine();
+          if ("HALT".equals(line)) {
+            return;
+          }
+          if (line.length() == 0) {
+            break;
+          }
           w.println(line);
         }
-      }
-      catch (IOException ioe) {
-        // ignore, we expect user to send ^C
       }
       finally {
         cs.close();
