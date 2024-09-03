@@ -1770,7 +1770,7 @@ void interpret(w_frame caller, w_method method) {
     i = (w_ushort) short_operand; 
     tag = &cclazz->tags[i]; 
 #ifdef JAVA5
-    if ((*tag & 0xf) == CONSTANT_CLASS) {
+    if ((*tag & CONSTANT_TYPE_MASK) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
       enterSafeRegion(thread);
@@ -1788,7 +1788,7 @@ void interpret(w_frame caller, w_method method) {
       SET_REFERENCE_SLOT(tos, cclazz->values[i]);
       *current = in_ldc_w_string;
     }
-    else if (*tag & 0x0f == 8) {
+    else if ((*tag & CONSTANT_TYPE_MASK) == CONSTANT_STRING) {
       wabort(ABORT_WONKA, "loading unresolved string constant!");
     }
     else {
@@ -1833,7 +1833,7 @@ void interpret(w_frame caller, w_method method) {
     i = (w_ushort) byte_operand;
     tag = &cclazz->tags[i]; 
 #ifdef JAVA5
-    if ((*tag & 0xf) == CONSTANT_CLASS) {
+    if ((*tag & CONSTANT_TYPE_MASK) == CONSTANT_CLASS) {
       w_clazz target_clazz;
       frame->jstack_top = tos;
       enterSafeRegion(thread);
@@ -1851,7 +1851,7 @@ void interpret(w_frame caller, w_method method) {
       SET_REFERENCE_SLOT(tos, cclazz->values[i]);
       current[-1] = in_ldc_string;
     }
-    else if (*tag & 0x0f == 8) {
+    else if ((*tag & CONSTANT_TYPE_MASK) == CONSTANT_STRING) {
       wabort(ABORT_WONKA, "loading unresolved string constant!");
     }
     else {
