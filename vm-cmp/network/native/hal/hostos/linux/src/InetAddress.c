@@ -191,12 +191,12 @@ void InetAddress_createInetAddress (w_thread thread, w_instance InetAddress, w_i
 
 w_instance InetAddress_getLocalName(w_thread thread, w_instance clazz) {
 
-  w_instance Name = NULL;
+  w_instance localName = NULL;
   if (w_gethostname(ownhostname, 255) == 0) {
     woempa(7, "Own host name is '%s'\n", ownhostname);
-    Name = ascii2String(ownhostname, strlen(ownhostname));
+    localName = ascii2String(ownhostname, strlen(ownhostname));
   } 
 
-  return Name;
+  return getStringInstance(localName);
 
 }
