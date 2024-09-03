@@ -283,7 +283,7 @@ public final class URL implements java.io.Serializable {
             // values in the context, but still allow them to be over-ridden
             // by the values in the ("relative") spec.
             if (context == null) {
-                throw new MalformedURLException("Protocol not found");
+                throw new MalformedURLException("URL spec " + spec + " has no protocol and no context was provided");
             }
             set(context.getProtocol(), context.getHost(), context.getPort(),
                     context.getAuthority(), context.getUserInfo(), context
@@ -298,7 +298,7 @@ public final class URL implements java.io.Serializable {
         if (strmHandler == null) {
             setupStreamHandler();
             if (strmHandler == null) {
-                throw new MalformedURLException("Unknown protocol: " + protocol);
+                throw new MalformedURLException("URL spec " + spec + " has unknown protocol: " + protocol);
             }
         }
 
