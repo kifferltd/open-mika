@@ -923,7 +923,8 @@ ht_list_values_no_lock(w_hashtable hashtable) {
   }
 
 
-  ht_lock(hashtable);
+  // [CG 20240712] locking the ht here contradicts the _no_lock suffix
+  // ht_lock(hashtable);
 
   for(i=0;i<hashtable->currentsize;++i)
   {
@@ -934,7 +935,8 @@ ht_list_values_no_lock(w_hashtable hashtable) {
     }
   }
 
-  ht_unlock(hashtable);
+  // [CG 20240712] see remark re. ht_lock() above
+  // ht_unlock(hashtable);
 
   return result;
 }
