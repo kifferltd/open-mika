@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/kifferltd/open-mika.svg?branch=master)](https://travis-ci.org/kifferltd/open-mika)
 
-#Breaking News - FreeRTOS port
+# Breaking News - FreeRTOS port
 
 Work is in progress (in the freertos-wip branch) on a port of Open Mika to FreeRTOS. This port has already been compiled and tested on a company's internal build system, the challenge now is to get it to build on a widely-available platform (Arduino IDE looks a good candidate). For testing we have Freenove starter kit for ESP8266 here in the Kiffer lab.
 
